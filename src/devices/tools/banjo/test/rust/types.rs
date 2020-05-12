@@ -250,8 +250,7 @@ pub struct handles {
     pub pager_handle: zircon::sys::zx_handle_t,
     pub pmt_handle: zircon::sys::zx_handle_t,
     pub clock_handle: zircon::sys::zx_handle_t,
-    pub msi_allocation_handle: zircon::sys::zx_handle_t,
-    pub msi_interrupt_handle: zircon::sys::zx_handle_t,
+    pub msi_handle: zircon::sys::zx_handle_t,
     pub nullable_handle_handle: zircon::sys::zx_handle_t,
     pub nullable_process_handle: zircon::sys::zx_handle_t,
     pub nullable_thread_handle: zircon::sys::zx_handle_t,
@@ -275,8 +274,7 @@ pub struct handles {
     pub nullable_pager_handle: zircon::sys::zx_handle_t,
     pub nullable_pmt_handle: zircon::sys::zx_handle_t,
     pub nullable_clock_handle: zircon::sys::zx_handle_t,
-    pub nullable_msi_allocation_handle: zircon::sys::zx_handle_t,
-    pub nullable_msi_interrupt_handle: zircon::sys::zx_handle_t,
+    pub nullable_msi_handle: zircon::sys::zx_handle_t,
 }
 
 #[repr(C)]

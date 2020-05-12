@@ -252,8 +252,7 @@ struct handles {
     handle<pager> pager_handle;
     handle<pmt> pmt_handle;
     handle<clock> clock_handle;
-    handle<msi_allocation> msi_allocation_handle;
-    handle<msi_interrupt> msi_interrupt_handle;
+    handle<msi> msi_handle;
 
     handle? nullable_handle_handle;
     handle<process>? nullable_process_handle;
@@ -278,8 +277,7 @@ struct handles {
     handle<pager>? nullable_pager_handle;
     handle<pmt>? nullable_pmt_handle;
     handle<clock>? nullable_clock_handle;
-    handle<msi_allocation>? nullable_msi_allocation_handle;
-    handle<msi_interrupt>? nullable_msi_interrupt_handle;
+    handle<msi>? nullable_msi_handle;
 };
 
 const uint32 strings_size = 32;

@@ -4067,26 +4067,12 @@ BanjoAst {
                             [],
                         ),
                         ty: Handle {
-                            ty: MsiAllocation,
+                            ty: Msi,
                             reference: false,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "msi_allocation_handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: MsiInterrupt,
-                            reference: false,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "msi_interrupt_handle",
+                            name: "msi_handle",
                         },
                         val: None,
                     },
@@ -4417,26 +4403,12 @@ BanjoAst {
                             [],
                         ),
                         ty: Handle {
-                            ty: MsiAllocation,
+                            ty: Msi,
                             reference: true,
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "nullable_msi_allocation_handle",
-                        },
-                        val: None,
-                    },
-                    StructField {
-                        attributes: Attrs(
-                            [],
-                        ),
-                        ty: Handle {
-                            ty: MsiInterrupt,
-                            reference: true,
-                        },
-                        ident: Ident {
-                            namespace: None,
-                            name: "nullable_msi_interrupt_handle",
+                            name: "nullable_msi_handle",
                         },
                         val: None,
                     },

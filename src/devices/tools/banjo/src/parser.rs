@@ -72,7 +72,7 @@ handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "por
                  "interrupt" | "log" | "socket" | "resource" | "event" |
                  "job" | "vmar" | "fifo" | "guest" | "timer" | "bti" | "profile" |
                  "debuglog" | "vcpu" | "iommu" | "pager" | "pmt" | "clock" |
-                 "msi_allocation" | "msi_interrupt" }
+                 "msi" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
 ident = @{ ("@")? ~ (alpha | digit | "_")+ }

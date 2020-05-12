@@ -63,8 +63,7 @@ fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<Stri
         ast::HandleTy::Pager => Ok(String::from("zx::pager")),
         ast::HandleTy::Pmt => Ok(String::from("zx::pmt")),
         ast::HandleTy::Clock => Ok(String::from("zx::clock")),
-        ast::HandleTy::MsiAllocation => Ok(String::from("zx::msi_allocation")),
-        ast::HandleTy::MsiInterrupt => Ok(String::from("zx::msi_interrupt")),
+        ast::HandleTy::Msi => Ok(String::from("zx::msi")),
     }
 }
 
