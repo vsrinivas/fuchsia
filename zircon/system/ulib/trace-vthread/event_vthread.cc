@@ -4,8 +4,9 @@
 
 #include "trace-vthread/event_vthread.h"
 
-#include <trace/event.h>
 #include <zircon/syscalls.h>
+
+#include <trace/event.h>
 
 namespace {
 
@@ -85,5 +86,16 @@ void trace_internal_write_vthread_flow_end_event_record_and_release_context(
   trace_internal_vthread_complete_args(context, args, num_args);
   trace_context_write_flow_end_event_record(context, helper.ticks, &helper.thread_ref, category_ref,
                                             &helper.name_ref, flow_id, args, num_args);
+  trace_release_context(context);
+}
+
+void trace_internal_write_vthread_counter_event_record_and_release_context(
+    trace_context_t* context, const trace_string_ref_t* category_ref, const char* name_literal,
+    const char* vthread_literal, trace_vthread_id_t vthread_id, uint64_t counter_id,
+    trace_ticks_t timestamp, trace_arg_t* args, size_t num_args) {
+  VThreadEventHelper helper(context, name_literal, vthread_literal, vthread_id, timestamp);
+  trace_internal_vthread_complete_args(context, args, num_args);
+  trace_context_write_counter_event_record(context, helper.ticks, &helper.thread_ref, category_ref,
+                                           &helper.name_ref, counter_id, args, num_args);
   trace_release_context(context);
 }

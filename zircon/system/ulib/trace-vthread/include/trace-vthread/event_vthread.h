@@ -202,4 +202,39 @@
   TRACE_VTHREAD_INTERNAL_FLOW_END((category_literal), (name_literal), (vthread_literal),    \
                                   (vthread_id), (flow_id), (timestamp), args)
 
+// Writes a virtual thread counter event with the specified id.
+//
+// The arguments to this event are numeric samples that are typically represented by
+// the visualizer as a stacked area chart.  The id serves to distinguish multiple
+// instances of counters which share the same category and name within the
+// same process.
+//
+// Virtual thread counters can describe state that is collected asynchronously as
+// the timestamp argument can be in the past.
+//
+// 1 to 15 numeric arguments can be associated with the event, each of which is
+// interpreted as a distinct time series.
+//
+// |category_literal|, |name_literal| and |vthread_literal| must be
+// null-terminated static string constants.
+// |vthread_id| is the correlation id of the virtual thread.
+//              Must be unique for a given process.
+// |timestamp| is the tick for the counter event.
+// |counter_id| is the correlation id of the counter.
+//              Must be unique for a given process, category, and name combination.
+// |args| is the list of argument key/value pairs.
+//
+// Usage:
+//
+//     trace_vthread_id_t vthread_id = 444;
+//     trace_counter_id_t counter_id = 555;
+//     zx_ticks_t curr_ticks = zx_ticks_get();
+//     TRACE_VTHREAD_COUNTER("category", "name", "vthread", vthread_id,
+//                           counter_id, curr_ticks, "x", TA_INT32(42));
+//
+#define TRACE_VTHREAD_COUNTER(category_literal, name_literal, vthread_literal, vthread_id, \
+                              counter_id, timestamp, args...)                              \
+  TRACE_VTHREAD_INTERNAL_COUNTER((category_literal), (name_literal), (vthread_literal),    \
+                                 (vthread_id), (counter_id), (timestamp), args)
+
 #endif  // TRACE_VTHREAD_EVENT_VTHREAD_H_

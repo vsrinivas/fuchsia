@@ -20,6 +20,8 @@
 #include "trace-vthread/event_vthread.h"
 
 // Helper macros for writing tests.
+#define I32_ARGS1 "k1", TA_INT32(1)
+#define I32_ARGS4 "k1", TA_INT32(1), "k2", TA_INT32(2), "k3", TA_INT32(3), "k4", TA_INT32(4)
 #define STR_ARGS1 "k1", TA_STRING("v1")
 #define STR_ARGS4 \
   "k1", TA_STRING("v1"), "k2", TA_STRING("v2"), "k3", TA_STRING("v3"), "k4", TA_STRING("v4")
@@ -219,10 +221,43 @@ Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", FlowEnd(id: 2), {k
   END_TEST;
 }
 
+bool TestVthreadCounter() {
+  TraceFixture fixture;
+
+  BEGIN_TEST;
+
+  ASSERT_TRUE(fixture.StartTracing());
+
+  TRACE_VTHREAD_COUNTER("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get());
+  TRACE_VTHREAD_COUNTER("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), I32_ARGS1);
+  TRACE_VTHREAD_COUNTER("+enabled", "name", "virtual-thread", 1u, 2u, zx_ticks_get(), I32_ARGS4);
+
+  ASSERT_TRUE(fixture.StopTracing());
+
+  ASSERT_TRUE(
+      fixture.CompareBuffer("\
+String(index: 1, \"+enabled\")\n\
+String(index: 2, \"process\")\n\
+KernelObject(koid: <>, type: thread, name: \"virtual-thread\", {process: koid(<>)})\n\
+Thread(index: 1, <>)\n\
+String(index: 3, \"name\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 2), {})\n\
+String(index: 4, \"k1\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 2), {k1: int32(1)})\n\
+String(index: 5, \"k2\")\n\
+String(index: 6, \"k3\")\n\
+String(index: 7, \"k4\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", Counter(id: 2), {k1: int32(1), k2: int32(2), k3: int32(3), k4: int32(4)})\n\
+"));
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(event_thread_tests)
 RUN_TEST(TestVthreadDurationBegin)
 RUN_TEST(TestVthreadDurationEnd)
 RUN_TEST(TestVthreadFlowBegin)
 RUN_TEST(TestVthreadFlowStep)
 RUN_TEST(TestVthreadFlowEnd)
+RUN_TEST(TestVthreadCounter)
 END_TEST_CASE(event_thread_tests)
