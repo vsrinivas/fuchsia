@@ -21,7 +21,7 @@ EXAMPLE_DIR=$( echo "$EXAMPLE_DIR" | sed -e "s+${FUCHSIA_DIR}/++" )
 # as each fidl file it regens. This makes it simpler to match the "filename" field
 # inside the JSON goldens when running json_generator_tests.cc
 
-cd "${EXAMPLE_DIR}"
+cd "${FUCHSIA_DIR}/${EXAMPLE_DIR}"
 while read -r src_path; do
     src_name="$( basename "${src_path}" )"
     json_name=$( echo "${src_name}" | cut -f 1 -d '.').test.json.golden
