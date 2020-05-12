@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::AppSet,
+    common::{AppSet, CheckOptions},
     configuration::Config,
     http_request::HttpRequest,
     installer::Installer,
@@ -18,7 +18,7 @@ use std::rc::Rc;
 
 #[cfg(test)]
 use crate::{
-    common::{App, CheckOptions},
+    common::App,
     http_request::StubHttpRequest,
     installer::stub::StubInstaller,
     metrics::StubMetricsReporter,
@@ -235,7 +235,6 @@ where
     }
 
     /// Run start_upate_check once, returning a stream of the states it produces.
-    #[cfg(test)]
     pub async fn oneshot_check(
         self,
         options: CheckOptions,
