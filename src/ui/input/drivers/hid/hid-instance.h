@@ -6,8 +6,12 @@
 #define SRC_UI_INPUT_DRIVERS_HID_HID_INSTANCE_H_
 
 #include <fuchsia/hardware/input/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl-async/cpp/bind.h>
 
 #include <array>
+#include <list>
 #include <memory>
 #include <vector>
 
@@ -23,6 +27,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
 
+#include "device-report-reader.h"
 #include "hid-fifo.h"
 
 namespace hid_driver {
@@ -40,7 +45,8 @@ class HidInstance : public HidInstanceDeviceType,
                     public ::llcpp::fuchsia::hardware::input::Device::Interface,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_HID_DEVICE> {
  public:
-  explicit HidInstance(zx_device_t* parent) : HidInstanceDeviceType(parent) {
+  explicit HidInstance(zx_device_t* parent)
+      : HidInstanceDeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     zx_hid_fifo_init(&fifo_);
   }
   ~HidInstance() = default;
@@ -60,6 +66,8 @@ class HidInstance : public HidInstanceDeviceType,
   void SetTraceId(uint32_t id, SetTraceIdCompleter::Sync _completer) override;
   void ReadReports(ReadReportsCompleter::Sync _completer) override;
   void ReadReport(ReadReportCompleter::Sync completer) override;
+  void GetDeviceReportsReader(zx::channel reader,
+                              GetDeviceReportsReaderCompleter::Sync completer) override;
 
   void CloseInstance();
   void WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);
@@ -84,6 +92,11 @@ class HidInstance : public HidInstanceDeviceType,
   uint32_t reports_written_ = 0;
   // The number of reports sent out to the client.
   uint32_t reports_sent_ = 0;
+
+  fbl::Mutex readers_lock_;
+  bool loop_started_ __TA_GUARDED(readers_lock_) = false;
+  async::Loop loop_ __TA_GUARDED(readers_lock_);
+  std::list<std::unique_ptr<DeviceReportsReader>> readers_ __TA_GUARDED(readers_lock_);
 };
 
 }  // namespace hid_driver

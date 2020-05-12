@@ -17,6 +17,7 @@ enum BootProtocol : uint32 {
 const uint16 MAX_DESC_LEN = 8192;
 const uint16 MAX_REPORT_LEN = 8192;
 const uint16 MAX_REPORT_DATA = 8192;
+const uint32 MAX_REPORTS_COUNT = 50;
 
 enum ReportType : uint8 {
     INPUT = 1;
@@ -35,6 +36,26 @@ struct DeviceIds {
     uint32 version;
 };
 
+/// A single HID Report.
+struct Report {
+    /// The time the report was created, from the view of the monotonic clock.
+    zx.time time;
+    /// The HID report data. This is guaranteed to always be a full HID report.
+    vector<uint8>:MAX_REPORT_DATA data;
+};
+
+/// Each `DeviceReportsReader` has its own FIFO of reports in the driver.
+/// Calling `ReadReports` drains the Report FIFO. If the Report FIFO
+/// fills up between calls to `ReadReports` the channel will be closed.
+protocol DeviceReportsReader {
+    /// This is a Hanging-Get function to read the reports in the
+    /// Report FIFO. This will block until there is at least one
+    /// report available.
+    /// If there is already one outstanding Hanging-Get, calling this
+    /// again will return ZX_ERR_ALREADY_BOUND.
+    ReadReports() -> (vector<Report>:MAX_REPORTS_COUNT reports) error zx.status;
+};
+
 // TODO(fxb/49329): This API doesn't follow best practices and needs to be
 // cleaned up.
 protocol Device {
@@ -47,6 +68,10 @@ protocol Device {
 
     /// Get the report descriptor
     GetReportDesc() -> (vector<uint8>:MAX_DESC_LEN desc);
+
+    /// Open a new DeviceReportsReader on this device. Opening a DeviceReportsReader
+    /// allocates a new FIFO for receiving input reports.
+    GetDeviceReportsReader(request<DeviceReportsReader> reader) -> () error zx.status;
 
     /// Read one report out of the report FIFO. Only a single report will be
     /// returned in this API. `time` is the time the report was created, from

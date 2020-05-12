@@ -78,7 +78,6 @@ class HidDevice : public HidDeviceType,
   const char* GetName();
 
  private:
-
   zx_status_t ProcessReportDescriptor();
   zx_status_t InitReassemblyBuffer();
   void ReleaseReassemblyBuffer();

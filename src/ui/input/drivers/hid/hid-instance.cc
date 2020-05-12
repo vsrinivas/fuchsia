@@ -220,6 +220,23 @@ void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint
   return;
 }
 
+void HidInstance::GetDeviceReportsReader(zx::channel reader,
+                                         GetDeviceReportsReaderCompleter::Sync completer) {
+  fbl::AutoLock lock(&readers_lock_);
+  zx_status_t status;
+  if (!loop_started_) {
+    status = loop_.StartThread("hid-reports-reader-loop");
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    loop_started_ = true;
+  }
+  readers_.push_back(std::make_unique<DeviceReportsReader>(base_));
+  fidl::Bind(loop_.dispatcher(), std::move(reader), readers_.back().get());
+  completer.ReplySuccess();
+}
+
 void HidInstance::SetTraceId(uint32_t id, SetTraceIdCompleter::Sync completer) { trace_id_ = id; }
 
 void HidInstance::CloseInstance() {
@@ -228,6 +245,18 @@ void HidInstance::CloseInstance() {
 }
 
 void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time) {
+  {
+    fbl::AutoLock lock(&readers_lock_);
+    auto iter = readers_.begin();
+    while (iter != readers_.end()) {
+      if ((*iter)->WriteToFifo(report, report_len, time) != ZX_OK) {
+        iter = readers_.erase(iter);
+      } else {
+        iter++;
+      }
+    }
+  }
+
   fbl::AutoLock lock(&fifo_lock_);
 
   if (timestamps_.full()) {

@@ -14,6 +14,7 @@ driver_module("hid") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
+    "device-report-reader.cc",
     "hid-fifo.c",
     "hid-instance.cc",
     "hid.cc",
@@ -23,7 +24,11 @@ driver_module("hid") {
     "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/lib/driver",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/trace-driver",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
@@ -34,6 +39,7 @@ driver_module("hid") {
 test("hid-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
+    "device-report-reader.cc",
     "hid-fifo.c",
     "hid-instance.cc",
     "hid-test.cc",
@@ -44,7 +50,11 @@ test("hid-test") {
     "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ddk",

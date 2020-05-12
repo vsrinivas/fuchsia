@@ -726,4 +726,204 @@ TEST_F(HidDeviceTest, GetReportBufferOverrun) {
       ZX_ERR_INTERNAL);
 }
 
+TEST_F(HidDeviceTest, DeviceReportReaderSingleReport) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+
+  SetupInstanceDriver();
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader =
+        llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Send the reports.
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+
+  auto response = reader.ReadReports();
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  auto result = &response->result.response();
+  ASSERT_EQ(result->reports.count(), 1);
+  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  }
+}
+
+TEST_F(HidDeviceTest, DeviceReportReaderDoubleReport) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+  uint8_t mouse_report_two[] = {0xDE, 0xAD, 0xBE};
+
+  SetupInstanceDriver();
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader =
+        llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Send the reports.
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+  fake_hidbus_.SendReport(mouse_report_two, sizeof(mouse_report_two));
+
+  auto response = reader.ReadReports();
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  auto result = &response->result.response();
+  ASSERT_EQ(result->reports.count(), 2);
+  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  }
+  ASSERT_EQ(result->reports[1].data.count(), sizeof(mouse_report));
+  for (size_t i = 0; i < result->reports[1].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[1].data[i]);
+  }
+}
+
+TEST_F(HidDeviceTest, DeviceReportReaderTwoClients) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+
+  SetupInstanceDriver();
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient reader;
+  llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient reader_two;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader =
+        llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
+
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    result = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader_two =
+        llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Send the report.
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+
+  auto response = reader.ReadReports();
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  auto result = &response->result.response();
+  ASSERT_EQ(result->reports.count(), 1);
+  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  }
+
+  response = reader_two.ReadReports();
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  result = &response->result.response();
+  ASSERT_EQ(result->reports.count(), 1);
+  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  }
+}
+
+// Test that only whole reports get sent through.
+TEST_F(HidDeviceTest, DeviceReportReaderOneAndAHalfReports) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  SetupInstanceDriver();
+
+  llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader =
+        llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Send the report.
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+
+  // Send a half of a report.
+  uint8_t half_report[] = {0xDE, 0xAD};
+  fake_hidbus_.SendReport(half_report, sizeof(half_report));
+
+  auto response = reader.ReadReports();
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  auto result = &response->result.response();
+  ASSERT_EQ(result->reports.count(), 1);
+  ASSERT_EQ(sizeof(mouse_report), result->reports[0].data.count());
+  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  }
+}
+
+TEST_F(HidDeviceTest, DeviceReportReaderHangingGet) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+
+  SetupInstanceDriver();
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient reader;
+  {
+    zx::channel token_server, token_client;
+    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
+    auto result = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result.status());
+    reader =
+        llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
+  }
+
+  // Send the reports, but delayed.
+  std::thread report_thread([&]() {
+    sleep(1);
+    fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+  });
+
+  auto response = reader.ReadReports();
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  auto result = &response->result.response();
+  ASSERT_EQ(result->reports.count(), 1);
+  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  }
+
+  report_thread.join();
+}
+
 }  // namespace hid_driver
