@@ -26,6 +26,12 @@ if [[ -z "$FUCHSIA_DEVICE_ADDR" ]]; then
   exit 1
 fi
 
+if [[ "$FUCHSIA_DEVICE_ADDR" == "::1" ]]; then
+  # Device addr is localhost, assume that means that ports were forwarded with
+  # fx serve-remote from a remote workstation/laptop with a device attached.
+  export SL4F_HTTP_PORT=9080
+fi
+
 # For legacy code.
 export FUCHSIA_IPV4_ADDR="${FUCHSIA_DEVICE_ADDR}"
 
