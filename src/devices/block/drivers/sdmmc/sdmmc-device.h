@@ -5,7 +5,10 @@
 #ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_DEVICE_H_
 #define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_DEVICE_H_
 
+#include <array>
+
 #include <ddktl/protocol/sdmmc.h>
+#include <hw/sdmmc.h>
 
 namespace sdmmc {
 
@@ -38,7 +41,7 @@ class SdmmcDevice {
   zx_status_t SdSendOpCond(uint32_t flags, uint32_t* ocr);
   zx_status_t SdSendIfCond();
   zx_status_t SdSelectCard();
-  zx_status_t SdSendScr(uint8_t scr[8]);
+  zx_status_t SdSendScr(std::array<uint8_t, 8>& scr);
   zx_status_t SdSetBusWidth(sdmmc_bus_width_t width);
 
   // SD/SDIO shared ops
@@ -55,10 +58,10 @@ class SdmmcDevice {
 
   // MMC ops
   zx_status_t MmcSendOpCond(uint32_t ocr, uint32_t* rocr);
-  zx_status_t MmcAllSendCid(uint32_t cid[4]);
+  zx_status_t MmcAllSendCid(std::array<uint8_t, SDMMC_CID_SIZE>& cid);
   zx_status_t MmcSetRelativeAddr(uint16_t rca);
-  zx_status_t MmcSendCsd(uint32_t csd[4]);
-  zx_status_t MmcSendExtCsd(uint8_t ext_csd[512]);
+  zx_status_t MmcSendCsd(std::array<uint8_t, SDMMC_CSD_SIZE>& csd);
+  zx_status_t MmcSendExtCsd(std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd);
   zx_status_t MmcSelectCard();
   zx_status_t MmcSwitch(uint8_t index, uint8_t value);
 

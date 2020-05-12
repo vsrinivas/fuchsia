@@ -49,6 +49,7 @@ test("sdmmc-test") {
   sources = [
     "fake-sdmmc-device.cc",
     "mmc.cc",
+    "sd.cc",
     "sdio-controller-device-test.cc",
     "sdio-controller-device.cc",
     "sdio-function-device.cc",

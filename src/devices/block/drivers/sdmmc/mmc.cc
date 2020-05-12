@@ -33,7 +33,7 @@ constexpr uint32_t kSwitchStatusRetries = 3;
 
 namespace {
 
-zx_status_t DecodeCid(const uint8_t* raw_cid) {
+zx_status_t DecodeCid(const std::array<uint8_t, SDMMC_CID_SIZE>& raw_cid) {
   zxlogf(INFO, "mmc: product name=%c%c%c%c%c%c", raw_cid[MMC_CID_PRODUCT_NAME_START],
          raw_cid[MMC_CID_PRODUCT_NAME_START + 1], raw_cid[MMC_CID_PRODUCT_NAME_START + 2],
          raw_cid[MMC_CID_PRODUCT_NAME_START + 3], raw_cid[MMC_CID_PRODUCT_NAME_START + 4],
@@ -46,7 +46,7 @@ zx_status_t DecodeCid(const uint8_t* raw_cid) {
   return ZX_OK;
 }
 
-zx_status_t DecodeCsd(const uint8_t* raw_csd) {
+zx_status_t DecodeCsd(const std::array<uint8_t, SDMMC_CSD_SIZE>& raw_csd) {
   uint8_t spec_vrsn = (raw_csd[MMC_CSD_SPEC_VERSION] >> 2) & 0xf;
   // Only support spec version > 4.0
   if (spec_vrsn < MMC_CID_SPEC_VRSN_40) {
@@ -57,7 +57,7 @@ zx_status_t DecodeCsd(const uint8_t* raw_csd) {
          spec_vrsn);
   if (zxlog_level_enabled(SPEW)) {
     zxlogf(SPEW, "CSD:");
-    hexdump8_ex(raw_csd, 16, 0);
+    hexdump8_ex(raw_csd.data(), SDMMC_CSD_SIZE, 0);
   }
 
   // Only support high capacity (> 2GB) cards
@@ -198,12 +198,12 @@ zx_status_t SdmmcBlockDevice::MmcSwitchFreq(uint32_t new_freq) {
   return ZX_OK;
 }
 
-zx_status_t SdmmcBlockDevice::MmcDecodeExtCsd(const uint8_t* raw_ext_csd) {
-  zxlogf(SPEW, "mmc: EXT_CSD version %u CSD version %u", raw_ext_csd[192], raw_ext_csd[194]);
+zx_status_t SdmmcBlockDevice::MmcDecodeExtCsd() {
+  zxlogf(SPEW, "mmc: EXT_CSD version %u CSD version %u", raw_ext_csd_[192], raw_ext_csd_[194]);
 
   // Get the capacity for the card
-  uint32_t sectors = (raw_ext_csd[212] << 0) | (raw_ext_csd[213] << 8) | (raw_ext_csd[214] << 16) |
-                     (raw_ext_csd[215] << 24);
+  uint32_t sectors = (raw_ext_csd_[212] << 0) | (raw_ext_csd_[213] << 8) |
+                     (raw_ext_csd_[214] << 16) | (raw_ext_csd_[215] << 24);
   block_info_.block_count = sectors * kMmcSectorSize / kMmcBlockSize;
   block_info_.block_size = kMmcBlockSize;
 
@@ -261,7 +261,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
   zxlogf(SPEW, "mmc: MMC_ALL_SEND_CID cid 0x%08x 0x%08x 0x%08x 0x%08x", raw_cid_[0], raw_cid_[1],
          raw_cid_[2], raw_cid_[3]);
 
-  DecodeCid(reinterpret_cast<const uint8_t*>(raw_cid_));
+  DecodeCid(raw_cid_);
 
   // Set relative card address
   if ((st = sdmmc_.MmcSetRelativeAddr(1)) != ZX_OK) {
@@ -275,7 +275,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
     return st;
   }
 
-  if ((st = DecodeCsd((const uint8_t*)raw_csd_)) != ZX_OK) {
+  if ((st = DecodeCsd(raw_csd_)) != ZX_OK) {
     return st;
   }
 
@@ -291,7 +291,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
     return st;
   }
 
-  if ((st = MmcDecodeExtCsd((const uint8_t*)raw_ext_csd_)) != ZX_OK) {
+  if ((st = MmcDecodeExtCsd()) != ZX_OK) {
     return st;
   }
   bus_width_ = SDMMC_BUS_WIDTH_ONE;

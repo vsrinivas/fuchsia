@@ -131,7 +131,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
 
   // For now we only support SDHC cards. These cards must have a CSD type = 1,
   // since CSD type 0 is unable to support SDHC sized cards.
-  uint8_t csd_structure = static_cast<uint8_t>((raw_csd_[3] >> 30) & 0x3);
+  const auto csd_structure = static_cast<uint8_t>((raw_csd_[15] >> 6) & 0x3);
   if (csd_structure != kCsdStructV2) {
     zxlogf(ERROR,
            "sd: unsupported card type, expected CSD version = %d, "
@@ -140,7 +140,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
     return ZX_ERR_INTERNAL;
   }
 
-  const uint32_t c_size = ((raw_csd_[1] >> 16) | (raw_csd_[2] << 16)) & 0x3fffff;
+  const uint32_t c_size = (raw_csd_[6] | (raw_csd_[7] << 8) | (raw_csd_[8] << 16)) & 0x3f'ffff;
   block_info_.block_count = (c_size + 1ul) * 1024ul;
   block_info_.block_size = 512ul;
   zxlogf(INFO, "sd: found card with capacity = %" PRIu64 "B",
@@ -151,7 +151,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
     return st;
   }
 
-  uint8_t scr[8];
+  std::array<uint8_t, 8> scr;
   if ((st = sdmmc_.SdSendScr(scr)) != ZX_OK) {
     zxlogf(ERROR, "sd: SEND_SCR failed with retcode = %d", st);
     return st;

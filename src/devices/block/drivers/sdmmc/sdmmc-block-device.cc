@@ -13,7 +13,6 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <hw/sdmmc.h>
 
 namespace {
 

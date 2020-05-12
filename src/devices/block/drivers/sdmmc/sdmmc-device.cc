@@ -163,7 +163,7 @@ zx_status_t SdmmcDevice::SdSelectCard() {
   return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::SdSendScr(uint8_t scr[8]) {
+zx_status_t SdmmcDevice::SdSendScr(std::array<uint8_t, 8>& scr) {
   zx_status_t st = SdSendAppCmd();
   if (st != ZX_OK) {
     return st;
@@ -176,7 +176,7 @@ zx_status_t SdmmcDevice::SdSendScr(uint8_t scr[8]) {
   req.blockcount = 1;
   req.blocksize = 8;
   req.use_dma = false;
-  req.virt_buffer = scr;
+  req.virt_buffer = scr.data();
   req.virt_size = 8;
   req.buf_offset = 0;
   return host_.Request(&req);
@@ -389,18 +389,19 @@ zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {
   return st;
 }
 
-zx_status_t SdmmcDevice::MmcAllSendCid(uint32_t cid[4]) {
+zx_status_t SdmmcDevice::MmcAllSendCid(std::array<uint8_t, SDMMC_CID_SIZE>& cid) {
   sdmmc_req_t req = {};
   req.cmd_idx = SDMMC_ALL_SEND_CID;
   req.arg = 0;
   req.cmd_flags = SDMMC_ALL_SEND_CID_FLAGS;
   req.use_dma = UseDma();
   zx_status_t st = host_.Request(&req);
+  auto* const cid_u32 = reinterpret_cast<uint32_t*>(cid.data());
   if (st == ZX_OK) {
-    cid[0] = req.response[0];
-    cid[1] = req.response[1];
-    cid[2] = req.response[2];
-    cid[3] = req.response[3];
+    cid_u32[0] = req.response[0];
+    cid_u32[1] = req.response[1];
+    cid_u32[2] = req.response[2];
+    cid_u32[3] = req.response[3];
   }
   return st;
 }
@@ -415,23 +416,24 @@ zx_status_t SdmmcDevice::MmcSetRelativeAddr(uint16_t rca) {
   return host_.Request(&req);
 }
 
-zx_status_t SdmmcDevice::MmcSendCsd(uint32_t csd[4]) {
+zx_status_t SdmmcDevice::MmcSendCsd(std::array<uint8_t, SDMMC_CSD_SIZE>& csd) {
   sdmmc_req_t req = {};
   req.cmd_idx = SDMMC_SEND_CSD;
   req.arg = RcaArg();
   req.cmd_flags = SDMMC_SEND_CSD_FLAGS;
   req.use_dma = UseDma();
   zx_status_t st = host_.Request(&req);
+  auto* const csd_u32 = reinterpret_cast<uint32_t*>(csd.data());
   if (st == ZX_OK) {
-    csd[0] = req.response[0];
-    csd[1] = req.response[1];
-    csd[2] = req.response[2];
-    csd[3] = req.response[3];
+    csd_u32[0] = req.response[0];
+    csd_u32[1] = req.response[1];
+    csd_u32[2] = req.response[2];
+    csd_u32[3] = req.response[3];
   }
   return st;
 }
 
-zx_status_t SdmmcDevice::MmcSendExtCsd(uint8_t ext_csd[512]) {
+zx_status_t SdmmcDevice::MmcSendExtCsd(std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd) {
   // EXT_CSD is send in a data stage
   sdmmc_req_t req = {};
   req.cmd_idx = MMC_SEND_EXT_CSD;
@@ -439,13 +441,13 @@ zx_status_t SdmmcDevice::MmcSendExtCsd(uint8_t ext_csd[512]) {
   req.blockcount = 1;
   req.blocksize = 512;
   req.use_dma = false;
-  req.virt_buffer = ext_csd;
+  req.virt_buffer = ext_csd.data();
   req.virt_size = 512;
   req.cmd_flags = MMC_SEND_EXT_CSD_FLAGS;
   zx_status_t st = host_.Request(&req);
   if (st == ZX_OK && zxlog_level_enabled(SPEW)) {
     zxlogf(SPEW, "EXT_CSD:");
-    hexdump8_ex(ext_csd, 512, 0);
+    hexdump8_ex(ext_csd.data(), ext_csd.size(), 0);
   }
   return st;
 }

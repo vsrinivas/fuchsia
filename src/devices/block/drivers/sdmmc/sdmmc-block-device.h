@@ -19,6 +19,7 @@
 #include <ddktl/protocol/block/partition.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
+#include <hw/sdmmc.h>
 
 #include "sdmmc-device.h"
 
@@ -117,7 +118,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   sdmmc_bus_width_t MmcSelectBusWidth();
   zx_status_t MmcSwitchTiming(sdmmc_timing_t new_timing);
   zx_status_t MmcSwitchFreq(uint32_t new_freq);
-  zx_status_t MmcDecodeExtCsd(const uint8_t* raw_ext_csd);
+  zx_status_t MmcDecodeExtCsd();
   bool MmcSupportsHs();
   bool MmcSupportsHsDdr();
   bool MmcSupportsHs200();
@@ -131,9 +132,9 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   uint32_t clock_rate_;  // Bus clock rate
 
   // mmc
-  uint32_t raw_cid_[4];
-  uint32_t raw_csd_[4];
-  uint8_t raw_ext_csd_[512];
+  std::array<uint8_t, SDMMC_CID_SIZE> raw_cid_;
+  std::array<uint8_t, SDMMC_CSD_SIZE> raw_csd_;
+  std::array<uint8_t, MMC_EXT_CSD_SIZE> raw_ext_csd_;
 
   fbl::Mutex lock_;
   fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);

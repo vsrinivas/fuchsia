@@ -953,4 +953,37 @@ TEST_F(SdmmcBlockDeviceTest, ProbeUsesPrefsHsDdr) {
   EXPECT_EQ(sdmmc_.timing(), SDMMC_TIMING_HSDDR);
 }
 
+TEST_F(SdmmcBlockDeviceTest, ProbeSd) {
+  sdmmc_.set_command_callback(SD_SEND_IF_COND,
+                              [](sdmmc_req_t* req) { req->response[0] = req->arg & 0xfff; });
+
+  sdmmc_.set_command_callback(SD_APP_SEND_OP_COND, [](sdmmc_req_t* req) {
+    req->response[0] = 0xc000'0000;  // Set busy and CCS bits.
+  });
+
+  sdmmc_.set_command_callback(SD_SEND_RELATIVE_ADDR, [](sdmmc_req_t* req) {
+    req->response[0] = 0x100;  // Set READY_FOR_DATA bit in SD status.
+  });
+
+  sdmmc_.set_command_callback(SDMMC_SEND_CSD, [](sdmmc_req_t* req) {
+    req->response[1] = 0x1234'0000;
+    req->response[2] = 0x0000'5678;
+    req->response[3] = 0x4000'0000;  // Set CSD_STRUCTURE to indicate SDHC/SDXC.
+  });
+
+  EXPECT_OK(dut_.ProbeSd());
+
+  EXPECT_OK(dut_.AddDevice());
+
+  ddk::BlockImplProtocolClient user = GetBlockClient(USER_DATA_PARTITION);
+  ASSERT_TRUE(user.is_valid());
+
+  size_t block_op_size;
+  block_info_t info;
+  user.Query(&info, &block_op_size);
+
+  EXPECT_EQ(info.block_size, 512);
+  EXPECT_EQ(info.block_count, 0x38'1235 * 1024ul);
+}
+
 }  // namespace sdmmc
