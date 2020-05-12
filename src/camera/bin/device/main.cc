@@ -15,7 +15,7 @@
 #include "src/camera/bin/device/device_impl.h"
 
 int main(int argc, char* argv[]) {
-  syslog::SetTags({"camera", "camera_device"});
+  syslog::SetLogSettings({.min_log_level = CAMERA_MIN_LOG_LEVEL}, {"camera", "camera_device"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
