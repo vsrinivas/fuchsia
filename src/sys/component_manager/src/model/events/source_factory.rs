@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         model::{
             error::ModelError,
             events::{event::SyncMode, registry::EventRegistry, source::EventSource},
@@ -95,13 +95,13 @@ impl EventSourceFactory {
     /// corresponds to the realm in which it will receive events.
     async fn on_scoped_framework_capability_routed_async(
         self: Arc<Self>,
-        capability_decl: &FrameworkCapability,
+        capability_decl: &InternalCapability,
         target_moniker: AbsoluteMoniker,
         _scope_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
-            (None, FrameworkCapability::Protocol(source_path))
+            (None, InternalCapability::Protocol(source_path))
                 if *source_path == *EVENT_SOURCE_SERVICE_PATH
                     || *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
             {
@@ -164,8 +164,7 @@ impl Hook for EventSourceFactory {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source:
-                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+                source: CapabilitySource::Framework { capability, scope_moniker },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;

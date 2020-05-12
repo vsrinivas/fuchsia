@@ -17,10 +17,10 @@ use {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Invalid scoped framework capability.")]
-    InvalidScopedFrameworkCapability {},
     #[error("Invalid framework capability.")]
     InvalidFrameworkCapability {},
+    #[error("Invalid builtin capability.")]
+    InvalidBuiltinCapability {},
 }
 
 /// Describes the source of a capability, as determined by `find_capability_source`
@@ -29,9 +29,12 @@ pub enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
     Component { capability: ComponentCapability, realm: WeakRealm },
-    /// This capability originates from component manager itself and is optionally
-    /// scoped to a component's realm.
-    Framework { capability: FrameworkCapability, scope_moniker: Option<AbsoluteMoniker> },
+    /// This capability originates from "framework". It's implemented by component manager and is
+    /// scoped to the realm of the source.
+    Framework { capability: InternalCapability, scope_moniker: AbsoluteMoniker },
+    /// This capability originates from the containing realm of the root component. That means it's
+    /// built in to component manager or originates from component manager's namespace.
+    AboveRoot { capability: InternalCapability },
 }
 
 impl CapabilitySource {
@@ -39,6 +42,15 @@ impl CapabilitySource {
         match self {
             CapabilitySource::Component { capability, .. } => capability.source_path(),
             CapabilitySource::Framework { capability, .. } => capability.path(),
+            CapabilitySource::AboveRoot { capability } => capability.path(),
+        }
+    }
+
+    pub fn id(&self) -> String {
+        match self {
+            CapabilitySource::Component { capability, .. } => capability.source_id(),
+            CapabilitySource::Framework { capability, .. } => capability.id(),
+            CapabilitySource::AboveRoot { capability } => capability.id(),
         }
     }
 
@@ -48,6 +60,9 @@ impl CapabilitySource {
                 capability.source_name().map(|name| name.to_string())
             }
             CapabilitySource::Framework { capability, .. } => {
+                capability.name().map(|name| name.to_string())
+            }
+            CapabilitySource::AboveRoot { capability } => {
                 capability.name().map(|name| name.to_string())
             }
         }
@@ -64,17 +79,17 @@ impl fmt::Display for CapabilitySource {
                     format!("{} '{}'", capability, realm.moniker)
                 }
                 CapabilitySource::Framework { capability, .. } => capability.to_string(),
+                CapabilitySource::AboveRoot { capability } => capability.to_string(),
             }
         )
     }
 }
 
-/// Describes a capability provided by the component manager which could either be
-/// scoped to the realm, or global. Each capability type has a corresponding
-/// `CapabilityPath` in the component manager's namespace. Note that this path may
-/// not be unique as capabilities can compose.
-#[derive(Debug, Clone)]
-pub enum FrameworkCapability {
+/// Describes a capability provided by the component manager which could be a framework capability
+/// scoped to a realm, a built-in global capability, or a capability from component manager's own
+/// namespace.
+#[derive(Clone, Debug)]
+pub enum InternalCapability {
     Service(CapabilityPath),
     Protocol(CapabilityPath),
     Directory(CapabilityPath),
@@ -82,39 +97,38 @@ pub enum FrameworkCapability {
     Event(CapabilityName),
 }
 
-impl FrameworkCapability {
+impl InternalCapability {
     /// Returns a name for the capability type.
     pub fn type_name(&self) -> &'static str {
         match self {
-            FrameworkCapability::Service(_) => "service",
-            FrameworkCapability::Protocol(_) => "protocol",
-            FrameworkCapability::Directory(_) => "directory",
-            FrameworkCapability::Runner(_) => "runner",
-            FrameworkCapability::Event(_) => "event",
+            InternalCapability::Service(_) => "service",
+            InternalCapability::Protocol(_) => "protocol",
+            InternalCapability::Directory(_) => "directory",
+            InternalCapability::Runner(_) => "runner",
+            InternalCapability::Event(_) => "event",
         }
     }
 
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
-            FrameworkCapability::Service(source_path) => Some(&source_path),
-            FrameworkCapability::Protocol(source_path) => Some(&source_path),
-            FrameworkCapability::Directory(source_path) => Some(&source_path),
-            FrameworkCapability::Runner(_) | FrameworkCapability::Event(_) => None,
+            InternalCapability::Service(source_path) => Some(&source_path),
+            InternalCapability::Protocol(source_path) => Some(&source_path),
+            InternalCapability::Directory(source_path) => Some(&source_path),
+            InternalCapability::Runner(_) | InternalCapability::Event(_) => None,
         }
     }
 
     pub fn name(&self) -> Option<&CapabilityName> {
         match self {
-            FrameworkCapability::Runner(name) => Some(&name),
-            FrameworkCapability::Event(name) => Some(&name),
-            FrameworkCapability::Service(_)
-            | FrameworkCapability::Protocol(_)
-            | FrameworkCapability::Directory(_) => None,
+            InternalCapability::Runner(name) => Some(&name),
+            InternalCapability::Event(name) => Some(&name),
+            InternalCapability::Service(_)
+            | InternalCapability::Protocol(_)
+            | InternalCapability::Directory(_) => None,
         }
     }
 
-    /// Returns the source path or name of the capability as a string, useful for debugging.
-    pub fn source_id(&self) -> String {
+    pub fn id(&self) -> String {
         self.path()
             .map(|p| format!("{}", p))
             .or_else(|| self.name().map(|n| format!("{}", n)))
@@ -124,35 +138,63 @@ impl FrameworkCapability {
     pub fn builtin_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
         match decl {
             UseDecl::Service(s) if s.source == UseSource::Realm => {
-                Ok(FrameworkCapability::Service(s.source_path.clone()))
+                Ok(InternalCapability::Service(s.source_path.clone()))
             }
             UseDecl::Protocol(s) if s.source == UseSource::Realm => {
-                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Realm => {
-                Ok(FrameworkCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             UseDecl::Event(e) if e.source == UseSource::Realm => {
-                Ok(FrameworkCapability::Event(e.source_name.clone()))
+                Ok(InternalCapability::Event(e.source_name.clone()))
             }
-            UseDecl::Runner(s) => Ok(FrameworkCapability::Runner(s.source_name.clone())),
-            _ => Err(Error::InvalidFrameworkCapability {}),
+            UseDecl::Runner(s) => Ok(InternalCapability::Runner(s.source_name.clone())),
+            _ => Err(Error::InvalidBuiltinCapability {}),
         }
     }
 
     pub fn builtin_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
             OfferDecl::Protocol(s) if s.source == OfferServiceSource::Realm => {
-                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Realm => {
-                Ok(FrameworkCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             OfferDecl::Runner(s) if s.source == OfferRunnerSource::Realm => {
-                Ok(FrameworkCapability::Runner(s.source_name.clone()))
+                Ok(InternalCapability::Runner(s.source_name.clone()))
             }
             OfferDecl::Event(e) if e.source == OfferEventSource::Realm => {
-                Ok(FrameworkCapability::Event(e.source_name.clone()))
+                Ok(InternalCapability::Event(e.source_name.clone()))
+            }
+            _ => {
+                return Err(Error::InvalidBuiltinCapability {});
+            }
+        }
+    }
+
+    pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
+        if decl.source == StorageDirectorySource::Realm {
+            Ok(InternalCapability::Directory(decl.source_path.clone()))
+        } else {
+            Err(Error::InvalidBuiltinCapability {})
+        }
+    }
+
+    pub fn framework_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
+        match decl {
+            UseDecl::Service(s) if s.source == UseSource::Framework => {
+                Ok(InternalCapability::Service(s.source_path.clone()))
+            }
+            UseDecl::Protocol(s) if s.source == UseSource::Framework => {
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
+            }
+            UseDecl::Directory(d) if d.source == UseSource::Framework => {
+                Ok(InternalCapability::Directory(d.source_path.clone()))
+            }
+            UseDecl::Event(e) if e.source == UseSource::Framework => {
+                Ok(InternalCapability::Event(e.source_name.clone()))
             }
             _ => {
                 return Err(Error::InvalidFrameworkCapability {});
@@ -160,47 +202,19 @@ impl FrameworkCapability {
         }
     }
 
-    pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
-        if decl.source == StorageDirectorySource::Realm {
-            Ok(FrameworkCapability::Directory(decl.source_path.clone()))
-        } else {
-            Err(Error::InvalidFrameworkCapability {})
-        }
-    }
-
-    pub fn framework_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
-        match decl {
-            UseDecl::Service(s) if s.source == UseSource::Framework => {
-                Ok(FrameworkCapability::Service(s.source_path.clone()))
-            }
-            UseDecl::Protocol(s) if s.source == UseSource::Framework => {
-                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
-            }
-            UseDecl::Directory(d) if d.source == UseSource::Framework => {
-                Ok(FrameworkCapability::Directory(d.source_path.clone()))
-            }
-            UseDecl::Event(e) if e.source == UseSource::Framework => {
-                Ok(FrameworkCapability::Event(e.source_name.clone()))
-            }
-            _ => {
-                return Err(Error::InvalidScopedFrameworkCapability {});
-            }
-        }
-    }
-
     pub fn framework_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
             OfferDecl::Protocol(s) if s.source == OfferServiceSource::Realm => {
-                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
-                Ok(FrameworkCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             OfferDecl::Event(e) if e.source == OfferEventSource::Framework => {
-                Ok(FrameworkCapability::Event(e.source_name.clone()))
+                Ok(InternalCapability::Event(e.source_name.clone()))
             }
             _ => {
-                return Err(Error::InvalidScopedFrameworkCapability {});
+                return Err(Error::InvalidFrameworkCapability {});
             }
         }
     }
@@ -208,21 +222,21 @@ impl FrameworkCapability {
     pub fn framework_from_expose_decl(decl: &ExposeDecl) -> Result<Self, Error> {
         match decl {
             ExposeDecl::Protocol(d) if d.source == ExposeSource::Framework => {
-                Ok(FrameworkCapability::Protocol(d.source_path.clone()))
+                Ok(InternalCapability::Protocol(d.source_path.clone()))
             }
             ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
-                Ok(FrameworkCapability::Directory(d.source_path.clone()))
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             _ => {
-                return Err(Error::InvalidScopedFrameworkCapability {});
+                return Err(Error::InvalidFrameworkCapability {});
             }
         }
     }
 }
 
-impl fmt::Display for FrameworkCapability {
+impl fmt::Display for InternalCapability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} '{}' from framework", self.type_name(), self.source_id())
+        write!(f, "{} '{}' from framework", self.type_name(), self.id())
     }
 }
 

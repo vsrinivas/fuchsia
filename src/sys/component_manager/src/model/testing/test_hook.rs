@@ -299,13 +299,13 @@ impl HubInjectionTestHook {
     pub async fn on_scoped_framework_capability_routed_async<'a>(
         &'a self,
         scope_moniker: AbsoluteMoniker,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         mut capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // This Hook is about injecting itself between the Hub and the Model.
         // If the Hub hasn't been installed, then there's nothing to do here.
         let mut relative_path = match (&capability_provider, capability) {
-            (Some(_), FrameworkCapability::Directory(source_path)) => source_path.split(),
+            (Some(_), InternalCapability::Directory(source_path)) => source_path.split(),
             _ => return Ok(capability_provider),
         };
 
@@ -325,7 +325,7 @@ impl HubInjectionTestHook {
 impl Hook for HubInjectionTestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+            source: CapabilitySource::Framework { capability, scope_moniker },
             capability_provider,
         }) = &event.result
         {

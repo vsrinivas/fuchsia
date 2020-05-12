@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
@@ -99,11 +99,11 @@ impl ProcessLauncher {
 
     async fn on_framework_capability_routed_async<'a>(
         self: Arc<Self>,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            FrameworkCapability::Protocol(capability_path)
+            InternalCapability::Protocol(capability_path)
                 if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
@@ -269,7 +269,7 @@ impl ProcessLauncher {
 impl Hook for ProcessLauncher {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            source: CapabilitySource::AboveRoot { capability },
             capability_provider,
         }) = &event.result
         {
@@ -372,9 +372,8 @@ mod tests {
         hooks.install(process_launcher.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::Protocol(PROCESS_LAUNCHER_CAPABILITY_PATH.clone()),
-            scope_moniker: None,
+        let source = CapabilitySource::AboveRoot {
+            capability: InternalCapability::Protocol(PROCESS_LAUNCHER_CAPABILITY_PATH.clone()),
         };
 
         let (client, mut server) = zx::Channel::create()?;

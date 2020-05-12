@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
@@ -47,14 +47,14 @@ impl BuiltinRunner {
 impl Hook for BuiltinRunner {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            source: CapabilitySource::AboveRoot { capability },
             capability_provider,
         }) = &event.result
         {
             // If we are being asked about the runner capability we own, pass a
             // copy back to the caller.
             let mut capability_provider = capability_provider.lock().await;
-            if let FrameworkCapability::Runner(runner_name) = capability {
+            if let InternalCapability::Runner(runner_name) = capability {
                 if self.name == *runner_name {
                     *capability_provider =
                         Some(Box::new(RunnerCapabilityProvider::new(self.runner.clone())));
@@ -151,9 +151,8 @@ mod tests {
             .dispatch(&Event::new(
                 AbsoluteMoniker::root(),
                 Ok(EventPayload::CapabilityRouted {
-                    source: CapabilitySource::Framework {
-                        capability: FrameworkCapability::Runner("elf".into()),
-                        scope_moniker: None,
+                    source: CapabilitySource::AboveRoot {
+                        capability: InternalCapability::Runner("elf".into()),
                     },
                     capability_provider: provider_result.clone(),
                 }),

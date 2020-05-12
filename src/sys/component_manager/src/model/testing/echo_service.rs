@@ -72,11 +72,11 @@ impl EchoService {
 
     async fn on_framework_capability_routed_async<'a>(
         self: Arc<Self>,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            FrameworkCapability::Protocol(capability_path)
+            InternalCapability::Protocol(capability_path)
                 if *capability_path == *ECHO_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(EchoCapabilityProvider::new()) as Box<dyn CapabilityProvider>))
@@ -90,7 +90,7 @@ impl EchoService {
 impl Hook for EchoService {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            source: CapabilitySource::AboveRoot { capability },
             capability_provider,
         }) = &event.result
         {

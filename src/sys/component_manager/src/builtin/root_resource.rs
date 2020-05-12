@@ -54,11 +54,11 @@ impl BuiltinCapability for RootResource {
 
     async fn on_framework_capability_routed<'a>(
         self: &'a Arc<Self>,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            FrameworkCapability::Protocol(capability_path)
+            InternalCapability::Protocol(capability_path)
                 if *capability_path == *ROOT_RESOURCE_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(BuiltinCapabilityProvider::<RootResource>::new(Arc::downgrade(
@@ -74,7 +74,7 @@ impl BuiltinCapability for RootResource {
 impl Hook for RootResource {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            source: CapabilitySource::AboveRoot { capability },
             capability_provider,
         }) = &event.result
         {
@@ -103,9 +103,8 @@ mod tests {
         hooks.install(root_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::Protocol(ROOT_RESOURCE_CAPABILITY_PATH.clone()),
-            scope_moniker: None,
+        let source = CapabilitySource::AboveRoot {
+            capability: InternalCapability::Protocol(ROOT_RESOURCE_CAPABILITY_PATH.clone()),
         };
 
         let event = Event::new(

@@ -53,7 +53,7 @@ pub trait BuiltinCapability {
     /// Returns a `CapabilityProvider` for a given framework capability.
     async fn on_framework_capability_routed<'a>(
         self: &'a Arc<Self>,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError>;
 }

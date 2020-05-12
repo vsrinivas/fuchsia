@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource},
         channel,
         model::{
             error::ModelError,
@@ -149,35 +149,26 @@ fn maybe_create_capability_routed_payload(
 ) -> Option<fsys::EventResult> {
     let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
 
-    // Runners are special. They do not have a path, so their name is the capability ID.
-    let capability_id = Some(
-        if let CapabilitySource::Framework {
-            capability: FrameworkCapability::Runner(name), ..
-        } = &source
-        {
-            name.to_string()
-        } else if let Some(path) = source.path() {
-            path.to_string()
-        } else {
-            return None;
-        },
-    );
-
+    let capability_id = Some(source.id());
     let source = Some(match source {
-        CapabilitySource::Framework { scope_moniker, .. } => {
-            let scope_moniker =
-                scope_moniker.as_ref().map(|a| RelativeMoniker::from_absolute(scope, &a));
-            fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
-                scope_moniker: scope_moniker.as_ref().map(|m| m.to_string()),
-                ..fsys::FrameworkCapability::empty()
-            })
-        }
         CapabilitySource::Component { realm, .. } => {
             let realm = realm.upgrade().ok()?;
             let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
             fsys::CapabilitySource::Component(fsys::ComponentCapability {
                 source_moniker: Some(source_moniker.to_string()),
                 ..fsys::ComponentCapability::empty()
+            })
+        }
+        CapabilitySource::Framework { scope_moniker, .. } => {
+            let scope_moniker = RelativeMoniker::from_absolute(scope, &scope_moniker);
+            fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
+                scope_moniker: Some(scope_moniker.to_string()),
+                ..fsys::FrameworkCapability::empty()
+            })
+        }
+        CapabilitySource::AboveRoot { .. } => {
+            fsys::CapabilitySource::AboveRoot(fsys::AboveRootCapability {
+                ..fsys::AboveRootCapability::empty()
             })
         }
     });

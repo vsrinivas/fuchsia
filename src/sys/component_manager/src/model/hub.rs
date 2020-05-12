@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             addable_directory::AddableDirectoryWithResult,
@@ -489,8 +489,8 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_capability_routed_async");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
-            capability: FrameworkCapability::Directory(source_path),
-            scope_moniker: Some(scope_moniker),
+            capability: InternalCapability::Directory(source_path),
+            scope_moniker,
         } = source
         {
             let mut relative_path = source_path.split();

@@ -730,7 +730,7 @@ mod connect_tests {
     use {
         super::{WorkScheduler, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH},
         crate::{
-            capability::{CapabilitySource, FrameworkCapability},
+            capability::{CapabilitySource, InternalCapability},
             model::{
                 hooks::{Event, EventPayload, Hooks},
                 moniker::AbsoluteMoniker,
@@ -755,11 +755,10 @@ mod connect_tests {
         hooks.install(work_scheduler.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::Protocol(
+        let source = CapabilitySource::AboveRoot {
+            capability: InternalCapability::Protocol(
                 WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
             ),
-            scope_moniker: None,
         };
 
         let (client, mut server) = zx::Channel::create()?;

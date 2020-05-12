@@ -8,7 +8,7 @@ pub use error::RoutingError;
 use {
     crate::{
         capability::{
-            CapabilityProvider, CapabilitySource, ComponentCapability, FrameworkCapability,
+            CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
         },
         channel,
         model::{
@@ -179,10 +179,6 @@ fn get_default_provider(
     source: &CapabilitySource,
 ) -> Option<Box<dyn CapabilityProvider>> {
     match source {
-        CapabilitySource::Framework { .. } => {
-            // There is no default provider for a Framework capability
-            None
-        }
         CapabilitySource::Component { capability, realm } => {
             // Route normally for a component capability with a source path
             if let Some(path) = capability.source_path() {
@@ -194,6 +190,10 @@ fn get_default_provider(
             } else {
                 None
             }
+        }
+        CapabilitySource::Framework { .. } | CapabilitySource::AboveRoot { .. } => {
+            // There is no default provider for a framework or builtin capability
+            None
         }
     }
 }
@@ -219,7 +219,7 @@ pub async fn open_capability_at_source(
 
     // This hack changes the flags for a scoped framework service
     let mut flags = flags;
-    if let CapabilitySource::Framework { scope_moniker: Some(_), .. } = source {
+    if let CapabilitySource::Framework { .. } = source {
         flags = SERVICE_OPEN_FLAGS;
     }
 
@@ -237,20 +237,6 @@ pub async fn open_capability_at_source(
         // in component manager's namespace. We could have modeled this as a default provider,
         // but several hooks (such as WorkScheduler) require that a provider is not set.
         let path = match &source {
-            CapabilitySource::Framework { capability, scope_moniker: None } => {
-                capability.path().ok_or_else(|| {
-                    ModelError::from(RoutingError::capability_from_component_manager_not_found(
-                        capability.source_id(),
-                    ))
-                })?
-            }
-            CapabilitySource::Framework { capability, scope_moniker: Some(m) } => {
-                return Err(RoutingError::capability_from_framework_not_found(
-                    &m,
-                    capability.source_id(),
-                )
-                .into());
-            }
             CapabilitySource::Component { .. } => {
                 unreachable!(
                     "Capability source is a component, which should have been caught by \
@@ -258,6 +244,16 @@ pub async fn open_capability_at_source(
                     source
                 );
             }
+            CapabilitySource::Framework { capability, scope_moniker: m } => {
+                return Err(
+                    RoutingError::capability_from_framework_not_found(&m, capability.id()).into()
+                );
+            }
+            CapabilitySource::AboveRoot { capability } => capability.path().ok_or_else(|| {
+                ModelError::from(RoutingError::capability_from_component_manager_not_found(
+                    capability.id(),
+                ))
+            })?,
         };
         let path = path.to_path_buf().attach(relative_path);
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
@@ -372,15 +368,15 @@ async fn route_storage_capability<'a>(
                 CapabilitySource::Component { capability, realm } => {
                     (capability.source_path().unwrap().clone(), Some(realm.upgrade()?), cap_state)
                 }
-                CapabilitySource::Framework { capability, scope_moniker: None } => {
-                    (capability.path().unwrap().clone(), None, cap_state)
-                }
-                CapabilitySource::Framework { scope_moniker: Some(_), .. } => {
+                CapabilitySource::Framework { .. } => {
                     return Err(RoutingError::storage_directory_source_is_not_component(
                         "framework",
                         &source_realm.abs_moniker,
                     )
                     .into());
+                }
+                CapabilitySource::AboveRoot { capability } => {
+                    (capability.path().unwrap().clone(), None, cap_state)
                 }
             }
         }
@@ -409,7 +405,7 @@ async fn route_storage_capability<'a>(
                     Some(realm.upgrade()?),
                     pos.cap_state,
                 ),
-                CapabilitySource::Framework { .. } => {
+                CapabilitySource::Framework { .. } | CapabilitySource::AboveRoot { .. } => {
                     return Err(RoutingError::storage_directory_source_is_not_component(
                         "framework",
                         &source_realm.abs_moniker,
@@ -427,10 +423,10 @@ async fn find_scoped_framework_capability_source<'a>(
     use_decl: &'a UseDecl,
     target_realm: &'a Arc<Realm>,
 ) -> Result<Option<CapabilitySource>, ModelError> {
-    if let Ok(capability) = FrameworkCapability::framework_from_use_decl(use_decl) {
+    if let Ok(capability) = InternalCapability::framework_from_use_decl(use_decl) {
         return Ok(Some(CapabilitySource::Framework {
             capability,
-            scope_moniker: Some(target_realm.abs_moniker.clone()),
+            scope_moniker: target_realm.abs_moniker.clone(),
         }));
     }
     return Ok(None);
@@ -603,7 +599,7 @@ pub async fn find_exposed_root_directory_capability(
                     return Ok((source_path, realm.upgrade()?));
                 }
                 CapabilitySource::Framework {
-                    capability: FrameworkCapability::Directory(_),
+                    capability: InternalCapability::Directory(_),
                     ..
                 } => {
                     return Err(ModelError::unsupported(
@@ -656,21 +652,21 @@ async fn walk_offer_chain<'a>(
             // manager's realm.
             let capability = match &pos.capability {
                 ComponentCapability::Use(use_decl) => {
-                    FrameworkCapability::builtin_from_use_decl(use_decl).map_err(|_| {
+                    InternalCapability::builtin_from_use_decl(use_decl).map_err(|_| {
                         ModelError::from(RoutingError::use_from_component_manager_not_found(
                             pos.capability.source_id(),
                         ))
                     })
                 }
                 ComponentCapability::Offer(offer_decl) => {
-                    FrameworkCapability::builtin_from_offer_decl(offer_decl).map_err(|_| {
+                    InternalCapability::builtin_from_offer_decl(offer_decl).map_err(|_| {
                         ModelError::from(RoutingError::offer_from_component_manager_not_found(
                             pos.capability.source_id(),
                         ))
                     })
                 }
                 ComponentCapability::Storage(storage_decl) => {
-                    FrameworkCapability::builtin_from_storage_decl(storage_decl).map_err(|_| {
+                    InternalCapability::builtin_from_storage_decl(storage_decl).map_err(|_| {
                         ModelError::from(RoutingError::storage_from_component_manager_not_found(
                             pos.capability.source_id(),
                         ))
@@ -681,7 +677,7 @@ async fn walk_offer_chain<'a>(
                     pos.capability,
                 ))),
             }?;
-            return Ok(Some(CapabilitySource::Framework { capability, scope_moniker: None }));
+            return Ok(Some(CapabilitySource::AboveRoot { capability }));
         }
         let cur_realm = pos.realm().clone();
         let cur_realm_state = cur_realm.lock_resolved_state().await?;
@@ -744,11 +740,11 @@ async fn walk_offer_chain<'a>(
                     *rights_state = rights_state.finalize(Some(Rights::from(*READ_RIGHTS)))?;
                     CapabilityState::update_subdir(subdir, decl_subdir);
                 }
-                let capability = FrameworkCapability::framework_from_offer_decl(offer)
+                let capability = InternalCapability::framework_from_offer_decl(offer)
                     .expect("not a framework offer declaration");
                 return Ok(Some(CapabilitySource::Framework {
                     capability,
-                    scope_moniker: Some(pos.moniker().clone()),
+                    scope_moniker: pos.moniker().clone(),
                 }));
             }
             OfferSource::Event(OfferEventSource::Framework) => {
@@ -756,11 +752,11 @@ async fn walk_offer_chain<'a>(
                 if let CapabilityState::Event { filter_state } = &mut pos.cap_state {
                     *filter_state = filter_state.finalize(Some(event_filter))?;
                 }
-                let capability = FrameworkCapability::framework_from_offer_decl(offer)
+                let capability = InternalCapability::framework_from_offer_decl(offer)
                     .expect("not a framework offer declaration");
                 return Ok(Some(CapabilitySource::Framework {
                     capability,
-                    scope_moniker: Some(pos.moniker().clone()),
+                    scope_moniker: pos.moniker().clone(),
                 }));
             }
             OfferSource::Protocol(OfferServiceSource::Realm)
@@ -1028,7 +1024,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             }
             CapabilityExposeSource::Protocol(ExposeSource::Framework) => {
                 let capability =
-                    FrameworkCapability::framework_from_expose_decl(expose).map_err(|_| {
+                    InternalCapability::framework_from_expose_decl(expose).map_err(|_| {
                         ModelError::from(RoutingError::expose_from_framework_not_found(
                             pos.moniker(),
                             pos.capability.source_id(),
@@ -1036,7 +1032,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     })?;
                 return Ok(CapabilitySource::Framework {
                     capability,
-                    scope_moniker: Some(pos.moniker().clone()),
+                    scope_moniker: pos.moniker().clone(),
                 });
             }
             CapabilityExposeSource::Directory(ExposeSource::Framework) => {
@@ -1047,7 +1043,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     CapabilityState::update_subdir(subdir, decl_subdir);
                 }
                 let capability =
-                    FrameworkCapability::framework_from_expose_decl(expose).map_err(|_| {
+                    InternalCapability::framework_from_expose_decl(expose).map_err(|_| {
                         ModelError::from(RoutingError::expose_from_framework_not_found(
                             pos.moniker(),
                             pos.capability.source_id(),
@@ -1055,7 +1051,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     })?;
                 return Ok(CapabilitySource::Framework {
                     capability,
-                    scope_moniker: Some(pos.moniker().clone()),
+                    scope_moniker: pos.moniker().clone(),
                 });
             }
             CapabilityExposeSource::Runner(ExposeSource::Framework) => {

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
@@ -230,8 +230,8 @@ impl EventSource {
         routing::route_use_event_capability(&UseDecl::Event(event_decl.clone()), &realm).await.map(
             |source| match source {
                 CapabilitySource::Framework {
-                    capability: FrameworkCapability::Event(source_name),
-                    scope_moniker: Some(scope_moniker),
+                    capability: InternalCapability::Event(source_name),
+                    scope_moniker,
                 } => (source_name, scope_moniker),
                 _ => unreachable!(),
             },

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
@@ -291,13 +291,13 @@ impl RealmCapabilityHost {
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         scope_moniker: AbsoluteMoniker,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
         // do here.
         match (&capability_provider, capability) {
-            (None, FrameworkCapability::Protocol(capability_path))
+            (None, InternalCapability::Protocol(capability_path))
                 if *capability_path == *REALM_SERVICE =>
             {
                 return Ok(Some(
@@ -314,7 +314,7 @@ impl RealmCapabilityHost {
 impl Hook for RealmCapabilityHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+            source: CapabilitySource::Framework { capability, scope_moniker },
             capability_provider,
         }) = &event.result
         {

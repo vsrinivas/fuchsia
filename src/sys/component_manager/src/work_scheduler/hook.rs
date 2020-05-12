@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
             error::ModelError,
@@ -45,11 +45,11 @@ impl WorkScheduler {
     /// capability.
     async fn on_framework_capability_routed_async<'a>(
         self: Arc<Self>,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, FrameworkCapability::Protocol(capability_path))
+            (None, InternalCapability::Protocol(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(self.clone()))
@@ -64,11 +64,11 @@ impl WorkScheduler {
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         scope_moniker: AbsoluteMoniker,
-        capability: &'a FrameworkCapability,
+        capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, FrameworkCapability::Protocol(capability_path))
+            (None, InternalCapability::Protocol(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
             {
                 // Only clients that expose the Worker protocol to the framework can
@@ -96,7 +96,7 @@ impl Hook for WorkScheduler {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
+                source: CapabilitySource::AboveRoot { capability },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;
@@ -105,8 +105,7 @@ impl Hook for WorkScheduler {
                     .await?;
             }
             Ok(EventPayload::CapabilityRouted {
-                source:
-                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+                source: CapabilitySource::Framework { capability, scope_moniker },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;

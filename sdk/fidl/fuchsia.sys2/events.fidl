@@ -64,15 +64,18 @@ enum EventType {
 
 /// Describes the source of a routed capability.
 flexible union CapabilitySource {
-    /// The capability is provided by the framework and may be
-    /// scoped down to a component.
-    1: FrameworkCapability framework;
-
     /// The capability is provided by another component.
-    2: ComponentCapability component;
+    1: ComponentCapability component;
+
+    /// The capability is provided by the framework and is scoped to a
+    /// realm.
+    2: FrameworkCapability framework;
+
+    /// The capability is provided by realm above the root, which is component manager itself.
+    3: AboveRootCapability above_root;
 };
 
-/// Describes a capability provided by the framework
+/// Describes a capability provided by the framework, scoped to a realm.
 table FrameworkCapability {
     /// The moniker of the instance that this capability is scoped to.
     1: string:fuchsia.component.MAX_MONIKER_LENGTH scope_moniker;
@@ -82,6 +85,11 @@ table FrameworkCapability {
 table ComponentCapability {
     /// The moniker of the instance that is providing this capability.
     1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
+};
+
+/// Describes a capability provided by component manager at the realm above the
+/// root.
+table AboveRootCapability {
 };
 
 /// Describes the result of a state transition.
