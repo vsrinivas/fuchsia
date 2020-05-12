@@ -126,7 +126,7 @@ library some_lib;
 
 enum MessageIds : uint64 {
     // 'string'
-    string_name = 7134240810508078445;
+    STRING_NAME = 7134240810508078445;
 };
 "#,
             outcome
