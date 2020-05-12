@@ -79,9 +79,8 @@ MemoryAllocationResult AllocateExportableMemoryDedicatedToImageIfRequired(
     // We use the passed size argument in the memory allocation info. For memory
     // type, we use 0xFFFFFFFF to represent *any* possible memory type supported
     // by device as long as they support the given |flags|.
-    vk::MemoryRequirements requirements = {.size = static_cast<vk::DeviceSize>(requested_size),
-                                           .alignment = vk::DeviceSize{},
-                                           .memoryTypeBits = 0xFFFFFFFF};
+    vk::MemoryRequirements requirements{
+        .size = requested_size, .alignment = vk::DeviceSize{}, .memoryTypeBits = 0xFFFFFFFF};
     vk::DeviceMemory result =
         AllocateExportableMemory(device, physical_device, requirements, flags);
     return MemoryAllocationResult{result, requested_size, false};
