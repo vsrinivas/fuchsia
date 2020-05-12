@@ -60,6 +60,7 @@ source_set("source") {
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.ge2d",
     "//sdk/banjo/ddk.protocol.isp",
+    "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.buttons",
     "//sdk/fidl/fuchsia.camera2",
