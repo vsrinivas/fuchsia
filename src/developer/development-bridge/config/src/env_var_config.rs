@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::config::api::ReadConfig, serde_json::Value, std::collections::HashMap};
+use {crate::api::ReadConfig, serde_json::Value, std::collections::HashMap};
 
 pub(crate) struct EnvironmentVariable<'a> {
     environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,

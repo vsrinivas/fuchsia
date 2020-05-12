@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::MAX_RETRY_COUNT,
     anyhow::{Context, Error},
+    ffx_core::constants::MAX_RETRY_COUNT,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
 };
-
-mod constants;
 
 pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy, Error> {
     let svc = hoist::connect_as_service_consumer()?;

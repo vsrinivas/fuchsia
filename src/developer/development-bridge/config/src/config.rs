@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::Ffx,
-    crate::config::api::{ConfigLevel, PersistentConfig, ReadConfig, WriteConfig},
-    crate::config::env_var_config::EnvironmentVariable,
-    crate::config::environment::Environment,
-    crate::config::file_backed_config::FileBacked,
-    crate::config::heuristic_config::{Heuristic, HeuristicFn},
-    crate::config::runtime_config::Runtime,
+    crate::api::{PersistentConfig, ReadConfig, WriteConfig},
+    crate::env_var_config::EnvironmentVariable,
+    crate::environment::Environment,
+    crate::file_backed_config::FileBacked,
+    crate::heuristic_config::{Heuristic, HeuristicFn},
+    crate::runtime_config::Runtime,
     anyhow::Error,
+    ffx_args::Ffx,
+    ffx_core::ConfigLevel,
     serde_json::Value,
     std::collections::HashMap,
 };
@@ -165,7 +166,7 @@ impl<'a> WriteConfig for Config<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::args::{DaemonCommand, Subcommand};
+    use ffx_args::{DaemonCommand, Subcommand};
 
     fn test_heuristic(key: &str) -> Option<Value> {
         Some(Value::String(key.to_string()))

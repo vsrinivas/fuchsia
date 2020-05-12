@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::constants::SOCKET;
 use crate::ssh::build_ssh_command;
 use crate::target::{Target, TargetAddr};
+use ffx_core::constants::SOCKET;
 use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::process::{Child, Stdio};

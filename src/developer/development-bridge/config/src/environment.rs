@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::api::ConfigLevel,
     anyhow::{anyhow, Error},
+    ffx_core::ConfigLevel,
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,

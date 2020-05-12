@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::api::{ConfigLevel, ReadConfig, WriteConfig},
+    crate::api::{ReadConfig, WriteConfig},
     anyhow::{anyhow, Error},
     config_macros::include_default,
+    ffx_core::ConfigLevel,
     serde_json::Value,
 };
 

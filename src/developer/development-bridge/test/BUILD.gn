@@ -12,6 +12,8 @@ if (host_toolchain == current_toolchain) {
     with_unit_tests = true
 
     deps = [
+      ":args_lib",
+      "../args:lib",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
       "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
@@ -26,9 +28,27 @@ if (host_toolchain == current_toolchain) {
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
   }
+
+  rustc_library("args_lib") {
+    name = "ffx_test_args"
+    version = "0.1.0"
+    edition = "2018"
+    with_unit_tests = true
+
+    source_root = "./src/args.rs"
+
+    deps = [
+      "../core:lib",
+      "//third_party/rust_crates:argh",
+    ]
+    non_rust_deps = [ "//third_party/boringssl" ]
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":lib_test($host_toolchain)" ]
+  deps = [
+    ":args_lib($host_toolchain)",
+    ":lib_test($host_toolchain)",
+  ]
 }

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::TestCommand,
     anyhow::{anyhow, format_err, Context, Error},
+    ffx_test_args::TestCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_test::{CaseIteratorMarker, Invocation, SuiteProxy},
@@ -15,8 +15,6 @@ use {
         run_and_collect_results_for_invocations as run_tests_and_collect, TestEvent, TestResult,
     },
 };
-
-pub mod args;
 
 pub async fn test(remote_proxy: RemoteControlProxy, test: TestCommand) -> Result<(), Error> {
     let writer = Box::new(stdout());

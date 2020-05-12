@@ -3,30 +3,25 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::Ffx,
-    crate::config::config::Config,
-    crate::config::environment::Environment,
-    crate::config::heuristic_config::HeuristicFn,
-    crate::constants::CONFIG_CACHE_TIMEOUT,
+    crate::config::Config,
+    crate::environment::Environment,
+    crate::heuristic_config::HeuristicFn,
     anyhow::{anyhow, Error},
     async_std::sync::{Arc, RwLock},
+    ffx_args::Ffx,
+    ffx_core::constants::CONFIG_CACHE_TIMEOUT,
     std::collections::HashMap,
     std::time::Instant,
 };
 
 #[cfg(target_os = "linux")]
-use crate::config::linux::imp::{env_vars, heuristics};
+use crate::linux::imp::{env_vars, heuristics};
 
 #[cfg(not(target_os = "linux"))]
-use crate::config::not_linux::imp::{env_vars, heuristics};
+use crate::not_linux::imp::{env_vars, heuristics};
 
 #[cfg(not(test))]
-use crate::config::find_env_file;
-
-#[cfg(not(test))]
-fn try_to_get_cli() -> Ffx {
-    argh::from_env()
-}
+use crate::find_env_file;
 
 struct CacheItem<'a> {
     created: Instant,
@@ -59,14 +54,16 @@ async fn read_cache(
 
 pub(crate) async fn load_config(
     build_dir: &Option<String>,
+    ffx: Ffx,
 ) -> Result<Arc<RwLock<Config<'static>>>, Error> {
-    load_config_with_instant(build_dir, Instant::now(), &CACHE).await
+    load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx).await
 }
 
 async fn load_config_with_instant(
     build_dir: &Option<String>,
     now: Instant,
     cache: &Cache,
+    ffx: Ffx,
 ) -> Result<Arc<RwLock<Config<'static>>>, Error> {
     let cache_hit = read_cache(build_dir, now, cache).await;
     match cache_hit {
@@ -88,7 +85,7 @@ async fn load_config_with_instant(
                                 build_dir,
                                 &ENV_VARS,
                                 &HEURISTICS,
-                                try_to_get_cli(),
+                                ffx,
                             )?)),
                         },
                     );
@@ -104,14 +101,7 @@ async fn load_config_with_instant(
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 #[cfg(test)]
-use crate::args::{DaemonCommand, Subcommand};
-
-#[cfg(test)]
-fn try_to_get_cli() -> Ffx {
-    // Hack for tests - argh::from_env panics during unit tests.  The subcommand is not used in
-    // this code path.
-    Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) }
-}
+use ffx_args::{DaemonCommand, Subcommand};
 
 #[cfg(test)]
 fn find_env_file() -> Result<String, Error> {
@@ -125,11 +115,15 @@ mod test {
     use futures::future::join_all;
     use std::time::Duration;
 
+    fn cli() -> Ffx {
+        Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) }
+    }
+
     async fn load(now: Instant, key: &Option<String>, cache: &Cache) {
         let tests = 25;
         let mut futures = Vec::new();
         for _x in 0..tests {
-            futures.push(load_config_with_instant(key, now, cache));
+            futures.push(load_config_with_instant(key, now, cache, cli()));
         }
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
@@ -223,7 +217,7 @@ mod test {
                 &build_dirs[0],
                 &ENV_VARS,
                 &HEURISTICS,
-                try_to_get_cli(),
+                cli(),
             )?)),
         };
         assert!(!is_cache_item_expired(&item, now));

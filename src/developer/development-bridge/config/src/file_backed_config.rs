@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::api::{ConfigLevel, ReadConfig, WriteConfig},
-    crate::config::persistent_config::Persistent,
+    crate::api::{ReadConfig, WriteConfig},
+    crate::persistent_config::Persistent,
     anyhow::{anyhow, Error},
+    ffx_core::ConfigLevel,
     serde_json::Value,
     std::fs::{File, OpenOptions},
     std::io::{BufReader, BufWriter},

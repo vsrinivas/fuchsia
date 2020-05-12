@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::args::ConfigCommand, argh::FromArgs,
-    ffx_run_component::args::RunComponentCommand, ffx_test::args::TestCommand,
+    argh::FromArgs, ffx_config_args::ConfigCommand, ffx_run_component_args::RunComponentCommand,
+    ffx_test_args::TestCommand,
 };
 
 #[derive(FromArgs, Debug, PartialEq)]

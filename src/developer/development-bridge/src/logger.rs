@@ -1,6 +1,6 @@
 use {
-    crate::config::{get_config_bool, get_config_str},
-    crate::constants::{LOG_DIR, LOG_ENABLED},
+    ffx_config::get,
+    ffx_core::constants::{LOG_DIR, LOG_ENABLED},
     simplelog::{
         CombinedLogger, Config, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
     },
@@ -16,7 +16,7 @@ fn debug_config() -> Config {
 
 async fn log_location(name: &str) -> String {
     let log_file = format!("{}.log", name);
-    let mut log_dir = get_config_str(LOG_DIR, "").await;
+    let mut log_dir = get!(str, LOG_DIR, "").await;
     if log_dir.len() > 0 && !log_dir.ends_with(std::path::MAIN_SEPARATOR) {
         log_dir = format!("{}{}", log_dir, std::path::MAIN_SEPARATOR);
     }
@@ -24,7 +24,7 @@ async fn log_location(name: &str) -> String {
 }
 
 async fn is_enabled() -> bool {
-    get_config_bool(LOG_ENABLED, false).await
+    get!(bool, LOG_ENABLED, false).await
 }
 
 pub(crate) async fn setup_logger(name: &str) {

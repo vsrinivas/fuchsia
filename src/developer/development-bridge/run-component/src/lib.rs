@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::RunComponentCommand,
     anyhow::{anyhow, Context, Error},
+    ffx_run_component_args::RunComponentCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_remotecontrol::{
         ComponentControllerEvent, ComponentControllerMarker, RemoteControlProxy,
@@ -13,8 +13,6 @@ use {
     signal_hook,
     std::sync::{Arc, Mutex},
 };
-
-pub mod args;
 
 pub async fn run_component(
     remote_proxy: RemoteControlProxy,

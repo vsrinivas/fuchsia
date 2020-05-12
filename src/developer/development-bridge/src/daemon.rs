@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{MAX_RETRY_COUNT, RETRY_DELAY, SOCKET},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::logger::setup_logger,
     crate::mdns::MdnsTargetFinder,
@@ -14,6 +13,7 @@ use {
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
+    ffx_core::constants::{MAX_RETRY_COUNT, RETRY_DELAY, SOCKET},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,

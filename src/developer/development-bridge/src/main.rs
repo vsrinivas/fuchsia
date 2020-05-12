@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::{Ffx, Subcommand},
-    crate::config::command::exec_config,
-    crate::constants::DAEMON,
     crate::daemon::{is_daemon_running, start as start_daemon},
     crate::logger::setup_logger,
-    anyhow::{format_err, Context, Error},
-    ffx_run_component::{args::RunComponentCommand, run_component},
-    ffx_test::{args::TestCommand, test},
+    anyhow::{anyhow, format_err, Context, Error},
+    ffx_args::{Ffx, Subcommand},
+    ffx_config::command::exec_config,
+    ffx_core::constants::DAEMON,
+    ffx_run_component::run_component,
+    ffx_test::test,
     ffxlib::find_and_connect,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
@@ -19,9 +19,6 @@ use {
     std::process::Command,
 };
 
-mod args;
-mod config;
-mod constants;
 mod daemon;
 mod discovery;
 mod logger;
@@ -54,6 +51,16 @@ impl Cli {
         }
 
         Ok(find_and_connect().await?.expect("No daemon found."))
+    }
+
+    pub async fn exec(&self, subcommand: Subcommand) -> Result<(), Error> {
+        if let Subcommand::RunComponent(c) = subcommand {
+            run_component(self.get_remote_proxy().await?, c).await
+        } else if let Subcommand::Test(t) = subcommand {
+            test(self.get_remote_proxy().await?, t).await
+        } else {
+            Err(anyhow!("no matching integration"))
+        }
     }
 
     pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {
@@ -102,14 +109,6 @@ impl Cli {
         Ok(remote_proxy)
     }
 
-    pub async fn run_component(&mut self, run_cmd: RunComponentCommand) -> Result<(), Error> {
-        run_component(self.get_remote_proxy().await?, run_cmd).await
-    }
-
-    pub async fn test(&mut self, test_cmd: TestCommand) -> Result<(), Error> {
-        test(self.get_remote_proxy().await?, test_cmd).await
-    }
-
     pub async fn quit(&mut self) -> Result<(), Error> {
         self.daemon_proxy.quit().await?;
         println!("Killed daemon.");
@@ -155,15 +154,6 @@ async fn async_main() -> Result<(), Error> {
             }
             Ok(())
         }
-        Subcommand::RunComponent(c) => {
-            match Cli::new().await?.run_component(c).await {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("ERROR: {:?}", e);
-                }
-            }
-            Ok(())
-        }
         Subcommand::Quit(_) => {
             match Cli::new().await?.quit().await {
                 Ok(_) => {}
@@ -175,17 +165,7 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::Daemon(_) => start_daemon().await,
         Subcommand::Config(c) => exec_config(c, writer).await,
-        Subcommand::Test(t) => {
-            match Cli::new().await.unwrap().test(t).await {
-                Ok(_) => {
-                    log::info!("Test successfully run");
-                }
-                Err(e) => {
-                    println!("ERROR: {:?}", e);
-                }
-            }
-            Ok(())
-        }
+        _ => Cli::new().await.unwrap().exec(app.subcommand).await,
     }
 }
 

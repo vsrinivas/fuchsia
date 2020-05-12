@@ -1,12 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#[cfg(not(target_os = "linux"))]
+#[cfg(target_os = "linux")]
 pub(crate) mod imp {
     use {
-        crate::config::heuristic_config::HeuristicFn,
-        crate::config::heuristic_fns::find_ssh_keys,
-        crate::constants::{SSH_PORT, SSH_PRIV, SSH_PUB},
+        crate::heuristic_config::HeuristicFn,
+        crate::heuristic_fns::find_ssh_keys,
+        ffx_core::constants::{LOG_DIR, LOG_ENABLED, SSH_PORT, SSH_PRIV, SSH_PUB},
         std::collections::HashMap,
     };
 
@@ -20,6 +20,8 @@ pub(crate) mod imp {
     pub(crate) fn env_vars() -> HashMap<&'static str, Vec<&'static str>> {
         let mut environment_variables = HashMap::new();
         environment_variables.insert(SSH_PORT, vec!["FUCHSIA_SSH_PORT"]);
+        environment_variables.insert(LOG_DIR, vec!["FFX_LOG_DIR", "HOME", "HOMEPATH"]);
+        environment_variables.insert(LOG_ENABLED, vec!["FFX_LOG_ENABLED"]);
         environment_variables
     }
 }

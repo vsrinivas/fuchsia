@@ -2,15 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, serde_json::Value};
-
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum ConfigLevel {
-    Defaults,
-    Build,
-    Global,
-    User,
-}
+use {anyhow::Error, ffx_core::ConfigLevel, serde_json::Value};
 
 pub trait ReadConfig {
     fn get(&self, key: &str) -> Option<Value>;

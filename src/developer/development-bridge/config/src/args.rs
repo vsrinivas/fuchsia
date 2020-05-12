@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::config::api::ConfigLevel, argh::FromArgs};
+use {argh::FromArgs, ffx_core::ConfigLevel};
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "config", description = "configuration management")]

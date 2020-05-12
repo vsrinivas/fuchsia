@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::config::get_config_str,
-    crate::constants::{SSH_PORT, SSH_PRIV},
     crate::target::TargetAddr,
     anyhow::{anyhow, Error},
+    ffx_config::get,
+    ffx_core::constants::{SSH_PORT, SSH_PRIV},
     std::collections::HashSet,
     std::process::Command,
 };
@@ -27,8 +27,8 @@ pub async fn build_ssh_command(
         return Err(anyhow!("missing SSH command"));
     }
 
-    let port = get_config_str(SSH_PORT, "").await;
-    let key = get_config_str(SSH_PRIV, "").await;
+    let port = get!(str, SSH_PORT, "").await;
+    let key = get!(str, SSH_PRIV, "").await;
 
     let mut c = Command::new("ssh");
 

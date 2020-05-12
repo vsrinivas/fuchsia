@@ -23,6 +23,7 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
 
     deps = [
+      "core:lib",
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
@@ -40,8 +41,10 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":lib",
+      "args:lib",
+      "config:lib",
+      "core:lib",
       "run-component:lib",
-      "src/config/macro:config-macros",
       "test:lib",
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
@@ -88,6 +91,8 @@ group("tests") {
   testonly = true
   deps = [
     ":bin_test($host_toolchain)",
+    "args:tests($host_toolchain)",
+    "config:tests($host_toolchain)",
     "run-component:tests($host_toolchain)",
     "test:tests($host_toolchain)",
   ]
