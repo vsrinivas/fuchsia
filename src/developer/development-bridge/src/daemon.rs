@@ -42,7 +42,7 @@ struct RCSActivatorHook {}
 #[async_trait]
 impl DiscoveryHook for RCSActivatorHook {
     async fn on_new_target(&self, target: &Arc<Target>, _tc: &Arc<TargetCollection>) {
-        let addrs_clone = target.clone_addrs().await;
+        let addrs_clone = target.addrs().await;
         let mut state = target.state.lock().await;
         if state.overnet_started {
             return;
@@ -196,7 +196,7 @@ impl Daemon {
                 "run",
                 "fuchsia-pkg://fuchsia.com/remote-control-runner#meta/remote-control-runner.cmx",
             ];
-            let mut cmd = build_ssh_command(target.clone_addrs().await, args.to_vec()).await?;
+            let mut cmd = build_ssh_command(target.addrs().await, args.to_vec()).await?;
 
             let output = cmd
                 .stdin(std::process::Stdio::null())
@@ -304,18 +304,12 @@ impl Daemon {
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
 
+                // This is not guaranteed to clean all processes all the time,
+                // but is a best-effort for the time being. In the future this
+                // could do something like prevent new targets from being added,
+                // or from new child processes being spawned.
                 let targets = self.target_collection.targets().await;
-
-                for t in targets.iter() {
-                    let t = t.clone();
-
-                    let state = t.state.lock().await;
-                    let mut child_lock = state.host_pipe.lock().await;
-                    if let Some(mut child) = child_lock.take() {
-                        child.kill()?;
-                    }
-                }
-
+                futures::future::try_join_all(targets.iter().map(|t| t.disconnect())).await?;
                 std::process::exit(0);
             }
         }
@@ -388,7 +382,6 @@ pub async fn start() -> Result<(), Error> {
 mod test {
     use super::*;
     use crate::target::TargetState;
-    use chrono::Utc;
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
@@ -461,7 +454,7 @@ mod test {
         stream: DaemonRequestStream,
     ) -> TargetControlChannels {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
-        res.send_target(Target::new("foobar", Utc::now())).await;
+        res.send_target(Target::new("foobar")).await;
         res
     }
 
@@ -502,7 +495,7 @@ mod test {
         let (_, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         hoist::run(async move {
             let mut ctrl = spawn_daemon_server_with_fake_target(stream).await;
-            ctrl.send_target(Target::new("bazmumble", Utc::now())).await;
+            ctrl.send_target(Target::new("bazmumble")).await;
             match daemon_proxy.get_remote_control(remote_server_end).await.unwrap() {
                 Ok(_) => panic!("failure expected for multiple targets"),
                 _ => (),
@@ -518,8 +511,8 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         hoist::run(async move {
             let mut ctrl = spawn_daemon_server_with_fake_target(stream).await;
-            ctrl.send_target(Target::new("baz", Utc::now())).await;
-            ctrl.send_target(Target::new("quux", Utc::now())).await;
+            ctrl.send_target(Target::new("baz")).await;
+            ctrl.send_target(Target::new("quux")).await;
             let res = daemon_proxy.list_targets("").await.unwrap();
 
             // TODO(awdavies): This check is in lieu of having an
@@ -568,7 +561,7 @@ mod test {
             let t = tc.get(target.nodename.clone().into()).await.unwrap().clone();
             assert_eq!(t.nodename, "nothin");
             assert_eq!(*t.state.lock().await, TargetState::new());
-            assert_eq!(*t.addrs.lock().await, HashSet::new());
+            assert_eq!(t.addrs().await, HashSet::new());
             self.callbacks_done.unbounded_send(true).unwrap();
         }
     }
@@ -592,7 +585,7 @@ mod test {
             let mut daemon = Daemon::new_with_rx(rx);
             daemon.register_hook(TestHookFirst { callbacks_done: tx_from_callback.clone() }).await;
             daemon.register_hook(TestHookSecond { callbacks_done: tx_from_callback }).await;
-            tx.unbounded_send(Target::new("nothin", Utc::now())).unwrap();
+            tx.unbounded_send(Target::new("nothin")).unwrap();
             assert!(rx_from_callback.next().await.unwrap());
             assert!(rx_from_callback.next().await.unwrap());
         });

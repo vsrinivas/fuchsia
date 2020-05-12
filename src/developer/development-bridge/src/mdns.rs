@@ -58,8 +58,6 @@ mod linux {
 
     use crate::net;
     use ::mdns::protocol as dns;
-    use chrono::Utc;
-    use futures::lock::Mutex;
     use net2;
     use net2::unix::UnixUdpBuilderExt;
     use net2::UdpSocketExt;
@@ -141,11 +139,7 @@ mod linux {
             if nodename.len() == 0 {
                 return Err(MdnsConvertError::NodenameMissing);
             }
-            let time = Utc::now();
-            let addrs = Mutex::new(addrs);
-            let last_response = Mutex::new(time);
-            let state = Mutex::new(TargetState::new());
-            Ok(Target { nodename, addrs, last_response, state })
+            Ok(Target::new_with_addrs(nodename.as_ref(), addrs))
         }
     }
 

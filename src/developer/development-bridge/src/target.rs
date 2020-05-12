@@ -99,48 +99,109 @@ impl TargetState {
 pub struct Target {
     // Nodename of the target (immutable).
     pub nodename: String,
-    pub last_response: Mutex<DateTime<Utc>>,
     pub state: Mutex<TargetState>,
-    pub addrs: Mutex<HashSet<TargetAddr>>,
+    last_response: RwLock<DateTime<Utc>>,
+    addrs: RwLock<HashSet<TargetAddr>>,
 }
 
 impl Target {
-    pub fn new(nodename: &str, t: DateTime<Utc>) -> Self {
+    pub fn new(nodename: &str) -> Self {
         Self {
             nodename: nodename.to_string(),
-            last_response: Mutex::new(t),
+            last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::new()),
-            addrs: Mutex::new(HashSet::new()),
+            addrs: RwLock::new(HashSet::new()),
         }
     }
 
-    // TODO(fxb/50708) remove this once we've resolved the possible deadlocks that result
-    // without it.
-    pub async fn clone_addrs(&self) -> HashSet<TargetAddr> {
-        let addrs = self.addrs.lock().await;
-        return addrs.clone();
+    #[cfg(target_os = "linux")] // Only used by mDNS code.
+    pub fn new_with_addrs(nodename: &str, addrs: HashSet<TargetAddr>) -> Self {
+        Self {
+            nodename: nodename.to_string(),
+            last_response: RwLock::new(Utc::now()),
+            state: Mutex::new(TargetState::new()),
+            addrs: RwLock::new(addrs),
+        }
     }
 
-    pub async fn to_string_async(&self) -> String {
-        // Need to hold onto the state for the duration of the format
-        // function to ensure that it doesn't change abruptly.
+    /// Dependency injection constructor so we can insert a fake time for
+    /// testing.
+    #[cfg(test)]
+    pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
+        Self {
+            nodename: nodename.to_string(),
+            last_response: RwLock::new(time),
+            state: Mutex::new(TargetState::new()),
+            addrs: RwLock::new(HashSet::new()),
+        }
+    }
+
+    /// Attempts to disconnect any active connections to the target.
+    pub async fn disconnect(&self) -> Result<(), Error> {
         let state = self.state.lock().await;
-        format!(
-            "{} [{}] [overnet_started: {}] [overnet_peer_id: {}] {}",
-            self.nodename,
-            self.addrs
-                .lock()
-                .await
-                .iter()
-                .map(|addr| addr.to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
+        let mut child_lock = state.host_pipe.lock().await;
+        if let Some(mut child) = child_lock.take() {
+            child.kill()?;
+        }
+        Ok(())
+    }
+
+    pub async fn last_response(&self) -> DateTime<Utc> {
+        self.last_response.read().await.clone()
+    }
+
+    pub async fn addrs(&self) -> HashSet<TargetAddr> {
+        self.addrs.read().await.clone()
+    }
+
+    #[cfg(test)]
+    async fn addrs_insert(&self, t: TargetAddr) {
+        self.addrs.write().await.insert(t);
+    }
+
+    async fn addrs_extend<T>(&self, iter: T)
+    where
+        T: IntoIterator<Item = TargetAddr>,
+    {
+        self.addrs.write().await.extend(iter);
+    }
+
+    async fn update_last_response(&self, other: DateTime<Utc>) {
+        let mut last_response = self.last_response.write().await;
+        if *last_response < other {
+            *last_response = other;
+        }
+    }
+
+    async fn update_state(&self, other: TargetState) {
+        let mut state = self.state.lock().await;
+        if state.rcs.is_none() {
+            state.rcs = other.rcs.clone();
+        }
+    }
+
+    /// Helper method for grabbing overnet info from `TargetState`.
+    async fn overnet_info(&self) -> (bool, String) {
+        let state = self.state.lock().await;
+        (
             state.overnet_started,
             match state.rcs.as_ref() {
                 Some(s) => s.overnet_id.id.to_string(),
                 None => String::from("not connected"),
             },
-            self.last_response.lock().await.to_rfc2822(),
+        )
+    }
+
+    pub async fn to_string_async(&self) -> String {
+        let ((overnet_started, overnet_peer_string), addrs, last_response) =
+            futures::join!(self.overnet_info(), self.addrs(), self.last_response());
+        format!(
+            "{} [{}] [overnet_started: {}] [overnet_peer_id: {}] {}",
+            self.nodename,
+            addrs.iter().map(|addr| addr.to_string()).collect::<Vec<_>>().join(", "),
+            overnet_started,
+            overnet_peer_string,
+            last_response.to_rfc2822(),
         )
     }
 
@@ -158,7 +219,7 @@ impl Target {
         // TODO(awdavies): Merge target addresses once the scope_id is picked
         // up properly, else there will be duplicate link-local addresses that
         // aren't usable.
-        let target = Target::new(nodename.as_ref(), Utc::now());
+        let target = Target::new(nodename.as_ref());
         // Forces drop of target state mutex so that target can be returned.
         {
             let mut target_state = target.state.lock().await;
@@ -271,7 +332,7 @@ impl TargetQuery {
         match self {
             Self::Nodename(nodename) => *nodename == t.nodename,
             Self::Addr(addr) => {
-                let addrs = t.addrs.lock().await;
+                let addrs = t.addrs().await;
                 // Try to do the lookup if either the scope_id is non-zero (and
                 // the IP address is IPv6 OR if the address is just IPv4 (as the
                 // scope_id is always zero in this case).
@@ -350,26 +411,17 @@ impl TargetCollection {
         // TODO(awdavies): better merging (using more indices for matching).
         match inner.get(&t.nodename) {
             Some(to_update) => {
-                let mut addrs = to_update.addrs.lock().await;
-                let mut last_response = to_update.last_response.lock().await;
-                addrs.extend(&*t.addrs.lock().await);
-                // Ignore out-of-order packets.
-                if *last_response < *t.last_response.lock().await {
-                    *last_response = *t.last_response.lock().await;
-                }
-
-                // TODO(awdavies): Create a merge function just for state.
-                let mut state = to_update.state.lock().await;
-                if state.rcs.is_none() {
-                    state.rcs = t.state.lock().await.rcs.clone();
-                }
+                futures::join!(
+                    to_update.update_last_response(t.last_response().await),
+                    to_update.addrs_extend(t.addrs().await),
+                    to_update.update_state(t.state.into_inner()),
+                );
 
                 to_update.clone()
             }
             None => {
                 let t = Arc::new(t);
                 inner.insert(t.nodename.clone(), t.clone());
-
                 t
             }
         }
@@ -429,9 +481,9 @@ mod test {
         fn clone(&self) -> Self {
             Self {
                 nodename: self.nodename.clone(),
-                last_response: Mutex::new(block_on(self.last_response.lock()).clone()),
+                last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
-                addrs: Mutex::new(block_on(self.addrs.lock()).clone()),
+                addrs: RwLock::new(block_on(self.addrs()).clone()),
             }
         }
     }
@@ -458,8 +510,8 @@ mod test {
     impl PartialEq for Target {
         fn eq(&self, o: &Target) -> bool {
             self.nodename == o.nodename
-                && *block_on(self.last_response.lock()) == *block_on(o.last_response.lock())
-                && *block_on(self.addrs.lock()) == *block_on(o.addrs.lock())
+                && *block_on(self.last_response.read()) == *block_on(o.last_response.read())
+                && block_on(self.addrs()) == block_on(o.addrs())
                 && *block_on(self.state.lock()) == *block_on(o.state.lock())
         }
     }
@@ -469,7 +521,7 @@ mod test {
         hoist::run(async move {
             let tc = TargetCollection::new();
             let nodename = String::from("what");
-            let t = Target::new(&nodename, fake_now());
+            let t = Target::new_with_time(&nodename, fake_now());
             tc.merge_insert(t.clone()).await;
             assert_eq!(&*tc.get(nodename.clone().into()).await.unwrap(), &t.clone());
             match tc.get("oihaoih".into()).await {
@@ -484,23 +536,23 @@ mod test {
         hoist::run(async move {
             let tc = TargetCollection::new();
             let nodename = String::from("bananas");
-            let t1 = Target::new(&nodename, fake_now());
-            let t2 = Target::new(&nodename, fake_elapsed());
+            let t1 = Target::new_with_time(&nodename, fake_now());
+            let t2 = Target::new_with_time(&nodename, fake_elapsed());
             let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
             let a2 = IpAddr::V6(Ipv6Addr::new(
                 0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
             ));
-            t1.addrs.lock().await.insert((a1.clone(), 1).into());
-            t2.addrs.lock().await.insert((a2.clone(), 1).into());
+            t1.addrs_insert((a1.clone(), 1).into()).await;
+            t2.addrs_insert((a2.clone(), 1).into()).await;
             tc.merge_insert(t2.clone()).await;
             tc.merge_insert(t1.clone()).await;
             let merged_target = tc.get(nodename.clone().into()).await.unwrap();
             assert_ne!(&*merged_target, &t1);
             assert_ne!(&*merged_target, &t2);
-            assert_eq!(merged_target.addrs.lock().await.len(), 2);
-            assert_eq!(*merged_target.last_response.lock().await, fake_elapsed());
-            assert!(merged_target.addrs.lock().await.contains(&(a1, 1).into()));
-            assert!(merged_target.addrs.lock().await.contains(&(a2, 1).into()));
+            assert_eq!(merged_target.addrs().await.len(), 2);
+            assert_eq!(*merged_target.last_response.read().await, fake_elapsed());
+            assert!(merged_target.addrs().await.contains(&(a1, 1).into()));
+            assert!(merged_target.addrs().await.contains(&(a2, 1).into()));
         });
     }
 
@@ -601,7 +653,7 @@ mod test {
                     assert_eq!(t.state.lock().await.rcs.as_ref().unwrap().overnet_id.id, 1234u64);
                     // For now there shouldn't be any addresses put in here, as
                     // there's not a consistent way to convert them yet.
-                    assert_eq!(t.addrs.lock().await.len(), 0);
+                    assert_eq!(t.addrs().await.len(), 0);
                 }
                 Err(_) => assert!(false),
             }
@@ -612,7 +664,7 @@ mod test {
     fn test_target_query_matches_nodename() {
         hoist::run(async move {
             let query = TargetQuery::from("foo");
-            let target = Arc::new(Target::new("foo", Utc::now()));
+            let target = Arc::new(Target::new("foo"));
             assert!(query.matches(&target).await);
         });
     }
@@ -636,8 +688,8 @@ mod test {
     fn test_target_by_addr() {
         hoist::run(async move {
             let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
-            let t = Target::new("foo", Utc::now());
-            t.addrs.lock().await.insert(addr.clone());
+            let t = Target::new("foo");
+            t.addrs_insert(addr.clone()).await;
             let tc = TargetCollection::new();
             tc.merge_insert(t.clone()).await;
             assert_eq!(*tc.get(addr.into()).await.unwrap(), t);
@@ -646,8 +698,8 @@ mod test {
 
             let addr: TargetAddr =
                 (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
-            let t = Target::new("fooberdoober", Utc::now());
-            t.addrs.lock().await.insert(addr.clone());
+            let t = Target::new("fooberdoober");
+            t.addrs_insert(addr.clone()).await;
             tc.merge_insert(t.clone()).await;
             assert_eq!(*tc.get("fe80::dead:beef:beef:beef".into()).await.unwrap(), t);
             assert_eq!(*tc.get(addr.clone().into()).await.unwrap(), t);
@@ -658,9 +710,9 @@ mod test {
     #[test]
     fn test_target_debug_string() {
         hoist::run(async move {
-            let t = Target::new("foo", fake_now());
+            let t = Target::new_with_time("foo", fake_now());
             assert_eq!(t.to_string_async().await, "foo [] [overnet_started: false] [overnet_peer_id: not connected] Fri, 31 Oct 2014 09:10:12 +0000");
-            t.addrs.lock().await.insert((IpAddr::from([192, 168, 1, 1]), 0).into());
+            t.addrs_insert((IpAddr::from([192, 168, 1, 1]), 0).into()).await;
             t.state.lock().await.rcs = Some(RCSConnection::new_with_proxy(
                 setup_fake_remote_control_service(false, "foo".to_owned()),
                 &NodeId { id: 2u64 },
@@ -672,7 +724,7 @@ mod test {
     #[test]
     fn test_wait_for_rcs() {
         hoist::run(async move {
-            let t = Arc::new(Target::new("foo", Utc::now()));
+            let t = Arc::new(Target::new("foo"));
             assert!(t.wait_for_state_with_rcs(0, Duration::from_millis(1)).await.is_err());
             assert!(t.wait_for_state_with_rcs(1, Duration::from_millis(1)).await.is_err());
             assert!(t.wait_for_state_with_rcs(10, Duration::from_millis(1)).await.is_err());
@@ -688,6 +740,28 @@ mod test {
             });
             // Adds a few hundred thousands as this is a race test.
             assert!(t.wait_for_state_with_rcs(500000, Duration::from_millis(1)).await.is_ok());
+        });
+    }
+
+    #[test]
+    fn test_target_disconnect_no_process() {
+        hoist::run(async move {
+            let t = Target::new("fooberdoober");
+            assert!(t.disconnect().await.is_ok());
+        });
+    }
+
+    #[test]
+    fn test_target_disconnect_fake_process() {
+        hoist::run(async move {
+            let t = Target::new("flabbadoobiedoo");
+            {
+                let mut state = t.state.lock().await;
+                // TODO(awdavies): Can probably spawn a fake command that mocks Child somehow.
+                state.host_pipe =
+                    Mutex::new(Some(std::process::Command::new("yes").spawn().unwrap()));
+            }
+            assert!(t.disconnect().await.is_ok());
         });
     }
 }
