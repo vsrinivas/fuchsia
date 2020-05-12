@@ -147,10 +147,9 @@ impl Daemon {
     pub async fn handle_requests_from_stream(
         &self,
         mut stream: DaemonRequestStream,
-        quiet: bool,
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
-            self.handle_request(req, quiet).await?;
+            self.handle_request(req).await?;
         }
         Ok(())
     }
@@ -227,22 +226,16 @@ impl Daemon {
         }
     }
 
-    pub async fn handle_request(&self, req: DaemonRequest, quiet: bool) -> Result<(), Error> {
+    pub async fn handle_request(&self, req: DaemonRequest) -> Result<(), Error> {
         log::debug!("daemon received request: {:?}", req);
         match req {
             DaemonRequest::EchoString { value, responder } => {
-                if !quiet {
-                    log::info!("Received echo request for string {:?}", value);
-                }
+                log::info!("Received echo request for string {:?}", value);
                 responder.send(value.as_ref()).context("error sending response")?;
-                if !quiet {
-                    log::info!("echo response sent successfully");
-                }
+                log::info!("echo response sent successfully");
             }
             DaemonRequest::ListTargets { value, responder } => {
-                if !quiet {
-                    log::info!("Received list target request for '{:?}'", value);
-                }
+                log::info!("Received list target request for '{:?}'", value);
                 // TODO(awdavies): Make this into a common format for easy
                 // parsing.
                 let response = match value.as_ref() {
@@ -292,9 +285,7 @@ impl Daemon {
                 responder.send(&mut response).context("error sending response")?;
             }
             DaemonRequest::Quit { responder } => {
-                if !quiet {
-                    log::info!("Received quit request.");
-                }
+                log::info!("Received quit request.");
                 responder.send(true).context("error sending response")?;
 
                 task::sleep(std::time::Duration::from_millis(10)).await;
@@ -326,7 +317,7 @@ async fn next_request(
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(daemon: Daemon, quiet: bool) -> Result<(), Error> {
+async fn exec_server(daemon: Daemon) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
@@ -337,15 +328,13 @@ async fn exec_server(daemon: Daemon, quiet: bool) -> Result<(), Error> {
         control_handle: _control_handle,
     }) = next_request(&mut stream).await?
     {
-        if !quiet {
-            log::trace!("Received service request for service");
-        }
+        log::trace!("Received service request for service");
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
         let daemon_clone = daemon.clone();
         spawn(async move {
             daemon_clone
-                .handle_requests_from_stream(DaemonRequestStream::from_channel(chan), quiet)
+                .handle_requests_from_stream(DaemonRequestStream::from_channel(chan))
                 .await
                 .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
         });
@@ -372,7 +361,7 @@ pub async fn start() -> Result<(), Error> {
     setup_logger("ffx.daemon").await;
     onet::start_ascendd().await;
     let daemon = Daemon::new().await?;
-    exec_server(daemon, true).await
+    exec_server(daemon).await
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -439,7 +428,7 @@ mod test {
         spawn(async move {
             let mut d = Daemon::new_with_rx(target_out);
             d.register_hook(TestHookFakeRCS::new(target_ready_channel_in)).await;
-            d.handle_requests_from_stream(stream, false)
+            d.handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|err| panic!("Fatal error handling request: {:?}", err));
         });
