@@ -2,20 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("security") {
+group("tools") {
   testonly = true
-  deps = [
-    ":tests",
-    "kms",
-    "tee_manager",
-  ]
+  public_deps = [ "//src/security/tools/scrutiny" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "kms:tests",
-    "tee_manager:tests",
-    "tools:tests",
-  ]
+  public_deps = [ "//src/security/tools/scrutiny:tests" ]
 }
