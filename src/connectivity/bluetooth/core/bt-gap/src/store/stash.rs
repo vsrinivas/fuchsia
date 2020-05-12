@@ -542,7 +542,14 @@ mod tests {
     }
 
     fn default_le_data() -> LeData {
-        LeData { connection_parameters: None, services: vec![], ltk: None, irk: None, csrk: None }
+        LeData {
+            connection_parameters: None,
+            services: vec![],
+            peer_ltk: None,
+            local_ltk: None,
+            irk: None,
+            csrk: None,
+        }
     }
 
     fn bond_data_1() -> BondingData {

@@ -38,7 +38,8 @@ fn example_emulator_identity() -> Identity {
     let le_data = LeData {
         connection_parameters: None,
         services: vec![],
-        ltk: None,
+        peer_ltk: None,
+        local_ltk: None,
         irk: None,
         csrk: Some(csrk),
     };

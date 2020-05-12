@@ -25,9 +25,12 @@ struct LeInspect {
     _connection_interval: Option<inspect::UintProperty>,
     _connection_latency: Option<inspect::UintProperty>,
     _supervision_timeout: Option<inspect::UintProperty>,
-    _ltk_authenticated: inspect::UintProperty,
-    _ltk_secure_connections: inspect::UintProperty,
-    _ltk_encryption_key_size: Option<inspect::UintProperty>,
+    _peer_ltk_authenticated: inspect::UintProperty,
+    _peer_ltk_secure_connections: inspect::UintProperty,
+    _peer_ltk_encryption_key_size: Option<inspect::UintProperty>,
+    _local_ltk_authenticated: inspect::UintProperty,
+    _local_ltk_secure_connections: inspect::UintProperty,
+    _local_ltk_encryption_key_size: Option<inspect::UintProperty>,
     _irk_authenticated: inspect::UintProperty,
     _irk_secure_connections: inspect::UintProperty,
     _irk_encryption_key_size: Option<inspect::UintProperty>,
@@ -54,17 +57,32 @@ impl LeInspect {
                 .as_ref()
                 .map(|p| inspect.create_uint("supervision_timeout", p.supervision_timeout as u64)),
 
-            _ltk_authenticated: inspect.create_uint(
-                "ltk_authenticated",
-                d.ltk.as_ref().map(|ltk| ltk.key.security.authenticated).to_property(),
+            _peer_ltk_authenticated: inspect.create_uint(
+                "peer_ltk_authenticated",
+                d.peer_ltk.as_ref().map(|ltk| ltk.key.security.authenticated).to_property(),
             ),
-            _ltk_secure_connections: inspect.create_uint(
-                "ltk_secure_connections",
-                d.ltk.as_ref().map(|ltk| ltk.key.security.secure_connections).to_property(),
+            _peer_ltk_secure_connections: inspect.create_uint(
+                "peer_ltk_secure_connections",
+                d.peer_ltk.as_ref().map(|ltk| ltk.key.security.secure_connections).to_property(),
             ),
-            _ltk_encryption_key_size: d.ltk.as_ref().map(|ltk| {
+            _peer_ltk_encryption_key_size: d.peer_ltk.as_ref().map(|ltk| {
                 inspect.create_uint(
-                    "ltk_encryption_key_size",
+                    "peer_ltk_encryption_key_size",
+                    ltk.key.security.encryption_key_size as u64,
+                )
+            }),
+
+            _local_ltk_authenticated: inspect.create_uint(
+                "local_ltk_authenticated",
+                d.local_ltk.as_ref().map(|ltk| ltk.key.security.authenticated).to_property(),
+            ),
+            _local_ltk_secure_connections: inspect.create_uint(
+                "local_ltk_secure_connections",
+                d.local_ltk.as_ref().map(|ltk| ltk.key.security.secure_connections).to_property(),
+            ),
+            _local_ltk_encryption_key_size: d.local_ltk.as_ref().map(|ltk| {
+                inspect.create_uint(
+                    "local_ltk_encryption_key_size",
                     ltk.key.security.encryption_key_size as u64,
                 )
             }),
@@ -168,8 +186,20 @@ pub struct LeData {
     pub connection_parameters: Option<sys::LeConnectionParameters>,
     /// Known GATT service UUIDs.
     pub services: Vec<Uuid>,
-    /// The LE long-term key. Present if the link was encrypted.
-    pub ltk: Option<sys::Ltk>,
+    /// LE long-term key generated and distributed by the peer device. This key is used when the
+    /// peer is the follower (i.e. the peer is in the LE peripheral role).
+    ///
+    /// Note: In LE legacy pairing, both sides are allowed to generate and distribute a link key.
+    /// In Secure Connections pairing, both sides generate the same LTK and hence the `peer_ltk` and
+    /// `local_ltk` values are identical.
+    pub peer_ltk: Option<sys::Ltk>,
+    /// LE long-term key generated and distributed by the local bt-host. This key is used when the
+    /// peer is the leader (i.e. the peer in the LE central role).
+    ///
+    /// Note: In LE legacy pairing, both sides are allowed to generate and distribute a link key.
+    /// In Secure Connections pairing, both sides generate the same LTK and hence the `peer_ltk` and
+    /// `local_ltk` values are identical.
+    pub local_ltk: Option<sys::Ltk>,
     /// Identity Resolving RemoteKey used to generate and resolve random addresses.
     pub irk: Option<sys::PeerKey>,
     /// Connection Signature Resolving RemoteKey used for data signing without encryption.
@@ -182,6 +212,16 @@ impl LeData {
             Address::Public(_) => control::AddressType::LePublic,
             Address::Random(_) => control::AddressType::LeRandom,
         };
+        let ltk = {
+            // TODO(fxb/2411): bt-host currently supports the exchange of only a single LTK during
+            // LE legacy pairing and still reports this in the singular `ltk` field of the control
+            // library `BondingData` type. Until bt-host's dependency on control gets removed, we
+            // map both peer and local LTKs in the new internal representations to this singular
+            // LTK. Remove this workaround and the control conversions once they are no longer
+            // needed for bt-host compatibility.
+            assert!(src.peer_ltk == src.local_ltk);
+            src.peer_ltk.map(|k| Box::new(compat::ltk_to_control(k)))
+        };
         control::LeData {
             address: address.to_string(),
             address_type,
@@ -189,7 +229,7 @@ impl LeData {
                 .connection_parameters
                 .map(|b| Box::new(compat::sys_conn_params_to_control(b))),
             services: src.services.into_iter().map(|uuid| uuid.to_string()).collect(),
-            ltk: src.ltk.map(|k| Box::new(compat::ltk_to_control(k))),
+            ltk,
             irk: src.irk.map(|k| Box::new(compat::peer_key_to_control(k))),
             csrk: src.csrk.map(|k| Box::new(compat::peer_key_to_control(k))),
         }
@@ -316,7 +356,11 @@ impl TryFrom<control::LeData> for LeData {
                 .connection_parameters
                 .map(|params| compat::sys_conn_params_from_control(*params)),
             services: services?,
-            ltk: src.ltk.map(|ltk| compat::ltk_from_control(*ltk)),
+            // TODO(fxb/35008): For now we map the singular control LTK to both the local and peer
+            // types, which should match the current behavior of bt-host. Remove this logic once
+            // bt-host generates separate local and peer keys during legacy pairing.
+            peer_ltk: src.ltk.clone().map(|ltk| compat::ltk_from_control(*ltk)),
+            local_ltk: src.ltk.map(|ltk| compat::ltk_from_control(*ltk)),
             irk: src.irk.map(|irk| compat::peer_key_from_control(*irk)),
             csrk: src.csrk.map(|csrk| compat::peer_key_from_control(*csrk)),
         })
@@ -325,10 +369,17 @@ impl TryFrom<control::LeData> for LeData {
 impl TryFrom<sys::LeData> for LeData {
     type Error = anyhow::Error;
     fn try_from(src: sys::LeData) -> Result<LeData, Self::Error> {
+        // If one of the new `peer_ltk` and `local_ltk` fields are present, then we use those.
+        // Otherwise we default to the deprecated `ltk` field for backwards compatibility.
+        let (peer_ltk, local_ltk) = match (src.peer_ltk, src.local_ltk) {
+            (None, None) => (src.ltk, src.ltk),
+            (p, l) => (p, l),
+        };
         Ok(LeData {
             connection_parameters: src.connection_parameters,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
-            ltk: src.ltk,
+            peer_ltk,
+            local_ltk,
             irk: src.irk,
             csrk: src.csrk,
         })
@@ -365,11 +416,17 @@ impl From<LeData> for sys::LeData {
             address: None,
             connection_parameters: src.connection_parameters,
             services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
-            ltk: src.ltk,
+            // The LTK field is deprecated and is not necessary for internal conversions to sys
+            // types.
+            //
+            // Note: when converting in the opposite direction (from sys::LeData to
+            // LeData) the `ltk` field will be mapped to both `peer_ltk` and `local_ltk`. This
+            // means that converting from a sys::LeData to LeData and back is no longer idempotent.
+            ltk: None,
+            peer_ltk: src.peer_ltk,
+            local_ltk: src.local_ltk,
             irk: src.irk,
             csrk: src.csrk,
-            peer_ltk: None,
-            local_ltk: None,
         }
     }
 }
@@ -595,7 +652,8 @@ mod tests {
                         supervision_timeout: 2,
                     }),
                     services: vec![],
-                    ltk: Some(ltk.clone()),
+                    peer_ltk: Some(ltk.clone()),
+                    local_ltk: Some(ltk.clone()),
                     irk: Some(remote_key.clone()),
                     csrk: Some(remote_key.clone()),
                 },
@@ -647,6 +705,23 @@ mod tests {
                 local_ltk: None,
                 irk: None,
                 csrk: None,
+            }
+        }
+
+        fn default_ltk() -> sys::Ltk {
+            sys::Ltk {
+                key: sys::PeerKey {
+                    security: sys::SecurityProperties {
+                        authenticated: false,
+                        secure_connections: false,
+                        encryption_key_size: 16,
+                    },
+                    data: sys::Key {
+                        value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                    },
+                },
+                ediv: 0,
+                rand: 0,
             }
         }
 
@@ -820,6 +895,64 @@ mod tests {
             let result =
                 BondingData::try_from(src).expect("failed to convert from sys.BondingData");
             assert_eq!(result.address, addr.into());
+        }
+
+        #[test]
+        fn use_deprecated_ltk() {
+            let ltk = default_ltk();
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 2, 3, 4, 5, 6],
+                }),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                le: Some(sys::LeData { ltk: Some(ltk.clone()), ..empty_le_data() }),
+                bredr: Some(sys::BredrData { ..empty_bredr_data() }),
+                ..empty_data()
+            };
+
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            let result_le = result.le().expect("expected LE data");
+            assert_eq!(result_le.peer_ltk, Some(ltk));
+            assert_eq!(result_le.local_ltk, Some(ltk));
+        }
+
+        #[test]
+        fn use_peer_and_local_ltk() {
+            let ltk1 = default_ltk();
+            let mut ltk2 = default_ltk();
+            ltk2.key.security.authenticated = true;
+
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 2, 3, 4, 5, 6],
+                }),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [1, 0, 0, 0, 0, 0],
+                }),
+                le: Some(sys::LeData {
+                    ltk: Some(ltk1),
+                    peer_ltk: Some(ltk2.clone()),
+                    local_ltk: None,
+                    ..empty_le_data()
+                }),
+                bredr: Some(sys::BredrData { ..empty_bredr_data() }),
+                ..empty_data()
+            };
+
+            let result =
+                BondingData::try_from(src).expect("failed to convert from sys.BondingData");
+            let result_le = result.le().expect("expected LE data");
+            assert_eq!(result_le.peer_ltk, Some(ltk2));
+            assert_eq!(result_le.local_ltk, None);
         }
     }
 
@@ -1095,13 +1228,36 @@ mod tests {
             (
                 option::of(any_connection_params()),
                 option::of(any_ltk()),
+                option::of(any_ltk()),
+                option::of(any_peer_key()),
+                option::of(any_peer_key()),
+            )
+                .prop_map(|(connection_parameters, peer_ltk, local_ltk, irk, csrk)| {
+                    LeData {
+                        connection_parameters,
+                        services: vec![],
+                        peer_ltk,
+                        local_ltk,
+                        irk,
+                        csrk,
+                    }
+                })
+        }
+
+        // TODO(35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
+        // same. We emulate that invariant here.
+        fn any_le_data_for_control_test() -> impl Strategy<Value = LeData> {
+            (
+                option::of(any_connection_params()),
+                option::of(any_ltk()),
                 option::of(any_peer_key()),
                 option::of(any_peer_key()),
             )
                 .prop_map(|(connection_parameters, ltk, irk, csrk)| LeData {
                     connection_parameters,
                     services: vec![],
-                    ltk,
+                    peer_ltk: ltk,
+                    local_ltk: ltk,
                     irk,
                     csrk,
                 })
@@ -1112,6 +1268,26 @@ mod tests {
                 any_le_data().prop_map(OneOrBoth::Left),
                 any_bredr_data().prop_map(OneOrBoth::Right),
                 (any_le_data(), any_bredr_data())
+                    .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
+            ];
+            (
+                any::<u64>(),
+                any_public_address(),
+                any_public_address(),
+                option::of("[a-zA-Z][a-zA-Z0-9_]*"),
+                any_data,
+            )
+                .prop_map(|(ident, address, local_address, name, data)| {
+                    let identifier = PeerId(ident);
+                    BondingData { identifier, address, local_address, name, data }
+                })
+        }
+
+        fn any_bonding_data_for_control_test() -> impl Strategy<Value = BondingData> {
+            let any_data = prop_oneof![
+                any_le_data_for_control_test().prop_map(OneOrBoth::Left),
+                any_bredr_data().prop_map(OneOrBoth::Right),
+                (any_le_data_for_control_test(), any_bredr_data())
                     .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
             ];
             (
@@ -1146,7 +1322,7 @@ mod tests {
                 assert_eq!(Ok(data), sys_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
             #[test]
-            fn le_data_control_roundtrip((address, data) in (any_public_address(), any_le_data())) {
+            fn le_data_control_roundtrip((address, mut data) in (any_public_address(), any_le_data_for_control_test())) {
                 let control_le_data = LeData::into_control(data.clone(), &address);
                 assert_eq!(address.to_string(), control_le_data.address);
                 assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
@@ -1158,7 +1334,7 @@ mod tests {
                 assert_eq!(Ok(data), (sys_bonding_data, peer_id).try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
             #[test]
-            fn bonding_data_control_roundtrip(data in any_bonding_data()) {
+            fn bonding_data_control_roundtrip(data in any_bonding_data_for_control_test()) {
                 let control_bonding_data: control::BondingData = data.clone().into();
                 assert_eq!(Ok(data), control_bonding_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
