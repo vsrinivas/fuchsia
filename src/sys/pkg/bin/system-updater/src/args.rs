@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
+use {
+    argh::FromArgs,
+    std::time::{Duration, SystemTime},
+};
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
 /// Arguments for the system updater.
@@ -28,14 +31,18 @@ pub struct Args {
     pub reboot: bool,
 
     /// start time of update attempt, as unix nanosecond timestamp
-    #[argh(
-        option,
-        default = "fuchsia_zircon::Time::get(fuchsia_zircon::ClockId::UTC).into_nanos()"
-    )]
-    pub start: i64,
+    #[argh(option, from_str_fn(parse_wall_time))]
+    pub start: Option<SystemTime>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+fn parse_wall_time(value: &str) -> Result<SystemTime, String> {
+    let since_unix_epoch =
+        Duration::from_nanos(value.parse().map_err(|e: std::num::ParseIntError| e.to_string())?);
+
+    Ok(SystemTime::UNIX_EPOCH + since_unix_epoch)
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Initiator {
     Automatic,
     Manual,
@@ -73,10 +80,13 @@ mod tests {
 
     #[test]
     fn test_start() {
-        assert_matches!(
-            Args::from_args(&["system-updater"], &["--start", "42"]),
-            Ok(Args { start: 42, .. })
-        );
+        use chrono::prelude::*;
+
+        const NANOS_IN_1970: u64 = 365 * 24 * 60 * 60 * 1_000_000_000;
+        let nanos_in_1970 = NANOS_IN_1970.to_string();
+
+        let args = Args::from_args(&["system-updater"], &["--start", &nanos_in_1970]).unwrap();
+        assert_eq!(args.start, Some(Utc.ymd(1971, 1, 1).and_hms(0, 0, 0).into()));
     }
 
     #[test]
