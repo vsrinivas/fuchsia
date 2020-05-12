@@ -134,13 +134,15 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
   EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
 }
 
-#if 0
-// This test is disabled until we have fxb/51461 fixed.
-
 TEST_F(AmlRamDeviceTest, ValidRequest) {
+  // Peform a request for 3 channels. The harness provides the data that should be
+  // read via mmio and verifies that the control registers are accessed in the
+  // right sequence.
   constexpr uint32_t kCyclesToMeasure = (1024 * 1024 * 10u);
   constexpr uint32_t kControlStart = DMC_QOS_ENABLE_CTRL | 0b0111;
   constexpr uint32_t kControlStop = DMC_QOS_CLEAR_CTRL | 0b0111;
+
+  // Note that the cycles are to be interpreted as shifted 4 bits.
   constexpr uint32_t kReadCycles[] = {0x125001, 0x124002, 0x123003, 0x0};
 
   ram_metrics::BandwidthMeasurementConfig config = {kCyclesToMeasure, {4, 2, 1, 0, 0, 0}};
@@ -150,22 +152,25 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
 
   pdev_.reg(MEMBW_TIMER).SetWriteCallback([expect = kCyclesToMeasure, &step](size_t value) {
     EXPECT_EQ(step, 0, "unexpected: 0x%lx", value);
+    EXPECT_EQ(value, expect, "0: got write of 0x%lx", value);
     ++step;
-    EXPECT_EQ(value, expect, "got write of 0x%lx", value);
   });
 
   pdev_.reg(MEMBW_PORTS_CTRL)
       .SetWriteCallback([start = kControlStart, stop = kControlStop, &step](size_t value) {
         if (step == 1) {
-          EXPECT_EQ(value, start, "0: got write of 0x%lx", value);
+          EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
           ++step;
         } else if (step == 3) {
-          EXPECT_EQ(value, stop, "2: got write of 0x%lx", value);
+          EXPECT_EQ(value, stop, "3: got write of 0x%lx", value);
           ++step;
         } else {
           EXPECT_TRUE(false, "unexpected: 0x%lx", value);
         }
       });
+
+  // Note that reading from MEMBW_PORTS_CTRL by default returns 0
+  // and that makes the operation succeed.
 
   pdev_.reg(MEMBW_C0_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[0]]() {
     EXPECT_EQ(step, 2);
@@ -185,7 +190,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
     return value;
   });
 
-  pdev_.reg(MEMBW_C2_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[3]]() {
+  pdev_.reg(MEMBW_C3_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[3]]() {
     EXPECT_EQ(step, 2);
     ++step;
     // Value of channel 3 cycles granted.
@@ -197,10 +202,53 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   ASSERT_TRUE(info.ok());
   ASSERT_FALSE(info->result.is_err());
 
-  // All reads and writes happened.
+  // Check All mmio reads and writes happened.
   EXPECT_EQ(step, 4);
+
+  EXPECT_GT(info->result.response().info.timestamp, 0u);
+
+  // Check FIDL result makes sense. AML hw does not support read or write only counters.
+  int ix = 0;
+  for (auto& c : info->result.response().info.channels) {
+    if (ix < 4) {
+      EXPECT_EQ(c.readwrite_cycles, kReadCycles[ix] * 16ul);
+    } else {
+      EXPECT_EQ(c.readwrite_cycles, 0u);
+    }
+    EXPECT_EQ(c.write_cycles, 0u);
+    EXPECT_EQ(c.read_cycles, 0u);
+    ++ix;
+  }
 }
-#endif
+
+TEST_F(AmlRamDeviceTest, HardwareError) {
+  // Perform a valid request but simulate the hardware never finishing.
+  constexpr uint32_t kControlStart = DMC_QOS_ENABLE_CTRL | 0b0111;
+  std::atomic<int> step = 0;
+
+  pdev_.reg(MEMBW_PORTS_CTRL).SetWriteCallback([start = kControlStart, &step](size_t value) {
+    if (step == 0) {
+      EXPECT_EQ(value, start, "0: got write of 0x%lx", value);
+      ++step;
+    } else {
+      EXPECT_TRUE(false, "unexpected: 0x%lx", value);
+    }
+  });
+
+  pdev_.reg(MEMBW_PORTS_CTRL).SetReadCallback([value = kControlStart, &step] {
+    EXPECT_EQ(step, 1);
+    // By returning the same value that was written (kControlStart) the logic in the
+    // driver should time-out.
+    return value;
+  });
+
+  ram_metrics::BandwidthMeasurementConfig config = {(1024 * 1024 * 10u), {4, 2, 1, 0, 0, 0}};
+  ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
+  auto info = client.MeasureBandwidth(config);
+  ASSERT_TRUE(info.ok());
+  ASSERT_TRUE(info->result.is_err());
+  EXPECT_EQ(info->result.err(), ZX_ERR_TIMED_OUT);
+}
 
 }  // namespace amlogic_ram
 
