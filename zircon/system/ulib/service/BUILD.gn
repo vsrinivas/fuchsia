@@ -33,7 +33,7 @@ zx_library("service-llcpp") {
   deps = [
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/fs",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/fs",
   ]
 }

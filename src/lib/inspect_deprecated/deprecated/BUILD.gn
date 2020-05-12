@@ -18,7 +18,7 @@ source_set("deprecated") {
     "//sdk/fidl/fuchsia.inspect.deprecated",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
   ]
 }

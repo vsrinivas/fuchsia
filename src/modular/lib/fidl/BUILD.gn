@@ -90,7 +90,7 @@ source_set("environment") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
   ]
 }
 

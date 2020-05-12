@@ -38,9 +38,9 @@ executable("expose_dir_rights") {
   deps = [
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/svc",
   ]

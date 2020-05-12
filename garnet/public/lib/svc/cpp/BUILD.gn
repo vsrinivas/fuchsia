@@ -23,8 +23,8 @@ source_set("cpp") {
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
   ]
 
   # fxb/36788 this target is deprecated

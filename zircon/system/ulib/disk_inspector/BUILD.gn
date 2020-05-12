@@ -48,8 +48,8 @@ if (is_fuchsia) {
 
       public_deps += [
         "//zircon/public/lib/fit",
-        "//zircon/public/lib/fs",
         "//zircon/system/ulib/block-client",
+        "//zircon/system/ulib/fs",
         "//zircon/system/ulib/fs/transaction",
         "//zircon/system/ulib/storage/buffer",
       ]

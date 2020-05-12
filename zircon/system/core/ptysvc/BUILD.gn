@@ -55,10 +55,10 @@ source_set("common") {
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-pty",
   ]
 

@@ -90,9 +90,9 @@ zx_library("blobfs") {
   ]
   public_deps = [
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/range",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/storage/buffer",

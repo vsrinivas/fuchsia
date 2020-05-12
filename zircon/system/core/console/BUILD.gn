@@ -51,9 +51,9 @@ source_set("common") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
   ]
 
   deps = [

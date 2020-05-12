@@ -89,8 +89,8 @@ source_set("src") {
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fs",
     "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/ulib/fs",
   ]
 }
 

@@ -14,7 +14,7 @@ source_set("fake_logical_buffer_collection") {
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/image-format",
   ]
   public_deps = [

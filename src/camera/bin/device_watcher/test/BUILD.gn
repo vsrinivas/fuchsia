@@ -18,6 +18,6 @@ executable("test") {
     "//src/camera/bin/device_watcher:lib",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
   ]
 }

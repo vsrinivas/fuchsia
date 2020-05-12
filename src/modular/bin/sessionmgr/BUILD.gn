@@ -123,7 +123,7 @@ source_set("session_ctl") {
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
   ]
 }
 

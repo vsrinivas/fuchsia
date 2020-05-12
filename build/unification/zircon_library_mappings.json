@@ -30,6 +30,11 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/fs:fs",
+    "name": "fs",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/fs-management:fs-management",
     "name": "fs-management",
     "sdk": false

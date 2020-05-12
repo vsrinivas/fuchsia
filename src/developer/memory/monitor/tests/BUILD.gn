@@ -76,8 +76,8 @@ executable("test-inspect") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/fs",
   ]
 
   # TODO(46756): Fix the leaks and remove this.

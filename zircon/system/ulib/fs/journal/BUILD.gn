@@ -59,11 +59,11 @@ zx_library("journal") {
       "superblock.cc",
     ]
     public_deps = [
-      "//zircon/public/lib/fs",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/operation",
       "//zircon/public/lib/range",
       "//zircon/system/ulib/disk_inspector",
+      "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fs/transaction",
       "//zircon/system/ulib/storage/buffer",
     ]

@@ -86,8 +86,8 @@ executable("package_updating_loader_test") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/sysmgr:lib",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
   ]
 }
 

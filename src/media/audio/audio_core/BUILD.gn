@@ -287,8 +287,8 @@ executable("unittest_bin") {
     "//src/media/audio/lib/test:null_renderer_capturer",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fs",
   ]
 }
 

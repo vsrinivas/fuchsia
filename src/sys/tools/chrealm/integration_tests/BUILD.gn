@@ -31,8 +31,8 @@ executable("tests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr:lib",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
   ]
 
   # TODO(46548): Fix the leaks and remove this.

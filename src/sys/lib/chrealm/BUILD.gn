@@ -14,7 +14,7 @@ source_set("chrealm") {
     "//sdk/fidl/fuchsia.sys",
     "//src/lib/fxl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs",
   ]
 }

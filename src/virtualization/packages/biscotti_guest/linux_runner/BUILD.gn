@@ -69,9 +69,9 @@ source_set("lib") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/fs",
   ]
   if (linux_runner_volatile_block) {
     defines = [ "USE_VOLATILE_BLOCK" ]

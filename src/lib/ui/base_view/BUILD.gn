@@ -29,7 +29,7 @@ source_set("base_view") {
     "//src/lib/fxl:fxl_logging",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
   ]
 
   deps = [ "//zircon/public/lib/trace" ]

@@ -49,7 +49,6 @@ source_set("common") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider-with-fdio",
@@ -62,6 +61,7 @@ source_set("common") {
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/fs",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]

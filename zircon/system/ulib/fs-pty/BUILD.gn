@@ -32,14 +32,14 @@ zx_library("fs-pty") {
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/fs",
   ]
 
   deps = [
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/fs",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/fs",
   ]
 }

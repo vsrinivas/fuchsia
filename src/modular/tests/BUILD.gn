@@ -284,7 +284,7 @@ executable("component_context_test") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
   ]
 }
 

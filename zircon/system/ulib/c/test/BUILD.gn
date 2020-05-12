@@ -67,6 +67,7 @@ executable("debugdata-test-helper") {
       configs -= fdio_config
     }
   }
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Flip back to true.
   testonly = false
@@ -102,11 +103,11 @@ test("debugdata") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-debugdata:llcpp",
+    "//zircon/system/ulib/fs",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
 }

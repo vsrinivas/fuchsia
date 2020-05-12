@@ -25,7 +25,7 @@ source_set("cpp") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fs",
+    "//zircon/system/ulib/fs",
   ]
 
   public_configs = [ "//garnet/public:config" ]

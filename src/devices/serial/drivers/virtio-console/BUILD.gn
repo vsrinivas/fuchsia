@@ -25,8 +25,8 @@ driver_module("virtio_console") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fs",
     "//zircon/system/ulib/ddktl",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-pty",
   ]
 }

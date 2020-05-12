@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("fs") {
   sdk = "source"
   sdk_headers = [
@@ -39,15 +51,15 @@ zx_library("fs") {
   static = true
 
   public_deps = [
-    "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/fdio:headers",
-    "$zx/system/ulib/fit:headers",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zircon-internal",
   ]
 
   # Uncomment to enable FS_TRACE_DEBUG-level logging
@@ -84,33 +96,32 @@ zx_library("fs") {
       "watcher.cc",
     ]
     public_deps += [
-      "$zx/system/ulib/async:headers",
-      "$zx/system/ulib/fit:headers",
-      "$zx/system/ulib/zx:headers",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
 
       # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
-      "$zx/system/fidl/fuchsia-io:llcpp.headers",
+      "//zircon/system/fidl/fuchsia-io:llcpp",
 
       # <fs/trace.h> has #include <trace/event.h>.
-      "$zx/system/ulib/trace:headers",
+      "//zircon/public/lib/trace",
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
-      "$zx/system/ulib/async:async-cpp.headers",
+      "//zircon/public/lib/async-cpp",
     ]
     deps += [
-      "$zx/system/fidl/fuchsia-cobalt:c",
-      "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/fidl/fuchsia-mem:llcpp",
-      "$zx/system/ulib/async",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/fit",
-      "$zx/system/ulib/fzl",
-      "$zx/system/ulib/sync",
-      "$zx/system/ulib/trace",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/trace",
+      "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-cobalt:c",
+      "//zircon/system/fidl/fuchsia-io:llcpp",
+      "//zircon/system/fidl/fuchsia-mem:llcpp",
     ]
   }
 }

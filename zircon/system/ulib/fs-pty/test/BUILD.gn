@@ -37,9 +37,9 @@ test("libfs-pty-test") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fs",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-pty",
   ]
 }
