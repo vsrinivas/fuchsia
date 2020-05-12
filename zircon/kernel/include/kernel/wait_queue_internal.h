@@ -17,9 +17,6 @@
 
 namespace internal {
 
-void wait_queue_insert(WaitQueue* wait, Thread* t) TA_REQ(thread_lock);
-void wait_queue_remove_head(Thread* t) TA_REQ(thread_lock);
-void wait_queue_remove_thread(Thread* t) TA_REQ(thread_lock);
 void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg);
 
 // Used by WaitQueue and OwnedWaitQueue to manage changes to the maximum
@@ -37,8 +34,7 @@ inline void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t,
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->blocking_wait_queue_ == wait);
 
-  wait_queue_remove_thread(t);
-  wait->collection_.count_--;
+  wait->collection_.Remove(t);
   t->blocked_status_ = wait_queue_error;
   t->blocking_wait_queue_ = NULL;
 }
@@ -90,8 +86,7 @@ inline zx_status_t wait_queue_block_etc_pre(WaitQueue* wait, const Deadline& dea
     }
   }
 
-  wait_queue_insert(wait, current_thread);
-  wait->collection_.count_++;
+  wait->collection_.Insert(current_thread);
   current_thread->state_ =
       (reason == ResourceOwnership::Normal) ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
   current_thread->blocking_wait_queue_ = wait;
@@ -125,5 +120,85 @@ inline zx_status_t wait_queue_block_etc_post(WaitQueue* wait, const Deadline& de
 }
 
 }  // namespace internal
+
+// This is defined here, rather than in wait.h, as it needs to see Thread internals as well.
+template <typename Callable>
+void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thread_lock) {
+  auto consider_queue = [&visit_thread](Thread* queue_head) TA_REQ(thread_lock) -> bool {
+    // So, this is a bit tricky.  We need to visit each node in a
+    // wait_queue priority level in a way which permits our visit_thread
+    // function to remove the thread that we are visiting.
+    //
+    // Each priority level starts with a queue head which has a list of
+    // more threads which exist at that priority level, but the queue
+    // head itself is not a member of this list, so some special care
+    // must be taken.
+    //
+    // Start with the queue_head and look up the next thread (if any) at
+    // the priority level.  Visit the thread, and if (after visiting the
+    // thread), the next thread has become the new queue_head, update
+    // queue_head and keep going.
+    //
+    // If we advance past the queue head, but still have threads to
+    // consider, switch to a more standard enumeration of the queue
+    // attached to the queue_head.  We know at this point in time that
+    // the queue_head can no longer change out from under us.
+    //
+    DEBUG_ASSERT(queue_head != nullptr);
+    Thread* next;
+
+    while (true) {
+      next = list_peek_head_type(&queue_head->wait_queue_state_.queue_node_, Thread,
+                                 wait_queue_state_.queue_node_);
+
+      if (!visit_thread(queue_head)) {
+        return false;
+      }
+
+      // Have we run out of things to visit?
+      if (!next) {
+        return true;
+      }
+
+      // If next is not the new queue head, stop.
+      if (!list_in_list(&next->wait_queue_state_.wait_queue_heads_node_)) {
+        break;
+      }
+
+      // Next is the new queue head.  Update and keep going.
+      queue_head = next;
+    }
+
+    // If we made it this far, then we must still have a valid next.
+    DEBUG_ASSERT(next);
+    do {
+      Thread* t = next;
+      next =
+          list_next_type(&queue_head->wait_queue_state_.queue_node_,
+                         &t->wait_queue_state_.queue_node_, Thread, wait_queue_state_.queue_node_);
+
+      if (!visit_thread(t)) {
+        return false;
+      }
+    } while (next != nullptr);
+
+    return true;
+  };
+
+  Thread* last_queue_head = nullptr;
+  Thread* queue_head;
+
+  list_for_every_entry (&private_heads_, queue_head, Thread,
+                        wait_queue_state_.wait_queue_heads_node_) {
+    if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
+      return;
+    }
+    last_queue_head = queue_head;
+  }
+
+  if (last_queue_head != nullptr) {
+    consider_queue(last_queue_head);
+  }
+}
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_QUEUE_INTERNAL_H_

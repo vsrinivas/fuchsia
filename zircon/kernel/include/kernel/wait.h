@@ -49,15 +49,50 @@ struct WaitQueueState {
 };
 
 // Encapsulation of the data structure backing the wait queue.
+//
+// This maintains an ordered collection of Threads.
+//
+// All such collections are protected by the thread_lock.
 struct WaitQueueCollection {
   constexpr WaitQueueCollection() {}
 
-  int count_ = 0;
-  struct list_node heads_ = LIST_INITIAL_VALUE(heads_);
+  // The number of threads currently in the collection.
+  uint32_t Count() const TA_REQ(thread_lock) { return private_count_; }
+
+  // Peek at the first Thread in the collection.
+  Thread* Peek() const TA_REQ(thread_lock);
+
+  // Add the Thread into its sorted location in the collection.
+  void Insert(Thread* thread) TA_REQ(thread_lock);
+
+  // Remove the Thread from the collection.
+  void Remove(Thread* thread) TA_REQ(thread_lock);
+
+  // This function enumerates the collection in a fashion which allows us to
+  // remove the threads in question as they are presented to our injected
+  // function for consideration.
+  //
+  // Callable should be a lambda which takes a Thread* for consideration and
+  // returns a bool.  If it returns true, iteration continues, otherwise it
+  // immediately stops.
+  //
+  // Because this needs to see Thread internals, it is declared here and
+  // defined after the Thread definition in thread.h.
+  template <typename Callable>
+  void ForeachThread(const Callable& visit_thread) TA_REQ(thread_lock);
+
+  // When WAIT_QUEUE_VALIDATION is set, many wait queue operations check that the internals of this
+  // data structure are correct, via this method.
+  void Validate() const TA_REQ(thread_lock);
 
   // Disallow copying.
   WaitQueueCollection(const WaitQueueCollection&) = delete;
   WaitQueueCollection& operator=(const WaitQueueCollection&) = delete;
+
+  // These are morally private. Eventually, Thread will not be required to be POD, and we can make
+  // it so.
+  int private_count_ = 0;
+  struct list_node private_heads_ = LIST_INITIAL_VALUE(private_heads_);
 };
 
 // NOTE: must be inside critical section when using these
@@ -102,7 +137,7 @@ class WaitQueue {
 
   // Returns the current highest priority blocked thread on this wait queue, or
   // nullptr if no threads are blocked.
-  Thread* Peek() TA_REQ(thread_lock);
+  Thread* Peek() const TA_REQ(thread_lock);
 
   // Release one or more threads from the wait queue.
   // reschedule = should the system reschedule if any is released.
@@ -114,7 +149,7 @@ class WaitQueue {
   // Whether the wait queue is currently empty.
   bool IsEmpty() const TA_REQ(thread_lock);
 
-  uint32_t Count() const TA_REQ(thread_lock) { return collection_.count_; }
+  uint32_t Count() const TA_REQ(thread_lock) { return collection_.Count(); }
 
   // Dequeue the first waiting thread, and set its blocking status, then return a
   // pointer to the thread which was dequeued.  Do not actually schedule the

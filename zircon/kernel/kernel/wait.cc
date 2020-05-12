@@ -79,70 +79,6 @@
 // sake).
 namespace internal {
 
-// add a thread to the tail of a wait queue, sorted by priority
-void wait_queue_insert(WaitQueue* wait, Thread* t) TA_REQ(thread_lock) {
-  if (likely(list_is_empty(&wait->collection_.heads_))) {
-    // we're the first thread
-    list_initialize(&t->wait_queue_state_.queue_node_);
-    list_add_head(&wait->collection_.heads_, &t->wait_queue_state_.wait_queue_heads_node_);
-  } else {
-    const int pri = t->scheduler_state_.effective_priority();
-
-    // walk through the sorted list of wait queue heads
-    Thread* temp;
-    list_for_every_entry (&wait->collection_.heads_, temp, Thread,
-                          wait_queue_state_.wait_queue_heads_node_) {
-      if (pri > temp->scheduler_state_.effective_priority()) {
-        // insert ourself here as a new queue head
-        list_initialize(&t->wait_queue_state_.queue_node_);
-        list_add_before(&temp->wait_queue_state_.wait_queue_heads_node_,
-                        &t->wait_queue_state_.wait_queue_heads_node_);
-        return;
-      } else if (temp->scheduler_state_.effective_priority() == pri) {
-        // same priority, add ourself to the tail of this queue
-        list_add_tail(&temp->wait_queue_state_.queue_node_, &t->wait_queue_state_.queue_node_);
-        list_clear_node(&t->wait_queue_state_.wait_queue_heads_node_);
-        return;
-      }
-    }
-
-    // we walked off the end, add ourself as a new queue head at the end
-    list_initialize(&t->wait_queue_state_.queue_node_);
-    list_add_tail(&wait->collection_.heads_, &t->wait_queue_state_.wait_queue_heads_node_);
-  }
-}
-
-// remove a thread from whatever wait queue its in
-// thread must be the head of a queue
-void wait_queue_remove_head(Thread* t) TA_REQ(thread_lock) {
-  // are there any nodes in the queue for this priority?
-  if (list_is_empty(&t->wait_queue_state_.queue_node_)) {
-    // no, remove ourself from the queue list
-    list_delete(&t->wait_queue_state_.wait_queue_heads_node_);
-    list_clear_node(&t->wait_queue_state_.queue_node_);
-  } else {
-    // there are other threads in this list, make the next thread in the queue the head
-    Thread* newhead = list_peek_head_type(&t->wait_queue_state_.queue_node_, Thread,
-                                          wait_queue_state_.queue_node_);
-    list_delete(&t->wait_queue_state_.queue_node_);
-
-    // patch in the new head into the queue head list
-    list_replace_node(&t->wait_queue_state_.wait_queue_heads_node_,
-                      &newhead->wait_queue_state_.wait_queue_heads_node_);
-  }
-}
-
-// remove the thread from whatever wait queue its in
-void wait_queue_remove_thread(Thread* t) TA_REQ(thread_lock) {
-  if (!list_in_list(&t->wait_queue_state_.wait_queue_heads_node_)) {
-    // we're just in a queue, not a head
-    list_delete(&t->wait_queue_state_.queue_node_);
-  } else {
-    // we're the head of a queue
-    wait_queue_remove_head(t);
-  }
-}
-
 void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg) {
   Thread* thread = (Thread*)arg;
 
@@ -174,26 +110,80 @@ bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thr
 
 }  // namespace internal
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// End internal::
-// Begin user facing API
-//
-////////////////////////////////////////////////////////////////////////////////
+Thread* WaitQueueCollection::Peek() const {
+  return list_peek_head_type(&private_heads_, Thread, wait_queue_state_.wait_queue_heads_node_);
+}
 
-void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
-  DEBUG_ASSERT_MAGIC_CHECK(this);
-  DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+void WaitQueueCollection::Insert(Thread* thread) {
+  // Regardless of the state of the collection, the count goes up one.
+  ++private_count_;
 
-  // validate that the queue is sorted properly
-  Thread* last = NULL;
+  if (likely(list_is_empty(&private_heads_))) {
+    // We're the first thread.
+    list_initialize(&thread->wait_queue_state_.queue_node_);
+    list_add_head(&private_heads_, &thread->wait_queue_state_.wait_queue_heads_node_);
+  } else {
+    const int pri = thread->scheduler_state_.effective_priority();
+
+    // Walk through the sorted list of wait queue heads.
+    Thread* temp;
+    list_for_every_entry (&private_heads_, temp, Thread, wait_queue_state_.wait_queue_heads_node_) {
+      if (pri > temp->scheduler_state_.effective_priority()) {
+        // Insert ourself here as a new queue head.
+        list_initialize(&thread->wait_queue_state_.queue_node_);
+        list_add_before(&temp->wait_queue_state_.wait_queue_heads_node_,
+                        &thread->wait_queue_state_.wait_queue_heads_node_);
+        return;
+      } else if (temp->scheduler_state_.effective_priority() == pri) {
+        // Same priority, add ourself to the tail of this queue.
+        list_add_tail(&temp->wait_queue_state_.queue_node_, &thread->wait_queue_state_.queue_node_);
+        list_clear_node(&thread->wait_queue_state_.wait_queue_heads_node_);
+        return;
+      }
+    }
+
+    // We walked off the end, so add ourself as a new queue head at the end.
+    list_initialize(&thread->wait_queue_state_.queue_node_);
+    list_add_tail(&private_heads_, &thread->wait_queue_state_.wait_queue_heads_node_);
+  }
+}
+
+void WaitQueueCollection::Remove(Thread* thread) {
+  // Either way, the count goes down one.
+  --private_count_;
+
+  if (!list_in_list(&thread->wait_queue_state_.wait_queue_heads_node_)) {
+    // We're just in a queue, not a head.
+    list_delete(&thread->wait_queue_state_.queue_node_);
+  } else {
+    // We're the head of a queue.
+
+    // Are there any nodes in the queue for this priority?
+    if (list_is_empty(&thread->wait_queue_state_.queue_node_)) {
+      // No, remove ourself from the queue list.
+      list_delete(&thread->wait_queue_state_.wait_queue_heads_node_);
+      list_clear_node(&thread->wait_queue_state_.queue_node_);
+    } else {
+      // There are other threads in this list, make the next thread in the queue the head.
+      Thread* newhead = list_peek_head_type(&thread->wait_queue_state_.queue_node_, Thread,
+                                            wait_queue_state_.queue_node_);
+      list_delete(&thread->wait_queue_state_.queue_node_);
+
+      // Patch in the new head into the queue head list.
+      list_replace_node(&thread->wait_queue_state_.wait_queue_heads_node_,
+                        &newhead->wait_queue_state_.wait_queue_heads_node_);
+    }
+  }
+}
+
+void WaitQueueCollection::Validate() const {
+  // Validate that the queue is sorted properly
+  Thread* last = nullptr;
   Thread* temp;
-  list_for_every_entry (&collection_.heads_, temp, Thread,
-                        wait_queue_state_.wait_queue_heads_node_) {
+  list_for_every_entry (&private_heads_, temp, Thread, wait_queue_state_.wait_queue_heads_node_) {
     DEBUG_ASSERT(temp->magic_ == THREAD_MAGIC);
 
-    // validate that the queue is sorted high to low priority
+    // Validate that the queue is sorted high to low priority.
     if (last) {
       DEBUG_ASSERT_MSG(
           last->scheduler_state_.effective_priority() > temp->scheduler_state_.effective_priority(),
@@ -201,7 +191,7 @@ void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
           temp->scheduler_state_.effective_priority());
     }
 
-    // walk any threads linked to this head, validating that they're the same priority
+    // Walk any threads linked to this head, validating that they're the same priority.
     Thread* temp2;
     list_for_every_entry (&temp->wait_queue_state_.queue_node_, temp2, Thread,
                           wait_queue_state_.queue_node_) {
@@ -216,10 +206,24 @@ void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//
+// End internal::
+// Begin user facing API
+//
+////////////////////////////////////////////////////////////////////////////////
+
+void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
+  DEBUG_ASSERT_MAGIC_CHECK(this);
+  DEBUG_ASSERT(arch_ints_disabled());
+  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+  collection_.Validate();
+}
+
 // return the numeric priority of the highest priority thread queued
 int WaitQueue::BlockedPriority() const {
-  Thread* t =
-      list_peek_head_type(&collection_.heads_, Thread, wait_queue_state_.wait_queue_heads_node_);
+  Thread* t = Peek();
   if (!t) {
     return -1;
   }
@@ -228,9 +232,7 @@ int WaitQueue::BlockedPriority() const {
 }
 
 // returns a reference to the highest priority thread queued
-Thread* WaitQueue::Peek() {
-  return list_peek_head_type(&collection_.heads_, Thread, wait_queue_state_.wait_queue_heads_node_);
-}
+Thread* WaitQueue::Peek() const { return collection_.Peek(); }
 
 /**
  * @brief  Block until a wait queue is notified, ignoring existing signals
@@ -370,12 +372,10 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
   DEBUG_ASSERT(list_in_list(&t->wait_queue_state_.queue_node_));
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->blocking_wait_queue_ == source);
-  DEBUG_ASSERT(source->collection_.count_ > 0);
+  DEBUG_ASSERT(source->collection_.Count() > 0);
 
-  internal::wait_queue_remove_thread(t);
-  internal::wait_queue_insert(dest, t);
-  --source->collection_.count_;
-  ++dest->collection_.count_;
+  source->collection_.Remove(t);
+  dest->collection_.Insert(t);
   t->blocking_wait_queue_ = dest;
 }
 
@@ -406,7 +406,7 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
     ValidateQueue();
   }
 
-  if (collection_.count_ == 0) {
+  if (collection_.Count() == 0) {
     return 0;
   }
 
@@ -421,7 +421,7 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
   }
 
   DEBUG_ASSERT(ret > 0);
-  DEBUG_ASSERT(collection_.count_ == 0);
+  DEBUG_ASSERT(collection_.Count() == 0);
 
   ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
@@ -440,7 +440,7 @@ bool WaitQueue::IsEmpty() const {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  return collection_.count_ == 0;
+  return collection_.Count() == 0;
 }
 
 /**
@@ -455,7 +455,7 @@ bool WaitQueue::IsEmpty() const {
 WaitQueue::~WaitQueue() {
   DEBUG_ASSERT_MAGIC_CHECK(this);
 
-  if (collection_.count_ != 0) {
+  if (collection_.Count() != 0) {
     panic("~WaitQueue() called on non-empty WaitQueue\n");
   }
 
@@ -526,8 +526,8 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   // TODO: implement optimal algorithm depending on all the different edge
   // cases of how the thread was previously queued and what priority its
   // switching to.
-  internal::wait_queue_remove_thread(t);
-  internal::wait_queue_insert(wq, t);
+  wq->collection_.Remove(t);
+  wq->collection_.Insert(t);
 
   bool ret = (propagate == PropagatePI::Yes)
                  ? internal::wait_queue_waiters_priority_changed(wq, old_wq_prio)

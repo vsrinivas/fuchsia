@@ -476,7 +476,7 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
 
   bool do_resched = false;
   uint32_t woken = 0;
-  ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
+  collection_.ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
     // Call the user supplied hook and let them decide what to do with this
     // thread (updating their own bookkeeping in the process)
     using Action = Hook::Action;
@@ -627,7 +627,7 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
   // requeue threads, then do so.
   if (!this->IsEmpty() && requeue_count) {
     uint32_t requeued = 0;
-    ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
+    collection_.ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
       // Call the user's requeue hook so that we can decide what to do
       // with this thread.
       using Action = Hook::Action;
