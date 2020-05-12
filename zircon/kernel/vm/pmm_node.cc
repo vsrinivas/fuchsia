@@ -8,6 +8,7 @@
 #include <align.h>
 #include <inttypes.h>
 #include <lib/counters.h>
+#include <lib/instrumentation/asan.h>
 #include <trace.h>
 
 #include <new>
@@ -32,6 +33,16 @@ namespace {
 void noop_callback(uint8_t idx) {}
 
 }  // namespace
+
+// Poison a page |p| with value |value|. Accesses to a poisoned page via the physmap are not
+// allowed and may cause faults or kASAN checks. Zero |value| 'unpoisons' a page.
+void PmmNode::AsanPoisonPage(vm_page_t* p, uint8_t value) {
+#if __has_feature(address_sanitizer)
+  if (likely(kasan_enabled_)) {
+    asan_poison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE, value);
+  }
+#endif  // __has_feature(address_sanitizer)
+}
 
 PmmNode::PmmNode() {
   // Initialize the reclaimation watermarks such that system never
@@ -168,6 +179,25 @@ void PmmNode::CheckAllFreePages() {
   list_for_every_entry (&free_list_, page, vm_page, queue_node) { checker_.AssertPattern(page); }
 }
 
+#if __has_feature(address_sanitizer)
+void PmmNode::DisableKasan() {
+  Guard<Mutex> guard{&lock_};
+  kasan_enabled_ = false;
+}
+
+void PmmNode::PoisonAllFreePages() {
+  Guard<Mutex> guard{&lock_};
+  if (!kasan_enabled_) {
+    return;
+  }
+
+  vm_page* page;
+  list_for_every_entry (&free_list_, page, vm_page, queue_node) {
+    AsanPoisonPage(page, kAsanPmmFreeMagic);
+  };
+}
+#endif  // __has_feature(address_sanitizer)
+
 void PmmNode::EnableChecker() {
   Guard<Mutex> guard{&lock_};
   free_fill_enabled_ = true;
@@ -182,6 +212,8 @@ void PmmNode::DisableChecker() {
 void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
   LTRACEF("allocating page %p, pa %#" PRIxPTR ", prev state %s\n", page, page->paddr(),
           page_state_to_string(page->state()));
+
+  AsanPoisonPage(page, 0);
 
   DEBUG_ASSERT(page->is_free());
 
@@ -359,7 +391,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
       p->set_state(VM_PAGE_STATE_ALLOC);
 
       DecrementFreeCountLocked(1);
-
+      AsanPoisonPage(p, 0);
       checker_.AssertPattern(p);
 
       list_add_tail(list, &p->queue_node);
@@ -384,6 +416,8 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
   if (unlikely(free_fill_enabled_)) {
     checker_.FillPattern(page);
   }
+
+  AsanPoisonPage(page, kAsanPmmFreeMagic);
 }
 
 void PmmNode::FreePage(vm_page* page) {

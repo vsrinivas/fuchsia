@@ -127,6 +127,10 @@ void pmm_checker_init_from_cmdline() {
 
 void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
 
+#if __has_feature(address_sanitizer)
+void pmm_asan_poison_all_free_pages() { pmm_node.PoisonAllFreePages(); }
+#endif
+
 static void pmm_checker_enable() {
   // Enable filling of pages going forward.
   pmm_node.EnableChecker();

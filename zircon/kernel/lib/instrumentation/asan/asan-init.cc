@@ -9,6 +9,7 @@
 
 #include <lk/init.h>
 #include <vm/physmap.h>
+#include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 
 #include "asan-internal.h"
@@ -25,6 +26,7 @@ void asan_late_init(unsigned int arg) {
   auto status =
       VmAspace::kernel_aspace()->ReserveSpace("kasan-shadow", kAsanShadowSize, KASAN_SHADOW_OFFSET);
   ZX_ASSERT(status == ZX_OK);
+  pmm_asan_poison_all_free_pages();
 }
 
 }  // namespace

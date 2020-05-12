@@ -8,7 +8,9 @@
 
 #include <assert.h>
 #include <lib/cmdline.h>
+#include <lib/instrumentation/asan.h>
 #include <platform.h>
+#include <string.h>
 #include <sys/types.h>
 
 #include <pretty/hexdump.h>
@@ -31,10 +33,10 @@ void PmmChecker::FillPattern(vm_page_t* page) {
   DEBUG_ASSERT(page->is_free());
   void* kvaddr = paddr_to_physmap(page->paddr());
   DEBUG_ASSERT(is_kernel_address(reinterpret_cast<vaddr_t>(kvaddr)));
-  memset(kvaddr, kPatternOneByte, PAGE_SIZE);
+  __unsanitized_memset(kvaddr, kPatternOneByte, PAGE_SIZE);
 }
 
-bool PmmChecker::ValidatePattern(vm_page_t* page) {
+NO_ASAN bool PmmChecker::ValidatePattern(vm_page_t* page) {
   if (!armed_) {
     return true;
   }

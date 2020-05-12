@@ -79,11 +79,27 @@ bool kasan_test_poison_heap_partial() {
   END_TEST;
 }
 
+bool kasan_test_pmm_use_after_free() {
+  BEGIN_TEST;
+
+  vm_page_t* vm_page;
+  paddr_t paddr;
+
+  pmm_alloc_page(0, &vm_page, &paddr);
+  EXPECT_EQ(0UL, asan_region_is_poisoned(reinterpret_cast<uintptr_t>(paddr_to_physmap(paddr)),
+                                         PAGE_SIZE));
+
+  pmm_free_page(vm_page);
+  EXPECT_TRUE(entire_region_is_poisoned(paddr_to_physmap(paddr), PAGE_SIZE));
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(kasan_tests)
 UNITTEST("test_poisoning_heap", kasan_test_poison_heap)
 UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)
+UNITTEST("test_pmm_use_after_free", kasan_test_pmm_use_after_free)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
 
 #endif  // _has_feature(address_sanitizer)

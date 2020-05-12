@@ -89,6 +89,11 @@ class PmmNode {
   // operation and should only be used for debugging purposes.
   void CheckAllFreePages();
 
+#if __has_feature(address_sanitizer)
+  // Synchronously walk the PMM's free list and poison each page.
+  void PoisonAllFreePages();
+#endif
+
   // Enable the free fill checker.
   void EnableChecker();
 
@@ -99,6 +104,9 @@ class PmmNode {
   //
   // For test and diagnostic purposes.
   PmmChecker* Checker() { return &checker_; }
+
+  // Disable kasan poisons.
+  void DisableKasan();
 
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
@@ -128,6 +136,8 @@ class PmmNode {
   bool InOomStateLocked() TA_REQ(lock_);
 
   void AllocPageHelperLocked(vm_page_t* page) TA_REQ(lock_);
+
+  void AsanPoisonPage(vm_page_t*, uint8_t) TA_REQ(lock_);
 
   fbl::Canary<fbl::magic("PNOD")> canary_;
 
@@ -164,6 +174,9 @@ class PmmNode {
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;
   PmmChecker checker_ TA_GUARDED(lock_);
+#if __has_feature(address_sanitizer)
+  bool kasan_enabled_ TA_GUARDED(lock_) = true;
+#endif
 };
 
 // We don't need to hold the arena lock while executing this, since it is

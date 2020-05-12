@@ -52,6 +52,10 @@ class ManagedPmmNode {
 
   explicit ManagedPmmNode(const uint64_t* watermarks = kDefaultArray, uint8_t watermark_count = 1,
                           uint64_t debounce = kDefaultDebounce) {
+#if __has_feature(address_sanitizer)
+    // Pmm nodes for tests do not use asan; their pages are managed independently.
+    node_.DisableKasan();
+#endif
     list_node list = LIST_INITIAL_VALUE(list);
     for (auto& p : pages_) {
       list_add_tail(&list, &p.queue_node);

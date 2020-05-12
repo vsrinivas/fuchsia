@@ -153,4 +153,8 @@ void pmm_checker_init_from_cmdline();
 // operation and should only be used for debugging purposes.
 void pmm_checker_check_all_free_pages();
 
+// Synchronously walk the PMM's free list and poison (via kASAN) each page. This is an
+// incredibly expensive operation and should be used with care.
+void pmm_asan_poison_all_free_pages();
+
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_
