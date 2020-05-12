@@ -1,0 +1,213 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/fidl.gni")
+import("//build/fidl/fidl_library.gni")
+
+# Generates localized assets from source localized strings.
+#
+# Please see `//src/intl/example/BUILD.gn` for example use of the target.
+#
+# Example instantiation:
+#
+# ```
+# import("//build/intl/strings.gni")
+# intl_strings("foo") {
+#   source = "strings.xml"
+#   source_locale = "en"
+#   output_locales = ["en", "fr", "es"]
+#   library = "fuchsia.intl.l10n"
+# }
+# ```
+#
+# Inputs:
+#
+# - Needs an input XML file (by convention named `strings.xml`), in the Android
+# strings resource format to represent the source externalized strings.
+#
+# - Needs, for each supported language `foo`, an input XML file (by convention
+# named `strings_foo.xml`) which contains equivalent messages to those in
+# `strings.xml`.  The source language is not special, so for example if your
+# `strings.xml` contains English strings, you still need `strings_en.xml`.
+#
+# Outputs:
+#
+# - An includable source file (language-dependent!) with generated constants
+# that refer to all messages in the `strings.xml` file.
+#
+# - A set of files named "$target_gen_dir/lang/foo.json" for every `lang`,
+# which maps the string IDs to messages in the appropriate language.  See
+# `//src/intl/example/BUILD.gn` for an example of how to bundle these files into
+# a Fuchsia package.
+#
+# Parameters:
+#
+#   library: (required string), a dot-separated library name to be
+#     used for the generated code.  For example, in C++, the generated constants
+#     will be wrapped into a nested namespace `fuchsia::intl::l10n` in the
+#     example above.
+#
+#   source: (required string), the source XML file containing
+#     Android-compatible externalized strings.
+#
+#   source_locale: (optional string, default "en-US"), the source locale that
+#     the file specified under `source` is written in.  This is used for
+#     bookkeeping only, the source locale is otherwise not special in any way.
+#
+#   output_locales: (required list of strings), the list of locales for which
+#     to generate the localized assets.  By convention, if the `source` is
+#     `strings.xml`, then a localized asset for language `foo` needs a source
+#     file named `strings_foo.xml`.
+#
+template("intl_strings") {
+  # Best practices forward.
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "visibility",
+                           "library",
+                           "source",
+                           "output_locales",
+                         ])
+
+  assert(defined(library), "Parameter library=... is required")
+
+  assert(defined(source), "Parameter source=... is required")
+
+  source_locale = "en-US"
+  if (defined(invoker.source_locale)) {
+    source_locale = invoker.source_locale
+  }
+
+  assert(defined(output_locales), "Parameter output_locales=[...] is required")
+
+  base_name = invoker.target_name
+  target_name = invoker.target_name
+  base_source = get_path_info(source, "name")
+
+  # Every target we generate in this template needs to be added here, so it
+  # could become a dependency of the final generated group target.
+  group_deps = []
+
+  # Generate a JSON file for each locale.  Collect all files into a group.
+  manifest_resources = []
+  locale_resources = []
+  foreach(locale, output_locales) {
+    target_strings_file = "${base_source}_${locale}.xml"
+    output_file_name = "${target_gen_dir}/${locale}/${base_name}.json"
+    locale_resources += [
+      {
+        foo = rebase_path(output_file_name, root_build_dir)
+        dest = "assets/locales/${locale}/${base_name}.json"
+        path = rebase_path(output_file_name)
+      },
+    ]
+
+    # TODO(fmil): This is an experiment with manifest file.
+    manifest_source_path = rebase_path(output_file_name, root_build_dir)
+    manifest_target_path = "assets/locales/${locale}/${base_name}.json"
+    manifest_resources += [ "${manifest_target_path}=${manifest_source_path}" ]
+
+    compiled_action_name = "${base_name}_to_json_${locale}"
+    group_deps += [ ":${compiled_action_name}" ]
+
+    compiled_action(compiled_action_name) {
+      tool = "//src/intl/strings_to_json:strings_to_json_bin"
+      tool_output_name = "strings_to_json"
+
+      sources = [ source ]
+
+      outputs = [ output_file_name ]
+
+      args = [
+        "--source-locale",
+        source_locale,
+        "--source-strings-file",
+        rebase_path(source, root_build_dir),
+        "--target-locale",
+        locale,
+        "--target-strings-file",
+        rebase_path(target_strings_file, root_build_dir),
+        "--output",
+        rebase_path(output_file_name, root_build_dir),
+      ]
+    }
+  }  # for_each
+
+  strings_to_fidl_name = "${target_name}_fidl"
+  generated_fidl_file_name = "${target_gen_dir}/${base_source}.fidl"
+
+  manifest_file = "${target_gen_dir}/${base_name}.manifest"
+  write_file(manifest_file, manifest_resources)
+
+  group("${base_name}_l10n_assets_group") {
+    metadata = {
+      resources = locale_resources
+      manifest = manifest_resources
+    }
+  }
+
+  group_deps += [ ":${base_name}_l10n_assets" ]
+  generated_file("${base_name}_l10n_assets") {
+    deps = [ ":${base_name}_l10n_assets_group" ]
+    outputs = [ "${target_gen_dir}/${base_name}_l10n_assets.json" ]
+    data_keys = [ "resources" ]
+    output_conversion = "json"
+  }
+
+  if (current_toolchain == fidl_toolchain) {
+    # Generates a FIDL file with all the strings constants defined.
+    # It is only ran in the FIDL toolchain because we want to run this
+    # conversion only once.
+    compiled_action(strings_to_fidl_name) {
+      tool = "//src/intl/strings_to_fidl:strings_to_fidl_bin"
+      tool_output_name = "strings_to_fidl"
+
+      sources = [ source ]
+
+      outputs = [ generated_fidl_file_name ]
+
+      args = [
+        "--input",
+        rebase_path(source, root_build_dir),
+        "--output",
+        rebase_path(generated_fidl_file_name, root_build_dir),
+        "--library",
+        library,
+      ]
+    }  # compiled_action
+
+    # Generates the FIDL library based on the generated FIDL file from the
+    # above target.  This invocation is special because it needs to depend
+    # on a non-fidl library.  It must be a special invocation because all
+    # FIDL invocations in different toolchain assume that the dependencies
+    # have FIDL subtargets.
+    fidl(library) {
+      sources = [ generated_fidl_file_name ]
+      non_fidl_deps = [ ":${strings_to_fidl_name}" ]
+
+      # Since we use FIDL as intermediate representation and nobody will read
+      # it, we don't need to lint.
+      should_lint = false
+    }
+  } else {
+    # The non-FIDL toolchain FIDL libraries are built normally; except based
+    # off of the generated FIDL file.
+    fidl(library) {
+      sources = [ generated_fidl_file_name ]
+    }
+  }
+
+  # This group target has the same name as the template invoker, and contains
+  # all generated targets as its deps, so that all the deps are executed when
+  # the template is expanded.
+  group_deps += [
+    ":${library}",
+    ":${strings_to_fidl_name}($fidl_toolchain)",
+  ]
+  group(target_name) {
+    public_deps = group_deps
+  }
+}

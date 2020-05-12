@@ -56,6 +56,13 @@ import("//build/rust/toolchain.gni")
 #
 #   experimental_flags (optional)
 #     A list of experimental fidlc features to enable.
+#
+#   non_fidl_deps (optional)
+#     A list of non-FIDL dependency targets, i.e. targets that don't contribute
+#     FIDL artifacts, but should be built before this target regardless.
+#
+#   should_lint (optional, boolean)
+#     If set to false, the linting step is skipped.
 
 template("fidl") {
   if (defined(invoker.sdk_category)) {
@@ -82,6 +89,12 @@ template("fidl") {
   assert(!defined(invoker.deps),
          "All FIDL dependencies are inherently " +
              "public, use 'public_deps' instead of 'deps'.")
+
+  deps = []
+
+  if (defined(invoker.non_fidl_deps)) {
+    deps += invoker.non_fidl_deps
+  }
 
   if (current_toolchain == dart_toolchain) {
     import("//build/dart/fidl_dart.gni")

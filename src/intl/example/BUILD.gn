@@ -1,0 +1,76 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/intl/intl_strings.gni")
+import("//build/package.gni")
+
+group("example") {
+  testonly = true
+  deps = [ ":pkg" ]
+}
+
+executable("src_intl_example_bin") {
+  sources = [ "main.cc" ]
+  deps = [
+    # This is the underlying generated FIDL code, must be included so that
+    # its settings make it to the -I flag for compiler invocation.
+    # Generate all needed intermediate resources.
+    ":fuchsia.intl.l10n",
+    ":l10n",
+  ]
+}
+
+package("pkg") {
+  package_name = "src-intl-example"
+  deps = [
+    # The binary to bundle in the package
+    ":src_intl_example_bin",
+
+    # For the localized resources.
+    ":l10n",
+    ":l10n_l10n_assets",
+  ]
+  binaries = [
+    {
+      name = "src_intl_example_bin"
+      dest = "src_intl_example"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/src-intl-example.cmx"
+      dest = "src-intl-example.cmx"
+    },
+  ]
+
+  # This declaration works, but needs to be maintained manually.  Work is
+  # underway to make the "package" target collect and apply this information
+  # automatically.
+  resources = [
+    {
+      path = rebase_path("$target_gen_dir/en/l10n.json")
+      dest = "assets/locales/en/l10n.json"
+    },
+    {
+      path = rebase_path("$target_gen_dir/fr/l10n.json")
+      dest = "assets/locales/fr/l10n.json"
+    },
+    {
+      path = rebase_path("$target_gen_dir/es/l10n.json")
+      dest = "assets/locales/es/l10n.json"
+    },
+  ]
+}
+
+intl_strings("l10n") {
+  source = "strings.xml"
+  source_locale = "en"
+  output_locales = [
+    "en",
+    "fr",
+    "es",
+  ]
+  library = "fuchsia.intl.l10n"
+}

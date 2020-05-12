@@ -5,6 +5,7 @@
 group("intl") {
   testonly = true
   public_deps = [
+    "example",
     "intl_services",
     "strings_to_fidl",
     "strings_to_json",

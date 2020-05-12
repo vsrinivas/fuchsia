@@ -24,7 +24,11 @@ rustc_staticlib("lib") {
   name = "intl_lookup"
   edition = "2018"
   public = [ "lookup.h" ]
-  deps = [ "//third_party/rust_crates:libc" ]
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:rust_icu_uloc",
+  ]
   non_rust_deps = [ "//zircon/public/lib/zx" ]
 }
 
