@@ -5,17 +5,16 @@
 use {
     crate::args::{Ffx, Subcommand},
     crate::config::command::exec_config,
-    crate::constants::{DAEMON, MAX_RETRY_COUNT},
+    crate::constants::DAEMON,
     crate::daemon::{is_daemon_running, start as start_daemon},
     crate::logger::setup_logger,
     anyhow::{format_err, Context, Error},
     ffx_run_component::{args::RunComponentCommand, run_component},
     ffx_test::{args::TestCommand, test},
-    fidl::endpoints::{create_proxy, ServiceMarker},
-    fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
+    ffxlib::find_and_connect,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
-    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
-    fidl_fuchsia_overnet_protocol::NodeId,
     std::env,
     std::process::Command,
 };
@@ -41,8 +40,7 @@ pub struct Cli {
 impl Cli {
     pub async fn new() -> Result<Self, Error> {
         setup_logger("ffx").await;
-        let mut peer_id = Cli::find_daemon().await?;
-        let daemon_proxy = Cli::create_daemon_proxy(&mut peer_id).await?;
+        let daemon_proxy = Cli::find_daemon().await?;
         Ok(Self { daemon_proxy })
     }
 
@@ -50,42 +48,12 @@ impl Cli {
         Self { daemon_proxy }
     }
 
-    async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy, Error> {
-        let svc = hoist::connect_as_service_consumer()?;
-        let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        svc.connect_to_service(id, DaemonMarker::NAME, s)?;
-        let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
-        Ok(DaemonProxy::new(proxy))
-    }
-
-    async fn find_daemon() -> Result<NodeId, Error> {
+    async fn find_daemon() -> Result<DaemonProxy, Error> {
         if !is_daemon_running() {
             Cli::spawn_daemon().await?;
         }
-        let svc = hoist::connect_as_service_consumer()?;
-        // Sometimes list_peers doesn't properly report the published services - retry a few times
-        // but don't loop indefinitely.
-        for _ in 0..MAX_RETRY_COUNT {
-            let peers = svc.list_peers().await?;
-            log::trace!("Got peers: {:?}", peers);
-            for peer in peers {
-                if peer.description.services.is_none() {
-                    continue;
-                }
-                if peer
-                    .description
-                    .services
-                    .unwrap()
-                    .iter()
-                    .find(|name| *name == DaemonMarker::NAME)
-                    .is_none()
-                {
-                    continue;
-                }
-                return Ok(peer.id);
-            }
-        }
-        panic!("No daemon found.")
+
+        Ok(find_and_connect().await?.expect("No daemon found."))
     }
 
     pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {
@@ -232,7 +200,11 @@ fn main() {
 
 #[cfg(test)]
 mod test {
-    use {super::*, fidl_fuchsia_developer_bridge::DaemonRequest, futures::TryStreamExt};
+    use {
+        super::*,
+        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest},
+        futures::TryStreamExt,
+    };
 
     fn setup_fake_daemon_service() -> DaemonProxy {
         let (proxy, mut stream) =
