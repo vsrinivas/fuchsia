@@ -141,7 +141,7 @@ async fn test_observer_stop_api() {
     let dir_req = observer.directory_request().clone();
     let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
 
-    let (_env_proxy, mut logging_component) = fs
+    let (env_proxy, mut logging_component) = fs
         .add_proxy_service_to::<LogSinkMarker, _>(dir_req)
         .launch_component_in_nested_environment(
             "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx"
@@ -171,6 +171,9 @@ async fn test_observer_stop_api() {
 
     // wait for logging_component to die
     assert!(logging_component.wait().await.unwrap().success());
+
+    // kill environment before stopping observer.
+    env_proxy.kill().await.unwrap();
 
     // connect to controller and call stop
     let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
