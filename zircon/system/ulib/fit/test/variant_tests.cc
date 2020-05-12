@@ -6,7 +6,14 @@
 #include <type_traits>
 
 #include <lib/fit/variant.h>
-#include <unittest/unittest.h>
+
+#include <zxtest/zxtest.h>
+
+#if !defined(NDEBUG) && defined(__Fuchsia__)
+#define DEATH_TESTS 1
+#else
+#define DEATH_TESTS 0
+#endif
 
 namespace {
 
@@ -97,9 +104,7 @@ const complex_traits::variant complex_traits::const_c{fit::in_place_index<2>,
                                                       complex_traits::c_value};
 
 template <typename T>
-bool accessors() {
-  BEGIN_TEST;
-
+void accessors() {
   EXPECT_EQ(0, T::a.index());
   EXPECT_TRUE(T::a_value == T::a.template get<0>());
   EXPECT_TRUE(T::a_value == T::const_a.template get<0>());
@@ -111,14 +116,10 @@ bool accessors() {
   EXPECT_EQ(2, T::c.index());
   EXPECT_TRUE(T::c_value == T::c.template get<2>());
   EXPECT_TRUE(T::c_value == T::const_c.template get<2>());
-
-  END_TEST;
 }
 
 template <typename T>
-bool copy_move_assign() {
-  BEGIN_TEST;
-
+void copy_move_assign() {
   using b_type = decltype(T::b_value);
   using c_type = decltype(T::c_value);
 
@@ -175,14 +176,10 @@ bool copy_move_assign() {
   EXPECT_FALSE(fit::holds_alternative<b_type>(z));
   EXPECT_TRUE(fit::holds_alternative<c_type>(z));
   EXPECT_TRUE(T::c_value == z.template get<2>());
-
-  END_TEST;
 }
 
 template <typename T>
-bool swapping() {
-  BEGIN_TEST;
-
+void swapping() {
   typename T::variant x;
   EXPECT_EQ(0, x.index());
   EXPECT_TRUE(T::a_value == x.template get<0>());
@@ -218,8 +215,6 @@ bool swapping() {
   EXPECT_TRUE(T::b_value == x.template get<1>());
   EXPECT_EQ(0, y.index());
   EXPECT_TRUE(T::a_value == y.template get<0>());
-
-  END_TEST;
 }
 
 // Test constexpr behavior.
@@ -453,11 +448,9 @@ static_assert(!std::is_trivially_copy_assignable<fit::variant<fit::monostate, st
 
 }  // namespace
 
-BEGIN_TEST_CASE(variant_tests)
-RUN_TEST(accessors<literal_traits>)
-RUN_TEST(accessors<complex_traits>)
-RUN_TEST(copy_move_assign<literal_traits>)
-RUN_TEST(copy_move_assign<complex_traits>)
-RUN_TEST(swapping<literal_traits>)
-RUN_TEST(swapping<complex_traits>)
-END_TEST_CASE(variant_tests)
+TEST(Variant, Accessors_Literal) { accessors<literal_traits>(); }
+TEST(Variant, Accessors_Complex) { accessors<complex_traits>(); }
+TEST(Variant, CopyMoveAssign_Literal) { copy_move_assign<literal_traits>(); }
+TEST(Variant, CopyMoveAssign_Complex) { copy_move_assign<complex_traits>(); }
+TEST(Variant, Swapping_Literal) { swapping<literal_traits>(); }
+TEST(Variant, Swapping_Complex) { swapping<complex_traits>(); }

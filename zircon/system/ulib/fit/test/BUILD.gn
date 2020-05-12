@@ -34,7 +34,10 @@ test("fit-unittest") {
       configs -= fdio_config
     }
   }
-  sources = [ "string_view_test.cc" ]
+  sources = [
+    "string_view_test.cc",
+    "variant_tests.cc",
+  ]
   deps = [
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
@@ -84,7 +87,6 @@ test("fit") {
     "suspended_task_tests.cc",
     "traits_tests.cc",
     "utility_internal_tests.cc",
-    "variant_tests.cc",
   ]
   deps = [ "//zircon/public/lib/fit" ]
   configs += [ ":shadow" ]
