@@ -97,7 +97,6 @@ if (current_toolchain == default_toolchain) {
     sources = [
       "arch.cc",
       "asm.S",
-      "boot-mmu.cc",
       "cache-ops.S",
       "debugger.cc",
       "exceptions.S",
@@ -120,6 +119,7 @@ if (current_toolchain == default_toolchain) {
       "uspace_entry.S",
     ]
     deps = [
+      ":boot-mmu",
       "$zx/kernel/dev/interrupt/arm_gic/common",
       "$zx/kernel/dev/iommu/dummy",
       "$zx/kernel/lib/arch",
@@ -134,6 +134,20 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/vm",
       "$zx/system/ulib/bitmap",
       "$zx/system/ulib/pretty",
+    ]
+  }
+
+  source_set("boot-mmu") {
+    visibility = [ ":*" ]
+
+    sources = [ "boot-mmu.cc" ]
+    deps = [ "$zx/kernel/vm" ]
+
+    # Everything in this file runs too early to use the full ABI.  Per-function
+    # attribute suppression of sanitizer modes doesn't work for C++ lambda.
+    configs += [
+      "$zx/public/gn/config:no_safestack",
+      "$zx/public/gn/config:no-shadow-call-stack",
     ]
   }
 }
