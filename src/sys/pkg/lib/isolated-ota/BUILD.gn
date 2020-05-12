@@ -214,5 +214,8 @@ package("isolated-swd") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":isolated-ota-tests" ]
+  public_deps = [
+    ":isolated-ota-tests",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+  ]
 }
