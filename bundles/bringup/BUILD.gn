@@ -101,7 +101,6 @@ group("tests") {
     "//zircon/system/utest/devcoordinator-namespace:devcoordinator-namespace-package",
     "//zircon/system/utest/device-enumeration:device-enumeration-package",
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-package",
-    "//zircon/system/utest/dump1:dump1-package",
     "//zircon/system/utest/entropy:entropy-package",
     "//zircon/system/utest/errno:errno-package",
     "//zircon/system/utest/ethernet:ethernet-package",
