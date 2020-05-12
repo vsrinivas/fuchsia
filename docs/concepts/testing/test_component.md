@@ -112,13 +112,17 @@ Tests and the components launched in a hermetic environment will have access to 
 
 ### Restricting log severity
 
-By default, a test component fails when the component's test environment produces [ERROR/FATAL logs][syslogs].
+**This section relates to an upcoming but yet unreleased feature.**
 
-A test might expect to log errors. For instance, the test might be covering a
-failure condition & recovery steps. Other tests might expect not to log anything
-more severe than INFO. The common case and default behavior is for errors above
-WARN level to be considered failures, but there are configuration files for
-overrides here:
+Tests may be configured to fail when the component's test environment produces
+high severity [logs][syslogs]. This is useful for when such logs, for instance
+when such logs are unexpected, as they indicate an error.
+
+A test might expect to log at ERROR severity. For example, the test might be
+covering a failure condition & recovery steps. Other tests might expect not to
+log anything more severe than INFO. The common case and default behavior is for
+errors above WARN level to be considered failures, but there are configuration
+files for overrides here:
 
 - **fuchsia**: [//garnet/bin/run_test_component/max_severity_fuchsia.json][max-severity-fuchsia]
 - **petals**: //tests/config/max_severity_\<petal\>.json
@@ -157,7 +161,6 @@ Valid values for `max_severity`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FAT
 
 Changes to configuration take effect *only after an update*, for instance with `fx
 update` or `fx ota`, or by rebuilding and restarting `fx qemu`.
-
 
 ## Run external services
 
