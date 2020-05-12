@@ -12,8 +12,8 @@
 
 #include "src/camera/bin/device/device_impl.h"
 #include "src/camera/bin/device/stream_impl.h"
-#include "src/camera/bin/device/test/fake_controller.h"
 #include "src/camera/bin/device/util.h"
+#include "src/camera/lib/fake_controller/fake_controller.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"

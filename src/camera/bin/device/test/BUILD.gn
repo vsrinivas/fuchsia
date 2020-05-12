@@ -7,11 +7,7 @@ executable("test") {
 
   output_name = "device_test"
 
-  sources = [
-    "fake_controller.cc",
-    "fake_controller.h",
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     "//garnet/packages/prod:sysmem_connector",
@@ -21,6 +17,7 @@ executable("test") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/camera/bin/device:lib",
+    "//src/camera/lib/fake_controller",
     "//src/camera/lib/fake_legacy_stream",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",

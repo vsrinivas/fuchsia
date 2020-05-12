@@ -3,8 +3,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_BIN_DEVICE_TEST_FAKE_CONTROLLER_H_
-#define SRC_CAMERA_BIN_DEVICE_TEST_FAKE_CONTROLLER_H_
+#ifndef SRC_CAMERA_LIB_FAKE_CONTROLLER_FAKE_CONTROLLER_H_
+#define SRC_CAMERA_LIB_FAKE_CONTROLLER_FAKE_CONTROLLER_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
@@ -44,4 +44,4 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   std::unique_ptr<camera::FakeLegacyStream> stream_;
 };
 
-#endif  // SRC_CAMERA_BIN_DEVICE_TEST_FAKE_CONTROLLER_H_
+#endif  // SRC_CAMERA_LIB_FAKE_CONTROLLER_FAKE_CONTROLLER_H_

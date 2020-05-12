@@ -2,40 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("fake_stream") {
+group("fake_controller") {
+  testonly = true
   public_deps = [ ":lib" ]
-}
-
-source_set("impl_header") {
-  visibility = [
-    ":*",
-    "//src/camera/lib/fake_camera/*",
-    "//src/camera/lib/fake_controller/*",
-  ]
-
-  sources = [ "fake_stream.h" ]
-
-  public = [ "fake_stream_impl.h" ]
 }
 
 source_set("lib") {
   visibility = [ ":*" ]
+  testonly = true
 
-  sources = [ "fake_stream_impl.cc" ]
+  sources = [
+    "fake_controller.cc",
+    "fake_controller.h",
+  ]
 
-  public = [ "fake_stream.h" ]
+  public = [ "fake_controller.h" ]
 
   deps = [
-    ":impl_header",
     "//sdk/lib/syslog/cpp",
+    "//src/camera/lib/fake_stream:impl_header",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
+    "//src/camera/lib/fake_legacy_stream",
+    "//src/camera/lib/fake_stream",
     "//zircon/public/lib/fit",
   ]
 }
