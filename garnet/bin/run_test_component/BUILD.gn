@@ -48,6 +48,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
+    "//src/sys/timekeeper:fuchsia.time",
     "//third_party/rapidjson",
     "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/fidl/fuchsia-logger",

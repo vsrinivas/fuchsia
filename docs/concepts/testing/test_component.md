@@ -223,6 +223,7 @@ There are some services, such as network, that cannot be faked or mocked. Howeve
 "fuchsia.scheduler.ProfileProvider"
 "fuchsia.sys.test.CacheControl"
 "fuchsia.sysmem.Allocator"
+"fuchsia.time.Utc"
 "fuchsia.ui.policy.Presenter"
 "fuchsia.ui.scenic.Scenic"
 "fuchsia.vulkan.loader.Loader"

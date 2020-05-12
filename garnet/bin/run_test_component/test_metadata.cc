@@ -18,6 +18,7 @@
 #include <fuchsia/sys/test/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/time/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
 #include <unordered_set>
@@ -55,6 +56,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::sys::test::CacheControl::Name_,
     fuchsia::sysinfo::SysInfo::Name_,
     fuchsia::sysmem::Allocator::Name_,
+    fuchsia::time::Utc::Name_,
     fuchsia::ui::policy::Presenter::Name_,
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,
