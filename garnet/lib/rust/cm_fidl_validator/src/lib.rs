@@ -49,10 +49,8 @@ pub enum Error {
     InvalidResolver(DeclField, String),
     #[error("{0} specifies multiple runners")]
     MultipleRunnersSpecified(String),
-    #[error("a dependency cycle exists between resolver registrations")]
-    ResolverDependencyCycle,
-    #[error("dependency cycle(s) exists between offer declarations: {0}")]
-    OfferDependencyCycle(String),
+    #[error("dependency cycle(s) exist: {0}")]
+    DependencyCycle(String),
     #[error("{} \"{}\" path overlaps with {} \"{}\"", decl, path, other_decl, other_path)]
     InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
 }
@@ -163,13 +161,8 @@ impl Error {
         Error::MultipleRunnersSpecified(decl_type.into())
     }
 
-    pub fn resolver_dependency_cycle() -> Self {
-        Error::ResolverDependencyCycle
-    }
-
-    pub fn offer_dependency_cycle(error: directed_graph::Error<&str>) -> Self {
-        // Convert the &strs into Strings
-        Error::OfferDependencyCycle(error.format_cycle())
+    pub fn dependency_cycle(error: String) -> Self {
+        Error::DependencyCycle(error)
     }
 
     pub fn invalid_path_overlap(
@@ -277,12 +270,29 @@ struct ValidationContext<'a> {
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
-    strong_dependencies: DirectedGraph<&'a str>,
+    strong_dependencies: DirectedGraph<DependencyNode<'a>>,
     target_paths: PathMap<'a>,
     offered_runner_names: NameMap<'a>,
     offered_resolver_names: NameMap<'a>,
     offered_event_names: NameMap<'a>,
     errors: Vec<Error>,
+}
+
+/// A node in the DependencyGraph. The first string describes the type of node and the second
+/// string is the name of the node.
+#[derive(Copy, Clone, Hash, Ord, Debug, PartialOrd, PartialEq, Eq)]
+enum DependencyNode<'a> {
+    Child(&'a str),
+    Environment(&'a str),
+}
+
+impl<'a> fmt::Display for DependencyNode<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DependencyNode::Child(name) => write!(f, "child {}", name),
+            DependencyNode::Environment(name) => write!(f, "environment {}", name),
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -367,9 +377,6 @@ impl<'a> ValidationContext<'a> {
             for offer in offers.iter() {
                 self.validate_offers_decl(&offer);
             }
-            if let Err(e) = self.strong_dependencies.topological_sort() {
-                self.errors.push(Error::offer_dependency_cycle(e));
-            }
         }
 
         // Validate "environments" after all other declarations are processed.
@@ -377,6 +384,11 @@ impl<'a> ValidationContext<'a> {
             for environment in environment {
                 self.validate_environment_decl(&environment);
             }
+        }
+
+        // Check that there are no strong cyclical dependencies between children and environments
+        if let Err(e) = self.strong_dependencies.topological_sort() {
+            self.errors.push(Error::dependency_cycle(e.format_cycle()));
         }
 
         if self.errors.is_empty() {
@@ -612,6 +624,11 @@ impl<'a> ValidationContext<'a> {
             if self.all_children.insert(name, child).is_some() {
                 self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
             }
+            if let Some(env) = child.environment.as_ref() {
+                let source = DependencyNode::Environment(env.as_str());
+                let target = DependencyNode::Child(name);
+                self.strong_dependencies.add_edge(source, target);
+            }
         }
         if let Some(environment) = child.environment.as_ref() {
             if !self.all_environment_names.contains(environment.as_str()) {
@@ -681,21 +698,11 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Child(child_ref)) => {
                 // Make sure the child is valid.
                 if self.validate_child_ref("ResolverRegistration", "source", &child_ref) {
-                    // Ensure there are no cycles, eg:
-                    // environment is assigned to a child, but the environment contains a resolver
-                    // provided by the same child.
-                    // TODO(fxb/48128): Replace with cycle detection algorithm using //src/lib/directed_graph.
-                    let child_name = child_ref.name.as_str();
-                    if let Some(child_decl) = self.all_children.get(child_name) {
-                        match (environment_name, child_decl.environment.as_ref()) {
-                            (Some(environment_name), Some(child_environment_name))
-                                if environment_name == child_environment_name =>
-                            {
-                                self.errors.push(Error::resolver_dependency_cycle());
-                            }
-                            _ => {}
-                        }
-                    }
+                    // Ensure there are no cycles, such as a resolver in an environment being
+                    // assigned to a child which the resolver depends on.
+                    let source = DependencyNode::Child(child_ref.name.as_str());
+                    let target = DependencyNode::Environment(environment_name.unwrap().as_str());
+                    self.strong_dependencies.add_edge(source, target);
                 }
             }
             Some(_) => {
@@ -1035,7 +1042,9 @@ impl<'a> ValidationContext<'a> {
                 if source == target {
                     // This is already its own error, don't report this as a cycle.
                 } else {
-                    self.strong_dependencies.add_edge(source.as_str(), target.as_str());
+                    let source = DependencyNode::Child(source.as_str());
+                    let target = DependencyNode::Child(target.as_str());
+                    self.strong_dependencies.add_edge(source, target);
                 }
             }
         }
@@ -1941,8 +1950,8 @@ mod tests {
                     decl.offers = Some(offers);
                     decl.children = Some(children);
                     let result = Err(ErrorList::new(vec![
-                        Error::offer_dependency_cycle(
-                            directed_graph::Error::CyclesDetected([vec!["a", "b", "a"]].iter().cloned().collect())),
+                        Error::dependency_cycle(
+                            directed_graph::Error::CyclesDetected([vec!["child a", "child b", "child a"]].iter().cloned().collect()).format_cycle()),
                     ]));
                     validate_test(decl, result);
                 }
@@ -4049,7 +4058,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::offer_dependency_cycle(directed_graph::Error::CyclesDetected([vec!["a", "b", "c", "a"], vec!["b", "d", "b"]].iter().cloned().collect())),
+                Error::dependency_cycle(directed_graph::Error::CyclesDetected([vec!["child a", "child b", "child c", "child a"], vec!["child b", "child d", "child b"]].iter().cloned().collect()).format_cycle()),
             ])),
         },
 
@@ -4257,7 +4266,63 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::resolver_dependency_cycle(),
+                Error::dependency_cycle(
+                    directed_graph::Error::CyclesDetected([vec!["child child", "environment env", "child child"]].iter().cloned().collect()).format_cycle()
+                ),
+            ])),
+        },
+        test_validate_environment_resolver_multiple_children_cycle => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("env".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: Some("pkg_resolver".to_string()),
+                            source: Some(Ref::Child(ChildRef{
+                                name: "a".to_string(),
+                                collection: None,
+                            })),
+                            scheme: Some("fuchsia-pkg".to_string()),
+                        },
+                    ]),
+                    stop_timeout_ms: Some(1234),
+                }]);
+                decl.children = Some(vec![
+                    ChildDecl {
+                        name: Some("a".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                        url: Some("fuchsia-pkg://child-a".to_string()),
+                        environment: None,
+                    },
+                    ChildDecl {
+                        name: Some("b".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                        url: Some("fuchsia-pkg://child-b".to_string()),
+                        environment: Some("env".to_string()),
+                    },
+                ]);
+                decl.offers = Some(vec![OfferDecl::Service(OfferServiceDecl {
+                    source: Some(Ref::Child(ChildRef {
+                        name: "b".to_string(),
+                        collection: None,
+                    })),
+                    source_path: Some("/svc/thing".to_string()),
+                    target: Some(Ref::Child(
+                       ChildRef {
+                           name: "a".to_string(),
+                           collection: None,
+                       }
+                    )),
+                    target_path: Some("/svc/thing".to_string()),
+                })]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle(
+                    directed_graph::Error::CyclesDetected([vec!["child a", "environment env", "child b", "child a"]].iter().cloned().collect()).format_cycle()
+                ),
             ])),
         },
 
