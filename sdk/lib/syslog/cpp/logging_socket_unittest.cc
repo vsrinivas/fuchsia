@@ -162,6 +162,22 @@ TEST_F(LoggingSocketTest, LogFirstN) {
   CheckSocketEmpty();
 }
 
+TEST_F(LoggingSocketTest, LogFirstNWithTag) {
+  constexpr int kLimit = 5;
+  constexpr int kCycles = 20;
+  constexpr const char* kLogMessage = "Hello";
+  constexpr const char* kTag = "tag";
+  static_assert(kCycles > kLimit);
+
+  for (int i = 0; i < kCycles; ++i) {
+    FX_LOGST_FIRST_N(ERROR, kLimit, kTag) << kLogMessage;
+  }
+  for (int i = 0; i < kLimit; ++i) {
+    ReadPacketAndCompare(FX_LOG_ERROR, kLogMessage, {kTag});
+  }
+  CheckSocketEmpty();
+}
+
 TEST_F(LoggingSocketTest, DontWriteSeverity) {
   FX_LOGS(ERROR) << "Hi";
   LogPacket packet = ReadPacket();

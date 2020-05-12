@@ -15,7 +15,7 @@ source_set("format") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/cpp:no_converters",
-    "//src/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/ffl",
   ]
 }

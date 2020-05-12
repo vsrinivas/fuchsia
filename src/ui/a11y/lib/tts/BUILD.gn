@@ -11,9 +11,9 @@ source_set("tts") {
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.tts" ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]

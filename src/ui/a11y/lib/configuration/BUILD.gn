@@ -16,7 +16,6 @@ source_set("configuration") {
   ]
 
   deps = [
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",

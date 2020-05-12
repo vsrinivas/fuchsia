@@ -4,7 +4,7 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 #include <openthread/platform/settings.h>

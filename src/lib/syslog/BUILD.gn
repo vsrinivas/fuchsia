@@ -9,7 +9,6 @@ group("syslog") {
 group("tests") {
   testonly = true
   deps = [
-    "cpp:tests",
     "go:tests",
     "rust:tests",
   ]

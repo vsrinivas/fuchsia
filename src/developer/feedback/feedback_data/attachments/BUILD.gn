@@ -66,8 +66,8 @@ source_set("types") {
   sources = [ "types.h" ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:errors",
-    "//src/lib/syslog/cpp",
   ]
 }
 

@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 ### BUILD.gn dependency
 
 ```gn
-//src/lib/syslog/cpp
+//sdk/lib/syslog/cpp
 ```
 
 ### Log messages
@@ -83,7 +83,7 @@ By default, the process name is used as the tag, but this can be changed by
 calling `syslog::SetTags`.
 
 ```C++
-#include "src/lib/syslog/cpp/logger.h"
+#include <lib/syslog/cpp/log_settings.h>
 
 int main(int argc, char** argv) {
      syslog::SetTags({"tag1", "tag2"});
@@ -93,11 +93,11 @@ int main(int argc, char** argv) {
 ### Set settings
 
 ```C++
-#include "src/lib/fxl/log_settings.h"
+#include "<lib/syslog/cpp/log_settings.h>
 
 int main(int argc, char** argv) {
-     fxl::LogSettings settings = {.min_log_level = fxl::LOG_ERROR};
-     fxl::SetLogSettings(settings, {"tag1", "tag2"});
+     syslog::LogSettings settings = {.min_log_level = syslog::LOG_ERROR};
+     syslog::SetLogSettings(settings, {"tag1", "tag2"});
 }
 ```
 
@@ -125,6 +125,6 @@ based on command line arguments (e.g. --verbose), use:
 
 ### Reference
 
-[C++ APIs](/src/lib/syslog/cpp/logger.h)
+[C++ APIs](/sdk/lib/syslog/cpp/macros.h)
 <br/>
 [Command line initialization API](/src/lib/fxl/log_settings_command_line.h)

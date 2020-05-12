@@ -30,10 +30,10 @@ executable("system_time_updater_test_bin") {
   deps = [
     "//garnet/bin/network_time:lib",
     "//garnet/bin/network_time:time_util_lib",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.hardware.rtc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

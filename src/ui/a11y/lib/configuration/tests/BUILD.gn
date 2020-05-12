@@ -17,12 +17,12 @@ executable("configuration_tests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/configuration",

@@ -30,9 +30,9 @@ executable("unittests") {
   sources = [ "settings_test.cc" ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

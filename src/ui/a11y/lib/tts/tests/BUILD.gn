@@ -14,10 +14,10 @@ executable("tts_manager_tests") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.accessibility.tts",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/tts",
   ]

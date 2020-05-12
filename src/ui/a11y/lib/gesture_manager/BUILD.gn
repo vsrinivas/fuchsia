@@ -23,9 +23,9 @@ source_set("gesture_manager") {
 
   deps = [
     ":util",
-    "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
