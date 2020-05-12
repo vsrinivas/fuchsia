@@ -19,7 +19,6 @@ if (current_cpu != "") {
       ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/kernel/phys:tests",
 
-      "$zx/system/dev/lib/mmio-ptr/test",
 #------------------
 #------------------
 #------------------
