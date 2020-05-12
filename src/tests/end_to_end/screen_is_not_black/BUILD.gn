@@ -6,40 +6,78 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
+group("screen_is_not_black") {
+  testonly = true
+
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":no_basemgr_test",
+    ":test",
+  ]
+}
+
+_ENVIRONMENTS = [
+  # The astro environment has tags as it is still to be run on an FYI builder.
+  {
+    dimensions = {
+      device_type = "Astro"
+    }
+    tags = [ "e2e-fyi" ]
+  },
+
+  # Runs on "main" builders (try and ci) in NUC environments.
+  nuc_env,
+
+  # Also runs on fyi builders in NUC environments, so it doesn't look empty
+  # there, and we have a second data set of flakiness information if needed.
+  {
+    dimensions = {
+      device_type = "Intel NUC Kit NUC7i5DNHE"
+    }
+    tags = [ "e2e-fyi" ]
+  },
+]
+
+_DEPS = [
+  "//sdk/testing/sl4f/client",
+  "//third_party/dart-pkg/pub/image",
+  "//third_party/dart-pkg/pub/logging",
+  "//third_party/dart-pkg/pub/matcher",
+  "//third_party/dart-pkg/pub/test",
+]
+
+_NON_DART_DEPS = [ ":runtime_deps($host_toolchain)" ]
+
 dart_test("screen_is_not_black_test") {
   sources = [ "screen_is_not_black_test.dart" ]
 
-  deps = [
-    "//sdk/testing/sl4f/client",
-    "//third_party/dart-pkg/pub/image",
-    "//third_party/dart-pkg/pub/logging",
-    "//third_party/dart-pkg/pub/matcher",
-    "//third_party/dart-pkg/pub/test",
-  ]
+  deps = _DEPS
 
-  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+  args = [ "--start_basemgr" ]
 
-  environments = [
-    # Runs on "main" builders (try and ci) in NUC environments.
-    nuc_env,
+  non_dart_deps = _NON_DART_DEPS
 
-    # Also runs on fyi builders in NUC environments, so it doesn't look empty
-    # there, and we have a second data set of flakiness information if needed.
-    {
-      dimensions = {
-        device_type = "Intel NUC Kit NUC7i5DNHE"
-      }
-      tags = [ "e2e-fyi" ]
-    },
+  environments = _ENVIRONMENTS
+}
 
-    # The astro environment has tags as it is still to be run on an FYI builder.
-    {
-      dimensions = {
-        device_type = "Astro"
-      }
-      tags = [ "e2e-fyi" ]
-    },
-  ]
+# Same as above, except doesn't attempt to start basemgr.  For use in
+# environments where basemgr is not available nor required to take a
+# screenshot.
+dart_test("screen_is_not_black_no_basemgr_test") {
+  sources = [ "screen_is_not_black_test.dart" ]
+
+  deps = _DEPS
+
+  args = [ "--no-start_basemgr" ]
+
+  non_dart_deps = _NON_DART_DEPS
+
+  environments = _ENVIRONMENTS
 }
 
 if (is_host) {
@@ -56,6 +94,12 @@ group("test") {
   testonly = true
 
   deps = [ ":screen_is_not_black_test($host_toolchain)" ]
+}
+
+group("no_basemgr_test") {
+  testonly = true
+
+  deps = [ ":screen_is_not_black_no_basemgr_test($host_toolchain)" ]
 }
 
 group("config") {

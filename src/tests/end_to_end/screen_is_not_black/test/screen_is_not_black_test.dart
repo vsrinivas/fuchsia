@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:args/args.dart';
 import 'package:image/image.dart';
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
@@ -72,10 +73,21 @@ class Uptime {
   Duration get rebootSincePowerOn => sincePowerOn - sinceReboot;
 }
 
-void main() {
+void main(List<String> args) {
   Logger.root
     ..level = Level.ALL
     ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
+
+  final parser = ArgParser()
+    ..addFlag('start_basemgr',
+        help: 'If set, attempts to start basemgr, which is required for taking '
+            'a successful screenshot in some system configurations',
+        negatable: true,
+        defaultsTo: true);
+
+  final argResults = parser.parse(args);
+  final bool startBasemgr = argResults['start_basemgr'];
+
   sl4f.Sl4f sl4fDriver;
   sl4f.Scenic scenicDriver;
   sl4f.Modular basemgrController;
@@ -239,9 +251,15 @@ void main() {
     // to reboot as a performance test result.
     var rebootDuration = await sl4fDriver.reboot();
     try {
-      // This call, and the 'shutdown' below are no-ops in configurations where
-      // modular is already running.
-      await basemgrController.boot();
+      if (startBasemgr) {
+        // This call, and the 'shutdown' below are no-ops in configurations where
+        // modular is already running.
+        await basemgrController.boot();
+      } else {
+        log.info('The test was started with --no-start_basemgr, '
+            'so the test will not ensure that basemgr.cmx is running; '
+            'screenshotting should be provided through some other means.');
+      }
       for (var attempt = 0; attempt < _tries; attempt++) {
         try {
           final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
@@ -258,7 +276,9 @@ void main() {
       }
       fail('Screen was all black.');
     } finally {
-      await basemgrController.shutdown(forceShutdownBasemgr: false);
+      if (startBasemgr) {
+        await basemgrController.shutdown(forceShutdownBasemgr: false);
+      }
     }
   },
       // This is a large test that waits for the DUT to come up and to start
