@@ -383,7 +383,12 @@ pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error>
     let reader = BufReader::new(selector_file);
     for line in reader.lines() {
         match line {
-            Ok(line) => selector_vec.push(parse_selector(&line)?),
+            Ok(line) => {
+                if line.is_empty() {
+                    continue;
+                }
+                selector_vec.push(parse_selector(&line)?);
+            }
             Err(_) => {
                 return Err(
                     format_err!("Failed to read line of selector file at configured path.",),
@@ -850,7 +855,11 @@ mod tests {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         File::create(tempdir.path().join("a.txt"))
             .expect("create file")
-            .write_all(b"a:b:c")
+            .write_all(
+                b"a:b:c
+
+",
+            )
             .expect("writing test file");
         File::create(tempdir.path().join("b.txt"))
             .expect("create file")
@@ -870,6 +879,22 @@ mod tests {
         File::create(tempdir.path().join("b.txt"))
             .expect("create file")
             .write_all(b"**:**:**")
+            .expect("writing test file");
+
+        assert!(parse_selectors(tempdir.path()).is_err());
+    }
+
+    #[test]
+    fn unsuccessful_selector_parsing_line_with_only_whitespace() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        // Hard to tell, but the "empty" line contains whitespace, which is invalid.
+        File::create(tempdir.path().join("a.txt"))
+            .expect("create file")
+            .write_all(
+                b"a:b:c
+     
+",
+            )
             .expect("writing test file");
 
         assert!(parse_selectors(tempdir.path()).is_err());
