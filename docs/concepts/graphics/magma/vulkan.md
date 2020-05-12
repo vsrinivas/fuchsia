@@ -23,13 +23,10 @@ There are two options for displaying your rendered output:
 
    This method is not compatible with a system that has a system compositor.
 
-You can use a custom version of the WSI swapchain:
+You can use a custom version of the [WSI swapchain](https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html#_wsi_swapchain){: .external}.
 
-https://www.khronos.org/registry/vulkan/specs/1.0-extensions/html/vkspec.html#_wsi_swapchain
-
-For details on the magma customization, refer to the vkcube example here:
-
-`third_party/vkcube/cube.cc`
+For details on the magma customization, refer to the
+[vkcube](/src/graphics/examples/vkcube/third_party/vkcube/cube.cc) example.
 
 ## Interaction with the graphics console
 

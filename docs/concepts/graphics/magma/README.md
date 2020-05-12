@@ -28,6 +28,7 @@ Similar to the direct rendering model on Linux, there are two driver components:
 ### Magma system driver
 
 Responsibilities:
+
 * Initializing hardware
 * Setting up memory spaces
 * Setting up hardware contexts
@@ -39,6 +40,7 @@ Responsibilities:
 ### Client library driver
 
 Responsibilities:
+
 * Implementing Vulkan 1.0/1.1 entry points
 * Implementing Fuchsia extensions for import and export of external memory and semaphores
 * Implementing VK_KHR_display and/or VK_KHR_swapchain for direct display access
