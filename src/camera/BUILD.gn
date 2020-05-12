@@ -141,11 +141,12 @@ test_package("camera_tests") {
       manifest = "//src/camera/bin/device_watcher/test/device_watcher_test.cmx"
       environments = [ sherlock_env ]
     },
-    {
-      name = "device_test"
-      manifest = "//src/camera/bin/device/test/device_test.cmx"
-      environments = basic_envs
-    },
+    # TODO(51861): Fix flake in device_test.
+    # {
+    #   name = "device_test"
+    #   manifest = "//src/camera/bin/device/test/device_test.cmx"
+    #   environments = basic_envs
+    # },
     {
       name = "fake_stream_test"
       manifest = "//src/camera/lib/fake_stream/test/fake_stream_test.cmx"
