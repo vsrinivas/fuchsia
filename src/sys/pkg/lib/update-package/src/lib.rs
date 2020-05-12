@@ -9,6 +9,7 @@
 mod board;
 mod image;
 mod images;
+mod packages;
 mod update_mode;
 mod util;
 
@@ -16,10 +17,11 @@ pub use crate::{
     board::VerifyBoardError,
     image::{Image, OpenImageError},
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
+    packages::ParsePackageError,
     update_mode::{ParseUpdateModeError, UpdateMode},
 };
 
-use fidl_fuchsia_io::DirectoryProxy;
+use {fidl_fuchsia_io::DirectoryProxy, fuchsia_url::pkg_url::PkgUrl};
 
 /// An open handle to an "update" package.
 #[derive(Debug)]
@@ -61,6 +63,11 @@ impl UpdatePackage {
     /// Parses the update-mode file to obtain update mode.
     pub async fn update_mode(&self) -> Result<Option<UpdateMode>, ParseUpdateModeError> {
         update_mode::update_mode(&self.proxy).await
+    }
+
+    /// Returns the list of package urls that go in the universe of this update package.
+    pub async fn packages(&self) -> Result<Vec<PkgUrl>, ParsePackageError> {
+        packages::packages(&self.proxy).await
     }
 }
 
