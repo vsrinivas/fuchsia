@@ -50,7 +50,7 @@ Your product definition (typically one found in
 may not transitively include this test group. If it doesn't, add it to your `fx
 set` command, like so:
 
-`fx set ... --with //garnet/packages/tests:scenic_tests`
+`fx set ... --with //garnet/packages/tests:scenic`
 
 Typically, one just adds a new test to an existing binary, or a new test binary
 to an existing package.
