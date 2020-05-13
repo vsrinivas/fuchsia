@@ -234,7 +234,7 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   uintptr_t table_start = reinterpret_cast<uintptr_t>(mcfg) + sizeof(ACPI_TABLE_MCFG);
   uintptr_t table_end = reinterpret_cast<uintptr_t>(mcfg) + mcfg->Header.Length;
   size_t table_bytes = table_end - table_start;
-  if (table_bytes % sizeof(pci_mcfg_allocation_t)) {
+  if (table_bytes % sizeof(McfgAllocation)) {
     zxlogf(ERROR, "%s MCFG table has invalid size %zu", kLogTag, table_bytes);
     return ZX_ERR_INTERNAL;
   }
@@ -320,15 +320,15 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   status = RootHost.GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
   if (status == ZX_OK) {
     // Do the bus values make sense?
-    if (found_bbn && mcfg_alloc.start_bus_num != pinfo.start_bus_num) {
+    if (found_bbn && mcfg_alloc.start_bus_number != pinfo.start_bus_num) {
       zxlogf(ERROR, "%s: conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
-             kLogTag, dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_num);
+             kLogTag, dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
     }
 
     // Do the segment values make sense?
-    if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.segment_group) {
+    if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.pci_segment) {
       zxlogf(ERROR, "%s: conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
-             kLogTag, dev_ctx->name, pinfo.segment_group, mcfg_alloc.segment_group);
+             kLogTag, dev_ctx->name, pinfo.segment_group, mcfg_alloc.pci_segment);
     }
 
     // Since we have an ecam its metadata will replace anything defined in the ACPI tables.
@@ -363,8 +363,8 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   uint8_t last_pci_bbn = dev_ctx->info.start_bus_num;
   memcpy(name, dev_ctx->name, sizeof(name));
 
-  status =
-      Pciroot<pciroot_ctx>::Create(&RootHost, std::move(dev_ctx), parent, ctx->platform_bus, name);
+  status = Pciroot<pciroot_ctx>::Create(&RootHost, std::move(dev_ctx), parent, ctx->platform_bus(),
+                                        name);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to add pciroot device for '%s': %d", kLogTag, name, status);
   } else {
