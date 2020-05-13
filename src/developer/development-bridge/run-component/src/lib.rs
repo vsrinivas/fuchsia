@@ -14,6 +14,14 @@ use {
     std::sync::{Arc, Mutex},
 };
 
+///TODO(fxb/51594): use an attribute and proc macro to generate this
+pub async fn ffx_plugin(
+    remote_proxy: RemoteControlProxy,
+    cmd: RunComponentCommand,
+) -> Result<(), Error> {
+    run_component(remote_proxy, cmd).await
+}
+
 pub async fn run_component(
     remote_proxy: RemoteControlProxy,
     run: RunComponentCommand,

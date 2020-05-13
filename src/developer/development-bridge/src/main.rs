@@ -5,7 +5,7 @@
 use {
     crate::daemon::{is_daemon_running, start as start_daemon},
     crate::logger::setup_logger,
-    anyhow::{anyhow, format_err, Context, Error},
+    anyhow::{format_err, Context, Error},
     ffx_command::{Ffx, Subcommand},
     ffx_config::command::exec_config,
     ffx_core::constants::DAEMON,
@@ -23,7 +23,6 @@ mod logger;
 mod mdns;
 mod net;
 mod onet;
-mod plugins;
 mod ssh;
 mod target;
 mod util;
@@ -53,7 +52,7 @@ impl Cli {
     }
 
     pub async fn exec_plugins(&self, subcommand: Subcommand) -> Result<(), Error> {
-        plugins!(self.get_remote_proxy().await?, subcommand)
+        ffx_plugins::plugins(self.get_remote_proxy().await?, subcommand).await
     }
 
     pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {

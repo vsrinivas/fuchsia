@@ -16,6 +16,11 @@ use {
     },
 };
 
+///TODO(fxb/51594): use an attribute and proc macro to generate this
+pub async fn ffx_plugin(remote_proxy: RemoteControlProxy, cmd: TestCommand) -> Result<(), Error> {
+    test(remote_proxy, cmd).await
+}
+
 pub async fn test(remote_proxy: RemoteControlProxy, test: TestCommand) -> Result<(), Error> {
     let writer = Box::new(stdout());
     if test.list {

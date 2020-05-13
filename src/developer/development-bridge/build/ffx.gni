@@ -4,7 +4,8 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("./command.gni")
+import("command.gni")
+import("plugins.gni")
 
 # Defines FFX
 #
@@ -67,10 +68,25 @@ template("ffx") {
            ]
   }
 
+  plugins("ffx_plugins") {
+    output_name = "plugins.rs"
+    plugin_deps = invoker.plugin_deps
+  }
+
+  rustc_library("plugins_lib") {
+    name = "ffx_plugins"
+    source_root = "$target_gen_dir/plugins.rs"
+    deps = ffx_deps + [
+             ":command_lib",
+             ":ffx_plugins",
+           ]
+  }
+
   rustc_binary("bin") {
     name = output_name
     deps = ffx_deps + [
              ":command_lib",
+             ":plugins_lib",
              ":args_lib",
            ]
     non_rust_deps = [ "//third_party/boringssl" ]

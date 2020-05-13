@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates FFX subcommand with a plugin commands
+#
+template("plugins") {
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+  plugin_deps = []
+  if (defined(invoker.plugin_deps)) {
+    plugin_deps += invoker.plugin_deps
+  }
+
+  libraries = []
+  foreach(dep, plugin_deps) {
+    libraries += [ get_label_info(dep, "name") ]
+  }
+
+  generated_file = "$target_gen_dir/" + output_name
+  outputs = [ generated_file ]
+
+  lib_str = string_join(",", libraries)
+  action(target_name) {
+    script = "build/gn_generate_plugins.py"
+    args = [
+      "--out",
+      rebase_path(generated_file),
+      "--deps",
+      lib_str,
+    ]
+  }
+}
