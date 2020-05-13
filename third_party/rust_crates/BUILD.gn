@@ -418,11 +418,10 @@ group("ring") {
   deps = [ ":ring-v0_16_9" ]
 }
 
-if (is_fuchsia) {
-  group("rouille") {
-    deps = [ ":rouille-v3_0_0" ]
-  }
+group("rouille") {
+  deps = [ ":rouille-v3_0_0" ]
 }
+
 group("rust-crypto") {
   deps = [ ":rust-crypto-v0_2_36" ]
 }
@@ -998,7 +997,7 @@ rust_proc_macro("async-attributes-v1_1_1") {
     "--cap-lints=allow",
     "--edition=2018",
     "-Cmetadata=92ae212165e44b2b",
-    "-Cextra-filename=92ae212165e44b2b",
+    "-Cextra-filename=-92ae212165e44b2b",
   ]
 }
 
@@ -3779,7 +3778,7 @@ rust_library("libm-v0_2_1") {
     "--cap-lints=allow",
     "--edition=2015",
     "-Cmetadata=9acc3111b7a9209b",
-    "-Cextra-filename=9acc3111b7a9209b",
+    "-Cextra-filename=-9acc3111b7a9209b",
   ]
 }
 
