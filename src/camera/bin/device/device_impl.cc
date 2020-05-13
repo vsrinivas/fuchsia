@@ -249,8 +249,9 @@ void DeviceImpl::OnStreamRequested(
         for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
           std::ostringstream oss;
           oss << "camera_c" << current_configuration_index_ << "_s" << index << "_b" << i;
-          fsl::MaybeSetObjectName(buffers.buffers[i].vmo.get(), oss.str(),
-                                  [](std::string s) { return s.find("Sysmem") == 0; });
+          fsl::MaybeSetObjectName(buffers.buffers[i].vmo.get(), oss.str(), [](std::string s) {
+            return s.find("Sysmem") == 0 || s.find("ImagePipe2") == 0;
+          });
         }
 
         // Get the legacy stream using the negotiated buffers.

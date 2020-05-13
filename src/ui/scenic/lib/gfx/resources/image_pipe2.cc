@@ -142,6 +142,13 @@ void ImagePipe2::AddBufferCollection(
     return;
   }
 
+  // Set a friendly name if currently unset.
+  const char* kVmoName = "ImagePipe2Surface";
+  // Set the name priority to 20 to override what Vulkan might set, but allow
+  // the application to have a higher priority.
+  constexpr uint32_t kNamePriority = 20;
+  buffer_collection->SetName(kNamePriority, kVmoName);
+
   // Set constraints for |local_token|.
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   // ImagePipe2 persistently holds a single buffer reference for the active image and transiently
@@ -225,11 +232,6 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
     CloseConnectionAndCleanUp();
     return;
   }
-
-  // Set a friendly name if currently unset.
-  const char* kVmoName = "ImagePipe2Surface";
-  fsl::MaybeSetObjectName(info.buffer_collection_info.buffers[buffer_collection_index].vmo.get(),
-                          kVmoName, [](std::string s) { return s.find("Sysmem") == 0; });
 
   ImagePtr image = CreateImage(session_, image_id, info, buffer_collection_index, image_format);
   if (!image) {

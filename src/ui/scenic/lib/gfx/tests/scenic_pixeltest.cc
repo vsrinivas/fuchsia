@@ -24,6 +24,7 @@
 #include <map>
 #include <string>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
@@ -1428,6 +1429,9 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   }
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_secure);
+  EXPECT_EQ(
+      0u,
+      fsl::GetObjectName(buffer_collection_info.buffers[0].vmo.get()).find("ImagePipe2Surface"));
   status = buffer_collection->Close();
   EXPECT_EQ(status, ZX_OK);
   fuchsia::sysmem::ImageFormat_2 image_format = {};

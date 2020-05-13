@@ -43,8 +43,9 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     for (uint32_t i = 0; i < info->output_buffers.buffer_count; i++) {
       std::string buffer_collection_name = "camera_controller_output_node";
       auto buffer_name = buffer_collection_name.append(std::to_string(i));
-      fsl::MaybeSetObjectName(info->output_buffers.buffers[i].vmo.get(), buffer_name,
-                              [](std::string s) { return s.find("Sysmem") == 0; });
+      fsl::MaybeSetObjectName(
+          info->output_buffers.buffers[i].vmo.get(), buffer_name,
+          [](std::string s) { return s.find("Sysmem") == 0 || s.find("ImagePipe2") == 0; });
     }
     return fit::ok(std::move(info->output_buffers));
   }
