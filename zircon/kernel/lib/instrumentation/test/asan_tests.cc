@@ -99,7 +99,8 @@ bool kasan_test_pmm_use_after_free() {
 UNITTEST_START_TESTCASE(kasan_tests)
 UNITTEST("test_poisoning_heap", kasan_test_poison_heap)
 UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)
-UNITTEST("test_pmm_use_after_free", kasan_test_pmm_use_after_free)
+// TODO(fxb/52129): Test is flaky. Fix and re-enable.
+// UNITTEST("test_pmm_use_after_free", kasan_test_pmm_use_after_free)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
 
 #endif  // _has_feature(address_sanitizer)
