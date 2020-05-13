@@ -100,7 +100,7 @@ fn run(args: Args) -> Result<(), Error> {
     let target_dictionary =
         target_parser.parse(target_reader).with_context(|| "while parsing target dictionary")?;
 
-    let model = json::Model::from_dictionaries(
+    let model = json::model_from_dictionaries(
         &args.source_locale,
         &source_dictionary,
         &args.target_locale,
