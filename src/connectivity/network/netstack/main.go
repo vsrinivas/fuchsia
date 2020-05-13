@@ -27,7 +27,7 @@ import (
 	"netstack/dns"
 	"netstack/filter"
 	"netstack/pprof"
-	"networking_metrics_golib"
+	networking_metrics "networking_metrics_golib"
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
