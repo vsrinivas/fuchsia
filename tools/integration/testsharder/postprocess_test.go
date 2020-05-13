@@ -576,4 +576,27 @@ func TestExtractDeps(t *testing.T) {
 		expected := []string{"1", "2", "3"}
 		shardHasExpectedDeps(t, buildDir, tests, expected)
 	})
+
+	t.Run("host test paths are added to deps", func(t *testing.T) {
+		tests := []Test{
+			{
+				Test: build.Test{
+					Name:            "A",
+					OS:              "linux",
+					Path:            "path/to/A",
+					RuntimeDepsFile: depsFile(t, buildDir, "1"),
+				},
+			},
+			{
+				Test: build.Test{
+					Name:            "B",
+					OS:              "mac",
+					Path:            "path/to/B",
+					RuntimeDepsFile: depsFile(t, buildDir, "2"),
+				},
+			},
+		}
+		expected := []string{"1", "2", "path/to/A", "path/to/B"}
+		shardHasExpectedDeps(t, buildDir, tests, expected)
+	})
 }

@@ -50,9 +50,18 @@ func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 func extractDepsFromShard(shard *Shard, fuchsiaBuildDir string) error {
 	var shardDeps []string
 	for i := range shard.Tests {
-		deps, err := extractDepsFromTest(&shard.Tests[i], fuchsiaBuildDir)
+		test, deps, err := extractDepsFromTest(shard.Tests[i], fuchsiaBuildDir)
 		if err != nil {
 			return err
+		}
+		// extractDepsFromTest may modify the test, so we need to overwrite the
+		// entry.
+		shard.Tests[i] = test
+		// Any test that doesn't run on Fuchsia is invoked via an executable in
+		// the build out directory. The executable itself needs to be copied to
+		// the testing bot along with the test's deps.
+		if test.OS != "fuchsia" && test.Path != "" {
+			deps = append(deps, test.Path)
 		}
 		shardDeps = append(shardDeps, deps...)
 	}
@@ -62,21 +71,21 @@ func extractDepsFromShard(shard *Shard, fuchsiaBuildDir string) error {
 	return nil
 }
 
-func extractDepsFromTest(test *Test, fuchsiaBuildDir string) ([]string, error) {
+func extractDepsFromTest(test Test, fuchsiaBuildDir string) (Test, []string, error) {
 	if test.RuntimeDepsFile == "" {
-		return nil, nil
+		return test, nil, nil
 	}
 	path := filepath.Join(fuchsiaBuildDir, test.RuntimeDepsFile)
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return test, nil, err
 	}
 	defer f.Close()
 	// RuntimeDepsFile is no longer needed at this point and clutters the output.
 	test.RuntimeDepsFile = ""
 	var deps []string
 	err = json.NewDecoder(f).Decode(&deps)
-	return deps, err
+	return test, deps, err
 }
 
 func dedupe(l []string) []string {
