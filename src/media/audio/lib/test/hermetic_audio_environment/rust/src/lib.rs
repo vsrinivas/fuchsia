@@ -126,10 +126,12 @@ pub struct Environment {
 impl Environment {
     pub fn new() -> Result<Self> {
         use fidl_fuchsia_logger::LogSinkMarker;
+        use fidl_fuchsia_scheduler::ProfileProviderMarker;
 
         let mut fs = ServiceFs::new();
         register_services(&mut fs);
         fs.add_proxy_service::<LogSinkMarker, ConnectRequest>();
+        fs.add_proxy_service::<ProfileProviderMarker, ConnectRequest>();
 
         let env = fs.create_salted_nested_environment("environment")?;
         let launched_components = launch_components(env.launcher())?;
