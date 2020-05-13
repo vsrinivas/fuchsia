@@ -146,7 +146,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   BufferCollectionInfo Allocate(zx_status_t* allocation_result);
 
   zx_status_t AllocateVmo(MemoryAllocator* allocator,
-                          const fuchsia_sysmem_SingleBufferSettings* settings, zx::vmo* vmo);
+                          const fuchsia_sysmem_SingleBufferSettings* settings, uint32_t index,
+                          zx::vmo* vmo);
 
   int32_t CompareImageFormatConstraintsTieBreaker(const fuchsia_sysmem_ImageFormatConstraints* a,
                                                   const fuchsia_sysmem_ImageFormatConstraints* b);

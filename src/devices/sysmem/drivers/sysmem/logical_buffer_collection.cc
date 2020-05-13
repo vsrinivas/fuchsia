@@ -13,6 +13,7 @@
 
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
 
 #include "buffer_collection.h"
 #include "buffer_collection_token.h"
@@ -1554,7 +1555,7 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
     // Assign directly into result to benefit from FidlStruct<> management
     // of handle lifetime.
     zx::vmo vmo;
-    zx_status_t allocate_result = AllocateVmo(allocator, settings, &vmo);
+    zx_status_t allocate_result = AllocateVmo(allocator, settings, i, &vmo);
     if (allocate_result != ZX_OK) {
       ZX_DEBUG_ASSERT(allocate_result == ZX_ERR_NO_MEMORY);
       LogError("AllocateVmo() failed - status: %d", allocate_result);
@@ -1579,7 +1580,7 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
 }
 
 zx_status_t LogicalBufferCollection::AllocateVmo(
-    MemoryAllocator* allocator, const fuchsia_sysmem_SingleBufferSettings* settings,
+    MemoryAllocator* allocator, const fuchsia_sysmem_SingleBufferSettings* settings, uint32_t index,
     zx::vmo* child_vmo) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::AllocateVmo", "size_bytes",
                  settings->buffer_settings.size_bytes);
@@ -1599,8 +1600,9 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // mappings left).
   zx::vmo raw_parent_vmo;
   std::optional<std::string> name;
-  if (name_)
-    name = name_->second;
+  if (name_) {
+    name = fbl::StringPrintf("%s:%d", name_->second.c_str(), index).c_str();
+  }
   zx_status_t status = allocator->Allocate(rounded_size_bytes, name, &raw_parent_vmo);
   if (status != ZX_OK) {
     LogError(
@@ -1709,8 +1711,8 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
     // ParentVmo::ParentVmo().
     return status;
   }
-  if (name_) {
-    local_child_vmo.set_property(ZX_PROP_NAME, name_->second.c_str(), name_->second.size());
+  if (name) {
+    local_child_vmo.set_property(ZX_PROP_NAME, name->c_str(), name->size());
   }
 
   *child_vmo = std::move(local_child_vmo);

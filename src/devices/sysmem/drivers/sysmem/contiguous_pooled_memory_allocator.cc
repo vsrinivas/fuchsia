@@ -250,7 +250,12 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
   for (auto& [vmo, region] : regions_) {
-    DRIVER_ERROR("Region name %s size %zu", region.first.c_str(), region.second->size);
+    zx_info_handle_basic_t handle_info;
+    zx_status_t status = zx_object_get_info(vmo, ZX_INFO_HANDLE_BASIC, &handle_info,
+                                            sizeof(handle_info), nullptr, nullptr);
+    ZX_ASSERT(status == ZX_OK);
+    DRIVER_ERROR("Region koid %ld name %s size %zu", handle_info.koid, region.first.c_str(),
+                 region.second->size);
   }
 }
 

@@ -731,8 +731,8 @@ TEST(Sysmem, BufferName) {
   char vmo_name[ZX_MAX_NAME_LEN];
   ASSERT_EQ(ZX_OK, zx_object_get_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name)));
 
-  // Should be equal up to the first null.
-  EXPECT_EQ(std::string(kSysmemName), std::string(vmo_name));
+  // Should be equal up to the first null, plus an index
+  EXPECT_EQ(std::string("abcdefghijkl:0"), std::string(vmo_name));
   EXPECT_EQ(0u, vmo_name[ZX_MAX_NAME_LEN - 1]);
 }
 
