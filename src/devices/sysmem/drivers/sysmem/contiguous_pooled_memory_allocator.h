@@ -5,7 +5,9 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_CONTIGUOUS_POOLED_MEMORY_ALLOCATOR_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_CONTIGUOUS_POOLED_MEMORY_ALLOCATOR_H_
 
+#include <lib/async/wait.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/event.h>
 #include <zircon/limits.h>
 
 #include <fbl/vector.h>
@@ -19,7 +21,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
   ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name,
                                   uint64_t pool_id, uint64_t size, bool is_cpu_accessible,
-                                  bool is_ready);
+                                  bool is_ready, async_dispatcher_t* dispatcher = nullptr);
+
+  ~ContiguousPooledMemoryAllocator();
 
   // Default to page alignment.
   zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
@@ -49,6 +53,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
 
  private:
   zx_status_t InitCommon(zx::vmo local_contiguous_vmo);
+  void TraceObserverCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                             zx_status_t status, const zx_packet_signal_t* signal);
   void DumpPoolStats();
   void TracePoolSize();
   Owner* const parent_device_{};
@@ -63,6 +69,11 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t size_{};
   bool is_cpu_accessible_{};
   bool is_ready_{};
+
+  zx::event trace_observer_event_;
+  async::WaitMethod<ContiguousPooledMemoryAllocator,
+                    &ContiguousPooledMemoryAllocator::TraceObserverCallback>
+      wait_{this};
 };
 
 }  // namespace sysmem_driver

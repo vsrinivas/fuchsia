@@ -10,11 +10,9 @@
 
 namespace sysmem_driver {
 
-ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(Owner* parent_device,
-                                                                 const char* allocation_name,
-                                                                 uint64_t pool_id, uint64_t size,
-                                                                 bool is_cpu_accessible,
-                                                                 bool is_ready)
+ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
+    Owner* parent_device, const char* allocation_name, uint64_t pool_id, uint64_t size,
+    bool is_cpu_accessible, bool is_ready, async_dispatcher_t* dispatcher)
     : parent_device_(parent_device),
       allocation_name_(allocation_name),
       pool_id_(pool_id),
@@ -25,6 +23,25 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(Owner* parent_d
   snprintf(child_name_, sizeof(child_name_), "%s-child", allocation_name_);
   // Ensure NUL-terminated.
   child_name_[sizeof(child_name_) - 1] = 0;
+
+  if (dispatcher) {
+    zx_status_t status = zx::event::create(0, &trace_observer_event_);
+    ZX_ASSERT(status == ZX_OK);
+    status = trace_register_observer(trace_observer_event_.get());
+    ZX_ASSERT(status == ZX_OK);
+    wait_.set_object(trace_observer_event_.get());
+    wait_.set_trigger(ZX_EVENT_SIGNALED);
+
+    status = wait_.Begin(dispatcher);
+    ZX_ASSERT(status == ZX_OK);
+  }
+}
+
+ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
+  wait_.Cancel();
+  if (trace_observer_event_) {
+    trace_unregister_observer(trace_observer_event_.get());
+  }
 }
 
 zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
@@ -203,6 +220,20 @@ void ContiguousPooledMemoryAllocator::set_ready() { is_ready_ = true; }
 
 bool ContiguousPooledMemoryAllocator::is_ready() { return is_ready_; }
 
+void ContiguousPooledMemoryAllocator::TraceObserverCallback(async_dispatcher_t* dispatcher,
+                                                            async::WaitBase* wait,
+                                                            zx_status_t status,
+                                                            const zx_packet_signal_t* signal) {
+  if (status != ZX_OK)
+    return;
+  trace_observer_event_.signal(ZX_EVENT_SIGNALED, 0);
+  // We don't care if tracing was enabled or disabled - if the category is now disabled, the trace
+  // will just be ignored anyway.
+  TracePoolSize();
+
+  trace_notify_observer_updated(trace_observer_event_.get());
+  wait_.Begin(dispatcher);
+}
 void ContiguousPooledMemoryAllocator::DumpPoolStats() {
   uint64_t unused_size = 0;
   uint64_t max_free_size = 0;
