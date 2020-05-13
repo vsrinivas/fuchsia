@@ -5,7 +5,11 @@
 #include "sdmmc-block-device.h"
 
 #include <endian.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fake_ddk/fidl-helper.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/fzl/vmo-mapper.h>
 
 #include <fbl/algorithm.h>
@@ -19,7 +23,9 @@ namespace sdmmc {
 
 class SdmmcBlockDeviceTest : public zxtest::Test {
  public:
-  SdmmcBlockDeviceTest() : dut_(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient())) {
+  SdmmcBlockDeviceTest()
+      : dut_(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient())),
+        loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     dut_.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
     for (size_t i = 0; i < (FakeSdmmcDevice::kBlockSize / sizeof(kTestData)); i++) {
       test_block_.insert(test_block_.end(), kTestData, kTestData + sizeof(kTestData));
@@ -50,9 +56,13 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 
   void TearDown() override { dut_.StopWorkerThread(); }
 
+  void QueueBlockOps();
+  void QueueRpmbRequests();
+
  protected:
   static constexpr uint32_t kBlockCount = 0x100000;
   static constexpr size_t kBlockOpSize = BlockOperation::OperationSize(sizeof(block_op_t));
+  static constexpr uint32_t kMaxOutstandingOps = 16;
 
   struct OperationContext {
     zx::vmo vmo;
@@ -89,6 +99,13 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     boot2_ = GetBlockClient(BOOT_PARTITION_2);
 
     ASSERT_TRUE(user_.is_valid());
+
+    const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+      return static_cast<decltype(ddk_)*>(ctx)->MessageChild(3, msg, txn);
+    };
+    ASSERT_OK(messenger_.SetMessageOp(&ddk_, message_op));
+    ASSERT_OK(loop_.StartThread("rpmb-client-thread"));
+    ASSERT_OK(rpmb_.Bind(std::move(messenger_.local()), loop_.dispatcher()));
   }
 
   void MakeBlockOp(uint32_t command, uint32_t length, uint64_t offset,
@@ -133,8 +150,8 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     }
   }
 
-  void FillVmo(const fzl::VmoMapper& mapper, uint32_t length) {
-    auto* ptr = reinterpret_cast<uint8_t*>(mapper.start());
+  void FillVmo(const fzl::VmoMapper& mapper, uint32_t length, uint64_t offset = 0) {
+    auto* ptr = reinterpret_cast<uint8_t*>(mapper.start()) + (offset * test_block_.size());
     for (uint32_t i = 0; i < length; i++, ptr += test_block_.size()) {
       memcpy(ptr, test_block_.data(), test_block_.size());
     }
@@ -177,7 +194,9 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   ddk::BlockImplProtocolClient user_;
   ddk::BlockImplProtocolClient boot1_;
   ddk::BlockImplProtocolClient boot2_;
+  fidl::Client<::llcpp::fuchsia::hardware::rpmb::Rpmb> rpmb_;
   Bind ddk_;
+  std::atomic<bool> run_threads_ = true;
 
  private:
   static constexpr uint8_t kTestData[] = {
@@ -191,6 +210,8 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   static_assert(FakeSdmmcDevice::kBlockSize % sizeof(kTestData) == 0);
 
   std::vector<uint8_t> test_block_;
+  fake_ddk::FidlMessenger messenger_;
+  async::Loop loop_;
 };
 
 TEST_F(SdmmcBlockDeviceTest, BlockImplQuery) {
@@ -610,7 +631,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
   EXPECT_EQ(ddk_.total_children(), 1);
 }
 
-TEST_F(SdmmcBlockDeviceTest, DdkLifecyclePartitionsExistButNotUsed) {
+TEST_F(SdmmcBlockDeviceTest, DdkLifecycleBootPartitionsExistButNotUsed) {
   sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
     uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
     ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 2;
@@ -626,7 +647,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecyclePartitionsExistButNotUsed) {
   EXPECT_EQ(ddk_.total_children(), 1);
 }
 
-TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithPartitions) {
+TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootPartitions) {
   sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
     uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
     ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
@@ -640,6 +661,23 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithPartitions) {
   dut_.DdkAsyncRemove();
   ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
   EXPECT_EQ(ddk_.total_children(), 3);
+}
+
+TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootAndRpmbPartitions) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT] = 1;
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 1;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+
+  dut_.DdkAsyncRemove();
+  ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
+  EXPECT_EQ(ddk_.total_children(), 4);
 }
 
 TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
@@ -1060,6 +1098,346 @@ TEST_F(SdmmcBlockDeviceTest, ProbeSd) {
 
   EXPECT_EQ(info.block_size, 512);
   EXPECT_EQ(info.block_count, 0x38'1235 * 1024ul);
+}
+
+TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT] = 0x74;
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+    ext_csd[MMC_EXT_CSD_REL_WR_SEC_C] = 1;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+
+  fake_ddk::FidlMessenger messenger;
+  const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    return static_cast<decltype(ddk_)*>(ctx)->MessageChild(1, msg, txn);
+  };
+  ASSERT_OK(messenger.SetMessageOp(&ddk_, message_op));
+
+  sync_completion_t completion;
+  rpmb_->GetDeviceInfo([&](auto result) {
+    EXPECT_TRUE(result.is_emmc_info());
+    EXPECT_EQ(result.emmc_info().rpmb_size, 0x74);
+    EXPECT_EQ(result.emmc_info().reliable_write_sector_count, 1);
+    sync_completion_signal(&completion);
+  });
+
+  sync_completion_wait(&completion, zx::duration::infinite().get());
+  sync_completion_reset(&completion);
+
+  fzl::VmoMapper tx_frames_mapper;
+  fzl::VmoMapper rx_frames_mapper;
+
+  zx::vmo tx_frames;
+  zx::vmo rx_frames;
+
+  ASSERT_OK(tx_frames_mapper.CreateAndMap(512 * 4, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                          &tx_frames));
+  ASSERT_OK(rx_frames_mapper.CreateAndMap(512 * 4, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                          &rx_frames));
+
+  ::llcpp::fuchsia::hardware::rpmb::Request write_read_request = {};
+  ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP,
+                                &write_read_request.tx_frames.vmo));
+
+  write_read_request.tx_frames.offset = 1024;
+  write_read_request.tx_frames.size = 1024;
+  FillVmo(tx_frames_mapper, 2, 2);
+
+  ::llcpp::fuchsia::mem::Range rx_frames_range = {};
+  ASSERT_OK(rx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo));
+  rx_frames_range.offset = 512;
+  rx_frames_range.size = 1536;
+  write_read_request.rx_frames =
+      fidl::unowned_ptr_t<::llcpp::fuchsia::mem::Range>(&rx_frames_range);
+
+  sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
+    const uint32_t index = (req->arg >> 16) & 0xff;
+    const uint32_t value = (req->arg >> 8) & 0xff;
+    EXPECT_EQ(index, MMC_EXT_CSD_PARTITION_CONFIG);
+    EXPECT_EQ(value, 0xa8 | RPMB_PARTITION);
+  });
+
+  rpmb_->Request(std::move(write_read_request), [&](auto result) {
+    EXPECT_FALSE(result.is_err());
+    sync_completion_signal(&completion);
+  });
+
+  sync_completion_wait(&completion, zx::duration::infinite().get());
+  sync_completion_reset(&completion);
+
+  ASSERT_NO_FATAL_FAILURES(CheckSdmmc(2, 0));
+  // The first two blocks were written by the RPMB write request, and read back by the read request.
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(rx_frames_mapper, 2, 1));
+
+  ::llcpp::fuchsia::hardware::rpmb::Request write_request = {};
+  ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP,
+                                &write_request.tx_frames.vmo));
+
+  write_request.tx_frames.offset = 0;
+  write_request.tx_frames.size = 2048;
+  FillVmo(tx_frames_mapper, 4, 0);
+
+  // Repeated accesses to one partition should not generate more than one MMC_SWITCH command.
+  sdmmc_.set_command_callback(MMC_SWITCH, [](__UNUSED sdmmc_req_t* req) { FAIL(); });
+
+  sdmmc_.set_command_callback(SDMMC_SET_BLOCK_COUNT, [](sdmmc_req_t* req) {
+    EXPECT_TRUE(req->arg & MMC_SET_BLOCK_COUNT_RELIABLE_WRITE);
+  });
+
+  rpmb_->Request(std::move(write_request), [&](auto result) {
+    EXPECT_FALSE(result.is_err());
+    sync_completion_signal(&completion);
+  });
+
+  sync_completion_wait(&completion, zx::duration::infinite().get());
+  sync_completion_reset(&completion);
+
+  ASSERT_NO_FATAL_FAILURES(CheckSdmmc(4, 0));
+}
+
+TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT] = 0x74;
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+    ext_csd[MMC_EXT_CSD_REL_WR_SEC_C] = 1;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+  dut_.StopWorkerThread();
+
+  zx::vmo tx_frames;
+  ASSERT_OK(zx::vmo::create(512, 0, &tx_frames));
+
+  for (int i = 0; i < 16; i++) {
+    ::llcpp::fuchsia::hardware::rpmb::Request request = {};
+    ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
+    request.tx_frames.offset = 0;
+    request.tx_frames.size = 512;
+    rpmb_->Request(std::move(request), [&](__UNUSED auto result) {});
+  }
+
+  ::llcpp::fuchsia::hardware::rpmb::Request error_request = {};
+  ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &error_request.tx_frames.vmo));
+  error_request.tx_frames.offset = 0;
+  error_request.tx_frames.size = 512;
+
+  sync_completion_t error_completion;
+  rpmb_->Request(std::move(error_request), [&](auto result) {
+    EXPECT_TRUE(result.is_err());
+    sync_completion_signal(&error_completion);
+  });
+
+  sync_completion_wait(&error_completion, zx::duration::infinite().get());
+}
+
+void SdmmcBlockDeviceTest::QueueBlockOps() {
+  struct BlockContext {
+    sync_completion_t completion = {};
+    block::OperationPool<> free_ops;
+    block::OperationQueue<> outstanding_ops;
+    std::atomic<uint32_t> outstanding_op_count = 0;
+  } context;
+
+  const auto op_callback = [](void* ctx, zx_status_t status, block_op_t* bop) {
+    EXPECT_OK(status);
+
+    auto& op_ctx = *reinterpret_cast<BlockContext*>(ctx);
+    block::Operation<> op(bop, kBlockOpSize);
+    EXPECT_TRUE(op_ctx.outstanding_ops.erase(&op));
+    op_ctx.free_ops.push(std::move(op));
+
+    // Wake up the block op thread when half the outstanding operations have been completed.
+    if (op_ctx.outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
+      sync_completion_signal(&op_ctx.completion);
+    }
+  };
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(1024, 0, &vmo));
+
+  // Populate the free op list.
+  for (uint32_t i = 0; i < kMaxOutstandingOps; i++) {
+    std::optional<block::Operation<>> op = block::Operation<>::Alloc(kBlockOpSize);
+    ASSERT_TRUE(op);
+    context.free_ops.push(*std::move(op));
+  }
+
+  while (run_threads_.load()) {
+    for (uint32_t i = context.outstanding_op_count.load(); i < kMaxOutstandingOps;
+         i = context.outstanding_op_count.fetch_add(1) + 1) {
+      // Move an op from the free list to the outstanding list. The callback will erase the op from
+      // the outstanding list and move it back to the free list.
+      std::optional<block::Operation<>> op = context.free_ops.pop();
+      ASSERT_TRUE(op);
+
+      op->operation()->rw = {.command = BLOCK_OP_READ, .vmo = vmo.get(), .length = 1};
+
+      block_op_t* const bop = op->operation();
+      context.outstanding_ops.push(*std::move(op));
+      user_.Queue(bop, op_callback, &context);
+    }
+
+    sync_completion_wait(&context.completion, zx::duration::infinite().get());
+    sync_completion_reset(&context.completion);
+  }
+
+  while (context.outstanding_op_count.load() > 0) {
+  }
+}
+
+void SdmmcBlockDeviceTest::QueueRpmbRequests() {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(512, 0, &vmo));
+
+  std::atomic<uint32_t> outstanding_op_count = 0;
+  sync_completion_t completion;
+
+  while (run_threads_.load()) {
+    for (uint32_t i = outstanding_op_count.load(); i < kMaxOutstandingOps;
+         i = outstanding_op_count.fetch_add(1) + 1) {
+      ::llcpp::fuchsia::hardware::rpmb::Request request = {};
+      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
+      request.tx_frames.offset = 0;
+      request.tx_frames.size = 512;
+
+      rpmb_->Request(std::move(request), [&](auto result) {
+        EXPECT_FALSE(result.is_err());
+        if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
+          sync_completion_signal(&completion);
+        }
+      });
+    }
+
+    sync_completion_wait(&completion, zx::duration::infinite().get());
+    sync_completion_reset(&completion);
+  }
+
+  while (outstanding_op_count.load() > 0) {
+  }
+}
+
+TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    auto* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
+
+    ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+
+  ASSERT_TRUE(boot1_.is_valid());
+  ASSERT_TRUE(boot2_.is_valid());
+
+  thrd_t block_thread;
+  EXPECT_EQ(thrd_create_with_name(
+                &block_thread,
+                [](void* ctx) -> int {
+                  reinterpret_cast<SdmmcBlockDeviceTest*>(ctx)->QueueBlockOps();
+                  return thrd_success;
+                },
+                this, "block-queue-thread"),
+            thrd_success);
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(512, 0, &vmo));
+
+  std::atomic<uint32_t> ops_completed = 0;
+  sync_completion_t completion;
+
+  for (uint32_t i = 0; i < kMaxOutstandingOps; i++) {
+    ::llcpp::fuchsia::hardware::rpmb::Request request = {};
+    EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
+    request.tx_frames.offset = 0;
+    request.tx_frames.size = 512;
+
+    rpmb_->Request(std::move(request), [&](auto result) {
+      EXPECT_FALSE(result.is_err());
+      if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
+        sync_completion_signal(&completion);
+      }
+    });
+  }
+
+  sync_completion_wait(&completion, zx::duration::infinite().get());
+
+  run_threads_.store(false);
+  EXPECT_EQ(thrd_join(block_thread, nullptr), thrd_success);
+}
+
+TEST_F(SdmmcBlockDeviceTest, BlockOpsGetToRun) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    auto* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
+
+    ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+
+  ASSERT_TRUE(boot1_.is_valid());
+  ASSERT_TRUE(boot2_.is_valid());
+
+  thrd_t rpmb_thread;
+  EXPECT_EQ(thrd_create_with_name(
+                &rpmb_thread,
+                [](void* ctx) -> int {
+                  reinterpret_cast<SdmmcBlockDeviceTest*>(ctx)->QueueRpmbRequests();
+                  return thrd_success;
+                },
+                this, "rpmb-queue-thread"),
+            thrd_success);
+
+  block::OperationPool<> outstanding_ops;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(1024, 0, &vmo));
+
+  struct BlockContext {
+    std::atomic<uint32_t> ops_completed = 0;
+    sync_completion_t completion = {};
+  } context;
+
+  const auto op_callback = [](void* ctx, zx_status_t status, __UNUSED block_op_t* bop) {
+    EXPECT_OK(status);
+
+    auto& op_ctx = *reinterpret_cast<BlockContext*>(ctx);
+    if ((op_ctx.ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
+      sync_completion_signal(&op_ctx.completion);
+    }
+  };
+
+  for (uint32_t i = 0; i < kMaxOutstandingOps; i++) {
+    std::optional<block::Operation<>> op = block::Operation<>::Alloc(kBlockOpSize);
+    ASSERT_TRUE(op);
+
+    op->operation()->rw = {.command = BLOCK_OP_READ, .vmo = vmo.get(), .length = 1};
+
+    block_op_t* const bop = op->operation();
+    outstanding_ops.push(*std::move(op));
+    user_.Queue(bop, op_callback, &context);
+  }
+
+  sync_completion_wait(&context.completion, zx::duration::infinite().get());
+
+  run_threads_.store(false);
+  EXPECT_EQ(thrd_join(rpmb_thread, nullptr), thrd_success);
 }
 
 }  // namespace sdmmc

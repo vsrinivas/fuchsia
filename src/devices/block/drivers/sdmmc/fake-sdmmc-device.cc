@@ -10,7 +10,7 @@
 
 namespace sdmmc {
 
-zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+zx_status_t Bind::DeviceAdd(__UNUSED zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                             zx_device_t** out) {
   if (parent == fake_ddk::kFakeParent) {
     unbind_ctx_ = args->ctx;
@@ -21,10 +21,8 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
     *out = kFakeChild;
     children_++;
     total_children_++;
-    children_release_.push_back({args->ctx, args->ops->release});
-    children_get_proto_.push_back({args->ctx, args->ops->get_protocol});
-    children_props_.push_back(
-        std::vector<zx_device_prop_t>(args->props, args->props + args->prop_count));
+    children_ops_.emplace_back(args);
+    children_props_.emplace_back(args->props, args->props + args->prop_count);
   } else {
     *out = kUnknownDevice;
     bad_parent_ = true;
@@ -64,7 +62,7 @@ void Bind::DeviceAsyncRemove(zx_device_t* device) {
   }
 }
 
-void Bind::Ok() {
+void Bind::Ok() const {
   EXPECT_EQ(children_, 0);
   EXPECT_TRUE(add_called_);
   EXPECT_TRUE(remove_called_);
@@ -262,6 +260,8 @@ void FakeSdmmcDevice::Erase(size_t address, size_t size, uint8_t func) {
   }
 }
 
-void FakeSdmmcDevice::TriggerInBandInterrupt() { interrupt_cb_.ops->callback(interrupt_cb_.ctx); }
+void FakeSdmmcDevice::TriggerInBandInterrupt() const {
+  interrupt_cb_.ops->callback(interrupt_cb_.ctx);
+}
 
 }  // namespace sdmmc

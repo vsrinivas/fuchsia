@@ -5,12 +5,14 @@
 #include "sdmmc-block-device.h"
 
 #include <inttypes.h>
+#include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/process.h>
 #include <zircon/threads.h>
 
 #include <ddk/debug.h>
+#include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
@@ -117,6 +119,45 @@ zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capaci
   return ZX_OK;
 }
 
+zx_status_t RpmbDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::rpmb::Rpmb::Dispatch(this, msg, &transaction);
+  return ZX_ERR_ASYNC;
+}
+
+void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
+  using DeviceInfo = ::llcpp::fuchsia::hardware::rpmb::DeviceInfo;
+  using EmmcDeviceInfo = ::llcpp::fuchsia::hardware::rpmb::EmmcDeviceInfo;
+
+  EmmcDeviceInfo emmc_info = {};
+  memcpy(emmc_info.cid.data(), cid_.data(), cid_.size() * sizeof(cid_[0]));
+  emmc_info.rpmb_size = rpmb_size_;
+  emmc_info.reliable_write_sector_count = reliable_write_sector_count_;
+
+  fidl::aligned<EmmcDeviceInfo> aligned_emmc_info(emmc_info);
+  fidl::unowned_ptr_t<fidl::aligned<EmmcDeviceInfo>> emmc_info_ptr(&aligned_emmc_info);
+
+  completer.ToAsync().Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
+}
+
+void RpmbDevice::Request(::llcpp::fuchsia::hardware::rpmb::Request request,
+                         RequestCompleter::Sync completer) {
+  RpmbRequestInfo info = {
+      .tx_frames = std::move(request.tx_frames),
+      .completer = completer.ToAsync(),
+  };
+
+  if (request.rx_frames) {
+    info.rx_frames = {
+        .vmo = std::move(request.rx_frames->vmo),
+        .offset = request.rx_frames->offset,
+        .size = request.rx_frames->size,
+    };
+  }
+
+  sdmmc_parent_->RpmbQueue(std::move(info));
+}
+
 zx_status_t SdmmcBlockDevice::Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                                      std::unique_ptr<SdmmcBlockDevice>* out_dev) {
   fbl::AllocChecker ac;
@@ -174,10 +215,6 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   const uint32_t boot_size = raw_ext_csd_[MMC_EXT_CSD_BOOT_SIZE_MULT] * kBootSizeMultiplier;
   const bool boot_enabled =
       raw_ext_csd_[MMC_EXT_CSD_PARTITION_CONFIG] & MMC_EXT_CSD_BOOT_PARTITION_ENABLE_MASK;
-  if (is_sd_ || boot_size == 0 || !boot_enabled) {
-    remove_device_on_error.cancel();
-    return ZX_OK;
-  }
 
   const uint64_t boot_partition_block_count = boot_size / block_info_.block_size;
   const block_info_t boot_info = {
@@ -188,33 +225,51 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
       .reserved = 0,
   };
 
-  std::unique_ptr<PartitionDevice> boot_partition_1(
-      new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_1));
-  if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
-    return ZX_ERR_NO_MEMORY;
+  if (!is_sd_ && boot_size > 0 && boot_enabled) {
+    std::unique_ptr<PartitionDevice> boot_partition_1(
+        new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_1));
+    if (!ac.check()) {
+      zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    std::unique_ptr<PartitionDevice> boot_partition_2(
+        new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_2));
+    if (!ac.check()) {
+      zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((st = boot_partition_1->AddDevice()) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
+      return st;
+    }
+
+    dummy = boot_partition_1.release();
+
+    if ((st = boot_partition_2->AddDevice()) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
+      return st;
+    }
+
+    dummy = boot_partition_2.release();
   }
 
-  std::unique_ptr<PartitionDevice> boot_partition_2(
-      new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_2));
-  if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
-    return ZX_ERR_NO_MEMORY;
+  if (!is_sd_ && raw_ext_csd_[MMC_EXT_CSD_RPMB_SIZE_MULT] > 0) {
+    std::unique_ptr<RpmbDevice> rpmb_partition(
+        new (&ac) RpmbDevice(zxdev(), this, raw_cid_, raw_ext_csd_));
+    if (!ac.check()) {
+      zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((st = rpmb_partition->DdkAdd("rpmb")) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc: failed to add RPMB partition device: %d", st);
+      return st;
+    }
+
+    __UNUSED auto* dummy1 = rpmb_partition.release();
   }
-
-  if ((st = boot_partition_1->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
-    return st;
-  }
-
-  dummy = boot_partition_1.release();
-
-  if ((st = boot_partition_2->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
-    return st;
-  }
-
-  dummy = boot_partition_2.release();
 
   remove_device_on_error.cancel();
   return ZX_OK;
@@ -248,6 +303,11 @@ void SdmmcBlockDevice::StopWorkerThread() {
   for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
     BlockComplete(*txn, ZX_ERR_BAD_STATE);
   }
+
+  for (auto& request : rpmb_list_) {
+    request.completer.ReplyError(ZX_ERR_BAD_STATE);
+  }
+  rpmb_list_.clear();
 }
 
 zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
@@ -404,8 +464,101 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
   return ZX_OK;
 }
 
+zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
+  using ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+
+  const uint64_t tx_frame_count = request.tx_frames.size / FRAME_SIZE;
+  const uint64_t rx_frame_count =
+      request.rx_frames.vmo.is_valid() ? (request.rx_frames.size / FRAME_SIZE) : 0;
+  const bool read_needed = rx_frame_count > 0;
+
+  zx_status_t status = SetPartition(RPMB_PARTITION);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fzl::VmoMapper tx_frames_mapper;
+  fzl::VmoMapper rx_frames_mapper;
+  if (!sdmmc_.UseDma()) {
+    if ((status = tx_frames_mapper.Map(request.tx_frames.vmo, 0, 0, ZX_VM_PERM_READ)) != ZX_OK) {
+      zxlogf(ERROR, "sdmmc: failed to map RPMB VMO: %d", status);
+      return status;
+    }
+
+    if (read_needed) {
+      status =
+          rx_frames_mapper.Map(request.rx_frames.vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "sdmmc: failed to map RPMB VMO: %d", status);
+        return status;
+      }
+    }
+  }
+
+  sdmmc_req_t set_tx_block_count = {
+      .cmd_idx = SDMMC_SET_BLOCK_COUNT,
+      .cmd_flags = SDMMC_SET_BLOCK_COUNT_FLAGS,
+      .arg = MMC_SET_BLOCK_COUNT_RELIABLE_WRITE | static_cast<uint32_t>(tx_frame_count),
+  };
+  if ((status = sdmmc_.host().Request(&set_tx_block_count)) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to set block count for RPMB request: %d", status);
+    return status;
+  }
+
+  sdmmc_req_t write_tx_frames = {
+      .cmd_idx = SDMMC_WRITE_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0,  // Ignored by the card.
+      .blockcount = static_cast<uint16_t>(tx_frame_count),
+      .blocksize = FRAME_SIZE,
+      .use_dma = sdmmc_.UseDma(),
+      .dma_vmo = sdmmc_.UseDma() ? request.tx_frames.vmo.get() : ZX_HANDLE_INVALID,
+      .virt_buffer = sdmmc_.UseDma() ? nullptr : tx_frames_mapper.start(),
+      .buf_offset = request.tx_frames.offset,
+  };
+  if ((status = sdmmc_.host().Request(&write_tx_frames)) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to write RPMB frames: %d", status);
+    return status;
+  }
+
+  if (!read_needed) {
+    return ZX_OK;
+  }
+
+  sdmmc_req_t set_rx_block_count = {
+      .cmd_idx = SDMMC_SET_BLOCK_COUNT,
+      .cmd_flags = SDMMC_SET_BLOCK_COUNT_FLAGS,
+      .arg = static_cast<uint32_t>(rx_frame_count),
+  };
+  if ((status = sdmmc_.host().Request(&set_rx_block_count)) != ZX_OK) {
+    zxlogf(ERROR, "mmc: failed to set block count for RPMB request: %d", status);
+    return status;
+  }
+
+  sdmmc_req_t read_rx_frames = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0,
+      .blockcount = static_cast<uint16_t>(rx_frame_count),
+      .blocksize = FRAME_SIZE,
+      .use_dma = sdmmc_.UseDma(),
+      .dma_vmo = sdmmc_.UseDma() ? request.rx_frames.vmo.get() : ZX_HANDLE_INVALID,
+      .virt_buffer = sdmmc_.UseDma() ? nullptr : rx_frames_mapper.start(),
+      .buf_offset = request.rx_frames.offset,
+  };
+  if ((status = sdmmc_.host().Request(&read_rx_frames)) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to read RPMB frames: %d", status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t SdmmcBlockDevice::SetPartition(const EmmcPartition partition) {
-  if (is_sd_ || partition == current_partition_) {
+  // SetPartition is only called by the worker thread.
+  static EmmcPartition current_partition = EmmcPartition::USER_DATA_PARTITION;
+
+  if (is_sd_ || partition == current_partition) {
     return ZX_OK;
   }
 
@@ -418,7 +571,7 @@ zx_status_t SdmmcBlockDevice::SetPartition(const EmmcPartition partition) {
     return status;
   }
 
-  current_partition_ = partition;
+  current_partition = partition;
   return ZX_OK;
 }
 
@@ -464,51 +617,140 @@ void SdmmcBlockDevice::Queue(BlockOperation txn) {
   worker_event_.Broadcast();
 }
 
-int SdmmcBlockDevice::WorkerThread() {
-  fbl::AutoLock lock(&lock_);
+void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
+  using ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
 
-  while (!dead_) {
-    for (std::optional<BlockOperation> txn = txn_list_.pop(); txn; txn = txn_list_.pop()) {
-      BlockOperation btxn(*std::move(txn));
+  if (info.tx_frames.size % FRAME_SIZE != 0) {
+    zxlogf(ERROR, "sdmmc: tx frame buffer size not a multiple of %u", FRAME_SIZE);
+    info.completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
 
-      const block_op_t& bop = *btxn.operation();
-      const uint32_t op = kBlockOp(bop.command);
+  // Checking against SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS is sufficient for casting to uint16_t.
+  static_assert(SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS <= UINT16_MAX);
 
-      zx_status_t status = ZX_ERR_INVALID_ARGS;
-      if (op == BLOCK_OP_READ || op == BLOCK_OP_WRITE) {
-        const char* const trace_name = op == BLOCK_OP_READ ? "read" : "write";
-        TRACE_DURATION_BEGIN("sdmmc", trace_name);
+  const uint64_t tx_frame_count = info.tx_frames.size / FRAME_SIZE;
+  if (tx_frame_count == 0) {
+    info.completer.ReplyError(ZX_OK);
+    return;
+  }
 
-        status = ReadWrite(btxn.operation()->rw, btxn.private_storage()->partition);
+  if (tx_frame_count > SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS) {
+    zxlogf(ERROR, "sdmmc: received %lu tx frames, maximum is %u", tx_frame_count,
+           SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS);
+    info.completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
 
-        TRACE_DURATION_END("sdmmc", trace_name, "command", TA_INT32(bop.rw.command), "extra",
-                           TA_INT32(bop.rw.extra), "length", TA_INT32(bop.rw.length), "offset_vmo",
-                           TA_INT64(bop.rw.offset_vmo), "offset_dev", TA_INT64(bop.rw.offset_dev),
-                           "txn_status", TA_INT32(status));
-      } else if (op == BLOCK_OP_TRIM) {
-        TRACE_DURATION_BEGIN("sdmmc", "trim");
-
-        status = Trim(btxn.operation()->trim, btxn.private_storage()->partition);
-
-        TRACE_DURATION_END("sdmmc", "trim", "command", TA_INT32(bop.trim.command), "length",
-                           TA_INT32(bop.trim.length), "offset_dev", TA_INT64(bop.trim.offset_dev),
-                           "txn_status", TA_INT32(status));
-      } else if (op == BLOCK_OP_FLUSH) {
-        status = ZX_OK;
-        TRACE_INSTANT("sdmmc", "flush", TRACE_SCOPE_PROCESS, "command", TA_INT32(bop.rw.command),
-                      "txn_status", TA_INT32(status));
-      } else {
-        // should not get here
-        zxlogf(ERROR, "sdmmc: invalid block op %d", kBlockOp(btxn.operation()->command));
-        TRACE_INSTANT("sdmmc", "unknown", TRACE_SCOPE_PROCESS, "command", TA_INT32(bop.rw.command),
-                      "txn_status", TA_INT32(status));
-        __UNREACHABLE;
-      }
-
-      BlockComplete(btxn, status);
+  if (info.rx_frames.vmo.is_valid()) {
+    if (info.rx_frames.size % FRAME_SIZE != 0) {
+      zxlogf(ERROR, "sdmmc: rx frame buffer size is not a multiple of %u", FRAME_SIZE);
+      info.completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
     }
 
-    worker_event_.Wait(&lock_);
+    const uint64_t rx_frame_count = info.rx_frames.size / FRAME_SIZE;
+    if (rx_frame_count > SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS) {
+      zxlogf(ERROR, "sdmmc: received %lu rx frames, maximum is %u", rx_frame_count,
+             SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS);
+      info.completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+      return;
+    }
+  }
+
+  fbl::AutoLock lock(&lock_);
+  if (rpmb_list_.size() >= kMaxOutstandingRpmbRequests) {
+    info.completer.ReplyError(ZX_ERR_SHOULD_WAIT);
+  } else {
+    rpmb_list_.push_back(std::move(info));
+    worker_event_.Broadcast();
+  }
+}
+
+void SdmmcBlockDevice::HandleBlockOps(block::BorrowedOperationQueue<PartitionInfo>& txn_list) {
+  for (size_t i = 0; i < kRoundRobinRequestCount; i++) {
+    std::optional<BlockOperation> txn = txn_list.pop();
+    if (!txn) {
+      break;
+    }
+
+    BlockOperation btxn(*std::move(txn));
+
+    const block_op_t& bop = *btxn.operation();
+    const uint32_t op = kBlockOp(bop.command);
+
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
+    if (op == BLOCK_OP_READ || op == BLOCK_OP_WRITE) {
+      const char* const trace_name = op == BLOCK_OP_READ ? "read" : "write";
+      TRACE_DURATION_BEGIN("sdmmc", trace_name);
+
+      status = ReadWrite(btxn.operation()->rw, btxn.private_storage()->partition);
+
+      TRACE_DURATION_END("sdmmc", trace_name, "command", TA_INT32(bop.rw.command), "extra",
+                         TA_INT32(bop.rw.extra), "length", TA_INT32(bop.rw.length), "offset_vmo",
+                         TA_INT64(bop.rw.offset_vmo), "offset_dev", TA_INT64(bop.rw.offset_dev),
+                         "txn_status", TA_INT32(status));
+    } else if (op == BLOCK_OP_TRIM) {
+      TRACE_DURATION_BEGIN("sdmmc", "trim");
+
+      status = Trim(btxn.operation()->trim, btxn.private_storage()->partition);
+
+      TRACE_DURATION_END("sdmmc", "trim", "command", TA_INT32(bop.trim.command), "length",
+                         TA_INT32(bop.trim.length), "offset_dev", TA_INT64(bop.trim.offset_dev),
+                         "txn_status", TA_INT32(status));
+    } else if (op == BLOCK_OP_FLUSH) {
+      status = ZX_OK;
+      TRACE_INSTANT("sdmmc", "flush", TRACE_SCOPE_PROCESS, "command", TA_INT32(bop.rw.command),
+                    "txn_status", TA_INT32(status));
+    } else {
+      // should not get here
+      zxlogf(ERROR, "sdmmc: invalid block op %d", kBlockOp(btxn.operation()->command));
+      TRACE_INSTANT("sdmmc", "unknown", TRACE_SCOPE_PROCESS, "command", TA_INT32(bop.rw.command),
+                    "txn_status", TA_INT32(status));
+      __UNREACHABLE;
+    }
+
+    BlockComplete(btxn, status);
+  }
+}
+
+void SdmmcBlockDevice::HandleRpmbRequests(std::deque<RpmbRequestInfo>& rpmb_list) {
+  for (size_t i = 0; i < kRoundRobinRequestCount && !rpmb_list.empty(); i++) {
+    RpmbRequestInfo& request = *rpmb_list.begin();
+    zx_status_t status = RpmbRequest(request);
+    if (status == ZX_OK) {
+      request.completer.ReplySuccess();
+    } else {
+      request.completer.ReplyError(status);
+    }
+
+    rpmb_list.pop_front();
+  }
+}
+
+int SdmmcBlockDevice::WorkerThread() {
+  for (;;) {
+    block::BorrowedOperationQueue<PartitionInfo> txn_list;
+    std::deque<RpmbRequestInfo> rpmb_list;
+
+    {
+      fbl::AutoLock lock(&lock_);
+      while (txn_list_.is_empty() && rpmb_list_.empty() && !dead_) {
+        worker_event_.Wait(&lock_);
+      }
+
+      if (dead_) {
+        break;
+      }
+
+      txn_list = std::move(txn_list_);
+      rpmb_list.swap(rpmb_list_);
+    }
+
+    while (!txn_list.is_empty() || !rpmb_list.empty()) {
+      HandleBlockOps(txn_list);
+      HandleRpmbRequests(rpmb_list);
+    }
   }
 
   zxlogf(TRACE, "sdmmc: worker thread terminated successfully");

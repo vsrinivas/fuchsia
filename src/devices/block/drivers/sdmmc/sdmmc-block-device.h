@@ -5,18 +5,21 @@
 #ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 #define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 
+#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <lib/operation/block.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
 #include <array>
 #include <atomic>
+#include <deque>
 #include <memory>
 
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <hw/sdmmc.h>
@@ -30,12 +33,19 @@ enum EmmcPartition : uint8_t {
   USER_DATA_PARTITION = 0x0,
   BOOT_PARTITION_1 = 0x1,
   BOOT_PARTITION_2 = 0x2,
+  RPMB_PARTITION = 0x3,
   PARTITION_COUNT,
 };
 
 struct PartitionInfo {
   enum EmmcPartition partition;
   uint64_t block_count;
+};
+
+struct RpmbRequestInfo {
+  ::llcpp::fuchsia::mem::Range tx_frames = {};
+  ::llcpp::fuchsia::mem::Range rx_frames = {};
+  ::llcpp::fuchsia::hardware::rpmb::Rpmb::Interface::RequestCompleter::Async completer;
 };
 
 using BlockOperation = block::BorrowedOperation<PartitionInfo>;
@@ -75,6 +85,40 @@ class PartitionDevice : public PartitionDeviceType,
   const EmmcPartition partition_;
 };
 
+class RpmbDevice;
+using RpmbDeviceType = ddk::Device<RpmbDevice, ddk::Messageable>;
+
+class RpmbDevice : public RpmbDeviceType,
+                   public ddk::EmptyProtocol<ZX_PROTOCOL_RPMB>,
+                   public ::llcpp::fuchsia::hardware::rpmb::Rpmb::Interface {
+ public:
+  // sdmmc_parent is owned by the SDMMC root device when the RpmbDevice object is created. Ownership
+  // is transferred to devmgr shortly after, meaning it will outlive this object due to the
+  // parent/child device relationship.
+  RpmbDevice(zx_device_t* parent, SdmmcBlockDevice* sdmmc_parent,
+             const std::array<uint8_t, SDMMC_CID_SIZE>& cid,
+             const std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd)
+      : RpmbDeviceType(parent),
+        sdmmc_parent_(sdmmc_parent),
+        cid_(cid),
+        rpmb_size_(ext_csd[MMC_EXT_CSD_RPMB_SIZE_MULT]),
+        reliable_write_sector_count_(ext_csd[MMC_EXT_CSD_REL_WR_SEC_C]) {}
+
+  void DdkRelease() { delete this; }
+
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) override;
+  void Request(::llcpp::fuchsia::hardware::rpmb::Request request,
+               RequestCompleter::Sync completer) override;
+
+ private:
+  SdmmcBlockDevice* const sdmmc_parent_;
+  const std::array<uint8_t, SDMMC_CID_SIZE> cid_;
+  const uint8_t rpmb_size_;
+  const uint8_t reliable_write_sector_count_;
+};
+
 class SdmmcBlockDevice;
 using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableNew, ddk::Suspendable>;
 
@@ -100,6 +144,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   // Called by children of this device.
   void Queue(BlockOperation txn) TA_EXCL(lock_);
+  void RpmbQueue(RpmbRequestInfo info) TA_EXCL(lock_);
 
   // Visible for testing.
   zx_status_t Init() { return sdmmc_.Init(); }
@@ -107,9 +152,21 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   void SetBlockInfo(uint32_t block_size, uint64_t block_count);
 
  private:
-  zx_status_t ReadWrite(const block_read_write_t& txn, const EmmcPartition partition) TA_REQ(lock_);
-  zx_status_t Trim(const block_trim_t& txn, const EmmcPartition partition) TA_REQ(lock_);
-  zx_status_t SetPartition(const EmmcPartition partition) TA_REQ(lock_);
+  // An arbitrary limit to prevent RPMB clients from flooding us with requests.
+  static constexpr size_t kMaxOutstandingRpmbRequests = 16;
+
+  // The worker thread will handle this many block ops then this many RPMB requests, and will repeat
+  // until both queues are empty.
+  static constexpr size_t kRoundRobinRequestCount = 16;
+
+  zx_status_t ReadWrite(const block_read_write_t& txn, const EmmcPartition partition);
+  zx_status_t Trim(const block_trim_t& txn, const EmmcPartition partition);
+  zx_status_t SetPartition(const EmmcPartition partition);
+  zx_status_t RpmbRequest(const RpmbRequestInfo& request);
+
+  void HandleBlockOps(block::BorrowedOperationQueue<PartitionInfo>& txn_list);
+  void HandleRpmbRequests(std::deque<RpmbRequestInfo>& rpmb_list);
+
   int WorkerThread();
 
   zx_status_t WaitForTran();
@@ -125,7 +182,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   bool MmcSupportsHs200();
   bool MmcSupportsHs400();
 
-  SdmmcDevice sdmmc_;
+  SdmmcDevice sdmmc_;  // Only accessed by ProbeSd, ProbeMmc, and WorkerThread.
 
   sdmmc_bus_width_t bus_width_;
   sdmmc_timing_t timing_;
@@ -142,6 +199,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   // blockio requests
   block::BorrowedOperationQueue<PartitionInfo> txn_list_ TA_GUARDED(lock_);
+  std::deque<RpmbRequestInfo> rpmb_list_ TA_GUARDED(lock_);
 
   // outstanding request (1 right now)
   sdmmc_req_t req_;
@@ -153,8 +211,6 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   block_info_t block_info_{};
 
   bool is_sd_ = false;
-
-  EmmcPartition current_partition_ TA_GUARDED(lock_) = EmmcPartition::USER_DATA_PARTITION;
 };
 
 }  // namespace sdmmc

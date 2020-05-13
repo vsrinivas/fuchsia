@@ -20,9 +20,9 @@ namespace sdmmc {
 
 class Bind : public fake_ddk::Bind {
  public:
-  ~Bind() {
-    for (auto& child : children_release_) {
-      child.op(child.ctx);
+  ~Bind() override {
+    for (auto& child : children_ops_) {
+      child.release(child.ctx);
     }
   }
 
@@ -32,16 +32,38 @@ class Bind : public fake_ddk::Bind {
                         zx_device_t** out) override;
   zx_status_t DeviceRemove(zx_device_t* device) override;
   void DeviceAsyncRemove(zx_device_t* device) override;
-  void Ok();
+  void Ok() const;
 
-  zx_status_t GetChildProtocol(size_t index, uint32_t proto_id, void* proto) {
-    if (index >= children_get_proto_.size()) {
-      return ZX_ERR_OUT_OF_RANGE;
+  void* GetChildContext(size_t index) const {
+    if (index >= children_ops_.size()) {
+      return nullptr;
     }
-    return children_get_proto_[index].op(children_get_proto_[index].ctx, proto_id, proto);
+    return children_ops_[index].ctx;
   }
 
-  fbl::Span<const zx_device_prop_t> GetChildProps(size_t index) {
+  zx_status_t GetChildProtocol(size_t index, uint32_t proto_id, void* proto) const {
+    if (index >= children_ops_.size()) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (children_ops_[index].get_protocol == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    return children_ops_[index].get_protocol(children_ops_[index].ctx, proto_id, proto);
+  }
+
+  zx_status_t MessageChild(size_t index, fidl_msg_t* msg, fidl_txn_t* txn) const {
+    if (index >= children_ops_.size()) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (children_ops_[index].message == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    return children_ops_[index].message(children_ops_[index].ctx, msg, txn);
+  }
+
+  fbl::Span<const zx_device_prop_t> GetChildProps(size_t index) const {
     if (index >= children_props_.size()) {
       return fbl::Span<zx_device_prop_t>();
     }
@@ -49,14 +71,17 @@ class Bind : public fake_ddk::Bind {
   }
 
  private:
-  struct ReleaseOp {
-    void* ctx;
-    void (*op)(void* ctx);
-  };
+  struct ChildOps {
+    explicit ChildOps(device_add_args_t* args)
+        : ctx(args->ctx),
+          get_protocol(args->ops->get_protocol),
+          release(args->ops->release),
+          message(args->ops->message) {}
 
-  struct GetProtocolOp {
-    void* ctx;
-    zx_status_t (*op)(void* ctx, uint32_t proto_id, void* protocol);
+    void* const ctx;
+    zx_status_t (*const get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
+    void (*const release)(void* ctx);
+    zx_status_t (*const message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
   };
 
   zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
@@ -73,8 +98,7 @@ class Bind : public fake_ddk::Bind {
   void* unbind_ctx_ = nullptr;
   void (*unbind_op_)(void* ctx) = nullptr;
 
-  std::vector<ReleaseOp> children_release_;
-  std::vector<GetProtocolOp> children_get_proto_;
+  std::vector<ChildOps> children_ops_;
   std::vector<std::vector<zx_device_prop_t>> children_props_;
 };
 
@@ -150,7 +174,7 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   }
   void Erase(size_t address, size_t size, uint8_t func = 0);
 
-  void TriggerInBandInterrupt();
+  void TriggerInBandInterrupt() const;
 
   void set_command_callback(Command command, CommandCallback callback) {
     command_callbacks_[command] = callback;
