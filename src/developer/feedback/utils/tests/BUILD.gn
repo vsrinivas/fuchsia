@@ -195,9 +195,11 @@ executable("data_provider_ptr_unittest") {
   sources = [ "data_provider_ptr_unittest.cc" ]
 
   deps = [
+    "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:data_provider",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/fidl:data_provider_ptr",
     "//src/lib/fsl",
     "//third_party/googletest:gmock",
@@ -214,6 +216,7 @@ executable("device_id_provider_ptr_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:device_id_provider",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/fidl:device_id_provider_ptr",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

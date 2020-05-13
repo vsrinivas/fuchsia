@@ -141,9 +141,10 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
-                               const std::optional<std::string>& device_id,
+                               const ::fit::result<std::string, Error>& device_id,
                                const std::string& build_version,
-                               const std::optional<std::string>& channel, const bool should_process,
+                               const ::fit::result<std::string, Error>& channel,
+                               const bool should_process,
                                std::map<std::string, std::string>* annotations) {
   (*annotations)["product"] = "Fuchsia";
   (*annotations)["version"] = build_version;
@@ -161,20 +162,22 @@ void AddCrashServerAnnotations(const std::string& program_name,
   }
 
   // We set the device's global unique identifier only if the device has one.
-  if (device_id.has_value()) {
+  if (device_id.is_ok()) {
     (*annotations)["guid"] = device_id.value();
   } else {
     (*annotations)["debug.guid.set"] = "false";
+    (*annotations)["debug.device-id.error"] = ToReason(device_id.error());
   }
 
   // "channel" is a required field on the crash server that defaults to the empty string. But on
   // Fuchsia, the system update channel can be the empty string in the case of a fresh pave
   // typically. So in case the channel is unavailable, we set the value to "<unknown>" to
   // distinguish it from the default empty string value it would get on the crash server.
-  if (channel.has_value()) {
+  if (channel.is_ok()) {
     (*annotations)["channel"] = channel.value();
   } else {
     (*annotations)["channel"] = "<unknown>";
+    (*annotations)["debug.channel.error"] = ToReason(channel.error());
   }
 
   // Not all reports need to be processed by the crash server.
@@ -192,8 +195,8 @@ void AddBugreportAnnotations(const fuchsia::feedback::Bugreport& bugreport,
   }
 }
 
-void AddBugreportAttachments(fuchsia::feedback::Bugreport bugreport,
-                             std::map<std::string, fuchsia::mem::Buffer>* attachments) {
+void AddBugreportAsAttachment(fuchsia::feedback::Bugreport bugreport,
+                              std::map<std::string, fuchsia::mem::Buffer>* attachments) {
   if (!bugreport.has_bugreport()) {
     return;
   }
@@ -201,14 +204,32 @@ void AddBugreportAttachments(fuchsia::feedback::Bugreport bugreport,
   (*attachments)[bugreport_attachment->key] = std::move(bugreport_attachment->value);
 }
 
+void AddBugreport(::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
+                  std::map<std::string, std::string>* annotations,
+                  std::map<std::string, fuchsia::mem::Buffer>* attachments) {
+  if (bugreport.is_error()) {
+    (*annotations)["debug.bugreport.error"] = ToReason(bugreport.error());
+    return;
+  }
+
+  if (bugreport.value().IsEmpty()) {
+    (*annotations)["debug.bugreport.empty"] = "true";
+    return;
+  }
+
+  AddBugreportAnnotations(bugreport.value(), annotations);
+
+  AddBugreportAsAttachment(bugreport.take_value(), attachments);
+}
+
 }  // namespace
 
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                    fuchsia::feedback::Bugreport bugreport,
+                                    ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
                                     const std::optional<zx::time_utc>& current_time,
-                                    const std::optional<std::string>& device_id,
+                                    const ::fit::result<std::string, Error>& device_id,
                                     const std::string& build_version,
-                                    const std::optional<std::string>& channel,
+                                    const ::fit::result<std::string, Error>& channel,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump) {
@@ -224,11 +245,8 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   AddCrashServerAnnotations(program_name, current_time, device_id, build_version, channel,
                             should_process, annotations);
 
-  // Feedback annotations common to all crash reports.
-  AddBugreportAnnotations(bugreport, annotations);
-
-  // Feedback attachments common to all crash reports.
-  AddBugreportAttachments(std::move(bugreport), attachments);
+  // Bugreport annotations and attachment common to all crash reports.
+  AddBugreport(std::move(bugreport), annotations, attachments);
 }
 
 }  // namespace feedback

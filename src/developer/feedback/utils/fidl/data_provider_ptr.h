@@ -13,6 +13,7 @@
 
 #include <memory>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/bridge_map.h"
 #include "src/lib/fxl/macros.h"
 
@@ -27,7 +28,7 @@ class DataProviderPtr {
  public:
   DataProviderPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<fuchsia::feedback::Bugreport> GetBugreport(zx::duration timeout);
+  ::fit::promise<fuchsia::feedback::Bugreport, Error> GetBugreport(zx::duration timeout);
 
  private:
   void Connect();

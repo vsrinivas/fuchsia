@@ -141,6 +141,7 @@ source_set("crash_reporter") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crash_reports/info",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils:utc_time_provider",
     "//src/developer/feedback/utils/fidl:channel_provider_ptr",
     "//src/developer/feedback/utils/fidl:data_provider_ptr",
@@ -255,6 +256,7 @@ source_set("report_util") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/utils:errors",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",
     "//zircon/system/fidl/fuchsia-mem",

@@ -522,6 +522,10 @@ TEST_F(CrashReporterTest, Check_guidNotSet) {
   ASSERT_NE(crash_server_->latest_annotations().find("debug.guid.set"),
             crash_server_->latest_annotations().end());
   EXPECT_EQ(crash_server_->latest_annotations().at("debug.guid.set"), "false");
+
+  ASSERT_NE(crash_server_->latest_annotations().find("debug.device-id.error"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("debug.device-id.error"), "no data returned");
 }
 
 TEST_F(CrashReporterTest, Check_UnknownChannel) {
@@ -539,6 +543,10 @@ TEST_F(CrashReporterTest, Check_UnknownChannel) {
   ASSERT_NE(crash_server_->latest_annotations().find("channel"),
             crash_server_->latest_annotations().end());
   EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "<unknown>");
+
+  ASSERT_NE(crash_server_->latest_annotations().find("debug.channel.error"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("debug.channel.error"), "FIDL connection error");
 }
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
@@ -887,7 +895,24 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
-  CheckAnnotationsOnServer();
+  CheckAnnotationsOnServer({
+      {"debug.bugreport.empty", "true"},
+  });
+  CheckAttachmentsOnServer({kSingleAttachmentKey});
+}
+
+TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(nullptr);
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
+  CheckAttachmentsInDatabase({kSingleAttachmentKey});
+  CheckAnnotationsOnServer({
+      {"debug.bugreport.error", "FIDL connection error"},
+  });
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 

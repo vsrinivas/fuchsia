@@ -50,6 +50,7 @@ source_set("data_provider_ptr") {
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
@@ -74,6 +75,7 @@ source_set("device_id_provider_ptr") {
     ":caching_ptr",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:errors",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",

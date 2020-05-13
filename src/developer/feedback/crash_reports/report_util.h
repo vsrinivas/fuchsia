@@ -7,11 +7,13 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fit/result.h>
 
 #include <map>
 #include <optional>
 #include <string>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/file/file_writer.h"
 
@@ -34,11 +36,11 @@ bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& cont
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                    fuchsia::feedback::Bugreport bugreport,
+                                    ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
                                     const std::optional<zx::time_utc>& current_time,
-                                    const std::optional<std::string>& device_id,
+                                    const ::fit::result<std::string, Error>& device_id,
                                     const std::string& build_version,
-                                    const std::optional<std::string>& channel,
+                                    const ::fit::result<std::string, Error>& channel,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump);

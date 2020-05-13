@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fidl/caching_ptr.h"
 
 namespace feedback {
@@ -26,7 +27,7 @@ class DeviceIdProviderPtr {
   DeviceIdProviderPtr(async_dispatcher_t* dispatcher,
                       std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<std::string> GetId(zx::duration timeout);
+  ::fit::promise<std::string, Error> GetId(zx::duration timeout);
 
  private:
   // Makes the unique call on |connection_|.

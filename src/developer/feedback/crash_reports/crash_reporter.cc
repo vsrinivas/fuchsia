@@ -124,59 +124,47 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
+  auto bugreport_promise = data_provider_ptr_.GetBugreport(kBugreportTimeout);
   auto channel_promise =
       fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(kChannelOrDeviceIdTimeout));
-  auto bugreport_promise = data_provider_ptr_.GetBugreport(kBugreportTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
 
   auto promise =
-      ::fit::join_promises(std::move(channel_promise), std::move(bugreport_promise),
+      ::fit::join_promises(std::move(bugreport_promise), std::move(channel_promise),
                            std::move(device_id_promise))
-          .then([this, report = std::move(report)](
-                    ::fit::result<std::tuple<::fit::result<std::string, Error>,
-                                             ::fit::result<Bugreport>, ::fit::result<std::string>>>&
-                        results) mutable -> ::fit::result<void> {
-            if (results.is_error()) {
-              return ::fit::error();
-            }
+          .then(
+              [this, report = std::move(report)](
+                  ::fit::result<
+                      std::tuple<::fit::result<Bugreport, Error>, ::fit::result<std::string, Error>,
+                                 ::fit::result<std::string, Error>>>& results) mutable
+              -> ::fit::result<void> {
+                if (results.is_error()) {
+                  return ::fit::error();
+                }
 
-            auto channel_result = std::move(std::get<0>(results.value()));
-            std::optional<std::string> channel = std::nullopt;
-            if (channel_result.is_ok()) {
-              channel = channel_result.take_value();
-            }
+                auto bugreport = std::move(std::get<0>(results.value()));
+                auto channel = std::move(std::get<1>(results.value()));
+                auto device_id = std::move(std::get<2>(results.value()));
 
-            auto bugreport_result = std::move(std::get<1>(results.value()));
-            Bugreport bugreport;
-            if (bugreport_result.is_ok()) {
-              bugreport = bugreport_result.take_value();
-            }
+                const std::string program_name = report.program_name();
 
-            auto device_id_result = std::move(std::get<2>(results.value()));
-            std::optional<std::string> device_id = std::nullopt;
-            if (device_id_result.is_ok()) {
-              device_id = device_id_result.take_value();
-            }
+                std::map<std::string, std::string> annotations;
+                std::map<std::string, fuchsia::mem::Buffer> attachments;
+                std::optional<fuchsia::mem::Buffer> minidump;
+                BuildAnnotationsAndAttachments(
+                    std::move(report), std::move(bugreport), utc_provider_.CurrentTime(), device_id,
+                    build_version_, channel, &annotations, &attachments, &minidump);
 
-            const std::string program_name = report.program_name();
+                if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
+                                 annotations)) {
+                  FX_LOGS(ERROR) << "Error adding new report to the queue";
+                  info_.LogCrashState(cobalt::CrashState::kDropped);
+                  return ::fit::error();
+                }
 
-            std::map<std::string, std::string> annotations;
-            std::map<std::string, fuchsia::mem::Buffer> attachments;
-            std::optional<fuchsia::mem::Buffer> minidump;
-            BuildAnnotationsAndAttachments(std::move(report), std::move(bugreport),
-                                           utc_provider_.CurrentTime(), device_id, build_version_,
-                                           channel, &annotations, &attachments, &minidump);
-
-            if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
-                             annotations)) {
-              FX_LOGS(ERROR) << "Error adding new report to the queue";
-              info_.LogCrashState(cobalt::CrashState::kDropped);
-              return ::fit::error();
-            }
-
-            info_.LogCrashState(cobalt::CrashState::kFiled);
-            return ::fit::ok();
-          })
+                info_.LogCrashState(cobalt::CrashState::kFiled);
+                return ::fit::ok();
+              })
           .then([callback = std::move(callback)](::fit::result<void>& result) {
             if (result.is_error()) {
               FX_LOGS(ERROR) << "Failed to file crash report. Won't retry.";

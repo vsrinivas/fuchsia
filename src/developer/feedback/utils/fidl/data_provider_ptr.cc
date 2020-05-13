@@ -26,7 +26,7 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services), pending_calls_(dispatcher) {}
 
-::fit::promise<Bugreport> DataProviderPtr::GetBugreport(const zx::duration timeout) {
+::fit::promise<Bugreport, Error> DataProviderPtr::GetBugreport(const zx::duration timeout) {
   if (!connection_) {
     Connect();
   }
@@ -47,7 +47,7 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
       });
 
   return pending_calls_.WaitForDone(id, fit::Timeout(timeout))
-      .then([id, this](::fit::result<Bugreport, Error>& result) -> ::fit::result<Bugreport> {
+      .then([id, this](::fit::result<Bugreport, Error>& result) {
         // We need to move the result before erasing the bridge because |result| is passed as a
         // reference.
         ::fit::result<Bugreport, Error> bugreport = std::move(result);
@@ -59,12 +59,7 @@ DataProviderPtr::DataProviderPtr(async_dispatcher_t* dispatcher,
           connection_.Unbind();
         }
 
-        if (bugreport.is_error()) {
-          // Swallow the Error.
-          return ::fit::error();
-        } else {
-          return ::fit::ok(bugreport.take_value());
-        }
+        return bugreport;
       });
 }
 
