@@ -42,7 +42,8 @@ containers::array_view<LineTable::Row> LineTable::GetRowSequenceForAddress(
 }
 
 LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_context,
-                                                TargetPointer absolute_address) const {
+                                                TargetPointer absolute_address,
+                                                SkipMode skip_mode) const {
   containers::array_view<Row> seq = GetRowSequenceForAddress(address_context, absolute_address);
   if (seq.empty())
     return FoundRow();
@@ -63,6 +64,14 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
   size_t found_index = found - seq.begin();
   while (found_index > 0 && seq[found_index].Address == seq[found_index - 1].Address)
     found_index--;
+
+  if (skip_mode == kSkipCompilerGenerated) {
+    // Skip compiler-generated rows. Don't advance to an "end sequence" line because that doesn't
+    // represent actual code, just the end of the extent of the sequence.
+    while (found_index + 1 < seq.size() && seq[found_index].Line == 0 &&
+           !seq[found_index + 1].EndSequence)
+      found_index++;
+  }
 
   return FoundRow(seq, found_index);
 }

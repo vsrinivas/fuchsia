@@ -454,7 +454,6 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
 
   // Get the file/line location (may fail). Don't overwrite one computed above if already set above
   // using the ambigous inline call site.
-  //
   if (!file_line.is_valid()) {
     const LineTable& line_table = unit->GetLineTable();
 

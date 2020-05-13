@@ -104,4 +104,52 @@ TEST(LineTable, GetRowForAddress) {
   EXPECT_TRUE(result.empty());  // Should be not found.
 }
 
+// Tests handling for addresses matching "line 0" entries (indicating compiler-generated).
+TEST(LineTable, GetRowForAddress_Line0) {
+  // This load address makes the addresses in the table start at 0x1000.
+  SymbolContext context(0x1000);
+
+  MockLineTable::FileNameVector files;
+  files.push_back("file.cc");  // Name for file #1.
+
+  MockLineTable::RowVector rows;
+  rows.push_back(MockLineTable::MakeStatementRow(0x1, 1, 2));
+  rows.push_back(MockLineTable::MakeStatementRow(0x3, 1, 0));  // <- Compiler-generated.
+  rows.push_back(MockLineTable::MakeStatementRow(0x5, 1, 3));
+  rows.push_back(MockLineTable::MakeStatementRow(0x7, 1, 0));  // <- Compiler-generated
+  // The settings for the "end sequence" marker aren't really used. They're normally inherited from
+  // the previous line because of the way the data is encoded in DWARF using a state machine. We
+  // inherit the same file/line from the previous entry in this same way.
+  rows.push_back(MockLineTable::MakeEndSequenceRow(0x9, 1, 0));
+
+  MockLineTable table(files, rows);
+
+  // Exact match query for the "line 0" address should return it.
+  auto result = table.GetRowForAddress(context, 0x1003, LineTable::kExactMatch);
+  ASSERT_FALSE(result.empty());
+  EXPECT_EQ(0x3u, result.get().Address);
+  EXPECT_EQ(0u, result.get().Line);
+
+  // Exact match query for the address immediately following 0x7 should also be covered by that
+  // entry.
+  result = table.GetRowForAddress(context, 0x1008, LineTable::kExactMatch);
+  ASSERT_FALSE(result.empty());
+  EXPECT_EQ(0x7u, result.get().Address);
+  EXPECT_EQ(0u, result.get().Line);
+
+  // Querying the first "line 0" entry with skipping should yield the next address.
+  result = table.GetRowForAddress(context, 0x1003, LineTable::kSkipCompilerGenerated);
+  ASSERT_FALSE(result.empty());
+  EXPECT_EQ(0x5u, result.get().Address);
+  EXPECT_EQ(3u, result.get().Line);
+
+  // Query the address immediately following 0x7. Since this is the last real entry in the table
+  // (the end sequence marker doesn't count), the line should not be advanced and the "line 0"
+  // entry should be returned.
+  result = table.GetRowForAddress(context, 0x1008, LineTable::kSkipCompilerGenerated);
+  ASSERT_FALSE(result.empty());
+  EXPECT_EQ(0x7u, result.get().Address);
+  EXPECT_EQ(0u, result.get().Line);
+}
+
 }  // namespace zxdb

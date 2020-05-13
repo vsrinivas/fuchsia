@@ -26,6 +26,21 @@ class LineTable {
  public:
   using Row = llvm::DWARFDebugLine::Row;
 
+  // The line table can contain lines marked with a line number of 0. These entries indicate code
+  // that is compiler-generated and not associated with any source line.
+  enum SkipMode {
+    // Return the exact row entry for the address, even if it's marked compiler-generated.
+    kExactMatch,
+
+    // If a line query matches a compiler generated line, advances to the next
+    // non-compiler-generated line. This usually makes more sense to the user since compiler
+    // generated instructions will normally be associated with some code.
+    //
+    // Thie mode can still return compiler generated line entries if there is no "next" row to
+    // advance to.
+    kSkipCompilerGenerated,
+  };
+
   struct FoundRow {
     FoundRow() = default;
     FoundRow(containers::array_view<Row> s, size_t i) : sequence(s), index(i) {}
@@ -83,8 +98,8 @@ class LineTable {
   // returned sequence will be empty.
   //
   // Watch out: the addresses in the returned rows will all be module-relative.
-  FoundRow GetRowForAddress(const SymbolContext& address_context,
-                            TargetPointer absolute_address) const;
+  FoundRow GetRowForAddress(const SymbolContext& address_context, TargetPointer absolute_address,
+                            SkipMode skip_mode = kSkipCompilerGenerated) const;
 
  protected:
   // Returns the line table row information.
