@@ -1,0 +1,37 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.feedback;
+
+/// Allows a component to choose a different crash reporting product to file crashes for that
+/// component under.
+///
+/// By default, all crashes detected by the platform are filed under a single product on the crash
+/// server. This API allows components to choose their own product while still benefiting from the
+/// platform's exception handling and crash reporting.
+protocol CrashReportingProductRegister {
+    /// Updates or inserts a crash reporting product for a given component URL.
+    ///
+    /// Upsert() may be called multiple times for the same |component_url|, e.g., once for each
+    /// launch of the component, in which case only the most recent call's product information
+    /// will be used in crash reports.
+    Upsert(string:MAX component_url, CrashReportingProduct product);
+};
+
+/// Product release information to report to the crash server.
+table CrashReportingProduct {
+    /// The product name on the crash server.
+    /// * Missing this required field will result in a ZX_ERR_INVALID_ARGS epitaph.
+    1: string:MAX name;
+
+    /// Optional product version of the component.
+    ///
+    /// If no version is specified then none is reported to the crash server.
+    2: string:MAX version;
+
+    /// Optional product release channel for the component, e.g., "canary", "beta", "stable".
+    ///
+    /// If no channel is specified then none is reported to the crash server.
+    3: string:MAX channel;
+};
