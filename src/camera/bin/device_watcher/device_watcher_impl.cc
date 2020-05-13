@@ -51,7 +51,7 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
 
   zx_status_t status_return;
   ctrl.set_error_handler([&](zx_status_t status) {
-    FX_PLOGS(ERROR, status);
+    FX_PLOGS(WARNING, status);
     status_return = status;
     event.signal(0, kErrorSignal);
   });
@@ -72,14 +72,14 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   }
 
   if (signaled & kErrorSignal) {
-    FX_PLOGS(ERROR, status_return);
+    FX_PLOGS(WARNING, status_return);
     return fit::error(status_return);
   }
 
   ZX_ASSERT(signaled & kInfoSignal);
 
   if (!info_return.has_vendor_id() || !info_return.has_product_id()) {
-    FX_LOGS(ERROR) << "Controller missing vendor or product ID.";
+    FX_LOGS(INFO) << "Controller missing vendor or product ID.";
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 

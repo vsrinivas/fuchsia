@@ -37,15 +37,15 @@ static zx_status_t Validate(const fuchsia::camera3::StreamProperties& properties
   if (properties.image_format.coded_width == 0 || properties.image_format.coded_height == 0 ||
       properties.image_format.bytes_per_row == 0) {
     status = ZX_ERR_INVALID_ARGS;
-    FX_PLOGS(ERROR, status) << "Invalid image format dimensions or stride.";
+    FX_PLOGS(DEBUG, status) << "Invalid image format dimensions or stride.";
   }
   if (properties.image_format.pixel_format.type == fuchsia::sysmem::PixelFormatType::INVALID) {
     status = ZX_ERR_INVALID_ARGS;
-    FX_PLOGS(ERROR, status) << "Invalid pixel format type.";
+    FX_PLOGS(DEBUG, status) << "Invalid pixel format type.";
   }
   if (properties.frame_rate.numerator == 0 || properties.frame_rate.denominator == 0) {
     status = ZX_ERR_INVALID_ARGS;
-    FX_PLOGS(ERROR, status) << "Invalid frame rate.";
+    FX_PLOGS(DEBUG, status) << "Invalid frame rate.";
   }
   return status;
 }
@@ -58,7 +58,7 @@ fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create
 
   zx_status_t status = Validate(properties);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "StreamProperties failed validation.";
+    FX_PLOGS(DEBUG, status) << "StreamProperties failed validation.";
     return fit::error(status);
   }
 

@@ -36,18 +36,18 @@ static zx_status_t Validate(const std::vector<FakeConfiguration>& configurations
 
   if (configurations.empty()) {
     status = ZX_ERR_INVALID_ARGS;
-    FX_PLOGS(ERROR, status) << "Configurations must not be empty.";
+    FX_PLOGS(DEBUG, status) << "Configurations must not be empty.";
   }
 
   for (const auto& configuration : configurations) {
     if (configuration.empty()) {
       status = ZX_ERR_INVALID_ARGS;
-      FX_PLOGS(ERROR, status) << "Configuration must not be empty.";
+      FX_PLOGS(DEBUG, status) << "Configuration must not be empty.";
     }
     for (const auto& stream : configuration) {
       if (!stream) {
         status = ZX_ERR_INVALID_ARGS;
-        FX_PLOGS(ERROR, status) << "Stream must be non-null.";
+        FX_PLOGS(DEBUG, status) << "Stream must be non-null.";
       }
     }
   }
@@ -61,7 +61,7 @@ fit::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> FakeCameraImpl::Create
 
   zx_status_t status = Validate(configurations);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Configurations failed validation.";
+    FX_PLOGS(DEBUG, status) << "Configurations failed validation.";
     return fit::error(status);
   }
 

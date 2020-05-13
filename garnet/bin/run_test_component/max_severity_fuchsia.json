@@ -57,18 +57,6 @@
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/device_watcher_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/fake_camera_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/fake_stream_test.cmx",
-         "max_severity": "ERROR"
-      },
-      {
          "url": "fuchsia-pkg://fuchsia.com/camera_tests#meta/image_writer_test.cmx",
          "max_severity": "FATAL"
       },

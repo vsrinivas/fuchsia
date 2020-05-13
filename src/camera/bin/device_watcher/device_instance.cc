@@ -73,15 +73,15 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
   instance->component_controller_.events().OnTerminated =
       [callback = on_component_unavailable.share()](int64_t return_code,
                                                     fuchsia::sys::TerminationReason reason) {
-        FX_LOGS(ERROR) << "Camera Device Component exited with code " << return_code
-                       << " and reason " << static_cast<uint32_t>(reason);
+        FX_LOGS(WARNING) << "Camera Device Component exited with code " << return_code
+                         << " and reason " << static_cast<uint32_t>(reason);
         callback();
       };
 
   // Bind error handlers.
   instance->component_controller_.set_error_handler(
       [callback = on_component_unavailable.share()](zx_status_t status) {
-        FX_PLOGS(ERROR, status) << "Component controller disconnected.";
+        FX_PLOGS(WARNING, status) << "Component controller disconnected.";
         // Invoke the callback here since OnTerminated won't be called.
         callback();
       });
