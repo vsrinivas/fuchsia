@@ -2,18 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::future::BoxFuture;
-use futures::prelude::*;
-use log::{info, warn};
+use crate::timer::FuchsiaTimer;
+use anyhow::{Context as _, Error};
+use fidl_fuchsia_ui_activity::{
+    ListenerMarker, ListenerRequest, ProviderMarker, ProviderProxy, State,
+};
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
+use futures::{future::BoxFuture, prelude::*};
+use log::{error, info, warn};
 use omaha_client::{
     common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     protocol::request::InstallSource,
     request_builder::RequestParams,
-    time::{PartialComplexTime, TimeSource},
+    time::{PartialComplexTime, TimeSource, Timer},
     unless::Unless,
 };
+use std::cell::Cell;
+use std::rc::Rc;
 use std::time::Duration;
 
 /// We do periodic update check roughly every hour.
@@ -156,6 +164,8 @@ impl Policy for FuchsiaPolicy {
 #[derive(Debug)]
 pub struct FuchsiaPolicyEngine<T> {
     time_source: T,
+    // Whether the device is in active use.
+    ui_activity: Rc<Cell<UiActivityState>>,
 }
 pub struct FuchsiaPolicyEngineBuilder;
 pub struct FuchsiaPolicyEngineBuilderWithTime<T> {
@@ -171,7 +181,10 @@ impl FuchsiaPolicyEngineBuilder {
 }
 impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
     pub fn build(self) -> FuchsiaPolicyEngine<T> {
-        FuchsiaPolicyEngine { time_source: self.time_source }
+        FuchsiaPolicyEngine {
+            time_source: self.time_source,
+            ui_activity: Rc::new(Cell::new(UiActivityState::new())),
+        }
     }
 }
 
@@ -229,11 +242,72 @@ where
     }
 }
 
+impl<T> FuchsiaPolicyEngine<T>
+where
+    T: TimeSource + Clone,
+{
+    /// Returns a future that watches the UI activity state and updates the value within
+    /// FuchsiaPolicyEngine.
+    pub fn start_watching_ui_activity(&self) -> impl Future<Output = ()> {
+        let ui_activity = Rc::clone(&self.ui_activity);
+        async move {
+            let mut backoff = Duration::from_secs(1);
+            loop {
+                if let Err(e) = watch_ui_activity(&ui_activity).await {
+                    error!("watch_ui_activity failed, retry in {}s: {:?}", backoff.as_secs(), e);
+                }
+                FuchsiaTimer.wait_for(backoff).await;
+                if backoff.as_secs() < 512 {
+                    backoff *= 2;
+                }
+            }
+        }
+    }
+}
+
+/// Watches the UI activity state and updates the value in `ui_activity`.
+async fn watch_ui_activity(ui_activity: &Rc<Cell<UiActivityState>>) -> Result<(), Error> {
+    let provider = connect_to_service::<ProviderMarker>()?;
+    watch_ui_activity_impl(ui_activity, provider).await
+}
+
+/// Watches the UI activity state using `provider` proxy and updates the value in `ui_activity`.
+async fn watch_ui_activity_impl(
+    ui_activity: &Rc<Cell<UiActivityState>>,
+    provider: ProviderProxy,
+) -> Result<(), Error> {
+    let (listener, mut stream) = fidl::endpoints::create_request_stream::<ListenerMarker>()?;
+    provider.watch_state(listener).context("watch_state")?;
+    while let Some(event) = stream.try_next().await? {
+        let ListenerRequest::OnStateChanged { state, transition_time, responder } = event;
+        ui_activity
+            .set(UiActivityState { state, transition_time: zx::Time::from_nanos(transition_time) });
+        responder.send()?;
+    }
+    Ok(())
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+struct UiActivityState {
+    state: State,
+    // Monotonic time of last state transition.
+    transition_time: zx::Time,
+}
+
+impl UiActivityState {
+    fn new() -> Self {
+        Self { state: State::Unknown, transition_time: zx::Time::get(zx::ClockId::Monotonic) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_ui_activity::ProviderRequest;
+    use fuchsia_async as fasync;
     use omaha_client::installer::stub::StubPlan;
-    use omaha_client::time::{ComplexTime, MockTimeSource, TimeSource};
+    use omaha_client::time::{ComplexTime, MockTimeSource, StandardTimeSource, TimeSource};
 
     /// Test that the correct next update time is calculated for the normal case where a check was
     /// recently done and the next needs to be scheduled.
@@ -653,5 +727,38 @@ mod tests {
                 result.time.checked_to_instant().map(|t| t.duration_since(now.into()))
             );
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ui_activity_state_default_unknown() {
+        let policy_engine = FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
+        let ui_activity = policy_engine.ui_activity.get();
+        assert_eq!(ui_activity.state, State::Unknown);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ui_activity_watch_state() {
+        let policy_engine = FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
+        let ui_activity = Rc::clone(&policy_engine.ui_activity);
+        assert_eq!(ui_activity.get().state, State::Unknown);
+
+        let (proxy, mut stream) = create_proxy_and_stream::<ProviderMarker>().unwrap();
+        fasync::spawn_local(async move {
+            watch_ui_activity_impl(&policy_engine.ui_activity, proxy).await.unwrap();
+        });
+
+        let ProviderRequest::WatchState { listener, control_handle: _ } =
+            stream.next().await.unwrap().unwrap();
+        let listener = listener.into_proxy().unwrap();
+        listener.on_state_changed(State::Active, 123).await.unwrap();
+        assert_eq!(
+            ui_activity.get(),
+            UiActivityState { state: State::Active, transition_time: zx::Time::from_nanos(123) }
+        );
+        listener.on_state_changed(State::Idle, 456).await.unwrap();
+        assert_eq!(
+            ui_activity.get(),
+            UiActivityState { state: State::Idle, transition_time: zx::Time::from_nanos(456) }
+        );
     }
 }

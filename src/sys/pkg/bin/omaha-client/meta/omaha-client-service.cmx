@@ -22,7 +22,8 @@
             "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
             "fuchsia.stash.Store2",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.activity.Provider"
         ]
     }
 }
