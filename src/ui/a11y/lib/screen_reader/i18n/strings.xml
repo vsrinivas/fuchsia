@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Spoken message that describes a heading. For example, an element with the ARIA role heading. -->
+    <string name="role_header">Heading</string>
+    <!-- Spoken message that describes a button. For example, an element with the ARIA role button. -->
+    <string name="role_button">Button</string>
+    <!-- Spoken message that Describes a check box. For example, an element with the ARIA role checkbox. -->
+    <string name="role_checkbox">Check box</string>
+    <!-- Spoken message that Describes a combo box. For example, an element with the ARIA role combobox. -->
+    <string name="role_combobox">Combo box</string>
+    <!-- Spoken message that Describes an image. For example, an element with the ARIA role img. -->
+    <string name="role_image">Image</string>
+    <!-- Spoken message that Describes a link in a document or in a page. -->
+    <string name="role_link">Link</string>
+    <!-- Spoken message that Describes a progress bar. For example, an element with the ARIA role progressbar. -->
+    <string name="role_progressbar">Progress bar</string>
+    <!-- Spoken message that Describes a slider. For example, an element with the ARIA role slider. -->
+    <string name="role_slider">Slider</string>
+    <!-- Spoken message that Describes a tab. For example, an element with the ARIA role tab. -->
+    <string name="role_tab">Tab</string>
+    <!-- Spoken message that Describes a radio button. For example, an element with the ARIA role radio. -->
+    <string name="role_radiobutton">Radio button</string>
+    <!-- Describes a HTML radio button named |name| in the selected state. -->
+    <string name="radio_button_selected">
+        <xliff:g id="name" example="first option">{name}</xliff:g>, radio button selected</string>
+    <!-- Describes a HTML radio button named |name| in the unselected state. -->
+    <string name="radio_button_unselected">
+        <xliff:g id="name" example="first option">{name}</xliff:g>, radio button unselected</string>
+    <!-- Spoken message that describes a table. For example, a <table> html tag. -->
+    <string name="role_table">Table</string>
+    <!-- Spoken message that summarizes a table. -->
+    <string name="table_summary">
+        <xliff:g id="table_name" example="days of the week">{table_name}</xliff:g>,        <xliff:g id="table_rows" example="10">{table_rows}</xliff:g> by <xliff:g id="table_columns" example="7">{table_columns}</xliff:g>
+    </string>
+    <!-- Spoken message that summarizes a table cell. -->
+    <string name="cell_summary">Row <xliff:g id="row_index" example="2">{row_index}</xliff:g> column <xliff:g id="column_index" example="1">{column_index}</xliff:g>
+    </string>
+    <!-- Spoken message that describes an element that is checked. For example, a check box is checked in a html form. -->
+    <string name="element_checked">Checked</string>
+    <!-- Spoken message that describes an element that is not checked. For example, a check box is not checked in a html form. -->
+    <string name="element_not_checked">Not checked</string>
+    <!-- Spoken message that describes an element where the checked state is mixed or indeterminate. -->
+    <string name="element_partially_checked">Partially checked</string>
+    <!-- Spoken message that describes an element that is disabled. For example, an element with the ARIA attribute aria-disabled=true. -->
+    <string name="element_disabled">Disabled</string>
+    <!-- Spoken message that describes an element that is expanded. For example, an element with the ARIA attribute aria-expanded=true. -->
+    <string name="element_expanded">Expanded</string>
+    <!-- Spoken message that describes an element that is collapsed. For example, an element with the ARIA attribute aria-expanded=false. -->
+    <string name="element_collapsed">Collapsed</string>
+    <!-- Spoken message that describes a <h1> html tag. -->
+    <string name="heading_level_1">Heading 1</string>
+    <!-- Spoken message that describes a <h2> html tag. -->
+    <string name="heading_level_2">Heading 2</string>
+    <!-- Spoken message that describes a <h3> html tag. -->
+    <string name="heading_level_3">Heading 3</string>
+    <!-- Spoken message that describes a <h4> html tag. -->
+    <string name="heading_level_4">Heading 4</string>
+    <!-- Spoken message that describes a <h5> html tag. -->
+    <string name="heading_level_5">Heading 5</string>
+    <!-- Spoken message that describes a <h6> html tag. -->
+    <string name="heading_level_6">Heading 6</string>
+    <!-- Spoken message that describes a list item. For example, a <li> html tag. -->
+    <string name="role_list_item">List item</string>
+    <!-- Spoken message that describes a ordered list. For example, a <ol> html tag. -->
+    <string name="role_ordered_list">Ordered list</string>
+    <!-- Spoken message that describes a list. For example, <ul> html tag. -->
+    <string name="role_list">List</string>
+    <!-- Spoken message that describes a list-like element in detail. For example, this message can be combined with others to produce List with 3 items. -->
+    <string name="list_items">{num_items, plural, =0{with no items} =1{with one item} other{with <xliff:g id="num" example="2">#</xliff:g> items}}</string>
+    <!-- Spoken message that describes when the user switches to the line granularity, which allows one to navigate the interface one line at a time. -->
+    <string name="line_granularity">Line</string>
+    <!-- Spoken message that describes when the user switches to the word granularity, which allows one to navigate the interface one word at a time. -->
+    <string name="word_granularity">Word</string>
+    <!-- Spoken message that describes when the user switches to the character granularity, which allows one to navigate the interface one character at a time. -->
+    <string name="character_granularity">Character</string>
+    <!-- Spoken message to the user that a control can be double tapped to be activated. -->
+    <string name="double_tap_hint">Double tap to activate</string>
+    <!-- Spoken message that describes that an element is the last of its type. -->
+    <string name="last_element">Last</string>
+    <!-- Spoken message that describes that an element is the first of its type. -->
+    <string name="first_element">First</string>
+    <!-- Spoken message to alert the user that the Screen Reader has no current focus when using a touch screen. -->
+    <string name="no_focus_alert">No focus. Touch and explore to find items.</string>
+</resources>
