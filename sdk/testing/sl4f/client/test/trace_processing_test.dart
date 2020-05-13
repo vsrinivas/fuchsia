@@ -518,6 +518,18 @@ void main(List<String> args) {
     expect(results[3].label, equals('IPC Memory'));
     expect(results[3].values[0], _closeTo(49152));
     expect(results[3].values[1], _closeTo(49152));
+    expect(results[4].label, equals('CPU Memory Bandwidth Usage'));
+    expect(results[4].values[0], _closeTo(40000000));
+    expect(results[4].values[1], _closeTo(50000000));
+    expect(results[5].label, equals('GPU Memory Bandwidth Usage'));
+    expect(results[5].values[0], _closeTo(240000000));
+    expect(results[5].values[1], _closeTo(250000000));
+    expect(results[6].label, equals('VDEC Memory Bandwidth Usage'));
+    expect(results[6].values[0], _closeTo(0));
+    expect(results[6].values[1], _closeTo(0));
+    expect(results[7].label, equals('VPU Memory Bandwidth Usage'));
+    expect(results[7].values[0], _closeTo(140000000));
+    expect(results[7].values[1], _closeTo(140000000));
   });
 
   test('Custom registry', () async {

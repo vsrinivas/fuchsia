@@ -54,12 +54,31 @@ List<TestCaseResults> memoryMetricsProcessor(
     final double usedMemory = totalMemory - freeMemory;
     return usedMemory;
   });
+  final bandwidthUsageEvents = filterEventsTyped<CounterEvent>(
+      memoryMonitorEvents,
+      name: 'bandwidth_usage');
+  final cpuBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'cpu')
+          .map((v) => v.toDouble());
+  final gpuBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'gpu')
+          .map((v) => v.toDouble());
+  final vdecBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'vdec')
+          .map((v) => v.toDouble());
+  final vpuBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'vpu')
+          .map((v) => v.toDouble());
   final List<TestCaseResults> results = [];
   <String, Iterable<double>>{
     'Total System Memory': usedMemoryValues,
     'VMO Memory': vmoMemoryValues,
     'MMU Overhead Memory': mmuMemoryValues,
     'IPC Memory': ipcMemoryValues,
+    'CPU Memory Bandwidth Usage': cpuBandwidthValues,
+    'GPU Memory Bandwidth Usage': gpuBandwidthValues,
+    'VDEC Memory Bandwidth Usage': vdecBandwidthValues,
+    'VPU Memory Bandwidth Usage': vpuBandwidthValues,
   }.forEach((name, values) {
     _log.info('Average $name in bytes: ${computeMean(values)}');
     results.add(TestCaseResults(name, Unit.bytes, values.toList()));

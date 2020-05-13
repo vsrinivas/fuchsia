@@ -92,6 +92,24 @@ const String testMemoryMetricJsonString = '''
       "tid": 7022,
       "ph": "C",
       "args":{"free":620000000, "free_heap":430000}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "bandwidth_usage",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"cpu":40000000, "gpu":240000000, "vdec":0, "vpu":140000000}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "bandwidth_usage",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"cpu":50000000, "gpu":250000000, "vdec":0, "vpu":140000000}
     }
   ],
   "systemTraceEvents": {
