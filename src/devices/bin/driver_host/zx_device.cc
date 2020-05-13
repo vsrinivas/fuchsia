@@ -222,8 +222,8 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 static fbl::Mutex local_id_map_lock_;
-static fbl::WAVLTree<uint64_t, fbl::RefPtr<zx_device>, zx_device::LocalIdKeyTraits,
-                     zx_device::LocalIdNode>
+static fbl::TaggedWAVLTree<uint64_t, fbl::RefPtr<zx_device>, zx_device::LocalIdMapTag,
+                           zx_device::LocalIdKeyTraits>
     local_id_map_ TA_GUARDED(local_id_map_lock_);
 
 void zx_device::set_local_id(uint64_t id) {

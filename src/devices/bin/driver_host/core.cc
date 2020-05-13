@@ -151,7 +151,7 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
         delete devices.pop_front();
       }
     }
-    fbl::DoublyLinkedList<zx_device*, zx_device::Node> devices;
+    fbl::TaggedDoublyLinkedList<zx_device*, zx_device::ChildrenListTag> devices;
   };
 
   static DeadList dead_list;
@@ -179,6 +179,7 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
   // Defer destruction to help catch use-after-free and also
   // so the compiler can't (easily) optimize away the poisoning
   // we do above.
+  ZX_DEBUG_ASSERT(!fbl::InContainer<zx_device::ChildrenListTag>(*dev));
   dead_list.devices.push_back(dev);
 
   if (dead_count == DEAD_DEVICE_MAX) {

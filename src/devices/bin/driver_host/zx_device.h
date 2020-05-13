@@ -84,12 +84,29 @@ class AsyncTrace {
 // 'MDEV'
 #define DEV_MAGIC 0x4D444556
 
+// Tags used to manage the different containers a zx_device may exist in
+namespace internal {
+struct ZxDeviceChildrenListTag {};
+struct ZxDeviceDeferListTag {};
+struct ZxDeviceLocalIdMapTag {};
+}  // namespace internal
+
 // This needs to be a struct, not a class, to match the public definition
-struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_device> {
+struct zx_device
+    : public fbl::RefCountedUpgradeable<zx_device>,
+      public fbl::Recyclable<zx_device>,
+      public fbl::ContainableBaseClasses<
+          fbl::TaggedDoublyLinkedListable<zx_device*, internal::ZxDeviceChildrenListTag>,
+          fbl::TaggedDoublyLinkedListable<zx_device*, internal::ZxDeviceDeferListTag>,
+          fbl::TaggedWAVLTreeContainable<fbl::RefPtr<zx_device>, internal::ZxDeviceLocalIdMapTag>> {
  private:
   using TraceLabelBuffer = fbl::StringBuffer<32>;
 
  public:
+  using ChildrenListTag = internal::ZxDeviceChildrenListTag;
+  using DeferListTag = internal::ZxDeviceDeferListTag;
+  using LocalIdMapTag = internal::ZxDeviceLocalIdMapTag;
+
   ~zx_device() = default;
 
   zx_device(const zx_device&) = delete;
@@ -247,24 +264,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // parent in the device tree
   fbl::RefPtr<zx_device_t> parent;
 
-  // for the parent's device_list
-  fbl::DoublyLinkedListNodeState<zx_device*> node;
-  struct Node {
-    static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(zx_device& obj) {
-      return obj.node;
-    }
-  };
-
   // list of this device's children in the device tree
-  fbl::DoublyLinkedList<zx_device*, Node> children;
-
-  // list node for the defer_device_list
-  fbl::DoublyLinkedListNodeState<zx_device*> defer;
-  struct DeferNode {
-    static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(zx_device& obj) {
-      return obj.defer;
-    }
-  };
+  fbl::TaggedDoublyLinkedList<zx_device*, ChildrenListTag> children;
 
   // This is an atomic so that the connection's async loop can inspect this
   // value to determine if an expected shutdown is happening.  See comments in
@@ -278,12 +279,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   char name[ZX_DEVICE_NAME_MAX + 1] = {};
 
-  // Trait structures for the local ID map
-  struct LocalIdNode {
-    static fbl::WAVLTreeNodeState<fbl::RefPtr<zx_device>>& node_state(zx_device& obj) {
-      return obj.local_id_node_;
-    }
-  };
+  // Trait structure for the local ID map
   struct LocalIdKeyTraits {
     static uint64_t GetKey(const zx_device& obj) { return obj.local_id_; }
     static bool LessThan(const uint64_t& key1, const uint64_t& key2) { return key1 < key2; }
@@ -374,8 +370,6 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // If this device is a fragment of a composite, this points to the
   // composite control structure.
   fbl::RefPtr<CompositeDevice> composite_;
-
-  fbl::WAVLTreeNodeState<fbl::RefPtr<zx_device>> local_id_node_;
 
   // Identifier assigned by devmgr that can be used to assemble composite
   // devices.

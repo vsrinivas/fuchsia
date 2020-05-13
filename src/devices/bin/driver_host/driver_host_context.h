@@ -212,7 +212,8 @@ class DriverHostContext {
 
   fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> drivers_;
 
-  fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list_ TA_GUARDED(api_lock_);
+  fbl::TaggedDoublyLinkedList<zx_device*, zx_device::DeferListTag> defer_device_list_
+      TA_GUARDED(api_lock_);
   int enumerators_ TA_GUARDED(api_lock_) = 0;
 
   zx::resource root_resource_;
