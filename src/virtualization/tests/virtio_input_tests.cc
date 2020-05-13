@@ -12,7 +12,6 @@
 
 namespace {
 
-#if __x86_64__
 // Create an alias, as "TEST_F" requires the fixture name to be a valid C token.
 using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
 
@@ -39,6 +38,5 @@ TEST_F(VirtioInputDebianGuestTest, Input) {
   std::string result;
   EXPECT_EQ(guest_console->WaitForMarker("PASS", &result), ZX_OK);
 }
-#endif  // __x86_64__
 
 }  // namespace

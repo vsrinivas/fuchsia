@@ -6,7 +6,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/tests/socket.h"
 
 namespace {

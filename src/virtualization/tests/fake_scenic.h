@@ -5,25 +5,17 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
 #define SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/sys/cpp/service_directory.h>
 #include <string.h>
 
 #include <optional>
 #include <unordered_map>
 #include <vector>
-
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 // This file implements a minimal fuchsia::ui::scenic::Scenic implementation.
 //

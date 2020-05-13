@@ -20,7 +20,6 @@
 
 namespace {
 
-#if __x86_64__
 using testing::AllOf;
 using testing::Ge;
 using testing::Le;
@@ -187,6 +186,5 @@ TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
   EXPECT_TRUE(success)
       << "Expected keystroke events to change console output, but nothing changed.";
 }
-#endif  // __x86_64__
 
 }  // namespace

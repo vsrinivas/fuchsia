@@ -33,7 +33,7 @@ static constexpr char kGuestManagerUrl[] =
 static constexpr char kRealm[] = "realmguestintegrationtest";
 // TODO(MAC-229): Use consistent naming for the test utils here.
 static constexpr char kFuchsiaTestUtilsUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
+    "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 static constexpr char kDebianTestUtilDir[] = "/test_utils";
 static constexpr zx::duration kLoopTimeout = zx::sec(300);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);

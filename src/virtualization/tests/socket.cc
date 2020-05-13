@@ -8,8 +8,6 @@
 
 #include <array>
 
-#include "src/lib/fxl/logging.h"
-
 static constexpr size_t kSerialBufferSize = 1024;
 
 ZxSocket::ZxSocket(zx::socket socket) : socket_(std::move(socket)) {}
@@ -53,7 +51,6 @@ zx_status_t ZxSocket::Send(zx::time deadline, const std::string& message) {
 }
 
 zx_status_t ZxSocket::Receive(zx::time deadline, std::string* result) {
-  FX_CHECK(result != nullptr);
   while (true) {
     zx_status_t status;
 

@@ -9,8 +9,6 @@
 
 #include <string>
 
-#include "src/lib/fxl/macros.h"
-
 class SocketInterface {
  public:
   SocketInterface() = default;
@@ -35,9 +33,6 @@ class SocketInterface {
   // Returns when one or more bytes has been received, or the given timeout has
   // passed.
   virtual zx_status_t Receive(zx::time deadline, std::string* result) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketInterface);
 };
 
 class ZxSocket : public SocketInterface {

@@ -10,7 +10,6 @@ import("//src/virtualization/buildtools/romfs_image.gni")
 
 # Packages required to run the guest integration tests.
 guest_packages = [
-  ":guest_integration_tests_utils",
   "//garnet/packages/prod:guest_runner",
   "//src/virtualization/bin/guest_manager",
   "//src/virtualization/packages/debian_guest",
@@ -18,18 +17,35 @@ guest_packages = [
   "//src/virtualization/packages/zircon_guest",
 ]
 
+# TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
+guest_environments = nuc_env_fails_on_asan + [ sherlock_env ]
+
+linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
+linux_tests_resources = [
+  {
+    path = get_label_info(linux_tests_label, "target_out_dir") +
+           "/debian/tests.img"
+    dest = "linux_tests.img"
+  },
+]
+
 group("tests") {
   testonly = true
   deps = [
-    ":guest_integration_tests",
-    ":guest_integration_tests_bin",
-    ":guest_integration_tests_utils",
     ":guest_unit_tests",
-    "virtio_block_test_util",
-    "virtio_net_test_util",
-    "virtio_rng_test_util",
-    "virtio_vsock_test_util",
+    ":virtualization_block_tests_pkg",
+    ":virtualization_core_tests_pkg",
+    ":virtualization_net_tests_pkg",
+    ":virtualization_vsock_tests_pkg",
   ]
+
+  # TODO(fxbug.dev/12616): These tests currently do not work on arm64.
+  if (current_cpu == "x64") {
+    deps += [
+      ":virtualization_gpu_tests_pkg",
+      ":virtualization_input_tests_pkg",
+    ]
+  }
 
   # Ensure guest packages are available in the manifest.
   data_deps = guest_packages
@@ -55,12 +71,8 @@ source_set("guest_console") {
     "socket.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//src/lib/inet",
-    "//zircon/public/lib/fbl",
   ]
   public_deps = [
     ":logger",
@@ -78,18 +90,29 @@ source_set("fake_netstack") {
     "fake_netstack.h",
   ]
   deps = [
-    "//src/lib/fxl",
-    "//src/lib/inet",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-    "//zircon/system/public",
-  ]
-  public_deps = [
     "//sdk/fidl/fuchsia.netstack",
-    "//sdk/lib/fidl/cpp",
+    "//src/lib/inet",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fit",
   ]
+  public_deps = [ "//sdk/fidl/fuchsia.netstack" ]
+}
+
+source_set("fake_scenic") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "fake_scenic.cc",
+    "fake_scenic.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//src/lib/fxl",
+  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.scenic" ]
 }
 
 executable("unit_tests") {
@@ -98,9 +121,7 @@ executable("unit_tests") {
   sources = [ "guest_console_test.cc" ]
   deps = [
     ":guest_console",
-    "//src/lib/fxl:fxl_logging",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 }
@@ -122,81 +143,26 @@ source_set("lib") {
   sources = [
     "enclosed_guest.cc",
     "enclosed_guest.h",
-    "fake_scenic.cc",
-    "fake_scenic.h",
     "guest_test.h",
     "periodic_logger.cc",
     "periodic_logger.h",
   ]
 
   deps = [
-    ":fake_netstack",
     ":guest_console",
-    "//garnet/public/lib/fostr",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/inet",
     "//src/virtualization/bin/vmm:guest_config",
-    "//src/virtualization/bin/vmm/device",
-    "//src/virtualization/lib/vsh:client",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.ui.scenic",
+    ":fake_netstack",
+    ":fake_scenic",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/virtualization/lib/grpc",
+    "//src/virtualization/lib/vsh:client",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-  ]
-}
-
-executable("guest_integration_tests_bin") {
-  visibility = [ ":*" ]
-  output_name = "guest_integration_tests"
-  testonly = true
-
-  sources = [
-    "core_tests.cc",
-    "virtio_block_tests.cc",
-    "virtio_gpu_tests.cc",
-    "virtio_net_tests.cc",
-    "virtio_vsock_tests.cc",
-  ]
-
-  # Architecture-specific tests.
-  if (target_cpu != "arm64") {
-    # TODO(MAC-256): Input tests don't currently work on the ARM Linux images.
-    sources += [ "virtio_input_tests.cc" ]
-  }
-
-  deps = [
-    ":fake_netstack",
-    ":guest_console",
-    ":lib",
-    ":test_main",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/inet",
-    "//src/virtualization/bin/vmm:guest_config",
-    "//src/virtualization/bin/vmm/device",
-    "//src/virtualization/bin/vmm/device:qcow_test_data",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -207,6 +173,201 @@ unittest_package("guest_unit_tests") {
     {
       name = "guest_unit_tests"
       environments = basic_envs
+    },
+  ]
+}
+
+executable("virtualization_core_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "core_tests.cc" ]
+
+  deps = [
+    ":guest_console",
+    ":lib",
+    ":test_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("virtualization_core_tests_pkg") {
+  package_name = "virtualization-core-tests"
+
+  deps = [
+    ":virtualization_core_tests",
+    linux_tests_label,
+  ]
+  data_deps = guest_packages
+  resources = linux_tests_resources
+
+  tests = [
+    {
+      name = "virtualization_core_tests"
+      environments = guest_environments
+    },
+  ]
+}
+
+executable("virtualization_block_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "virtio_block_tests.cc" ]
+
+  deps = [
+    ":guest_console",
+    ":lib",
+    ":test_main",
+    "//src/virtualization/bin/vmm:guest_config",
+    "//src/virtualization/bin/vmm/device:qcow_test_data",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("virtualization_block_tests_pkg") {
+  package_name = "virtualization-block-tests"
+
+  deps = [
+    ":virtualization_block_tests",
+    linux_tests_label,
+  ]
+  data_deps = guest_packages
+  resources = linux_tests_resources
+
+  tests = [
+    {
+      name = "virtualization_block_tests"
+      environments = guest_environments
+    },
+  ]
+}
+
+executable("virtualization_gpu_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "virtio_gpu_tests.cc" ]
+
+  deps = [
+    ":guest_console",
+    ":lib",
+    ":test_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("virtualization_gpu_tests_pkg") {
+  package_name = "virtualization-gpu-tests"
+
+  deps = [
+    ":virtualization_gpu_tests",
+    linux_tests_label,
+  ]
+  data_deps = guest_packages
+  resources = linux_tests_resources
+
+  tests = [
+    {
+      name = "virtualization_gpu_tests"
+      environments = guest_environments
+    },
+  ]
+}
+
+executable("virtualization_input_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "virtio_input_tests.cc" ]
+
+  deps = [
+    ":guest_console",
+    ":lib",
+    ":test_main",
+  ]
+}
+
+test_package("virtualization_input_tests_pkg") {
+  package_name = "virtualization-input-tests"
+
+  deps = [
+    ":virtualization_input_tests",
+    linux_tests_label,
+  ]
+  data_deps = guest_packages
+  resources = linux_tests_resources
+
+  tests = [
+    {
+      name = "virtualization_input_tests"
+      environments = guest_environments
+    },
+  ]
+}
+
+executable("virtualization_net_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "virtio_net_tests.cc" ]
+
+  deps = [
+    ":guest_console",
+    ":lib",
+    ":test_main",
+    "//src/lib/inet",
+    "//src/virtualization/bin/vmm:guest_config",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("virtualization_net_tests_pkg") {
+  package_name = "virtualization-net-tests"
+
+  deps = [
+    ":virtualization_net_tests",
+    linux_tests_label,
+  ]
+  data_deps = guest_packages
+  resources = linux_tests_resources
+
+  tests = [
+    {
+      name = "virtualization_net_tests"
+      environments = guest_environments
+    },
+  ]
+}
+
+executable("virtualization_vsock_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "virtio_vsock_tests.cc" ]
+
+  deps = [
+    ":guest_console",
+    ":lib",
+    ":test_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("virtualization_vsock_tests_pkg") {
+  package_name = "virtualization-vsock-tests"
+
+  deps = [
+    ":virtualization_vsock_tests",
+    linux_tests_label,
+  ]
+  data_deps = guest_packages
+  resources = linux_tests_resources
+
+  tests = [
+    {
+      name = "virtualization_vsock_tests"
+      environments = guest_environments
     },
   ]
 }
@@ -252,41 +413,9 @@ romfs_image("extras") {
   output = "$target_out_dir/linux/extras.img"
 }
 
-_linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
+package("virtualization_test_utils_pkg") {
+  package_name = "virtualization-test-utils"
 
-test_package("guest_integration_tests") {
-  deps = [
-    ":extras",
-    ":guest_integration_tests_bin",
-    _linux_tests_label,
-  ]
-
-  resources = [
-    {
-      path = get_label_info(_linux_tests_label, "target_out_dir") +
-             "/debian/tests.img"
-      dest = "linux_tests.img"
-    },
-    {
-      path = "$target_out_dir/linux/extras.img"
-      dest = "extras.img"
-    },
-  ]
-
-  # Integration tests rely on launching Debian, Zircon and the guest_manager.
-  data_deps = guest_packages
-
-  tests = [
-    {
-      name = "guest_integration_tests"
-
-      # TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
-      environments = nuc_env_fails_on_asan + [ sherlock_env ]
-    },
-  ]
-}
-
-package("guest_integration_tests_utils") {
   deps = [
     "virtio_block_test_util",
     "virtio_net_test_util",
@@ -359,12 +488,12 @@ test_package("termina_integration_tests") {
   deps = [
     ":extras",
     ":termina_integration_tests_bin",
-    _linux_tests_label,
+    linux_tests_label,
   ]
 
   resources = [
     {
-      path = get_label_info(_linux_tests_label, "target_out_dir") +
+      path = get_label_info(linux_tests_label, "target_out_dir") +
              "/debian/tests.img"
       dest = "linux_tests.img"
     },

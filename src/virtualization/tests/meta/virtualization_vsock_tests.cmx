@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/virtualization_vsock_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
+        ]
+    }
+}
