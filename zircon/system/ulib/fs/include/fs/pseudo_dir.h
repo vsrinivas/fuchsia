@@ -79,9 +79,13 @@ class PseudoDir : public Vnode {
  private:
   static constexpr uint64_t kDotId = 1u;
 
-  struct NameTreeTraits;
-  struct IdTreeTraits;
-  class Entry {
+  struct IdTreeTag {};
+  struct NameTreeTag {};
+
+  class Entry : public fbl::ContainableBaseClasses<
+                    fbl::TaggedWAVLTreeContainable<std::unique_ptr<Entry>, IdTreeTag,
+                                                   fbl::NodeOptions::AllowMultiContainerUptr>,
+                    fbl::TaggedWAVLTreeContainable<Entry*, NameTreeTag>> {
    public:
     Entry(uint64_t id, fbl::String name, fbl::RefPtr<fs::Vnode> node);
     ~Entry();
@@ -94,12 +98,6 @@ class PseudoDir : public Vnode {
     uint64_t const id_;
     fbl::String name_;
     fbl::RefPtr<fs::Vnode> node_;
-
-    // Node states.
-    friend IdTreeTraits;
-    friend NameTreeTraits;
-    fbl::WAVLTreeNodeState<std::unique_ptr<Entry>> id_tree_state_;
-    fbl::WAVLTreeNodeState<Entry*> name_tree_state_;
   };
 
   struct KeyByIdTraits {
@@ -114,22 +112,9 @@ class PseudoDir : public Vnode {
     static bool EqualTo(const fbl::String& key1, const fbl::String& key2) { return key1 == key2; }
   };
 
-  struct IdTreeTraits {
-    using PtrTraits = fbl::internal::ContainerPtrTraits<std::unique_ptr<Entry>>;
-    static fbl::WAVLTreeNodeState<std::unique_ptr<Entry>>& node_state(Entry& entry) {
-      return entry.id_tree_state_;
-    }
-  };
-
-  struct NameTreeTraits {
-    using PtrTraits = fbl::internal::ContainerPtrTraits<Entry*>;
-    static fbl::WAVLTreeNodeState<Entry*>& node_state(Entry& entry) {
-      return entry.name_tree_state_;
-    }
-  };
-
-  using EntryByIdMap = fbl::WAVLTree<uint64_t, std::unique_ptr<Entry>, KeyByIdTraits, IdTreeTraits>;
-  using EntryByNameMap = fbl::WAVLTree<fbl::String, Entry*, KeyByNameTraits, NameTreeTraits>;
+  using EntryByIdMap =
+      fbl::TaggedWAVLTree<uint64_t, std::unique_ptr<Entry>, IdTreeTag, KeyByIdTraits>;
+  using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
 
   mutable fbl::Mutex mutex_;
 
