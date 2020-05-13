@@ -85,7 +85,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.noop-test.ubsan",
     ":test.sys.noop-test.ubsan-sancov",
     ":test.sys.noop-test.ubsan-sancov-full",
-    ":test.sys.stdio-test",
   ]
 
   deps += [
@@ -179,7 +178,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.noop-test.ubsan",
     ":test.sys.noop-test.ubsan-sancov",
     ":test.sys.noop-test.ubsan-sancov-full",
-    ":test.sys.stdio-test",
   ]
 
   reference = "legacy-tests-$target_cpu"
@@ -790,7 +788,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
 #------------------
-    #":test.sys.stdio-test",
+    "//zircon/system/utest/stdio:stdio-manifest",
 #------------------
     "//zircon/system/ulib/storage-metrics/test:storage-metrics-manifest",
     "//src/devices/lib/as370/test:syn-audio-in-test-manifest",
@@ -1040,7 +1038,7 @@ aggregate_manifest("migrated-tests") {
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
 #------------------
-    #":test.sys.stdio-test",
+    "//zircon/system/utest/stdio:stdio-manifest",
 #------------------
     "//zircon/system/ulib/storage-metrics/test:storage-metrics-manifest",
     "//src/devices/lib/as370/test:syn-audio-in-test-manifest",
