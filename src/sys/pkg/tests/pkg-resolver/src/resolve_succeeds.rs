@@ -20,6 +20,7 @@ use {
         test_package_cmx, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
     },
     matches::assert_matches,
+    rand::prelude::*,
     std::{
         collections::HashSet,
         io::{self, Read},
@@ -169,8 +170,8 @@ async fn meta_far_and_empty_blob() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn large_blobs() {
-    let s = "large_blobs";
+async fn large_compressible_blobs() {
+    let s = "large-compressible-blobs";
     verify_resolve(
         PackageBuilder::new(s)
             .add_resource_at("bin/numbers", &test_package_bin(s)[..])
@@ -182,6 +183,32 @@ async fn large_blobs() {
             .unwrap(),
     )
     .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn large_uncompressible_blobs() {
+    let s = "large-uncompressible-blobs";
+
+    let mut rng = StdRng::from_seed([0u8; 32]);
+    let rng = &mut rng as &mut dyn RngCore;
+
+    verify_resolve(
+        PackageBuilder::new(s)
+            .add_resource_at("data/1mb/1", rng.take(1 * 1024 * 1024))
+            .add_resource_at("data/1mb/2", rng.take(1 * 1024 * 1024))
+            .add_resource_at("data/1mb/3", rng.take(1 * 1024 * 1024))
+            .add_resource_at("data/2mb", rng.take(2 * 1024 * 1024))
+            .add_resource_at("data/3mb", rng.take(3 * 1024 * 1024))
+            .build()
+            .await
+            .unwrap(),
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn many_blobs() {
+    verify_resolve(make_pkg_with_extra_blobs("many_blobs", 200).await).await
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -293,17 +320,6 @@ async fn error_codes() {
     );
 
     env.stop().await;
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn many_blobs() {
-    verify_resolve(make_pkg_with_extra_blobs("many_blobs", 200).await).await
-}
-
-#[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(49497): This should be replaced with at test over fewer large blobs.
-async fn identity() {
-    verify_resolve(Package::identity().await.unwrap()).await
 }
 
 #[fasync::run_singlethreaded(test)]
