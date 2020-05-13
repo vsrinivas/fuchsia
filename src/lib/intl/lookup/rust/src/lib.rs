@@ -2,7 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {libc, std::convert::From, std::ffi, std::mem, std::str};
+use {
+    anyhow::{Context, Result},
+    libc, rust_icu_uloc as uloc,
+    std::convert::From,
+    std::convert::TryFrom,
+    std::ffi,
+    std::mem,
+    std::str,
+};
+
+/// The directory where localized resources are kept.
+pub(crate) const ASSETS_DIR: &str = "/pkg/data/assets/locales";
 
 #[repr(i8)]
 #[derive(Debug, PartialEq)]
@@ -175,13 +186,78 @@ pub unsafe extern "C" fn intl_lookup_string(
     }
 }
 
+#[allow(dead_code)] // Clean up before reviewing
 pub struct Lookup {
     hello: ffi::CString,
+    requested_locales: Vec<uloc::ULoc>,
+    supported_locales: Vec<uloc::ULoc>,
 }
 
 impl Lookup {
-    pub fn new(_: &[&str]) -> Lookup {
-        Lookup { hello: ffi::CString::new("Hello world!").unwrap() }
+    /// Creates a new instance of Lookup, with the default ways to look up the
+    /// data.
+    pub fn new(requested: &[&str]) -> Lookup {
+        let supported_locales =
+            Lookup::get_available_locales().with_context(|| "while creating Lookup").unwrap();
+        Lookup::new_internal(requested, supported_locales).expect("error (should be corrected)")
+    }
+
+    /// Create a new [Lookup] from parts.  Only to be used in tests.
+    #[cfg(test)]
+    pub fn new_from_parts(requested: &[impl AsRef<str>], supported: Vec<String>) -> Result<Lookup> {
+        Lookup::new_internal(requested, supported)
+    }
+
+    fn new_internal(requested: &[impl AsRef<str>], supported: Vec<String>) -> Result<Lookup> {
+        Ok(Lookup {
+            hello: ffi::CString::new("Hello world!").unwrap(),
+            requested_locales: requested
+                .iter()
+                .map(|l| uloc::ULoc::try_from(l.as_ref()))
+                .map(|r| r.expect("could not parse"))
+                .collect(),
+            supported_locales: supported
+                .into_iter()
+                .map(|s: String| uloc::ULoc::try_from(s.as_str()))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+
+    #[cfg(test)]
+    fn get_available_locales_for_test() -> Result<Vec<String>> {
+        Lookup::get_available_locales()
+    }
+
+    // Returns the list of locales for which there are resources present in
+    // the locale assets directory.  Errors are returned if the locale assets
+    // directory is malformed: since it is prepared at compile time, such an
+    // occurrence means that the program is corrupted.
+    fn get_available_locales() -> Result<Vec<String>> {
+        let locale_dirs = std::fs::read_dir(ASSETS_DIR)
+            .with_context(|| format!("while reading {}", ASSETS_DIR))?;
+        let mut available_locales: Vec<String> = vec![];
+        for entry_or in locale_dirs {
+            let entry =
+                entry_or.with_context(|| format!("while reading entries in {}", ASSETS_DIR))?;
+            // We only ever expect directories corresponding to locale names
+            // to be UTF-8 encoded, so this conversion will normally always
+            // succeed for directories in `ASSETS_DIR`.
+            let name = entry.file_name().into_string().map_err(|os_string| {
+                anyhow::anyhow!("OS path not convertible to UTF-8: {:?}", os_string)
+            })?;
+            let entry_type = entry
+                .file_type()
+                .with_context(|| format!("while looking up file type for: {:?}", name))?;
+            if entry_type.is_dir() {
+                available_locales.push(name);
+            }
+        }
+        Ok(available_locales)
+    }
+
+    /// Looks up the message by its key.
+    pub fn str(&self, _: u64) -> Result<&str, LookupStatus> {
+        Ok(self.hello.to_str()?)
     }
 }
 
@@ -195,6 +271,8 @@ impl API for Lookup {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_intl_test as ftest;
+    use std::collections::HashSet;
 
     #[test]
     fn all_lookups_are_the_same() -> Result<(), LookupStatus> {
@@ -211,10 +289,28 @@ mod tests {
     fn test_fake_lookup() -> Result<(), LookupStatus> {
         let l = FakeLookup::new();
         assert_eq!("Hello {person}!", l.string(1)?.to_str()?);
+        // Fake lookups always return "Hello world!", that's a FakeLookup
+        // feature.
         assert_eq!("Hello world!", l.string(10)?.to_str()?);
         assert_eq!("Hello world!", l.string(12)?.to_str()?);
         assert_eq!(LookupStatus::Unavailable, l.string(11).unwrap_err());
         assert_eq!(LookupStatus::Unavailable, l.string(41).unwrap_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_real_lookup() -> Result<(), LookupStatus> {
+        let l = Lookup::new(&vec!["es"]);
+        assert_eq!("Hello world!", l.str(ftest::MessageIds::StringName as u64)?);
+        Ok(())
+    }
+
+    /// Locales have been made part of the resources of the test package.
+    #[test]
+    fn test_available_locales() -> Result<()> {
+        // Iteration order is not deterministic.
+        let expected: HashSet<String> = ["es", "en", "fr"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(expected, Lookup::get_available_locales_for_test()?.into_iter().collect());
         Ok(())
     }
 }

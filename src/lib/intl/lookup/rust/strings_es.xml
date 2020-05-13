@@ -1,0 +1,15 @@
+<!-- comment -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <!-- comment -->
+  <string
+    name="STRING_NAME"
+      >el stringo</string>
+  <string
+    name="STRING_NAME_2"
+      >el stringo 2</string>
+  <string
+    name="STRING_NAME_3"
+      >el stringo with
+an intervening newline</string>
+</resources>

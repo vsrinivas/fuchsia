@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/intl/intl_strings.gni")
 import("//build/rust/rustc_staticlib.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -29,11 +30,21 @@ rustc_staticlib("lib") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:rust_icu_uloc",
   ]
-  non_rust_deps = [ "//zircon/public/lib/zx" ]
+  non_rust_deps = [
+    "//third_party/icu",
+    "//zircon/public/lib/zx",
+  ]
+  test_deps = [
+    ":fuchsia.intl.test-rustc",
+    ":l10n",
+  ]
 }
 
 test_package("intl-lookup-rust-tests") {
-  deps = [ ":lib_test" ]
+  deps = [
+    ":l10n",
+    ":lib_test",
+  ]
 
   tests = [
     {
@@ -41,4 +52,30 @@ test_package("intl-lookup-rust-tests") {
       dest = "intl_lookup_rust_tests"
     },
   ]
+
+  resources = [
+    {
+      path = rebase_path("$target_gen_dir/en/l10n.json")
+      dest = "assets/locales/en/l10n.json"
+    },
+    {
+      path = rebase_path("$target_gen_dir/fr/l10n.json")
+      dest = "assets/locales/fr/l10n.json"
+    },
+    {
+      path = rebase_path("$target_gen_dir/es/l10n.json")
+      dest = "assets/locales/es/l10n.json"
+    },
+  ]
+}
+
+intl_strings("l10n") {
+  source = "strings.xml"
+  source_locale = "en"
+  output_locales = [
+    "en",
+    "fr",
+    "es",
+  ]
+  library = "fuchsia.intl.test"
 }
