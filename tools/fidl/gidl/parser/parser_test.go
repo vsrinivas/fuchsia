@@ -23,6 +23,8 @@ func TestParseValues(t *testing.T) {
 		{gidl: `3.14`, expectedValue: float64(3.14)},
 		{gidl: `-3.14`, expectedValue: float64(-3.14)},
 		{gidl: `"hello"`, expectedValue: "hello"},
+		{gidl: `"\x00"`, expectedValue: "\x00"},
+		{gidl: `"\""`, expectedValue: "\""},
 		{gidl: `true`, expectedValue: true},
 		{gidl: `null`, expectedValue: nil},
 		{gidl: `SomeRecord {}`, expectedValue: ir.Record{
@@ -110,13 +112,32 @@ func TestParseValues(t *testing.T) {
 		{gidl: `[null,]`, expectedValue: []interface{}{nil}},
 	}
 	for _, tc := range testCases {
-		p := NewParser("", strings.NewReader(tc.gidl), []string{})
-		value, err := p.parseValue()
 		t.Run(tc.gidl, func(t *testing.T) {
+			p := NewParser("", strings.NewReader(tc.gidl), []string{})
+			value, err := p.parseValue()
 			checkMatch(t, value, tc.expectedValue, err)
 		})
 	}
 }
+
+func TestFailsParseValues(t *testing.T) {
+	type testCase struct {
+		gidl                string
+		expectedErrorSubstr string
+	}
+	testCases := []testCase{
+		{gidl: `"`, expectedErrorSubstr: "improperly escaped string"},
+		{gidl: `"\xwrong"`, expectedErrorSubstr: "improperly escaped string"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.gidl, func(t *testing.T) {
+			p := NewParser("", strings.NewReader(tc.gidl), []string{})
+			_, err := p.parseValue()
+			checkFailure(t, err, tc.expectedErrorSubstr)
+		})
+	}
+}
+
 func TestParseBytes(t *testing.T) {
 	type testCase struct {
 		gidl          string
@@ -921,7 +942,10 @@ func TestTokenizationSuccess(t *testing.T) {
 		t.Run(input, func(t *testing.T) {
 			p := NewParser("", strings.NewReader(input), []string{})
 			for index, expected := range expecteds {
-				actual := p.nextToken()
+				actual, err := p.nextToken()
+				if err != nil {
+					t.Fatalf("unexpected error reading next token: %s", err)
+				}
 				if actual != expected {
 					t.Fatalf(
 						"#%d: expected %s (line: %d col: %d), actual %s (line: %d col: %d)", index,

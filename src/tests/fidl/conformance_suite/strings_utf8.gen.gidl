@@ -1,0 +1,2201 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// DO NOT EDIT; Cases below are generated with:
+//
+//     go run src/tests/fidl/conformance_suite/gen_strings.go > src/tests/fidl/conformance_suite/strings_utf8.gen.gidl
+//
+
+// single byte, min: 0
+success("StringsValidCase1") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x00",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(0),
+            7:padding(0),
+        ],
+    },
+}
+
+// single byte, max: 127
+success("StringsValidCase2") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x7f",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(127),
+            7:padding(0),
+        ],
+    },
+}
+
+// two bytes,   min: 128
+success("StringsValidCase3") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc2\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(194),
+            1:raw(128),
+            6:padding(0),
+        ],
+    },
+}
+
+// two bytes,   max: 2047
+success("StringsValidCase4") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xdf\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(223),
+            1:raw(191),
+            6:padding(0),
+        ],
+    },
+}
+
+// three bytes, min: 2048
+success("StringsValidCase5") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe1\x80\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(225),
+            1:raw(128),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+}
+
+// three bytes, max: 65535
+success("StringsValidCase6") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xef\xbf\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(239),
+            1:raw(191),
+            1:raw(191),
+            5:padding(0),
+        ],
+    },
+}
+
+// four bytes,  min: 65536
+success("StringsValidCase7") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x90\x80\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(144),
+            1:raw(128),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+}
+
+// four bytes,  max: 1114111
+success("StringsValidCase8") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf4\x8f\xbf\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(244),
+            1:raw(143),
+            1:raw(191),
+            1:raw(191),
+            4:padding(0),
+        ],
+    },
+}
+
+// 1 above max single byte
+encode_failure("StringsInvalidCase1") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max single byte
+decode_failure("StringsInvalidCase1") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(128),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 below min two bytes
+encode_failure("StringsInvalidCase2") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc2\x7f",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 below min two bytes
+decode_failure("StringsInvalidCase2") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(194),
+            1:raw(127),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max two bytes
+encode_failure("StringsInvalidCase3") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xdf\xc0",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max two bytes
+decode_failure("StringsInvalidCase3") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(223),
+            1:raw(192),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 below min three bytes
+encode_failure("StringsInvalidCase4") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe1\x80\x7f",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 below min three bytes
+decode_failure("StringsInvalidCase4") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(225),
+            1:raw(128),
+            1:raw(127),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max three bytes
+encode_failure("StringsInvalidCase5") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xef\xbf\xc0",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max three bytes
+decode_failure("StringsInvalidCase5") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(239),
+            1:raw(191),
+            1:raw(192),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 below min four bytes
+encode_failure("StringsInvalidCase6") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x80\x80\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 below min four bytes
+decode_failure("StringsInvalidCase6") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(128),
+            1:raw(128),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max four bytes
+encode_failure("StringsInvalidCase7") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf7\xbf\xbf\xc0",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 1 above max four bytes
+decode_failure("StringsInvalidCase7") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(247),
+            1:raw(191),
+            1:raw(191),
+            1:raw(192),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+success("StringsValidCase9") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc2\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(194),
+            1:raw(128),
+            6:padding(0),
+        ],
+    },
+}
+
+// first byte following two byte value not starting with 0b10
+encode_failure("StringsInvalidCase8") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc2\x7f",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// first byte following two byte value not starting with 0b10
+decode_failure("StringsInvalidCase8") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(194),
+            1:raw(127),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// first byte following three byte value not starting with 0b10
+encode_failure("StringsInvalidCase9") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe1\x7f\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// first byte following three byte value not starting with 0b10
+decode_failure("StringsInvalidCase9") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(225),
+            1:raw(127),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// second byte following three byte value not starting with 0b10
+encode_failure("StringsInvalidCase10") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe1\x80\x7f",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// second byte following three byte value not starting with 0b10
+decode_failure("StringsInvalidCase10") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(225),
+            1:raw(128),
+            1:raw(127),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+success("StringsValidCase10") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x90\x80\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(144),
+            1:raw(128),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+}
+
+// first byte following four byte value not starting with 0b10
+encode_failure("StringsInvalidCase11") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x7f\x80\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// first byte following four byte value not starting with 0b10
+decode_failure("StringsInvalidCase11") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(127),
+            1:raw(128),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// second byte following four byte value not starting with 0b10
+encode_failure("StringsInvalidCase12") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x90\x7f\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// second byte following four byte value not starting with 0b10
+decode_failure("StringsInvalidCase12") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(144),
+            1:raw(127),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// third byte following four byte value not starting with 0b10
+encode_failure("StringsInvalidCase13") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x90\x80\x7f",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// third byte following four byte value not starting with 0b10
+decode_failure("StringsInvalidCase13") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(144),
+            1:raw(128),
+            1:raw(127),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// ascii slash
+success("StringsValidCase11") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x2f",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(47),
+            7:padding(0),
+        ],
+    },
+}
+
+// slash (2)
+encode_failure("StringsInvalidCase14") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc0\xaf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// slash (2)
+decode_failure("StringsInvalidCase14") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(192),
+            1:raw(175),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// slash (3)
+encode_failure("StringsInvalidCase15") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\x80\xaf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// slash (3)
+decode_failure("StringsInvalidCase15") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(128),
+            1:raw(175),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// slash (4)
+encode_failure("StringsInvalidCase16") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x80\x80\xaf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// slash (4)
+decode_failure("StringsInvalidCase16") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(128),
+            1:raw(128),
+            1:raw(175),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+061D
+success("StringsValidCase12") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xd8\x9d",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(216),
+            1:raw(157),
+            6:padding(0),
+        ],
+    },
+}
+
+// U+05F6
+success("StringsValidCase13") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xd7\xb6",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(215),
+            1:raw(182),
+            6:padding(0),
+        ],
+    },
+}
+
+// U+0AF4
+success("StringsValidCase14") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\xab\xb4",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(171),
+            1:raw(180),
+            5:padding(0),
+        ],
+    },
+}
+
+// U+0C52
+success("StringsValidCase15") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\xb1\x92",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(177),
+            1:raw(146),
+            5:padding(0),
+        ],
+    },
+}
+
+// U+1E454
+success("StringsValidCase16") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x9e\x91\x94",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(158),
+            1:raw(145),
+            1:raw(148),
+            4:padding(0),
+        ],
+    },
+}
+
+// U+1F978
+success("StringsValidCase17") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x9f\xa5\xb8",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(159),
+            1:raw(165),
+            1:raw(184),
+            4:padding(0),
+        ],
+    },
+}
+
+// empty string
+success("StringsValidCase18") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(0),
+            8:padding(0xff),
+
+            // content
+        ],
+    },
+}
+
+// simply the letter a
+success("StringsValidCase19") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x61",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(97),
+            7:padding(0),
+        ],
+    },
+}
+
+// euro sign, i.e \xe2\x82\xac
+success("StringsValidCase20") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe2\x82\xac",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(226),
+            1:raw(130),
+            1:raw(172),
+            5:padding(0),
+        ],
+    },
+}
+
+// mix and match from earlier cases
+success("StringsValidCase21") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(12),
+            8:padding(0xff),
+
+            // content
+            1:raw(0),
+            1:raw(244),
+            1:raw(143),
+            1:raw(191),
+            1:raw(191),
+            1:raw(127),
+            1:raw(240),
+            1:raw(144),
+            1:raw(128),
+            1:raw(128),
+            1:raw(194),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+}
+
+// mix and match from earlier cases
+success("StringsValidCase22") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xdf\xbf\xef\xbf\xbf\xe1\x80\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(8),
+            8:padding(0xff),
+
+            // content
+            1:raw(223),
+            1:raw(191),
+            1:raw(239),
+            1:raw(191),
+            1:raw(191),
+            1:raw(225),
+            1:raw(128),
+            1:raw(128),
+        ],
+    },
+}
+
+// UTF-8 BOM
+success("StringsValidCase23") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xef\xbb\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(239),
+            1:raw(187),
+            1:raw(191),
+            5:padding(0),
+        ],
+    },
+}
+
+// Partial UTF-8 BOM (1)
+encode_failure("StringsInvalidCase17") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xef",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// Partial UTF-8 BOM (1)
+decode_failure("StringsInvalidCase17") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(239),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// Partial UTF-8 BOM (2)
+encode_failure("StringsInvalidCase18") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xef\xbb",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// Partial UTF-8 BOM (2)
+decode_failure("StringsInvalidCase18") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(239),
+            1:raw(187),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// invalid partial sequence
+encode_failure("StringsInvalidCase19") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xdf\x80\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// invalid partial sequence
+decode_failure("StringsInvalidCase19") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(223),
+            1:raw(128),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// long U+0000, non shortest form
+encode_failure("StringsInvalidCase20") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\x80\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// long U+0000, non shortest form
+decode_failure("StringsInvalidCase20") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(128),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+success("StringsValidCase24") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe1\x80\x80",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(225),
+            1:raw(128),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+}
+
+// invalid 2 octet sequence
+encode_failure("StringsInvalidCase21") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc3\x28",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// invalid 2 octet sequence
+decode_failure("StringsInvalidCase21") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(195),
+            1:raw(40),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+success("StringsValidCase25") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x0d",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(13),
+            7:padding(0),
+        ],
+    },
+}
+
+
+success("StringsValidCase26") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x0a",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(10),
+            7:padding(0),
+        ],
+    },
+}
+
+
+success("StringsValidCase27") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\x61",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(97),
+            7:padding(0),
+        ],
+    },
+}
+
+
+success("StringsValidCase28") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc2\x81",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(194),
+            1:raw(129),
+            6:padding(0),
+        ],
+    },
+}
+
+
+success("StringsValidCase29") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe1\x80\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(225),
+            1:raw(128),
+            1:raw(191),
+            5:padding(0),
+        ],
+    },
+}
+
+
+success("StringsValidCase30") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf1\x80\xa0\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(241),
+            1:raw(128),
+            1:raw(160),
+            1:raw(191),
+            4:padding(0),
+        ],
+    },
+}
+
+// UTF-8 BOM
+success("StringsValidCase31") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xef\xbb\xbf",
+    },
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(239),
+            1:raw(187),
+            1:raw(191),
+            5:padding(0),
+        ],
+    },
+}
+
+
+encode_failure("StringsInvalidCase22") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc0",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase22") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(192),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase23") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc1",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase23") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(193),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase24") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf5",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase24") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(245),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase25") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf6",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase25") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(246),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase26") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf7",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase26") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(247),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase27") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf8",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase27") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(248),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase28") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf9",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase28") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(249),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase29") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfa",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase29") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(250),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase30") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfb",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase30") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(251),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase31") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfc",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase31") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(252),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase32") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfd",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase32") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(253),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase33") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfe",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase33") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(254),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase34") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xff",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase34") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(1),
+            8:padding(0xff),
+
+            // content
+            1:raw(255),
+            7:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+D800, high surrogate, first
+encode_failure("StringsInvalidCase35") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xed\xa0\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+D800, high surrogate, first
+decode_failure("StringsInvalidCase35") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(237),
+            1:raw(160),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// low surrogate, first
+encode_failure("StringsInvalidCase36") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xed\xb0\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// low surrogate, first
+decode_failure("StringsInvalidCase36") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(237),
+            1:raw(176),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// low surrogate, last
+encode_failure("StringsInvalidCase37") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xed\xbf\xbf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// low surrogate, last
+decode_failure("StringsInvalidCase37") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(237),
+            1:raw(191),
+            1:raw(191),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0000
+encode_failure("StringsInvalidCase38") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc0\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0000
+decode_failure("StringsInvalidCase38") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(192),
+            1:raw(128),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// "A"
+encode_failure("StringsInvalidCase39") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc1\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// "A"
+decode_failure("StringsInvalidCase39") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(193),
+            1:raw(128),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// "B"
+encode_failure("StringsInvalidCase40") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xc1\x81",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// "B"
+decode_failure("StringsInvalidCase40") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(193),
+            1:raw(129),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0000
+encode_failure("StringsInvalidCase41") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\x80\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0000
+decode_failure("StringsInvalidCase41") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(128),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0080
+encode_failure("StringsInvalidCase42") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\x82\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0080
+decode_failure("StringsInvalidCase42") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(130),
+            1:raw(128),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+07ff
+encode_failure("StringsInvalidCase43") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xe0\x9f\xbf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+07ff
+decode_failure("StringsInvalidCase43") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(3),
+            8:padding(0xff),
+
+            // content
+            1:raw(224),
+            1:raw(159),
+            1:raw(191),
+            5:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+000D
+encode_failure("StringsInvalidCase44") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x80\x80\x8d",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+000D
+decode_failure("StringsInvalidCase44") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(128),
+            1:raw(128),
+            1:raw(141),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0091
+encode_failure("StringsInvalidCase45") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x80\x82\x91",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0091
+decode_failure("StringsInvalidCase45") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(128),
+            1:raw(130),
+            1:raw(145),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0800
+encode_failure("StringsInvalidCase46") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x80\xa0\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+0800
+decode_failure("StringsInvalidCase46") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(128),
+            1:raw(160),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+FEFF (BOM)
+encode_failure("StringsInvalidCase47") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf0\x8f\xbb\xbf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+FEFF (BOM)
+decode_failure("StringsInvalidCase47") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(240),
+            1:raw(143),
+            1:raw(187),
+            1:raw(191),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+003F
+encode_failure("StringsInvalidCase48") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf8\x80\x80\x80\xbf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+003F
+decode_failure("StringsInvalidCase48") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(5),
+            8:padding(0xff),
+
+            // content
+            1:raw(248),
+            1:raw(128),
+            1:raw(128),
+            1:raw(128),
+            1:raw(191),
+            3:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+encode_failure("StringsInvalidCase49") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfc\x80\x80\x80\xa0\xa5",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+
+decode_failure("StringsInvalidCase49") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(6),
+            8:padding(0xff),
+
+            // content
+            1:raw(252),
+            1:raw(128),
+            1:raw(128),
+            1:raw(128),
+            1:raw(160),
+            1:raw(165),
+            2:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+110000
+encode_failure("StringsInvalidCase50") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf4\x90\x80\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// U+110000
+decode_failure("StringsInvalidCase50") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(4),
+            8:padding(0xff),
+
+            // content
+            1:raw(244),
+            1:raw(144),
+            1:raw(128),
+            1:raw(128),
+            4:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 5 bytes
+encode_failure("StringsInvalidCase51") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xf8\xa0\xbf\x80\xbf",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 5 bytes
+decode_failure("StringsInvalidCase51") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(5),
+            8:padding(0xff),
+
+            // content
+            1:raw(248),
+            1:raw(160),
+            1:raw(191),
+            1:raw(128),
+            1:raw(191),
+            3:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 6 bytes
+encode_failure("StringsInvalidCase52") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfc\x9c\xbf\x80\xbf\x80",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// 6 bytes
+decode_failure("StringsInvalidCase52") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(6),
+            8:padding(0xff),
+
+            // content
+            1:raw(252),
+            1:raw(156),
+            1:raw(191),
+            1:raw(128),
+            1:raw(191),
+            1:raw(128),
+            2:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// BOMs in UTF-16 BE
+encode_failure("StringsInvalidCase53") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xfe\xff",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// BOMs in UTF-16 BE
+decode_failure("StringsInvalidCase53") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(254),
+            1:raw(255),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// BOMs in UTF-16 LE
+encode_failure("StringsInvalidCase54") {
+    bindings_allowlist = [go,],
+    value = StringWrapper {
+        str: "\xff\xfe",
+    },
+    err = STRING_NOT_UTF8,
+}
+
+// BOMs in UTF-16 LE
+decode_failure("StringsInvalidCase54") {
+    bindings_allowlist = [go,],
+    type = StringWrapper,
+    bytes = {
+        old, v1 = [
+            // length, present
+            8:num(2),
+            8:padding(0xff),
+
+            // content
+            1:raw(255),
+            1:raw(254),
+            6:padding(0),
+        ],
+    },
+    err = STRING_NOT_UTF8,
+}
+

@@ -302,9 +302,9 @@ func (p *Parser) parseSection(all *ir.All) error {
 }
 
 func (p *Parser) parsePreamble() (sectionMetadata, string, error) {
-	tok, ok := p.consumeToken(tText)
-	if !ok {
-		return sectionMetadata{}, "", p.failExpectedToken(tText, tok)
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return sectionMetadata{}, "", err
 	}
 
 	section, ok := sections[tok.value]
@@ -312,20 +312,20 @@ func (p *Parser) parsePreamble() (sectionMetadata, string, error) {
 		return sectionMetadata{}, "", p.newParseError(tok, "unknown section %s", tok.value)
 	}
 
-	tok, ok = p.consumeToken(tLparen)
-	if !ok {
-		return sectionMetadata{}, "", p.failExpectedToken(tLparen, tok)
+	tok, err = p.consumeToken(tLparen)
+	if err != nil {
+		return sectionMetadata{}, "", err
 	}
 
-	tok, ok = p.consumeToken(tString)
-	if !ok {
-		return sectionMetadata{}, "", p.failExpectedToken(tString, tok)
+	tok, err = p.consumeToken(tString)
+	if err != nil {
+		return sectionMetadata{}, "", err
 	}
 	name := tok.value
 
-	tok, ok = p.consumeToken(tRparen)
-	if !ok {
-		return sectionMetadata{}, "", p.failExpectedToken(tRparen, tok)
+	tok, err = p.consumeToken(tRparen)
+	if err != nil {
+		return sectionMetadata{}, "", err
 	}
 
 	return section, name, nil
@@ -335,12 +335,14 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]bool, optionalKinds map
 	var (
 		result      body
 		parsedKinds = make(map[bodyElement]bool)
-		bodyTok     = p.peekToken()
 	)
-	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
-		return p.parseSingleBodyElement(&result, parsedKinds)
-	})
+	bodyTok, err := p.peekToken()
 	if err != nil {
+		return result, err
+	}
+	if err := p.parseCommaSeparated(tLacco, tRacco, func() error {
+		return p.parseSingleBodyElement(&result, parsedKinds)
+	}); err != nil {
 		return result, err
 	}
 	for requiredKind := range requiredKinds {
@@ -357,19 +359,19 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]bool, optionalKinds map
 }
 
 func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) error {
-	tok, ok := p.consumeToken(tText)
-	if !ok {
-		return p.failExpectedToken(tText, tok)
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return err
 	}
-	if tok, ok := p.consumeToken(tEqual); !ok {
-		return p.failExpectedToken(tEqual, tok)
+	if _, err := p.consumeToken(tEqual); err != nil {
+		return err
 	}
 	var kind bodyElement
 	switch tok.value {
 	case "type":
-		tok, ok := p.consumeToken(tText)
-		if !ok {
-			return p.failExpectedToken(tText, tok)
+		tok, err := p.consumeToken(tText)
+		if err != nil {
+			return err
 		}
 		result.Type = tok.value
 		kind = isType
@@ -419,9 +421,16 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 }
 
 func (p *Parser) parseValue() (interface{}, error) {
-	switch p.peekToken().kind {
+	tok, err := p.peekToken()
+	if err != nil {
+		return nil, err
+	}
+	switch tok.kind {
 	case tText:
-		tok := p.nextToken()
+		tok, err := p.nextToken()
+		if err != nil {
+			return nil, err
+		}
 		if '0' <= tok.value[0] && tok.value[0] <= '9' {
 			return parseNum(tok, false)
 		}
@@ -438,16 +447,26 @@ func (p *Parser) parseValue() (interface{}, error) {
 	case tLsquare:
 		return p.parseSlice()
 	case tString:
-		return p.nextToken().value, nil
+		tok, err := p.nextToken()
+		if err != nil {
+			return nil, err
+		}
+		return tok.value, nil
 	case tNeg:
-		p.nextToken()
-		if tok, ok := p.consumeToken(tText); !ok {
-			return nil, p.failExpectedToken(tText, tok)
+		if _, err := p.nextToken(); err != nil {
+			return nil, err
+		}
+		if tok, err := p.consumeToken(tText); err != nil {
+			return nil, err
 		} else {
 			return parseNum(tok, true)
 		}
 	default:
-		return nil, p.newParseError(p.peekToken(), "expected value")
+		tok, err := p.peekToken()
+		if err != nil {
+			return nil, err
+		}
+		return nil, p.newParseError(tok, "expected value")
 	}
 }
 
@@ -478,12 +497,12 @@ func parseNum(tok token, neg bool) (interface{}, error) {
 func (p *Parser) parseRecord(name string) (interface{}, error) {
 	obj := ir.Record{Name: name}
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
-		tokFieldName, ok := p.consumeToken(tText)
-		if !ok {
-			return p.failExpectedToken(tText, tokFieldName)
+		tokFieldName, err := p.consumeToken(tText)
+		if err != nil {
+			return err
 		}
-		if tok, ok := p.consumeToken(tColon); !ok {
-			return p.failExpectedToken(tColon, tok)
+		if _, err := p.consumeToken(tColon); err != nil {
+			return err
 		}
 		val, err := p.parseValue()
 		if err != nil {
@@ -507,9 +526,9 @@ func decodeFieldKey(field string) ir.FieldKey {
 }
 
 func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {
-	tok, ok := p.consumeToken(tText)
-	if !ok {
-		return "", p.failExpectedToken(tText, tok)
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return "", err
 	}
 	code := ir.ErrorCode(tok.value)
 	if _, ok := ir.AllErrorCodes[code]; !ok {
@@ -537,8 +556,8 @@ func (p *Parser) parseSlice() ([]interface{}, error) {
 func (p *Parser) parseTextSlice() ([]string, error) {
 	var result []string
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
-		if tok, ok := p.consumeToken(tText); !ok {
-			return p.failExpectedToken(tText, tok)
+		if tok, err := p.consumeToken(tText); err != nil {
+			return err
 		} else {
 			result = append(result, tok.value)
 			return nil
@@ -553,8 +572,8 @@ func (p *Parser) parseTextSlice() ([]string, error) {
 func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
 	var result ir.LanguageList
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
-		if tok, ok := p.consumeToken(tText); !ok {
-			return p.failExpectedToken(tText, tok)
+		if tok, err := p.consumeToken(tText); err != nil {
+			return err
 		} else if !p.allLanguages.Includes(tok.value) {
 			return p.newParseError(tok, "invalid language '%s'; must be one of: %s",
 				tok.value, strings.Join(p.allLanguages, ", "))
@@ -572,13 +591,16 @@ func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
 func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 	var res []ir.Encoding
 	seenWireFormats := map[ir.WireFormat]struct{}{}
-	firstTok := p.peekToken()
-	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
+	firstTok, err := p.peekToken()
+	if err != nil {
+		return nil, err
+	}
+	err = p.parseCommaSeparated(tLacco, tRacco, func() error {
 		var wireFormats []ir.WireFormat
 		for {
-			tok, ok := p.consumeToken(tText)
-			if !ok {
-				return p.failExpectedToken(tText, tok)
+			tok, err := p.consumeToken(tText)
+			if err != nil {
+				return err
 			}
 			wf, err := ir.WireFormatByName(tok.value)
 			if err != nil {
@@ -592,12 +614,12 @@ func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 			if p.peekTokenKind(tEqual) {
 				break
 			}
-			if tok, ok := p.consumeToken(tComma); !ok {
-				return p.failExpectedToken(tComma, tok)
+			if _, err := p.consumeToken(tComma); err != nil {
+				return err
 			}
 		}
-		if teq, ok := p.consumeToken(tEqual); !ok {
-			return p.failExpectedToken(tEqual, teq)
+		if _, err := p.consumeToken(tEqual); err != nil {
+			return err
 		}
 		b, err := p.parseByteList()
 		if err != nil {
@@ -624,9 +646,9 @@ func (p *Parser) parseByteList() ([]byte, error) {
 	var bytes []byte
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
 		// Read the byte size.
-		tok, ok := p.consumeToken(tText)
-		if !ok {
-			return p.failExpectedToken(tText, tok)
+		tok, err := p.consumeToken(tText)
+		if err != nil {
+			return err
 		}
 		if p.peekTokenKind(tText) {
 			// First token was the label. Now get the byte size.
@@ -641,14 +663,14 @@ func (p *Parser) parseByteList() ([]byte, error) {
 			return p.newParseError(tok, "expected non-zero byte size")
 		}
 
-		if tok, ok := p.consumeToken(tColon); !ok {
-			return p.failExpectedToken(tColon, tok)
+		if _, err := p.consumeToken(tColon); err != nil {
+			return err
 		}
 
 		// Read the type.
-		tok, ok = p.consumeToken(tText)
-		if !ok {
-			return p.failExpectedToken(tText, tok)
+		tok, err = p.consumeToken(tText)
+		if err != nil {
+			return err
 		}
 		var handler func(byteSize int) ([]byte, error)
 		switch tok.value {
@@ -690,16 +712,16 @@ func (p *Parser) parseByteBlockRaw(byteSize int) ([]byte, error) {
 }
 
 func (p *Parser) parseByteBlockNum(byteSize int) ([]byte, error) {
-	if tok, ok := p.consumeToken(tLparen); !ok {
-		return nil, p.failExpectedToken(tLparen, tok)
+	if _, err := p.consumeToken(tLparen); err != nil {
+		return nil, err
 	}
 	neg := p.peekTokenKind(tNeg)
 	if neg {
 		p.consumeToken(tNeg)
 	}
-	tok, ok := p.consumeToken(tText)
-	if !ok {
-		return nil, p.failExpectedToken(tText, tok)
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return nil, err
 	}
 	buf := make([]byte, 8)
 	uintVal, err := strconv.ParseUint(tok.value, 0, 64)
@@ -718,8 +740,8 @@ func (p *Parser) parseByteBlockNum(byteSize int) ([]byte, error) {
 		}
 	}
 	binary.LittleEndian.PutUint64(buf, uintVal)
-	if tok, ok := p.consumeToken(tRparen); !ok {
-		return nil, p.failExpectedToken(tRparen, tok)
+	if _, err := p.consumeToken(tRparen); err != nil {
+		return nil, err
 	}
 	return buf[:byteSize], nil
 }
@@ -728,23 +750,23 @@ func (p *Parser) parseByteBlockPadding(byteSize int) ([]byte, error) {
 	if !p.peekTokenKind(tLparen) {
 		return bytes.Repeat([]byte{0}, byteSize), nil
 	}
-	if tok, ok := p.consumeToken(tLparen); !ok {
-		return nil, p.failExpectedToken(tLparen, tok)
+	if _, err := p.consumeToken(tLparen); err != nil {
+		return nil, err
 	}
 	b, err := p.parseByte()
 	if err != nil {
 		return nil, err
 	}
-	if tok, ok := p.consumeToken(tRparen); !ok {
-		return nil, p.failExpectedToken(tRparen, tok)
+	if _, err := p.consumeToken(tRparen); err != nil {
+		return nil, err
 	}
 	return bytes.Repeat([]byte{b}, byteSize), nil
 }
 
 func (p *Parser) parseByte() (byte, error) {
-	tok, ok := p.consumeToken(tText)
-	if !ok {
-		return 0, p.failExpectedToken(tText, tok)
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return 0, err
 	}
 	if len(tok.value) == 3 && tok.value[0] == '\'' && tok.value[2] == '\'' {
 		return tok.value[1], nil
@@ -757,72 +779,89 @@ func (p *Parser) parseByte() (byte, error) {
 }
 
 func (p *Parser) parseCommaSeparated(beginTok, endTok tokenKind, handler func() error) error {
-	if tok, ok := p.consumeToken(beginTok); !ok {
-		return p.failExpectedToken(beginTok, tok)
+	if _, err := p.consumeToken(beginTok); err != nil {
+		return err
 	}
 	for !p.peekTokenKind(endTok) {
 		if err := handler(); err != nil {
 			return err
 		}
 		if !p.peekTokenKind(endTok) {
-			if tok, ok := p.consumeToken(tComma); !ok {
-				return p.failExpectedToken(tComma, tok)
+			if _, err := p.consumeToken(tComma); err != nil {
+				return err
 			}
 		}
 	}
-	if tok, ok := p.consumeToken(endTok); !ok {
-		return p.failExpectedToken(endTok, tok)
+	if _, err := p.consumeToken(endTok); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (p *Parser) consumeToken(kind tokenKind) (token, bool) {
-	tok := p.nextToken()
-	return tok, tok.kind == kind
+func (p *Parser) consumeToken(kind tokenKind) (token, error) {
+	tok, err := p.nextToken()
+	if err != nil {
+		return token{}, err
+	} else if tok.kind != kind {
+		return token{}, p.newParseError(tok, "unexpected tokenKind: want %q, got %q (value: %q)", kind, tok.kind, tok.value)
+	}
+	return tok, nil
 }
 
 func (p *Parser) peekTokenKind(kind tokenKind) bool {
-	return p.peekToken().kind == kind
+	tok, err := p.peekToken()
+	if err != nil {
+		return false
+	}
+	return tok.kind == kind
 }
 
-func (p *Parser) peekToken() token {
+func (p *Parser) peekToken() (token, error) {
 	if len(p.lookaheads) == 0 {
-		tok := p.nextToken()
+		tok, err := p.nextToken()
+		if err != nil {
+			return token{}, err
+		}
 		p.lookaheads = append(p.lookaheads, tok)
 	}
-	return p.lookaheads[0]
+	return p.lookaheads[0], nil
 }
 
-func (p *Parser) nextToken() token {
+func (p *Parser) nextToken() (token, error) {
 	if len(p.lookaheads) != 0 {
 		var tok token
 		tok, p.lookaheads = p.lookaheads[0], p.lookaheads[1:]
-		return tok
+		return tok, nil
 	}
 	return p.scanToken()
 }
 
-func (p *Parser) scanToken() token {
+func (p *Parser) scanToken() (token, error) {
 	// eof
 	if tok := p.scanner.Scan(); tok == scanner.EOF {
-		return token{tEof, "", 0, 0}
+		return token{tEof, "", 0, 0}, nil
 	}
 	pos := p.scanner.Position
 
 	// unit tokens
 	text := p.scanner.TokenText()
 	if kind, ok := textToTokenKind[text]; ok {
-		return token{kind, text, pos.Line, pos.Column}
+		return token{kind, text, pos.Line, pos.Column}, nil
 	}
 
 	// string
 	if text[0] == '"' {
-		// TODO escape
-		return token{tString, text[1 : len(text)-1], pos.Line, pos.Column}
+		tok := token{tString, "", pos.Line, pos.Column}
+		s, err := strconv.Unquote(text)
+		if err != nil {
+			return tok, p.newParseError(tok, "improperly escaped string, %s: %s", err, text)
+		}
+		tok.value = s
+		return tok, nil
 	}
 
 	// text
-	return token{tText, text, pos.Line, pos.Column}
+	return token{tText, text, pos.Line, pos.Column}, nil
 }
 
 type parseError struct {
@@ -836,10 +875,6 @@ var _ error = &parseError{}
 
 func (err *parseError) Error() string {
 	return fmt.Sprintf("%s:%d:%d: %s", err.input, err.line, err.column, err.message)
-}
-
-func (p *Parser) failExpectedToken(want tokenKind, got token) error {
-	return p.newParseError(got, "unexpected tokenKind: want %q, got %q (value: %q)", want, got.kind, got.value)
 }
 
 func (p *Parser) newParseError(tok token, format string, a ...interface{}) error {

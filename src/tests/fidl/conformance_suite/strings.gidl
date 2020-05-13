@@ -23,19 +23,3 @@ decode_failure("NonEmptyStringWithNullPtrBody") {
     },
     err = NON_EMPTY_STRING_WITH_NULL_BODY,
 }
-
-// 1 above max single byte
-decode_failure("StringsNonUtf8Case1") {
-    // TODO(fxb/8014): Enforce UTF8 for strings in LLCPP / HLCPP.
-    bindings_denylist = [cpp, llcpp],
-
-    type = StringWrapper,
-    bytes = {
-        old, v1 = [
-            1:raw(0x01), 7:padding,  // length
-            8:padding(0xff),         // present
-            1:raw(0x80), 7:padding,  // content
-        ],
-    },
-    err = STRING_NOT_UTF8,
-}
