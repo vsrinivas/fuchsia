@@ -6,6 +6,10 @@ import("//build/config.gni")
 import("//build/driver_package.gni")
 
 declare_args() {
+  prebuilt_libvulkan_goldfish_path = ""
+}
+
+if (target_cpu == "x64") {
   prebuilt_libvulkan_goldfish_path = "//prebuilt/third_party/libvulkan_goldfish/${target_cpu}/libvulkan_goldfish.so"
 }
 
