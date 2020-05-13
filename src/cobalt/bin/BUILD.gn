@@ -112,18 +112,21 @@ test_package("cobalt_tests_do_not_run_manually") {
           rebase_path("meta/cobalt_testapp_for_prober_do_not_run_manually.cmx")
       dest = "cobalt_testapp_for_prober_do_not_run_manually"
 
-      # We don't want to run this version of cobalt_testapp in the Garnet
+      # We don't want to run this version of cobalt_testapp in the Fuchsia
       # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
-      # instead. This version is run in the stand-alone cobalt_client CI.
+      # instead. This version is run in the Cobalt Prober.
       # It should not be run outside of CI, since it populates a test pipeline
       # whose output is inspected.
       environments = [
         {
           dimensions = {
-            # The test doesn't care about what device it runs on, but it needs
-            # internet acess. As of writing, this is the only device type that
-            # has that.
             device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+          tags = [ "cobalt-prober" ]
+        },
+        {
+          dimensions = {
+            device_type = "QEMU"
           }
           tags = [ "cobalt-prober" ]
         },
