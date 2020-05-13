@@ -1,0 +1,166 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/developer/feedback/feedback_data/annotations/last_reboot_info_provider.h"
+
+#include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
+
+#include <memory>
+#include <string>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include "src/developer/feedback/feedback_data/annotations/types.h"
+#include "src/developer/feedback/feedback_data/constants.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/last_reboot_info_provider.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt/event.h"
+#include "src/developer/feedback/utils/cobalt/logger.h"
+#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/feedback/utils/time.h"
+
+namespace feedback {
+namespace {
+
+using fuchsia::feedback::LastReboot;
+using fuchsia::feedback::RebootReason;
+using testing::ElementsAreArray;
+using testing::Pair;
+
+constexpr RebootReason kRebootReason = RebootReason::GENERIC_GRACEFUL;
+constexpr zx::duration kUptime = zx::msec(100);
+
+class LastRebootInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
+ public:
+  LastRebootInfoProviderTest()
+      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+
+ protected:
+  void SetUpLastRebootInfoProviderServer(
+      std::unique_ptr<stubs::LastRebootInfoProviderBase> server) {
+    last_reboot_info_provider_server_ = std::move(server);
+    if (last_reboot_info_provider_server_) {
+      InjectServiceProvider(last_reboot_info_provider_server_.get());
+    }
+  }
+
+  Annotations GetLastRebootReason(const AnnotationKeys& allowlist,
+                                  const zx::duration timeout = zx::sec(1)) {
+    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+    cobalt::Logger cobalt(dispatcher(), services());
+
+    LastRebootInfoProvider provider(dispatcher(), services(), &cobalt);
+    auto promise = provider.GetAnnotations(timeout, allowlist);
+
+    Annotations annotations;
+    executor_.schedule_task(
+        std::move(promise).then([&annotations](::fit::result<Annotations>& res) {
+          if (res.is_ok()) {
+            annotations = res.take_value();
+          }
+        }));
+    RunLoopFor(timeout);
+
+    return annotations;
+  }
+
+ private:
+  async::Executor executor_;
+  std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
+};
+
+TEST_F(LastRebootInfoProviderTest, Success_ReasonAndUptimeReturned) {
+  const auto uptime_str = FormatDuration(kUptime);
+  ASSERT_TRUE(uptime_str.has_value());
+
+  LastReboot last_reboot;
+  last_reboot.set_reason(kRebootReason).set_uptime(kUptime.get());
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result, ElementsAreArray({
+                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("generic graceful")),
+                          Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
+                      }));
+}
+
+TEST_F(LastRebootInfoProviderTest, Succeed_NoReasonReturned) {
+  const auto uptime_str = FormatDuration(kUptime);
+  ASSERT_TRUE(uptime_str.has_value());
+
+  LastReboot last_reboot;
+  last_reboot.set_uptime(kUptime.get());
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result,
+              ElementsAreArray({
+                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr(Error::kMissingValue)),
+                  Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
+              }));
+}
+
+TEST_F(LastRebootInfoProviderTest, Succeed_NoUptimeReturned) {
+  LastReboot last_reboot;
+  last_reboot.set_reason(kRebootReason);
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result,
+              ElementsAreArray({
+                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("generic graceful")),
+                  Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(Error::kMissingValue)),
+              }));
+}
+
+TEST_F(LastRebootInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
+  LastReboot last_reboot;
+  last_reboot.set_reason(kRebootReason);
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      "not-returned-by-last-reboot-reason-provider",
+  });
+  EXPECT_TRUE(result.empty());
+}
+
+TEST_F(LastRebootInfoProviderTest, Check_CobaltLogsTimeout) {
+  SetUpLastRebootInfoProviderServer(std::make_unique<stubs::LastRebootInfoProviderNeverReturns>());
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result, ElementsAreArray({
+                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr(Error::kTimeout)),
+                          Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(Error::kTimeout)),
+                      }));
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
+                                          cobalt::Event(cobalt::TimedOutData::kLastRebootInfo),
+                                      }));
+}
+
+}  // namespace
+}  // namespace feedback

@@ -44,6 +44,8 @@ constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
 constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
 constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
 constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
+constexpr char kAnnotationSystemLastRebootReason[] = "system.last-reboot.reason";
+constexpr char kAnnotationSystemLastRebootUptime[] = "system.last-reboot.uptime";
 constexpr char kAnnotationSystemUpdateChannelCurrent[] = "system.update-channel.current";
 
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces

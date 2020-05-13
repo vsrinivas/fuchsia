@@ -18,6 +18,8 @@
         "hardware.product.name",
         "hardware.product.regulatory-domain",
         "hardware.product.sku",
+        "system.last-reboot.reason",
+        "system.last-reboot.uptime",
         "system.update-channel.current"
     ],
     "attachment_allowlist": [

@@ -22,6 +22,7 @@ group("tests") {
     "//garnet/bin/sysmem_connector",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/developer/feedback/feedback_data:feedback_agent",
+    "//src/developer/feedback/testing/fakes:fake-last-reboot-info-provider",
     "//src/diagnostics/archivist",
     "//src/graphics/bin/vulkan_loader",
     "//src/hwinfo:tests",
@@ -80,6 +81,13 @@ test_package("feedback-data-tests") {
     },
     {
       name = "kernel_log_ptr_integration_test"
+    },
+    {
+      # Binary name on the host. We prefix it with "feedback_data" to reduce collisions.
+      name = "feedback_data_last_reboot_info_provider_unittest"
+
+      # Component and binary name on the target. Confined to the package so no risk of collisions.
+      dest = "last_reboot_info_provider_unittest"
     },
     {
       name = "product_info_provider_unittest"
@@ -168,6 +176,7 @@ test_package("feedback-data-tests") {
     ":inspect_ptr_unittest",
     ":integrity_reporter_unittest",
     ":kernel_log_ptr_integration_test",
+    ":last_reboot_info_provider_unittest",
     ":main_service_unittest",
     ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
@@ -309,9 +318,11 @@ executable("datastore_unittest") {
     "//src/developer/feedback/testing/stubs:channel_provider",
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/developer/feedback/testing/stubs:inspect",
+    "//src/developer/feedback/testing/stubs:last_reboot_info_provider",
     "//src/developer/feedback/testing/stubs:logger",
     "//src/developer/feedback/testing/stubs:product_info_provider",
     "//src/developer/feedback/utils:files",
+    "//src/developer/feedback/utils:time",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
@@ -464,6 +475,30 @@ executable("kernel_log_ptr_integration_test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("last_reboot_info_provider_unittest") {
+  testonly = true
+
+  output_name = "feedback_data_last_reboot_info_provider_unittest"
+
+  sources = [ "last_reboot_info_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_data:constants",
+    "//src/developer/feedback/feedback_data/annotations:last_reboot_info_provider",
+    "//src/developer/feedback/feedback_data/annotations:types",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/developer/feedback/testing/stubs:last_reboot_info_provider",
+    "//src/developer/feedback/utils:time",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 

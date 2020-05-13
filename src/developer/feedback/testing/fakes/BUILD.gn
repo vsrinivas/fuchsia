@@ -57,6 +57,23 @@ package("fake-device-id-provider") {
   deps = [ ":device_id_provider_main" ]
 }
 
+package("fake-last-reboot-info-provider") {
+  binaries = [
+    {
+      name = "fake_last_reboot_info_provider"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/fake_last_reboot_info_provider.cmx"
+      dest = "fake_last_reboot_info_provider.cmx"
+    },
+  ]
+
+  deps = [ ":last_reboot_info_provider_main" ]
+}
+
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
@@ -117,6 +134,25 @@ executable("device_id_provider_main") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+executable("last_reboot_info_provider_main") {
+  output_name = "fake_last_reboot_info_provider"
+
+  sources = [
+    "last_reboot_info_provider.cc",
+    "last_reboot_info_provider.h",
+    "last_reboot_info_provider_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

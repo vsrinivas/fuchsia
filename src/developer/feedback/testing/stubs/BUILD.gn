@@ -158,6 +158,22 @@ source_set("inspect") {
   ]
 }
 
+source_set("last_reboot_info_provider") {
+  testonly = true
+
+  sources = [
+    "last_reboot_info_provider.cc",
+    "last_reboot_info_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_server",
+    "//sdk/fidl/fuchsia.feedback",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
 source_set("logger") {
   testonly = true
 

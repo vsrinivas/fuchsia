@@ -49,6 +49,8 @@ using fuchsia::feedback::DeviceIdProvider_GetId_Result;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
 using fuchsia::feedback::GetBugreportParameters;
 using fuchsia::feedback::ImageEncoding;
+using fuchsia::feedback::LastReboot;
+using fuchsia::feedback::LastRebootInfoProviderPtr;
 using fuchsia::feedback::Screenshot;
 using fuchsia::hwinfo::BoardInfo;
 using fuchsia::hwinfo::BoardPtr;
@@ -176,6 +178,17 @@ class FeedbackDataIntegrationTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&ready] { return ready; });
   }
 
+  // Makes sure the component serving fuchsia.feedback.LastRebootInfo is up and running as the
+  // Get() request could time out on machines where the component is too slow to start.
+  void WaitForLastRebootInfoProvider() {
+    fuchsia::feedback::LastRebootInfoProviderPtr last_reboot_info_provider;
+    environment_services_->Connect(last_reboot_info_provider.NewRequest());
+
+    bool ready = false;
+    last_reboot_info_provider->Get([&](LastReboot last_reboot) { ready = true; });
+    RunLoopUntil([&ready] { return ready; });
+  }
+
   // Makes sure the component serving fuchsia.hwinfo.ProductInfo is up and running as the
   // GetInfo() request could time out on machines where the component is too slow to start.
   void WaitForProductProvider() {
@@ -288,6 +301,8 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
                                            MatchesKey(kAnnotationHardwareProductName),
                                            MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
                                            MatchesKey(kAnnotationHardwareProductSKU),
+                                           MatchesKey(kAnnotationSystemLastRebootReason),
+                                           MatchesKey(kAnnotationSystemLastRebootUptime),
                                            MatchesKey(kAnnotationSystemUpdateChannelCurrent),
                                        }));
 
@@ -355,6 +370,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckCobalt) {
   WaitForInspect();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForLastRebootInfoProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
@@ -378,6 +394,7 @@ TEST_F(FeedbackDataIntegrationTest,
   WaitForInspect();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForLastRebootInfoProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
@@ -407,6 +424,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetData_SmokeTest) {
   WaitForInspect();
   WaitForBoardProvider();
   WaitForProductProvider();
+  WaitForLastRebootInfoProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());

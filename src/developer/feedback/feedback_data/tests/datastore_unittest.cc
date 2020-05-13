@@ -30,12 +30,14 @@
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/stubs/inspect_archive.h"
 #include "src/developer/feedback/testing/stubs/inspect_batch_iterator.h"
+#include "src/developer/feedback/testing/stubs/last_reboot_info_provider.h"
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/stubs/product_info_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/file_size.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
+#include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -114,6 +116,14 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
+  void SetUpLastRebootInfoProviderServer(
+      std::unique_ptr<stubs::LastRebootInfoProviderBase> server) {
+    last_reboot_info_provider_server_ = std::move(server);
+    if (last_reboot_info_provider_server_) {
+      InjectServiceProvider(last_reboot_info_provider_server_.get());
+    }
+  }
+
   void SetUpLoggerServer(const std::vector<fuchsia::logger::LogMessage>& messages) {
     auto new_logger = std::make_unique<stubs::Logger>();
     new_logger->set_messages(messages);
@@ -189,6 +199,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
   std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
+  std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
   std::unique_ptr<stubs::LoggerBase> logger_server_;
   std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
@@ -205,6 +216,8 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           kAnnotationDeviceBoardName,
           kAnnotationDeviceUptime,
           kAnnotationDeviceUTCTime,
+          kAnnotationSystemLastRebootReason,
+          kAnnotationSystemLastRebootUptime,
       },
       {
           kAttachmentBuildSnapshot,
@@ -269,6 +282,34 @@ TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
                                       }));
 
   ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false));
+}
+
+TEST_F(DatastoreTest, GetAnnotations_LastRebootInfo) {
+  const zx::duration uptime = zx::hour(10);
+  const auto uptime_str = FormatDuration(uptime);
+  ASSERT_TRUE(uptime_str.has_value());
+
+  fuchsia::feedback::LastReboot last_reboot;
+  last_reboot.set_reason(fuchsia::feedback::RebootReason::GENERIC_GRACEFUL)
+      .set_uptime(uptime.get());
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+  SetUpDatastore(
+      {
+          kAnnotationSystemLastRebootReason,
+          kAnnotationSystemLastRebootUptime,
+      },
+      kDefaultAttachmentsToAvoidSpuriousLogs);
+
+  ::fit::result<Annotations> annotations = GetAnnotations();
+  ASSERT_TRUE(annotations.is_ok());
+  EXPECT_THAT(annotations.take_value(),
+              ElementsAreArray({
+                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("generic graceful")),
+                  Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
+              }));
+
+  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {

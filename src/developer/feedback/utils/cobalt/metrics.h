@@ -64,6 +64,8 @@ enum class TimedOutData {
   kChannel = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::Channel,
   kProductInfo = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::ProductInfo,
   kBoardInfo = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::BoardInfo,
+  kLastRebootInfo =
+      cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::LastRebootInfo,
 };
 
 enum class BugreportGenerationFlow {

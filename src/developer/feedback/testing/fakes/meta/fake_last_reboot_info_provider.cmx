@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/fake_last_reboot_info_provider"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
