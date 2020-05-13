@@ -400,7 +400,7 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
   size_t mexec_asm_length = (uintptr_t)mexec_asm_end - (uintptr_t)mexec_asm;
   DEBUG_ASSERT(mexec_asm_length <= PAGE_SIZE);
 
-  memcpy(id_page_addr, (const void*)mexec_asm, mexec_asm_length);
+  __unsanitized_memcpy(id_page_addr, (const void*)mexec_asm, mexec_asm_length);
   arch_sync_cache_range((vaddr_t)id_page_addr, mexec_asm_length);
 
   // We must pass in an arg that represents a list of memory regions to
