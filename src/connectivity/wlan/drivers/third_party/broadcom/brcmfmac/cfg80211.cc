@@ -3912,12 +3912,79 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
   return ZX_OK;
 }
 
+// Handler to ASSOC_IND and REASSOC_IND events. These are explicitly meant for SoftAP
+static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                          void* data) {
+  struct net_device* ndev = ifp->ndev;
+
+  BRCMF_DBG(CONN, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
+            e->status, e->reason, e->auth_type, e->flags);
+
+  ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
+
+  if (e->reason != BRCMF_E_STATUS_SUCCESS) {
+    return ZX_OK;
+  }
+
+  if (data == NULL || e->datalen == 0) {
+    BRCMF_ERR("Received ASSOC_IND with no IEs\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const struct brcmf_tlv* ssid_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_SSID);
+  if (ssid_ie == NULL) {
+    BRCMF_ERR("Received ASSOC_IND with no SSID IE\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (ssid_ie->len > WLAN_MAX_SSID_LEN) {
+    BRCMF_ERR("Received ASSOC_IND with invalid SSID IE\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const struct brcmf_tlv* rsn_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_RSNE);
+  if (rsn_ie && rsn_ie->len > WLAN_RSNE_MAX_LEN) {
+    BRCMF_ERR("Received ASSOC_IND with invalid RSN IE\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  wlanif_assoc_ind_t assoc_ind_params;
+  memset(&assoc_ind_params, 0, sizeof(assoc_ind_params));
+  memcpy(assoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+
+  // Unfortunately, we have to ask the firmware to provide the associated station's
+  // listen interval.
+  struct brcmf_sta_info_le sta_info;
+  uint8_t mac[ETH_ALEN];
+  memcpy(mac, e->addr, ETH_ALEN);
+  brcmf_cfg80211_get_station(ndev, mac, &sta_info);
+  // convert from ms to beacon periods
+  assoc_ind_params.listen_interval =
+      sta_info.listen_interval_inms / ifp->vif->profile.beacon_period;
+
+  // Extract the SSID from the IEs
+  assoc_ind_params.ssid.len = ssid_ie->len;
+  memcpy(assoc_ind_params.ssid.data, ssid_ie->data, ssid_ie->len);
+
+  // Extract the RSN information from the IEs
+  if (rsn_ie != NULL) {
+    assoc_ind_params.rsne_len = rsn_ie->len + TLV_HDR_LEN;
+    memcpy(assoc_ind_params.rsne, rsn_ie, assoc_ind_params.rsne_len);
+  }
+
+  BRCMF_DBG(WLANIF, "Sending assoc indication to SME. address: " MAC_FMT_STR "\n",
+            MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
+
+  wlanif_impl_ifc_assoc_ind(&ndev->if_proto, &assoc_ind_params);
+  return ZX_OK;
+}
+
 static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cfg,
                                                   struct net_device* ndev,
                                                   const struct brcmf_event_msg* e, void* data) {
   uint32_t event = e->event_code;
   uint32_t reason = e->reason;
-  struct brcmf_if* ifp = ndev_to_if(ndev);
 
   BRCMF_DBG(CONN, "event %s (%u), reason %d\n",
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event)), event, reason);
@@ -3926,61 +3993,8 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     BRCMF_DBG(CONN, "AP mode link down\n");
     sync_completion_signal(&cfg->vif_disabled);
     return ZX_OK;
-  } else if (((event == BRCMF_E_ASSOC_IND) || (event == BRCMF_E_REASSOC_IND)) &&
-             (reason == BRCMF_E_STATUS_SUCCESS)) {
-    if (data == NULL || e->datalen == 0) {
-      BRCMF_ERR("Received ASSOC_IND with no IEs\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    const struct brcmf_tlv* ssid_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_SSID);
-    if (ssid_ie == NULL) {
-      BRCMF_ERR("Received ASSOC_IND with no SSID IE\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (ssid_ie->len > WLAN_MAX_SSID_LEN) {
-      BRCMF_ERR("Received ASSOC_IND with invalid SSID IE\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    const struct brcmf_tlv* rsn_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_RSNE);
-    if (rsn_ie && rsn_ie->len > WLAN_RSNE_MAX_LEN) {
-      BRCMF_ERR("Received ASSOC_IND with invalid RSN IE\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    wlanif_assoc_ind_t assoc_ind_params;
-    memset(&assoc_ind_params, 0, sizeof(assoc_ind_params));
-    memcpy(assoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
-
-    // Unfortunately, we have to ask the firmware to provide the associated station's
-    // listen interval.
-    struct brcmf_sta_info_le sta_info;
-    uint8_t mac[ETH_ALEN];
-    memcpy(mac, e->addr, ETH_ALEN);
-    brcmf_cfg80211_get_station(ndev, mac, &sta_info);
-    // convert from ms to beacon periods
-    assoc_ind_params.listen_interval =
-        sta_info.listen_interval_inms / ifp->vif->profile.beacon_period;
-
-    // Extract the SSID from the IEs
-    assoc_ind_params.ssid.len = ssid_ie->len;
-    memcpy(assoc_ind_params.ssid.data, ssid_ie->data, ssid_ie->len);
-
-    // Extract the RSN information from the IEs
-    if (rsn_ie != NULL) {
-      assoc_ind_params.rsne_len = rsn_ie->len + TLV_HDR_LEN;
-      memcpy(assoc_ind_params.rsne, rsn_ie, assoc_ind_params.rsne_len);
-    }
-
-    BRCMF_DBG(WLANIF, "Sending assoc indication to SME. address: " MAC_FMT_STR "\n",
-              MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
-
-    wlanif_impl_ifc_assoc_ind(&ndev->if_proto, &assoc_ind_params);
-
-    // Client has disassociated
   } else if (event == BRCMF_E_DISASSOC_IND) {
+    // Client has disassociated
     wlanif_disassoc_indication_t disassoc_ind_params;
     memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
     memcpy(disassoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
@@ -4237,8 +4251,8 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_notify_connect_status);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_ASSOC_IND, brcmf_notify_connect_status);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_REASSOC_IND, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_ASSOC_IND, brcmf_handle_assoc_ind);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_REASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ROAM, brcmf_notify_roaming_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_MIC_ERROR, brcmf_notify_mic_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_SET_SSID, brcmf_notify_connect_status);

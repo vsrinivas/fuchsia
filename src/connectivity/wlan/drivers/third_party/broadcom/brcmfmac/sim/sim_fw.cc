@@ -546,17 +546,33 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
 // Handle association request from a client to the SoftAP interface
 // ifidx is expected to be a valid index (allocated and configured as AP)
 #define TWO_ZERO_LEN_TLVS_LEN (4)
-zx_status_t SimFirmware::HandleAssocReq(uint16_t ifidx, const common::MacAddr& src_mac) {
+zx_status_t SimFirmware::HandleAssocReq(uint16_t ifidx, const simulation::SimAssocReqFrame* frame) {
   auto buf = std::make_unique<std::vector<uint8_t>>(TWO_ZERO_LEN_TLVS_LEN);
-
   uint8_t* tlv_buf = buf->data();
   // The driver expects ssid and rsne in TLV format, just fake it for now
   *tlv_buf++ = WLAN_IE_TYPE_SSID;
   *tlv_buf++ = 0;
   *tlv_buf++ = WLAN_IE_TYPE_RSNE;
   *tlv_buf++ = 0;
-  SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_ASSOC_IND,
-                    BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0, src_mac);
+  if (FindClient(ifidx, frame->src_addr_)) {
+    // Client already associated, send a REASSOC_IND event to driver
+    SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_REASSOC_IND,
+                      BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0, frame->src_addr_);
+  } else {
+    // Indicate Assoc success to driver - by sending AUTH_IND and ASSOC_IND
+    // AUTH_IND is a simple event with the source mac address included
+    SendEventToDriver(0, nullptr, BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0,
+                      frame->src_addr_);
+
+    SendEventToDriver(TWO_ZERO_LEN_TLVS_LEN, std::move(buf), BRCMF_E_ASSOC_IND,
+                      BRCMF_E_STATUS_SUCCESS, ifidx, nullptr, 0, 0, frame->src_addr_);
+    // Add the client to the list
+    iface_tbl_[ifidx].ap_config.clients.push_back(frame->src_addr_);
+  }
+  simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
+                                                 WLAN_ASSOC_RESULT_SUCCESS);
+  hw_.Tx(&assoc_resp_frame);
+  BRCMF_DBG(SIM, "Assoc done Num Clients : %lu", iface_tbl_[ifidx].ap_config.clients.size());
   return ZX_OK;
 }
 
@@ -778,6 +794,17 @@ bool SimFirmware::FindAndRemoveClient(const uint16_t ifidx, const common::MacAdd
   }
   return false;
 }
+
+// Return true if client is in the assoc list else false
+bool SimFirmware::FindClient(const uint16_t ifidx, const common::MacAddr client_mac) {
+  for (auto client : iface_tbl_[ifidx].ap_config.clients) {
+    if (client == client_mac) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void SimFirmware::RxDeauthReq(const simulation::SimDeauthFrame* frame) {
   BRCMF_DBG(SIM, "Deauth from %s for %s reason: %d", MACSTR(frame->src_addr_),
             MACSTR(frame->dst_addr_), frame->reason_);
@@ -987,18 +1014,8 @@ void SimFirmware::RxAssocReq(const simulation::SimAssocReqFrame* frame) {
   for (uint8_t i = 0; i < kMaxIfSupported; i++) {
     if (iface_tbl_[i].allocated && iface_tbl_[i].ap_mode) {
       if (std::memcmp(iface_tbl_[i].mac_addr.byte, frame->bssid_.byte, ETH_ALEN) == 0) {
-        // Indicate Assoc success to driver - by sending AUTH_IND and ASSOC_IND
-        // AUTH_IND is a simple event with the source mac address included
-        SendEventToDriver(0, nullptr, BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, i, nullptr, 0, 0,
-                          frame->src_addr_);
         // ASSOC_IND contains some TLVs
-        HandleAssocReq(i, frame->src_addr_);
-        // Add the client to the list
-        iface_tbl_[i].ap_config.clients.push_back(frame->src_addr_);
-        simulation::SimAssocRespFrame assoc_resp_frame(frame->bssid_, frame->src_addr_,
-                                                       WLAN_ASSOC_RESULT_SUCCESS);
-        hw_.Tx(&assoc_resp_frame);
-        BRCMF_DBG(SIM, "Assoc done Num Clients : %lu", iface_tbl_[i].ap_config.clients.size());
+        HandleAssocReq(i, frame);
         break;
       }
     }

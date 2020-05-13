@@ -263,7 +263,7 @@ class SimFirmware {
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
   zx_status_t HandleJoinRequest(const void* value, size_t value_len, const uint16_t ifidx);
-  zx_status_t HandleAssocReq(uint16_t ifidx, const common::MacAddr& src_mac);
+  zx_status_t HandleAssocReq(uint16_t ifidx, const simulation::SimAssocReqFrame* frame);
   void HandleDisconnectForClientIF(const simulation::SimManagementFrame* frame,
                                    const uint16_t ifidx, const common::MacAddr& bssid,
                                    const uint16_t reason);
@@ -339,6 +339,7 @@ class SimFirmware {
 
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
   bool FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac, uint16_t reason);
+  bool FindClient(const uint16_t ifidx, const common::MacAddr client_mac);
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.
   brcmf_simdev* simdev_;
