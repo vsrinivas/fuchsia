@@ -30,9 +30,6 @@ __BEGIN_CDECLS
 //
 // The shared library loader is passed as |PA_LDSVC_LOADER|.
 #define FDIO_SPAWN_DEFAULT_LDSVC ((uint32_t)0x0002u)
-// FDIO_SPAWN_CLONE_LDSVC is the same as FDIO_SPAWN_DEFAULT_LDSVC.
-// TODO(ZX-3031): this name is deprecated.
-#define FDIO_SPAWN_CLONE_LDSVC ((uint32_t)0x0002u)
 
 // Clones the filesystem namespace into the spawned process.
 #define FDIO_SPAWN_CLONE_NAMESPACE ((uint32_t)0x0004u)
