@@ -344,7 +344,7 @@ A driver is a dynamic shared library which [Device Manager](#devmgr) can load
 into a [DevHost](#devhost) and that enables, and controls one or more devices.
 
 -   [Reference](/docs/concepts/drivers/driver-development.md)
--   [Driver Sources](/zircon/system/dev)
+-   [Driver Sources](/src/devices)
 
 ### **Element** {#element}
 

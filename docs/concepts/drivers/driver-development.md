@@ -7,7 +7,7 @@ Device Hosts, Device Coordinator and the driver and device lifecycles.
 
 ## Directory structure
 
-Zircon drivers are found under [system/dev](/zircon/system/dev).
+Zircon drivers are found under [system/dev](/src/devices).
 They are grouped based on the protocols they implement.
 The driver protocols are defined in
 [ddk/include/ddk/protodefs.h](/zircon/system/ulib/ddk/include/ddk/protodefs.h).
