@@ -94,12 +94,19 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     for (const auto& service_name : agent_context_impl_->agent_runner_->GetAgentServices()) {
       service_list->names.push_back(service_name);
     }
+
+    auto agent_url = agent_config_.url;
     agent_context_impl_->service_provider_impl_.AddBinding(service_list->provider.NewRequest());
     agent_context_impl_->app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
         launcher_, std::move(agent_config_), /*data_origin=*/"", std::move(service_list));
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
+    agent_context_impl_->agent_.set_error_handler([agent_url](zx_status_t status) {
+      FX_PLOGS(INFO, status) << "Agent " << agent_url
+                             << "closed its fuchsia.modular.Agent channel. "
+                             << "This is expected for agents that don't expose it.";
+    });
 
     // Enumerate the services that the agent has published in its outgoing directory.
     auto agent_outgoing_dir_handle =
@@ -234,7 +241,7 @@ void AgentContextImpl::ConnectToService(
 
         if (agent_outgoing_services_.count(service_name) > 0) {
           app_client_->services().ConnectToService(std::move(channel), service_name);
-        } else {
+        } else if (agent_.is_bound()) {
           fuchsia::sys::ServiceProviderPtr agent_services;
           agent_->Connect(requestor_url, agent_services.NewRequest());
           agent_services->ConnectToService(service_name, std::move(channel));
@@ -256,7 +263,9 @@ void AgentContextImpl::NewAgentConnection(
        agent_controller_request = std::move(agent_controller_request)]() mutable {
         FX_CHECK(state_ == State::RUNNING);
 
-        agent_->Connect(requestor_url, std::move(incoming_services_request));
+        if (agent_.is_bound()) {
+          agent_->Connect(requestor_url, std::move(incoming_services_request));
+        }
 
         // Add a binding to the |controller|. When all the bindings go away,
         // the agent will stop.
