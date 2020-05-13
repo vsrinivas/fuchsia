@@ -6,14 +6,21 @@
 
 //! `cs` performs a Component Search on the current system.
 
-use anyhow::{format_err, Error};
-use cs::inspect::{generate_inspect_object_tree, InspectObject};
-use fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue};
-use std::{
-    fmt, fs,
-    path::{Path, PathBuf},
+use {
+    anyhow::{format_err, Error},
+    cs::inspect::{generate_inspect_object_tree, InspectObject},
+    fdio,
+    fidl_fuchsia_inspect::TreeMarker,
+    fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue},
+    fuchsia_async as fasync,
+    fuchsia_inspect::reader::{self, Property},
+    std::{
+        collections::HashMap,
+        fmt, fs,
+        path::{Path, PathBuf},
+    },
+    structopt::StructOpt,
 };
-use structopt::StructOpt;
 
 type ComponentsResult = Result<Vec<Component>, Error>;
 type RealmsResult = Result<Vec<Realm>, Error>;
@@ -242,13 +249,80 @@ struct Opt {
         default_value = "stack,all_thread_stacks"
     )]
     exclude_objects: Vec<String>,
+
+    #[structopt(long = "log-stats")]
+    log_stats: bool,
 }
 
-fn main() -> TraversalResult {
+async fn print_log_stats() -> Result<(), Error> {
+    let mut entries = fs::read_dir("/hub/c/archivist.cmx")?.collect::<Vec<_>>();
+    if entries.len() == 0 {
+        return Err(format_err!("No instance of archivist present in /hub/c/archivist.cmx"));
+    } else if entries.len() > 1 {
+        return Err(format_err!("Multiple instances of archivist present in /hub/c/archivist.cmx"));
+    }
+
+    let mut path = entries.remove(0)?.path();
+    path.push("out/diagnostics/fuchsia.inspect.Tree");
+    let path_str = path.to_str().ok_or(format_err!("Failed to convert path to string"))?;
+
+    let (tree, server) = fidl::endpoints::create_proxy::<TreeMarker>()?;
+    fdio::service_connect(&path_str, server.into_channel())?;
+    let hierarchy = reader::read_from_tree(&tree).await?;
+
+    let log_stats_node = hierarchy
+        .children
+        .into_iter()
+        .find(|x| x.name == "log_stats")
+        .ok_or(format_err!("Failed to find /log_stats node in the inspect hierarchy"))?;
+
+    let per_component_node =
+        log_stats_node.children.into_iter().find(|x| x.name == "by_component").ok_or(
+            format_err!("Failed to find /log_stats/by_component node in the inspect hierarchy"),
+        )?;
+
+    println!(
+        "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
+        "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "Total", "Component"
+    );
+
+    for child in per_component_node.children {
+        let map = child
+            .properties
+            .into_iter()
+            .map(|x| match x {
+                Property::Uint(name, value) => (name, value),
+                _ => (String::from(""), 0),
+            })
+            .collect::<HashMap<_, _>>();
+        println!(
+            "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
+            map["fatal_logs"],
+            map["error_logs"],
+            map["warning_logs"],
+            map["info_logs"],
+            map["debug_logs"],
+            map["trace_logs"],
+            map["total_logs"],
+            child.name
+        );
+    }
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> TraversalResult {
     // Visit the directory /hub and recursively traverse it, outputting information about the
     // component hierarchy. See https://fuchsia.dev/fuchsia-src/concepts/components/hub for more
     // information on the Hub directory structure.
     let opt = Opt::from_args();
+
+    if opt.log_stats {
+        print_log_stats().await?;
+        return Ok(());
+    }
+
     let root_realm = Realm::create("/hub")?;
     match opt.job_id {
         Some(job_id) => inspect_realm(job_id, &opt.exclude_objects, &root_realm)?,

@@ -26,8 +26,12 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
