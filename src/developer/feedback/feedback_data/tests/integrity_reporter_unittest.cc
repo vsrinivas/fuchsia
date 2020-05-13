@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <cstring>
+#include <string>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -346,6 +348,134 @@ TEST(IntegrityReporterTest, Fail_EmptyBugreport) {
   const auto integrity_report = reporter.MakeIntegrityReport(
       ::fit::error(), ::fit::error(), /*missing_non_platform_annotations=*/false);
   EXPECT_FALSE(integrity_report.has_value());
+}
+
+struct TestParam {
+  std::string test_name;
+  AnnotationKeys annotation_allowlist;
+  Annotations annotations;
+  bool missing_non_platform_annotations;
+  std::string state;
+};
+
+class AnnotationsJsonStateTest : public testing::Test,
+                                 public testing::WithParamInterface<TestParam> {};
+
+INSTANTIATE_TEST_SUITE_P(WithVariousAnnotations, AnnotationsJsonStateTest,
+                         ::testing::ValuesIn(
+                             std::vector<TestParam>(
+                                 {
+                                     TestParam{
+                                         .test_name = "CompletePlatform_CompleteNonPlatform",
+                                         .annotation_allowlist = {"platform"},
+                                         .annotations =
+                                             {
+                                                 {"platform", AnnotationOr("")},
+                                                 {"non-platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = false,
+                                         .state = "complete",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "CompletePlatform_PartialNonPlatform",
+                                         .annotation_allowlist = {"platform"},
+                                         .annotations =
+                                             {
+                                                 {"platform", AnnotationOr("")},
+                                                 {"non-platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = true,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "CompletePlatform_MissingNonPlatform",
+                                         .annotation_allowlist = {"platform"},
+                                         .annotations =
+                                             {
+                                                 {"platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = true,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "PartialPlatform_CompleteNonPlatform",
+                                         .annotation_allowlist = {"platform 1", "platform 2"},
+                                         .annotations =
+                                             {
+                                                 {"platform 1", AnnotationOr("")},
+                                                 {"non-platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = false,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "PartialPlatform_PartialNonPlatform",
+                                         .annotation_allowlist = {"platform 1", "platform 2"},
+                                         .annotations =
+                                             {
+                                                 {"platform 1", AnnotationOr("")},
+                                                 {"non-platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = true,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "PartialPlatform_MissingNonPlatform",
+                                         .annotation_allowlist = {"platform 1", "platform 2"},
+                                         .annotations =
+                                             {
+                                                 {"platform 1", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = true,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "MissingPlatform_CompleteNonPlatform",
+                                         .annotation_allowlist = {"platform"},
+                                         .annotations =
+                                             {
+                                                 {"non-platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = false,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "MissingPlatform_PartialNonPlatform",
+                                         .annotation_allowlist = {"platform"},
+                                         .annotations =
+                                             {
+                                                 {"non-platform", AnnotationOr("")},
+                                             },
+                                         .missing_non_platform_annotations = true,
+                                         .state = "partial",
+
+                                     },
+                                     TestParam{
+                                         .test_name = "MissingPlatform_MissingNonPlatform",
+                                         .annotation_allowlist = {"platform"},
+                                         .annotations = {},
+                                         .missing_non_platform_annotations = true,
+                                         .state = "missing",
+
+                                     },
+                                 })),
+                         [](const testing::TestParamInfo<TestParam>& info) {
+                           return info.param.test_name;
+                         });
+TEST_P(AnnotationsJsonStateTest, Succeed) {
+  const auto param = GetParam();
+  const IntegrityReporter reporter(param.annotation_allowlist, /*attachment_allowlist=*/{});
+
+  const auto report = MakeJsonReport(reporter, ::fit::ok(param.annotations), ::fit::error(),
+                                     param.missing_non_platform_annotations);
+  ANNOTATIONS_JSON_STATE_IS(report, param.state.c_str());
 }
 
 }  // namespace

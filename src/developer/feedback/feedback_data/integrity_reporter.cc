@@ -99,12 +99,8 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
                         rapidjson::Document* integrity_report) {
   const Annotations all_annotations = AllAnnotations(annotation_allowlist, annotations_result);
 
-  // We only add information on non-platform annotations if some are present or we attempted to
-  // add some and failed.
-  bool has_non_platform_annotations =
-      (all_annotations.size() > annotation_allowlist.size() || missing_non_platform_annotations);
-
-  if (annotation_allowlist.empty() && !has_non_platform_annotations) {
+  bool has_non_platform = all_annotations.size() > annotation_allowlist.size();
+  if (annotation_allowlist.empty() && !(has_non_platform || missing_non_platform_annotations)) {
     return;
   }
 
@@ -113,7 +109,8 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
   rapidjson::Value present(rapidjson::kArrayType);
   rapidjson::Value missing(rapidjson::kObjectType);
 
-  size_t num_missing = 0u;
+  size_t num_present_platform = 0u;
+  size_t num_missing_platform = 0u;
   for (const auto& [k, v] : all_annotations) {
     if (annotation_allowlist.find(k) == annotation_allowlist.end()) {
       continue;
@@ -122,13 +119,14 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
     rapidjson::Value key(k, allocator);
     if (v.HasValue()) {
       present.PushBack(key, allocator);
+      ++num_present_platform;
     } else {
       missing.AddMember(key, rapidjson::Value(ToReason(v.Error()), allocator), allocator);
-      ++num_missing;
+      ++num_missing_platform;
     }
   }
 
-  if (has_non_platform_annotations) {
+  if (has_non_platform || missing_non_platform_annotations) {
     if (!missing_non_platform_annotations) {
       present.PushBack("non-platform annotations", allocator);
     } else {
@@ -138,9 +136,10 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
   }
 
   rapidjson::Value state;
-  if (present.Size() == all_annotations.size()) {
+  if (num_present_platform == annotation_allowlist.size() && !missing_non_platform_annotations) {
     state = "complete";
-  } else if (num_missing == all_annotations.size()) {
+  } else if (num_missing_platform == annotation_allowlist.size() && !has_non_platform &&
+             missing_non_platform_annotations) {
     state = "missing";
   } else {
     state = "partial";
