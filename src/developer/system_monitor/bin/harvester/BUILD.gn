@@ -127,7 +127,7 @@ executable("system_monitor_harvester_test") {
   ]
 
   # TODO(46848): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  #deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("system_monitor_harvester_tests") {
