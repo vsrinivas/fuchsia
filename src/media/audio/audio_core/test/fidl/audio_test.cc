@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include <cmath>
 
@@ -77,6 +78,144 @@ TEST_F(UsageReporterTest, ConnectToUsageReporter) {
   audio_core->Watch(std::move(usage), watcher.Bind());
 
   ExpectCallback();
+}
+
+//
+// UsageGainReporterTest
+//
+class UsageGainReporterTest : public HermeticAudioCoreTest {
+ protected:
+  static void SetUpTestSuite() {
+    HermeticAudioCoreTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+        .audio_core_config_data_path = "/pkg/data/test_output",
+    });
+  }
+  void SetUp() override {
+    HermeticAudioCoreTest::SetUp();
+    environment()->ConnectToService(virtualaudio_control_.NewRequest());
+    virtualaudio_control_->Enable();
+  }
+  void TearDown() override {
+    // Ensure all devices are now removed
+    fuchsia::media::AudioDeviceEnumeratorSyncPtr enumerator;
+    environment()->ConnectToService(enumerator.NewRequest());
+    RunLoopUntil([&enumerator] {
+      std::vector<fuchsia::media::AudioDeviceInfo> devices;
+      zx_status_t status = enumerator->GetDevices(&devices);
+      FX_CHECK(status == ZX_OK);
+      return devices.empty();
+    });
+
+    virtualaudio_control_->Disable();
+    HermeticAudioCoreTest::TearDown();
+  }
+
+  fuchsia::virtualaudio::OutputPtr AddVirtualOutput(
+      const std::array<uint8_t, 16>& output_unique_id) {
+    fuchsia::media::AudioDeviceEnumeratorPtr enumerator;
+    environment()->ConnectToService(enumerator.NewRequest());
+
+    bool device_default = false;
+    enumerator.events().OnDefaultDeviceChanged = [&device_default](uint64_t old_default_token,
+                                                                   uint64_t new_default_token) {
+      device_default = (new_default_token != 0) ? true : false;
+    };
+
+    fuchsia::virtualaudio::OutputPtr output;
+
+    bool device_started = false;
+    output.events().OnStart = [&device_started](zx_time_t start_time) { device_started = true; };
+
+    environment()->ConnectToService(output.NewRequest());
+    output.set_error_handler(ErrorHandler());
+    output->SetUniqueId(output_unique_id);
+    output->Add();
+
+    RunLoopUntil([&device_started, &device_default] { return device_started & device_default; });
+
+    return output;
+  }
+
+  class FakeGainListener : public fuchsia::media::UsageGainListener {
+   public:
+    explicit FakeGainListener(fit::closure completer)
+        : completer_(std::move(completer)), binding_(this) {
+      binding_.set_error_handler([](zx_status_t status) { ASSERT_EQ(status, ZX_OK); });
+    }
+
+    fidl::InterfaceHandle<fuchsia::media::UsageGainListener> NewBinding() {
+      return binding_.NewBinding();
+    }
+
+    bool muted() const { return last_muted_; }
+
+    float gain_dbfs() const { return last_gain_dbfs_; }
+
+   private:
+    // |fuchsia::media::UsageGainListener|
+    void OnGainMuteChanged(bool muted, float gain_dbfs, OnGainMuteChangedCallback callback) final {
+      last_muted_ = muted;
+      last_gain_dbfs_ = gain_dbfs;
+      completer_();
+    }
+
+    fit::closure completer_;
+    fidl::Binding<fuchsia::media::UsageGainListener> binding_;
+    bool last_muted_ = false;
+    float last_gain_dbfs_ = 0.0;
+  };
+
+  fuchsia::virtualaudio::ControlSyncPtr virtualaudio_control_;
+
+  // This matches the configuration in test_output_audio_core_config.json
+  const std::string device_id_string_ = "ffffffffffffffffffffffffffffffff";
+  const std::array<uint8_t, 16> device_id_array_ = {{
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+  }};
+};
+
+//
+// Test that the user is connected to the usage gain reporter.
+//
+TEST_F(UsageGainReporterTest, ConnectToUsageGainReporter) {
+  fit::closure completer = CompletionCallback([] {});
+
+  // Keep output alive for duration of test
+  auto output = AddVirtualOutput(device_id_array_);
+
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
+
+  fuchsia::media::audio::VolumeControlPtr volume_control;
+  audio_core_->BindUsageVolumeControl(fidl::Clone(usage), volume_control.NewRequest());
+
+  fuchsia::media::UsageGainReporterPtr gain_reporter;
+  environment()->ConnectToService(gain_reporter.NewRequest());
+  gain_reporter.set_error_handler(ErrorHandler());
+
+  auto fake_listener = std::make_unique<FakeGainListener>(std::move(completer));
+  gain_reporter->RegisterListener(device_id_string_, fidl::Clone(usage),
+                                  fake_listener->NewBinding());
+
+  volume_control->SetVolume(1.0);
+  ExpectCallback();
+  EXPECT_FALSE(fake_listener->muted());
+  EXPECT_FLOAT_EQ(fake_listener->gain_dbfs(), 0.0);
 }
 
 //

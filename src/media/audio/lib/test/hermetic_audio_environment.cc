@@ -143,6 +143,8 @@ void HermeticAudioEnvironment::Start(async::Loop* loop) {
   services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services, options_),
                                      fuchsia::media::UsageReporter::Name_);
   services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services, options_),
+                                     fuchsia::media::UsageGainReporter::Name_);
+  services->AddServiceWithLaunchInfo("audio_core", AudioCoreLaunchInfo(real_services, options_),
                                      fuchsia::ultrasound::Factory::Name_);
   services->AddServiceWithLaunchInfo("virtual_audio", VirtualAudioLaunchInfo(real_services),
                                      fuchsia::virtualaudio::Control::Name_);

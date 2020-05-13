@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/throttle_output.h"
+#include "src/media/audio/audio_core/usage_gain_reporter_impl.h"
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
 
 namespace media::audio {
@@ -40,7 +41,8 @@ class ContextImpl : public Context {
                      &usage_reporter_, &activity_dispatcher_),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
-        process_config_(std::move(process_config)) {
+        process_config_(std::move(process_config)),
+        usage_gain_reporter_(this) {
     FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
     zx_status_t res = device_manager_.Init();
@@ -64,6 +66,7 @@ class ContextImpl : public Context {
     component_context_->outgoing()->AddPublicService(device_manager_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(usage_reporter_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(activity_dispatcher_.GetFidlRequestHandler());
+    component_context_->outgoing()->AddPublicService(usage_gain_reporter_.GetFidlRequestHandler());
   }
   ThreadingModel& threading_model() override { return *threading_model_; }
   AudioDeviceManager& device_manager() override { return device_manager_; }
@@ -105,6 +108,8 @@ class ContextImpl : public Context {
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;
 
   ProcessConfig process_config_;
+
+  UsageGainReporterImpl usage_gain_reporter_;
 };
 
 }  // namespace
