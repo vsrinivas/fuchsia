@@ -28,8 +28,8 @@ zx_library("transaction") {
 
   public_deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/operation",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
   ]
 
   if (is_fuchsia) {
@@ -49,9 +49,9 @@ zx_library("transaction") {
     deps = [
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fdio",
-      "//zircon/public/lib/operation",
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/storage/operation",
     ]
   } else {
     sources = [
@@ -61,7 +61,7 @@ zx_library("transaction") {
 
     deps = [
       "//zircon/public/lib/fbl",
-      "//zircon/public/lib/operation",
+      "//zircon/system/ulib/storage/operation",
     ]
   }
 }

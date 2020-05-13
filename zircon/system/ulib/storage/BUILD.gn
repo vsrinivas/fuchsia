@@ -4,6 +4,5 @@
 
 group("storage") {
   deps = [
-    "operation",
   ]
 }

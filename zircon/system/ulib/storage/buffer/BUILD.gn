@@ -43,8 +43,8 @@ zx_library("buffer") {
     public_deps = [
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/operation",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/storage/operation",
     ]
     deps = [
       "//zircon/public/lib/fbl",
@@ -52,9 +52,9 @@ zx_library("buffer") {
 
       # TODO(38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
       "//zircon/public/lib/fzl",
-      "//zircon/public/lib/operation",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/fs",
+      "//zircon/system/ulib/storage/operation",
     ]
   } else {
     public_deps = [ "//zircon/system/public" ]

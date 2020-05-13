@@ -115,7 +115,6 @@ zx_library("blobfs") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
-    "//zircon/public/lib/operation",
     "//zircon/public/lib/range",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
@@ -125,6 +124,7 @@ zx_library("blobfs") {
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/storage/operation",
   ]
   if (is_fuchsia) {
     sources += [
