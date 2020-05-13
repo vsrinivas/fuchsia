@@ -23,6 +23,6 @@ source_set("util") {
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }

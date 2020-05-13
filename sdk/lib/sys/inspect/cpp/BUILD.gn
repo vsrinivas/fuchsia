@@ -19,7 +19,7 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 
   public_configs = [ "//sdk/config" ]

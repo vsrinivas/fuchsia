@@ -40,6 +40,11 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/inspect:inspect",
+    "name": "inspect",
+    "sdk": true
+  },
+  {
     "label": "//src/devices/lib/mmio:mmio",
     "name": "mmio",
     "sdk": false

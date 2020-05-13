@@ -19,7 +19,7 @@ test("inspect_service_cpp_unittests") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

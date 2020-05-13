@@ -244,7 +244,7 @@ source_set("gfx") {
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/utils",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
 
     # TODO(24590) Remove timings dependency when display_swapchain is pulled out.
     "//sdk/fidl/fuchsia.sysmem",

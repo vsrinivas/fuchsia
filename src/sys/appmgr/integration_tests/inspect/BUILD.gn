@@ -71,7 +71,7 @@ executable("test-vmo") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 
   # TODO(46733): Fix the leaks and remove this.
@@ -105,7 +105,7 @@ executable("test-health") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 
   # TODO(46733): Fix the leaks and remove this.

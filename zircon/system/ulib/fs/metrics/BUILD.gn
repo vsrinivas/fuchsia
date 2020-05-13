@@ -45,14 +45,14 @@ zx_library("metrics-inspect") {
   public_deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
   configs += [ "//build/config:Wno-unused-function" ]
 }

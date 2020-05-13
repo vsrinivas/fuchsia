@@ -12,6 +12,6 @@ source_set("cpp") {
   public_deps = [
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }

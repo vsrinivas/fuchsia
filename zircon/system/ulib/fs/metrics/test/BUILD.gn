@@ -34,13 +34,13 @@ test("metrics-composite-latency-event") {
   test_group = "fs"
   sources = [ "composite_latency_event_test.cc" ]
   deps = [
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
     "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
     "//zircon/system/ulib/fs/metrics:metrics-inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }
 
@@ -68,10 +68,10 @@ test("metrics-inspect") {
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/metrics:metrics-inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

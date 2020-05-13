@@ -22,8 +22,8 @@ executable("bin") {
     "//src/lib/callback",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/inspect",
     "//zircon/system/ulib/abs_clock",
+    "//zircon/system/ulib/inspect",
   ]
   public_deps = [
     "//garnet/public/lib/gtest",

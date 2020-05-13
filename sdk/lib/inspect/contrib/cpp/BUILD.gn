@@ -26,7 +26,7 @@ source_set("read_visitor") {
 
   public_deps = [
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

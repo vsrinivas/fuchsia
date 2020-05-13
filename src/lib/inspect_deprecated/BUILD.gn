@@ -15,8 +15,8 @@ source_set("inspect_deprecated") {
   public_deps = [
     "//src/lib/inspect_deprecated/deprecated",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
 
   public_configs = [ "//garnet/public:config" ]

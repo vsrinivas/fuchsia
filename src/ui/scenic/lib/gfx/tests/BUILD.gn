@@ -67,8 +67,8 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/utils",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

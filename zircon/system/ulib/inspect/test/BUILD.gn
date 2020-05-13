@@ -42,15 +42,15 @@ test("inspect") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/inspect",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inspect",
   ]
 }
 
 fuzzer("inspect-reader-fuzzer") {
   sources = [ "reader_fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/inspect" ]
+  deps = [ "//zircon/system/ulib/inspect" ]
 }
 
 migrated_manifest("inspect-manifest") {

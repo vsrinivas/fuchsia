@@ -16,6 +16,6 @@ source_set("frame_scheduler_mocks") {
   ]
   public_deps = [
     "//src/ui/scenic/lib/gfx/tests/mocks:util",
-    "//zircon/public/lib/inspect",
+    "//zircon/system/ulib/inspect",
   ]
 }
