@@ -428,10 +428,11 @@ static int recycle_possible(CFTLN ftl, ui32 b) {
 //
 //      Inputs: ftl = pointer to FTL control block
 //              b = block to compute selector for
+//              should_boost_low_wear = prioritise blocks with low wear
 //
 //     Returns: Selector used to determine whether block is recycled
 //
-static ui32 block_selector(FTLN ftl, ui32 b) {
+static ui32 block_selector(FTLN ftl, ui32 b, int should_boost_low_wear) {
   ui32 pages_gained, priority;
 
   // Get number of free pages gained. Only half of MLC map block pages
@@ -443,16 +444,18 @@ static ui32 block_selector(FTLN ftl, ui32 b) {
 #endif
   pages_gained -= NUM_USED(ftl->bdata[b]);
 
-  // Calculate base selection priority.
-  if (ftl->flags & FTLN_DO_WEAR_BASED)
-    priority = ftl->blk_wc_lag[b] * ftl->pgs_per_blk + pages_gained;
-  else
-    priority = pages_gained * 255 + ftl->blk_wc_lag[b];
+  priority = pages_gained * 256 + ftl->blk_wc_lag[b];
+
+  // Boost a block's priority if requested and considered low wear.
+  if (should_boost_low_wear && (ftl->blk_wc_lag[b] + FTL_LOW_WEAR_BOOST_LAG
+                                > ftl->wear_data.cur_max_lag)) {
+    priority += 0x100000;
+  }
 
   // If block's read count is too high, there is danger of losing its
   // data, so add a priority boost that overwhelms the other facters.
   if (GET_RC(ftl->bdata[b]) >= ftl->max_rc)
-    priority += 256 * (ftl->pgs_per_blk + 1);
+    priority += 0x200000;
 
   // Return priority value (higher value is better to recycle).
   return priority;
@@ -461,10 +464,11 @@ static ui32 block_selector(FTLN ftl, ui32 b) {
 // next_recycle_blk: Choose next block (volume or map) to recycle
 //
 //       Input: ftl = pointer to FTL control block
+//              should_boost_low_wear = prioritise blocks with low wear
 //
 //     Returns: Chosen recycle block, (ui32)-1 on error
 //
-static ui32 next_recycle_blk(FTLN ftl) {
+static ui32 next_recycle_blk(FTLN ftl, int should_boost_low_wear) {
   ui32 b, rec_b, selector, best_selector = 0;
 
   // Initially set flag as if no block is at the max read-count limit.
@@ -494,7 +498,7 @@ static ui32 next_recycle_blk(FTLN ftl) {
       continue;
 
     // Compute block selector.
-    selector = block_selector(ftl, b);
+    selector = block_selector(ftl, b, should_boost_low_wear);
 
     // If no recycle block selected yet, or if the current block has a
     // higher selector value, remember it. Also, if the selector value
@@ -515,15 +519,18 @@ static ui32 next_recycle_blk(FTLN ftl) {
       b = ftl->free_vpn / ftl->pgs_per_blk;
       if (recycle_possible(ftl, b)) {
         rec_b = b;
-        best_selector = block_selector(ftl, b);
+        best_selector = block_selector(ftl, b, should_boost_low_wear);
       }
     }
 
     // Check if free map page list block can be used and is better.
     if (ftl->free_mpn != (ui32)-1) {
       b = ftl->free_mpn / ftl->pgs_per_blk;
-      if (recycle_possible(ftl, b) && block_selector(ftl, b) > best_selector)
+      selector = block_selector(ftl, b, should_boost_low_wear);
+      if (recycle_possible(ftl, b) && selector > best_selector) {
         rec_b = b;
+        best_selector = selector;
+      }
     }
   }
 
@@ -636,7 +643,7 @@ static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
 //
 //     Returns: 0 on success, -1 on error
 //
-static int recycle(FTLN ftl) {
+static int recycle(FTLN ftl, int should_boost_low_wear) {
   ui32 rec_b;
 
   // Confirm no physical page number changes in critical sections.
@@ -653,42 +660,11 @@ static int recycle(FTLN ftl) {
   check_lag_sum(ftl);
 #endif
 
-  // Determine deferment and whether to do wear based recycle.
-  if (ftl->wear_data.cur_max_lag >= FtlnLim2Lag) {
-    ftl->deferment = 0;
-    ftl->flags |= FTLN_DO_WEAR_BASED;
-    ++ftl->wear_data.wc_lim2_recycles;
-
-  } else if (ftl->deferment == 0) {
-    if (ftl->wear_data.cur_max_lag >= FtlnLim1Lag) {
-      ftl->deferment = FtlnLim1Def - FtlnLim1Def * (ftl->wear_data.cur_max_lag - FtlnLim1Lag) /
-                                         (FtlnLim2Lag - FtlnLim1Lag);
-      ftl->flags |= FTLN_DO_WEAR_BASED;
-      ++ftl->wear_data.wc_lim1_recycles;
-
-    } else if (ftl->wear_data.avg_wc_lag >= FtlnLim0Lag) {
-      ftl->deferment = FtlnLim0Def - (FtlnLim0Def - FtlnLim1Def) *
-                                         (ftl->wear_data.avg_wc_lag - FtlnLim0Lag) /
-                                         (FtlnLim1Lag - FtlnLim0Lag);
-      ftl->flags |= FTLN_DO_WEAR_BASED;
-      ++ftl->wear_data.wc_sum_recycles;
-    }
-  } else {
-    --ftl->deferment;
-    ftl->flags &= ~FTLN_DO_WEAR_BASED;
-  }
-
   // Select next block to recycle. Return error if unable.
-  for (;;) {
-    rec_b = next_recycle_blk(ftl);
-    if (rec_b != (ui32)-1)
-      break;
-    if (ftl->flags & FTLN_DO_WEAR_BASED) {
-      ftl->flags &= ~FTLN_DO_WEAR_BASED;
-    } else {
-      PfAssert(rec_b != (ui32)-1);
-      return FsError2(FTL_NO_RECYCLE_BLK, ENOSPC);
-    }
+  rec_b = next_recycle_blk(ftl, should_boost_low_wear);
+  if (rec_b == (ui32)-1) {
+    PfAssert(FALSE);
+    return FsError2(FTL_NO_RECYCLE_BLK, ENOSPC);
   }
 
   // Increment recycle count.
@@ -1042,7 +1018,7 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
     // Loop until enough pages are free.
     for (count = 1;; ++count) {
       // Perform one recycle operation. Return -1 if error.
-      if (recycle(ftl) != 0)
+      if (recycle(ftl, /*should_boost_low_wear=*/count & 1) != 0)
         return -1;
 
 #if SHOW_LAG_HIST
@@ -1199,7 +1175,7 @@ int FtlnVclean(FTLN ftl) {
   // Check if the dirty pages garbage level is > 9.
   if (FtlnGarbLvl(ftl) >= 10) {
     // Perform one recycle operation. Return -1 if error.
-    if (recycle(ftl))
+    if (recycle(ftl, /*should_boost_low_wear=*/1))
       return -1;
 
     // Return '1' so that vclean() is called again.

@@ -12,17 +12,14 @@
 //
 // Configuration.
 //
-// Default Wear Leveling Parameters.
+// Legacy wear lag parameters. Unused except for measuring some
+// statistics below.
 //
-#define WC_LIM0_DEF 7    // limit 0 wear-based recycle deferment
-#define WC_LIM1_DEF 6    // limit 1 wear-based recycle deferment
 #define WC_LIM0_LAG 190  // avg wear lag priority trigger
 #define WC_LIM1_LAG 205  // periodic wear lag priority trigger
 #define WC_LIM2_LAG 252  // constant wear lag priority trigger
 
 // Global Variable Definitions
-uint32_t FtlnLim0Def = WC_LIM0_DEF;
-uint32_t FtlnLim1Def = WC_LIM1_DEF;
 uint32_t FtlnLim0Lag = WC_LIM0_LAG;
 uint32_t FtlnLim1Lag = WC_LIM1_LAG;
 uint32_t FtlnLim2Lag = WC_LIM2_LAG;
@@ -785,37 +782,6 @@ FtlWearData FtlnGetWearData(void* vol) {
 
   // Return structure of metrics on wear data.
   return wear_data;
-}
-
-// FtlnSetLim0: Set threshold/deferment for wear lag limit 0.
-//
-//      Inputs: wc_lim0_lag = wear limit 0 lag
-//              wc_lim0_def = wear limit 0 deferment
-//
-void FtlnSetLim0(uint wc_lim0_lag, uint wc_lim0_def) {
-  // Set wear leveling limit 0's theshold and initial deferment.
-  FtlnLim0Lag = wc_lim0_lag;
-  FtlnLim0Def = wc_lim0_def;
-}
-
-// FtlnSetLim1: Set threshold/deferment for wear lag limit 1.
-//
-//      Inputs: wc_lim1_lag = wear limit 1 lag
-//              wc_lim1_def = wear limit 1 deferment
-//
-void FtlnSetLim1(uint wc_lim1_lag, uint wc_lim1_def) {
-  // Set wear leveling limit 1's theshold and initial deferment.
-  FtlnLim1Lag = wc_lim1_lag;
-  FtlnLim1Def = wc_lim1_def;
-}
-
-// FtlnSetLim2: Set threshold for wear lag limit 2.
-//
-//       Input: wc_lim2_lag = wear limit 2 lag
-//
-void FtlnSetLim2(uint wc_lim2_lag) {
-  // Set wear leveling limit 2's theshold.
-  FtlnLim2Lag = wc_lim2_lag;
 }
 
 #if FTLN_DEBUG

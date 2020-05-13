@@ -224,11 +224,6 @@ extern CircLink FtlnVols;
 #if FTLN_DEBUG_PTR
 extern FTLN Ftln;
 #endif
-extern uint32_t FtlnLim2Lag;
-extern uint32_t FtlnLim1Lag;
-extern uint32_t FtlnLim0Lag;
-extern uint32_t FtlnLim0Def;
-extern uint32_t FtlnLim1Def;
 
 //
 // Function Prototypes.

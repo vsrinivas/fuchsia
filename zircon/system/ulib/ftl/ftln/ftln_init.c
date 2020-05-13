@@ -722,12 +722,28 @@ static int format_status(FTLN ftl) {
   if (n)
     avg_lag = (avg_lag + n / 2) / n;
 
+  int wear_lag_histogram[256] = {0};
+  int set_to_avg = 0;
+
   // Apply average wear offset to every block marked as needing it.
-  for (b = 0; b < ftl->num_blks; ++b)
+  for (b = 0; b < ftl->num_blks; ++b) {
     if ((ftl->bdata[b] & RC_MASK) == 100) {
       ftl->bdata[b] &= ~RC_MASK;
       ftl->blk_wc_lag[b] = avg_lag;
+      ++set_to_avg;
     }
+    ++wear_lag_histogram[ftl->blk_wc_lag[b]];
+  }
+
+  fprintf(stderr, "ftl: wear counts: %u - %u, avg=%u, <%u=%u, missing=%u\n",
+          low_wc, ftl->high_wc, ftl->high_wc - avg_lag, ftl->high_wc - 255,
+          ftl->wear_data.max_wc_over, set_to_avg);
+
+  for (int i = 255; i >= 0; --i) {
+    fprintf(stderr, "%5u", wear_lag_histogram[i]);
+    if (i % 8 == 0)
+      fputc('\n', stderr);
+  }
 
   // Depending when powerfail recovery was interrupted, at this point
   // the volume block being resumed might look like a free block or a

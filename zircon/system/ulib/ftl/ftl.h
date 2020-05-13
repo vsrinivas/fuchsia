@@ -33,6 +33,18 @@
 #undef FTL_RESUME_STRESS
 #define FTL_NAME_MAX 32
 
+// The lag that separates blocks with low wear from high wear. Blocks that are
+// within this value of the lowest wear count are considered low wear, whilst
+// blocks that exceed this are considered having high wear.
+//
+// This number has been initially chosen because it matches WC_LIM0_LAG_190,
+// which used to be the point where the recycle strategy changed. It's
+// slightly different, because it was based on average wear lag, whereas this
+// value is based on maximum lag. It's possible that we could make this
+// smaller; 190 seems like plenty of variation and making it smaller might not
+// adversely affect performance, whilst keeping the range of wear closer.
+#define FTL_LOW_WEAR_BOOST_LAG  190
+
 // Default block read limits to avoid read-disturb errors.
 #define MLC_NAND_RC_LIMIT 100000
 #define SLC_NAND_RC_LIMIT 1000000
@@ -51,7 +63,6 @@
 #define FSF_READ_WEAR_LIMIT (1u << 7)   // Driver specs read-wear limit.
 #define FSF_READ_ONLY_INIT  (1u << 8)   // Dev is read-only during init.
 #define FTLN_VERBOSE        (1u << 9)   // Turn debug messages on.
-#define FTLN_DO_WEAR_BASED  (1u << 10)  // Do a wear-based recycle.
 
 #define NDM_PART_NAME_LEN 15            // Partition name size in bytes.
 #define NDM_PART_USER 0                 // Number of uint32_t in partition for user.
@@ -318,9 +329,6 @@ int ndmExtractBBL(NDM ndm);
 int ndmInsertBBL(NDM ndm);
 int NdmDvrTestAdd(const NDMDrvr* dev);
 FtlWearData FtlnGetWearData(void *ftl);
-void FtlnSetLim0(uint32_t wc_lim0_lag, uint32_t wc_lim0_def);
-void FtlnSetLim1(uint32_t wc_lim1_lag, uint32_t wc_lim1_def);
-void FtlnSetLim2(uint32_t wc_lim2_lag);
 
 // TargetNDM NVRAM Control Page Storage.
 void NvNdmCtrlPgWr(uint32_t frst);
