@@ -14,7 +14,56 @@ config("fidlc_config") {
   }
 }
 
-if (defined(zx)) {
+if (!defined(zx) || zx != "/") {
+  # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
+
+  config("fidl_config") {
+    visibility = [ ":*" ]
+    include_dirs = [ "include" ]
+  }
+
+  source_set("compiler") {
+    public_configs = [ ":fidl_config" ]
+    sources = [
+      "lib/attributes.cc",
+      "lib/c_generator.cc",
+      "lib/coded_types_generator.cc",
+      "lib/diagnostics_json.cc",
+      "lib/error_reporter.cc",
+      "lib/error_types.cc",
+      "lib/experimental_flags.cc",
+      "lib/findings_json.cc",
+      "lib/flat_ast.cc",
+      "lib/formatter.cc",
+      "lib/json_generator.cc",
+      "lib/lexer.cc",
+      "lib/linter.cc",
+      "lib/linting_tree_callbacks.cc",
+      "lib/names.cc",
+      "lib/ordinals.cc",
+      "lib/parser.cc",
+      "lib/raw_ast.cc",
+      "lib/source_file.cc",
+      "lib/source_manager.cc",
+      "lib/source_span.cc",
+      "lib/tables_generator.cc",
+      "lib/template_string.cc",
+      "lib/tree_visitor.cc",
+      "lib/type_shape.cc",
+      "lib/utils.cc",
+      "lib/virtual_source_file.cc",
+    ]
+    if (is_host) {
+      public_deps = [
+        "//third_party/boringssl",
+        "//zircon/public/lib/cmdline",
+        "//zircon/public/lib/fit",
+        "//zircon/public/lib/safemath",
+        "//zircon/system/public",
+      ]
+    }
+  }
+} else {
   zx_library("fidl") {
     host = true
     sources = [
@@ -173,38 +222,5 @@ if (defined(zx)) {
   fidlgen_executable("fidlgen_llcpp") {
     go_path = "$zx/../garnet/go"
     go_package = "fidl/compiler/llcpp_backend"
-  }
-} else {
-  # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
-
-  config("fidl_config") {
-    visibility = [ ":*" ]
-    include_dirs = [ "include" ]
-  }
-
-  source_set("compiler") {
-    public_configs = [ ":fidl_config" ]
-    sources = [
-      "lib/attributes.cc",
-      "lib/c_generator.cc",
-      "lib/diagnostics_json.cc",
-      "lib/error_reporter.cc",
-      "lib/error_types.cc",
-      "lib/findings_json.cc",
-      "lib/flat_ast.cc",
-      "lib/formatter.cc",
-      "lib/json_generator.cc",
-      "lib/lexer.cc",
-      "lib/linter.cc",
-      "lib/names.cc",
-      "lib/parser.cc",
-      "lib/raw_ast.cc",
-      "lib/source_file.cc",
-      "lib/source_manager.cc",
-      "lib/source_span.cc",
-      "lib/tables_generator.cc",
-      "lib/tree_visitor.cc",
-      "lib/type_shape.cc",
-    ]
   }
 }

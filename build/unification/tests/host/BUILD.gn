@@ -35,7 +35,6 @@ listed_tests = [
 #------------------
 #------------------
 #------------------
-  "fidl-compiler",
 #------------------
 #------------------
 #------------------
@@ -117,7 +116,7 @@ group("migrated-tests") {
     "//zircon/system/utest/fidl",
   #------------------
   #------------------
-    #"fidl-compiler",
+    "//zircon/system/utest/fidl-compiler",
   #------------------
   #------------------
     "//zircon/system/utest/fs-host",
