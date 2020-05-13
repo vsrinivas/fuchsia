@@ -29,7 +29,8 @@ async fn main() -> Result<(), Error> {
     let echo = connect_to_service::<fecho::EchoMarker>()?;
 
     for _ in 1..=3 {
-        let _ = event_stream.expect_type::<Started>().await?;
+        let event = event_stream.expect_type::<Started>().await?;
+        assert_eq!(event.unwrap_payload().component_url, url);
         let _ = echo.echo_string(Some(&format!("{:?}", Started::TYPE))).await?;
     }
 

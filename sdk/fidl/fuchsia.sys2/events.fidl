@@ -6,6 +6,7 @@ library fuchsia.sys2;
 
 using fuchsia.component;
 using fuchsia.io;
+using fuchsia.url;
 using zx;
 
 /// The maximum number of event types that a receiver can listen to.
@@ -144,6 +145,9 @@ flexible union EventPayload {
 
     /// Payload for CapabilityRouted events
     2: CapabilityRoutedPayload capability_routed;
+
+    /// Payload for Started events
+    3: StartedPayload started;
 };
 
 /// Payload for CapabilityReady events
@@ -169,6 +173,12 @@ table CapabilityRoutedPayload {
 
     /// Source of the capability that needs to be routed.
     3: CapabilitySource source;
+};
+
+/// Payload for Started events
+table StartedPayload {
+    /// The url of the component that started
+    1: fuchsia.url.Url component_url;
 };
 
 /// Contains all information about a single event

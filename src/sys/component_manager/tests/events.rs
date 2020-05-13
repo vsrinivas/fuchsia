@@ -768,6 +768,148 @@ pub struct EventError {
 ///     * name -> FIDL name for the protocol
 ///     * ty -> Rust type for the protocol proxy
 macro_rules! create_event {
+    (@build from-fidl-shared $event_type:ident $event:ident $result:ident) => {{
+        // Event type in event must match what is expected
+        let event_type = $event.event_type.ok_or(
+            format_err!("Missing event_type from Event object")
+        )?;
+
+        if event_type != Self::TYPE {
+            return Err(format_err!("Incorrect event type"));
+        }
+
+        let target_moniker = $event.target_moniker.ok_or(
+            format_err!("Missing target_moniker from Event object")
+        )?;
+
+        let timestamp = zx::Time::from_nanos($event.timestamp.ok_or(
+            format_err!("Missing timestamp from the Event object")
+        )?);
+
+        let handler = $event.handler.map(|h| h.into_proxy()).transpose()?;
+
+        $event_type { target_moniker, handler,  timestamp, $result }
+    }};
+
+    (@build impl-event-shared $event_type:ident $event_name:ident) => {
+        const TYPE: fsys::EventType = fsys::EventType::$event_type;
+        const NAME: &'static str = stringify!($event_name);
+
+        fn target_moniker(&self) -> &str {
+            &self.target_moniker
+        }
+
+        fn timestamp(&self) -> zx::Time {
+            self.timestamp
+        }
+    };
+
+    (@build with-payload-success-case $payload:ident {
+        event_type: $event_type:ident,
+        payload: $($data_name:ident, $data_ty:ty)*,
+        protocols: $($protocol_name:ident, $protocol_ty:ty)*
+    }) => {{
+        let payload = match $payload {
+            fsys::EventPayload::$event_type(payload) => Ok(payload),
+            _ => Err(format_err!("Incorrect payload type")),
+        }?;
+
+        // Extract the additional data from the Payload object.
+        $(
+            let $data_name: $data_ty = payload.$data_name.ok_or(
+                format_err!("Missing $data_name from $event_type object")
+            )?;
+        )*
+
+        // Extract the additional protocols from the Payload object.
+        $(
+            let $protocol_name: $protocol_ty = payload.$protocol_name.ok_or(
+                format_err!("Missing $protocol_name from $event_type object")
+            )?.into_proxy()?;
+        )*
+
+        let payload = paste::expr! {
+             [<$event_type Payload>] { $($data_name,)* $($protocol_name,)* }
+        };
+
+        Ok(Ok(payload))
+    }};
+
+    // Entry points
+    (
+        event_type: $event_type:ident,
+        event_name: $event_name:ident,
+        payload: {
+            data: {$(
+                {
+                    name: $data_name:ident,
+                    ty: $data_ty:ty,
+                }
+            )*},
+            protocols: {$(
+                {
+                    name: $protocol_name:ident,
+                    ty: $protocol_ty:ty,
+                }
+            )*},
+        }
+    ) => {
+        paste::item! {
+            pub struct [<$event_type Payload>] {
+                $(pub $protocol_name: $protocol_ty,)*
+                $(pub $data_name: $data_ty,)*
+            }
+
+            pub struct $event_type {
+                target_moniker: String,
+                handler: Option<fsys::HandlerProxy>,
+                timestamp: zx::Time,
+                pub result: Result<[<$event_type Payload>], EventError>,
+            }
+
+            impl $event_type {
+                pub fn unwrap_payload<'a>(&'a self) -> &'a [<$event_type Payload>] {
+                    self.result.as_ref().unwrap()
+                }
+            }
+
+            impl Event for $event_type {
+                create_event!(@build impl-event-shared $event_type $event_name);
+
+                fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
+
+                    // Extract the payload from the Event object.
+                    let result = match event.event_result {
+                        Some(fsys::EventResult::Payload(payload)) => {
+                            create_event!(@build with-payload-success-case payload {
+                                event_type: $event_type,
+                                payload: $($data_name, $data_ty)*,
+                                protocols: $($protocol_name, $protocol_ty)*
+                            })
+                        },
+                        Some(fsys::EventResult::Error(p)) => Ok(Err(
+                                EventError {
+                                    description: p.description.ok_or(
+                                        format_err!("Missing error description"))?
+                                }
+                            )),
+                        None => Err(format_err!("Missing event_result from Event object")),
+                        _ => Err(format_err!("Unexpected event result")),
+                    }?;
+
+                    let event = create_event!(@build from-fidl-shared $event_type event result);
+                    Ok(event)
+                }
+            }
+
+            impl Handler for $event_type {
+                fn handler_proxy(self) -> Option<fsys::HandlerProxy> {
+                    self.handler
+                }
+            }
+        }
+    };
+
     (
         event_type: $event_type:ident,
         event_name: $event_name:ident,
@@ -791,7 +933,7 @@ macro_rules! create_event {
                     name: $error_data_name:ident,
                     ty: $error_data_ty:ty,
                 }
-            )*,
+            )*
         }
     ) => {
         paste::item! {
@@ -820,61 +962,17 @@ macro_rules! create_event {
             }
 
             impl Event for $event_type {
-                const TYPE: fsys::EventType = fsys::EventType::$event_type;
-                const NAME: &'static str = stringify!($event_name);
-
-                fn target_moniker(&self) -> &str {
-                    &self.target_moniker
-                }
-
-                fn timestamp(&self) -> zx::Time {
-                    self.timestamp
-                }
+                create_event!(@build impl-event-shared $event_type $event_name);
 
                 fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
-                    // Event type in event must match what is expected
-                    let event_type = event.event_type.ok_or(
-                        format_err!("Missing event_type from Event object")
-                    )?;
-
-                    if event_type != Self::TYPE {
-                        return Err(format_err!("Incorrect event type"));
-                    }
-
-                    let target_moniker = event.target_moniker.ok_or(
-                        format_err!("Missing target_moniker from Event object")
-                    )?;
-
-                    let timestamp = zx::Time::from_nanos(event.timestamp.ok_or(
-                        format_err!("Missing timestamp from the Event object")
-                    )?);
-
-                    let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
-
                     // Extract the payload from the Event object.
                     let result = match event.event_result {
                         Some(fsys::EventResult::Payload(payload)) => {
-                            let payload = match payload {
-                                fsys::EventPayload::$event_type(payload) => Ok(payload),
-                                _ => Err(format_err!("Incorrect payload type")),
-                            }?;
-
-                            // Extract the additional data from the Payload object.
-                            $(
-                                let $data_name: $data_ty = payload.$data_name.ok_or(
-                                    format_err!("Missing $data_name from $event_type object")
-                                )?;
-                            )*
-
-                            // Extract the additional protocols from the Payload object.
-                            $(
-                                let $protocol_name: $protocol_ty = payload.$protocol_name.ok_or(
-                                    format_err!("Missing $protocol_name from $event_type object")
-                                )?.into_proxy()?;
-                            )*
-
-                            let payload = [<$event_type Payload>] { $($data_name,)* $($protocol_name,)* };
-                            Ok(Ok(payload))
+                            create_event!(@build with-payload-success-case payload {
+                                event_type: $event_type,
+                                payload: $($data_name, $data_ty)*,
+                                protocols: $($protocol_name, $protocol_ty)*
+                            })
                         },
                         Some(fsys::EventResult::Error(err)) => {
                             let description = err.description.ok_or(
@@ -899,14 +997,15 @@ macro_rules! create_event {
                             )*
 
                             let error_payload =
-                            [<$event_type Error>] { $($error_data_name,)* description };
+                                [<$event_type Error>] { $($error_data_name,)* description };
                             Ok(Err(error_payload))
                         },
                         None => Err(format_err!("Missing event_result from Event object")),
                         _ => Err(format_err!("Unexpected event result")),
                     }?;
 
-                    Ok($event_type { target_moniker, handler,  timestamp, result })
+                    let event = create_event!(@build from-fidl-shared $event_type event result);
+                    Ok(event)
                 }
             }
 
@@ -926,38 +1025,9 @@ macro_rules! create_event {
         }
 
         impl Event for $event_type {
-            const TYPE: fsys::EventType = fsys::EventType::$event_type;
-            const NAME: &'static str = stringify!($event_name);
-
-            fn target_moniker(&self) -> &str {
-                &self.target_moniker
-            }
-
-            fn timestamp(&self) -> zx::Time {
-                self.timestamp
-            }
+            create_event!(@build impl-event-shared $event_type $event_name);
 
             fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
-                // ent type in event must match what is expected
-                let event_type = event.event_type.ok_or(
-                    format_err!("Missing event_type from Event object")
-                )?;
-
-                if event_type != Self::TYPE {
-                    return Err(format_err!(
-                        "Incorrect event type. Expected: {:?}. Got: {:?}", Self::TYPE, event_type));
-                }
-
-                let timestamp = zx::Time::from_nanos(event.timestamp.ok_or(
-                    format_err!("Missing timestamp from the Event object")
-                )?);
-
-                let target_moniker = event.target_moniker.ok_or(
-                    format_err!("Missing target_moniker from Event object")
-                )?;
-
-                let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
-
                 let error = match event.event_result {
                     Some(fsys::EventResult::Error(p)) => Ok(Some(EventError { description: p.description.ok_or(
                                 format_err!("Missing error description"))? })),
@@ -965,9 +1035,8 @@ macro_rules! create_event {
                     _ => Err(format_err!("Unexpected event result")),
                 }?;
 
-
-
-                Ok($event_type { target_moniker, handler, error, timestamp })
+                let event = create_event!(@build from-fidl-shared $event_type event error);
+                Ok(event)
             }
         }
 
@@ -984,7 +1053,19 @@ create_event!(Destroyed, destroyed);
 create_event!(Discovered, discovered);
 create_event!(MarkedForDestruction, marked_for_destruction);
 create_event!(Resolved, resolved);
-create_event!(Started, started);
+create_event!(
+    event_type: Started,
+    event_name: started,
+    payload: {
+        data: {
+            {
+                name: component_url,
+                ty: String,
+            }
+        },
+        protocols: {},
+    }
+);
 create_event!(Stopped, stopped);
 create_event!(Running, running);
 create_event!(
@@ -1008,7 +1089,7 @@ create_event!(
         {
             name: path,
             ty: String,
-        },
+        }
     }
 );
 create_event!(
@@ -1036,7 +1117,7 @@ create_event!(
         {
             name: capability_id,
             ty: String,
-        },
+        }
     }
 );
 

@@ -106,6 +106,11 @@ fn maybe_create_event_result(
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
         }
+        Ok(EventPayload::Started { component_url, .. }) => {
+            Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::Started(
+                fsys::StartedPayload { component_url: Some(component_url.to_string()) },
+            ))))
+        }
         Err(EventError {
             source,
             event_error_payload: EventErrorPayload::CapabilityReady { path },

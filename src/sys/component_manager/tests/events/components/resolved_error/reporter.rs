@@ -32,7 +32,7 @@ async fn main() -> Result<(), Error> {
     // error.
     let started_event = event_stream.expect_exact::<Started>(EventMatcher::new()).await?;
 
-    assert_eq!(resolved_event.error, started_event.error);
+    assert_eq!(resolved_event.error, started_event.result.err());
 
     if resolved_event.error.is_some() {
         let _ = echo.echo_string(Some("ERROR")).await?;
