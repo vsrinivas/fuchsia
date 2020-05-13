@@ -29,9 +29,6 @@ class PendingAllocationData {
   // Returns the |start| and |count| of the first range in the block_map_.
   zx_status_t GetNextRange(blk_t* start, blk_t* count) const;
 
-  // Returns the size of the longest range in block_map_;
-  blk_t GetLongestRange() const;
-
   // Returns true if no blocks are marked for allocation.
   bool IsEmpty() const {
     return block_map_.num_bits() == 0 && new_blocks_ == 0;

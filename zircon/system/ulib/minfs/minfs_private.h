@@ -65,18 +65,9 @@ constexpr uint32_t kExtentCount = 6;
 // #define MINFS_PARANOID_MODE
 
 namespace minfs {
+
 #ifdef __Fuchsia__
-// Validate that |vmo| is large enough to access block |blk|,
-// relative to the start of the vmo.
-inline void ValidateVmoSize(zx_handle_t vmo, blk_t blk) {
-  uint64_t size;
-  size_t min = (blk + 1) * kMinfsBlockSize;
-  ZX_ASSERT(zx_vmo_get_size(vmo, &size) == ZX_OK);
-  ZX_ASSERT_MSG(size >= min, "VMO size %" PRIu64 " too small for access at block %u\n", size, blk);
-}
-
 using MountState = llcpp::fuchsia::minfs::MountState;
-
 #endif  // __Fuchsia__
 
 // SyncVnode flags
@@ -462,62 +453,9 @@ class Minfs :
 };
 
 #ifdef __Fuchsia__
-// Create and register a VMO for writes.
-zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
-                                 storage::Vmoid* out_vmoid);
-
-// Writes |bytes| bytes of |data| to disk at block |block_num|. |bytes| must not exceed
-// kMinfsBlockSize. If |bytes| < kMinfsBlockSize, kMinfsBlockSize bytes will still be
-// written to disk with the remaining |kMinfsBlockSize - bytes| bytes set to 0.
-zx_status_t WriteDataToDisk(fs::TransactionHandler* transaction_handler,
-                            block_client::BlockDevice* device, void* data, size_t bytes,
-                            blk_t block_num);
-
-// Reads |bytes| bytes of |data| from disk at block |block_num|. |bytes| must not exceed
-// kMinfsBlockSize.
-zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
-                             block_client::BlockDevice* device, void* data, size_t bytes,
-                             blk_t block_num);
-#endif
-
-#ifdef __Fuchsia__
 // Replay the minfs journal, given the sizes provided within the superblock.
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out);
 #endif
-
-// Return the required vmo size (in blocks) to store doubly indirect blocks in vmo_indirect_
-// TODO(43519).
-constexpr uint32_t GetVmoBlocksForDoublyIndirect() { return kMinfsIndirect + kMinfsDoublyIndirect; }
-static_assert(GetVmoBlocksForDoublyIndirect() == kMinfsIndirect + kMinfsDoublyIndirect,
-              "Vnode block map changed");
-
-// Return the required vmo size (in bytes) to store doubly indirect blocks in vmo_indirect_
-constexpr size_t GetVmoSizeForDoublyIndirect() {
-  return GetVmoBlocksForDoublyIndirect() * kMinfsBlockSize;
-}
-static_assert(GetVmoSizeForDoublyIndirect() ==
-                  (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize,
-              "Vnode layout changed");
-
-// Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect
-// block at dindex
-constexpr uint32_t GetVmoOffsetForIndirect(uint32_t dibindex) {
-  return GetVmoBlocksForDoublyIndirect() + (dibindex * kMinfsDirectPerIndirect);
-}
-
-// Return the required vmo size (in bytes) to store indirect blocks pointed to by doubly indirect
-// block dibindex
-constexpr size_t GetVmoSizeForIndirect(uint32_t dibindex) {
-  // See comments for VnodeMinfs::vmo_indirect_.
-  size_t size = GetVmoOffsetForIndirect(dibindex + 1);
-  return size * kMinfsBlockSize;
-}
-
-// Return the block offset of doubly indirect blocks in vmo_indirect_
-constexpr uint32_t GetVmoOffsetForDoublyIndirect(uint32_t dibindex) {
-  ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
-  return kMinfsIndirect + dibindex;
-}
 
 // write the inode data of this vnode to disk (default does not update time values)
 void SyncVnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);

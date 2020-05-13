@@ -24,16 +24,6 @@ zx_status_t PendingAllocationData::GetNextRange(blk_t* start, blk_t* count) cons
   return ZX_OK;
 }
 
-blk_t PendingAllocationData::GetLongestRange() const {
-  blk_t block_count = 0;
-  for (auto range = block_map_.begin(); range != block_map_.end(); range++) {
-    if (range->bitlen > block_count) {
-      block_count = static_cast<blk_t>(range->bitlen);
-    }
-  }
-  return block_count;
-}
-
 void PendingAllocationData::SetPending(blk_t block_num, bool allocated) {
   size_t initial_bits = block_map_.num_bits();
   ZX_ASSERT(block_map_.SetOne(block_num) == ZX_OK);
