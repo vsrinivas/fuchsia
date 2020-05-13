@@ -46,7 +46,13 @@ if (current_toolchain == default_toolchain) {
         "physmem",
         "standalone",
       ]
-      exclude_variant_tags = [ "instrumentation-runtime" ]
+      exclude_variant_tags = [
+        # There is no possibility of fancy runtimes like ASan for phys.
+        "instrumentation-runtime",
+
+        # TOOD(51994): Remove this when profile is supported.
+        "instrumented",
+      ]
 
       # Append the arch-specific lists.  The phys/phys.gni file in each
       # arch subdirectory defines phys_* lists to append to the parameters.
