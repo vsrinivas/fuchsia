@@ -291,17 +291,20 @@ func TestCloseEndpointsMap(t *testing.T) {
 	}
 }
 
-func TestNicName(t *testing.T) {
+func TestNICName(t *testing.T) {
 	ns := newNetstack(t)
+
+	if want, got := "unknown NIC(id=0)", ns.name(0); got != want {
+		t.Fatalf("got ns.name(0) = %q, want %q", got, want)
+	}
 
 	eth := deviceForAddEth(ethernet.Info{}, t)
 	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := ifs.ns.name(ifs.nicid)
-	if name != testDeviceName {
-		t.Fatalf("ifs.mu.name = %v, want = %v", name, testDeviceName)
+	if name := ifs.ns.name(ifs.nicid); name != testDeviceName {
+		t.Fatalf("ifs.mu.name = %q, want = %q", name, testDeviceName)
 	}
 }
 

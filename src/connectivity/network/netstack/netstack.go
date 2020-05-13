@@ -342,10 +342,11 @@ func addressWithPrefixRoute(nicid tcpip.NICID, addr tcpip.AddressWithPrefix) tcp
 }
 
 func (ns *Netstack) name(nicid tcpip.NICID) string {
-	if nicInfo, ok := ns.stack.NICInfo()[nicid]; ok {
-		return nicInfo.Name
+	name := ns.stack.FindNICNameFromID(nicid)
+	if len(name) == 0 {
+		name = fmt.Sprintf("unknown NIC(id=%d)", nicid)
 	}
-	return fmt.Sprintf("stack.NICInfo()[%d]: %s", nicid, tcpip.ErrUnknownNICID)
+	return name
 }
 
 func (ns *Netstack) onInterfacesChanged() {
