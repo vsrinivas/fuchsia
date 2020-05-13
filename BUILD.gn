@@ -105,7 +105,7 @@ declare_args() {
     }
     variants = zircon_variants
     if (optimize == "none" || optimize == "sanitizer" ||
-        optimize == "profile") {
+        optimize == "profile" || optimize == "size") {
       # TODO(51585): Only propagate none/sanitizer/profile for now.
       # "Normal" Zircon builds use a different default than Fuchsia builds.
       # These should be harmonized at some point so this is always passed

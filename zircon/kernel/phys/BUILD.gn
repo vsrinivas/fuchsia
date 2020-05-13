@@ -66,6 +66,9 @@ if (current_toolchain == default_toolchain) {
           # phys code doesn't stay sufficiently purely position-independent
           # without optimization.
           optimize = "debug"
+        } else if (optimize == "size") {
+          # ... and likewise size optimizations.
+          optimize = "speed"
         }
       }
     }
