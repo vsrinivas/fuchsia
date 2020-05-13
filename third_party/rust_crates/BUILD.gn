@@ -29,11 +29,10 @@ group("base64") {
   deps = [ ":base64-v0_9_3" ]
 }
 
-if (is_fuchsia) {
-  group("bincode") {
-    deps = [ ":bincode-v1_1_1" ]
-  }
+group("bincode") {
+  deps = [ ":bincode-v1_1_1" ]
 }
+
 group("bitfield") {
   deps = [ ":bitfield-v0_13_1" ]
 }
