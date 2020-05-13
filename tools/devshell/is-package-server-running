@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#### CATEGORY=Software Delivery
+#### CATEGORY=Software delivery
 ### check if the package server is running
 ##
 ## This command is to be used primarily by other commands, such as `fx test`.

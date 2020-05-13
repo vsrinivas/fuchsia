@@ -12,25 +12,11 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/prebuilt.sh"
 )
-BT_MOCKED_TOOLS=("tools/devshell/lib/metrics.sh")
-
-BT_MKDIR_DEPS=(".jiri_root")
-
-BT_INIT_TEMP_DIR() {
-  cat > tools/devshell/lib/metrics.sh.mock_side_effects <<EOF
-  function track-command-execution {
-    echo ""
-  }
-  function track-command-finished {
-    echo ""
-  }
-EOF
-}
 
 BT_SET_UP() {
-  base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../.."
-  fx="${base_dir}/scripts/fx"
-  BT_ASSERT_FILE_EXISTS "${fx}"
+  base_dir="${BT_TEMP_DIR}"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
 }
 
 _create_subcommand() {
@@ -38,9 +24,12 @@ _create_subcommand() {
   local subcommand_file="${base_dir}/$2/${subcommand}"
   local subcommand_output="$3"
   local summary="$4"
-  local category="Testing"
   local long_description_1="$5"
   local long_description_2="$6"
+  local category="Testing"
+  if [[ $# -gt 6 ]]; then
+    category="$7"
+  fi
   mkdir -p "$(dirname "${subcommand_file}")"
   cat >"${subcommand_file}" <<EOF
 #!/bin/bash
@@ -70,6 +59,16 @@ TEST_fx-help() {
   # check the command name and summary
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${summary}"
+}
+
+# ensure that categories are normalized
+TEST_fx-normalized-category() {
+  local subcommand="mycommand1"
+  local category="Category UpperCASE 1"
+  local norm_category_header="Category uppercase 1:"
+  _create_subcommand "${subcommand}" "tools/devshell" "howdy!" "summary1" "line1" "line2" "${category}"
+  # check that the normalized category shows up in fx help
+  BT_EXPECT_EQ "$(${fx} help | grep -B 1 "${subcommand}" | head -n 1)" "${norm_category_header}"
 }
 
 # test for `fx help <subcommand>`

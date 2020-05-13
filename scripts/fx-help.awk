@@ -25,7 +25,7 @@ BEGIN {
 
 /^#### +CATEGORY *=/ {
   if (category == "") {
-    category = $2
+    category = toupper(substr($2,1,1)) tolower(substr($2,2))
     next
   }
 }

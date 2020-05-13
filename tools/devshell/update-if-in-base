@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#### CATEGORY=Software Delivery
+#### CATEGORY=Software delivery
 ### check if packages are in base and update the device if needed
 ## usage: fx update-if-in-base PACKAGE_NAME [PACKAGE_NAME]*
 ##
