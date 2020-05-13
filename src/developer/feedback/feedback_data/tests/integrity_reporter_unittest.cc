@@ -130,11 +130,12 @@ rapidjson::Document MakeJsonReport(const IntegrityReporter& reporter,
                                    const ::fit::result<Annotations>& annotations,
                                    const ::fit::result<Attachments>& attachments,
                                    const bool missing_non_platform_annotations = false) {
-  const std::string integrity_report =
+  const auto integrity_report =
       reporter.MakeIntegrityReport(annotations, attachments, missing_non_platform_annotations);
+  FX_CHECK(integrity_report.has_value());
 
   rapidjson::Document json;
-  FX_CHECK(!json.Parse(integrity_report.c_str()).HasParseError());
+  FX_CHECK(!json.Parse(integrity_report.value().c_str()).HasParseError());
   rapidjson::Document schema_json;
   FX_CHECK(!schema_json.Parse(kIntegrityReportSchema).HasParseError());
   rapidjson::SchemaDocument schema(schema_json);
@@ -314,7 +315,7 @@ TEST(IntegrityReporterTest, Check_SmokeTest) {
 
   const auto report = MakeJsonReport(reporter, ::fit::ok<Annotations>(std::move(annotations)),
                                      ::fit::ok<Attachments>(std::move(attachments)),
-                                     /*extra_annotation_failure=*/true);
+                                     /*missing_non_platform_annotations=*/true);
 
   HAS_COMPLETE_ATTACHMENT(report, "complete attachment 1");
   HAS_COMPLETE_ATTACHMENT(report, "complete attachment 2");
@@ -337,6 +338,14 @@ TEST(IntegrityReporterTest, Check_SmokeTest) {
 
   HAS_MISSING_ANNOTATION(report, "non-platform annotations",
                          "too many non-platfrom annotations added");
+}
+
+TEST(IntegrityReporterTest, Fail_EmptyBugreport) {
+  IntegrityReporter reporter(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
+
+  const auto integrity_report = reporter.MakeIntegrityReport(
+      ::fit::error(), ::fit::error(), /*missing_non_platform_annotations=*/false);
+  EXPECT_FALSE(integrity_report.has_value());
 }
 
 }  // namespace

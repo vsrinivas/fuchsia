@@ -160,10 +160,19 @@ IntegrityReporter::IntegrityReporter(const AnnotationKeys& annotation_allowlist,
                                      const AttachmentKeys& attachment_allowlist)
     : annotation_allowlist_(annotation_allowlist), attachment_allowlist_(attachment_allowlist) {}
 
-std::string IntegrityReporter::MakeIntegrityReport(
+std::optional<std::string> IntegrityReporter::MakeIntegrityReport(
     const ::fit::result<Annotations>& annotations_result,
     const ::fit::result<Attachments>& attachments_result,
     bool missing_non_platform_annotations) const {
+  const bool has_non_platform_annotations =
+      annotations_result.is_ok() &&
+      annotations_result.value().size() > annotation_allowlist_.size();
+
+  if (annotation_allowlist_.empty() && attachment_allowlist_.empty() &&
+      !has_non_platform_annotations && !missing_non_platform_annotations) {
+    return std::nullopt;
+  }
+
   rapidjson::Document integrity_report(rapidjson::kObjectType);
 
   AddAttachments(attachment_allowlist_, attachments_result, &integrity_report);

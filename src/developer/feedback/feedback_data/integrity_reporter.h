@@ -7,6 +7,7 @@
 
 #include <lib/fit/result.h>
 
+#include <optional>
 #include <string>
 
 #include "src/developer/feedback/feedback_data/annotations/types.h"
@@ -20,14 +21,15 @@ class IntegrityReporter {
   IntegrityReporter(const AnnotationKeys& annotation_allowlist,
                     const AttachmentKeys& attachment_allowlist);
 
-  // Returns a JSON integrity report.
+  // Returns a JSON integrity report. No report is returned if no annotations or attachments will be
+  // in the bugreport.
   //
   // |missing_non_platform_annotations| indicates whether some non-platform annotations are
   // missing, i.e. whether clients tried to insert more non-platform annotations than the maximum
   // number of non-platform annotations the Datastore can hold.
-  std::string MakeIntegrityReport(const ::fit::result<Annotations>& annotations,
-                                  const ::fit::result<Attachments>& attachments,
-                                  bool missing_non_platform_annotations) const;
+  std::optional<std::string> MakeIntegrityReport(const ::fit::result<Annotations>& annotations,
+                                                 const ::fit::result<Attachments>& attachments,
+                                                 bool missing_non_platform_annotations) const;
 
  private:
   AnnotationKeys annotation_allowlist_;
