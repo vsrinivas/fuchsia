@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
+#include <ktl/array.h>
 #include <object/handle.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -180,15 +181,24 @@ class VDsoCodeWindow {
 // syscalls in that category.  These functions can be used in
 // VDso::CreateVariant (below) to block a category of syscalls for a particular
 // variant vDSO.
-#define SYSCALL_CATEGORY_BEGIN(category) \
-  [[maybe_unused]]                       \
-  void block_##category##_syscalls(VDsoDynSymWindow& dynsym_window, VDsoCodeWindow& code_window) {
+#define SYSCALL_CATEGORY_BEGIN(category)                                             \
+  [[maybe_unused]] void block_##category##_syscalls(VDsoDynSymWindow& dynsym_window, \
+                                                    VDsoCodeWindow& code_window) {
 #define SYSCALL_IN_CATEGORY(syscall) BLOCK_SYSCALL(dynsym_window, code_window, zx_##syscall);
 #define SYSCALL_CATEGORY_END(category) }
 #include <lib/syscalls/category.inc>
 #undef SYSCALL_CATEGORY_BEGIN
 #undef SYSCALL_IN_CATEGORY_END
 #undef SYSCALL_CATEGORY_END
+
+// This is extracted from the vDSO image at build time.
+using VdsoBuildIdNote = ktl::array<uint8_t, VDSO_BUILD_ID_NOTE_SIZE>;
+constexpr VdsoBuildIdNote kVdsoBuildIdNote = VDSO_BUILD_ID_NOTE_BYTES;
+
+// That should exactly match the note read from the vDSO image at runtime.
+KernelVmoWindow<VdsoBuildIdNote> VdsoBuildIdNoteWindow(VDso* vdso) {
+  return {"vDSO build ID", vdso->vmo()->vmo(), VDSO_BUILD_ID_NOTE_ADDRESS};
+}
 
 }  // anonymous namespace
 
@@ -205,6 +215,9 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   fbl::AllocChecker ac;
   VDso* vdso = new (&ac) VDso(&vmo_kernel_handles[0]);
   ASSERT(ac.check());
+
+  // Sanity-check that it's the exact vDSO image the kernel was compiled for.
+  ASSERT(*VdsoBuildIdNoteWindow(vdso).data() == kVdsoBuildIdNote);
 
   // Map a window into the VMO to write the vdso_constants struct.
   static_assert(sizeof(vdso_constants) == VDSO_DATA_CONSTANTS_SIZE, "gen-rodso-code.sh is suspect");
