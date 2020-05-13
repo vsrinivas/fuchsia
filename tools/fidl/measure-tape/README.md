@@ -20,6 +20,7 @@ To add a measure tape to your project, use the `measure_tape` template:
 
 ```gn
 measure_tape("measure_tape_for_targettype") {
+  target_binding = "hlcpp"
   target_type = "fuchsia.your.library/TargetType"
   fidls = [ ":fuchsia.your.library" ]
 }
@@ -27,6 +28,9 @@ measure_tape("measure_tape_for_targettype") {
 
 _This template must be imported with
 `import("//tools/fidl/measure-tape/measure-tape.gni")`._
+
+ * `target_binding` key indicates what bindings to generate.
+   Valid values are currently "hlcpp" and "rust".
 
  * `target_type` key indicates the FIDL target type for which to generate a
    measure tape. It must be provided in its fully qualified form, e.g.
