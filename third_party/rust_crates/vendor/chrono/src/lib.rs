@@ -59,14 +59,14 @@
 //! Chrono currently uses
 //! the [`time::Duration`](https://docs.rs/time/0.1.40/time/struct.Duration.html) type
 //! from the `time` crate to represent the magnitude of a time span.
-//! Since this has the same name to the newer, standard type for duration,
+//! Since this has the same name as the newer, standard type for duration,
 //! the reference will refer this type as `OldDuration`.
 //! Note that this is an "accurate" duration represented as seconds and
 //! nanoseconds and does not represent "nominal" components such as days or
 //! months.
 //!
 //! Chrono does not yet natively support
-//! the standard [`Duration`](https://docs.rs/time/0.1.40/time/struct.Duration.html) type,
+//! the standard [`Duration`](https://doc.rust-lang.org/std/time/struct.Duration.html) type,
 //! but it will be supported in the future.
 //! Meanwhile you can convert between two types with
 //! [`Duration::from_std`](https://docs.rs/time/0.1.40/time/struct.Duration.html#method.from_std)
@@ -158,22 +158,22 @@
 //! The following illustrates most supported operations to the date and time:
 //!
 //! ```rust
-//! # extern crate chrono; extern crate time; fn main() {
+//! # extern crate chrono;
+//! extern crate time;
+//!
+//! # fn main() {
 //! use chrono::prelude::*;
 //! use time::Duration;
 //!
-//! # /* we intentionally fake the datetime...
 //! // assume this returned `2014-11-28T21:45:59.324310806+09:00`:
-//! let dt = Local::now();
-//! # */ // up to here. we now define a fixed datetime for the illustrative purpose.
-//! # let dt = FixedOffset::east(9*3600).ymd(2014, 11, 28).and_hms_nano(21, 45, 59, 324310806);
+//! let dt = FixedOffset::east(9*3600).ymd(2014, 11, 28).and_hms_nano(21, 45, 59, 324310806);
 //!
 //! // property accessors
 //! assert_eq!((dt.year(), dt.month(), dt.day()), (2014, 11, 28));
 //! assert_eq!((dt.month0(), dt.day0()), (10, 27)); // for unfortunate souls
 //! assert_eq!((dt.hour(), dt.minute(), dt.second()), (21, 45, 59));
 //! assert_eq!(dt.weekday(), Weekday::Fri);
-//! assert_eq!(dt.weekday().number_from_monday(), 5); // Mon=1, ..., Sat=7
+//! assert_eq!(dt.weekday().number_from_monday(), 5); // Mon=1, ..., Sun=7
 //! assert_eq!(dt.ordinal(), 332); // the day of year
 //! assert_eq!(dt.num_days_from_ce(), 735565); // the number of days from and including Jan 1, 1
 //!
@@ -302,10 +302,8 @@
 //! to get the number of additional number of nanoseconds.
 //!
 //! ```rust
-//! # use chrono::DateTime;
-//! # use chrono::Utc;
 //! // We need the trait in scope to use Utc::timestamp().
-//! use chrono::TimeZone;
+//! use chrono::{DateTime, TimeZone, Utc};
 //!
 //! // Construct a datetime from epoch:
 //! let dt = Utc.timestamp(1_500_000_000, 0);
@@ -385,9 +383,12 @@
 
 #![doc(html_root_url = "https://docs.rs/chrono/latest/")]
 
-#![cfg_attr(bench, feature(test))] // lib stability features as per RFC #507
+#![cfg_attr(feature = "bench", feature(test))] // lib stability features as per RFC #507
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
+#![deny(dead_code)]
+
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 
 // The explicit 'static lifetimes are still needed for rustc 1.13-16
 // backward compatibility, and this appeases clippy. If minimum rustc
@@ -405,6 +406,13 @@
     trivially_copy_pass_by_ref,
 ))]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(any(feature = "std", test))]
+extern crate std as core;
+#[cfg(all(feature = "std", not(feature="alloc")))]
+extern crate std as alloc;
+
 #[cfg(feature="clock")]
 extern crate time as oldtime;
 extern crate num_integer;
@@ -413,6 +421,18 @@ extern crate num_traits;
 extern crate rustc_serialize;
 #[cfg(feature = "serde")]
 extern crate serde as serdelib;
+#[cfg(test)]
+#[macro_use]
+extern crate doc_comment;
+#[cfg(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind"))]
+extern crate wasm_bindgen;
+#[cfg(all(target_arch = "wasm32", not(target_os = "wasi"), feature = "wasmbind"))]
+extern crate js_sys;
+#[cfg(feature = "bench")]
+extern crate test;
+
+#[cfg(test)]
+doctest!("../README.md");
 
 // this reexport is to aid the transition and should not be in the prelude!
 pub use oldtime::Duration;
@@ -451,7 +471,7 @@ mod div;
 mod oldtime;
 pub mod offset;
 pub mod naive {
-    //! Date and time types which do not concern about the timezones.
+    //! Date and time types unconcerned with timezones.
     //!
     //! They are primarily building blocks for other types
     //! (e.g. [`TimeZone`](../offset/trait.TimeZone.html)),
@@ -470,6 +490,10 @@ pub mod naive {
     #[cfg(feature = "rustc-serialize")]
     #[allow(deprecated)]
     pub use self::datetime::rustc_serialize::TsSeconds;
+
+    #[cfg(feature = "__internal_bench")]
+    #[doc(hidden)]
+    pub use self::internals::YearFlags as __BenchYearFlags;
 
 
     /// Serialization/Deserialization of naive types in alternate formats
@@ -490,6 +514,10 @@ mod datetime;
 pub mod format;
 mod round;
 
+#[cfg(feature = "__internal_bench")]
+#[doc(hidden)]
+pub use naive::__BenchYearFlags;
+
 /// Serialization/Deserialization in alternate formats
 ///
 /// The various modules in here are intended to be used with serde's [`with`
@@ -501,6 +529,41 @@ mod round;
 #[cfg(feature = "serde")]
 pub mod serde {
     pub use super::datetime::serde::*;
+}
+
+// Until rust 1.18 there  is no "pub(crate)" so to share this we need it in the root
+
+#[cfg(feature = "serde")]
+enum SerdeError<V: fmt::Display, D: fmt::Display> {
+    NonExistent { timestamp: V },
+    Ambiguous { timestamp: V, min: D, max: D },
+}
+
+/// Construct a [`SerdeError::NonExistent`]
+#[cfg(feature = "serde")]
+fn ne_timestamp<T: fmt::Display>(ts: T) -> SerdeError<T, u8> {
+    SerdeError::NonExistent::<T, u8> { timestamp: ts }
+}
+
+#[cfg(feature = "serde")]
+impl<V: fmt::Display, D: fmt::Display> fmt::Debug for SerdeError<V, D> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ChronoSerdeError({})", self)
+    }
+}
+
+// impl<V: fmt::Display, D: fmt::Debug> core::error::Error for SerdeError<V, D> {}
+#[cfg(feature = "serde")]
+impl<V: fmt::Display, D: fmt::Display> fmt::Display for SerdeError<V, D> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &SerdeError::NonExistent { ref timestamp } => write!(
+                f, "value is not a legal timestamp: {}", timestamp),
+            &SerdeError::Ambiguous { ref timestamp, ref min, ref max } => write!(
+                f, "value is an ambiguous timestamp: {}, could be either of {}, {}",
+                timestamp, min, max),
+        }
+    }
 }
 
 /// The day of week.
@@ -637,6 +700,20 @@ impl Weekday {
     }
 }
 
+impl fmt::Display for Weekday {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match *self {
+            Weekday::Mon => "Mon",
+            Weekday::Tue => "Tue",
+            Weekday::Wed => "Wed",
+            Weekday::Thu => "Thu",
+            Weekday::Fri => "Fri",
+            Weekday::Sat => "Sat",
+            Weekday::Sun => "Sun",
+        })
+    }
+}
+
 /// Any weekday can be represented as an integer from 0 to 6, which equals to
 /// [`Weekday::num_days_from_monday`](#method.num_days_from_monday) in this implementation.
 /// Do not heavily depend on this though; use explicit methods whenever possible.
@@ -670,7 +747,7 @@ impl num_traits::FromPrimitive for Weekday {
     }
 }
 
-use std::fmt;
+use core::fmt;
 
 /// An error resulting from reading `Weekday` value with `FromStr`.
 #[derive(Clone, PartialEq)]
@@ -689,14 +766,14 @@ impl fmt::Debug for ParseWeekdayError {
 #[cfg(feature = "serde")]
 mod weekday_serde {
     use super::Weekday;
-    use std::fmt;
+    use core::fmt;
     use serdelib::{ser, de};
 
     impl ser::Serialize for Weekday {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where S: ser::Serializer
         {
-            serializer.serialize_str(&format!("{:?}", self))
+            serializer.collect_str(&self)
         }
     }
 
@@ -880,17 +957,22 @@ pub trait Datelike: Sized {
     /// Returns `None` when the resulting value would be invalid.
     fn with_ordinal0(&self, ordinal0: u32) -> Option<Self>;
 
-    /// Returns the number of days since January 1, Year 1 (aka Day 1) in the
-    /// proleptic Gregorian calendar.
+    /// Counts the days in the proleptic Gregorian calendar, with January 1, Year 1 (CE) as day 1.
     ///
-    /// # Example:
+    /// # Examples
     ///
-    /// ~~~
+    /// ```
     /// use chrono::{NaiveDate, Datelike};
-    /// assert_eq!(NaiveDate::from_ymd(1970, 1, 1).num_days_from_ce(), 719163);
+    ///
+    /// assert_eq!(NaiveDate::from_ymd(1970, 1, 1).num_days_from_ce(), 719_163);
+    /// assert_eq!(NaiveDate::from_ymd(2, 1, 1).num_days_from_ce(), 366);
+    /// assert_eq!(NaiveDate::from_ymd(1, 1, 1).num_days_from_ce(), 1);
     /// assert_eq!(NaiveDate::from_ymd(0, 1, 1).num_days_from_ce(), -365);
-    /// ~~~
+    /// ```
     fn num_days_from_ce(&self) -> i32 {
+        // See test_num_days_from_ce_against_alternative_impl below for a more straightforward
+        // implementation.
+
         // we know this wouldn't overflow since year is limited to 1/2^13 of i32's full range.
         let mut year = self.year() - 1;
         let mut ndays = 0;
@@ -990,5 +1072,54 @@ fn test_readme_doomsday() {
         let weekday = d30.weekday();
         let other_dates = [d4, d6, d8, d10, d12, d59, d95, d711, d117];
         assert!(other_dates.iter().all(|d| d.weekday() == weekday));
+    }
+}
+
+/// Tests `Datelike::num_days_from_ce` against an alternative implementation.
+///
+/// The alternative implementation is not as short as the current one but it is simpler to
+/// understand, with less unexplained magic constants.
+#[test]
+fn test_num_days_from_ce_against_alternative_impl() {
+    /// Returns the number of multiples of `div` in the range `start..end`.
+    ///
+    /// If the range `start..end` is back-to-front, i.e. `start` is greater than `end`, the
+    /// behaviour is defined by the following equation:
+    /// `in_between(start, end, div) == - in_between(end, start, div)`.
+    ///
+    /// When `div` is 1, this is equivalent to `end - start`, i.e. the length of `start..end`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `div` is not positive.
+    fn in_between(start: i32, end: i32, div: i32) -> i32 {
+        assert!(div > 0, "in_between: nonpositive div = {}", div);
+        let start = (start.div_euclid(div), start.rem_euclid(div));
+        let   end = (  end.div_euclid(div),   end.rem_euclid(div));
+        // The lowest multiple of `div` greater than or equal to `start`, divided.
+        let start = start.0 + (start.1 != 0) as i32;
+        // The lowest multiple of `div` greater than or equal to   `end`, divided.
+        let   end =   end.0 + (  end.1 != 0) as i32;
+        end - start
+    }
+
+    /// Alternative implementation to `Datelike::num_days_from_ce`
+    fn num_days_from_ce<Date: Datelike>(date: &Date) -> i32 {
+        let year = date.year();
+        let diff = move |div| in_between(1, year, div);
+        // 365 days a year, one more in leap years. In the gregorian calendar, leap years are all
+        // the multiples of 4 except multiples of 100 but including multiples of 400.
+        date.ordinal() as i32 + 365 * diff(1) + diff(4) - diff(100) + diff(400)
+    }
+
+    use num_iter::range_inclusive;
+
+    for year in range_inclusive(naive::MIN_DATE.year(), naive::MAX_DATE.year()) {
+        let jan1_year = NaiveDate::from_ymd(year, 1, 1);
+        assert_eq!(jan1_year.num_days_from_ce(), num_days_from_ce(&jan1_year),
+            "on {:?}", jan1_year);
+        let mid_year = jan1_year + Duration::days(133);
+        assert_eq!(mid_year.num_days_from_ce(), num_days_from_ce(&mid_year),
+            "on {:?}", mid_year);
     }
 }

@@ -3,8 +3,10 @@
 
 //! ISO 8601 calendar date without timezone.
 
-use std::{str, fmt};
-use std::ops::{Add, Sub, AddAssign, SubAssign};
+#[cfg(any(feature = "alloc", feature = "std", test))]
+use core::borrow::Borrow;
+use core::{str, fmt};
+use core::ops::{Add, Sub, AddAssign, SubAssign};
 use num_traits::ToPrimitive;
 use oldtime::Duration as OldDuration;
 
@@ -12,7 +14,9 @@ use {Weekday, Datelike};
 use div::div_mod_floor;
 use naive::{NaiveTime, NaiveDateTime, IsoWeek};
 use format::{Item, Numeric, Pad};
-use format::{parse, Parsed, ParseError, ParseResult, DelayedFormat, StrftimeItems};
+use format::{parse, Parsed, ParseError, ParseResult, StrftimeItems};
+#[cfg(any(feature = "alloc", feature = "std", test))]
+use format::DelayedFormat;
 
 use super::isoweek;
 use super::internals::{self, DateImpl, Of, Mdf, YearFlags};
@@ -90,7 +94,7 @@ const MAX_BITS: usize = 44;
 ///
 /// The ISO 8601 **ordinal date** is a pair of year number and day of the year ("ordinal").
 /// The ordinal number ranges from 1 to 365 or 366 depending on the year.
-/// The year number is same to that of the [calendar date](#calendar-date).
+/// The year number is the same as that of the [calendar date](#calendar-date).
 ///
 /// This is currently the internal format of Chrono's date types.
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Copy, Clone)]
@@ -330,10 +334,10 @@ impl NaiveDate {
         }
     }
 
-    /// Makes a new `NaiveDate` from the number of days since January 1, 1 (Day 1)
-    /// in the proleptic Gregorian calendar.
+    /// Makes a new `NaiveDate` from a day's number in the proleptic Gregorian calendar, with
+    /// January 1, 1 being day 1.
     ///
-    /// Panics on the out-of-range date.
+    /// Panics if the date is out of range.
     ///
     /// # Example
     ///
@@ -378,10 +382,10 @@ impl NaiveDate {
         NaiveDate::from_num_days_from_ce_opt(days).expect("out-of-range date")
     }
 
-    /// Makes a new `NaiveDate` from the number of days since January 1, 1 (Day 1)
-    /// in the proleptic Gregorian calendar.
+    /// Makes a new `NaiveDate` from a day's number in the proleptic Gregorian calendar, with
+    /// January 1, 1 being day 1.
     ///
-    /// Returns `None` on the out-of-range date.
+    /// Returns `None` if the date is out of range.
     ///
     /// # Example
     ///
@@ -405,6 +409,55 @@ impl NaiveDate {
         let flags = YearFlags::from_year_mod_400(year_mod_400 as i32);
         NaiveDate::from_of(year_div_400 * 400 + year_mod_400 as i32,
                            Of::new(ordinal, flags))
+    }
+
+    /// Makes a new `NaiveDate` by counting the number of occurrences of a particular day-of-week
+    /// since the beginning of the given month.  For instance, if you want the 2nd Friday of March
+    /// 2017, you would use `NaiveDate::from_weekday_of_month(2017, 3, Weekday::Fri, 2)`.
+    ///
+    /// # Panics
+    ///
+    /// The resulting `NaiveDate` is guaranteed to be in `month`.  If `n` is larger than the number
+    /// of `weekday` in `month` (eg. the 6th Friday of March 2017) then this function will panic.
+    ///
+    /// `n` is 1-indexed.  Passing `n=0` will cause a panic.
+    ///
+    /// # Example
+    ///
+    /// ~~~~
+    /// use chrono::{NaiveDate, Weekday};
+    ///
+    /// let from_weekday_of_month = NaiveDate::from_weekday_of_month;
+    /// let from_ymd = NaiveDate::from_ymd;
+    ///
+    /// assert_eq!(from_weekday_of_month(2018, 8, Weekday::Wed, 1), from_ymd(2018, 8, 1));
+    /// assert_eq!(from_weekday_of_month(2018, 8, Weekday::Fri, 1), from_ymd(2018, 8, 3));
+    /// assert_eq!(from_weekday_of_month(2018, 8, Weekday::Tue, 2), from_ymd(2018, 8, 14));
+    /// assert_eq!(from_weekday_of_month(2018, 8, Weekday::Fri, 4), from_ymd(2018, 8, 24));
+    /// assert_eq!(from_weekday_of_month(2018, 8, Weekday::Fri, 5), from_ymd(2018, 8, 31));
+    /// ~~~~
+    pub fn from_weekday_of_month(year: i32, month: u32, weekday: Weekday, n: u8) -> NaiveDate {
+        NaiveDate::from_weekday_of_month_opt(year, month, weekday, n).expect("out-of-range date")
+    }
+
+    /// Makes a new `NaiveDate` by counting the number of occurrences of a particular day-of-week
+    /// since the beginning of the given month.  For instance, if you want the 2nd Friday of March
+    /// 2017, you would use `NaiveDate::from_weekday_of_month(2017, 3, Weekday::Fri, 2)`.  `n` is 1-indexed.
+    ///
+    /// ~~~~
+    /// use chrono::{NaiveDate, Weekday};
+    /// assert_eq!(NaiveDate::from_weekday_of_month_opt(2017, 3, Weekday::Fri, 2),
+    ///            NaiveDate::from_ymd_opt(2017, 3, 10))
+    /// ~~~~
+    ///
+    /// Returns `None` if `n` out-of-range; ie. if `n` is larger than the number of `weekday` in
+    /// `month` (eg. the 6th Friday of March 2017), or if `n == 0`.
+    pub fn from_weekday_of_month_opt(year: i32, month: u32, weekday: Weekday, n: u8) -> Option<NaiveDate> {
+        if n == 0 { return None; }
+        let first = NaiveDate::from_ymd(year, month, 1).weekday();
+        let first_to_dow = (7 + weekday.number_from_monday() - first.number_from_monday()) % 7;
+        let day = (u32::from(n) - 1) * 7 + first_to_dow + 1;
+        NaiveDate::from_ymd_opt(year, month, day)
     }
 
     /// Parses a string with the specified format string and returns a new `NaiveDate`.
@@ -451,7 +504,7 @@ impl NaiveDate {
     /// ~~~~
     pub fn parse_from_str(s: &str, fmt: &str) -> ParseResult<NaiveDate> {
         let mut parsed = Parsed::new();
-        try!(parse(&mut parsed, s, StrftimeItems::new(fmt)));
+        parse(&mut parsed, s, StrftimeItems::new(fmt))?;
         parsed.to_naive_date()
     }
 
@@ -890,7 +943,7 @@ impl NaiveDate {
     }
 
     /// Formats the date with the specified formatting items.
-    /// Otherwise it is same to the ordinary `format` method.
+    /// Otherwise it is the same as the ordinary `format` method.
     ///
     /// The `Iterator` of items should be `Clone`able,
     /// since the resulting `DelayedFormat` value may be formatted multiple times.
@@ -916,9 +969,10 @@ impl NaiveDate {
     /// # let d = NaiveDate::from_ymd(2015, 9, 5);
     /// assert_eq!(format!("{}", d.format_with_items(fmt)), "2015-09-05");
     /// ~~~~
+    #[cfg(any(feature = "alloc", feature = "std", test))]
     #[inline]
-    pub fn format_with_items<'a, I>(&self, items: I) -> DelayedFormat<I>
-            where I: Iterator<Item=Item<'a>> + Clone {
+    pub fn format_with_items<'a, I, B>(&self, items: I) -> DelayedFormat<I>
+            where I: Iterator<Item=B> + Clone, B: Borrow<Item<'a>> {
         DelayedFormat::new(Some(*self), None, items)
     }
 
@@ -954,6 +1008,7 @@ impl NaiveDate {
     /// assert_eq!(format!("{}", d.format("%Y-%m-%d")), "2015-09-05");
     /// assert_eq!(format!("{}", d.format("%A, %-d %B, %C%y")), "Saturday, 5 September, 2015");
     /// ~~~~
+    #[cfg(any(feature = "alloc", feature = "std", test))]
     #[inline]
     pub fn format<'a>(&self, fmt: &'a str) -> DelayedFormat<StrftimeItems<'a>> {
         self.format_with_items(StrftimeItems::new(fmt))
@@ -1345,7 +1400,7 @@ impl AddAssign<OldDuration> for NaiveDate {
 
 /// A subtraction of `Duration` from `NaiveDate` discards the fractional days,
 /// rounding to the closest integral number of days towards `Duration::zero()`.
-/// It is same to the addition with a negated `Duration`.
+/// It is the same as the addition with a negated `Duration`.
 ///
 /// Panics on underflow or overflow.
 /// Use [`NaiveDate::checked_sub_signed`](#method.checked_sub_signed) to detect that.
@@ -1387,7 +1442,7 @@ impl SubAssign<OldDuration> for NaiveDate {
 
 /// Subtracts another `NaiveDate` from the current date.
 /// Returns a `Duration` of integral numbers.
-/// 
+///
 /// This does not overflow or underflow at all,
 /// as all possible output fits in the range of `Duration`.
 ///
@@ -1421,7 +1476,7 @@ impl Sub<NaiveDate> for NaiveDate {
     }
 }
 
-/// The `Debug` output of the naive date `d` is same to
+/// The `Debug` output of the naive date `d` is the same as
 /// [`d.format("%Y-%m-%d")`](../format/strftime/index.html).
 ///
 /// The string printed can be readily parsed via the `parse` method on `str`.
@@ -1456,7 +1511,7 @@ impl fmt::Debug for NaiveDate {
     }
 }
 
-/// The `Display` output of the naive date `d` is same to
+/// The `Display` output of the naive date `d` is the same as
 /// [`d.format("%Y-%m-%d")`](../format/strftime/index.html).
 ///
 /// The string printed can be readily parsed via the `parse` method on `str`.
@@ -1503,16 +1558,16 @@ impl str::FromStr for NaiveDate {
 
     fn from_str(s: &str) -> ParseResult<NaiveDate> {
         const ITEMS: &'static [Item<'static>] = &[
-            Item::Space(""), Item::Numeric(Numeric::Year, Pad::Zero),
+                             Item::Numeric(Numeric::Year, Pad::Zero),
             Item::Space(""), Item::Literal("-"),
-            Item::Space(""), Item::Numeric(Numeric::Month, Pad::Zero),
+                             Item::Numeric(Numeric::Month, Pad::Zero),
             Item::Space(""), Item::Literal("-"),
-            Item::Space(""), Item::Numeric(Numeric::Day, Pad::Zero),
+                             Item::Numeric(Numeric::Day, Pad::Zero),
             Item::Space(""),
         ];
 
         let mut parsed = Parsed::new();
-        try!(parse(&mut parsed, s, ITEMS.iter().cloned()));
+        parse(&mut parsed, s, ITEMS.iter())?;
         parsed.to_naive_date()
     }
 }
@@ -1600,7 +1655,7 @@ mod rustc_serialize {
 
 #[cfg(feature = "serde")]
 mod serde {
-    use std::fmt;
+    use core::fmt;
     use super::NaiveDate;
     use serdelib::{ser, de};
 
@@ -1629,15 +1684,23 @@ mod serde {
     impl<'de> de::Visitor<'de> for NaiveDateVisitor {
         type Value = NaiveDate;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result 
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result
         {
             write!(formatter, "a formatted date string")
         }
 
+        #[cfg(any(feature = "std", test))]
         fn visit_str<E>(self, value: &str) -> Result<NaiveDate, E>
             where E: de::Error
         {
-            value.parse().map_err(|err| E::custom(format!("{}", err)))
+            value.parse().map_err(E::custom)
+        }
+
+        #[cfg(not(any(feature = "std", test)))]
+        fn visit_str<E>(self, value: &str) -> Result<NaiveDate, E>
+            where E: de::Error
+        {
+            value.parse().map_err(E::custom)
         }
     }
 
@@ -1821,6 +1884,24 @@ mod tests {
         assert_eq!(from_ndays_from_ce(MIN_DATE.num_days_from_ce() - 1), None);
         assert_eq!(from_ndays_from_ce(MAX_DATE.num_days_from_ce()), Some(MAX_DATE));
         assert_eq!(from_ndays_from_ce(MAX_DATE.num_days_from_ce() + 1), None);
+    }
+
+    #[test]
+    fn test_date_from_weekday_of_month_opt() {
+        let ymwd = |y,m,w,n| NaiveDate::from_weekday_of_month_opt(y,m,w,n);
+        assert_eq!(ymwd(2018, 8, Weekday::Tue, 0), None);
+        assert_eq!(ymwd(2018, 8, Weekday::Wed, 1), Some(NaiveDate::from_ymd(2018, 8, 1)));
+        assert_eq!(ymwd(2018, 8, Weekday::Thu, 1), Some(NaiveDate::from_ymd(2018, 8, 2)));
+        assert_eq!(ymwd(2018, 8, Weekday::Sun, 1), Some(NaiveDate::from_ymd(2018, 8, 5)));
+        assert_eq!(ymwd(2018, 8, Weekday::Mon, 1), Some(NaiveDate::from_ymd(2018, 8, 6)));
+        assert_eq!(ymwd(2018, 8, Weekday::Tue, 1), Some(NaiveDate::from_ymd(2018, 8, 7)));
+        assert_eq!(ymwd(2018, 8, Weekday::Wed, 2), Some(NaiveDate::from_ymd(2018, 8, 8)));
+        assert_eq!(ymwd(2018, 8, Weekday::Sun, 2), Some(NaiveDate::from_ymd(2018, 8, 12)));
+        assert_eq!(ymwd(2018, 8, Weekday::Thu, 3), Some(NaiveDate::from_ymd(2018, 8, 16)));
+        assert_eq!(ymwd(2018, 8, Weekday::Thu, 4), Some(NaiveDate::from_ymd(2018, 8, 23)));
+        assert_eq!(ymwd(2018, 8, Weekday::Thu, 5), Some(NaiveDate::from_ymd(2018, 8, 30)));
+        assert_eq!(ymwd(2018, 8, Weekday::Fri, 5), Some(NaiveDate::from_ymd(2018, 8, 31)));
+        assert_eq!(ymwd(2018, 8, Weekday::Sat, 5), None);
     }
 
     #[test]

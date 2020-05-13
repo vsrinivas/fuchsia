@@ -14,8 +14,9 @@
 //! so that the user-facing `NaiveDate` can validate the input as late as possible.
 
 #![allow(dead_code)] // some internal methods have been left for consistency
+#![cfg_attr(feature = "__internal_bench", allow(missing_docs))]
 
-use std::{i32, fmt};
+use core::{i32, fmt};
 use num_traits::FromPrimitive;
 use Weekday;
 use div::{div_rem, mod_floor};
@@ -470,7 +471,6 @@ impl fmt::Debug for Mdf {
 #[cfg(test)]
 mod tests {
     #[cfg(test)] extern crate num_iter;
-    #[cfg(bench)] extern crate test;
 
     use Weekday;
     use super::{Of, Mdf};
@@ -515,16 +515,6 @@ mod tests {
         assert_eq!(ED.nisoweeks(), 53);
         assert_eq!(FE.nisoweeks(), 52);
         assert_eq!(GF.nisoweeks(), 52);
-    }
-
-    #[cfg(bench)]
-    #[bench]
-    fn bench_year_flags_from_year(bh: &mut test::Bencher) {
-        bh.iter(|| {
-            for year in -999i32..1000 {
-                YearFlags::from_year(year);
-            }
-        });
     }
 
     #[test]

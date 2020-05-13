@@ -34,7 +34,7 @@ bitflags = "1"
 bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
 cargo_metadata = "0.9.1"
-chrono = "0.4.2"
+chrono = "0.4.11"
 clap = "2.33"
 crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }

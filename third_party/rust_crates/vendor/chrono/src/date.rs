@@ -3,16 +3,18 @@
 
 //! ISO 8601 calendar date with time zone.
 
-use std::{fmt, hash};
-use std::cmp::Ordering;
-use std::ops::{Add, Sub};
+use core::borrow::Borrow;
+use core::{fmt, hash};
+use core::cmp::Ordering;
+use core::ops::{Add, Sub};
 use oldtime::Duration as OldDuration;
 
 use {Weekday, Datelike};
 use offset::{TimeZone, Utc};
 use naive::{self, NaiveDate, NaiveTime, IsoWeek};
 use DateTime;
-use format::{Item, DelayedFormat, StrftimeItems};
+#[cfg(any(feature = "alloc", feature = "std", test))]
+use format::{DelayedFormat, Item, StrftimeItems};
 
 /// ISO 8601 calendar date with time zone.
 ///
@@ -53,7 +55,7 @@ impl<Tz: TimeZone> Date<Tz> {
     /// Makes a new `Date` with given *UTC* date and offset.
     /// The local date should be constructed via the `TimeZone` trait.
     //
-    // note: this constructor is purposedly not named to `new` to discourage the direct usage.
+    // note: this constructor is purposely not named to `new` to discourage the direct usage.
     #[inline]
     pub fn from_utc(date: NaiveDate, offset: Tz::Offset) -> Date<Tz> {
         Date { date: date, offset: offset }
@@ -238,7 +240,7 @@ impl<Tz: TimeZone> Date<Tz> {
 
     /// Returns a view to the naive local date.
     ///
-    /// This is technically same to [`naive_utc`](#method.naive_utc)
+    /// This is technically the same as [`naive_utc`](#method.naive_utc)
     /// because the offset is restricted to never exceed one day,
     /// but provided for the consistency.
     #[inline]
@@ -255,15 +257,17 @@ fn map_local<Tz: TimeZone, F>(d: &Date<Tz>, mut f: F) -> Option<Date<Tz>>
 
 impl<Tz: TimeZone> Date<Tz> where Tz::Offset: fmt::Display {
     /// Formats the date with the specified formatting items.
+    #[cfg(any(feature = "alloc", feature = "std", test))]
     #[inline]
-    pub fn format_with_items<'a, I>(&self, items: I) -> DelayedFormat<I>
-            where I: Iterator<Item=Item<'a>> + Clone {
+    pub fn format_with_items<'a, I, B>(&self, items: I) -> DelayedFormat<I>
+            where I: Iterator<Item=B> + Clone, B: Borrow<Item<'a>> {
         DelayedFormat::new_with_offset(Some(self.naive_local()), None, &self.offset, items)
     }
 
     /// Formats the date with the specified format string.
     /// See the [`format::strftime` module](./format/strftime/index.html)
     /// on the supported escape sequences.
+    #[cfg(any(feature = "alloc", feature = "std", test))]
     #[inline]
     pub fn format<'a>(&self, fmt: &'a str) -> DelayedFormat<StrftimeItems<'a>> {
         self.format_with_items(StrftimeItems::new(fmt))
