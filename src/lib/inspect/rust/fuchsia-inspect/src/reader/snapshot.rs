@@ -197,7 +197,8 @@ impl<'h> Iterator for BlockIterator<'h> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::format::block::WritableBlockContainer, mapped_vmo::Mapping, std::sync::Arc,
+        super::*, crate::format::container::WritableBlockContainer, mapped_vmo::Mapping,
+        std::sync::Arc,
     };
 
     #[test]

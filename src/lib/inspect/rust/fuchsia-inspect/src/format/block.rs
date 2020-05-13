@@ -8,19 +8,17 @@ use {
             bitfields::{BlockHeader, Payload},
             block_type::BlockType,
             constants,
+            container::{BlockContainerEq, ReadableBlockContainer, WritableBlockContainer},
         },
         utils,
     },
     anyhow::{format_err, Error},
     byteorder::{ByteOrder, LittleEndian},
-    mapped_vmo::Mapping,
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
     std::{
         cmp::min,
-        ptr,
         sync::atomic::{fence, Ordering},
-        sync::Arc,
     },
 };
 
@@ -37,54 +35,6 @@ pub enum PropertyFormat {
 pub struct Block<T> {
     index: u32,
     container: T,
-}
-
-pub trait ReadableBlockContainer {
-    fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize;
-}
-
-pub trait WritableBlockContainer {
-    fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize;
-}
-
-pub trait BlockContainerEq<RHS = Self> {
-    fn ptr_eq(&self, other: &RHS) -> bool;
-}
-
-impl ReadableBlockContainer for Arc<Mapping> {
-    fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize {
-        self.read_at(offset, bytes) as usize
-    }
-}
-
-impl ReadableBlockContainer for &[u8] {
-    fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize {
-        if offset >= self.len() {
-            return 0;
-        }
-        let upper_bound = min(self.len(), bytes.len() + offset);
-        let bytes_read = upper_bound - offset;
-        bytes[..bytes_read].clone_from_slice(&self[offset..upper_bound]);
-        bytes_read
-    }
-}
-
-impl BlockContainerEq for Arc<Mapping> {
-    fn ptr_eq(&self, other: &Arc<Mapping>) -> bool {
-        Arc::ptr_eq(&self, &other)
-    }
-}
-
-impl BlockContainerEq for &[u8] {
-    fn ptr_eq(&self, other: &&[u8]) -> bool {
-        ptr::eq(*self, *other)
-    }
-}
-
-impl WritableBlockContainer for Arc<Mapping> {
-    fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize {
-        self.write_at(offset, bytes) as usize
-    }
 }
 
 impl<T: ReadableBlockContainer> Block<T> {
@@ -867,19 +817,6 @@ mod tests {
     use super::*;
     use std::collections::BTreeSet;
     use std::iter::FromIterator;
-    use std::ptr::copy_nonoverlapping;
-
-    impl WritableBlockContainer for &[u8] {
-        fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize {
-            if offset >= self.len() {
-                return 0;
-            }
-            let bytes_written = min(self.len() - offset, bytes.len());
-            let base = (self.as_ptr() as usize).checked_add(offset).unwrap() as *mut u8;
-            unsafe { copy_nonoverlapping(bytes.as_ptr(), base, bytes_written) };
-            bytes_written
-        }
-    }
 
     fn create_with_type(container: &[u8], index: u32, block_type: BlockType) -> Block<&[u8]> {
         let block = Block::new(container, index);
