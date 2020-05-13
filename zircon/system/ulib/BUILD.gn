@@ -26,15 +26,15 @@ group("ulib") {
 #------------------
 #------------------
 #------------------
-    "$zx/system/dev/lib/mmio-ptr",
-    "$zx/system/dev/lib/mmio-ptr:mmio-ptr-fake",
+    "mmio-ptr",
+    "mmio-ptr:mmio-ptr-fake",
 #------------------
 #------------------
 #------------------
-    "$zx/system/dev/lib/uart",
+    "uart",
 #------------------
 #------------------
-    "$zx/system/dev/lib/uart:uart-mock",
+    "uart:uart-mock",
 #------------------
 #------------------
     "$zx/third_party/ulib",
@@ -508,10 +508,10 @@ group("ulib-host") {
     "$zx/kernel/lib/arch/$zircon_cpu",
 #------------------
 #------------------
-    "$zx/system/dev/lib/uart",
+    "uart",
 #------------------
 #------------------
-    "$zx/system/dev/lib/uart:uart-mock",
+    "uart:uart-mock",
 #------------------
 #------------------
     "$zx/kernel/lib/heap/cmpctmalloc",

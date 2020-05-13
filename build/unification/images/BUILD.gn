@@ -814,7 +814,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/vdso-variant:vdso-variant-helper-manifest",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
-    "//zircon/system/dev/lib/uart/test:uart-unittests-manifest",
+    "//zircon/system/ulib/uart/test:uart-unittests-manifest",
   ]
 
   if (target_cpu == "arm64") {
@@ -1066,7 +1066,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
     "//src/graphics/display/bin/display-test:display-test-manifest",
-    "//zircon/system/dev/lib/uart/test:uart-unittests-manifest",
+    "//zircon/system/ulib/uart/test:uart-unittests-manifest",
   ]
 
   if (target_cpu == "arm64") {

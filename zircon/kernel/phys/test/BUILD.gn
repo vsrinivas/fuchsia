@@ -17,7 +17,7 @@ source_set("qemu-test-main") {
   deps = [
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/libc",
-    "$zx/system/dev/lib/uart",
+    "$zx/system/ulib/uart",
   ]
   public_deps = [ ":test-main" ]
 }
