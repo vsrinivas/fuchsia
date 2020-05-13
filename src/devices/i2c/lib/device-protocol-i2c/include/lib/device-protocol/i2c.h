@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
-#define ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
+#ifndef SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
+#define SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
 
 #include <lib/sync/completion.h>
 #include <string.h>
@@ -103,4 +103,4 @@ static inline zx_status_t i2c_read_sync(const i2c_protocol_t* i2c, void* read_bu
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_
+#endif  // SRC_DEVICES_I2C_LIB_DEVICE_PROTOCOL_I2C_INCLUDE_LIB_DEVICE_PROTOCOL_I2C_H_

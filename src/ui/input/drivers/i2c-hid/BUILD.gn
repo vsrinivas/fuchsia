@@ -17,12 +17,12 @@ driver_module("i2c-hid") {
   deps = [
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
   ]
@@ -37,6 +37,7 @@ test("i2c-hid-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
@@ -45,7 +46,6 @@ test("i2c-hid-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
   ]

@@ -19,6 +19,7 @@ driver_module("lite-on") {
   deps = [
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -26,7 +27,6 @@ driver_module("lite-on") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
@@ -52,6 +52,7 @@ test("ltr-578als-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/mmio",
@@ -63,7 +64,6 @@ test("ltr-578als-test") {
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",

@@ -15,10 +15,10 @@ driver_module("nxp") {
   deps = [
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",

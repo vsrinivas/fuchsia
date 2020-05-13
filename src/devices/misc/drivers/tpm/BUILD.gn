@@ -22,6 +22,7 @@ driver_module("tpm") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/explicit-memory",
     "//zircon/public/lib/fbl",
@@ -29,7 +30,6 @@ driver_module("tpm") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/driver-unit-test",

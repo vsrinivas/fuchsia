@@ -19,6 +19,7 @@ driver_module("sg-micro") {
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -26,7 +27,6 @@ driver_module("sg-micro") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
@@ -47,6 +47,7 @@ test("sgm37603a-test") {
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/driver",
@@ -56,7 +57,6 @@ test("sgm37603a-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

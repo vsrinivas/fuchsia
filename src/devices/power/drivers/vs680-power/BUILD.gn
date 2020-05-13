@@ -17,13 +17,13 @@ driver_module("vs680-power") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.powerimpl",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
@@ -42,6 +42,7 @@ test("vs680-power-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.powerimpl",
+    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
@@ -51,7 +52,6 @@ test("vs680-power-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/device-protocol-i2c",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
