@@ -258,7 +258,6 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
         {"osVersion", Not(IsEmpty())},
         {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
-        {"debug.guid.set", "true"},
         {"channel", kDefaultChannel},
         {"should_process", "false"},
     };

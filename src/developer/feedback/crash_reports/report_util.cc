@@ -163,7 +163,6 @@ void AddCrashServerAnnotations(const std::string& program_name,
   // We set the device's global unique identifier only if the device has one.
   if (device_id.has_value()) {
     (*annotations)["guid"] = device_id.value();
-    (*annotations)["debug.guid.set"] = "true";
   } else {
     (*annotations)["debug.guid.set"] = "false";
   }
