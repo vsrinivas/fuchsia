@@ -13,7 +13,9 @@ pub use {
 };
 mod adapter_info;
 mod address;
-mod bonding_data;
+/// Types related to bonding data. This module defines helper functions for unit tests that utilize
+/// proptest.
+pub mod bonding_data;
 /// Bluetooth HCI emulator protocol types
 pub mod emulator;
 pub mod host_info;

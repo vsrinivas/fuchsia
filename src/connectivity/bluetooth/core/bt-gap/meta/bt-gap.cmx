@@ -9,7 +9,7 @@
         "services": [
             "fuchsia.device.NameProvider",
             "fuchsia.logger.LogSink",
-            "fuchsia.stash.Store"
+            "fuchsia.stash.SecureStore"
         ]
     }
 }

@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash::{
-        GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value,
+        GetIteratorMarker, SecureStoreMarker, StoreAccessorMarker, StoreAccessorProxy, Value,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -23,7 +23,6 @@ use {
     },
     serde_json,
     std::collections::HashMap,
-    std::convert::TryInto,
     std::ops::Deref,
 };
 
@@ -251,7 +250,7 @@ impl StashInner {
         for bond in bonds.iter() {
             // Persist the serialized blob.
             let serialized =
-                serde_json::to_string(&BondingDataSerializer(&bond.deref().clone().into()))?;
+                serde_json::to_string(&BondingDataSerializer::new(&bond.deref().clone()))?;
             self.proxy
                 .set_value(&bonding_data_key(bond.identifier), &mut Value::Stringval(serialized))?;
         }
@@ -339,8 +338,7 @@ impl StashInner {
             }
             for key_value in next {
                 if let Value::Stringval(json) = key_value.val {
-                    let bonding_data: BondingDataDeserializer = serde_json::from_str(&json)?;
-                    let bonding_data = BondingData::from(bonding_data.contents().try_into()?);
+                    let bonding_data = BondingDataDeserializer::from_json(&json)?;
                     let node = inspect.create_child(format!("bond {}", bonding_data.identifier));
                     let bonding_data = Inspectable::new(bonding_data, node);
                     let local_address_entries =
@@ -348,7 +346,7 @@ impl StashInner {
                     local_address_entries.insert(bonding_data.identifier.clone(), bonding_data);
                 } else {
                     fx_log_err!("stash malformed: bonding data should be a string");
-                    return Err(BtError::new("failed to initialize stash").into());
+                    return Err(format_err!("failed to initialize stash"));
                 }
             }
         }
@@ -372,8 +370,7 @@ impl StashInner {
                 let host_address = host_id_from_key(&key_value.key)?;
                 let host_address = Address::public_from_str(&host_address)?;
                 if let Value::Stringval(json) = key_value.val {
-                    let host_data: HostDataDeserializer = serde_json::from_str(&json)?;
-                    let host_data = host_data.contents();
+                    let host_data = HostDataDeserializer::from_json(&json)?;
                     host_data_map.insert(host_address, host_data.into());
                 } else {
                     fx_log_err!("stash malformed: host data should be a string");
@@ -400,7 +397,7 @@ pub async fn init_stash(
     component_id: &str,
     inspect: fuchsia_inspect::Node,
 ) -> Result<Stash, Error> {
-    let stash_svc = fuchsia_component::client::connect_to_service::<StoreMarker>()?;
+    let stash_svc = fuchsia_component::client::connect_to_service::<SecureStoreMarker>()?;
     stash_svc.identify(component_id)?;
 
     let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
@@ -436,7 +433,7 @@ mod tests {
     // All preexisting data in stash under this identity is deleted before the accessor is
     // returned.
     async fn create_stash_accessor(test_name: &str) -> Result<StoreAccessorProxy, Error> {
-        let stashserver = connect_to_service::<StoreMarker>()?;
+        let stashserver = connect_to_service::<SecureStoreMarker>()?;
 
         // Identify
         stashserver.identify(&(BONDING_DATA_PREFIX.to_owned() + test_name))?;
@@ -550,7 +547,7 @@ mod tests {
     fn bond_data_1() -> BondingData {
         BondingData {
             identifier: PeerId(1),
-            address: Address::Public([3, 0, 0, 0, 0, 0]),
+            address: Address::Random([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([1, 0, 0, 0, 0, 0]),
             name: Some("Test Device 1".to_string()),
             data: OneOrBoth::Left(default_le_data()),
@@ -559,7 +556,7 @@ mod tests {
     fn bond_data_2() -> BondingData {
         BondingData {
             identifier: PeerId(2),
-            address: Address::Public([3, 0, 0, 0, 0, 0]),
+            address: Address::Random([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([1, 0, 0, 0, 0, 0]),
             name: Some("Test Device 2".to_string()),
             data: OneOrBoth::Left(default_le_data()),
@@ -569,18 +566,37 @@ mod tests {
     fn bond_data_3() -> BondingData {
         BondingData {
             identifier: PeerId(3),
-            address: Address::Public([3, 0, 0, 0, 0, 0]),
+            address: Address::Random([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([2, 0, 0, 0, 0, 0]),
             name: None,
             data: OneOrBoth::Left(default_le_data()),
         }
     }
 
+    #[rustfmt::skip]
     fn bond_entry_1() -> Value {
         Value::Stringval(
-                "{\"identifier\":\"0000000000000001\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":\"Test Device 1\",\
-                \"le\":{\"address\":\"00:00:00:00:00:03\",\"addressType\":\"lePublic\",\"connectionParameters\":null,\"services\":[],\"ltk\":null,\"irk\":null,\"csrk\":null},\
-                \"bredr\":null}".to_string()
+            "{\
+                \"identifier\":1,\
+                \"address\":{\
+                    \"type\":\"random\",\
+                    \"value\":[3,0,0,0,0,0]\
+                },\
+                \"hostAddress\":{\
+                    \"type\":\"public\",\
+                    \"value\":[1,0,0,0,0,0]\
+                },\
+                \"name\":\"Test Device 1\",\
+                \"le\":{\
+                    \"connectionParameters\":null,\
+                    \"peerLtk\":null,\
+                    \"localLtk\":null,\
+                    \"irk\":null,\
+                    \"csrk\":null\
+                },\
+                \"bredr\":null\
+            }"
+            .to_string(),
         )
     }
 
@@ -588,19 +604,24 @@ mod tests {
         Value::Stringval(
             r#"
             {
-            "identifier": "2",
-            "localAddress": "00:00:00:00:00:01",
-            "name": "Test Device 2",
-            "le": {
-                "address": "00:00:00:00:00:03",
-                "addressType": "lePublic",
-                "connectionParameters": null,
-                "services": [],
-                "ltk": null,
-                "irk": null,
-                "csrk": null
-            },
-            "bredr": null
+                "identifier": 2,
+                "hostAddress": {
+                    "type": "public",
+                    "value": [1,0,0,0,0,0]
+                },
+                "address": {
+                    "type": "random",
+                    "value": [3,0,0,0,0,0]
+                },
+                "name": "Test Device 2",
+                "le": {
+                    "connectionParameters": null,
+                    "peerLtk": null,
+                    "localLtk": null,
+                    "irk": null,
+                    "csrk": null
+                },
+                "bredr": null
             }"#
             .to_string(),
         )
@@ -609,19 +630,24 @@ mod tests {
         Value::Stringval(
             r#"
             {
-            "identifier": "3",
-            "localAddress": "00:00:00:00:00:02",
-            "name": null,
-            "le": {
-                "address": "00:00:00:00:00:03",
-                "addressType": "lePublic",
-                "connectionParameters": null,
-                "services": [],
-                "ltk": null,
-                "irk": null,
-                "csrk": null
-            },
-            "bredr": null
+                "identifier": 3,
+                "hostAddress": {
+                    "type": "public",
+                    "value": [2,0,0,0,0,0]
+                },
+                "address": {
+                    "type": "random",
+                    "value": [3,0,0,0,0,0]
+                },
+                "name": null,
+                "le": {
+                    "connectionParameters": null,
+                    "peerLtk": null,
+                    "localLtk": null,
+                    "irk": null,
+                    "csrk": null
+                },
+                "bredr": null
             }"#
             .to_string(),
         )

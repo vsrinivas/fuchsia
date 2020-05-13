@@ -653,12 +653,143 @@ impl From<Identity> for sys::Identity {
     }
 }
 
+/// This module defines a BondingData test strategy generator for use with proptest.
+pub mod proptest_util {
+    use super::*;
+    use crate::types::address::proptest_util::{any_address, any_public_address};
+    use proptest::{option, prelude::*};
+
+    pub fn any_bonding_data() -> impl Strategy<Value = BondingData> {
+        let any_data = prop_oneof![
+            any_le_data().prop_map(OneOrBoth::Left),
+            any_bredr_data().prop_map(OneOrBoth::Right),
+            (any_le_data(), any_bredr_data()).prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
+        ];
+        (any::<u64>(), any_address(), any_address(), option::of("[a-zA-Z][a-zA-Z0-9_]*"), any_data)
+            .prop_map(|(ident, address, local_address, name, data)| {
+                let identifier = PeerId(ident);
+                BondingData { identifier, address, local_address, name, data }
+            })
+    }
+
+    // TODO(36378) Note: We don't generate data with a None role_preference, as these can't be
+    // safely roundtripped to control::BredrData. This can be removed when the control api is
+    // retired.
+    pub(crate) fn any_bredr_data() -> impl Strategy<Value = BredrData> {
+        (any_connection_role(), option::of(any_peer_key())).prop_map(
+            |(role_preference, link_key)| {
+                let role_preference = Some(role_preference);
+                BredrData { role_preference, services: vec![], link_key }
+            },
+        )
+    }
+
+    pub(crate) fn any_le_data() -> impl Strategy<Value = LeData> {
+        (
+            option::of(any_connection_params()),
+            option::of(any_ltk()),
+            option::of(any_ltk()),
+            option::of(any_peer_key()),
+            option::of(any_peer_key()),
+        )
+            .prop_map(|(connection_parameters, peer_ltk, local_ltk, irk, csrk)| LeData {
+                connection_parameters,
+                services: vec![],
+                peer_ltk,
+                local_ltk,
+                irk,
+                csrk,
+            })
+    }
+
+    // TODO(35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
+    // same. We emulate that invariant here.
+    pub(crate) fn any_le_data_for_control_test() -> impl Strategy<Value = LeData> {
+        (
+            option::of(any_connection_params()),
+            option::of(any_ltk()),
+            option::of(any_peer_key()),
+            option::of(any_peer_key()),
+        )
+            .prop_map(|(connection_parameters, ltk, irk, csrk)| LeData {
+                connection_parameters,
+                services: vec![],
+                peer_ltk: ltk,
+                local_ltk: ltk,
+                irk,
+                csrk,
+            })
+    }
+
+    pub(crate) fn any_bonding_data_for_control_test() -> impl Strategy<Value = BondingData> {
+        let any_data = prop_oneof![
+            any_le_data_for_control_test().prop_map(OneOrBoth::Left),
+            any_bredr_data().prop_map(OneOrBoth::Right),
+            (any_le_data_for_control_test(), any_bredr_data())
+                .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
+        ];
+        (
+            any::<u64>(),
+            any_public_address(),
+            any_public_address(),
+            option::of("[a-zA-Z][a-zA-Z0-9_]*"),
+            any_data,
+        )
+            .prop_map(|(ident, address, local_address, name, data)| {
+                let identifier = PeerId(ident);
+                BondingData { identifier, address, local_address, name, data }
+            })
+    }
+
+    fn any_security_properties() -> impl Strategy<Value = sys::SecurityProperties> {
+        any::<(bool, bool, u8)>().prop_map(
+            |(authenticated, secure_connections, encryption_key_size)| sys::SecurityProperties {
+                authenticated,
+                secure_connections,
+                encryption_key_size,
+            },
+        )
+    }
+
+    fn any_key() -> impl Strategy<Value = sys::Key> {
+        any::<[u8; 16]>().prop_map(|value| sys::Key { value })
+    }
+
+    fn any_peer_key() -> impl Strategy<Value = sys::PeerKey> {
+        (any_security_properties(), any_key())
+            .prop_map(|(security, data)| sys::PeerKey { security, data })
+    }
+
+    fn any_ltk() -> impl Strategy<Value = sys::Ltk> {
+        (any_peer_key(), any::<u16>(), any::<u64>()).prop_map(|(key, ediv, rand)| sys::Ltk {
+            key,
+            ediv,
+            rand,
+        })
+    }
+
+    fn any_connection_params() -> impl Strategy<Value = sys::LeConnectionParameters> {
+        (any::<u16>(), any::<u16>(), any::<u16>()).prop_map(
+            |(connection_interval, connection_latency, supervision_timeout)| {
+                sys::LeConnectionParameters {
+                    connection_interval,
+                    connection_latency,
+                    supervision_timeout,
+                }
+            },
+        )
+    }
+
+    fn any_connection_role() -> impl Strategy<Value = bt::ConnectionRole> {
+        prop_oneof![Just(bt::ConnectionRole::Leader), Just(bt::ConnectionRole::Follower)]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
-        super::compat::*, super::*, crate::types::address::tests::any_public_address,
-        fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys,
-        proptest::option, proptest::prelude::*,
+        super::compat::*, super::*, fidl_fuchsia_bluetooth_control as control,
+        fidl_fuchsia_bluetooth_sys as sys,
     };
 
     fn peer_key() -> sys::PeerKey {
@@ -1225,143 +1356,15 @@ mod tests {
     // The test cases below use proptest to exercise round-trip conversions between FIDL and the
     // library type across several permutations.
     mod roundtrip {
-        use super::*;
-
-        fn any_security_properties() -> impl Strategy<Value = sys::SecurityProperties> {
-            any::<(bool, bool, u8)>().prop_map(
-                |(authenticated, secure_connections, encryption_key_size)| {
-                    sys::SecurityProperties {
-                        authenticated,
-                        secure_connections,
-                        encryption_key_size,
-                    }
-                },
-            )
-        }
-
-        fn any_key() -> impl Strategy<Value = sys::Key> {
-            any::<[u8; 16]>().prop_map(|value| sys::Key { value })
-        }
-
-        fn any_peer_key() -> impl Strategy<Value = sys::PeerKey> {
-            (any_security_properties(), any_key())
-                .prop_map(|(security, data)| sys::PeerKey { security, data })
-        }
-
-        fn any_ltk() -> impl Strategy<Value = sys::Ltk> {
-            (any_peer_key(), any::<u16>(), any::<u64>()).prop_map(|(key, ediv, rand)| sys::Ltk {
-                key,
-                ediv,
-                rand,
-            })
-        }
-
-        fn any_connection_params() -> impl Strategy<Value = sys::LeConnectionParameters> {
-            (any::<u16>(), any::<u16>(), any::<u16>()).prop_map(
-                |(connection_interval, connection_latency, supervision_timeout)| {
-                    sys::LeConnectionParameters {
-                        connection_interval,
-                        connection_latency,
-                        supervision_timeout,
-                    }
-                },
-            )
-        }
-
-        fn any_connection_role() -> impl Strategy<Value = bt::ConnectionRole> {
-            prop_oneof![Just(bt::ConnectionRole::Leader), Just(bt::ConnectionRole::Follower)]
-        }
-
-        // TODO(36378) Note: We don't generate data with a None role_preference, as these can't be
-        // safely roundtripped to control::BredrData. This can be removed when the control api is
-        // retired.
-        fn any_bredr_data() -> impl Strategy<Value = BredrData> {
-            (any_connection_role(), option::of(any_peer_key())).prop_map(
-                |(role_preference, link_key)| {
-                    let role_preference = Some(role_preference);
-                    BredrData { role_preference, services: vec![], link_key }
-                },
-            )
-        }
-
-        fn any_le_data() -> impl Strategy<Value = LeData> {
-            (
-                option::of(any_connection_params()),
-                option::of(any_ltk()),
-                option::of(any_ltk()),
-                option::of(any_peer_key()),
-                option::of(any_peer_key()),
-            )
-                .prop_map(|(connection_parameters, peer_ltk, local_ltk, irk, csrk)| {
-                    LeData {
-                        connection_parameters,
-                        services: vec![],
-                        peer_ltk,
-                        local_ltk,
-                        irk,
-                        csrk,
-                    }
-                })
-        }
-
-        // TODO(35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
-        // same. We emulate that invariant here.
-        fn any_le_data_for_control_test() -> impl Strategy<Value = LeData> {
-            (
-                option::of(any_connection_params()),
-                option::of(any_ltk()),
-                option::of(any_peer_key()),
-                option::of(any_peer_key()),
-            )
-                .prop_map(|(connection_parameters, ltk, irk, csrk)| LeData {
-                    connection_parameters,
-                    services: vec![],
-                    peer_ltk: ltk,
-                    local_ltk: ltk,
-                    irk,
-                    csrk,
-                })
-        }
-
-        fn any_bonding_data() -> impl Strategy<Value = BondingData> {
-            let any_data = prop_oneof![
-                any_le_data().prop_map(OneOrBoth::Left),
-                any_bredr_data().prop_map(OneOrBoth::Right),
-                (any_le_data(), any_bredr_data())
-                    .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
-            ];
-            (
-                any::<u64>(),
-                any_public_address(),
-                any_public_address(),
-                option::of("[a-zA-Z][a-zA-Z0-9_]*"),
-                any_data,
-            )
-                .prop_map(|(ident, address, local_address, name, data)| {
-                    let identifier = PeerId(ident);
-                    BondingData { identifier, address, local_address, name, data }
-                })
-        }
-
-        fn any_bonding_data_for_control_test() -> impl Strategy<Value = BondingData> {
-            let any_data = prop_oneof![
-                any_le_data_for_control_test().prop_map(OneOrBoth::Left),
-                any_bredr_data().prop_map(OneOrBoth::Right),
-                (any_le_data_for_control_test(), any_bredr_data())
-                    .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
-            ];
-            (
-                any::<u64>(),
-                any_public_address(),
-                any_public_address(),
-                option::of("[a-zA-Z][a-zA-Z0-9_]*"),
-                any_data,
-            )
-                .prop_map(|(ident, address, local_address, name, data)| {
-                    let identifier = PeerId(ident);
-                    BondingData { identifier, address, local_address, name, data }
-                })
-        }
+        use super::{
+            proptest_util::{
+                any_bonding_data, any_bonding_data_for_control_test, any_bredr_data, any_le_data,
+                any_le_data_for_control_test,
+            },
+            *,
+        };
+        use crate::types::address::proptest_util::any_public_address;
+        use proptest::prelude::*;
 
         proptest! {
             #[test]

@@ -127,8 +127,7 @@ impl fmt::Display for Address {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
+pub(crate) mod proptest_util {
     use super::*;
     use proptest::prelude::*;
 
@@ -143,6 +142,13 @@ pub mod tests {
     pub fn any_address() -> impl Strategy<Value = Address> {
         prop_oneof![any_public_address(), any_random_address()]
     }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::proptest_util::*;
+    use super::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
