@@ -13,14 +13,16 @@ import (
 	"fuchsia.googlesource.com/sse"
 )
 
+type RemoteAddr string
+
 type AutoServer struct {
 	mu sync.Mutex
 
-	clients map[http.ResponseWriter]struct{}
+	clients map[http.ResponseWriter]RemoteAddr
 }
 
 func NewAutoServer() *AutoServer {
-	return &AutoServer{clients: map[http.ResponseWriter]struct{}{}}
+	return &AutoServer{clients: map[http.ResponseWriter]RemoteAddr{}}
 }
 
 func (a *AutoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +38,7 @@ func (a *AutoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	a.clients[w] = struct{}{}
+	a.clients[w] = RemoteAddr(r.RemoteAddr)
 	fmt.Printf("%s [pm auto] adding client: %s\n", time.Now().Format("2006-01-02 15:04:05"), r.RemoteAddr)
 	fmt.Printf("%s [pm auto] client count: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(a.clients))
 	defer func() {
@@ -53,7 +55,8 @@ func (a *AutoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (a *AutoServer) Broadcast(name, data string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	for w := range a.clients {
+	for w, remoteAddr := range a.clients {
+		fmt.Printf("%s [pm auto] notifying client: %s\n", time.Now().Format("2006-01-02 15:04:05"), remoteAddr)
 		sse.Write(w, &sse.Event{
 			Event: name,
 			Data:  []byte(data),
