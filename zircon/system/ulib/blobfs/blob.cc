@@ -52,8 +52,12 @@ using digest::Digest;
 using digest::MerkleTreeCreator;
 
 bool SupportsPaging(const Inode& inode) {
-  // Currently only uncompressed blobs can be paged.
-  return !inode.IsCompressed();
+  CompressionAlgorithm algorithm = AlgorithmForInode(inode);
+  if (algorithm == CompressionAlgorithm::UNCOMPRESSED
+      || algorithm == CompressionAlgorithm::CHUNKED) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace

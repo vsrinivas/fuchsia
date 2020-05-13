@@ -5,6 +5,7 @@
 #include "blob-loader.h"
 
 #include <lib/sync/completion.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <set>
@@ -126,6 +127,8 @@ class FakeUserPager : public UserPager {
 class BlobLoaderTest : public zxtest::Test {
  public:
   void Init(CompressionAlgorithm algorithm) {
+    srand(zxtest::Runner::GetInstance()->random_seed());
+
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_TRUE(device);
     ASSERT_OK(FormatFilesystem(device.get()));
@@ -143,9 +146,15 @@ class BlobLoaderTest : public zxtest::Test {
     ASSERT_OK(Sync());
   }
 
-  BlobLoader CreateLoader(UserPager* pager) {
+  BlobLoader CreateLoader(UserPager* pager) const {
     auto* fs_ptr = fs_.get();
-    return BlobLoader(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics());
+    zx::status<BlobLoader> loader =
+        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics());
+    EXPECT_EQ(loader.status_value(), ZX_OK);
+    // TODO(jfsulliv): Pessimizing move seems to be necessary, since otherwise fitx::result::value
+    // selects the const-ref variant and the (deleted) copy constructor of BlobLoader is invoked
+    // instead. Remove this pessimising move if possible.
+    return std::move(loader.value());
   }
 
   // Sync waits for blobfs to sync with the underlying block device.
@@ -288,7 +297,7 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
 // TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
-// TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 
 void DoTest_LargeBlob(BlobLoaderTest* test) {
@@ -379,7 +388,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
 
 // TODO(44820): Enable when compressed, pageable blobs are supported.
 // TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
-// TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
+TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 
 void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
@@ -414,9 +423,9 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
 // TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
 //   DoTest_Paged_LargeBlob_NonAlignedLength(this);
 // }
-// TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
-//   DoTest_Paged_LargeBlob_NonAlignedLength(this);
-// }
+TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
+  DoTest_Paged_LargeBlob_NonAlignedLength(this);
+}
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
   DoTest_Paged_LargeBlob_NonAlignedLength(this);
 }

@@ -6,6 +6,7 @@
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_BLOB_LOADER_H_
 
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 
@@ -17,6 +18,7 @@
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "compression/seekable-decompressor.h"
 #include "iterator/block-iterator-provider.h"
 #include "metrics.h"
 #include "pager/page-watcher.h"
@@ -29,14 +31,20 @@ namespace blobfs {
 class BlobLoader {
  public:
   BlobLoader() = default;
-  BlobLoader(
-      TransactionManager* txn_manager,
-      BlockIteratorProvider* block_iter_provider,
-      NodeFinder* node_finder,
-      UserPager* pager,
-      BlobfsMetrics* metrics);
   BlobLoader(BlobLoader&& o) = default;
   BlobLoader& operator=(BlobLoader&& o) = default;
+
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlobLoader);
+
+  // Creates a BlobLoader.
+  static zx::status<BlobLoader> Create(TransactionManager* txn_manager,
+                                       BlockIteratorProvider* block_iter_provider,
+                                       NodeFinder* node_finder, UserPager* pager,
+                                       BlobfsMetrics* metrics);
+
+  // Resets the BlobLoader, freeing any owned resources. |LoadBlob*| must not be invoked after
+  // |Reset()| is called.
+  void Reset();
 
   // Loads the merkle tree and data for the blob with index |node_index|.
   //
@@ -69,6 +77,9 @@ class BlobLoader {
                             fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out);
 
  private:
+  BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
+             NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics,
+             fzl::OwnedVmoMapper scratch_vmo, storage::OwnedVmoid scratch_vmoid);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
@@ -76,6 +87,13 @@ class BlobLoader {
   zx_status_t InitMerkleVerifier(uint32_t node_index, const Inode& inode,
                                  fzl::OwnedVmoMapper* vmo_out,
                                  std::unique_ptr<BlobVerifier>* verifier_out);
+  // Prepares |decompressor_out| to decompress the blob contents of |inode|.
+  // If |inode| is not compressed, this is a NOP.
+  // Depending on the format, some data may be read (e.g. for the CHUNKED format, the header
+  // containing the seek table is read and used to initialize the decomprssor).
+  zx_status_t InitDecompressor(uint32_t node_index, const Inode& inode,
+                               const BlobVerifier& verifier,
+                               std::unique_ptr<SeekableDecompressor>* decompressor_out);
   zx_status_t LoadMerkle(uint32_t node_index, const Inode& inode,
                          const fzl::OwnedVmoMapper& vmo) const;
   zx_status_t LoadData(uint32_t node_index, const Inode& inode,
@@ -84,15 +102,15 @@ class BlobLoader {
                                     const fzl::OwnedVmoMapper& vmo) const;
   zx_status_t LoadDataInternal(uint32_t node_index, const Inode& inode,
                                const fzl::OwnedVmoMapper& vmo, fs::Duration* out_duration,
-                               uint64_t *out_bytes_read) const;
+                               uint64_t* out_bytes_read) const;
 
-  TransactionManager* txn_manager_;
-  BlockIteratorProvider* block_iter_provider_;
-  NodeFinder* node_finder_;
-  UserPager* pager_;
-  BlobfsMetrics* metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlobLoader);
+  TransactionManager* txn_manager_ = nullptr;
+  BlockIteratorProvider* block_iter_provider_ = nullptr;
+  NodeFinder* node_finder_ = nullptr;
+  UserPager* pager_ = nullptr;
+  BlobfsMetrics* metrics_ = nullptr;
+  fzl::OwnedVmoMapper scratch_vmo_;
+  storage::OwnedVmoid scratch_vmoid_;
 };
 
 }  // namespace blobfs
