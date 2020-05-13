@@ -17,7 +17,7 @@ pub enum Subcommand {
     Config(ConfigCommand),
     Quit(QuitCommand),
 {% for dep in deps %}
-    {{dep.enum}}({{dep.lib}}::Command),
+    {{dep.enum}}({{dep.lib}}::FfxPluginCommand),
 {% endfor %}
 }
 

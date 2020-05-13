@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, format_err, Context, Error},
+    ffx_core::ffx_plugin,
     ffx_test_args::TestCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -16,17 +17,13 @@ use {
     },
 };
 
-///TODO(fxb/51594): use an attribute and proc macro to generate this
-pub async fn ffx_plugin(remote_proxy: RemoteControlProxy, cmd: TestCommand) -> Result<(), Error> {
-    test(remote_proxy, cmd).await
-}
-
-pub async fn test(remote_proxy: RemoteControlProxy, test: TestCommand) -> Result<(), Error> {
+#[ffx_plugin()]
+pub async fn test(remote_proxy: RemoteControlProxy, cmd: TestCommand) -> Result<(), Error> {
     let writer = Box::new(stdout());
-    if test.list {
-        get_tests(remote_proxy, writer, &test.url).await
+    if cmd.list {
+        get_tests(remote_proxy, writer, &cmd.url).await
     } else {
-        run_tests(remote_proxy, writer, &test.url, &test.tests).await
+        run_tests(remote_proxy, writer, &cmd.url, &cmd.tests).await
     }
 }
 

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
+use {argh::FromArgs, ffx_core::ffx_command};
 
+#[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "run-component", description = "run component")]
 pub struct RunComponentCommand {
@@ -14,9 +15,6 @@ pub struct RunComponentCommand {
     /// args for the component
     pub args: Vec<String>,
 }
-
-///TODO(fxb/51594): use an attribute and proc macro to generate this
-pub type Command = RunComponentCommand;
 
 #[cfg(test)]
 mod tests {

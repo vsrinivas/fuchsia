@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
+use {argh::FromArgs, ffx_core::ffx_command};
 
+#[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "test", description = "run tests")]
 pub struct TestCommand {
@@ -19,9 +20,6 @@ pub struct TestCommand {
     /// list tests in the Test Suite
     pub list: bool,
 }
-
-///TODO(fxb/51594): use an attribute and proc macro to generate this
-pub type Command = TestCommand;
 
 #[cfg(test)]
 mod tests {
