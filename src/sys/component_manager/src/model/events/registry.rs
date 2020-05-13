@@ -9,7 +9,7 @@ use {
             dispatcher::{EventDispatcher, ScopeMetadata},
             event::SyncMode,
             stream::EventStream,
-            synthesizer::EventSynthesizer,
+            synthesizer::{EventSynthesisProvider, EventSynthesizer},
         },
         hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
         model::Model,
@@ -52,6 +52,14 @@ impl EventRegistry {
             ),
         ]
     }
+    /// Register a provider for an synthesized event.
+    pub fn register_synthesis_provider(
+        &mut self,
+        event: EventType,
+        provider: Arc<dyn EventSynthesisProvider>,
+    ) {
+        self.event_synthesizer.register_provider(event, provider);
+    }
 
     /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe(
@@ -63,9 +71,11 @@ impl EventRegistry {
         let mut event_stream = EventStream::new();
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
-        let running_name: CapabilityName = EventType::Running.to_string().into();
-        for event in events.iter() {
-            if event.source_name != running_name {
+        for event in &events {
+            if EventType::synthesized_only()
+                .iter()
+                .all(|e| e.to_string() != event.source_name.str())
+            {
                 let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
                 let dispatcher =
                     event_stream.create_dispatcher(sync_mode.clone(), event.scopes.clone());
@@ -73,6 +83,7 @@ impl EventRegistry {
             }
         }
 
+        let events = events.into_iter().map(|event| (event.source_name, event.scopes)).collect();
         self.event_synthesizer.spawn_synthesis(event_stream.sender(), events);
 
         Ok(event_stream)

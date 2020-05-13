@@ -131,6 +131,12 @@ macro_rules! events {
     };
 }
 
+impl EventType {
+    pub fn synthesized_only() -> Vec<Self> {
+        vec![EventType::Running]
+    }
+}
+
 // Keep the event types listed below in alphabetical order!
 events!([
     /// A capability exposed to the framework by a component is available.

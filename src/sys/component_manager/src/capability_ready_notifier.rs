@@ -5,6 +5,7 @@
 use {
     crate::model::{
         error::ModelError,
+        events::{filter::EventFilter, synthesizer::EventSynthesisProvider},
         hooks::{
             Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
         },
@@ -51,18 +52,7 @@ impl CapabilityReadyNotifier {
     ) -> Result<(), ModelError> {
         // Forward along errors into the new task so that dispatch can forward the
         // error as an event.
-        let outgoing_node_result = async move {
-            let outgoing_dir = io_util::clone_directory(
-                &outgoing_dir,
-                fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
-            )
-            .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
-            let outgoing_dir_channel = outgoing_dir
-                .into_channel()
-                .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
-            Ok(NodeProxy::from_channel(outgoing_dir_channel))
-        }
-        .await;
+        let outgoing_node_result = clone_outgoing_root(&outgoing_dir, &target_moniker).await;
 
         // Don't block the handling on the event on the exposed capabilities being ready
         let this = self.clone();
@@ -82,13 +72,8 @@ impl CapabilityReadyNotifier {
                 None => return,
             };
 
-            if let Err(e) = this
-                .dispatch_capabilities_ready(outgoing_node_result, expose_decls, &target_realm)
-                .await
-            {
-                error!("Failed CapabilityReady dispatch for {}: {:?}", moniker, e);
-                return;
-            }
+            this.dispatch_capabilities_ready(outgoing_node_result, expose_decls, &target_realm)
+                .await;
         });
         Ok(())
     }
@@ -116,7 +101,22 @@ impl CapabilityReadyNotifier {
         outgoing_node_result: Result<NodeProxy, ModelError>,
         expose_decls: Vec<ExposeDecl>,
         target_realm: &Arc<Realm>,
-    ) -> Result<(), ModelError> {
+    ) {
+        let capability_ready_events =
+            self.create_events(outgoing_node_result, expose_decls, target_realm).await;
+        for capability_ready_event in capability_ready_events {
+            target_realm.hooks.dispatch(&capability_ready_event).await.unwrap_or_else(|e| {
+                error!("Error notifying capability ready for {}: {:?}", target_realm.abs_moniker, e)
+            });
+        }
+    }
+
+    async fn create_events(
+        &self,
+        outgoing_node_result: Result<NodeProxy, ModelError>,
+        expose_decls: Vec<ExposeDecl>,
+        target_realm: &Arc<Realm>,
+    ) -> Vec<Event> {
         // Forward along the result for opening the outgoing directory into the CapabilityReady
         // dispatch in order to propagate any potential errors as an event.
         let outgoing_dir_result = async move {
@@ -129,15 +129,16 @@ impl CapabilityReadyNotifier {
         }
         .await;
 
+        let mut events = Vec::new();
         for expose_decl in expose_decls {
-            match expose_decl {
+            let event = match expose_decl {
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source_path,
                     target_path,
                     rights,
                     ..
                 }) => {
-                    self.dispatch_capability_ready(
+                    self.create_event(
                         &target_realm,
                         outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_DIRECTORY,
@@ -148,7 +149,7 @@ impl CapabilityReadyNotifier {
                     .await
                 }
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_path, target_path, .. }) => {
-                    self.dispatch_capability_ready(
+                    self.create_event(
                         &target_realm,
                         outgoing_dir_result.as_ref(),
                         fio::MODE_TYPE_SERVICE,
@@ -158,19 +159,17 @@ impl CapabilityReadyNotifier {
                     )
                     .await
                 }
-                _ => Ok(()),
-            }
-            .unwrap_or_else(|e| {
-                error!("Error notifying capability ready for {}: {:?}", target_realm.abs_moniker, e)
-            });
+                _ => continue,
+            };
+            events.push(event);
         }
 
-        Ok(())
+        events
     }
 
-    /// Dispatches an event with the directory at the given `source_path` inside the provided
-    /// outgoing directory if the capability is available. Renames to `target_path`.
-    async fn dispatch_capability_ready(
+    /// Creates an event with the directory at the given `target_path` inside the provided
+    /// outgoing directory if the capability is available.
+    async fn create_event(
         &self,
         target_realm: &Arc<Realm>,
         outgoing_dir_result: Result<&DirectoryProxy, &ModelError>,
@@ -178,7 +177,7 @@ impl CapabilityReadyNotifier {
         rights: Rights,
         source_path: CapabilityPath,
         target_path: CapabilityPath,
-    ) -> Result<(), ModelError> {
+    ) -> Event {
         let target_path = target_path.to_string();
 
         let node_result = async move {
@@ -209,25 +208,73 @@ impl CapabilityReadyNotifier {
         .await;
 
         match node_result {
-            Ok(node) => {
-                let event = Event::new(
-                    target_realm.abs_moniker.clone(),
-                    Ok(EventPayload::CapabilityReady { path: target_path, node }),
-                );
-                target_realm.hooks.dispatch(&event).await
-            }
-            Err(e) => {
-                let event = Event::new(
-                    target_realm.abs_moniker.clone(),
-                    Err(EventError::new(
-                        &e,
-                        EventErrorPayload::CapabilityReady { path: target_path },
-                    )),
-                );
-                target_realm.hooks.dispatch(&event).await?;
-                return Err(e);
-            }
+            Ok(node) => Event::new(
+                target_realm.abs_moniker.clone(),
+                Ok(EventPayload::CapabilityReady { path: target_path, node }),
+            ),
+            Err(e) => Event::new(
+                target_realm.abs_moniker.clone(),
+                Err(EventError::new(&e, EventErrorPayload::CapabilityReady { path: target_path })),
+            ),
         }
+    }
+}
+
+async fn clone_outgoing_root(
+    outgoing_dir: &DirectoryProxy,
+    target_moniker: &AbsoluteMoniker,
+) -> Result<NodeProxy, ModelError> {
+    let outgoing_dir = io_util::clone_directory(
+        &outgoing_dir,
+        fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
+    )
+    .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
+    let outgoing_dir_channel = outgoing_dir
+        .into_channel()
+        .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
+    Ok(NodeProxy::from_channel(outgoing_dir_channel))
+}
+
+#[async_trait]
+impl EventSynthesisProvider for CapabilityReadyNotifier {
+    async fn provide(&self, realm: Arc<Realm>, filter: EventFilter) -> Vec<Event> {
+        let outgoing_node_result = async {
+            let execution = realm.lock_execution().await;
+            if execution.runtime.is_none() {
+                return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
+            }
+            let runtime = execution.runtime.as_ref().unwrap();
+            let out_dir = &runtime.outgoing_dir.as_ref().ok_or(
+                ModelError::open_directory_error(realm.abs_moniker.clone(), "/".to_string()),
+            )?;
+            clone_outgoing_root(&out_dir, &realm.abs_moniker).await
+        }
+        .await;
+
+        let expose_decls = {
+            if let Some(state) = realm.lock_state().await.as_ref() {
+                let expose_decls = state.decl().get_self_capabilities_exposed_to_framework();
+                if expose_decls.is_empty() {
+                    return Vec::new();
+                }
+                expose_decls
+            } else {
+                return Vec::new();
+            }
+        };
+
+        let expose_decls = expose_decls
+            .into_iter()
+            .filter(|expose_decl| match expose_decl {
+                ExposeDecl::Directory(ExposeDirectoryDecl { target_path, .. })
+                | ExposeDecl::Protocol(ExposeProtocolDecl { target_path, .. }) => {
+                    filter.contains("path", vec![target_path.to_string()])
+                }
+                _ => false,
+            })
+            .collect();
+
+        self.create_events(outgoing_node_result, expose_decls, &realm).await
     }
 }
 

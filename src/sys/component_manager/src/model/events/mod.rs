@@ -7,6 +7,7 @@ pub mod error;
 pub mod event;
 pub(crate) mod filter;
 pub mod registry;
+pub mod running_provider;
 pub(crate) mod serve;
 pub mod source;
 pub mod source_factory;

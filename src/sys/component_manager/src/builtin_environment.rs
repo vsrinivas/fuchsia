@@ -20,7 +20,12 @@ use {
             binding::Binder,
             error::ModelError,
             event_logger::EventLogger,
-            events::{event::SyncMode, source_factory::EventSourceFactory},
+            events::{
+                event::SyncMode,
+                running_provider::RunningProvider,
+                source_factory::{EventSourceFactory, EventSourceFactoryBuilder},
+            },
+            hooks::EventType,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
             runner::Runner,
@@ -176,14 +181,22 @@ impl BuiltinEnvironment {
         let hub = Arc::new(Hub::new(model, args.root_component_url.clone())?);
         model.root_realm.hooks.install(hub.hooks()).await;
 
-        // Set up the event source factory.
-        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
-        model.root_realm.hooks.install(event_source_factory.hooks()).await;
-
         // Set up the capability ready notifier.
         let capability_ready_notifier =
             Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(model)));
         model.root_realm.hooks.install(capability_ready_notifier.hooks()).await;
+
+        // Set up the event source factory.
+        let event_source_factory = Arc::new(
+            EventSourceFactoryBuilder::new(Arc::downgrade(&model))
+                .with_synthesis_provider(
+                    EventType::CapabilityReady,
+                    capability_ready_notifier.clone(),
+                )
+                .with_synthesis_provider(EventType::Running, Arc::new(RunningProvider::new()))
+                .build(),
+        );
+        model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
         let event_logger = if args.debug {
             let event_logger = Arc::new(EventLogger::new());

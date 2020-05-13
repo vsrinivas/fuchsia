@@ -5,82 +5,160 @@
 use {
     crate::model::{
         error::ModelError,
-        events::{event::Event, registry::RoutedEvent},
-        hooks::{Event as HookEvent, EventPayload},
+        events::{dispatcher::ScopeMetadata, event::Event, filter::EventFilter},
+        hooks::{Event as HookEvent, EventType},
         model::Model,
         moniker::AbsoluteMoniker,
         realm::Realm,
     },
+    async_trait::async_trait,
+    cm_rust::CapabilityName,
     fuchsia_async as fasync,
-    futures::{channel::mpsc, stream, SinkExt, StreamExt},
+    futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
-    std::{collections::HashSet, sync::Arc, sync::Weak},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::{Arc, Weak},
+    },
 };
 
+/// Implementors of this trait know how to synthesize an event.
+#[async_trait]
+pub trait EventSynthesisProvider: Send + Sync {
+    /// Provides a synthesized event applying the given `filter` under the given `realm`.
+    async fn provide(&self, realm: Arc<Realm>, filter: EventFilter) -> Vec<HookEvent>;
+}
+
+/// Synthesis manager.
 pub struct EventSynthesizer {
+    /// A reference to the model.
     model: Weak<Model>,
+
+    /// Maps an event name to the provider for synthesis
+    providers: HashMap<CapabilityName, Arc<dyn EventSynthesisProvider>>,
 }
 
 impl EventSynthesizer {
+    /// Creates a new event synthesizer.
     pub fn new(model: Weak<Model>) -> Self {
-        Self { model }
+        Self { model, providers: HashMap::new() }
     }
 
-    pub fn spawn_synthesis(&self, sender: mpsc::UnboundedSender<Event>, events: Vec<RoutedEvent>) {
-        let model = self.model.clone();
-        fasync::spawn(async move {
-            synthesize(model, sender, events).await.unwrap_or_else(|e| {
-                error!("Event synthesis failed: {:?}", e);
-            });
-        });
+    /// Registers a new provider that will be used when synthesizing events of the type `event`.
+    pub fn register_provider(
+        &mut self,
+        event: EventType,
+        provider: Arc<dyn EventSynthesisProvider>,
+    ) {
+        self.providers.insert(CapabilityName(event.to_string()), provider);
+    }
+
+    /// Spawns a synthesis task for the requested `events`. Resulting events will be sent on the
+    /// `sender` channel.
+    pub fn spawn_synthesis(
+        &self,
+        sender: mpsc::UnboundedSender<Event>,
+        events: HashMap<CapabilityName, Vec<ScopeMetadata>>,
+    ) {
+        SynthesisTask::new(&self, sender, events).spawn()
     }
 }
 
-/// Performs a depth-first traversal of the realm tree. It adds to the stream a `Running` event
-/// for all realms that are running. In the case of overlapping scopes, events are deduped.
-async fn synthesize(
+/// Information about an event that will be synthesized.
+struct EventSynthesisInfo {
+    /// The provider of the synthesized event.
+    provider: Arc<dyn EventSynthesisProvider>,
+
+    /// The scopes under which the event will be synthesized.
+    scopes: Vec<ScopeMetadata>,
+}
+
+struct SynthesisTask {
+    /// A reference to the model.
     model: Weak<Model>,
-    mut sender: mpsc::UnboundedSender<Event>,
-    events: Vec<RoutedEvent>,
-) -> Result<(), ModelError> {
-    // TODO: first validate the RoutedEvents to extract the ones we'll synthesize and ensure
-    // Running is present.
-    let scopes = match events
-        .into_iter()
-        .find(|event| event.source_name.str() == "running")
-        .map(|event| event.scopes)
-    {
-        None => return Ok(()),
-        Some(scopes) => scopes,
-    };
-    let model = model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
 
-    let mut visited_realms = HashSet::new();
+    /// The sender end of the channel where synthesized events will be sent.
+    sender: mpsc::UnboundedSender<Event>,
 
-    for scope in scopes {
-        let root_realm = model.look_up_realm(&scope.moniker).await?;
-        let mut realm_stream = get_subrealms(root_realm, visited_realms.clone());
-        while let Some(realm) = realm_stream.next().await {
-            let started_time = match &realm.lock_execution().await.runtime {
-                Some(runtime) => runtime.timestamp,
-                // No runtime means the component is not running.
-                None => continue,
-            };
-            let event = HookEvent::new_with_timestamp(
-                realm.abs_moniker.clone(),
-                Ok(EventPayload::Running),
-                started_time,
-            );
-            let event = Event { event, scope_moniker: scope.moniker.clone(), responder: None };
-            if let Err(_) = sender.send(event).await {
-                // Ignore this error. This can occur when the event stream is closed in the middle
-                // of synthesis.
-                return Ok(());
-            }
-            visited_realms.insert(realm.abs_moniker.clone());
-        }
+    /// Information about the events to synthesize
+    event_infos: Vec<EventSynthesisInfo>,
+}
+
+impl SynthesisTask {
+    /// Creates a new synthesis task from the given events. It will ignore events for which the
+    /// `synthesizer` doesn't have a provider.
+    pub fn new(
+        synthesizer: &EventSynthesizer,
+        sender: mpsc::UnboundedSender<Event>,
+        mut events: HashMap<CapabilityName, Vec<ScopeMetadata>>,
+    ) -> Self {
+        let event_infos = synthesizer
+            .providers
+            .iter()
+            .filter_map(|(event_name, provider)| {
+                events
+                    .remove(event_name)
+                    .map(|scopes| EventSynthesisInfo { provider: provider.clone(), scopes })
+            })
+            .collect();
+        Self { model: synthesizer.model.clone(), sender, event_infos }
     }
-    Ok(())
+
+    /// Spawns a task that will synthesize all events that were requested when creating the
+    /// `SynthesisTask`
+    pub fn spawn(self) {
+        if self.event_infos.is_empty() {
+            return;
+        }
+        fasync::spawn(async move {
+            // If we can't find the realm then we can't synthesize events.
+            // This isn't necessarily an error as the model or realm might've been
+            // destroyed in the intervening time, so we just exit early.
+            if let Ok(model) = self.model.upgrade().ok_or(ModelError::ModelNotAvailable) {
+                let sender = self.sender;
+                let futs = self
+                    .event_infos
+                    .into_iter()
+                    .map(|event_info| Self::run(model.clone(), sender.clone(), event_info));
+                for result in join_all(futs).await {
+                    if let Err(e) = result {
+                        error!("Event synthesis failed: {:?}", e);
+                    }
+                }
+            }
+        });
+    }
+
+    /// Performs a depth-first traversal of the realm tree. It adds to the stream a `Running` event
+    /// for all realms that are running. In the case of overlapping scopes, events are deduped.
+    /// It also synthesizes events that were requested which are synthesizable (there's a provider
+    /// for them). Those events will only be synthesized if their scope is within the scope of
+    /// a Running scope.
+    async fn run(
+        model: Arc<Model>,
+        mut sender: mpsc::UnboundedSender<Event>,
+        info: EventSynthesisInfo,
+    ) -> Result<(), ModelError> {
+        let mut visited_realms = HashSet::new();
+        for scope in info.scopes {
+            let root_realm = model.look_up_realm(&scope.moniker).await?;
+            let mut realm_stream = get_subrealms(root_realm, visited_realms.clone());
+            while let Some(realm) = realm_stream.next().await {
+                visited_realms.insert(realm.abs_moniker.clone());
+                let events = info.provider.provide(realm, scope.filter.clone()).await;
+                for event in events {
+                    let event =
+                        Event { event, scope_moniker: scope.moniker.clone(), responder: None };
+                    // Ignore this error. This can occur when the event stream is closed in the
+                    // middle of synthesis. We can finish synthesizing if an error happens.
+                    if let Err(_) = sender.send(event).await {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Returns all realms that are under the given `root` realm. Skips the ones whose moniker is
@@ -126,12 +204,13 @@ mod tests {
                 registry::{EventRegistry, RoutedEvent},
                 stream::EventStream,
             },
-            hooks::{EventPayload, EventType},
+            hooks::{EventError, EventErrorPayload, EventPayload, EventType},
             moniker::AbsoluteMoniker,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
-        fuchsia_async as fasync,
-        std::{collections::HashSet, iter::FromIterator},
+        cm_rust::{CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget},
+        fidl_fuchsia_io2 as fio, fuchsia_async as fasync,
+        std::{collections::HashSet, convert::TryFrom, iter::FromIterator},
     };
 
     // Shows that we see Running only for realms that are bound at the moment of subscription.
@@ -145,7 +224,12 @@ mod tests {
         test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance d success");
 
         let registry = test.builtin_environment.event_source_factory.registry();
-        let mut event_stream = create_stream(&registry, vec![AbsoluteMoniker::root()]).await;
+        let mut event_stream = create_stream(
+            &registry,
+            vec![AbsoluteMoniker::root()],
+            vec![EventType::Started, EventType::Running],
+        )
+        .await;
 
         // Bind e, this will be a Started event.
         test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance success");
@@ -208,6 +292,7 @@ mod tests {
         let mut event_stream = create_stream(
             &registry,
             vec![vec!["c:0"].into(), vec!["c:0", "e:0"].into(), vec!["c:0", "e:0", "h:0"].into()],
+            vec![EventType::Started, EventType::Running],
         )
         .await;
 
@@ -251,6 +336,7 @@ mod tests {
         let mut event_stream = create_stream(
             &registry,
             vec![vec!["c:0"].into(), vec!["c:0", "e:0"].into(), vec!["c:0", "f:0", "i:0"].into()],
+            vec![EventType::Started, EventType::Running],
         )
         .await;
 
@@ -272,24 +358,85 @@ mod tests {
         }
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn synthesize_capability_ready() {
+        let test = setup_synthesis_test().await;
+
+        test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
+        test.bind_instance(&vec!["b:0", "d:0"].into()).await.expect("bind instance d success");
+        test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
+        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
+        test.bind_instance(&vec!["c:0", "e:0", "g:0"].into())
+            .await
+            .expect("bind instance g success");
+        test.bind_instance(&vec!["c:0", "e:0", "h:0"].into())
+            .await
+            .expect("bind instance g success");
+        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance g success");
+        test.bind_instance(&vec!["c:0", "f:0", "i:0"].into())
+            .await
+            .expect("bind instance g success");
+
+        let registry = test.builtin_environment.event_source_factory.registry();
+        // TODO: bind components
+        let mut event_stream = create_stream(
+            &registry,
+            vec![vec!["b:0"].into(), vec!["c:0", "e:0"].into()],
+            vec![EventType::Running, EventType::CapabilityReady],
+        )
+        .await;
+
+        // We expect 4 CapabilityReady events and 5 running events.
+        // CR: b, d, e, g
+        // RN: b, d, e, g, h
+        let expected_capability_ready_monikers =
+            vec!["/b:0", "/b:0/d:0", "/c:0/e:0", "/c:0/e:0/g:0"];
+        let mut expected_running_monikers = expected_capability_ready_monikers.clone();
+        expected_running_monikers.extend(vec!["/c:0/e:0/h:0"].into_iter());
+        // We use sets given that the CapabilityReady could be dispatched twice: regular +
+        // synthesized.
+        let mut result_running_monikers = HashSet::new();
+        let mut result_capability_ready_monikers = HashSet::new();
+        while result_running_monikers.len() < 5 || result_capability_ready_monikers.len() < 4 {
+            let event = event_stream.next().await.expect("got running event");
+            match event.event.result {
+                Ok(EventPayload::Running) => {
+                    result_running_monikers.insert(event.event.target_moniker.to_string());
+                }
+                // We get an error cuz the component is not really serving the directory, but is
+                // exposing it. For the purposes of the test, this is enough information.
+                Err(EventError {
+                    event_error_payload: EventErrorPayload::CapabilityReady { path },
+                    ..
+                }) if path == "/diagnostics" => {
+                    result_capability_ready_monikers.insert(event.event.target_moniker.to_string());
+                }
+                payload => panic!("Expected running or capability ready. Got: {:?}", payload),
+            }
+        }
+        let mut result_running = result_running_monikers.into_iter().collect::<Vec<_>>();
+        let mut result_capability_ready =
+            result_capability_ready_monikers.into_iter().collect::<Vec<_>>();
+        result_running.sort();
+        result_capability_ready.sort();
+        assert_eq!(result_running, expected_running_monikers);
+        assert_eq!(result_capability_ready, expected_capability_ready_monikers);
+    }
+
     async fn create_stream(
         registry: &EventRegistry,
         scope_monikers: Vec<AbsoluteMoniker>,
+        events: Vec<EventType>,
     ) -> EventStream {
         let scopes = scope_monikers
             .into_iter()
             .map(|moniker| ScopeMetadata { moniker, filter: EventFilter::debug() })
             .collect::<Vec<_>>();
-        registry
-            .subscribe(
-                &SyncMode::Async,
-                vec![
-                    RoutedEvent { source_name: EventType::Running.into(), scopes: scopes.clone() },
-                    RoutedEvent { source_name: EventType::Started.into(), scopes },
-                ],
-            )
-            .await
-            .expect("subscribe to event stream")
+        let events = events
+            .into_iter()
+            .map(|event| RoutedEvent { source_name: event.into(), scopes: scopes.clone() })
+            .collect();
+        registry.subscribe(&SyncMode::Async, events).await.expect("subscribe to event stream")
     }
 
     // Sets up the following topology (all children are lazy)
@@ -306,6 +453,7 @@ mod tests {
             (
                 "a",
                 ComponentDeclBuilder::new()
+                    .expose(expose_diagnostics_decl())
                     .add_lazy_child("b")
                     .add_lazy_child("c")
                     .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -314,6 +462,7 @@ mod tests {
             (
                 "b",
                 ComponentDeclBuilder::new()
+                    .expose(expose_diagnostics_decl())
                     .add_lazy_child("d")
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
@@ -326,10 +475,11 @@ mod tests {
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
-            ("d", ComponentDeclBuilder::new().build()),
+            ("d", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
             (
                 "e",
                 ComponentDeclBuilder::new()
+                    .expose(expose_diagnostics_decl())
                     .add_lazy_child("g")
                     .add_lazy_child("h")
                     .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -342,9 +492,9 @@ mod tests {
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
-            ("g", ComponentDeclBuilder::new().build()),
+            ("g", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
             ("h", ComponentDeclBuilder::new().build()),
-            ("i", ComponentDeclBuilder::new().build()),
+            ("i", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
         ];
         RoutingTest::new("a", components).await
     }
@@ -365,5 +515,16 @@ mod tests {
         }
         result_monikers.sort();
         result_monikers
+    }
+
+    fn expose_diagnostics_decl() -> ExposeDecl {
+        ExposeDecl::Directory(ExposeDirectoryDecl {
+            source: ExposeSource::Self_,
+            source_path: CapabilityPath::try_from("/diagnostics").unwrap(),
+            target_path: CapabilityPath::try_from("/diagnostics").unwrap(),
+            target: ExposeTarget::Framework,
+            rights: Some(fio::Operations::Connect),
+            subdir: None,
+        })
     }
 }

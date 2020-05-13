@@ -5,6 +5,7 @@
 use {
     crate::model::{events::error::EventsError, walk_state::WalkStateUnit},
     cm_rust::DictionaryValue,
+    maplit::hashmap,
     std::collections::HashMap,
 };
 
@@ -32,6 +33,10 @@ impl EventFilter {
             return true;
         }
         Self::validate_subset(&fields, &self.filter).is_ok()
+    }
+
+    pub fn contains(&self, key: impl Into<String>, values: Vec<String>) -> bool {
+        self.has_fields(&Some(hashmap! {key.into() => DictionaryValue::StrVec(values)}))
     }
 
     fn validate_subset(
@@ -180,5 +185,19 @@ mod tests {
 
         assert_matches!(multi_field_single.validate_next(&single_field_filter), Ok(()));
         assert_matches!(multi_field_empty.validate_next(&single_field_filter), Ok(()));
+    }
+
+    #[test]
+    fn contains() {
+        let filter = EventFilter::new(Some(hashmap! {
+            "field".to_string() => DictionaryValue::StrVec(vec!["/foo".to_string(), "/bar".to_string()]),
+        }));
+
+        assert!(filter.contains("field", vec!["/foo".to_string()]));
+        assert!(filter.contains("field", vec!["/foo".to_string(), "/bar".to_string()]));
+        assert!(!filter.contains("field2", vec!["/foo".to_string()]));
+        assert!(!filter
+            .contains("field2", vec!["/foo".to_string(), "/bar".to_string(), "/baz".to_string()]));
+        assert!(!filter.contains("field2", vec!["/baz".to_string()]));
     }
 }

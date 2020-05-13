@@ -7,7 +7,10 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{self as component, ScopedInstance},
     regex::Regex,
-    test_utils_lib::events::{Event, EventSource, MarkedForDestruction, Running, Started},
+    std::{collections::BTreeSet, iter::FromIterator},
+    test_utils_lib::events::{
+        CapabilityReady, Event, EventSource, MarkedForDestruction, Running, Started,
+    },
 };
 
 #[fasync::run_singlethreaded]
@@ -15,6 +18,11 @@ async fn main() -> Result<(), Error> {
     let mut instances = vec![];
     let url =
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
+    let url_cap_ready =
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm"
+            .to_string();
+    let scoped_instance = ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await?;
+    instances.push(scoped_instance);
     for _ in 0..3 {
         let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await?;
         instances.push(scoped_instance);
@@ -29,30 +37,52 @@ async fn main() -> Result<(), Error> {
     // Subscribe to events.
     let event_source = EventSource::new_async()?;
     let mut event_stream = event_source
-        .subscribe(vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME])
+        .subscribe(vec![
+            Started::NAME,
+            Running::NAME,
+            MarkedForDestruction::NAME,
+            CapabilityReady::NAME,
+        ])
         .await?;
 
     let echo = component::connect_to_service::<fecho::EchoMarker>()?;
 
-    // There were 3 running instances when the stream was created: this instance itself and two
-    // more.
-    let mut monikers = vec![];
-    for _ in 0..3 {
-        let event = event_stream.expect_type::<Running>().await?;
-        let _ = echo.echo_string(Some(&format!("{:?}", Running::TYPE))).await?;
-        monikers.push(event.target_moniker().to_string());
+    // There were 4 running instances when the stream was created: this instance itself and three
+    // more. We are also expecting capability ready for one of them.
+    let mut running = vec![];
+    let mut capability_ready = vec![];
+    for _ in 0..5 {
+        let event = event_stream.next().await?;
+        match event.event_type {
+            Some(Running::TYPE) => {
+                running.push(event.target_moniker.unwrap().to_string());
+            }
+            Some(CapabilityReady::TYPE) => {
+                capability_ready.push(event.target_moniker.unwrap().to_string());
+            }
+            other => panic!("unexpected event type: {:?}", other),
+        }
     }
-    assert_eq!(monikers[0], ".");
+
+    for _ in &running {
+        let _ = echo.echo_string(Some(&format!("{:?}", Running::TYPE))).await?;
+    }
+    for _ in &capability_ready {
+        let _ = echo.echo_string(Some(&format!("{:?}", CapabilityReady::TYPE))).await?;
+    }
+
+    assert_eq!(running.len(), 4);
+    assert_eq!(capability_ready.len(), 1);
+    assert_eq!(running[0], ".");
     let re = Regex::new(r"./coll:auto-\d+:\d").unwrap();
-    assert!(re.is_match(&monikers[1]));
-    assert!(re.is_match(&monikers[2]));
-    assert_ne!(monikers[1], monikers[2]);
+    assert!(running[1..].iter().all(|m| re.is_match(m)));
+    assert_eq!(BTreeSet::from_iter::<Vec<String>>(running).len(), 4);
 
     // Dropping instances stops and destroys the children.
     drop(instances);
 
-    // The two instances were marked for destruction.
-    for _ in 0..2 {
+    // The three instances were marked for destruction.
+    for _ in 0..3 {
         let _ = event_stream.expect_type::<MarkedForDestruction>().await?;
         let _ = echo.echo_string(Some(&format!("{:?}", MarkedForDestruction::TYPE))).await?;
     }

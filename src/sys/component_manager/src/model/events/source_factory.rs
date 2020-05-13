@@ -7,7 +7,10 @@ use {
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         model::{
             error::ModelError,
-            events::{event::SyncMode, registry::EventRegistry, source::EventSource},
+            events::{
+                event::SyncMode, registry::EventRegistry, source::EventSource,
+                synthesizer::EventSynthesisProvider,
+            },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
             moniker::AbsoluteMoniker,
@@ -29,6 +32,42 @@ lazy_static! {
         "/svc/fuchsia.sys2.EventSource".try_into().unwrap();
     pub static ref EVENT_SOURCE_SYNC_SERVICE_PATH: CapabilityPath =
         "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap();
+}
+
+/// Allows to create `EventSource`s and tracks all the created ones.
+pub struct EventSourceFactoryBuilder {
+    /// The event registry. It subscribes to all events happening in the system and
+    /// routes them to subscribers.
+    event_registry: EventRegistry,
+
+    /// The component model, needed to route events.
+    model: Weak<Model>,
+}
+
+impl EventSourceFactoryBuilder {
+    /// Creates a new `EventSourceFactory` builder.
+    pub fn new(model: Weak<Model>) -> Self {
+        Self { event_registry: EventRegistry::new(model.clone()), model }
+    }
+
+    /// Register a provider for an synthesized event.
+    pub fn with_synthesis_provider(
+        mut self,
+        event: EventType,
+        provider: Arc<dyn EventSynthesisProvider>,
+    ) -> Self {
+        self.event_registry.register_synthesis_provider(event, provider);
+        self
+    }
+
+    /// Creates a new event source factory.
+    pub fn build(self) -> EventSourceFactory {
+        EventSourceFactory {
+            event_source_registry: Mutex::new(HashMap::new()),
+            event_registry: Arc::new(self.event_registry),
+            model: self.model,
+        }
+    }
 }
 
 /// Allows to create `EventSource`s and tracks all the created ones.

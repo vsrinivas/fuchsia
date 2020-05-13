@@ -338,13 +338,22 @@ async fn synthesis_test() -> Result<(), Error> {
 
     event_source.start_component_tree().await?;
     let mut events = vec![];
-    for _ in 0..5 {
+    for _ in 0..8 {
         let event = echo_rx.next().await.unwrap();
         events.push(event.message.clone());
         event.resume();
     }
     assert_eq!(
-        vec!["Running", "Running", "Running", "MarkedForDestruction", "MarkedForDestruction"],
+        vec![
+            "Running",
+            "Running",
+            "Running",
+            "Running",
+            "CapabilityReady",
+            "MarkedForDestruction",
+            "MarkedForDestruction",
+            "MarkedForDestruction"
+        ],
         events
     );
     injector.abort();
