@@ -168,7 +168,7 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
   } else {
     child2->SavePowerStateInfo(std::move(states), count, std::move(performance_states),
                                perf_state_count);
-    status = child2->DdkAdd("power-test-child-2", DEVICE_ADD_INVISIBLE);
+    status = child2->DdkAdd("power-test-child-2");
   }
   if (status != ZX_OK) {
     completer.ReplyError(status);
