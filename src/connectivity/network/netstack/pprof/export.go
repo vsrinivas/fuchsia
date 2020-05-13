@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 	"netstack/inspect"
 )
 
@@ -48,6 +49,9 @@ func Setup(path string) (component.Node, func() error, error) {
 							return err
 						}
 						delete(mapDir.mu.m, filename)
+						if err := os.Remove(filepath.Join(path, filename)); err != nil {
+							syslog.Warnf("failed to remove %s: %s", filename, err)
+						}
 					}
 				}
 				mapDir.mu.Unlock()
