@@ -18,10 +18,9 @@ use {
 
 #[cfg(target_os = "fuchsia")]
 use {
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{self, Future, FutureExt, TryFutureExt, TryStreamExt},
+    log::error,
 };
 
 /// A marker for a particular FIDL service.
@@ -183,7 +182,7 @@ where
 {
     stream
         .try_for_each(move |r| f(r).map(Ok))
-        .unwrap_or_else(|e| fx_log_err!("FIDL stream handler failed: {}", e))
+        .unwrap_or_else(|e| error!("FIDL stream handler failed: {}", e))
 }
 
 /// The `Client` end of a FIDL connection.

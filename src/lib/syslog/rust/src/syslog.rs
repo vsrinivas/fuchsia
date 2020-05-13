@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_logger as flogger;
 use fuchsia_zircon::sys::*;
 use std::os::raw::c_char;
 
@@ -19,18 +20,17 @@ pub struct fx_logger_config_t {
     pub num_tags: usize,
 }
 
-// Align with syslog logger.h
-pub const FX_LOG_ALL: fx_log_severity_t = -0x7F;
-pub const FX_LOG_TRACE: fx_log_severity_t = 0x10;
-pub const FX_LOG_DEBUG: fx_log_severity_t = 0x20;
-pub const FX_LOG_INFO: fx_log_severity_t = 0x30;
-pub const FX_LOG_WARN: fx_log_severity_t = 0x40;
-pub const FX_LOG_ERROR: fx_log_severity_t = 0x50;
-pub const FX_LOG_FATAL: fx_log_severity_t = 0x60;
+// Constants defined via logger.fidl
+pub const FX_LOG_ALL: fx_log_severity_t = flogger::LogLevelFilter::All as i32;
+pub const FX_LOG_TRACE: fx_log_severity_t = flogger::LogLevelFilter::Trace as i32;
+pub const FX_LOG_DEBUG: fx_log_severity_t = flogger::LogLevelFilter::Debug as i32;
+pub const FX_LOG_INFO: fx_log_severity_t = flogger::LogLevelFilter::Info as i32;
+pub const FX_LOG_WARN: fx_log_severity_t = flogger::LogLevelFilter::Warn as i32;
+pub const FX_LOG_ERROR: fx_log_severity_t = flogger::LogLevelFilter::Error as i32;
+pub const FX_LOG_FATAL: fx_log_severity_t = flogger::LogLevelFilter::Fatal as i32;
 
-pub const FX_LOG_SEVERITY_DEFAULT: fx_log_severity_t = FX_LOG_INFO;
-
-pub const FX_LOG_VERBOSITY_STEP_SIZE: i32 = 1;
+pub const FX_LOG_VERBOSITY_STEP_SIZE: i32 = flogger::LOG_VERBOSITY_STEP_SIZE as i32;
+pub const FX_LOG_SEVERITY_DEFAULT: fx_log_severity_t = flogger::LOG_LEVEL_DEFAULT as i32;
 
 #[link(name = "syslog")]
 #[allow(improper_ctypes)]

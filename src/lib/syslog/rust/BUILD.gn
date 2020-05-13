@@ -17,6 +17,7 @@ rustc_library("syslog") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
