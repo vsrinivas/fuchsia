@@ -25,11 +25,11 @@ flutter_app("wifi_settings") {
 
   deps = [
     "//src/experiences/settings/lib/settings",
+    "//src/experiences/settings/lib/widgets",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.wlan.service",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/widgets:lib.widgets"
   ]
 }

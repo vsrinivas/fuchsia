@@ -22,6 +22,7 @@ template("settings_app") {
 
   base_deps = [
     "//src/experiences/settings/lib/settings",
+    "//src/experiences/settings/lib/widgets",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
@@ -31,7 +32,6 @@ template("settings_app") {
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/widgets:lib.widgets",
   ]
 
   base_meta = [

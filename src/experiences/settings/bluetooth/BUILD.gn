@@ -24,6 +24,7 @@ flutter_app("bluetooth_settings") {
 
   deps = [
     "//src/experiences/settings/lib/settings",
+    "//src/experiences/settings/lib/widgets",
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.bluetooth.gatt",
@@ -31,6 +32,5 @@ flutter_app("bluetooth_settings") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
-    "//topaz/public/dart/widgets:lib.widgets",
   ]
 }
