@@ -10,10 +10,10 @@ use super::{read_only, read_write, write_only, NewVmo};
 use crate::{
     assert_close, assert_event, assert_get_attr, assert_get_buffer, assert_get_buffer_err,
     assert_no_event, assert_read, assert_read_at, assert_read_at_err, assert_read_err,
-    assert_read_fidl_err, assert_seek, assert_seek_err, assert_truncate, assert_truncate_err,
-    assert_vmo_content, assert_write, assert_write_at, assert_write_at_err, assert_write_err,
-    assert_write_fidl_err, clone_as_file_assert_err, clone_get_file_proxy_assert_ok,
-    clone_get_proxy_assert, report_invalid_vmo_content,
+    assert_read_fidl_err_closed, assert_seek, assert_seek_err, assert_truncate,
+    assert_truncate_err, assert_vmo_content, assert_write, assert_write_at, assert_write_at_err,
+    assert_write_err, assert_write_fidl_err_closed, clone_as_file_assert_err,
+    clone_get_file_proxy_assert_ok, clone_get_proxy_assert, report_invalid_vmo_content,
 };
 
 use crate::{
@@ -863,12 +863,8 @@ fn clone_cannot_increase_access() {
                 Status::ACCESS_DENIED
             );
 
-            assert_read_fidl_err!(second_proxy, fidl::Error::ClientWrite(Status::PEER_CLOSED));
-            assert_write_fidl_err!(
-                second_proxy,
-                "Write attempt",
-                fidl::Error::ClientWrite(Status::PEER_CLOSED)
-            );
+            assert_read_fidl_err_closed!(second_proxy);
+            assert_write_fidl_err_closed!(second_proxy, "Write attempt");
 
             assert_close!(first_proxy);
         },
@@ -917,12 +913,8 @@ fn clone_can_not_remove_node_reference() {
                     Status::ACCESS_DENIED
                 );
 
-                assert_read_fidl_err!(second_proxy, fidl::Error::ClientWrite(Status::PEER_CLOSED));
-                assert_write_fidl_err!(
-                    second_proxy,
-                    "Write attempt",
-                    fidl::Error::ClientWrite(Status::PEER_CLOSED)
-                );
+                assert_read_fidl_err_closed!(second_proxy);
+                assert_write_fidl_err_closed!(second_proxy, "Write attempt");
 
                 // We now try without OPEN_RIGHT_READABLE, as we might still be able to Seek.
                 let third_proxy = clone_get_file_proxy_assert_ok!(&first_proxy, OPEN_FLAG_DESCRIBE);

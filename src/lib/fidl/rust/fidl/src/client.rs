@@ -173,8 +173,17 @@ impl Client {
         let id = self.inner.register_msg_interest();
         let res = crate::encoding::with_tls_coding_bufs(|bytes, handles| {
             msg_from_id(Txid::from_interest_id(id), bytes, handles)?;
-            self.inner.channel.write(bytes, handles).map_err(|e| Error::ClientWrite(e.into()))?;
-            Ok::<(), Error>(())
+            match self.inner.channel.write(bytes, handles) {
+                Ok(()) => Ok(()),
+                Err(zx_status::Status::PEER_CLOSED) => {
+                    // Whether the PEER_CLOSED happened before sending the message, or before
+                    // receiving the reply, the client can't tell the difference.
+                    // Pretend the message sent so that the receiving flow can properly report
+                    // any received epitaphs.
+                    Ok(())
+                }
+                Err(e) => Err(Error::ClientWrite(e.into())),
+            }
         });
 
         match res {
@@ -1244,5 +1253,24 @@ mod tests {
 
         // then, make sure we can still take the event receiver without panicking
         let mut _event_receiver = client.take_event_receiver();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn client_reports_epitaph_on_query_write() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        // Immediately close the FIDL channel with an epitaph.
+        let server_end = AsyncChannel::from_channel(server_end).unwrap();
+        server_end
+            .close_with_epitaph(zx_status::Status::UNAVAILABLE)
+            .expect("failed to write epitaph");
+
+        let result = client.send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL).await;
+        assert_matches!(
+            result,
+            Err(crate::Error::ClientChannelClosed(zx_status::Status::UNAVAILABLE))
+        );
     }
 }
