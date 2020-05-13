@@ -6,6 +6,7 @@
 from contextlib import contextmanager
 from collections import namedtuple
 import argparse
+import json
 import mmap
 import os
 import struct
@@ -28,8 +29,18 @@ PT_LOAD = 1
 PT_DYNAMIC = 2
 PT_INTERP = 3
 PT_NOTE = 4
+PT_GNU_RELRO = 0x6474e552
+PF_W = 2
 DT_NEEDED = 1
+DT_PLTRELSZ = 2
 DT_STRTAB = 5
+DT_RELA = 7
+DT_RELASZ = 8
+DT_REL = 17
+DT_RELSZ = 18
+DT_RELRSZ = 35
+DT_RELR = 36
+DT_PLTREL = 20
 DT_SONAME = 14
 NT_GNU_BUILD_ID = 3
 SHT_SYMTAB = 2
@@ -263,16 +274,17 @@ This ensures that the mmap and file objects are closed at the end of the
 'with' statement."""
     fileobj = open(filename, 'rb')
     fd = fileobj.fileno()
-    if os.fstat(fd).st_size == 0:
+    size = os.fstat(fd).st_size
+    if size == 0:
         # mmap can't handle empty files.
         try:
-            yield fd, ''
+            yield fd, '', 0
         finally:
             fileobj.close()
     else:
         mmapobj = mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
         try:
-            yield fd, mmapobj
+            yield fd, mmapobj, size
         finally:
             mmapobj.close()
             fileobj.close()
@@ -286,19 +298,32 @@ def makedirs(dirs):
             raise e
 
 
+elf_sizes = namedtuple(
+    'elf_sizes', [
+        'file',                     # st_size
+        'memory',                   # lowest p_vaddr to highest p_memsz
+        'rel',                      # DT_RELSZ (+ DT_PLTRELSZ if matching)
+        'rela',                     # DT_RELASZ (+ DT_PLTRELSZ if matching)
+        'relr',                     # DT_RELRSZ
+        'relro',                    # PT_GNU_RELRO p_memsz
+        'data',                     # writable segment p_filesz
+        'bss',                      # writable segment p_memsz past p_filesz
+    ])
+
 # elf_info objects are only created by `get_elf_info` or the `copy` or
 # `rename` methods.
 class elf_info(namedtuple(
         'elf_info',
     [
         'filename',
-        'cpu',  # cpu tuple
-        'notes',  # list of (ident, desc): selected notes
-        'build_id',  # string: lowercase hex
-        'stripped',  # bool: Has no symbols or .debug_* sections
-        'interp',  # string or None: PT_INTERP (without \0)
-        'soname',  # string or None: DT_SONAME
-        'needed',  # list of strings: DT_NEEDED
+        'sizes',                # elf_sizes
+        'cpu',                  # cpu tuple
+        'notes',                # list of (ident, desc): selected notes
+        'build_id',             # string: lowercase hex
+        'stripped',             # bool: Has no symbols or .debug_* sections
+        'interp',               # string or None: PT_INTERP (without \0)
+        'soname',               # string or None: DT_SONAME
+        'needed',               # list of strings: DT_NEEDED
     ])):
 
     def rename(self, filename):
@@ -323,7 +348,7 @@ class elf_info(namedtuple(
         """Write stripped output to the given file unless it already exists
 with identical contents.  Returns True iff the file was changed."""
         with mmapper(self.filename) as mapped:
-            fd, file = mapped
+            fd, file, filesize = mapped
             ehdr = self.elf.Ehdr.read(file)
 
             stripped_ehdr = ehdr._replace(e_shoff=0, e_shnum=0, e_shstrndx=0)
@@ -447,8 +472,23 @@ def get_elf_info(filename, match_notes=False):
             return interp
         return None
 
-    # Returns a set of strings.
-    def get_soname_and_needed():
+    def get_dynamic():
+        # PT_DYNAMIC points to the list of ElfNN_Dyn tags.
+        for dynamic in (phdr for phdr in phdrs if phdr.p_type == PT_DYNAMIC):
+            return [
+                elf.Dyn.read(file, dynamic.p_offset + dyn_offset)
+                for dyn_offset in xrange(0, dynamic.p_filesz, elf.Dyn.size)
+            ]
+        return None
+
+    def dyn_get(dyn, tag):
+        for dt in dyn:
+            if dt.d_tag == tag:
+                return dt.d_val
+        return None
+
+    # Returns a string (or None) and a set of strings.
+    def get_soname_and_needed(dyn):
         # Each DT_NEEDED or DT_SONAME points to a string in the .dynstr table.
         def GenDTStrings(tag):
             return (
@@ -456,37 +496,80 @@ def get_elf_info(filename, match_notes=False):
                 for dt in dyn
                 if dt.d_tag == tag)
 
-        # PT_DYNAMIC points to the list of ElfNN_Dyn tags.
-        for dynamic in (phdr for phdr in phdrs if phdr.p_type == PT_DYNAMIC):
-            dyn = [
-                elf.Dyn.read(file, dynamic.p_offset + dyn_offset)
-                for dyn_offset in xrange(0, dynamic.p_filesz, elf.Dyn.size)
-            ]
+        if dyn is None:
+            return None, set()
 
-            # DT_STRTAB points to the string table's vaddr (.dynstr).
-            [strtab_vaddr] = [dt.d_val for dt in dyn if dt.d_tag == DT_STRTAB]
+        # DT_STRTAB points to the string table's vaddr (.dynstr).
+        strtab_vaddr = dyn_get(dyn, DT_STRTAB)
 
-            # Find the PT_LOAD containing the vaddr to compute the file offset.
-            [strtab_offset] = [
-                strtab_vaddr - phdr.p_vaddr + phdr.p_offset
-                for phdr in phdrs
+        # Find the PT_LOAD containing the vaddr to compute the file offset.
+        [strtab_offset] = [
+            strtab_vaddr - phdr.p_vaddr + phdr.p_offset
+            for phdr in phdrs
                 if (
                     phdr.p_type == PT_LOAD and phdr.p_vaddr <= strtab_vaddr and
                     strtab_vaddr - phdr.p_vaddr < phdr.p_filesz)
-            ]
+        ]
 
-            soname = None
-            for soname in GenDTStrings(DT_SONAME):
-                break
+        soname = None
+        for soname in GenDTStrings(DT_SONAME):
+            break
 
-            return soname, set(GenDTStrings(DT_NEEDED))
-        return None, set()
+        return soname, set(GenDTStrings(DT_NEEDED))
 
     def get_stripped():
         return all(
             (shdr.sh_flags & SHF_ALLOC) != 0 or
             (shdr.sh_type != SHT_SYMTAB and not name.startswith('.debug_'))
             for shdr, name in gen_sections())
+
+    def get_memory_size():
+        segments = [phdr for phdr in phdrs if phdr.p_type == PT_LOAD]
+        first = segments[0]
+        last = segments[-1]
+        start = first.p_vaddr &- first.p_align
+        last = (last.p_vaddr + last.p_memsz + last.p_align - 1) &- last.p_align
+        return last - start
+
+    def get_relro_size():
+        return sum(phdr.p_memsz for phdr in phdrs
+                   if phdr.p_type == PT_GNU_RELRO)
+
+    def get_segment_size(phdr, file, mem):
+        start = phdr.p_vaddr &- phdr.p_align
+        file_end = phdr.p_vaddr + phdr.p_filesz
+        mem_end = phdr.p_vaddr + phdr.p_memsz
+        file_end = (file_end + phdr.p_align - 1) &- phdr.p_align
+        mem_end = (mem_end + phdr.p_align - 1) &- phdr.p_align
+        if file and mem:
+            return mem_end - start
+        if file:
+            return file_end - start
+        return mem_end - file_end
+
+    def gen_writable_segments():
+        return (phdr for phdr in phdrs
+                if phdr.p_type == PT_LOAD and (phdr.p_flags & PF_W) != 0)
+
+    def get_data_size():
+        return sum(get_segment_size(phdr, file=True, mem=False)
+                   for phdr in gen_writable_segments())
+
+    def get_bss_size():
+        return sum(get_segment_size(phdr, file=False, mem=True)
+                   for phdr in gen_writable_segments())
+
+    def get_relsz(dyn, tag, sizetag):
+        if dyn is None:
+            return 0
+        relsz = dyn_get(dyn, sizetag)
+        if relsz is None:
+            relsz = 0
+        if dyn_get(dyn, DT_PLTREL) == tag:
+            pltrelsz = dyn_get(dyn, DT_PLTRELSZ)
+            if pltrelsz is not None:
+                relsz += pltrelsz
+        return relsz
 
     def get_cpu():
         return ELF_MACHINE_TO_CPU.get(ehdr.e_machine)
@@ -572,7 +655,7 @@ def get_elf_info(filename, match_notes=False):
 
     # Map in the whole file's contents and use it as a string.
     with mmapper(filename) as mapped:
-        fd, file = mapped
+        fd, file, filesize = mapped
         elf = get_elf_accessor(file)
         if elf is not None:
             # ELF header leads to program headers.
@@ -580,9 +663,19 @@ def get_elf_info(filename, match_notes=False):
             assert ehdr.e_phentsize == elf.Phdr.size, (
                 "%s: invalid e_phentsize" % filename)
             phdrs = list(gen_phdrs(file, elf, ehdr))
+            dyn = get_dynamic()
             info = elf_info(
-                filename, get_cpu(), get_matching_notes(), get_build_id(),
-                get_stripped(), get_interp(), *get_soname_and_needed())
+                filename,
+                elf_sizes(file=filesize,
+                          memory=get_memory_size(),
+                          relro=get_relro_size(),
+                          data=get_data_size(),
+                          bss=get_bss_size(),
+                          rel=get_relsz(dyn, DT_REL, DT_RELSZ),
+                          rela=get_relsz(dyn, DT_RELA, DT_RELASZ),
+                          relr=get_relsz(dyn, DT_RELR, DT_RELRSZ)),
+                get_cpu(), get_matching_notes(), get_build_id(),
+                get_stripped(), get_interp(), *get_soname_and_needed(dyn))
             info.elf = elf
             info.get_sources = lazy_get_sources
             return info
@@ -596,23 +689,59 @@ __all__ = ['cpu', 'elf_info', 'elf_note', 'get_elf_accessor', 'get_elf_info']
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--strip', action='store_true')
-    parser.add_argument('--build-id', action='store_true')
-    parser.add_argument('file', help='ELF file')
+    parser.add_argument('--strip', action='store_true',
+                        help='Strip each file into FILE.ei-strip')
+    parser.add_argument('--build-id', action='store_true',
+                        help='Print each build ID')
+    parser.add_argument('--blobs', help='Read blobs.json', metavar='FILE')
+    parser.add_argument('--sizes', help='Write elf_sizes.json', metavar='FILE')
+    parser.add_argument('file', help='ELF file', metavar='FILE', nargs='*')
     args = parser.parse_args()
 
-    info = get_elf_info(args.file)
+    files = args.file
+    if args.blobs:
+        with open(args.blobs) as f:
+            blobs = json.load(f)
+        files += [blob['source_path'] for blob in blobs]
 
-    if args.strip:
-        stripped_filename = info.filename + '.ei-strip'
-        info.strip(stripped_filename)
-        print stripped_filename
-    elif args.build_id:
-        print info.build_id
+    if args.sizes:
+        if args.blobs:
+            blob_map = {blob['source_path']: blob for blob in blobs}
+        def json_size(info):
+            sizes = info.sizes._asdict()
+            sizes['path'] = info.filename
+            sizes['build_id'] = info.build_id
+            if args.blobs:
+                blob = blob_map[info.filename]
+                assert info.sizes.file == blob['bytes'], (
+                    "%r != %r in %r vs %r" % (info.sizes.file, blob['bytes'],
+                                              info, blob))
+                sizes['blob'] = blob['size']
+            return sizes
+        sizes = [json_size(info)
+                 for info in (get_elf_info(file) for file in files) if info]
+        totals = {}
+        for file in sizes:
+            for key, val in file.iteritems():
+                if isinstance(val, int):
+                    totals[key] = totals.get(key, 0) + val
+        with open(args.sizes, 'w') as outf:
+            json.dump({'files': sizes, 'totals': totals},
+                      outf, sort_keys=True, indent=1)
     else:
-        print info
-        for source in info.get_sources():
-            print '\t' + source
+        for file in files:
+          info = get_elf_info(file)
+
+          if args.strip:
+              stripped_filename = info.filename + '.ei-strip'
+              info.strip(stripped_filename)
+              print stripped_filename
+          elif args.build_id:
+              print info.build_id
+          else:
+              print info
+              for source in info.get_sources():
+                  print '\t' + source
 
     return 0
 

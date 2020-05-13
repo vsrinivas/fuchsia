@@ -334,18 +334,16 @@ collect_blob_manifest("blob.manifest") {
 
 blob_image_path = "$target_out_dir/blob.blk"
 rebased_blob_image_path = rebase_path(blob_image_path, root_build_dir)
+blob_size_list = "$root_build_dir/blobs.json"
 
 # Pack up all the blobs!
 compiled_action("blob.blk") {
   visibility = [ ":*" ]
   testonly = true
   deps = [ ":blob.manifest" ]
-  blob_size_list = "$root_build_dir/blobs.json"
   outputs = [
     blob_image_path,
-    # This should be an output too, but the generate_fvm template assumes that all
-    # outputs of these actions are inputs to the fvm tool.
-    # blob_size_list
+    blob_size_list,
   ]
   depfile = blob_image_path + ".d"
   inputs = [ blob_manifest ]
@@ -377,6 +375,20 @@ compiled_action("blob.blk") {
   }
 }
 default_image_deps += [ ":blob.blk" ]
+
+action("elf_sizes.json") {
+  testonly = true
+  script = "elfinfo.py"
+  deps = [ ":blob.blk" ]
+  sources = [ blob_size_list ]
+  outputs = [ "$root_build_dir/$target_name" ]
+  args = [
+    "--sizes",
+    rebase_path(outputs[0], root_build_dir),
+    "--blobs",
+    rebase_path(sources[0], root_build_dir),
+  ]
+}
 
 # The prime images are used to have an alternate known-compatible OTA
 # target for integration testing.
@@ -1364,7 +1376,10 @@ action("filesystem_sizes.json") {
 # during the build for later analysis.
 group("record_filesystem_sizes") {
   testonly = true
-  deps = [ ":filesystem_sizes.json" ]
+  deps = [
+    ":elf_sizes.json",
+    ":filesystem_sizes.json",
+  ]
 }
 
 ###

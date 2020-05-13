@@ -117,8 +117,10 @@ template("generate_fvm") {
     foreach(part, invoker.partitions) {
       args += [ "--${part.type}" ]
       deps += [ part.dep ]
-      sources += get_target_outputs(part.dep)
-      args += rebase_path(get_target_outputs(part.dep), root_build_dir)
+      dep_outputs = []  # Reset after last iteration.
+      dep_outputs = get_target_outputs(part.dep)
+      sources += [ dep_outputs[0] ]
+      args += [ rebase_path(dep_outputs[0], root_build_dir) ]
       if (defined(part.minimum_inodes) && "${part.minimum_inodes}" != "") {
         args += [
           "--minimum-inodes",

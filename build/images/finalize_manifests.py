@@ -353,7 +353,7 @@ def strip_binary_manifest(
             continue
         assert not debug.stripped, "'%s' is stripped" % debug.filename
         assert info == debug._replace(
-            filename=info.filename,
+            filename=info.filename, sizes=info.sizes,
             stripped=True), ("Debug file mismatch: %r vs %r" % (info, debug))
         if debug.build_id:
             debug_list.append(debug)

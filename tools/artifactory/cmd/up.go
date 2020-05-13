@@ -57,6 +57,9 @@ const (
 	// The blobs manifest.
 	blobManifestName = "blobs.json"
 
+	// The ELF sizes manifest.
+	elfSizesManifestName = "elf_sizes.json"
+
 	// Constants for upload retries.
 	uploadRetryBackoff = 1 * time.Second
 	maxUploadAttempts  = 4
@@ -97,6 +100,7 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   │   └── <images>
 │   │   │   │   ├── packages
 │   │   │   │   │   ├── blobs.json
+│   │   │   │   │   ├── elf_sizes.json
 │   │   │   │   │   ├── repository
 │   │   │   │   │   │   ├── targets
 │   │   │   │   │   │   │   └── <package repo target files>
@@ -191,6 +195,10 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		{
 			Source:      path.Join(buildDir, blobManifestName),
 			Destination: path.Join(buildsUUIDDir, packageDirName, blobManifestName),
+		},
+		{
+			Source:      path.Join(buildDir, elfSizesManifestName),
+			Destination: path.Join(buildsUUIDDir, packageDirName, elfSizesManifestName),
 		},
 	}
 
