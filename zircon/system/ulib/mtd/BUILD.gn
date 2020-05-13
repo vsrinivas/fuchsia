@@ -33,7 +33,7 @@ zx_library("mtd") {
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/log",
+    "//zircon/system/ulib/log",
   ]
 
   defines = []

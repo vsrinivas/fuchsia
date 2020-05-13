@@ -2,18 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("log") {
-  sdk = "shared"
-  sdk_headers = [
-    "lib/log/log_writer.h",
-    "lib/log/log.h",
-  ]
-  shared = true
-  host = true
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
+# default_library_type is shared on Fuchsia and static on host.
+target(default_library_type, "log") {
   sources = [ "log.cc" ]
-  deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
+
+  public = [
+    "include/lib/log/log.h",
+    "include/lib/log/log_writer.h",
   ]
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  public_configs = [ ":includes" ]
+
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx-panic-libc",
+  ]
+
+  if (is_fuchsia) {
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  }
 }
