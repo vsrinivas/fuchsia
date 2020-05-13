@@ -11,6 +11,7 @@ pub use crate::form_command::*;
 pub use crate::join_command::*;
 pub use crate::leave_command::*;
 pub use crate::list_command::*;
+pub use crate::network_scan_command::*;
 pub use crate::provision_command::*;
 pub use crate::reset_command::*;
 pub use crate::status_command::*;
@@ -48,6 +49,7 @@ pub enum CommandEnum {
     Join(JoinCommand),
     Form(FormCommand),
     EnergyScan(EnergyScanCommand),
+    NetworkScan(NetworkScanCommand),
 }
 
 impl LowpanCtlInvocation {
@@ -61,6 +63,7 @@ impl LowpanCtlInvocation {
             CommandEnum::Join(x) => x.exec(context).await,
             CommandEnum::Form(x) => x.exec(context).await,
             CommandEnum::EnergyScan(x) => x.exec(context).await,
+            CommandEnum::NetworkScan(x) => x.exec(context).await,
         }
     }
 }

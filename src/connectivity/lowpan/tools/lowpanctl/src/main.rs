@@ -12,6 +12,7 @@ pub mod invocation;
 pub mod join_command;
 pub mod leave_command;
 pub mod list_command;
+pub mod network_scan_command;
 pub mod provision_command;
 pub mod reset_command;
 pub mod status_command;
