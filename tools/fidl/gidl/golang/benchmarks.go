@@ -19,24 +19,63 @@ var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 package benchmark_suite
 
 import (
+	"sync"
 	"testing"
 
 	"fidl/benchmarkfidl"
 
 	"syscall/zx"
-	"syscall/zx/fidl"
-)
+	"syscall/zx/fidl")
+
+
+type pools struct {
+	bytes sync.Pool
+	handleInfos sync.Pool
+	handleDispositions sync.Pool
+}
+
+func newPools() *pools {
+	return &pools{
+		bytes: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, zx.ChannelMaxMessageBytes)
+			},
+		},
+		handleInfos: sync.Pool{
+			New: func() interface{} {
+				return make([]zx.HandleInfo, zx.ChannelMaxMessageHandles)
+			},
+		},
+		handleDispositions: sync.Pool{
+			New: func() interface{} {
+				return make([]zx.HandleDisposition, zx.ChannelMaxMessageHandles)
+			},
+		},
+	}
+}
+
+func (p *pools) useOnce() {
+	p.bytes.Put(p.bytes.Get().([]byte))
+	p.handleInfos.Put(p.handleInfos.Get().([]zx.HandleInfo))
+	p.handleDispositions.Put(p.handleDispositions.Get().([]zx.HandleDisposition))
+}
 
 {{ range .EncodeBenchmarks }}
 func BenchmarkEncode{{ .Name }}(b *testing.B) {
-	data := make([]byte, 65536)
+	pools := newPools()
+	pools.useOnce()
 	input := {{ .Value }}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := fidl.Marshal(&input, data, nil)
+		// This should be kept in sync with the buffer allocation strategy used in Go bindings.
+		respb := pools.bytes.Get().([]byte)
+		resphd := pools.handleDispositions.Get().([]zx.HandleDisposition)
+		_, _, err := fidl.Marshal(&input, respb, resphd)
 		if err != nil {
 			b.Fatal(err)
 		}
+		pools.bytes.Put(respb)
+		pools.handleDispositions.Put(resphd)
 	}
 }
 
