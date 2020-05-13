@@ -31,6 +31,7 @@ class Flags {
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
   final bool shouldOnlyRunHostTests;
+  final bool shouldRestrictLogs;
   final bool shouldPrintSkipped;
   final bool shouldRandomizeTestOrder;
   final bool shouldSilenceUnsupported;
@@ -48,6 +49,7 @@ class Flags {
     this.shouldFailFast = false,
     this.shouldOnlyRunDeviceTests = false,
     this.shouldOnlyRunHostTests = false,
+    this.shouldRestrictLogs = false,
     this.shouldPrintSkipped = false,
     this.shouldRandomizeTestOrder = false,
     this.shouldRebuild = true,
@@ -69,6 +71,7 @@ class Flags {
       shouldFailFast: argResults['fail'],
       shouldOnlyRunDeviceTests: argResults['device'],
       shouldOnlyRunHostTests: argResults['host'],
+      shouldRestrictLogs: argResults['restrict-logs'],
       shouldPrintSkipped: argResults['skipped'],
 
       // True (aka, yes rebuild) if `no-build` is missing or set to `False`
@@ -90,10 +93,11 @@ class Flags {
   isVerbose: $isVerbose
   info: $infoOnly,
   matchLength: ${matchLength.toString()},
+  shouldFailFast: $shouldFailFast
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
   shouldOnlyRunHostTests: $shouldOnlyRunHostTests
-  shouldFailFast: $shouldFailFast
+  shouldRestrictLogs: $shouldRestrictLogs
   shouldPrintSkipped: $shouldPrintSkipped
   shouldRandomizeTestOrder: $shouldRandomizeTestOrder
   shouldSilenceUnsupported: $shouldSilenceUnsupported
@@ -150,14 +154,16 @@ class TestsConfig {
       rawTestNames: _testArguments.parsedArgs.rest,
       fuchsiaLocator: fuchsiaLocator,
     );
-
     Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
+
+    var runnerTokens = <String>[];
+    if (flags.realm != null) runnerTokens.add('--realm-label=${flags.realm}');
+    if (flags.shouldRestrictLogs) runnerTokens.add('--restrict-logs');
+
     return TestsConfig(
       flags: flags,
       fuchsiaLocator: fuchsiaLocator ?? FuchsiaLocator.shared,
-      runnerTokens: flags.realm != null
-          ? ['--realm-label=${flags.realm}', '--restrict-logs']
-          : ['--restrict-logs'],
+      runnerTokens: runnerTokens,
       testArguments: _testArguments,
       testArgumentGroups: _testArgumentsCollector.collect(),
     );

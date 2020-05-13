@@ -223,6 +223,34 @@ void main() {
     test('with --realm', () {
       var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--realm=foo']);
       expect(testsConfig.flags.realm, 'foo');
+      expect(testsConfig.runnerTokens, ['--realm-label=foo']);
+    });
+
+    test('with no --restrict-logs', () {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      expect(testsConfig.flags.shouldRestrictLogs, false);
+      expect(testsConfig.runnerTokens, []);
+    });
+
+    test('with --restrict-logs', () {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--restrict-logs']);
+      expect(testsConfig.flags.shouldRestrictLogs, true);
+      expect(testsConfig.runnerTokens, ['--restrict-logs']);
+    });
+
+    test('with --restrict-logs and --realm', () {
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: [
+        '--restrict-logs',
+        '--realm=bar',
+      ]);
+      expect(testsConfig.flags.realm, 'bar');
+      expect(testsConfig.flags.shouldRestrictLogs, true);
+      expect(
+          testsConfig.runnerTokens,
+          containsAll([
+            '--restrict-logs',
+            '--realm-label=bar',
+          ]));
     });
   });
 

@@ -49,6 +49,10 @@ and component.''',
       defaultsTo: true,
       negatable: true,
       help: 'If true, invokes `fx build` before running the test suite')
+  ..addFlag('restrict-logs',
+      defaultsTo: false,
+      help: 'If true, passes a flag of the same name to the component test '
+          'runner')
   ..addFlag('updateifinbase',
       defaultsTo: true,
       negatable: true,
