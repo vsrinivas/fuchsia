@@ -56,8 +56,8 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 };
 
 class SimpleAudioStream;
-using SimpleAudioStreamBase = ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable,
-                                          ddk::UnbindableDeprecated>;
+using SimpleAudioStreamBase =
+    ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::UnbindableDeprecated>;
 
 // The SimpleAudioStream server (thread compatible) implements Device::Interface and
 // RingBuffer::Interface.
@@ -301,8 +301,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
       AUDIO_PDNF_HARDWIRED | AUDIO_PDNF_PLUGGED;
 
  private:
-  class Channel : public fbl::DoublyLinkedListable<fbl::RefPtr<Channel>>,
-                  public fbl::RefCounted<Channel> {
+  class Channel : public fbl::RefCounted<Channel> {
    public:
     template <typename T = Channel, typename... ConstructorSignature>
     static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
@@ -328,22 +327,16 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // gets managed in SimpleAudioStream.
   // All this is serialized in the single threaded SimpleAudioStream's dispatcher().
   // All the StreamConfig::Interface methods are forwarded to SimpleAudioStream.
-  class StreamChannel : public Channel, public audio_fidl::StreamConfig::Interface {
+  class StreamChannel : public Channel,
+                        public audio_fidl::StreamConfig::Interface,
+                        public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
-    using NodeState = fbl::DoublyLinkedListNodeState<fbl::RefPtr<StreamChannel>>;
-    struct StreamChannelTrait {
-      static NodeState& node_state(StreamChannel& c) { return c.stream_channel_state_; }
-    };
-    friend struct StreamChannelTrait;
-
     // Does not take ownership of stream, which must refer to a valid SimpleAudioStream that
     // outlives this object.
     explicit StreamChannel(SimpleAudioStream* stream) : stream_(*stream) {
       last_reported_gain_state_.cur_gain = kInvalidGain;
     }
     ~StreamChannel() = default;
-
-    bool in_stream_channel_list() const { return stream_channel_state_.InContainer(); }
 
     // fuchsia hardware audio Stream Interface.
     virtual void GetProperties(GetPropertiesCompleter::Sync completer) override {
@@ -380,7 +373,6 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     static constexpr float kInvalidGain = std::numeric_limits<float>::max();
 
     SimpleAudioStream& stream_;
-    NodeState stream_channel_state_;
     std::optional<StreamChannel::WatchPlugStateCompleter::Async> plug_completer_;
     std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
     Plugged last_reported_plugged_state_ = Plugged::kNotReported;
@@ -427,9 +419,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_token());
   fbl::RefPtr<StreamChannel> stream_channel_ __TA_GUARDED(channel_lock_);
   fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(channel_lock_);
-
-  fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>, StreamChannel::StreamChannelTrait>
-      stream_channels_ __TA_GUARDED(channel_lock_);
+  fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>> stream_channels_ __TA_GUARDED(channel_lock_);
 
   // Plug capabilities default to hardwired, if not changed by a child class.
   zx_time_t plug_time_ __TA_GUARDED(domain_token()) = 0;
