@@ -4,10 +4,10 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/trace_manager/tests/trace_manager_test.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

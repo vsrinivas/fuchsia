@@ -5,6 +5,7 @@
 #include "src/developer/feedback/feedback_data/attachments/system_log_ptr.h"
 
 #include <lib/async/cpp/executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -22,7 +23,6 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace {

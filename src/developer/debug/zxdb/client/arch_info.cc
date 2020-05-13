@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/arch_info.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -12,7 +14,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

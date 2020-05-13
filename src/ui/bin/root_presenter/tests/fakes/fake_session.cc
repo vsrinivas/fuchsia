@@ -4,7 +4,7 @@
 
 #include "src/ui/bin/root_presenter/tests/fakes/fake_session.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace root_presenter {
 namespace testing {

@@ -37,7 +37,6 @@
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"

@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include <vector>
 
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/logging.h"
 
 namespace files {
 

@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/console/format_table.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

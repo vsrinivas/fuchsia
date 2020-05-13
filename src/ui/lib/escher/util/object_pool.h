@@ -5,10 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_UTIL_OBJECT_POOL_H_
 #define SRC_UI_LIB_ESCHER_UTIL_OBJECT_POOL_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <utility>
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

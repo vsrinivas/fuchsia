@@ -6,6 +6,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,6 @@
 
 #include "guest_test.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"

@@ -6,13 +6,12 @@
 
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <zircon/device/ethernet.h>
-
-#include "src/lib/fxl/logging.h"
 
 static constexpr size_t kMtu = 1500;
 static constexpr size_t kVmoSize = kMtu * 2;

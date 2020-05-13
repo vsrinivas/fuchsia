@@ -9,11 +9,11 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/object.h>
 
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

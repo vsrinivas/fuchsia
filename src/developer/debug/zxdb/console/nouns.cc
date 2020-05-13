@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/nouns.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <utility>
@@ -34,7 +35,6 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

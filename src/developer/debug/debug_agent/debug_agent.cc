@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/features.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
@@ -30,7 +31,6 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

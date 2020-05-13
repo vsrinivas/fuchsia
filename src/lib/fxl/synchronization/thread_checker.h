@@ -8,10 +8,10 @@
 #ifndef SRC_LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
 #define SRC_LIB_FXL_SYNCHRONIZATION_THREAD_CHECKER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <pthread.h>
 
 #include "src/lib/fxl/build_config.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 

@@ -6,6 +6,7 @@
 #define GARNET_BIN_CPUPERF_PROVIDER_IMPORTER_H_
 
 #include <assert.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -17,7 +18,6 @@
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/events.h"
 #include "garnet/lib/perfmon/reader.h"
-#include "src/lib/fxl/logging.h"
 
 namespace cpuperf_provider {
 

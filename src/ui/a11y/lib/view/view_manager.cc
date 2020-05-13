@@ -10,7 +10,6 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {

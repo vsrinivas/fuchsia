@@ -5,8 +5,7 @@
 #ifndef SRC_LIB_FXL_LOGGING_H_
 #define SRC_LIB_FXL_LOGGING_H_
 
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include "src/lib/fxl/log_settings.h"
 
 #endif  // SRC_LIB_FXL_LOGGING_H_

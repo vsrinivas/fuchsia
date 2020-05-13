@@ -6,12 +6,11 @@
 
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
-#include <src/lib/fxl/logging.h>
 
 namespace activity {
 

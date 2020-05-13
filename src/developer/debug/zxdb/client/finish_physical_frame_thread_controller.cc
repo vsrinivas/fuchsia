@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/zxdb/client/finish_physical_frame_thread_controller.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

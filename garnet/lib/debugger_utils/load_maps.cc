@@ -5,6 +5,7 @@
 #include "load_maps.h"
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cinttypes>
 #include <cstdio>
@@ -14,7 +15,6 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
 

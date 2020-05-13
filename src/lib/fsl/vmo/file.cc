@@ -6,10 +6,9 @@
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/insntrace/config.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
 #include <array>
@@ -19,7 +20,6 @@
 #include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {

@@ -5,12 +5,13 @@
 #ifndef SRC_LIB_FXL_STRINGS_STRING_VIEW_H_
 #define SRC_LIB_FXL_STRINGS_STRING_VIEW_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iosfwd>
 #include <string>
 #include <type_traits>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/logging.h"
 
 // MSVC 2015 doesn't support "extended constexpr" from C++14.
 #if __cplusplus >= 201402L

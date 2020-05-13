@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace flatland {
 

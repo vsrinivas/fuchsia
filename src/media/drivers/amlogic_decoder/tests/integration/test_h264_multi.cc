@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <byteswap.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <zircon/compiler.h>
 
 #include <gtest/gtest.h>
@@ -13,7 +14,6 @@
 #include "h264_utils.h"
 #include "macros.h"
 #include "pts_manager.h"
-#include "src/lib/fxl/log_settings.h"
 #include "test_frame_allocator.h"
 #include "tests/integration/test_25fps_h264_hashes.h"
 #include "tests/test_support.h"

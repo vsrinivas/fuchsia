@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/stack.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <map>
 
 #include "src/developer/debug/ipc/records.h"
@@ -16,7 +18,6 @@
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace zxdb {

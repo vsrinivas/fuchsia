@@ -4,13 +4,13 @@
 
 #include "src/developer/debug/zxdb/console/format_register.cc"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/debug/arm64.h>
 
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/shared/arch_x86.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

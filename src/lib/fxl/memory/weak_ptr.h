@@ -10,11 +10,11 @@
 #define SRC_LIB_FXL_MEMORY_WEAK_PTR_H_
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstddef>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr_internal.h"
 

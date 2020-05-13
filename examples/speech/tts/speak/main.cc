@@ -8,11 +8,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

@@ -8,11 +8,11 @@
 #include <arpa/inet.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
 #include <ostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inet/ip_address.h"
 #include "src/lib/inet/ip_port.h"
 

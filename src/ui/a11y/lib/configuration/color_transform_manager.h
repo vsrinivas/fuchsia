@@ -10,13 +10,12 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <math.h>
 
 #include <array>
 
 #include <src/lib/fxl/macros.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace a11y {
 

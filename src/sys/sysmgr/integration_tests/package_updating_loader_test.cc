@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -26,8 +27,6 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace sysmgr {
 namespace {

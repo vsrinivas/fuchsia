@@ -8,12 +8,12 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
 
 #include "fuchsia/netemul/guest/cpp/fidl.h"
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/test/integration_test_lib.h"
 

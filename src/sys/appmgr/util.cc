@@ -5,6 +5,7 @@
 #include "src/sys/appmgr/util.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 
@@ -12,8 +13,6 @@
 
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace component {
 

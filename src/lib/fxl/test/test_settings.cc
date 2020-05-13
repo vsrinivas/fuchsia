@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 #include "test_settings.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 

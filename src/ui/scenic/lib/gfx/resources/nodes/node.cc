@@ -5,10 +5,10 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"

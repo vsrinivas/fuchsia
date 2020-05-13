@@ -10,6 +10,7 @@
 #include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -21,7 +22,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"

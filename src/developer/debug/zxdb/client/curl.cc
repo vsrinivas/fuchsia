@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/client/curl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 namespace {

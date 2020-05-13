@@ -4,10 +4,11 @@
 
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"

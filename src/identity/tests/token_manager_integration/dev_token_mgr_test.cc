@@ -10,6 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <string>
@@ -22,7 +23,6 @@
 #include "rapidjson/schema.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 

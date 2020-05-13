@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -15,7 +16,6 @@
 #include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/simple-pt/elf.h"
 #include "third_party/simple-pt/symtab.h"

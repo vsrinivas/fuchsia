@@ -19,7 +19,6 @@
 #include "src/developer/feedback/utils/fit/promise.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
 namespace feedback {

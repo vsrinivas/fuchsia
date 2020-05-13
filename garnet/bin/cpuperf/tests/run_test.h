@@ -5,14 +5,13 @@
 #ifndef GARNET_BIN_CPUPERF_TESTS_RUN_TEST_H_
 #define GARNET_BIN_CPUPERF_TESTS_RUN_TEST_H_
 
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 
 #include <string>
 #include <vector>
-
-#include "src/lib/fxl/log_settings.h"
 
 // For now don't run longer than this. The CQ bot has this timeout as well,
 // so this is as good a value as any. Later we might want to add a timeout

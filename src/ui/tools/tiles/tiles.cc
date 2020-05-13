@@ -6,11 +6,10 @@
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <cmath>
-
-#include "src/lib/fxl/logging.h"
 
 constexpr float kTileElevation = 5.f;
 

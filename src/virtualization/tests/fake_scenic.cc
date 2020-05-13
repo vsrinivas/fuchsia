@@ -10,14 +10,13 @@
 #include <lib/fit/defer.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 #include <zircon/errors.h>
 
 #include <cstdint>
 #include <fstream>
 #include <iostream>
-
-#include "src/lib/fxl/logging.h"
 
 // If true, print to log files received Session commands.
 constexpr bool kTraceCommands = false;

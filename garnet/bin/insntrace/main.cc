@@ -11,6 +11,8 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,9 +21,7 @@
 #include <iostream>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"

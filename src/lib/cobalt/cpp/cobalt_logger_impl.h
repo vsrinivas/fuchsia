@@ -8,13 +8,13 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <set>
 
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/fxl/logging.h"
 
 namespace cobalt {
 

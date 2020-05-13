@@ -6,12 +6,13 @@
 // TODO(dje): As with generic elf, dwarf, et.al, move to application
 // independent library.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUGGER_UTILS_X86_CPUID_H_
+#define GARNET_LIB_DEBUGGER_UTILS_X86_CPUID_H_
+
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 #include <cstdio>
-
-#include "src/lib/fxl/logging.h"
 
 namespace debugger_utils {
 
@@ -130,3 +131,5 @@ struct x86_topology_level {
 bool x86_topology_enumerate(uint8_t level, x86_topology_level* info);
 
 }  // namespace debugger_utils
+
+#endif  // GARNET_LIB_DEBUGGER_UTILS_X86_CPUID_H_

@@ -5,6 +5,7 @@
 #include "managed_logger.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -12,7 +13,6 @@
 #include <iostream>
 
 #include "format.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace netemul {

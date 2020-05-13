@@ -4,8 +4,9 @@
 
 #include "src/developer/debug/zxdb/client/remote_api.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/session.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

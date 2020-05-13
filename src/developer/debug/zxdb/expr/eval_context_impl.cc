@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -29,7 +31,6 @@
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

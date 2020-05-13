@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/identifier_base.h"
 
-#include <map>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <map>
 
 namespace zxdb {
 

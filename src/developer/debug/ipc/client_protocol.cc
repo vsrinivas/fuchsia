@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/ipc/client_protocol.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
@@ -17,7 +18,6 @@
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 // This test tests that the debug agent can effectively capture process being
 // launched by zircon, and set breakpoints on them.

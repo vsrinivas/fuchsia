@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <getopt.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
@@ -24,7 +25,6 @@
 
 #include "action.h"
 #include "object.h"
-#include "src/lib/fxl/logging.h"
 #include "tracing.h"
 #include "utility.h"
 #include "worker.h"

@@ -8,6 +8,7 @@
 #include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
 #include <zircon/status.h>
@@ -19,7 +20,6 @@
 #include "garnet/bin/ktrace_provider/device_reader.h"
 #include "garnet/bin/ktrace_provider/importer.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ktrace_provider {
 namespace {

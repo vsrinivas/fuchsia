@@ -8,13 +8,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

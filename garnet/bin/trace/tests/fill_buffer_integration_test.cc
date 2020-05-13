@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -9,7 +10,6 @@
 #include <memory>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

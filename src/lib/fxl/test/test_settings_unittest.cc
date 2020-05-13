@@ -4,6 +4,7 @@
 
 #include "src/lib/fxl/test/test_settings.h"
 
+#include <lib/syslog/cpp/log_settings.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -13,7 +14,6 @@
 #include "sdk/lib/syslog/cpp/log_level.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 
 namespace fxl {
 namespace {

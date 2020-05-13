@@ -5,8 +5,8 @@
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 
 #include <lib/fit/bridge.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
 fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(

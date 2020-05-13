@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/symbols/inheritance_path.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace zxdb {
 

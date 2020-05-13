@@ -5,9 +5,9 @@
 #ifndef SRC_LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
 #define SRC_LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_export.h"
 
 namespace url {

@@ -5,7 +5,8 @@
 #ifndef GARNET_BIN_UI_BENCHMARKS_IMAGE_GRID_CPP_IMAGE_GRID_VIEW_H_
 #define GARNET_BIN_UI_BENCHMARKS_IMAGE_GRID_CPP_IMAGE_GRID_VIEW_H_
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/ui/scenic/lib/scenic/util/rk4_spring_simulation.h"

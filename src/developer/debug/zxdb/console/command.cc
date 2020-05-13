@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/zxdb/console/command.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

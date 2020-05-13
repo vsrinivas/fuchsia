@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -13,7 +15,6 @@
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_unit_impl.h"
 #include "src/lib/elflib/elflib.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

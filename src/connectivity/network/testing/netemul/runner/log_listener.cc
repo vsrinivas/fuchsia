@@ -4,11 +4,11 @@
 
 #include "log_listener.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "log_listener_log_sink.h"
 #include "log_listener_ostream.h"
-#include "src/lib/fxl/logging.h"
 
 namespace netemul {
 namespace internal {

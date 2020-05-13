@@ -5,10 +5,10 @@
 #include "test_helper_fixture.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "test_helper.h"
 #include "util.h"
 

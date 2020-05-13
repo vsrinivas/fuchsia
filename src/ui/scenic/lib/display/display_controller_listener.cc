@@ -5,9 +5,8 @@
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace display {

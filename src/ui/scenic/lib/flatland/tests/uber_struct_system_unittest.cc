@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <chrono>
 #include <cstddef>
 #include <mutex>
@@ -12,7 +14,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 

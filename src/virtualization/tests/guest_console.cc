@@ -4,6 +4,7 @@
 
 #include "src/virtualization/tests/guest_console.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -11,7 +12,6 @@
 #include <regex>
 
 #include "logger.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 static constexpr zx::duration kTestTimeout = zx::sec(300);

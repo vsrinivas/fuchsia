@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/format.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -26,7 +28,6 @@
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

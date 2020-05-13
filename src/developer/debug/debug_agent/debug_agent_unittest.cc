@@ -3,6 +3,7 @@
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
@@ -16,7 +17,6 @@
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::exception;

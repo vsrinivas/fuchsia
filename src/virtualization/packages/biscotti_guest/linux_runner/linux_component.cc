@@ -5,9 +5,8 @@
 #include "src/virtualization/packages/biscotti_guest/linux_runner/linux_component.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace linux_runner {
 

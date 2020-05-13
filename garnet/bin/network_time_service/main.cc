@@ -12,7 +12,6 @@
 #include "lib/fit/function.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
 constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
 

@@ -6,8 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace scenic_impl {
 

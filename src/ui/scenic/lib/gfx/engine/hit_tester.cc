@@ -4,10 +4,11 @@
 
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <sstream>
 #include <stack>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
@@ -16,7 +18,6 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // The parser is a Pratt parser. The basic idea there is to have the precedences (and

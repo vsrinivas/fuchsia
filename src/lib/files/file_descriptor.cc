@@ -4,8 +4,9 @@
 
 #include "src/lib/files/file_descriptor.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/files/eintr_wrapper.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 

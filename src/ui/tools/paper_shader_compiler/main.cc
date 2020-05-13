@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/escher_process_init.h"

@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace {
 struct pair_hash {

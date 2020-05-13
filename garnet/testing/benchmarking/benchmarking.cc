@@ -5,6 +5,7 @@
 #include "garnet/testing/benchmarking/benchmarking.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -16,7 +17,6 @@
 #include <fstream>
 
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"

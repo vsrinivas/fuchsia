@@ -4,9 +4,10 @@
 
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 
 namespace scenic_impl {

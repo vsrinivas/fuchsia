@@ -5,11 +5,10 @@
 #include "src/lib/fsl/socket/blocking_drain.h"
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/socket.h>
 
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

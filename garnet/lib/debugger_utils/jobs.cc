@@ -5,6 +5,7 @@
 #include "garnet/lib/debugger_utils/jobs.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -14,7 +15,6 @@
 #include <list>
 
 #include "garnet/lib/debugger_utils/util.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

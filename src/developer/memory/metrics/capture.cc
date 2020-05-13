@@ -9,6 +9,7 @@
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
@@ -18,8 +19,6 @@
 
 #include <task-utils/walker.h>
 #include <trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace memory {
 

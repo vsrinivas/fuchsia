@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/substatement.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "src/developer/debug/shared/message_loop.h"
@@ -15,7 +17,6 @@
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

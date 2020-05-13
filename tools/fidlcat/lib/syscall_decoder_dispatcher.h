@@ -5,6 +5,7 @@
 #ifndef TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 #define TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/types.h>
 
@@ -27,7 +28,6 @@
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "src/lib/fidl_codec/wire_types.h"
-#include "src/lib/fxl/logging.h"
 #include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decode_options.h"
 #include "tools/fidlcat/lib/event.h"

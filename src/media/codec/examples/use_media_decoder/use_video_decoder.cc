@@ -14,6 +14,7 @@
 #include <lib/media/test/codec_client.h>
 #include <lib/media/test/frame_sink.h>
 #include <lib/media/test/one_shot_event.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -27,7 +28,6 @@
 #include "input_copier.h"
 #include "lib/zx/time.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "util.h"
 
 namespace {

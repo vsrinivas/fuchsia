@@ -4,9 +4,10 @@
 
 #include "src/ui/lib/escher/impl/image_cache.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/test/vk/fake_gpu_allocator.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 

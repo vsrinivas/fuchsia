@@ -5,9 +5,9 @@
 #ifndef SRC_UI_LIB_ESCHER_BASE_TYPE_INFO_H_
 #define SRC_UI_LIB_ESCHER_BASE_TYPE_INFO_H_
 
-#include <utility>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <utility>
 
 namespace escher {
 

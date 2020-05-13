@@ -12,7 +12,6 @@
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "zircon/third_party/uapp/dash/src/output.h"
 

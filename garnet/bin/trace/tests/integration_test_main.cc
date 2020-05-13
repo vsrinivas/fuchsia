@@ -13,6 +13,8 @@
 // The tests are currently combined into one binary because there aren't
 // that many and they share enough code. KISS.
 
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include <iostream>
@@ -22,9 +24,7 @@
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
 const char kUsageString[] = {
     "Test runner usage:\n"

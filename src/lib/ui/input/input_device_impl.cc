@@ -4,9 +4,9 @@
 
 #include "src/lib/ui/input/input_device_impl.h"
 
-#include <trace/event.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <trace/event.h>
 
 namespace ui_input {
 

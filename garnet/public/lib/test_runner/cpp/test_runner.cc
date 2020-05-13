@@ -32,6 +32,7 @@
 
 #include <arpa/inet.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -45,7 +46,6 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_view.h"
 

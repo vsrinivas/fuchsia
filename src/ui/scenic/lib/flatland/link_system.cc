@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 #include <glm/gtc/matrix_access.hpp>
 

@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/console/mock_console.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_parser.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -5,11 +5,10 @@
 #include "src/ui/bin/activity/activity_provider_connection.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace activity {
 

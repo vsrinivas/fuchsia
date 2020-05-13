@@ -6,8 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
-
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 HostVsockEndpoint::HostVsockEndpoint(AcceptorProvider acceptor_provider)
     : acceptor_provider_(std::move(acceptor_provider)) {}

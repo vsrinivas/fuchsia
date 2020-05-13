@@ -4,6 +4,8 @@
 
 #include "src/lib/fidl_codec/message_decoder.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <ostream>
 #include <sstream>
 
@@ -15,7 +17,6 @@
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "src/lib/fidl_codec/wire_types.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

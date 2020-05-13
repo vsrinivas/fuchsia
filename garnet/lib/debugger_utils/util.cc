@@ -4,11 +4,12 @@
 
 #include "util.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cctype>
 #include <cinttypes>
 #include <cstring>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

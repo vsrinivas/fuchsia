@@ -4,9 +4,8 @@
 
 #include "src/lib/ui/base_view/view_provider_component.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-
-#include "src/lib/fxl/logging.h"
 
 using fuchsia::ui::views::ViewToken;
 

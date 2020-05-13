@@ -4,7 +4,8 @@
 
 #include "src/virtualization/lib/vsh/command_runner.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/virtualization/lib/vsh/client.h"
 
 namespace vsh {

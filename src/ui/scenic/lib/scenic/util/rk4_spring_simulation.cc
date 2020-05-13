@@ -4,12 +4,13 @@
 
 #include "src/ui/scenic/lib/scenic/util/rk4_spring_simulation.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <cmath>
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {

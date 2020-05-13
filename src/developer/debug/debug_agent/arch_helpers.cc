@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace debug_agent {
 namespace arch {

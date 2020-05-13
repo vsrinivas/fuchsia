@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include <vector>
 
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // ProcessSpawner is a simple utility that waits for user input on stdin and

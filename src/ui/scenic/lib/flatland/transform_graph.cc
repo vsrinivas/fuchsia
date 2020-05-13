@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace flatland {
 

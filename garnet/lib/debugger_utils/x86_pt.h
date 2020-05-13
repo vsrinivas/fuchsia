@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_DEBUGGER_UTILS_X86_PT_H_
+#define GARNET_LIB_DEBUGGER_UTILS_X86_PT_H_
+
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 #include <cstdio>
-
-#include "src/lib/fxl/logging.h"
 
 namespace debugger_utils {
 
@@ -45,3 +46,5 @@ bool X86HaveProcessorTrace();
 const X86ProcessorTraceFeatures* X86GetProcessorTraceFeatures();
 
 }  // namespace debugger_utils
+
+#endif  // GARNET_LIB_DEBUGGER_UTILS_X86_PT_H_

@@ -7,6 +7,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <stdlib.h>
 
@@ -16,8 +17,6 @@
 #include <queue>
 #include <string>
 #include <unordered_map>
-
-#include "src/lib/fxl/logging.h"
 
 using fuchsia::cobalt::Status;
 

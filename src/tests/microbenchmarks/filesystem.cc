@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <perftest/perftest.h>
 
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

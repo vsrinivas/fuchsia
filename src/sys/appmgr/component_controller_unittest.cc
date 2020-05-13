@@ -5,6 +5,8 @@
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/object.h>
 
 #include <fs/pseudo_dir.h>
@@ -16,8 +18,6 @@
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/log_settings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/util.h"

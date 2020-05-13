@@ -25,7 +25,7 @@
 #include <string>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_util.h"

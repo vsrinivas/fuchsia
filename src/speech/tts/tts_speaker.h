@@ -11,6 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <mutex>
@@ -18,7 +19,6 @@
 
 #include "lib/fidl/cpp/string.h"
 #include "lib/sys/cpp/component_context.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "third_party/flite/include/flite_fuchsia.h"

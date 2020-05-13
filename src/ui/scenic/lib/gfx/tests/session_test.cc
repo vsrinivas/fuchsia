@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 

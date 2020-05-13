@@ -6,8 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/fdio/fd.h>
-
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 int ConvertSocketToNonBlockingFd(zx::socket socket) {
   int fd = -1;

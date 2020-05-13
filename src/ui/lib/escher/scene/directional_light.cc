@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/scene/directional_light.h"
 
-#include <utility>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <utility>
 
 #include <glm/gtc/epsilon.hpp>
 

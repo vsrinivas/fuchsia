@@ -4,9 +4,8 @@
 
 #include "src/lib/fsl/vmo/shared_vmo.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmar.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

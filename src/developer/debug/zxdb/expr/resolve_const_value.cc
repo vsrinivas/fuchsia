@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_const_value.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace zxdb {
 

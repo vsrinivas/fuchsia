@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #define _ALL_SOURCE
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
@@ -11,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // This binary is meant to be a playground for testing different multi-threading

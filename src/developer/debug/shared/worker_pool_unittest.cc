@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/shared/worker_pool.h"
 
-#include <gtest/gtest.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 using namespace std::chrono_literals;
 

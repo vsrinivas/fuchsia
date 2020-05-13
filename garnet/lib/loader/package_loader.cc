@@ -5,6 +5,7 @@
 #include "garnet/lib/loader/package_loader.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <utility>
@@ -15,7 +16,6 @@
 #include "lib/fidl/cpp/optional.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/url_resolver.h"
 

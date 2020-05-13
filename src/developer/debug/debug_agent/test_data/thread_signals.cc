@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
-
-#include "src/lib/fxl/logging.h"
 
 // This binary is meant to be a test ground for thread signaling.
 // The first iteration shows how ZX_THREAD_SUSPENDED and ZX_THREAD_RUNNING

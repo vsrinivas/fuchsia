@@ -4,9 +4,10 @@
 
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <ostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/display_compositor.h"

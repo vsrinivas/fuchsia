@@ -7,6 +7,7 @@
 #include "dso_list.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <link.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
 

@@ -4,11 +4,11 @@
 
 #include "src/developer/debug/debug_agent/agent_configuration.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

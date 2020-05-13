@@ -4,9 +4,10 @@
 
 #include "src/media/playback/examples/audio_player/audio_player_params.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace examples {

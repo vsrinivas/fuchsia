@@ -4,8 +4,9 @@
 
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/trim.h"
 
 namespace root_presenter {

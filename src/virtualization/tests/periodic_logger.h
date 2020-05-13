@@ -5,9 +5,8 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
 #define SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
-
-#include "src/lib/fxl/logging.h"
 
 // Print a log message every |logging_interval| units of time.
 //

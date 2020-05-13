@@ -12,6 +12,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/inspect/service/cpp/service.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <cinttypes>
@@ -27,7 +28,6 @@
 #include "lib/inspect/service/cpp/service.h"
 #include "lib/vfs/cpp/service.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/namespace.h"
 

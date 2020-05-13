@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "intel_tests.h"
-#include "src/lib/fxl/logging.h"
 
 class UserFlagVerifier : public Verifier {
  public:

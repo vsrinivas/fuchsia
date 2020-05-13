@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -25,7 +26,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"

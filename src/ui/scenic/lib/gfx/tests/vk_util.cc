@@ -4,9 +4,9 @@
 
 #include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 

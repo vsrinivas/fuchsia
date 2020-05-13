@@ -4,6 +4,8 @@
 
 #include "src/lib/fidl_codec/wire_object.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -19,7 +21,6 @@
 #include "src/lib/fidl_codec/status.h"
 #include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

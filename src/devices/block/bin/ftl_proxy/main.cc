@@ -7,6 +7,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
 #include <fbl/unique_fd.h>
@@ -15,7 +16,6 @@
 #include "src/devices/block/bin/ftl_proxy/local_storage_metrics.cb.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

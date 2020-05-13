@@ -4,11 +4,10 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 
 #include <memory>
-
-#include "src/lib/fxl/logging.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_access.hpp>

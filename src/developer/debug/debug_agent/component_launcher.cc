@@ -7,12 +7,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

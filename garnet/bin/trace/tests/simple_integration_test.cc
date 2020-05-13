@@ -6,6 +6,7 @@
 // The big part of the test is that this works at all in the presence of
 // a provider that provides two of them.
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -13,7 +14,6 @@
 #include <memory>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

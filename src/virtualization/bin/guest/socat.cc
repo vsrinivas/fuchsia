@@ -7,12 +7,12 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest/serial.h"
 
 class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {

@@ -4,12 +4,11 @@
 
 #include "app.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <functional>
 #include <iostream>
-
-#include "src/lib/fxl/logging.h"
 
 namespace ble = fuchsia::bluetooth::le;
 

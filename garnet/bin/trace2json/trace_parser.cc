@@ -4,7 +4,7 @@
 
 #include "garnet/bin/trace2json/trace_parser.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace tracing {
 

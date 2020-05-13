@@ -4,13 +4,13 @@
 
 #include "gather_threads_and_cpu.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/process.h>
 
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
 #include "root_resource.h"
-#include "src/lib/fxl/logging.h"
 
 class GatherThreadsAndCpuTest : public ::testing::Test {
  public:

@@ -5,10 +5,10 @@
 #include "test_suite.h"
 
 #include <fuchsia/test/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "src/lib/fxl/logging.h"
 
 namespace example {
 

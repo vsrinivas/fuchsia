@@ -5,9 +5,9 @@
 #ifndef SRC_UI_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 #define SRC_UI_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/base_view/base_view.h"
 

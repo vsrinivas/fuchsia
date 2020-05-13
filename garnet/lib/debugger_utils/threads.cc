@@ -4,11 +4,12 @@
 
 #include "garnet/lib/debugger_utils/threads.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debugger_utils {

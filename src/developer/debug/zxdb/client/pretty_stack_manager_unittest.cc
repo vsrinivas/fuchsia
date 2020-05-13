@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/zxdb/client/pretty_stack_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_stack_delegate.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

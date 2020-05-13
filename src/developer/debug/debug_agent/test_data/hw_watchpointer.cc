@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
@@ -9,7 +10,6 @@
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 // This is a self contained binary that is meant to be run *manually*.
 // This is the smallest code that can be used to reproduce a HW watchpoint

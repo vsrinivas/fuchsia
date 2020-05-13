@@ -6,6 +6,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -14,7 +15,6 @@
 #include <gtest/gtest.h>
 
 #include "settable_time_source.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/roughtime/protocol.h"
 #include "third_party/roughtime/simple_server.h"
 #include "third_party/roughtime/udp_processor.h"

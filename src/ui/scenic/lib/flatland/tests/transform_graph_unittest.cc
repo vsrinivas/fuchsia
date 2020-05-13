@@ -4,12 +4,12 @@
 
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <array>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 using flatland::TransformGraph;
 using flatland::TransformHandle;

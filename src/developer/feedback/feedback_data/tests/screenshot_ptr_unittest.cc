@@ -6,6 +6,7 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -17,7 +18,6 @@
 
 #include "src/developer/feedback/testing/stubs/scenic.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace {

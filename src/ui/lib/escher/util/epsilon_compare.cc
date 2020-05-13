@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/util/epsilon_compare.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/geometry/types.h"
 
 namespace escher {

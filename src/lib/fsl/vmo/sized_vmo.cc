@@ -4,7 +4,7 @@
 
 #include "src/lib/fsl/vmo/sized_vmo.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace fsl {
 

@@ -7,13 +7,13 @@
 
 // Derived from chromium/src/base/observer_list.h
 
+#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 
 #include <algorithm>
 #include <limits>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

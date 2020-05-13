@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -17,7 +18,6 @@
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

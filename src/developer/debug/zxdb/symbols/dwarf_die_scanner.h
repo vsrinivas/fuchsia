@@ -5,12 +5,11 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_DIE_SCANNER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 
 #include <utility>
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 namespace llvm {
 

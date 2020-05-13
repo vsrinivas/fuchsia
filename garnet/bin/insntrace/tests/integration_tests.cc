@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <unistd.h>
@@ -13,7 +14,6 @@
 
 #include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace {

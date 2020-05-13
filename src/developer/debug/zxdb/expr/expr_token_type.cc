@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/expr/expr_token_type.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

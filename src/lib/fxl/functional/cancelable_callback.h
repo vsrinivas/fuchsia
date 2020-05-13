@@ -6,10 +6,10 @@
 #define SRC_LIB_FXL_FUNCTIONAL_CANCELABLE_CALLBACK_H_
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <functional>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

@@ -4,12 +4,12 @@
 
 #include "processes.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/logging.h"
 #include "util.h"
 
 namespace debugger_utils {

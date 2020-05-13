@@ -4,7 +4,7 @@
 
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace cobalt {
 

@@ -5,12 +5,12 @@
 #include "runner.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace netemul {

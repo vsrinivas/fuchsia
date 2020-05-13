@@ -9,9 +9,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace component {

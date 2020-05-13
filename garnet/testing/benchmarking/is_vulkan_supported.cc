@@ -5,6 +5,7 @@
 #include "garnet/testing/benchmarking/is_vulkan_supported.h"
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/handle.h>
 #include <unistd.h>
 #include <zircon/status.h>
@@ -14,8 +15,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 namespace benchmarking {
 

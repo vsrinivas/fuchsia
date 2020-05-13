@@ -5,6 +5,7 @@
 #include "garnet/bin/trace/utils.h"
 
 #include <errno.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netdb.h>
 #include <stddef.h>
 #include <string.h>
@@ -21,7 +22,6 @@
 #include <src/lib/files/unique_fd.h>
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/trim.h"
 
 namespace tracing {

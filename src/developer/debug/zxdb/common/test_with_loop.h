@@ -5,10 +5,11 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TEST_WITH_LOOP_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TEST_WITH_LOOP_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/shared/platform_message_loop.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

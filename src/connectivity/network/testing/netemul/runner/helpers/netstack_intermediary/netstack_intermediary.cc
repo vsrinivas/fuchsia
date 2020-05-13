@@ -6,12 +6,11 @@
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/status.h>
 
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 static constexpr netemul::EthernetConfig eth_config = {.nbufs = 256, .buff_size = 2048};
 

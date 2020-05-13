@@ -4,10 +4,10 @@
 
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/exception.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fuchsia {
 namespace exception {

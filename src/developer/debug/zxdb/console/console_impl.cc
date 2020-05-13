@@ -12,6 +12,8 @@
 #include <termios.h>
 #endif
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <filesystem>
 
 #include "src/developer/debug/zxdb/client/process.h"
@@ -24,7 +26,6 @@
 #include "src/developer/debug/zxdb/console/command_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"

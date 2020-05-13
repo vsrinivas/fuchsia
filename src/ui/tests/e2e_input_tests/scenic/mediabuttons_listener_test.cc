@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
@@ -20,7 +21,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/ui/base_view/base_view.h"
 
 // NOTE WELL. Run each of these e2e tests in its own executable.  They each

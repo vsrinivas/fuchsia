@@ -4,6 +4,7 @@
 
 #include "workload.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/port.h>
 #include <lib/zx/profile.h>
@@ -25,7 +26,6 @@
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "utility.h"
 #include "worker.h"
 

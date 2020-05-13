@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <optional>
@@ -15,7 +16,6 @@
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
 namespace feedback {

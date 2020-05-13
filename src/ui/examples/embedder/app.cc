@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
@@ -16,7 +17,6 @@
 #include <zircon/types.h>
 
 #include "example_view_provider_service.h"
-#include "src/lib/fxl/logging.h"
 
 // Returns a human-readable string for a given embedder process type -
 // either container or subview.

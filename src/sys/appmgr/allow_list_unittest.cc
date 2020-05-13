@@ -5,6 +5,7 @@
 #include "src/sys/appmgr/allow_list.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <string>
@@ -16,7 +17,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace component {

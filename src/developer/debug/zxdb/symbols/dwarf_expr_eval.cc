@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include <utility>
@@ -14,7 +15,6 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

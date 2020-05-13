@@ -7,6 +7,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/if_ether.h>
@@ -20,8 +21,6 @@
 #include <fbl/unique_fd.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 void TraceSend(int sendfd, uint8_t* buf, ssize_t size, const char* name, struct sockaddr_in* addr,
                socklen_t addrlen);

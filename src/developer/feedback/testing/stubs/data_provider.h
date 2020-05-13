@@ -9,6 +9,7 @@
 #include <fuchsia/feedback/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <cstdlib>
@@ -16,7 +17,6 @@
 #include <memory>
 
 #include "src/developer/feedback/testing/stubs/fidl_server.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {

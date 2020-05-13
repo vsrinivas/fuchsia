@@ -15,6 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <netdb.h>
@@ -26,7 +27,6 @@
 #include <vector>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/sys/lib/chrealm/chrealm.h"

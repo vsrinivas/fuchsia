@@ -4,12 +4,12 @@
 
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

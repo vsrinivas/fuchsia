@@ -4,12 +4,13 @@
 
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
 #include <glm/gtc/constants.hpp>

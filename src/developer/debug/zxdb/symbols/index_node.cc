@@ -4,11 +4,12 @@
 
 #include "src/developer/debug/zxdb/symbols/index_node.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <sstream>
 
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

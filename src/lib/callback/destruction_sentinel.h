@@ -6,8 +6,8 @@
 #define SRC_LIB_CALLBACK_DESTRUCTION_SENTINEL_H_
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace callback {

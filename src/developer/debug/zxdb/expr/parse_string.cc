@@ -5,9 +5,8 @@
 #include "src/developer/debug/zxdb/expr/parse_string.h"
 
 #include <ctype.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

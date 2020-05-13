@@ -8,12 +8,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/limits.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
 #include "garnet/bin/http/http_service_impl.h"
 #include "garnet/bin/http/http_url_loader_impl.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

@@ -6,6 +6,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
@@ -14,7 +15,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/id.h"

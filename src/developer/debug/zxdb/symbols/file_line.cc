@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/file_line.h"
 
-#include <tuple>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <tuple>
 
 namespace zxdb {
 

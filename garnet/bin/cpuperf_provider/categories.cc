@@ -4,9 +4,10 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <trace-engine/instrumentation.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace cpuperf_provider {

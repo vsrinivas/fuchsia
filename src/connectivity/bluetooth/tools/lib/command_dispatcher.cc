@@ -4,10 +4,10 @@
 
 #include "command_dispatcher.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <cstdio>
-
-#include "src/lib/fxl/logging.h"
 
 namespace bluetooth_tools {
 

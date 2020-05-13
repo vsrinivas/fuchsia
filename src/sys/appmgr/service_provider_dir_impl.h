@@ -6,6 +6,7 @@
 #define SRC_SYS_APPMGR_SERVICE_PROVIDER_DIR_IMPL_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <string>
 #include <unordered_set>
@@ -18,7 +19,6 @@
 #include <fs/vfs_types.h>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/sys/appmgr/log_connector_impl.h"

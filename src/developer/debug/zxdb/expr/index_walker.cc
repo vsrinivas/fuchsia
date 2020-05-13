@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/index_walker.h"
 
 #include <ctype.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
 #include <string_view>
@@ -13,7 +14,6 @@
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/index_node.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

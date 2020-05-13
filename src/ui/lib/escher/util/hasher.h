@@ -5,9 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_UTIL_HASHER_H_
 #define SRC_UI_LIB_ESCHER_UTIL_HASHER_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdint>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/hash.h"
 #include "src/ui/lib/escher/util/hash_fnv_1a.h"
 

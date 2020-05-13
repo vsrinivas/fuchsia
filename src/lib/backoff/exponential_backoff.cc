@@ -4,10 +4,9 @@
 
 #include "src/lib/backoff/exponential_backoff.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace backoff {
 

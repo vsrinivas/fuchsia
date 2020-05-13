@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <type_traits>
 
 #include "src/developer/debug/zxdb/common/err.h"
@@ -17,7 +19,6 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
-#include "src/lib/fxl/logging.h"
 
 // About math handling
 // -------------------

@@ -4,11 +4,11 @@
 
 #include "src/ui/lib/escher/geometry/transform.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cmath>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 #include <glm/glm.hpp>
 

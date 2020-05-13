@@ -4,8 +4,9 @@
 
 // This target runs all benchmarks for the Garnet layer.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "garnet/testing/benchmarking/benchmarking.h"
-#include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   auto maybe_benchmarks_runner = benchmarking::BenchmarksRunner::Create(argc, argv);

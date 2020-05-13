@@ -14,6 +14,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -25,8 +26,6 @@
 #include <iostream>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 // This test exercises the touch input dispatch path from Root Presenter to a Scenic client. It is a
 // multi-component test, and carefully avoids sleeping or polling for component coordination.

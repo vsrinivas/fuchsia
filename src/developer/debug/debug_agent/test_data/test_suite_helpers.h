@@ -5,6 +5,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SUITE_HELPERS_H_
 
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/event.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/job.h>
@@ -22,7 +23,6 @@
 #include <thread>
 
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 constexpr uint32_t kHarnessToThread = ZX_USER_SIGNAL_0;

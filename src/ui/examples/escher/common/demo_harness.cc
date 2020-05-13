@@ -4,12 +4,13 @@
 
 #include "src/ui/examples/escher/common/demo_harness.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iostream>
 #include <set>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/escher_process_init.h"

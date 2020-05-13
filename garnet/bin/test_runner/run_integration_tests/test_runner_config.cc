@@ -4,6 +4,7 @@
 
 #include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
 #include <iostream>
@@ -12,7 +13,6 @@
 #include "rapidjson/document.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/remote_api_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "lib/fit/bridge.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -12,7 +14,6 @@
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/async_util.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

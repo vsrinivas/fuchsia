@@ -9,13 +9,13 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debugger_utils {
 

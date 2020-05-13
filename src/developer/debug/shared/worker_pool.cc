@@ -4,8 +4,9 @@
 
 #include "src/developer/debug/shared/worker_pool.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

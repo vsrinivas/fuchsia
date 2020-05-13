@@ -4,9 +4,10 @@
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <optional>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"

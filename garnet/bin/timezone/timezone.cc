@@ -5,6 +5,7 @@
 #include "garnet/bin/timezone/timezone.h"
 
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
 #include <fstream>
@@ -13,7 +14,6 @@
 
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "third_party/icu/source/common/unicode/errorcode.h"
 #include "third_party/icu/source/common/unicode/udata.h"

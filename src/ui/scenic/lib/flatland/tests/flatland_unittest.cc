@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <limits>
 
@@ -13,7 +14,6 @@
 #include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"

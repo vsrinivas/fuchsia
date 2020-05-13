@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/verbs.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/console/commands/verb_aspace.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach_job.h"
@@ -57,7 +59,6 @@
 #include "src/developer/debug/zxdb/console/commands/verb_until.h"
 #include "src/developer/debug/zxdb/console/commands/verb_up.h"
 #include "src/developer/debug/zxdb/console/commands/verb_watch.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

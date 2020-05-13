@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 

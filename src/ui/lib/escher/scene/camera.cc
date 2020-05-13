@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/scene/camera.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/math/rotations.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/util/debug_print.h"

@@ -4,6 +4,7 @@
 
 #include "processes.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
@@ -12,7 +13,6 @@
 
 #include "jobs.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "test_helper.h"
 #include "test_helper_fixture.h"
 #include "util.h"

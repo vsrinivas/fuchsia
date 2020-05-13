@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -23,7 +24,6 @@
 #include <trace/observer.h>
 
 #include "garnet/bin/trace/spec.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

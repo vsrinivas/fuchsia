@@ -31,7 +31,6 @@
 #include "src/developer/feedback/utils/cobalt/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"

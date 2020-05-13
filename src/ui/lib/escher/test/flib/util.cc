@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/test/flib/util.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace escher {
 namespace test {

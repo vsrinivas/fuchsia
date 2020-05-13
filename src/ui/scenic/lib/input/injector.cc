@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/input/injector.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/scenic/lib/input/helper.h"
 
 namespace scenic_impl {

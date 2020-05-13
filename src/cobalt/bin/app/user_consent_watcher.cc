@@ -12,7 +12,6 @@
 #include <optional>
 
 #include "lib/async/cpp/task.h"
-#include "src/lib/fxl/logging.h"
 
 namespace cobalt {
 

@@ -8,9 +8,9 @@
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
 
 namespace scenic_impl {

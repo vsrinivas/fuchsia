@@ -7,10 +7,10 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"

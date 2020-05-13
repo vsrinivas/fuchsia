@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/scheduling/delegating_frame_scheduler.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scheduling {

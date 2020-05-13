@@ -4,6 +4,7 @@
 
 #include "tools/fidlcat/command_line_options.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -11,8 +12,6 @@
 #include <fstream>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fidlcat {
 

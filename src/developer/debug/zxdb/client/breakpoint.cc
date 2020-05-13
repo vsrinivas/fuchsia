@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

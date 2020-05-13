@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
 #include <zircon/assert.h>
@@ -16,7 +17,6 @@
 
 #include <map>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/bin/activity/activity_state_machine.h"
 #include "src/ui/bin/activity/common.h"

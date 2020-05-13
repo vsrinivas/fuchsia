@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
 #include "src/ui/lib/escher/renderer/frame.h"

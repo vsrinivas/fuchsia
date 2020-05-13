@@ -9,11 +9,11 @@
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/outgoing_directory.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
 #include "fuchsia/sys/cpp/fidl.h"
-#include "src/lib/fxl/logging.h"
 
 namespace component {
 namespace testing {

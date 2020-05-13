@@ -5,6 +5,7 @@
 #include "garnet/bin/cpuperf/session_spec.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
@@ -21,7 +22,6 @@
 
 #include "garnet/lib/perfmon/events.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 

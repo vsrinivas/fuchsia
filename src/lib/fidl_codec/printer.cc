@@ -4,8 +4,9 @@
 
 #include "src/lib/fidl_codec/printer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/fidl_codec/display_handle.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

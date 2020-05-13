@@ -5,9 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_COMPLETION_CALLBACK_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_COMPLETION_CALLBACK_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

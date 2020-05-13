@@ -4,6 +4,7 @@
 
 #include "garnet/bin/trace2json/convert.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <cstddef>
@@ -15,7 +16,6 @@
 #include <trace-reader/reader.h>
 
 #include "garnet/bin/trace2json/trace_parser.h"
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

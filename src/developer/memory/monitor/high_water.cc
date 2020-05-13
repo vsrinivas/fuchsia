@@ -5,13 +5,13 @@
 #include "src/developer/memory/monitor/high_water.h"
 
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <fstream>
 
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
-#include <src/lib/fxl/logging.h>
 
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"

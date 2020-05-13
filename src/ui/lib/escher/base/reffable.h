@@ -5,9 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_BASE_REFFABLE_H_
 #define SRC_UI_LIB_ESCHER_BASE_REFFABLE_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdint>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/base/make.h"
 

@@ -7,10 +7,10 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <queue>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scheduling {

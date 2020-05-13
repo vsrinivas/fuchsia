@@ -12,6 +12,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/cmdline/args_parser.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -21,7 +22,6 @@
 #include <variant>
 
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace activity_ctl {

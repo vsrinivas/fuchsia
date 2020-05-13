@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_FUCHSIA_BASENAME_H_
 
 #ifndef __USE_GNU
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 // Empty implementation of the POSIX libgen basename call. The Fuchsia
 // port does not read files from the filesystem so does not need this call,

@@ -4,11 +4,11 @@
 
 #include "byte_block_file.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <cinttypes>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
 

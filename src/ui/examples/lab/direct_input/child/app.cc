@@ -7,13 +7,13 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <limits>
 #include <string>
 
 #include "lib/ui/scenic/cpp/resources.h"
-#include "src/lib/fxl/logging.h"
 
 namespace direct_input_child {
 

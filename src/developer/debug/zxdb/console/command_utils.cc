@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 
 #include <limits>
@@ -52,7 +53,6 @@
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 

@@ -4,9 +4,8 @@
 
 #include "src/ui/testing/views/embedder_view.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace scenic {
 

@@ -5,8 +5,7 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 #include <lib/async/default.h>
-
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace a11y {
 

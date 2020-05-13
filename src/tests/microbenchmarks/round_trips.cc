@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <pthread.h>
@@ -22,7 +23,6 @@
 #include "assert.h"
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "test_runner.h"
 
 // This file measures two things:

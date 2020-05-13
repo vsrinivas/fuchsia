@@ -4,12 +4,12 @@
 
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/object.h>
 
 #include <sstream>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 

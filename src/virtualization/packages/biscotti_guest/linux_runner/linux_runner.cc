@@ -4,9 +4,9 @@
 
 #include "src/virtualization/packages/biscotti_guest/linux_runner/linux_runner.h"
 
-#include <memory>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <memory>
 
 namespace linux_runner {
 

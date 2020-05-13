@@ -4,12 +4,11 @@
 
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 
 #include <limits>
 #include <type_traits>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 namespace {

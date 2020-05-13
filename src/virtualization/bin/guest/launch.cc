@@ -4,9 +4,9 @@
 
 #include "src/virtualization/bin/guest/launch.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/guest/serial.h"
 

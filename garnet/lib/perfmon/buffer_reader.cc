@@ -6,9 +6,10 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "buffer_reader.h"
 #include "records.h"
-#include "src/lib/fxl/logging.h"
 
 namespace perfmon {
 

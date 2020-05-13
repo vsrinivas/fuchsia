@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -21,7 +22,6 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/url_resolver.h"
 

@@ -7,6 +7,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <functional>
 #include <map>
@@ -14,7 +15,6 @@
 #include <utility>
 
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/logging.h"
 
 namespace callback {
 

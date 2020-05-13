@@ -4,6 +4,8 @@
 
 #include "src/lib/fidl_codec/semantic_parser.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cctype>
 #include <iostream>
 #include <memory>
@@ -11,7 +13,6 @@
 #include <string>
 
 #include "src/lib/fidl_codec/library_loader.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 namespace semantic {

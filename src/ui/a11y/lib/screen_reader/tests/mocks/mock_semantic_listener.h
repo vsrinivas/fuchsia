@@ -10,8 +10,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace accessibility_test {

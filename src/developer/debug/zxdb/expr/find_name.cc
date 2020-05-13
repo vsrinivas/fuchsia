@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/find_name.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
@@ -23,7 +25,6 @@
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

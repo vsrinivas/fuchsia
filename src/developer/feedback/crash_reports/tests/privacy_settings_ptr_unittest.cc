@@ -7,6 +7,7 @@
 #include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -17,7 +18,6 @@
 #include "src/developer/feedback/crash_reports/settings.h"
 #include "src/developer/feedback/testing/fakes/privacy_settings.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace {

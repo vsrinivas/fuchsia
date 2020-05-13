@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/format_frame.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -18,7 +19,6 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/value.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

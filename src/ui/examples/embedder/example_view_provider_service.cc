@@ -4,9 +4,8 @@
 
 #include "src/ui/examples/embedder/example_view_provider_service.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace embedder {
 

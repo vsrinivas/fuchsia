@@ -5,12 +5,12 @@
 #ifndef SRC_UI_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
 #define SRC_UI_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include <cmath>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/examples/escher/waterfall/scenes/scene.h"
 #include "src/ui/lib/escher/escher.h"

@@ -5,6 +5,7 @@
 #include "src/developer/shell/mirror/wire_format.h"
 
 #include <dirent.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <memory>
 
 #include "src/developer/shell/mirror/common.h"
-#include "src/lib/fxl/logging.h"
 
 namespace shell::mirror {
 

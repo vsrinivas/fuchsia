@@ -5,7 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_SCENE_SHAPE_H_
 #define SRC_UI_LIB_ESCHER_SCENE_SHAPE_H_
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/debug_print.h"

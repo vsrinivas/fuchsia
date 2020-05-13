@@ -6,7 +6,7 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include "group_key_store_impl.h"
 // clang-format on
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 using namespace ::nl;
 using namespace ::nl::Weave;

@@ -7,13 +7,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/device/vfs.h>
 
 #include <iostream>
 
 #include "isolated_devmgr.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_view.h"

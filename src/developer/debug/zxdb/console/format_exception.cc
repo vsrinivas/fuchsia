@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_exception.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -14,7 +16,6 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

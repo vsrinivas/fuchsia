@@ -25,7 +25,8 @@
 
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/bit_ops.h"

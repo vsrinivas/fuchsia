@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/common/file_util.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <filesystem>
 
 #include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

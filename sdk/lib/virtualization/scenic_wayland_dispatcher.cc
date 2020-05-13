@@ -4,9 +4,8 @@
 
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/virtualization/scenic_wayland_dispatcher.h>
-
-#include "src/lib/fxl/logging.h"
 
 static constexpr char kWaylandDispatcherPackage[] =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";

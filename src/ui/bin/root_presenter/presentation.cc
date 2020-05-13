@@ -5,13 +5,13 @@
 #include "src/ui/bin/root_presenter/presentation.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cmath>
 #include <utility>
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
 #include "src/ui/lib/key_util/key_util.h"
 

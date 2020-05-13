@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/guest_manager/manager_impl.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 static uint32_t g_next_env_id = 0;
 

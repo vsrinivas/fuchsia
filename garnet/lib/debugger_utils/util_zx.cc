@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "util.h"
-
-#include <cctype>
-#include <cinttypes>
-
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include <cctype>
+#include <cinttypes>
 
 #include "byte_block.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "util.h"
 
 namespace debugger_utils {
 

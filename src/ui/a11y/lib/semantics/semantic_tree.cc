@@ -12,7 +12,6 @@
 #include <string>
 #include <unordered_set>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace a11y {

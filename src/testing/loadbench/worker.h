@@ -6,6 +6,7 @@
 #define SRC_TESTING_LOADBENCH_WORKER_H_
 
 #include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -26,7 +27,6 @@
 
 #include "action.h"
 #include "object.h"
-#include "src/lib/fxl/logging.h"
 #include "utility.h"
 #include "workload.h"
 

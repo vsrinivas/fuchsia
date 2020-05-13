@@ -4,13 +4,12 @@
 
 #include <fuchsia/testing/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
 #include <thread>
-
-#include <src/lib/fxl/logging.h>
 
 namespace fake_clock = llcpp::fuchsia::testing;
 

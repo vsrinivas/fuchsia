@@ -4,13 +4,13 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include "garnet/bin/trace_manager/app.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace {

@@ -6,10 +6,9 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/backtrace-request/backtrace-request.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <mutex>
-
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 

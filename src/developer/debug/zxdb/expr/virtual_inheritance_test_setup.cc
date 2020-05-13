@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/expr/virtual_inheritance_test_setup.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

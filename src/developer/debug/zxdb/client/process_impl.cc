@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/client/process_impl.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <set>
@@ -22,7 +23,6 @@
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

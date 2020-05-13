@@ -6,10 +6,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
-
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

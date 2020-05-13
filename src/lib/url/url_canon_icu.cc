@@ -6,10 +6,10 @@
 
 #include "src/lib/url/url_canon_icu.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_canon_internal.h"  // for IntToString
 #include "third_party/icu/source/common/unicode/ucnv.h"
 #include "third_party/icu/source/common/unicode/ucnv_cb.h"

@@ -5,12 +5,12 @@
 #include "src/ui/scenic/lib/display/display_manager2.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iterator>
 #include <string>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/display/display_controller.h"
 
 namespace scenic_impl {

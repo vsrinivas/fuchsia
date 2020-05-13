@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/ipc/register_desc.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <map>
 
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 namespace {

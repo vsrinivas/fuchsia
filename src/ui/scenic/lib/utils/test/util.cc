@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/utils/test/util.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace utils {
 namespace test {

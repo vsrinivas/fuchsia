@@ -5,6 +5,7 @@
 #ifndef SRC_TESTING_LOADBENCH_OBJECT_H_
 #define SRC_TESTING_LOADBENCH_OBJECT_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
@@ -16,8 +17,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 // Abstract base for objects.
 class Object {

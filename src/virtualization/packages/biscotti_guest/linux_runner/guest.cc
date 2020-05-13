@@ -11,13 +11,13 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/vector.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"

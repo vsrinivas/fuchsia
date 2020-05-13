@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include "garnet/bin/insntrace/utils.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {

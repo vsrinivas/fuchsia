@@ -4,10 +4,11 @@
 
 #include "src/lib/fsl/socket/strings.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <utility>
 
 #include "src/lib/fsl/socket/blocking_drain.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

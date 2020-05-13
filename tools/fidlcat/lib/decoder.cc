@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/system/public/zircon/types.h>
 
 #include <algorithm>
@@ -18,7 +19,6 @@
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
-#include "src/lib/fxl/logging.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
 namespace fidlcat {

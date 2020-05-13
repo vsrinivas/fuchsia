@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/zxdb/symbols/line_table.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <limits>
 
 #include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

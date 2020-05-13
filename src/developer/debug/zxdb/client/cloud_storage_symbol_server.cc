@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/cloud_storage_symbol_server.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdio>
 #include <filesystem>
 
@@ -15,7 +17,6 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 namespace {

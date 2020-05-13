@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,7 +22,6 @@
 #include "garnet/lib/debugger_utils/util.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace intel_processor_trace {

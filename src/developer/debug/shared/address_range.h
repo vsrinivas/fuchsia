@@ -5,11 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_SHARED_ADDRESS_RANGE_H_
 #define SRC_DEVELOPER_DEBUG_SHARED_ADDRESS_RANGE_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 
 #include <string>
-
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

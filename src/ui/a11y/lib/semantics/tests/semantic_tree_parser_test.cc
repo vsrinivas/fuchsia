@@ -5,10 +5,9 @@
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 namespace accessibility_test {
 using fuchsia::accessibility::semantics::Node;

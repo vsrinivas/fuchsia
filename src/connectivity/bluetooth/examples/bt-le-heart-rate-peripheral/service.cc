@@ -6,13 +6,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <limits>
-
-#include "src/lib/fxl/logging.h"
 
 using fuchsia::bluetooth::Status;
 

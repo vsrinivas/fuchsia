@@ -7,6 +7,7 @@
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -26,7 +27,6 @@
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/errors.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace feedback {

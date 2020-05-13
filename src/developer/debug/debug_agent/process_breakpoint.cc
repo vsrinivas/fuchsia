@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
@@ -13,7 +14,6 @@
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {

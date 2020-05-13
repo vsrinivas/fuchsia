@@ -9,10 +9,9 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
-
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {

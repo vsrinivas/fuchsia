@@ -4,13 +4,14 @@
 
 #include "src/lib/fidl_codec/library_loader.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <rapidjson/error/en.h>
 
 #include "src/lib/fidl_codec/builtin_semantic.h"
 #include "src/lib/fidl_codec/semantic_parser.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
-#include "src/lib/fxl/logging.h"
 
 // See library_loader.h for details.
 

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
@@ -12,7 +14,6 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

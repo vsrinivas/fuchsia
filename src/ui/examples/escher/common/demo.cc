@@ -4,11 +4,12 @@
 
 #include "src/ui/examples/escher/common/demo.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <array>
 #include <chrono>
 #include <thread>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
 #include "src/ui/lib/escher/renderer/frame.h"

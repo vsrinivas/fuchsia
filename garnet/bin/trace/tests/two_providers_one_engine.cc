@@ -9,6 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
@@ -20,9 +22,7 @@
 #include <memory>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
 int main(int argc, char* argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);

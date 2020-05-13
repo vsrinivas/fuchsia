@@ -4,7 +4,7 @@
 
 #include "elf_symtab.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace debugger_utils {
 

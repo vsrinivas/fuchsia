@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/time.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "gather_cpu.h"
 #include "harvester.h"
-#include "src/lib/fxl/logging.h"
 
 namespace harvester {
 

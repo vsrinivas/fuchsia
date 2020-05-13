@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/cksum.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 #include <zircon/compiler.h>
 
 #include <fbl/array.h>
 #include <src/lib/chunked-compression/chunked-archive.h>
 #include <src/lib/chunked-compression/status.h>
-#include <src/lib/fxl/logging.h>
 
 namespace chunked_compression {
 

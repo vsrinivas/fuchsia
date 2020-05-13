@@ -4,11 +4,12 @@
 
 #include "src/developer/debug/zxdb/client/step_into_specific_thread_controller.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/step_into_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

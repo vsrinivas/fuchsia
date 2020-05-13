@@ -4,11 +4,11 @@
 
 #include "src/lib/url/url_util.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/ascii.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/url_canon_internal.h"

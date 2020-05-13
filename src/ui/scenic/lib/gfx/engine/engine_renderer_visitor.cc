@@ -4,7 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"

@@ -4,9 +4,8 @@
 
 #include "garnet/bin/insntrace/utils.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include <src/lib/fxl/logging.h>
 
 namespace insntrace {
 

@@ -4,9 +4,9 @@
 
 #include "src/lib/json_parser/rapidjson_validation.h"
 
-#include <rapidjson/error/en.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <rapidjson/error/en.h>
 
 namespace json_parser {
 

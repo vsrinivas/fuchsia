@@ -14,6 +14,7 @@
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/virtualization/testing/fake_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -21,7 +22,6 @@
 
 #include <unordered_map>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
 
 namespace linux_runner {

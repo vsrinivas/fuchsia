@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "arm64_tests.h"
 #include "garnet/lib/perfmon/events.h"
-#include "src/lib/fxl/logging.h"
 
 class TallyVerifier : public Verifier {
  public:

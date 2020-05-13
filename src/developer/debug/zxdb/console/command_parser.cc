@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/command_parser.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 
 #include <map>
@@ -13,7 +14,6 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/expr/parse_string.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

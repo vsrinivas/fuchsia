@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,7 +18,6 @@
 
 #include "../use_video_decoder.h"
 #include "../util.h"
-#include "src/lib/fxl/logging.h"
 #include "use_video_decoder_test.h"
 
 namespace {

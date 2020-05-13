@@ -7,14 +7,13 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstring>
 #include <functional>
 #include <utility>
 
 #include <trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace callback {
 

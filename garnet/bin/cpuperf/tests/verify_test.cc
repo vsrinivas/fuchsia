@@ -4,6 +4,8 @@
 
 #include "verify_test.h"
 
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
 #include <string>
@@ -15,9 +17,7 @@
 #include "garnet/lib/perfmon/file_reader.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

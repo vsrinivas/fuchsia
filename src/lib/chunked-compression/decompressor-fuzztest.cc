@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -11,8 +13,6 @@
 #include <src/lib/chunked-compression/chunked-archive.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/test-utils.h>
-#include <src/lib/fxl/log_settings.h>
-#include <src/lib/fxl/logging.h>
 
 namespace {
 

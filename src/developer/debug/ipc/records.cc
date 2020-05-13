@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/ipc/records.h"
 
-#include <algorithm>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <algorithm>
 
 namespace debug_ipc {
 

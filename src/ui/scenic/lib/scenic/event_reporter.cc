@@ -6,8 +6,8 @@
 
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
 
 namespace scenic_impl {

@@ -6,9 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "garnet/bin/timezone/timezone.h"
-#include "src/lib/fxl/logging.h"
 
 namespace time_zone {
 

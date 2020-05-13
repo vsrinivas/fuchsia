@@ -6,8 +6,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest_manager/guest_services.h"
 
 RealmImpl::RealmImpl(uint32_t id, const std::string& label, sys::ComponentContext* context,

@@ -4,8 +4,9 @@
 
 #include "garnet/lib/perfmon/events.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "garnet/lib/perfmon/event-registry.h"
-#include "src/lib/fxl/logging.h"
 
 namespace perfmon {
 

@@ -4,6 +4,7 @@
 
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
@@ -11,7 +12,6 @@
 #include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 
 namespace {

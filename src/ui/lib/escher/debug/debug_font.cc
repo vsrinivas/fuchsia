@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/debug/debug_font.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/types/color.h"
 #include "src/ui/lib/escher/util/alloca.h"

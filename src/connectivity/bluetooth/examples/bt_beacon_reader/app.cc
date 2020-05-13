@@ -8,12 +8,12 @@
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <time.h>
 
 #include <iostream>
 
 #include "beacons.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace ble = fuchsia::bluetooth::le;

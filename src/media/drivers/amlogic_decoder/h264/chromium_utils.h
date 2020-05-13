@@ -12,7 +12,7 @@
 #include <safemath/checked_math.h>
 #include <zircon/compiler.h>
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #include "time_delta.h"
 
 #define MEDIA_EXPORT

@@ -5,11 +5,11 @@
 #include "virtual_devices.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <fs/service.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace netemul {

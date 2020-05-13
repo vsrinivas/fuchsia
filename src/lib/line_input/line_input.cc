@@ -16,7 +16,8 @@
 #include <termios.h>
 #endif
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace line_input {

@@ -4,11 +4,11 @@
 
 #include "garnet/bin/trace/results_output.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <limits>
 #include <numeric>
-
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

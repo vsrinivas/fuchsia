@@ -5,6 +5,7 @@
 #ifndef SRC_TESTING_LOADBENCH_WORKLOAD_H_
 #define SRC_TESTING_LOADBENCH_WORKLOAD_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <optional>
@@ -15,7 +16,6 @@
 #include "action.h"
 #include "object.h"
 #include "rapidjson/document.h"
-#include "src/lib/fxl/logging.h"
 
 struct WorkerConfig {
   WorkerConfig() = default;

@@ -12,11 +12,12 @@
 #define FILE_CREATE_MODE 0666
 #define BINARY_MODE 0
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/files/eintr_wrapper.h"
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 
 namespace files {
 namespace {

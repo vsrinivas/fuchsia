@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_HTTP_HTTP_CLIENT_H_
 #define GARNET_BIN_HTTP_HTTP_CLIENT_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <set>
@@ -12,7 +13,6 @@
 #include "garnet/bin/http/http_errors.h"
 #include "garnet/bin/http/upload_element_reader.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/ascii.h"
 
 #include <asio.hpp>

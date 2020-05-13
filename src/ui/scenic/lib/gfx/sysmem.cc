@@ -5,8 +5,7 @@
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 
 #include <lib/fdio/directory.h>
-
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace scenic_impl {
 namespace gfx {

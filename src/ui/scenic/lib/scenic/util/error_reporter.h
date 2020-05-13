@@ -5,11 +5,11 @@
 #ifndef SRC_UI_SCENIC_LIB_SCENIC_UTIL_ERROR_REPORTER_H_
 #define SRC_UI_SCENIC_LIB_SCENIC_UTIL_ERROR_REPORTER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <sstream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {

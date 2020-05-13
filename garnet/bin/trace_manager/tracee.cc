@@ -5,6 +5,7 @@
 #include "garnet/bin/trace_manager/tracee.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
@@ -14,7 +15,6 @@
 
 #include "garnet/bin/trace_manager/trace_session.h"
 #include "garnet/bin/trace_manager/util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

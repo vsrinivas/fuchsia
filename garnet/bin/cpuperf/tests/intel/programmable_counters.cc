@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "garnet/lib/perfmon/events.h"
 #include "intel_tests.h"
-#include "src/lib/fxl/logging.h"
 
 class ProgrammableCounterVerifier : public Verifier {
  public:

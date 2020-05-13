@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
@@ -11,7 +12,6 @@
 #include <src/lib/chunked-compression/chunked-compressor.h>
 #include <src/lib/chunked-compression/status.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
-#include <src/lib/fxl/logging.h>
 #include <zstd/zstd.h>
 
 namespace chunked_compression {

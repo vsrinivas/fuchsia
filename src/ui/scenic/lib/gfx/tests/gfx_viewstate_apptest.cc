@@ -9,13 +9,13 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"

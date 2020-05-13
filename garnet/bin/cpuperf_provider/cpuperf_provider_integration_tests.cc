@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 
@@ -11,7 +12,6 @@
 #include "garnet/lib/perfmon/controller.h"
 #include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 const char kTracePath[] = "/bin/trace";

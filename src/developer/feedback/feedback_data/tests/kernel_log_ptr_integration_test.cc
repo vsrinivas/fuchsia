@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -20,7 +21,6 @@
 
 #include "src/developer/feedback/feedback_data/attachments/kernel_log_ptr.h"
 #include "src/developer/feedback/feedback_data/attachments/types.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {

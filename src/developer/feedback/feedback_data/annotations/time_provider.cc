@@ -13,7 +13,6 @@
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/time.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/timekeeper/clock.h"
 
 namespace feedback {

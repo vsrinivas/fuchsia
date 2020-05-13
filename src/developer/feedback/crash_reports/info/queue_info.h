@@ -5,10 +5,11 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_QUEUE_INFO_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_INFO_QUEUE_INFO_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 #include "src/developer/feedback/crash_reports/info/info_context.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 

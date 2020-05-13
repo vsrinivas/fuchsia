@@ -4,10 +4,10 @@
 
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <chrono>
 #include <thread>
-
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/finish_thread_controller.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/finish_physical_frame_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -15,7 +17,6 @@
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

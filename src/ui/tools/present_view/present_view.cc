@@ -6,9 +6,9 @@
 
 #include <lib/fidl/cpp/vector.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace {

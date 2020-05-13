@@ -30,7 +30,6 @@
 #include "../input_copier.h"
 #include "../use_video_decoder.h"
 #include "../util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

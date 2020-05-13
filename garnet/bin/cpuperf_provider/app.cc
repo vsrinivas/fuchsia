@@ -5,6 +5,7 @@
 #include "garnet/bin/cpuperf_provider/app.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 #include <limits>
@@ -15,7 +16,6 @@
 #include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/reader.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace cpuperf_provider {

@@ -8,6 +8,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <threads.h>
 
 #include <map>
@@ -17,7 +18,6 @@
 #include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/virtualization/lib/grpc/fdio_util.h"
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"

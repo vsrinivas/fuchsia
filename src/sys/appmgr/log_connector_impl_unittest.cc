@@ -6,10 +6,9 @@
 
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace component {
 namespace {

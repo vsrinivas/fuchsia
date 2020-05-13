@@ -29,7 +29,7 @@
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/lib/ui/scenic/cpp/host_memory.h"
 #include "src/lib/ui/scenic/cpp/mesh_utils.h"
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/util/image_utils.h"

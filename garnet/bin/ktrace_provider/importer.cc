@@ -4,6 +4,7 @@
 
 #include "garnet/bin/ktrace_provider/importer.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
@@ -11,7 +12,6 @@
 #include <fbl/string_printf.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ktrace_provider {
 namespace {

@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <map>
 
@@ -24,7 +25,6 @@
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

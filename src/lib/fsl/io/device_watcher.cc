@@ -10,14 +10,13 @@
 #include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/types.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
 
 #include <fbl/unique_fd.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

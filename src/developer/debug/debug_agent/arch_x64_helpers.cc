@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/debug/x86.h>
 
 #include <vector>
@@ -11,7 +12,6 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/shared/arch_x86.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace debug_ipc;

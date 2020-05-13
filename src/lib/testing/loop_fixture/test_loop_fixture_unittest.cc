@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdlib>
 
@@ -13,7 +14,6 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace gtest {

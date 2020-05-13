@@ -4,8 +4,9 @@
 
 #include "src/developer/debug/zxdb/expr/format_node.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/expr/eval_context.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

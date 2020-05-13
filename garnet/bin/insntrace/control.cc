@@ -9,6 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/handle.h>
@@ -29,7 +30,6 @@
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {

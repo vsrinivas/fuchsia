@@ -4,13 +4,12 @@
 
 #include "src/virtualization/lib/vsh/util.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <iostream>
 
 #include <google/protobuf/message_lite.h>
-
-#include "src/lib/fxl/logging.h"
 
 using google::protobuf::MessageLite;
 

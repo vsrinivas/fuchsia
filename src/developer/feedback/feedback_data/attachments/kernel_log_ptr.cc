@@ -10,7 +10,6 @@
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {

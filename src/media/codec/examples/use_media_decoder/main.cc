@@ -7,6 +7,7 @@
 #include <lib/media/test/frame_sink.h>
 #include <lib/media/test/one_shot_event.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,7 +17,6 @@
 #include "in_stream_peeker.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/media/codec/examples/use_media_decoder/in_stream_file.h"
 #include "src/media/codec/examples/use_media_decoder/util.h"
 #include "use_aac_decoder.h"

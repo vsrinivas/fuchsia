@@ -4,8 +4,9 @@
 
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/expr/expr_token.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

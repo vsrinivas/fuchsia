@@ -19,6 +19,7 @@
 #include <lib/fit/sequencer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
@@ -27,7 +28,6 @@
 
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 using namespace fuchsia::netemul;

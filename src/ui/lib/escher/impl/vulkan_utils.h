@@ -5,10 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 #define SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <set>
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 #include <vulkan/vulkan.hpp>
 

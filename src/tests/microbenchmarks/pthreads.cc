@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <pthread.h>
 
 #include <perftest/perftest.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

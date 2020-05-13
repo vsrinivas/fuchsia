@@ -13,6 +13,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <unistd.h>
 #include <zircon/process.h>
@@ -36,7 +37,6 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"

@@ -5,10 +5,10 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
 
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <variant>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"

@@ -4,9 +4,10 @@
 
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <set>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 
 namespace escher {

@@ -4,13 +4,14 @@
 
 #include "json_formatter.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <locale>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 
 #include "rapidjson/stringbuffer.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/health/health.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "third_party/modp_b64/modp_b64.h"

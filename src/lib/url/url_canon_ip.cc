@@ -4,12 +4,12 @@
 
 #include "src/lib/url/url_canon_ip.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_canon_internal.h"
 
 namespace url {

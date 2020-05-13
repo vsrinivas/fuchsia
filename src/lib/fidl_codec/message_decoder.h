@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 #include <memory>
@@ -19,7 +20,6 @@
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/memory_helpers.h"
 #include "src/lib/fidl_codec/printer.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

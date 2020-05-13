@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/source_util.h"
 
-#include <limits>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <limits>
 
 namespace zxdb {
 

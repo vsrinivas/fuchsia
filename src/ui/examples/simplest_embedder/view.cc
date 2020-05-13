@@ -5,8 +5,7 @@
 #include "src/ui/examples/simplest_embedder/view.h"
 
 #include <lib/async/cpp/task.h>
-
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace simplest_embedder {
 using ::fuchsia::ui::input::InputEvent;

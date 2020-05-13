@@ -5,9 +5,9 @@
 #ifndef SRC_UI_BIN_ROOT_PRESENTER_DISPLAYS_DISPLAY_METRICS_H_
 #define SRC_UI_BIN_ROOT_PRESENTER_DISPLAYS_DISPLAY_METRICS_H_
 
-#include <cstdint>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <cstdint>
 
 namespace root_presenter {
 

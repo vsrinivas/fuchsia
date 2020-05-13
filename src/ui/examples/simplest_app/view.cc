@@ -5,9 +5,8 @@
 #include "src/ui/examples/simplest_app/view.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace simplest_app {
 

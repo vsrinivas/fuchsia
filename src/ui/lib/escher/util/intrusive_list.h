@@ -6,7 +6,7 @@
 #define SRC_UI_LIB_ESCHER_UTIL_INTRUSIVE_LIST_H_
 
 #ifndef NDEBUG
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #endif
 
 namespace escher {

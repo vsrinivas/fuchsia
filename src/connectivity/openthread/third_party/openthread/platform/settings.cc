@@ -32,10 +32,11 @@
  *
  */
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <openthread/platform/misc.h>
 #include <openthread/platform/settings.h>
 
-#include "src/lib/fxl/logging.h"
 #include "thread_config_manager.h"
 
 static otError platformSettingsDelete(otInstance *instance, uint16_t key, int index);

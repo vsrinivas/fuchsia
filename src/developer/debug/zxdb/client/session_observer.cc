@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/client/session_observer.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace zxdb {
 

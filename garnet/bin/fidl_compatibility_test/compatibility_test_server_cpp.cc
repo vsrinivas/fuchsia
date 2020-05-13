@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
@@ -16,7 +17,6 @@
 #include <fidl/test/compatibility/cpp/fidl.h>
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl {
 namespace test {

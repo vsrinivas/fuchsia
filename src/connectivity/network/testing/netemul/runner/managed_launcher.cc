@@ -5,6 +5,7 @@
 #include "managed_launcher.h"
 
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
@@ -14,7 +15,6 @@
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace netemul {

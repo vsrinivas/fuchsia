@@ -6,6 +6,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <zircon/errors.h>
@@ -14,7 +15,6 @@
 #include <trace/event.h>
 
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ui_input {
 

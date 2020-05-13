@@ -11,11 +11,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
-#include "src/lib/fxl/logging.h"
 
 // Reads bytes from stdin and writes them to a socket provided by the guest.
 // These bytes are generally delivered to emulated serial devices (ex:

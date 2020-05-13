@@ -5,12 +5,12 @@
 #include "src/lib/fidl_codec/encoder.h"
 
 #include <lib/fidl/txn_header.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 
 #include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

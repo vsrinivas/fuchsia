@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/debug_agent/system_info.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -12,7 +13,6 @@
 #include <zircon/syscalls/object.h>
 
 #include "src/developer/debug/debug_agent/object_provider.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -45,7 +45,8 @@ debug_ipc::ProcessTreeRecord GetProcessTreeRecord(const ObjectProvider& provider
 
 }  // namespace
 
-zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root, const ObjectProvider& object_provider) {
+zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root,
+                           const ObjectProvider& object_provider) {
   *root = GetProcessTreeRecord(object_provider, object_provider.GetRootJob(),
                                debug_ipc::ProcessTreeRecord::Type::kJob);
   return ZX_OK;

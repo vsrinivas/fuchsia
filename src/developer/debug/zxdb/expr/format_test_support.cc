@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/expr/format_test_support.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/expr/format.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

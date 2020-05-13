@@ -18,7 +18,6 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace {

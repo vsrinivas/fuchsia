@@ -4,13 +4,13 @@
 
 #include "src/ui/scenic/lib/scenic/util/scheduler_profile.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 
 #include "fuchsia/scheduler/cpp/fidl.h"
 #include "lib/fdio/directory.h"
-#include "src/lib/fxl/logging.h"
 
 namespace util {
 

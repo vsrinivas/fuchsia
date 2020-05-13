@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/exception.h>
 
 #include <utility>
@@ -25,7 +26,6 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {

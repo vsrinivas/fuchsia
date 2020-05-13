@@ -6,8 +6,8 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/input_report_reader/fdio_device_watcher.h"
 #include "src/ui/lib/input_report_reader/input_interpreter.h"
 

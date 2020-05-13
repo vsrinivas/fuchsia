@@ -11,7 +11,6 @@
 
 #include "netstack_intermediary.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 
 constexpr size_t kMacNetworkNameLength = 100;
 

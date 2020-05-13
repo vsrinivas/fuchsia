@@ -4,9 +4,9 @@
 
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 
-#include <unordered_set>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <unordered_set>
 
 namespace scenic_impl {
 namespace gfx {

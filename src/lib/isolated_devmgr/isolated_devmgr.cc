@@ -10,6 +10,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -19,8 +20,6 @@
 #include <ddk/platform-defs.h>
 #include <libzbi/zbi-cpp.h>
 #include <sdk/lib/sys/cpp/component_context.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace isolated_devmgr {
 

@@ -13,7 +13,7 @@
 #include "src/ui/lib/escher/util/object_pool.h"
 
 #ifndef NDEBUG
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #endif
 
 namespace escher {

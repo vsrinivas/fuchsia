@@ -5,13 +5,13 @@
 #ifndef SRC_UI_LIB_ESCHER_FLIB_RELEASE_FENCE_SIGNALLER_H_
 #define SRC_UI_LIB_ESCHER_FLIB_RELEASE_FENCE_SIGNALLER_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/event.h>
 
 #include <deque>
 #include <queue>
 
 #include "lib/fidl/cpp/vector.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 

@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/client/map_setting_store.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -7,9 +7,10 @@
 #ifndef SRC_LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
 #define SRC_LIB_FXL_MEMORY_REF_COUNTED_INTERNAL_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <atomic>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fxl {

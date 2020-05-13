@@ -4,9 +4,9 @@
 
 #include "garnet/lib/measure/results.h"
 
-#include <sstream>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <sstream>
 
 namespace tracing {
 namespace measure {

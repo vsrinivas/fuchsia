@@ -5,7 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_H_
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/debug/debug_rects.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"

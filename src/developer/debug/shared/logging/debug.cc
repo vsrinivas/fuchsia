@@ -4,13 +4,14 @@
 
 #include "src/developer/debug/shared/logging/debug.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <chrono>
 #include <mutex>
 #include <set>
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {

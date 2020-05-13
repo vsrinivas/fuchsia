@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <functional>
 #include <variant>
@@ -19,7 +20,6 @@
 #include "src/developer/feedback/utils/fit/bridge_map.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/backoff/exponential_backoff.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace fidl {

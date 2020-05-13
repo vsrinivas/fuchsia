@@ -4,12 +4,11 @@
 
 #include "src/lib/fsl/socket/socket_drainer.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/socket.h>
 
 #include <utility>
 #include <vector>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

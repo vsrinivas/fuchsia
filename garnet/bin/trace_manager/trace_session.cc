@@ -6,13 +6,13 @@
 
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-engine/fields.h>
 
 #include <numeric>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
 #include "garnet/bin/trace_manager/util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

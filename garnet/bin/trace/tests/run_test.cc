@@ -9,6 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -26,8 +28,6 @@
 #include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/log_settings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

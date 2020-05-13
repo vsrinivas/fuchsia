@@ -7,10 +7,9 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/fitx/result.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
-
-#include "src/lib/fxl/logging.h"
 
 namespace flatland {
 

@@ -10,11 +10,11 @@
 #include <lib/fit/function.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/bridge.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {

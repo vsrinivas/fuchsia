@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include <vector>
 
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 
 namespace perfmon {
 

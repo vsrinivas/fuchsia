@@ -4,12 +4,13 @@
 
 #include "gather_threads_and_cpu.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <string>
 
 #include "gather_cpu.h"
 #include "gather_tasks.h"
 #include "sample_bundle.h"
-#include "src/lib/fxl/logging.h"
 #include "task_tree.h"
 
 namespace harvester {

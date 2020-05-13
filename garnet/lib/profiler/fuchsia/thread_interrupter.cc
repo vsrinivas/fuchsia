@@ -5,6 +5,7 @@
 #include "thread_interrupter.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <stdarg.h>
 #include <zircon/process.h>
@@ -12,8 +13,6 @@
 #include <zircon/syscalls/debug.h>
 
 #include <fbl/function.h>
-
-#include "src/lib/fxl/logging.h"
 
 #define print_error(...)                                                \
   do {                                                                  \

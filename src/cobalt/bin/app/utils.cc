@@ -6,7 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/lib/util/pem_util.h"
 

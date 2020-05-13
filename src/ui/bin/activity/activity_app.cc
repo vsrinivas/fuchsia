@@ -4,10 +4,9 @@
 
 #include "src/ui/bin/activity/activity_app.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace activity {
 

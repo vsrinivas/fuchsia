@@ -6,12 +6,12 @@
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
 
 #include <lib/fidl/cpp/binding.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/system/ulib/fit/include/lib/fit/function.h>
 
 #include <grpc/support/log.h>
 
 #include "fuchsia/netemul/guest/cpp/fidl.h"
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"

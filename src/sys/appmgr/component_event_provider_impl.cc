@@ -5,9 +5,8 @@
 #include "src/sys/appmgr/component_event_provider_impl.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace component {
 

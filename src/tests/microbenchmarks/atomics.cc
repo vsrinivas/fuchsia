@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <atomic>
 
 #include <perftest/perftest.h>
-
-#include "src/lib/fxl/logging.h"
 
 // Measure the times taken by atomic memory operations in the uncontended
 // case (when no other threads are accessing the memory location).

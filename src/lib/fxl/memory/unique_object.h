@@ -5,10 +5,11 @@
 #ifndef SRC_LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
 #define SRC_LIB_FXL_MEMORY_UNIQUE_OBJECT_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <utility>
 
 #include "src/lib/fxl/compiler_specific.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fxl {

@@ -6,10 +6,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/ui/input/device_state.h"

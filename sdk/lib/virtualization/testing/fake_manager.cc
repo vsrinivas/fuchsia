@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/virtualization/testing/fake_manager.h>
 #include <lib/virtualization/testing/guest_cid.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace guest {
 namespace testing {

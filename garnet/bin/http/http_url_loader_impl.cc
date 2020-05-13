@@ -4,6 +4,8 @@
 
 #include "http_url_loader_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <istream>
 #include <memory>
 #include <ostream>
@@ -13,7 +15,6 @@
 #include "garnet/bin/http/http_adapters.h"
 #include "garnet/bin/http/http_client.h"
 #include "garnet/bin/http/http_errors.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/gurl.h"
 
 namespace http {

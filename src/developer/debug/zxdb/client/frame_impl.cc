@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
@@ -18,7 +20,6 @@
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/variable_location.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

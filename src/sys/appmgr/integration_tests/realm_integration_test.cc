@@ -15,6 +15,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -34,7 +35,6 @@
 
 #include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 #include "src/sys/appmgr/realm.h"

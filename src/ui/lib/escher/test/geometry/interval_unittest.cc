@@ -4,9 +4,10 @@
 
 #include "src/ui/lib/escher/geometry/interval.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/lib/escher/geometry/types.h"
 

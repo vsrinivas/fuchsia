@@ -5,9 +5,8 @@
 #include "src/lib/fsl/tasks/fd_waiter.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

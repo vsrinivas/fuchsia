@@ -16,7 +16,7 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <src/lib/ui/scenic/cpp/host_memory.h>
 #include <lib/zx/time.h>
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #include <string>
 
 #include "src/ui/lib/escher/util/image_utils.h"

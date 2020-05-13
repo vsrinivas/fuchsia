@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/format_register.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include <algorithm>
@@ -22,7 +23,6 @@
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

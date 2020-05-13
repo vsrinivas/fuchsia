@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/filter.h"
@@ -26,7 +27,6 @@
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

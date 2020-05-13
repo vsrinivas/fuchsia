@@ -15,11 +15,10 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/service.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace sysmgr {
 

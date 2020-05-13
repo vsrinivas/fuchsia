@@ -4,8 +4,9 @@
 
 #include "garnet/lib/perfmon/config.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "garnet/lib/perfmon/config_impl.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace perfmon {

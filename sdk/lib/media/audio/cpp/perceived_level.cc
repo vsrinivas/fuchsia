@@ -5,11 +5,10 @@
 #include "lib/media/audio/cpp/perceived_level.h"
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <cmath>
-
-#include "src/lib/fxl/logging.h"
 
 namespace media {
 namespace {

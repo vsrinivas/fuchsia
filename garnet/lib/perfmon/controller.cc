@@ -6,6 +6,7 @@
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 
 #include <fbl/algorithm.h>
@@ -14,7 +15,6 @@
 #include "garnet/lib/perfmon/controller_impl.h"
 #include "garnet/lib/perfmon/device_reader.h"
 #include "garnet/lib/perfmon/properties_impl.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace perfmon {

@@ -8,10 +8,9 @@
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/device/network.h>
 #include <zircon/status.h>
-
-#include <src/lib/fxl/logging.h>
 
 namespace network {
 namespace client {

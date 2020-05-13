@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/display/display_controller.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace scenic_impl {
 namespace display {

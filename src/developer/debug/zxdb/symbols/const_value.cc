@@ -4,9 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/const_value.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

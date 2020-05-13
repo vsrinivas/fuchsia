@@ -22,12 +22,11 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace {
 

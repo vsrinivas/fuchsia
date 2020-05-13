@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/debug/arm64.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
@@ -15,7 +16,6 @@
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // Notes on ARM64 architecture:

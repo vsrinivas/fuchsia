@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -12,7 +13,6 @@
 #include <trace/event.h>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
-#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace test {

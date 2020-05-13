@@ -5,12 +5,12 @@
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 
 #include <dlfcn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <link.h>
 #include <stdlib.h>
 
 #include <string>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {

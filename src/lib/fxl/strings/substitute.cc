@@ -4,12 +4,13 @@
 
 #include "src/lib/fxl/strings/substitute.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <array>
 #include <cassert>
 #include <tuple>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fxl {

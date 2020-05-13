@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/common/address_ranges.h"
 
-#include <algorithm>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <algorithm>
 
 namespace zxdb {
 

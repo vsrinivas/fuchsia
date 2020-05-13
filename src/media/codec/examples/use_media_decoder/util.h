@@ -8,6 +8,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,8 +16,6 @@
 #include <memory>
 
 #include <openssl/sha.h>
-
-#include "src/lib/fxl/logging.h"
 
 #define VLOG_ENABLED 0
 

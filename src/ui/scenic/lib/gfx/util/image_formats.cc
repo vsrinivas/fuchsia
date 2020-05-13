@@ -5,8 +5,8 @@
 #include "src/ui/scenic/lib/gfx/util/image_formats.h"
 
 #include <lib/images/cpp/images.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/yuv/yuv.h"
 
 namespace scenic_impl {

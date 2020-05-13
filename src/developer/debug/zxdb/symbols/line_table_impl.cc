@@ -4,8 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/line_table_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

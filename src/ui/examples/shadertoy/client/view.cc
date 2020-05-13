@@ -11,7 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <lib/async/default.h>
 #include <lib/ui/scenic/cpp/commands.h>
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/examples/shadertoy/client/glsl_strings.h"
 

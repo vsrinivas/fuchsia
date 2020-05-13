@@ -4,8 +4,9 @@
 
 #include "netdump_parser.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "netdump_types.h"
-#include "src/lib/fxl/logging.h"
 
 #define INSUFF_LEN(a, b)                                                 \
   if ((a) < (b)) {                                                       \

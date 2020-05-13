@@ -4,12 +4,13 @@
 
 #include "elf_reader.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"

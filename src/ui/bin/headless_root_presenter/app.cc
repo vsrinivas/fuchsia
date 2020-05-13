@@ -8,11 +8,10 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace headless_root_presenter {
 

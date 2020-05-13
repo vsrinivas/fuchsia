@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/stack.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <map>
 
 #include <gtest/gtest.h>
@@ -20,7 +22,6 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

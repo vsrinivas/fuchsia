@@ -6,12 +6,12 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/images/cpp/images.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/yuv/yuv.h"
 
 namespace yuv_to_image_pipe {

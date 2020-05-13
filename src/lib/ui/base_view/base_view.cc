@@ -5,13 +5,12 @@
 #include "src/lib/ui/base_view/base_view.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
 #include <trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace scenic {
 

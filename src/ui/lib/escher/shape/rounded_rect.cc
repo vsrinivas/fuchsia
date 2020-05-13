@@ -4,7 +4,8 @@
 
 #include "src/ui/lib/escher/shape/rounded_rect.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 #include "src/ui/lib/escher/util/trace_macros.h"

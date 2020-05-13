@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
@@ -12,7 +13,6 @@
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 // Notes on x64 architecture:
 //

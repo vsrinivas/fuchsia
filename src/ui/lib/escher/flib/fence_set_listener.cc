@@ -5,9 +5,8 @@
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

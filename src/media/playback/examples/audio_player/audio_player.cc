@@ -10,6 +10,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <poll.h>
 #include <unistd.h>
 
@@ -17,7 +18,6 @@
 
 #include "lib/fidl/cpp/optional.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/gurl.h"
 #include "src/media/playback/examples/audio_player/audio_player_params.h"
 

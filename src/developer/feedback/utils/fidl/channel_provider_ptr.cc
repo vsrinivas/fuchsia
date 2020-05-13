@@ -4,13 +4,13 @@
 
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <memory>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/promise.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace fidl {

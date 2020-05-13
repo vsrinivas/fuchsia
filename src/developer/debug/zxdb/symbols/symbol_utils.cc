@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -13,7 +15,6 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -5,8 +5,8 @@
 #include "src/ui/scenic/lib/watchdog/watchdog.h"
 
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace scenic_impl {

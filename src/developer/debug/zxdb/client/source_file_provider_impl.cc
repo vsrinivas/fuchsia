@@ -4,13 +4,14 @@
 
 #include "src/developer/debug/zxdb/client/source_file_provider_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <limits>
 
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

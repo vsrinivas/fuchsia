@@ -4,10 +4,11 @@
 
 #include "garnet/bin/trace/cmd_utils.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

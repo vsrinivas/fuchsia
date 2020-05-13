@@ -10,9 +10,9 @@
 // template bloat because everything is inlined when anybody calls any of our
 // functions.
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_canon.h"
 
 namespace url {

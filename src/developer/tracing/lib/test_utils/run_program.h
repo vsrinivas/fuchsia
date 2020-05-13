@@ -10,6 +10,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -17,8 +18,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "src/lib/fxl/log_settings.h"
 
 namespace tracing {
 namespace test {

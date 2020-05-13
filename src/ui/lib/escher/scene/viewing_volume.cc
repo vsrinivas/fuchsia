@@ -4,9 +4,9 @@
 
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 
-#include <utility>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <utility>
 
 #include <glm/gtc/matrix_transform.hpp>
 

@@ -4,9 +4,9 @@
 
 #include "garnet/bin/trace_manager/app.h"
 
-#include <utility>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <utility>
 
 namespace tracing {
 

@@ -8,8 +8,8 @@
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/ui/scenic/lib/gfx/snapshot/snapshot_generated.h"

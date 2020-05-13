@@ -4,11 +4,10 @@
 
 #include "tracing.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/ktrace.h>
 
 #include <fstream>
-
-#include "src/lib/fxl/logging.h"
 
 std::optional<KTraceRecord> KTraceRecord::ParseRecord(uint8_t* data_buf, size_t buf_len) {
   if (buf_len < KTRACE_HDRSIZE)

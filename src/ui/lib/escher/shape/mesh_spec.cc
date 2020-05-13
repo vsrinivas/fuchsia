@@ -4,9 +4,10 @@
 
 #include "src/ui/lib/escher/shape/mesh_spec.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <type_traits>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/util/hasher.h"

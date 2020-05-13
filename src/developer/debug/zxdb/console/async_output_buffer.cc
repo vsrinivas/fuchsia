@@ -4,8 +4,9 @@
 
 #include "src/developer/debug/zxdb/console/async_output_buffer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -14,7 +14,6 @@
 #include <optional>
 
 #include "src/developer/feedback/crash_reports/settings.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 

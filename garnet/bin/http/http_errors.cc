@@ -4,7 +4,7 @@
 
 #include "http_errors.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace http {
 

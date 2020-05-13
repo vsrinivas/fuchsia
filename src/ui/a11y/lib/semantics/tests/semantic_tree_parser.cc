@@ -4,7 +4,7 @@
 
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace accessibility_test {
 bool SemanticTreeParser::ParseSemanticTree(

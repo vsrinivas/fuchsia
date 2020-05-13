@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <atomic>
@@ -17,7 +18,6 @@
 
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
-#include "src/lib/fxl/logging.h"
 
 using namespace ::fuchsia::exception;
 

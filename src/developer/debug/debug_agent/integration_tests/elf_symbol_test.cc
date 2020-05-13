@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
+
+#include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
@@ -11,7 +13,6 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/shared/message_loop_zircon.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

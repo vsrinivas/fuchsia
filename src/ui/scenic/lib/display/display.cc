@@ -4,11 +4,10 @@
 
 #include "src/ui/scenic/lib/display/display.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
 #include <trace/event.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace display {

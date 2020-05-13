@@ -5,13 +5,13 @@
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 
 #include <ctype.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <type_traits>
 
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/expr/parse_special_identifier.h"
 #include "src/developer/debug/zxdb/expr/parse_string.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

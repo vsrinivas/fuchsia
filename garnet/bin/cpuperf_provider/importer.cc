@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
@@ -14,7 +15,6 @@
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/reader.h"
 #include "garnet/lib/perfmon/writer.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace cpuperf_provider {

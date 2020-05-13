@@ -8,11 +8,11 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cmath>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
 
 namespace accessibility_test {
 

@@ -5,13 +5,14 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_ERROR_REPORTING_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_ERROR_REPORTING_TEST_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 

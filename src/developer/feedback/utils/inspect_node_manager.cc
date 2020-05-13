@@ -4,9 +4,10 @@
 
 #include "src/developer/feedback/utils/inspect_node_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace feedback {

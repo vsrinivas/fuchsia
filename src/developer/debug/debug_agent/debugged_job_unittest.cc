@@ -3,11 +3,12 @@
 
 #include "src/developer/debug/debug_agent/debugged_job.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {

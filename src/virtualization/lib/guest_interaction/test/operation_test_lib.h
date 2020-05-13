@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -17,7 +18,6 @@
 
 #include <grpc/support/log.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
 
 #include <grpc++/grpc++.h>

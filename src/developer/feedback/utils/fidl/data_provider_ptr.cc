@@ -12,7 +12,6 @@
 #include <zircon/types.h>
 
 #include "src/developer/feedback/utils/errors.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace fidl {

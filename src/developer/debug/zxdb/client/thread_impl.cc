@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 #include <limits>
@@ -20,7 +21,6 @@
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

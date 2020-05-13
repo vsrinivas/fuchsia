@@ -5,9 +5,9 @@
 #include "src/ui/scenic/lib/display/display_manager.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "lib/fit/function.h"
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace display {

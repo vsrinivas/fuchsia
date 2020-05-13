@@ -7,12 +7,13 @@
 #ifndef SRC_LIB_FXL_MEMORY_REF_PTR_H_
 #define SRC_LIB_FXL_MEMORY_REF_PTR_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cstddef>
 #include <functional>
 #include <utility>
 
 #include "src/lib/fxl/compiler_specific.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr_internal.h"
 

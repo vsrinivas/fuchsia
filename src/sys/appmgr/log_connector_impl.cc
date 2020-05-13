@@ -4,10 +4,10 @@
 
 #include "src/sys/appmgr/log_connector_impl.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/logging.h"
 
 namespace component {
 

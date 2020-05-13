@@ -4,6 +4,8 @@
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
@@ -11,7 +13,6 @@
 #include <rapidjson/writer.h>
 
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 

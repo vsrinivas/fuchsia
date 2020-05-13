@@ -4,6 +4,8 @@
 
 #include "src/lib/fxl/log_settings_command_line.h"
 
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
@@ -12,8 +14,6 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 namespace {

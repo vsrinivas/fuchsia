@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
 
 // These tests exercise the context View Space to target View Space coordinate transform logic

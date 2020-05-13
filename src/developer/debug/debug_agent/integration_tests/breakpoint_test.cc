@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
@@ -13,7 +14,6 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

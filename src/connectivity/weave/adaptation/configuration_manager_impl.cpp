@@ -20,7 +20,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <net/ethernet.h>
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include <zircon/status.h>

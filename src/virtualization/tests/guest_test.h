@@ -5,9 +5,10 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
 #define SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <fbl/type_info.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/tests/enclosed_guest.h"
 
 // GuestTest creates a static EnclosedGuest to be shared across all tests in a

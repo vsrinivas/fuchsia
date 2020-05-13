@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/pretty_type_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <limits>
 
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -13,7 +15,6 @@
 #include "src/developer/debug/zxdb/expr/pretty_tree.h"
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

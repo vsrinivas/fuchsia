@@ -8,6 +8,7 @@
 
 #include "garnet/lib/debugger_utils/threads.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -22,7 +23,6 @@
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debugger_utils {
 namespace {

@@ -4,9 +4,8 @@
 
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <math.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 namespace {

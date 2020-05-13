@@ -4,12 +4,13 @@
 
 #include "src/developer/debug/zxdb/expr/expr.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

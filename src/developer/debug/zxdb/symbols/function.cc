@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/symbols/function.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

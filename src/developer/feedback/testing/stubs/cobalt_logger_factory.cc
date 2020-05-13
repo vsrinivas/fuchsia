@@ -12,7 +12,6 @@
 #include <zircon/errors.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 namespace stubs {

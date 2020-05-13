@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/format_register_x64.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <set>
 
@@ -15,7 +16,6 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_formatters.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using debug_ipc::RegisterCategory;

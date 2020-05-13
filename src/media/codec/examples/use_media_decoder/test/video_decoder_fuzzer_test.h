@@ -23,7 +23,6 @@
 #include "../use_video_decoder.h"
 #include "../util.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "use_video_decoder_test.h"
 
 int video_fuzzer_test(std::string input_file_path, UseVideoDecoderFunction use_video_decoder,

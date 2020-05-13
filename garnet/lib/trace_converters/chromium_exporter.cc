@@ -5,6 +5,7 @@
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <utility>
 
@@ -13,7 +14,6 @@
 
 #include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/writer.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
 

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -12,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -5,6 +5,7 @@
 #include "in_stream_http.h"
 
 #include <lib/media/test/one_shot_event.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <zircon/errors.h>
@@ -13,7 +14,6 @@
 #include <queue>
 #include <tuple>
 
-#include "src/lib/fxl/logging.h"
 #include "util.h"
 
 InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,

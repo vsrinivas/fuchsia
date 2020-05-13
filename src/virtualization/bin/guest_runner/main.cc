@@ -4,8 +4,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest_runner/runner_impl.h"
 
 int main(int argc, char** argv) {

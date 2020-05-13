@@ -8,13 +8,13 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/exception.h>
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zircon_utils.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

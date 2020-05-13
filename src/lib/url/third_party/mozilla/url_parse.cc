@@ -36,9 +36,9 @@
 
 #include "src/lib/url/third_party/mozilla/url_parse.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_parse_internal.h"
 #include "src/lib/url/url_util.h"
 #include "src/lib/url/url_util_internal.h"

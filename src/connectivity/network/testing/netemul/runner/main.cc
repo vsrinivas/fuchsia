@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iostream>
 
@@ -14,7 +15,6 @@
 #include "sandbox_service.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 
 using namespace netemul;
 

@@ -10,11 +10,11 @@
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/memfs/memfs.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
-#include <src/lib/fxl/logging.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"

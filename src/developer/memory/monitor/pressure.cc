@@ -7,6 +7,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
@@ -16,8 +17,6 @@
 #include <zircon/status.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace monitor {
 

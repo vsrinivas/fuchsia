@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/expr/vector_register_format.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

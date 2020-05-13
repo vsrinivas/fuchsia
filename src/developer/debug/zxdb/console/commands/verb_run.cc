@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_run.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -14,7 +16,6 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <limits>
@@ -19,7 +20,6 @@
 #include "src/developer/feedback/utils/cobalt/event.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/cobalt/metrics.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 

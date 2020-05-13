@@ -8,10 +8,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/bin/activity/activity_app.h"
 #include "src/ui/bin/activity/state_machine_driver.h"
 

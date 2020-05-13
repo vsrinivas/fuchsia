@@ -4,10 +4,11 @@
 
 #include "tools/fidlcat/lib/exception_decoder.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
-#include "src/lib/fxl/logging.h"
 #include "tools/fidlcat/lib/interception_workflow.h"
 
 namespace fidlcat {

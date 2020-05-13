@@ -4,12 +4,12 @@
 
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/logging.h"
 
 using flatland::TransformGraph;
 using flatland::TransformHandle;

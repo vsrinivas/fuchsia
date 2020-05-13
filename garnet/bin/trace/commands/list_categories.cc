@@ -4,9 +4,9 @@
 
 #include "garnet/bin/trace/commands/list_categories.h"
 
-#include <iostream>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <iostream>
 
 namespace tracing {
 

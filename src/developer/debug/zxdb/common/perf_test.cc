@@ -4,10 +4,9 @@
 
 #include "src/developer/debug/zxdb/common/perf_test.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

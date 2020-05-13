@@ -7,13 +7,13 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 #include <vector>
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/input_system.h"

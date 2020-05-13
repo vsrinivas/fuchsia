@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,9 +21,7 @@
 #include "session_spec.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 const char kUsageString[] =

@@ -4,7 +4,7 @@
 
 #include "lib/media/audio/cpp/types.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace media {
 

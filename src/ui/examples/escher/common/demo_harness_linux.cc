@@ -4,12 +4,13 @@
 
 #include "src/ui/examples/escher/common/demo_harness_linux.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <chrono>
 #include <thread>
 
 #include <GLFW/glfw3.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 

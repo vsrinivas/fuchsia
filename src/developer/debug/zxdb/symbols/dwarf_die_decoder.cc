@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "src/developer/debug/zxdb/symbols/const_value.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

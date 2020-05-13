@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_CODEC_WIRE_OBJECT_H_
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <map>
 #include <memory>
@@ -14,7 +15,6 @@
 
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/message_decoder.h"
-#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 

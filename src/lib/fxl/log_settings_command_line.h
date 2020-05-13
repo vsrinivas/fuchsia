@@ -5,11 +5,12 @@
 #ifndef SRC_LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
 #define SRC_LIB_FXL_LOG_SETTINGS_COMMAND_LINE_H_
 
+#include <lib/syslog/cpp/log_settings.h>
+
 #include <string>
 #include <vector>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/log_settings.h"
 
 namespace fxl {
 

@@ -9,12 +9,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/dispatcher.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <optional>
-
-#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 

@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_die_scanner.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -5,9 +5,8 @@
 #include "src/ui/bin/root_presenter/color_transform_handler.h"
 
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
-
-#include "src/lib/fxl/logging.h"
 
 namespace root_presenter {
 

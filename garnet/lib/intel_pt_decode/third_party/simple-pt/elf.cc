@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -39,7 +40,6 @@
 #include "garnet/lib/debugger_utils/byte_block_file.h"
 #include "garnet/lib/debugger_utils/elf_reader.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
 namespace simple_pt {

@@ -5,6 +5,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/build_config.h"
-#include "src/lib/fxl/logging.h"
 
 namespace files {
 

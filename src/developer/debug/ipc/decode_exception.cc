@@ -4,13 +4,13 @@
 
 #include "src/developer/debug/ipc/decode_exception.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/hw/debug/x86.h>
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 namespace {

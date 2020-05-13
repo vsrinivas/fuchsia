@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
@@ -29,7 +30,6 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
@@ -357,7 +357,7 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
 
 void DebuggedThread::ResumeException() {
   if (!IsInException()) {
-    return;  
+    return;
   }
   // We need to mark that this token is correctly handled before closing it.
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming exception handle.";

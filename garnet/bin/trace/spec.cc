@@ -4,6 +4,8 @@
 
 #include "garnet/bin/trace/spec.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <memory>
 
 #include <rapidjson/document.h>
@@ -11,7 +13,6 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace tracing {

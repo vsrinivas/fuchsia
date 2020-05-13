@@ -7,11 +7,10 @@
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
 #include <cstdlib>
-
-#include "src/lib/fxl/logging.h"
 
 class Object {
  public:

@@ -4,11 +4,11 @@
 
 #include "src/ui/lib/escher/mesh/tessellation.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <math.h>
 
 #include <algorithm>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/shape/mesh_builder.h"
 #include "src/ui/lib/escher/shape/mesh_builder_factory.h"
 

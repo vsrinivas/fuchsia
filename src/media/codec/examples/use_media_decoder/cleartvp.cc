@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/securemem/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -12,7 +13,6 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <src/lib/fxl/logging.h>
 #include <tee-client-api/tee_client_api.h>
 
 #include "input_copier.h"

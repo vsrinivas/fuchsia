@@ -4,9 +4,9 @@
 
 #include "src/lib/line_input/modal_line_input.h"
 
-#include <locale>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <locale>
 
 namespace line_input {
 

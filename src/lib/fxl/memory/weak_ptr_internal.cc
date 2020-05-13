@@ -4,7 +4,7 @@
 
 #include "src/lib/fxl/memory/weak_ptr_internal.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace fxl {
 namespace internal {

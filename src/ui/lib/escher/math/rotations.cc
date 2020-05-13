@@ -4,11 +4,12 @@
 
 #include "src/ui/lib/escher/math/rotations.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <cmath>
+
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/matrix_operation.hpp>
-
-#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

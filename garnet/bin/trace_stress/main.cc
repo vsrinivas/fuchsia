@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,6 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 static constexpr int kDefaultCount = 1;

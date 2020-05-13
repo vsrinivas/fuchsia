@@ -4,7 +4,7 @@
 
 #include "garnet/lib/measure/duration.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace tracing {
 namespace measure {

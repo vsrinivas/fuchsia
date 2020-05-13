@@ -4,10 +4,10 @@
 
 #include "src/virtualization/lib/vsh/client.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/socket.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/vsh/util.h"
 
 namespace vsh {

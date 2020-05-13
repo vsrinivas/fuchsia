@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -12,7 +14,6 @@
 #include "src/developer/debug/zxdb/expr/format_options.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

@@ -13,6 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/time.h>
@@ -33,7 +34,6 @@
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace monitor {

@@ -5,6 +5,7 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
@@ -19,7 +20,6 @@
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/compiler_specific.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

@@ -4,6 +4,7 @@
 
 #include "src/lib/fidl_codec/wire_types.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/fidl.h>
 
 #include <rapidjson/error/en.h>
@@ -11,7 +12,6 @@
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_object.h"
-#include "src/lib/fxl/logging.h"
 
 // See wire_types.h for details.
 

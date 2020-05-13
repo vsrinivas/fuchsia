@@ -10,6 +10,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <string.h>
 #include <sys/mount.h>
@@ -21,7 +22,6 @@
 #include <optional>
 #include <string>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"

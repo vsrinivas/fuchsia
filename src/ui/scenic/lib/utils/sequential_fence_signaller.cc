@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/utils/sequential_fence_signaller.h"
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace utils {
 

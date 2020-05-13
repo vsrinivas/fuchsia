@@ -4,9 +4,9 @@
 
 #include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
 
-#include <gtest/gtest.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
+#include <gtest/gtest.h>
 
 using fuchsia::ui::scenic::internal::GraphLinkStatus;
 using fuchsia::ui::scenic::internal::LayoutInfo;

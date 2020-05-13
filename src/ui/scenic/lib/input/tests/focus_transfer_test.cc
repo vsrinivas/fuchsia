@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 #include "src/ui/scenic/lib/input/tests/util.h"

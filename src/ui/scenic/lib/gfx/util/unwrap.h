@@ -6,8 +6,8 @@
 #define SRC_UI_SCENIC_LIB_GFX_UTIL_UNWRAP_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/lib/escher/geometry/types.h"

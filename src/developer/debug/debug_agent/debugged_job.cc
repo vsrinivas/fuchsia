@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/debugged_job.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/shared/component_utils.h"
@@ -11,7 +13,6 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

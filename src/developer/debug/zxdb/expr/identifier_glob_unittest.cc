@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/expr/identifier_glob.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
-#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

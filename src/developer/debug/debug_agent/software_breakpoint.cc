@@ -5,12 +5,12 @@
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 

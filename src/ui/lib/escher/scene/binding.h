@@ -5,7 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_SCENE_BINDING_H_
 #define SRC_UI_LIB_ESCHER_SCENE_BINDING_H_
 
-#include "src/lib/fxl/logging.h"
+#include <lib/syslog/cpp/macros.h>
 
 namespace escher {
 

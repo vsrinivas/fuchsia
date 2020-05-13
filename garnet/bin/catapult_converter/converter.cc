@@ -5,6 +5,7 @@
 #include "converter.h"
 
 #include <getopt.h>
+#include <lib/syslog/cpp/macros.h>
 #include <math.h>
 
 #include <algorithm>
@@ -17,7 +18,6 @@
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/prettywriter.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 #if defined(OS_FUCHSIA)

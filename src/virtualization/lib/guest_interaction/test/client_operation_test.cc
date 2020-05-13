@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/virtualization/lib/guest_interaction/client/client_operation_state.h"
 #include "src/virtualization/lib/guest_interaction/test/operation_test_lib.h"
 

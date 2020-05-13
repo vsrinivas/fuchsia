@@ -8,10 +8,10 @@
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace display {

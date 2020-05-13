@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/test_utils.h"
@@ -11,7 +13,6 @@
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/logging.h"
 
 using namespace debug_ipc;
 

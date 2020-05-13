@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "garnet/testing/benchmarking/benchmarking.h"
-#include "src/lib/fxl/logging.h"
 
 // This file no longer runs any interesting test cases, but it is left in
 // place for testing (on the CQ) that garnet/testing/benchmarking/ works,

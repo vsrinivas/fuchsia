@@ -9,11 +9,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/interface_ptr.h"
-#include "src/lib/fxl/logging.h"
 
 // The sysmem-test in zircon covers more functionality of sysmem itself.  This
 // test is only meant to verify that sysmem_connector establishes a connection

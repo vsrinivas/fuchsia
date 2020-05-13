@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/expr/find_name.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -23,7 +25,6 @@
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
-#include "src/lib/fxl/logging.h"
 
 // NOTE: Finding variables on *this* and subclasses is EvalContextImplTest.FoundThis which tests
 // both of our file's finding code as well as the decoding code.

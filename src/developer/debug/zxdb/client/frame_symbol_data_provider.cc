@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -13,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
