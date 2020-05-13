@@ -28,6 +28,8 @@ struct GrantedCyclesResult {
 struct BandwidthInfo {
     // Time when the measurement started.
     zx.time timestamp;
+    // Bus frequency in hertz (Hz) when the measurement started.
+    uint64 frequency;
     array<GrantedCyclesResult>:MAX_COUNT_CHANNELS channels;
 };
 

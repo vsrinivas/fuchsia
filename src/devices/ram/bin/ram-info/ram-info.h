@@ -24,8 +24,6 @@ struct RamDeviceInfo {
     const char* name;
     uint64_t mask;
   } default_channels[::llcpp::fuchsia::hardware::ram::metrics::MAX_COUNT_CHANNELS];
-  // Counter value to bandwidth in MB/s.
-  double (*counter_to_bandwidth_mbs)(uint64_t counter);
 };
 
 class Printer {

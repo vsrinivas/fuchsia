@@ -36,6 +36,7 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
 
     ram_metrics::BandwidthInfo info = {};
     info.timestamp = zx::msec(1234).to_nsecs();
+    info.frequency = 256 * 1024 * 1024;
     info.channels[0].readwrite_cycles = 10;
     info.channels[1].readwrite_cycles = 20;
     info.channels[2].readwrite_cycles = 30;
@@ -77,9 +78,7 @@ class RamInfoTest : public zxtest::Test {
 
 TEST_F(RamInfoTest, Errors) {
   constexpr RamDeviceInfo kDeviceInfo = {
-      .counter_to_bandwidth_mbs = [](uint64_t counter) -> double {
-        return static_cast<double>(counter);
-      },
+      .default_cycles_to_measure = 1024,
   };
 
   char output_buffer[512];
@@ -100,9 +99,7 @@ TEST_F(RamInfoTest, Errors) {
 
 TEST_F(RamInfoTest, DefaultPrinter) {
   constexpr RamDeviceInfo kDeviceInfo = {
-      .counter_to_bandwidth_mbs = [](uint64_t counter) -> double {
-        return static_cast<double>(counter) / 4.0;
-      },
+      .default_cycles_to_measure = 1024,
   };
 
   char output_buffer[512];
@@ -133,9 +130,7 @@ TEST_F(RamInfoTest, DefaultPrinter) {
 
 TEST_F(RamInfoTest, CsvPrinter) {
   constexpr RamDeviceInfo kDeviceInfo = {
-      .counter_to_bandwidth_mbs = [](uint64_t counter) -> double {
-        return static_cast<double>(counter) / 4.0;
-      },
+      .default_cycles_to_measure = 1024,
   };
 
   char output_buffer[512];

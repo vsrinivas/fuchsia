@@ -9,10 +9,6 @@
 
 namespace aml_ram {
 
-// TODO(cpu): Understand why we use these two numbers.
-constexpr uint64_t kMemCycleCount = 1024 * 1024 * 57u;
-constexpr double kMemCyclePerSecond = (912.0 / 2.0);
-
 // Astro and Sherlock ports.
 constexpr uint64_t kPortIdArmAe = 0x01u << 0;
 constexpr uint64_t kPortIdMali = 0x01u << 1;
@@ -43,10 +39,6 @@ constexpr uint64_t kDefaultChannelVDec =
     kPortIdHevcFront | kPortIdHevcBack | kPortIdVDec | kPortIdHCodec;
 constexpr uint64_t kDefaultChannelVpu =
     kPortIdVpuR1 | kPortIdVpuR2 | kPortIdVpuR3 | kPortIdVpuW1 | kPortIdVpuW2;
-
-inline double CounterToBandwidth(uint64_t counter) {
-  return (static_cast<double>(counter) * kMemCyclePerSecond) / kMemCycleCount;
-}
 
 }  // namespace aml_ram
 

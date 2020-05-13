@@ -14,15 +14,17 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 namespace amlogic_ram {
 
-constexpr zx_signals_t kCancelSignal = ZX_USER_SIGNAL_0;
-constexpr zx_signals_t kWorkPendingSignal = ZX_USER_SIGNAL_1;
-
 constexpr size_t kMaxPendingRequests = 64u;
+
+constexpr uint64_t kPortKeyIrqMsg = 0x0;
+constexpr uint64_t kPortKeyCancelMsg = 0x1;
+constexpr uint64_t kPortKeyWorkPendingMsg = 0x2;
 
 zx_status_t ValidateRequest(const ram_metrics::BandwidthMeasurementConfig& config) {
   // Restrict timer to reasonable values.
@@ -57,8 +59,29 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
+  zx::interrupt irq;
+  status = pdev.GetInterrupt(0, &irq);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-ram: Failed to map interrupt, st = %d", status);
+    return status;
+  }
+
+  zx::port port;
+  status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-ram: Failed to create port, st = %d", status);
+    return status;
+  }
+
+  status = irq.bind(port, kPortKeyIrqMsg, 0 /*options*/);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-ram: Failed to bind interrupt, st = %d", status);
+    return status;
+  }
+
   fbl::AllocChecker ac;
-  auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio));
+  auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio), std::move(irq),
+                                                 std::move(port));
   if (!ac.check()) {
     zxlogf(ERROR, "aml-ram: Failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
@@ -74,8 +97,8 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
   return ZX_OK;
 }
 
-AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio)
-    : DeviceType(parent), mmio_(std::move(mmio)) {}
+AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port)
+    : DeviceType(parent), mmio_(std::move(mmio)), irq_(std::move(irq)), port_(std::move(port)) {}
 
 AmlRam::~AmlRam() {
   // Verify we drained all requests.
@@ -112,14 +135,7 @@ void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
     return;
   }
 
-  if (!thread_control_) {
-    // First request.
-    auto status = zx::event::create(0u, &thread_control_);
-    if (status != ZX_OK) {
-      completer.ReplyError(st);
-      zxlogf(ERROR, "aml-ram: could not create event\n");
-      return;
-    }
+  if (!thread_.joinable()) {
     thread_ = std::thread([this] { ReadLoop(); });
   }
 
@@ -135,7 +151,9 @@ void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
     // Enqueue task and signal worker thread as needed.
     requests_.emplace_back(std::move(config), completer.ToAsync());
     if (requests_.size() == 1u) {
-      thread_control_.signal(0, kWorkPendingSignal);
+      zx_port_packet_t packet = {
+          .key = kPortKeyWorkPendingMsg, .type = ZX_PKT_TYPE_USER, .status = ZX_OK};
+      ZX_ASSERT(port_.queue(&packet) == ZX_OK);
     }
   }
 }
@@ -157,33 +175,60 @@ zx_status_t AmlRam::ReadBandwithCounters(const ram_metrics::BandwidthMeasurement
   mmio_.Write32(static_cast<uint32_t>(config.cycles_to_measure), MEMBW_TIMER);
   mmio_.Write32(channels_enabled | DMC_QOS_ENABLE_CTRL, MEMBW_PORTS_CTRL);
 
+  // Drain stray interrupt packets from port if we exit early.
+  auto auto_drain_port = fbl::MakeAutoCall([this]() {
+    zx_port_packet_t packet;
+    if (port_.wait(zx::time(0), &packet) == ZX_OK) {
+      // Acknowledge IRQ or re-queue packet.
+      if (packet.key == kPortKeyIrqMsg) {
+        ZX_ASSERT(irq_.ack() == ZX_OK);
+      } else {
+        ZX_ASSERT(port_.queue(&packet) == ZX_OK);
+      }
+    }
+  });
+
+  // Disable measurement before we exit.
+  // Note: must go out of scope before |auto_drain_port|.
+  auto auto_disable_measurement = fbl::MakeAutoCall([this, channels_enabled]() {
+    mmio_.Write32(channels_enabled | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
+  });
+
   bpi->timestamp = zx_clock_get_monotonic();
+  bpi->frequency = ReadFrequency();
 
-  uint32_t value = mmio_.Read32(MEMBW_PORTS_CTRL);
-  uint32_t count = 0;
-
-  // Polling loop for the bandwith cycle counters.
-  // TODO(cpu): tune wait interval to minimize polling.
-  while (value & DMC_QOS_ENABLE_CTRL) {
-    if (count++ > 20) {
+  zx_port_packet_t packet;
+  zx::time deadline = zx::deadline_after(zx::sec(1));
+  for (;;) {
+    auto status = port_.wait(deadline, &packet);
+    if (status == ZX_ERR_TIMED_OUT) {
       return ZX_ERR_TIMED_OUT;
     }
-
-    auto status =
-        thread_control_.wait_one(kCancelSignal, zx::deadline_after(zx::msec(50)), nullptr);
-    if (status != ZX_ERR_TIMED_OUT) {
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "aml-ram: error in wait, st =%d\n", status);
+      return status;
+    }
+    if (packet.key == kPortKeyCancelMsg) {
       // Shutdown. This is handled by the caller.
       return ZX_ERR_CANCELED;
     }
-    value = mmio_.Read32(MEMBW_PORTS_CTRL);
+    if (packet.key == kPortKeyIrqMsg) {
+      ZX_ASSERT(irq_.ack() == ZX_OK);
+      break;
+    }
+    // We can ignore kPortKeyWorkPendingMsg here as caller will
+    // check for more pending work before waiting on port again.
   }
+
+  uint32_t value = mmio_.Read32(MEMBW_PORTS_CTRL);
+  ZX_ASSERT((value & DMC_QOS_ENABLE_CTRL) == 0);
 
   bpi->channels[0].readwrite_cycles = mmio_.Read32(MEMBW_C0_GRANT_CNT) * 16ul;
   bpi->channels[1].readwrite_cycles = mmio_.Read32(MEMBW_C1_GRANT_CNT) * 16ul;
   bpi->channels[2].readwrite_cycles = mmio_.Read32(MEMBW_C2_GRANT_CNT) * 16ul;
   bpi->channels[3].readwrite_cycles = mmio_.Read32(MEMBW_C3_GRANT_CNT) * 16ul;
 
-  mmio_.Write32(channels_enabled | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
+  auto_drain_port.cancel();
   return ZX_OK;
 }
 
@@ -191,52 +236,50 @@ void AmlRam::ReadLoop() {
   std::deque<Job> jobs;
 
   for (;;) {
-    zx_signals_t observed = 0u;
-    auto status = thread_control_.wait_one(kCancelSignal | kWorkPendingSignal, zx::time::infinite(),
-                                           &observed);
+    zx_port_packet_t packet;
+    auto status = port_.wait(zx::time::infinite(), &packet);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-ram: error in wait_one, st =%d\n", status);
+      zxlogf(ERROR, "aml-ram: error in wait, st =%d\n", status);
       return;
     }
 
-    ZX_ASSERT(jobs.empty());
+    for (;;) {
+      ZX_ASSERT(jobs.empty());
 
-    if (observed & kCancelSignal) {
-      // Shutdown with no pending work in the local queue.
-      return;
-    }
-
-    {
-      fbl::AutoLock lock(&lock_);
-      if (requests_.empty()) {
-        // Done with all work. Clear pending-work signal, go back to wait.
-        thread_control_.signal(kWorkPendingSignal, 0);
-        continue;
-      } else {
+      {
+        fbl::AutoLock lock(&lock_);
+        if (shutdown_) {
+          // Shutdown with no pending work in the local queue.
+          return;
+        }
+        if (requests_.empty()) {
+          // Done with all work. Go back to wait.
+          break;
+        }
         // Some work available. Move it all to the local queue.
         jobs = std::move(requests_);
       }
-    }
 
-    while (!jobs.empty()) {
-      Job& job = jobs.front();
-      ram_metrics::BandwidthInfo bpi;
-      status = ReadBandwithCounters(job.config, &bpi);
-      if (status == ZX_OK) {
-        job.completer.ReplySuccess(bpi);
-      } else if (status == ZX_ERR_CANCELED) {
-        // Shutdown case with pending work in local queue. Give back the jobs
-        // to the main thread.
-        RevertJobs(&jobs);
-        return;
-      } else {
-        // Unexpected error. Better log it.
-        zxlogf(ERROR, "aml-ram: read error z %d\n", status);
-        job.completer.ReplyError(status);
+      while (!jobs.empty()) {
+        Job& job = jobs.front();
+        ram_metrics::BandwidthInfo bpi;
+        status = ReadBandwithCounters(job.config, &bpi);
+        if (status == ZX_OK) {
+          job.completer.ReplySuccess(bpi);
+        } else if (status == ZX_ERR_CANCELED) {
+          // Shutdown case with pending work in local queue. Give back the jobs
+          // to the main thread.
+          RevertJobs(&jobs);
+          return;
+        } else {
+          // Unexpected error. Better log it.
+          zxlogf(ERROR, "aml-ram: read error z %d\n", status);
+          job.completer.ReplyError(status);
+        }
+        jobs.pop_front();
       }
-      jobs.pop_front();
     }
-  };
+  }
 }
 
 // Merge back the request jobs from the local jobs in |source| preserving
@@ -251,10 +294,15 @@ void AmlRam::RevertJobs(std::deque<AmlRam::Job>* source) {
 }
 
 void AmlRam::Shutdown() {
-  if (thread_control_) {
-    thread_control_.signal(kWorkPendingSignal, kCancelSignal);
+  if (thread_.joinable()) {
+    {
+      fbl::AutoLock lock(&lock_);
+      shutdown_ = true;
+      zx_port_packet_t packet = {
+          .key = kPortKeyCancelMsg, .type = ZX_PKT_TYPE_USER, .status = ZX_OK};
+      ZX_ASSERT(port_.queue(&packet) == ZX_OK);
+    }
     thread_.join();
-    thread_control_.reset();
     // Cancel all pending requests. There are no more threads
     // but we still take the lock to keep lock checker happy.
     {
@@ -265,6 +313,41 @@ void AmlRam::Shutdown() {
       requests_.clear();
     }
   }
+}
+
+uint64_t AmlRam::ReadFrequency() const {
+  uint32_t value = mmio_.Read32(MEMBW_PLL_CNTL);
+  uint64_t dpll_int_num = value & 0x1ff;
+  uint64_t dpll_ref_div_n = (value >> 10) & 0x1f;
+  uint64_t od = (value >> 16) & 0x7;
+  uint64_t od1 = (value >> 19) & 0x1;
+
+  ZX_ASSERT(dpll_ref_div_n);
+  uint64_t od_div = 1;
+  switch (od) {
+    case 0:
+      od_div = 2;  // 000:/2
+      break;
+    case 1:
+      od_div = 3;  // 001:/3
+      break;
+    case 2:
+      od_div = 4;  // 010:/4
+      break;
+    case 3:
+      od_div = 6;  // 011:/6
+      break;
+    case 4:
+      od_div = 8;  // 100:/8
+      break;
+  }
+  uint64_t od1_shift = od1 == 0 ? 1 : 2;  // 0:/2, 1:/4
+  // Frequency is calculated with the following equation:
+  //
+  // f = fREF * (M + frac) / N
+  //
+  constexpr uint64_t kFreqRef = 24000000;
+  return (((kFreqRef * dpll_int_num) / dpll_ref_div_n) >> od1_shift) / od_div;
 }
 
 }  // namespace amlogic_ram

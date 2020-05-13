@@ -9,7 +9,8 @@
 #include <fuchsia/hardware/ram/metrics/llcpp/fidl.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/event.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/port.h>
 
 #include <deque>
 #include <thread>
@@ -51,6 +52,10 @@ constexpr uint32_t MEMBW_RP[MEMBW_MAX_CHANNELS] = {(0x0021 << 2), (0x0023 << 2),
 constexpr uint32_t MEMBW_SP[MEMBW_MAX_CHANNELS] = {(0x0022 << 2), (0x0024 << 2), (0x0026 << 2),
                                                    (0x0028 << 2)};
 
+// Contains the DDR frequency.
+// TODO(reveman): Understand why we use 0x0300 instead of 0x0000.
+constexpr uint32_t MEMBW_PLL_CNTL = (0x0300 << 2);
+
 constexpr uint64_t kMinimumCycleCount = 1024 * 512;
 constexpr uint64_t kMaximumCycleCount = 1024 * 1024 * 256;
 
@@ -63,7 +68,7 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
 
   static zx_status_t Create(void* context, zx_device_t* parent);
 
-  explicit AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio);
+  explicit AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port);
   ~AmlRam();
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -91,12 +96,15 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   void ReadLoop();
   void RevertJobs(std::deque<AmlRam::Job>* source);
   void Shutdown();
+  uint64_t ReadFrequency() const;
 
   ddk::MmioBuffer mmio_;
+  zx::interrupt irq_;
+  zx::port port_;
   std::thread thread_;
-  zx::event thread_control_;
   fbl::Mutex lock_;
   std::deque<Job> requests_ TA_GUARDED(lock_);
+  bool shutdown_ TA_GUARDED(lock_) = false;
 };
 
 }  // namespace amlogic_ram

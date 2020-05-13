@@ -18,6 +18,13 @@ static const pbus_mmio_t sherlock_ram_ctl_mmios[] = {
     },
 };
 
+static const pbus_irq_t sherlock_ram_ctl_irqs[] = {
+    {
+        .irq = T931_DMC_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static const pbus_dev_t ramctl_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-ram-ctl";
@@ -26,6 +33,8 @@ static const pbus_dev_t ramctl_dev = []() {
   dev.did = PDEV_DID_AMLOGIC_RAM_CTL;
   dev.mmio_list = sherlock_ram_ctl_mmios;
   dev.mmio_count = countof(sherlock_ram_ctl_mmios);
+  dev.irq_list = sherlock_ram_ctl_irqs;
+  dev.irq_count = countof(sherlock_ram_ctl_irqs);
   return dev;
 }();
 

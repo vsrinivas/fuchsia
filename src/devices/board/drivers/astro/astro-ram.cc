@@ -26,6 +26,13 @@ static const pbus_bti_t astro_ram_ctl_btis[] = {
     },
 };
 
+static const pbus_irq_t astro_ram_ctl_irqs[] = {
+    {
+        .irq = S905D2_DMC_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static const pbus_dev_t ramctl_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-ram-ctl";
@@ -36,6 +43,8 @@ static const pbus_dev_t ramctl_dev = []() {
   dev.mmio_count = countof(astro_ram_ctl_mmios);
   dev.bti_list = astro_ram_ctl_btis;
   dev.bti_count = countof(astro_ram_ctl_btis);
+  dev.irq_list = astro_ram_ctl_irqs;
+  dev.irq_count = countof(astro_ram_ctl_irqs);
   return dev;
 }();
 

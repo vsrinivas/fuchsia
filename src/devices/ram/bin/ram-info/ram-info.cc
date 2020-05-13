@@ -20,7 +20,7 @@ constexpr ram_info::RamDeviceInfo kDevices[] = {
     {
         // Astro
         .devfs_path = "/dev/sys/platform/05:03:24/ram",
-        .default_cycles_to_measure = aml_ram::kMemCycleCount,
+        .default_cycles_to_measure = 456000000 / 20,  // 456 Mhz, 50 ms.
         .default_channels =
             {
                 [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
@@ -28,12 +28,11 @@ constexpr ram_info::RamDeviceInfo kDevices[] = {
                 [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
                 [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
             },
-        .counter_to_bandwidth_mbs = aml_ram::CounterToBandwidth,
     },
     {
         // Sherlock
         .devfs_path = "/dev/sys/platform/05:04:24/ram",
-        .default_cycles_to_measure = aml_ram::kMemCycleCount,
+        .default_cycles_to_measure = 792000000 / 20,  // 792 Mhz, 50 ms.
         .default_channels =
             {
                 [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
@@ -41,9 +40,15 @@ constexpr ram_info::RamDeviceInfo kDevices[] = {
                 [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
                 [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
             },
-        .counter_to_bandwidth_mbs = aml_ram::CounterToBandwidth,
     },
 };
+
+double CounterToBandwidthMBs(uint64_t cycles, uint64_t frequency, uint64_t cycles_measured) {
+  double bandwidth_rw = static_cast<double>(cycles * frequency);
+  bandwidth_rw /= static_cast<double>(cycles_measured);
+  bandwidth_rw /= 1024.0 * 1024.0;
+  return bandwidth_rw;
+}
 
 }  // namespace
 
@@ -59,7 +64,8 @@ void DefaultPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
     }
     // We discard read-only and write-only counters as they are not supported
     // by current hardware.
-    double bandwidth_rw = device_info_.counter_to_bandwidth_mbs(info.channels[ix].readwrite_cycles);
+    double bandwidth_rw = CounterToBandwidthMBs(info.channels[ix].readwrite_cycles, info.frequency,
+                                                device_info_.default_cycles_to_measure);
     total_bandwidth_rw += bandwidth_rw;
     fprintf(file_, "%s (rw) \t\t %g\n", row.c_str(), bandwidth_rw);
     ++ix;
@@ -95,7 +101,8 @@ void CsvPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
       continue;
     }
 
-    double bandwidth_rw = device_info_.counter_to_bandwidth_mbs(info.channels[ix].readwrite_cycles);
+    double bandwidth_rw = CounterToBandwidthMBs(info.channels[ix].readwrite_cycles, info.frequency,
+                                                device_info_.default_cycles_to_measure);
     fprintf(file_, "%g%s", bandwidth_rw, (ix < row_count - 1) ? "," : "\n");
     ix++;
   }

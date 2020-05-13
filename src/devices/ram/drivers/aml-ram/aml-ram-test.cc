@@ -26,6 +26,7 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
   FakePDev() : proto_({&pdev_protocol_ops_, this}) {
     regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegSize);
     mmio_ = std::make_unique<ddk_fake::FakeMmioRegRegion>(regs_.get(), sizeof(uint32_t), kRegSize);
+    zx::interrupt::create(zx::resource(ZX_HANDLE_INVALID), 0, ZX_INTERRUPT_VIRTUAL, &irq_);
   }
 
   zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
@@ -35,7 +36,10 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
   }
 
   zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
+    EXPECT_EQ(index, 0);
+    irq_signaller_ = zx::unowned_interrupt(irq_);
+    *out_irq = std::move(irq_);
+    return ZX_OK;
   }
 
   zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
@@ -56,10 +60,14 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
     return regs_[ix >> 2];
   }
 
+  void InjectInterrupt() { irq_signaller_->trigger(0, zx::time()); }
+
  private:
   pdev_protocol_t proto_;
   std::unique_ptr<ddk_fake::FakeMmioReg[]> regs_;
   std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
+  zx::interrupt irq_;
+  zx::unowned_interrupt irq_signaller_;
 };
 
 class Ddk : public fake_ddk::Bind {
@@ -141,6 +149,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   constexpr uint32_t kCyclesToMeasure = (1024 * 1024 * 10u);
   constexpr uint32_t kControlStart = DMC_QOS_ENABLE_CTRL | 0b0111;
   constexpr uint32_t kControlStop = DMC_QOS_CLEAR_CTRL | 0b0111;
+  constexpr uint32_t kFreq = 0x4 | (0x1 << 10);  // F=24000000 (M=4, N=1, OD=0, OD1=0)
 
   // Note that the cycles are to be interpreted as shifted 4 bits.
   constexpr uint32_t kReadCycles[] = {0x125001, 0x124002, 0x123003, 0x0};
@@ -157,17 +166,21 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   });
 
   pdev_.reg(MEMBW_PORTS_CTRL)
-      .SetWriteCallback([start = kControlStart, stop = kControlStop, &step](size_t value) {
-        if (step == 1) {
-          EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
-          ++step;
-        } else if (step == 3) {
-          EXPECT_EQ(value, stop, "3: got write of 0x%lx", value);
-          ++step;
-        } else {
-          EXPECT_TRUE(false, "unexpected: 0x%lx", value);
-        }
-      });
+      .SetWriteCallback(
+          [start = kControlStart, stop = kControlStop, &step, pdev = &pdev_](size_t value) {
+            if (step == 1) {
+              EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
+              pdev->InjectInterrupt();
+              ++step;
+            } else if (step == 3) {
+              EXPECT_EQ(value, stop, "3: got write of 0x%lx", value);
+              ++step;
+            } else {
+              EXPECT_TRUE(false, "unexpected: 0x%lx", value);
+            }
+          });
+
+  pdev_.reg(MEMBW_PLL_CNTL).SetReadCallback([value = kFreq]() { return value; });
 
   // Note that reading from MEMBW_PORTS_CTRL by default returns 0
   // and that makes the operation succeed.
@@ -206,6 +219,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   EXPECT_EQ(step, 4);
 
   EXPECT_GT(info->result.response().info.timestamp, 0u);
+  EXPECT_EQ(info->result.response().info.frequency, 24000000u);
 
   // Check FIDL result makes sense. AML hw does not support read or write only counters.
   int ix = 0;
@@ -224,23 +238,26 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
 TEST_F(AmlRamDeviceTest, HardwareError) {
   // Perform a valid request but simulate the hardware never finishing.
   constexpr uint32_t kControlStart = DMC_QOS_ENABLE_CTRL | 0b0111;
+  constexpr uint32_t kControlStop = DMC_QOS_CLEAR_CTRL | 0b0111;
+  constexpr uint32_t kFreq = 0x4 | (0x1 << 10);  // F=24000000 (M=4, N=1, OD=0, OD1=0)
   std::atomic<int> step = 0;
 
-  pdev_.reg(MEMBW_PORTS_CTRL).SetWriteCallback([start = kControlStart, &step](size_t value) {
-    if (step == 0) {
-      EXPECT_EQ(value, start, "0: got write of 0x%lx", value);
-      ++step;
-    } else {
-      EXPECT_TRUE(false, "unexpected: 0x%lx", value);
-    }
-  });
+  pdev_.reg(MEMBW_PORTS_CTRL)
+      .SetWriteCallback([start = kControlStart, stop = kControlStop, &step](size_t value) {
+        if (step == 0) {
+          EXPECT_EQ(value, start, "0: got write of 0x%lx", value);
+          // By not injecting an IRQ the logic in the driver should time-out.
+          ++step;
+        } else if (step == 1) {
+          // Driver should stop measurement in order to drain stray IRQs.
+          EXPECT_EQ(value, stop, "2: got write of 0x%lx", value);
+          ++step;
+        } else {
+          EXPECT_TRUE(false, "unexpected: 0x%lx", value);
+        }
+      });
 
-  pdev_.reg(MEMBW_PORTS_CTRL).SetReadCallback([value = kControlStart, &step] {
-    EXPECT_EQ(step, 1);
-    // By returning the same value that was written (kControlStart) the logic in the
-    // driver should time-out.
-    return value;
-  });
+  pdev_.reg(MEMBW_PLL_CNTL).SetReadCallback([value = kFreq]() { return value; });
 
   ram_metrics::BandwidthMeasurementConfig config = {(1024 * 1024 * 10u), {4, 2, 1, 0, 0, 0}};
   ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
