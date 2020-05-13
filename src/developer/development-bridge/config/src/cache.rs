@@ -8,7 +8,7 @@ use {
     crate::heuristic_config::HeuristicFn,
     anyhow::{anyhow, Error},
     async_std::sync::{Arc, RwLock},
-    ffx_args::Ffx,
+    ffx_command::Ffx,
     ffx_core::constants::CONFIG_CACHE_TIMEOUT,
     std::collections::HashMap,
     std::time::Instant,
@@ -101,9 +101,6 @@ async fn load_config_with_instant(
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 #[cfg(test)]
-use ffx_args::{DaemonCommand, Subcommand};
-
-#[cfg(test)]
 fn find_env_file() -> Result<String, Error> {
     // Prevent any File I/O in unit tests.
     Err(anyhow!("test no environment"))
@@ -112,6 +109,8 @@ fn find_env_file() -> Result<String, Error> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use ffx_args::DaemonCommand;
+    use ffx_command::Subcommand;
     use futures::future::join_all;
     use std::time::Duration;
 

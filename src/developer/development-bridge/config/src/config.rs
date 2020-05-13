@@ -10,7 +10,7 @@ use {
     crate::heuristic_config::{Heuristic, HeuristicFn},
     crate::runtime_config::Runtime,
     anyhow::Error,
-    ffx_args::Ffx,
+    ffx_command::Ffx,
     ffx_core::ConfigLevel,
     serde_json::Value,
     std::collections::HashMap,
@@ -166,7 +166,8 @@ impl<'a> WriteConfig for Config<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_args::{DaemonCommand, Subcommand};
+    use ffx_args::DaemonCommand;
+    use ffx_command::Subcommand;
 
     fn test_heuristic(key: &str) -> Option<Value> {
         Some(Value::String(key.to_string()))

@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("./command.gni")
 
 # Defines FFX
 #
@@ -20,19 +21,6 @@ template("ffx") {
 
   if (defined(invoker.name)) {
     output_name = invoker.name
-  }
-
-  rustc_binary("bin") {
-    name = output_name
-    deps = ffx_deps + [ ":args_lib" ]
-    non_rust_deps = [ "//third_party/boringssl" ]
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "name",
-                             "deps",
-                             "non_rust_deps",
-                           ])
   }
 
   args_deps = []
@@ -63,23 +51,52 @@ template("ffx") {
                            ])
   }
 
+  command("ffx_sub_command") {
+    output_name = "cmd_args.rs"
+    plugin_deps = invoker.plugin_deps
+  }
+
+  rustc_library("command_lib") {
+    name = "ffx_command"
+    source_root = "$target_gen_dir/cmd_args.rs"
+    deps = args_deps + [
+             ":args_lib",
+             ":ffx_sub_command",
+             "config:args_lib",
+             "//third_party/rust_crates:argh",
+           ]
+  }
+
+  rustc_binary("bin") {
+    name = output_name
+    deps = ffx_deps + [
+             ":command_lib",
+             ":args_lib",
+           ]
+    non_rust_deps = [ "//third_party/boringssl" ]
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "name",
+                             "deps",
+                             "non_rust_deps",
+                           ])
+  }
+
   tests_deps = []
   if (defined(invoker.plugin_deps)) {
     foreach(d, invoker.plugin_deps) {
-      args_test = d + "_args_test"
-      lib_test = d + "_test"
-      tests_deps += [
-        args_test,
-        lib_test,
-      ]
+      test = get_label_info(d, "dir")
+      tests_deps += [ test + ":tests" ]
     }
   }
 
   group("ffx_tests") {
     testonly = true
+
     deps = tests_deps + [
-             ":bin_test($host_toolchain)",
              ":args_lib_test($host_toolchain)",
+             ":bin_test($host_toolchain)",
              "config:tests($host_toolchain)",
            ]
   }

@@ -12,9 +12,9 @@ macro_rules! ffx_cmd {
     () => {{
         #[cfg(test)]
         {
-            ffx_args::Ffx {
+            ffx_command::Ffx {
                 config: None,
-                subcommand: ffx_args::Subcommand::Daemon(ffx_args::DaemonCommand {}),
+                subcommand: ffx_command::Subcommand::Daemon(ffx_args::DaemonCommand {}),
             }
         }
         #[cfg(not(test))]

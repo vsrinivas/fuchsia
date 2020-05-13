@@ -13,10 +13,11 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":args_lib",
-      "../:args_lib",
-      "../core:lib",
       "macro:config-macros",
       "//src/connectivity/overnet/lib/hoist",
+      "//src/developer/development-bridge:args_lib",
+      "//src/developer/development-bridge:command_lib",
+      "//src/developer/development-bridge/core:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-std",

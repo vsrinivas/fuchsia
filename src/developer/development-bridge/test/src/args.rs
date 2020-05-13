@@ -20,6 +20,9 @@ pub struct TestCommand {
     pub list: bool,
 }
 
+///TODO(fxb/51594): use an attribute and proc macro to generate this
+pub type Command = TestCommand;
+
 #[cfg(test)]
 mod tests {
     use super::*;

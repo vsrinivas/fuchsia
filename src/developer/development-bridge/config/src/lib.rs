@@ -8,7 +8,7 @@ use {
     crate::config::Config,
     crate::environment::Environment,
     anyhow::{anyhow, Error},
-    ffx_args::Ffx,
+    ffx_command::Ffx,
     ffx_core::{constants::ENV_FILE, ConfigLevel},
     serde_json::Value,
     std::{env, fs::File, io::Write, path::PathBuf},

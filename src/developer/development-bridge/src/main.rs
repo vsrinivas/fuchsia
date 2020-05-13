@@ -6,7 +6,7 @@ use {
     crate::daemon::{is_daemon_running, start as start_daemon},
     crate::logger::setup_logger,
     anyhow::{anyhow, format_err, Context, Error},
-    ffx_args::{Ffx, Subcommand},
+    ffx_command::{Ffx, Subcommand},
     ffx_config::command::exec_config,
     ffx_core::constants::DAEMON,
     ffxlib::find_and_connect,
