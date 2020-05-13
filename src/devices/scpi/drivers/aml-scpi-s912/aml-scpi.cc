@@ -64,7 +64,7 @@ zx_status_t AmlSCPI::ExecuteCommand(void* rx_buf, size_t rx_size, void* tx_buf, 
   mailbox_channel_t channel;
   zx_status_t status = GetMailbox(cmd, &channel.mailbox);
   if (status != ZX_OK) {
-    SCPI_ERROR("aml_scpi_get_mailbox failed - error status %d\n", status);
+    SCPI_ERROR("aml_scpi_get_mailbox failed - error status %d", status);
     return status;
   }
 
@@ -76,7 +76,7 @@ zx_status_t AmlSCPI::ExecuteCommand(void* rx_buf, size_t rx_size, void* tx_buf, 
     mailbox_status = *(uint32_t*)(rx_buf);
   }
   if (status != ZX_OK || mailbox_status != 0) {
-    SCPI_ERROR("mailbox_send_command failed - error status %d\n", status);
+    SCPI_ERROR("mailbox_send_command failed - error status %d", status);
     return status;
   }
   return ZX_OK;
@@ -101,7 +101,7 @@ zx_status_t AmlSCPI::ScpiGetDvfsIdx(uint8_t power_domain, uint16_t* idx) {
 
   *idx = aml_dvfs_idx_info.idx;
 
-  SCPI_INFO("Current Operation point %x\n", aml_dvfs_idx_info.idx);
+  SCPI_INFO("Current Operation point %x", aml_dvfs_idx_info.idx);
   return ZX_OK;
 }
 
@@ -119,7 +119,7 @@ zx_status_t AmlSCPI::ScpiSetDvfsIdx(uint8_t power_domain, uint16_t idx) {
   aml_dvfs_idx_info.power_domain = power_domain;
   aml_dvfs_idx_info.idx = idx;
 
-  SCPI_INFO("OPP index for cluster %d to %d\n", power_domain, idx);
+  SCPI_INFO("OPP index for cluster %d to %d", power_domain, idx);
   return ExecuteCommand(NULL, 0, &aml_dvfs_idx_info, sizeof(aml_dvfs_idx_info), SCPI_CMD_SET_DVFS,
                         SCPI_CL_DVFS);
 }
@@ -160,7 +160,7 @@ zx_status_t AmlSCPI::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* out_opps)
   out_opps->latency = aml_dvfs_info.latency;
 
   if (out_opps->count > fuchsia_hardware_thermal_MAX_DVFS_OPPS) {
-    SCPI_ERROR("Number of operating_points greater than fuchsia_hardware_thermal_MAX_DVFS_OPPS\n");
+    SCPI_ERROR("Number of operating_points greater than fuchsia_hardware_thermal_MAX_DVFS_OPPS");
     status = ZX_ERR_INVALID_ARGS;
     return status;
   }
