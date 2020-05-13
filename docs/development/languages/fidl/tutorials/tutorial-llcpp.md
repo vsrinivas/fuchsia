@@ -66,7 +66,7 @@ the steps to use the bindings depend on where the consumer code is located:
     The in-memory layout of LLCPP structures is the same as the layout of the
     wire format. The LLCPP objects can be thought of as a view over the
     encoded message..
-    
+
 *   **Message ownership:**
     LLCPP objects use [`tracking_ptr`](#Pointers-and-memory-ownership) smart
     pointers to manage ownership and track whether an object is heap allocated
@@ -116,6 +116,7 @@ protocol SpaceShip {
     SetHeading(int16 heading);
     ScanForPlanets() -> (vector<Planet> planets);
     DirectedScan(int16 heading) -> (vector<Planet> planets);
+    -> OnBeacon(int16 heading);
 };
 ```
 
@@ -155,6 +156,16 @@ class SpaceShip final {
   class ResultOf final { /* ... */ };
   class UnownedResultOf final { /* ... */ };
   class InPlace final { /* ... */ };
+
+  // Generated classes for thread-safe async-capable client.
+  struct AsyncEventHandlers {
+    std::variant<fit::callback<void(int16_t)>,
+                 fit::callback<void(fidl::DecodedMessage<OnBeaconResponse>)>>
+        on_beacon;
+  };
+  class ScanForPlanetsResponseContext { /* ... */ };
+  class DirectedScanResponseContext { /* ... */ };
+  class ClientImpl { /* ... */ };
 };
 ```
 
@@ -189,7 +200,7 @@ comes with caveats. We will dive into these separately.
 
 ### Sync client `(Protocol::SyncClient)`
 
-The following code is generated for `SpaceShape::SyncClient`. Each FIDL method
+The following code is generated for `SpaceShip::SyncClient`. Each FIDL method
 always correspond to two overloads which differ in memory management strategies,
 termed *flavors* in LLCPP: *managed flavor* and *caller-allocating flavor*.
 
@@ -342,9 +353,119 @@ Here the return value `result` owns them, and takes care of closing them when
 it goes out of scope.
 If any handle is `std::move`ed away, `result` would not accidentally close it.
 
+### Async-capable Client (`fidl::Client<Protocol>`)
+
+This client is thread-safe and supports both synchronous and asynchronous calls
+as well as asynchronous event handling. It also supports use with a
+multi-threaded dispatcher.
+
+#### Creation
+
+A client is created with a client-end `zx::channel`, an `async_dispatcher_t*`,
+an optional hook (`OnClientUnboundFn`) to be invoked when the channel is
+unbound, and an optional `AsyncEventHandlers` containing hooks to
+be invoked on FIDL events.
+
+```cpp
+Client<SpaceShip> client;
+zx_status_t status = client.Bind(
+    std::move(client_end), dispatcher,
+    // OnClientUnboundFn
+    [&](fidl::UnboundReason, zx_status_t, zx::channel) { /* ... */ },
+    // AsyncEventHandlers
+    { .on_beacon = [&](int16_t) { /* ... */ } });
+```
+
+#### Unbinding
+
+The channel may be unbound automatically in case of the server-end being closed
+or due to an invalid message being received from the server. You may also
+actively unbind the channel through `client.Unbind()`.
+
+Unbinding is thread-safe. In any of these cases, ongoing and future operations
+will not cause a fatal failure, only returning `ZX_ERR_CANCELED` where
+appropriate.
+
+If you provided an unbound hook, it is executed as task on the dispatcher,
+providing a reason and error status for the unbinding. You may also recover
+ownership of the client end of the channel through the hook.
+
+#### Interaction with dispatcher
+
+All asynchronous responses, event handling, and error handling are done through
+the `async_dispatcher_t*` provided on creation of a client. You MUST ensure that
+the dispatcher remains valid as long as there are any clients bound to it.
+
+If you did not provide an `OnClientUnboundFn`, invoking `client.Unbind()` is
+sufficient for it to be considered unbound. If provided, the client is only
+considered unbound once the `OnClientUnboundFn` is invoked.
+
+#### Outgoing FIDL methods
+
+You can invoke outgoing FIDL APIs through the `fidl::Client<SpaceShip>`
+instance, e.g. `client->SetHeading(0)`. The full generated API is given below:
+
+```cpp
+class ClientImpl final {
+ public:
+  fidl::StatusAndError SetHeading(int16_t heading);
+  fidl::StatusAndError SetHeading(fidl::BytePart _request_buffer,
+                                  int16_t heading);
+
+  fidl::StatusAndError ScanForPlanets(
+      fit::callback<void(fidl::VectorView<Planet> planets)> _cb);
+  fidl::StatusAndError ScanForPlanets(ScanForPlanetsResponseContext* _context);
+  ResultOf::ScanForPlanets ScanForPlanets_Sync(int16_t heading);
+  UnownedResultOf::ScanForPlanets ScanForPlanets_Sync(
+      fidl::BytePart _response_buffer, int16_t heading);
+
+  fidl::StatusAndError DirectedScan(fit::callback<void(fidl::VectorView<Planet> planets)> _cb);
+  fidl::StatusAndError DirectedScan(DirectedScanResponseContext* _context);
+  ResultOf::DirectedScan DirectedScan_Sync(int16_t heading);
+  UnownedResultOf::DirectedScan DirectedScan_Sync(
+      fidl::BytePart _request_buffer, int16_t heading,
+      fidl::BytePart _response_buffer);
+};
+```
+
+Note that the one-way and synchronous two-way FIDL methods have a similar API to
+the `SyncClient` versions. Aside from one-way methods directly returning
+`fidl::StatusAndError` and the added `_Sync` on the synchronous methods, the
+behavior is identical.
+
+##### Asynchronous APIs
+
+The *managed* flavor of the asynchronous two-way APIs simply takes a
+`fit::callback` hook which is executed on response in a dispatcher thread. The
+returned `fidl::StatusAndError` refers just to the status of the outgoing call.
+
+```cpp
+auto status = client->DirectedScan(0, [&]{ /* ... */ });
+```
+
+The *caller-allocated* flavor enables you to provide the storage for the
+callback as well as any associated state. This is done through the generated
+virtual `ResponseContext` classes:
+
+```cpp
+class DirectedScanResponseContext : public fidl::internal::ResponseContext {
+ public:
+  virtual void OnReply(fidl::DecodedMessage<DirectedScanResponse> msg) = 0;
+};
+```
+
+You can derive from this class, implementing `OnReply()` and `OnError()`
+(inherited from `fidl::internal::ResponseContext`). You can then allocate an
+object of this type as required, passing a pointer to it to the API. The object
+must stay alive until either `OnReply()` or `OnError()` is invoked by the
+`Client`.
+
+NOTE: If the `Client` is destroyed with outstanding asynchronous transactions,
+`OnError()` will be invoked for all of the associated `ResponseContext`s.
+
 ### Static functions `(Protocol::Call)`
 
-The following code is generated for `SpaceShape::Call`:
+The following code is generated for `SpaceShip::Call`:
 
 ```cpp
 class Call final {
@@ -492,7 +613,7 @@ request_bytes.set_actual(request_bytes.capacity());
 fidl::DecodedMessage<SetHeadingRequest> request(std::move(request_bytes));
 
 // Finally, make the call.
-auto result = SpaceShape::InPlace::SetHeading(channel, std::move(request));
+auto result = SpaceShip::InPlace::SetHeading(channel, std::move(request));
 // Check result.status(), result.error()
 ```
 

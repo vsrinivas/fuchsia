@@ -79,7 +79,7 @@ Category                           | Simple C                          | Low-lev
 **send behavior**                  | copy                              | copy or encode in-place                       | move to buffer then encode
 **calling protocol methods**       | free functions                    | free functions or proxy                       | call through proxies, register callbacks
 **implementing protocol methods**  | manual dispatch or via ops table  | manual dispatch or implement stub interface   | implement stub object, invoke callbacks
-**async client**                   | no                                | no (planned)                                  | yes
+**async client**                   | no                                | yes                                           | yes
 **async server**                   | limited [2]                       | yes (unbounded) [3]                           | yes (unbounded)
 **parallel server dispatch**       | no                                | yes [4]                                       | no
 **generated code footprint**       | small                             | moderate                                      | large
