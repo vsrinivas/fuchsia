@@ -14,29 +14,12 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
-zx_library("ddktl") {
+zx_library("mmio") {
   sdk = "source"
-  sdk_publishable = false
-  sdk_headers = [
-    "ddktl/device-internal.h",
-    "ddktl/device.h",
-  ]
+  sdk_headers = [ "lib/mmio/mmio.h" ]
   sources = []
   public_deps = [
-    # <ddktl/device-internal.h> has #include <fbl/macros.h>.
+    # <lib/mmio/mmio.h> has #include <fbl/macros.h>.
     "//zircon/public/lib/fbl",
-
-    # <ddktl/protocol/display-controller.h> has #include <lib/zx/vmo.h>.
-    "//zircon/public/lib/zx",
-
-    # <ddktl/fidl.h> has #include <ddk/device.h>
-    "//zircon/system/ulib/ddk",
-  ]
-  deps = [
-    "//src/devices/lib/mmio",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
   ]
 }

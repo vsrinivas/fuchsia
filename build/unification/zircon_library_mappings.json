@@ -40,7 +40,7 @@
     "sdk": false
   },
   {
-    "label": "//zircon/system/dev/lib/mmio:mmio",
+    "label": "//src/devices/lib/mmio:mmio",
     "name": "mmio",
     "sdk": false
   },

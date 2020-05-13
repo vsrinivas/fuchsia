@@ -51,6 +51,7 @@ test("ams-light-test") {
     "//sdk/banjo/ddk.protocol.i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
@@ -59,7 +60,6 @@ test("ams-light-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/device-protocol-i2c",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
   ]

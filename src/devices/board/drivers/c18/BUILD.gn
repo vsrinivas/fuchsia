@@ -24,10 +24,10 @@ driver_module("c18") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/lib/mt8183",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddktl",
   ]
 

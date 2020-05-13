@@ -13,6 +13,7 @@ executable("test_utils_test") {
   deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/camera/drivers/test_utils",
+    "//src/devices/lib/mmio",
     "//src/devices/testing/fake-bti",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
@@ -21,7 +22,6 @@ executable("test_utils_test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
   ]
 }

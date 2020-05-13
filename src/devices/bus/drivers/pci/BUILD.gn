@@ -47,7 +47,7 @@ source_set("user_pci") {
     # TODO(ZX-4062): This shouldn't be here if the mmio code is actually
     # used in the test too.  Anything using that needs to be separately
     # compiled for the test using the mock version.
-    "//zircon/system/dev/lib/mmio",
+    "//src/devices/lib/mmio",
   ]
 }
 

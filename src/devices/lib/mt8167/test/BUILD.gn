@@ -26,6 +26,7 @@ test("mt8167-audio-lib-test") {
     "mt8167-audio-in-test.cc",
   ]
   deps = [
+    "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
@@ -33,7 +34,6 @@ test("mt8167-audio-lib-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

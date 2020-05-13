@@ -24,11 +24,11 @@ test("device-protocol-pci") {
 
   deps = [
     "//sdk/banjo/ddk.protocol.pci",
+    "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
   ]
 }
 

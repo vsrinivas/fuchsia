@@ -56,6 +56,7 @@ driver_module("astro") {
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
     "//src/devices/lib/focaltech",
+    "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
     "//src/graphics/display/lib/device-protocol-display",
     "//zircon/public/lib/fbl",
@@ -63,7 +64,6 @@ driver_module("astro") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

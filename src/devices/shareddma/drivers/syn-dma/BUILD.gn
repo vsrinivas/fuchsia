@@ -29,6 +29,7 @@ driver_module("syn-dma") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
     "//src/devices/lib/qcom",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -36,7 +37,6 @@ driver_module("syn-dma") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
@@ -63,6 +63,7 @@ test("syn-dhub-test") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/as370",
+    "//src/devices/lib/mmio",
     "//src/devices/lib/qcom",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
@@ -75,7 +76,6 @@ test("syn-dhub-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

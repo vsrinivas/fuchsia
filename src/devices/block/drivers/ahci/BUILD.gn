@@ -58,11 +58,11 @@ source_set("shared") {
   deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.pci",
+    "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
   ]
 }

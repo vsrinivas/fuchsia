@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MMIO_MMIO_H_
-#define LIB_MMIO_MMIO_H_
+#ifndef SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_H_
+#define SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_H_
+
+#include <lib/zx/bti.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
+#include <string.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+
+#include <optional>
+#include <utility>
 
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
 #include <fbl/macros.h>
 #include <hw/arch_ops.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/resource.h>
-#include <lib/zx/vmo.h>
-#include <optional>
-#include <string.h>
-#include <utility>
-#include <zircon/assert.h>
-#include <zircon/process.h>
 
 namespace ddk {
 
@@ -457,4 +459,4 @@ inline MmioView MmioBuffer::View(zx_off_t off, size_t size) const {
 
 }  // namespace ddk
 
-#endif  // LIB_MMIO_MMIO_H_
+#endif  // SRC_DEVICES_LIB_MMIO_INCLUDE_LIB_MMIO_MMIO_H_

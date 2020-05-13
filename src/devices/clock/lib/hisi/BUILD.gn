@@ -23,7 +23,7 @@ zx_library("hisi") {
   sources = [ "hisi-clk.cc" ]
   public_deps = [
     # <dev/clk/hisi-lib/hisi-clk.h> has #include <lib/mmio/mmio.h>.
-    "//zircon/system/dev/lib/mmio",
+    "//src/devices/lib/mmio",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.clockimpl",
@@ -31,9 +31,9 @@ zx_library("hisi") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/mmio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

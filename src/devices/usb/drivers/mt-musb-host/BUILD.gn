@@ -33,6 +33,7 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.usb.bus",
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/fbl",
@@ -41,7 +42,6 @@ source_set("common") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
@@ -72,6 +72,7 @@ test("mt-hci-transaction-test") {
   ]
   deps = [
     "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fbl",
@@ -80,7 +81,6 @@ test("mt-hci-transaction-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
   ]
 }
@@ -98,6 +98,7 @@ test("mt-hci-request-queue-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
@@ -108,7 +109,6 @@ test("mt-hci-request-queue-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
   ]
 }

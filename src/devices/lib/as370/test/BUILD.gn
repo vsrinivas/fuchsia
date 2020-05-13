@@ -29,6 +29,7 @@ test("syn-audio-in-test") {
     "//sdk/banjo/ddk.protocol.shareddma",
     "//sdk/banjo/ddk.protocol.shareddma:ddk.protocol.shareddma_mock",
     "//src/devices/lib/as370",
+    "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/fbl",
@@ -37,7 +38,6 @@ test("syn-audio-in-test") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

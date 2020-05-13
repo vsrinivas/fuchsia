@@ -12,8 +12,8 @@ source_set("shared") {
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//zircon/system/dev/lib/mmio",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]

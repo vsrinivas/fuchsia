@@ -1,25 +1,7 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36548.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
-import("//build/unification/zx_library.gni")
-
-zx_library("mmio") {
-  sdk = "source"
-  sdk_headers = [ "lib/mmio/mmio.h" ]
-  sources = []
-  public_deps = [
-    # <lib/mmio/mmio.h> has #include <fbl/macros.h>.
-    "//zircon/public/lib/fbl",
-  ]
+group("mmio") {
+  public_deps = [ "//src/devices/lib/mmio" ]
 }
