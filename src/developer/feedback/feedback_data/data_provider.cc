@@ -43,10 +43,12 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 }  // namespace
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
+                           std::shared_ptr<sys::ServiceDirectory> services,
+                           IntegrityReporter integrity_reporter, cobalt::Logger* cobalt,
                            Datastore* datastore)
     : dispatcher_(dispatcher),
       services_(services),
+      integrity_reporter_(integrity_reporter),
       cobalt_(cobalt),
       datastore_(datastore),
       executor_(dispatcher_) {}
@@ -61,22 +63,21 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
 
   auto promise =
       ::fit::join_promises(datastore_->GetAnnotations(timeout), datastore_->GetAttachments(timeout))
-          .and_then([](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
-                           annotations_and_attachments) {
+          .and_then([this](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
+                               annotations_and_attachments) {
             Bugreport bugreport;
             std::vector<fuchsia::feedback::Attachment> attachments;
 
-            auto& annotations_or_error = std::get<0>(annotations_and_attachments);
-            if (annotations_or_error.is_ok()) {
-              bugreport.set_annotations(
-                  ToFeedbackAnnotationVector(annotations_or_error.take_value()));
+            const auto& annotations_result = std::get<0>(annotations_and_attachments);
+            if (annotations_result.is_ok()) {
+              bugreport.set_annotations(ToFeedbackAnnotationVector(annotations_result.value()));
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any annotations";
             }
 
-            auto& attachments_or_error = std::get<1>(annotations_and_attachments);
-            if (attachments_or_error.is_ok()) {
-              attachments = ToFeedbackAttachmentVector(attachments_or_error.take_value());
+            const auto& attachments_result = std::get<1>(annotations_and_attachments);
+            if (attachments_result.is_ok()) {
+              attachments = ToFeedbackAttachmentVector(attachments_result.value());
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }
@@ -89,6 +90,13 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
               if (annotations_json.has_value()) {
                 AddToAttachments(kAttachmentAnnotations, annotations_json.value(), &attachments);
               }
+            }
+
+            if (const auto integrity_report = integrity_reporter_.MakeIntegrityReport(
+                    annotations_result, attachments_result,
+                    datastore_->IsMissingNonPlatformAnnotations());
+                integrity_report.has_value()) {
+              AddToAttachments(kAttachmentManifest, integrity_report.value(), &attachments);
             }
 
             // We bundle the attachments into a single attachment.

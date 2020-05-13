@@ -26,6 +26,7 @@
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
 #include "src/developer/feedback/feedback_data/device_id_provider.h"
+#include "src/developer/feedback/feedback_data/integrity_reporter.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
@@ -157,8 +158,9 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     datastore_ =
         std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
                                     attachment_allowlist, &device_id_provider_);
-    data_provider_ =
-        std::make_unique<DataProvider>(dispatcher(), services(), cobalt_.get(), datastore_.get());
+    data_provider_ = std::make_unique<DataProvider>(
+        dispatcher(), services(), IntegrityReporter(annotation_allowlist, attachment_allowlist),
+        cobalt_.get(), datastore_.get());
   }
 
   void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {
@@ -412,6 +414,24 @@ TEST_F(DataProviderTest, GetBugreport_AnnotationsAsAttachment) {
     EXPECT_TRUE(json.Accept(validator));
   }
   EXPECT_TRUE(found_annotations_attachment);
+}
+
+TEST_F(DataProviderTest, GetBugreport_ManifestAsAttachment) {
+  SetUpDataProvider();
+
+  Bugreport bugreport = GetBugreport();
+  std::vector<Attachment> unpacked_attachments = UnpackBugreport(bugreport);
+
+  // There should be a "manifest.json" attachment present in the bugreport.
+  bool found_manifest_attachment = false;
+  std::string manifest_json;
+  for (const auto& attachment : unpacked_attachments) {
+    if (attachment.key != kAttachmentManifest) {
+      continue;
+    }
+    found_manifest_attachment = true;
+  }
+  EXPECT_TRUE(found_manifest_attachment);
 }
 
 TEST_F(DataProviderTest, GetBugreport_SingleAttachmentOnEmptyAttachmentAllowlist) {

@@ -54,6 +54,8 @@ class Datastore {
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
   const Annotations& GetNonPlatformAnnotations() const { return non_platform_annotations_; }
 
+  bool IsMissingNonPlatformAnnotations() const { return is_missing_non_platform_annotations_; }
+
  private:
   ::fit::promise<Attachment> BuildAttachment(const AttachmentKey& key, zx::duration timeout);
   ::fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key,
@@ -71,6 +73,7 @@ class Datastore {
 
   std::vector<std::unique_ptr<AnnotationProvider>> reusable_annotation_providers_;
 
+  bool is_missing_non_platform_annotations_ = false;
   Annotations non_platform_annotations_;
 };
 

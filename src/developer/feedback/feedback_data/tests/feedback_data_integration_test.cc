@@ -316,6 +316,7 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
                                         MatchesKey(kAttachmentInspect),
                                         MatchesKey(kAttachmentLogKernel),
                                         MatchesKey(kAttachmentLogSystem),
+                                        MatchesKey(kAttachmentManifest),
                                     }));
 
   std::string inspect_json;

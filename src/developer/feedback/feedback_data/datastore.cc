@@ -108,13 +108,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
           }
         }
 
-        for (const auto& [key, value] : ok_annotations) {
-          if (!value.HasValue()) {
-            FX_LOGS(WARNING) << "Failed to build annotation " << key << ": "
-                             << ToString(value.Error());
-          }
-        }
-
         return ::fit::ok(ok_annotations);
       });
 }
@@ -177,9 +170,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
 
 bool Datastore::TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations) {
   if (non_platform_annotations.size() <= kMaxNumNonPlatformAnnotations) {
+    is_missing_non_platform_annotations_ = false;
     non_platform_annotations_ = non_platform_annotations;
     return true;
   } else {
+    is_missing_non_platform_annotations_ = true;
     FX_LOGS(WARNING) << fxl::StringPrintf(
         "Ignoring all %lu new non-platform annotations as only %u non-platform annotations are "
         "allowed",

@@ -71,6 +71,7 @@ constexpr char kAttachmentInspect[] = "inspect.json";
 constexpr char kAttachmentLogKernel[] = "log.kernel.txt";
 constexpr char kAttachmentLogSystem[] = "log.system.txt";
 constexpr char kAttachmentLogSystemPrevious[] = "log.system.previous_boot.txt";
+constexpr char kAttachmentManifest[] = "manifest.json";
 
 // Bugreport key.
 constexpr char kBugreportFilename[] = "bugreport.zip";

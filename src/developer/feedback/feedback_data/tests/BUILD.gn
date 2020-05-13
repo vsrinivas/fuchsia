@@ -262,6 +262,7 @@ executable("data_provider_unittest") {
     "//src/developer/feedback/feedback_data:constants",
     "//src/developer/feedback/feedback_data:data_provider",
     "//src/developer/feedback/feedback_data:device_id_provider",
+    "//src/developer/feedback/feedback_data:integrity_reporter",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:types",
     "//src/developer/feedback/testing:cobalt_test_fixture",
