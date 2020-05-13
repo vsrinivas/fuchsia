@@ -69,7 +69,7 @@ llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(const zx_dev
   };
 }
 
-static fx_log_severity_t log_min_severity(const char* flag) {
+static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
   if (!strcmp(flag, "error")) {
     return FX_LOG_ERROR;
   }
@@ -85,6 +85,7 @@ static fx_log_severity_t log_min_severity(const char* flag) {
   if (!strcmp(flag, "trace")) {
     return FX_LOG_TRACE;
   }
+  LOGF(WARNING, "Invalid minimum log severity '%s' for driver '%s', will log all", flag, name);
   return FX_LOG_ALL;
 }
 
@@ -390,7 +391,7 @@ zx_status_t DriverHostContext::FindDriver(std::string_view libname, zx::vmo vmo,
   const auto flag_name = fbl::StringPrintf("driver.%s.log", new_driver->name());
   const char* flag_value = getenv(flag_name.data());
   if (flag_value != nullptr) {
-    fx_log_severity_t min_severity = log_min_severity(flag_value);
+    fx_log_severity_t min_severity = log_min_severity(new_driver->name(), flag_value);
     status = fx_logger_set_min_severity(new_driver->logger(), min_severity);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to set minimum log severity for driver '%s': %s", new_driver->name(),
