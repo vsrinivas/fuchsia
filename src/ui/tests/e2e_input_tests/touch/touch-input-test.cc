@@ -276,9 +276,9 @@ TEST_F(TouchInputTest, FlutterTap) {
     FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time;
     FX_LOGS(INFO) << "Flutter Received Time (ns): " << pointer_data.time_received();
     FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time;
-    TRACE_INSTANT("touch-input-test", "input_latency", TRACE_SCOPE_PROCESS, "input_injection_time",
-                  input_injection_time, "flutter_received_time", pointer_data.time_received(),
-                  "elapsed_time", elapsed_time);
+    TRACE_INSTANT("touch-input-test", "Input Latency", TRACE_SCOPE_PROCESS,
+                  "Input Injection Time (ns)", input_injection_time, "Flutter Received Time (ns)",
+                  pointer_data.time_received(), "Elapsed Time (ns)", elapsed_time);
 
     // Allow for minor rounding differences in coordinates.
     EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
