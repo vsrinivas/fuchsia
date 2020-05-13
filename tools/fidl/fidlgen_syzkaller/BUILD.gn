@@ -36,11 +36,5 @@ if (is_host) {
       ":lib",
       "//garnet/go/src/fidl:fidlgen_test_lib",
     ]
-    non_go_deps = [ ":clang_format" ]
-  }
-
-  host_test_data("clang_format") {
-    sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-    outputs = [ "$root_out_dir/test_data/fidlgen_syzkaller/clang-format" ]
   }
 }
