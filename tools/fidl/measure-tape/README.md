@@ -27,7 +27,7 @@ measure_tape("measure_tape_for_targettype") {
 ```
 
 _This template must be imported with
-`import("//tools/fidl/measure-tape/measure-tape.gni")`._
+`import("//tools/fidl/measure-tape/measure_tape.gni")`._
 
  * `target_binding` key indicates what bindings to generate.
    Valid values are currently "hlcpp" and "rust".

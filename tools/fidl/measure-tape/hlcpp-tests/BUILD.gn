@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//tools/fidl/measure-tape/measure-tape.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
 
 test("hlcpp-tests") {
   sources = [ "hlcpp_test.cc" ]
