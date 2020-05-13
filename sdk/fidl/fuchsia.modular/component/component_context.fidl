@@ -18,10 +18,6 @@ protocol ComponentContext {
     /// Used to start an agent in the user scope if it isn't already running, and
     /// connect to it.
     [Transitional]
-    ConnectToAgent(string url,
-                   request<fuchsia.sys.ServiceProvider> incoming_services,
-                   request<AgentController> controller);
-    [Transitional]
     DeprecatedConnectToAgent(string url,
                              request<fuchsia.sys.ServiceProvider> incoming_services,
                              request<AgentController> controller);
@@ -41,8 +37,6 @@ protocol ComponentContext {
     ///     specified, and an agent for the `request.service_name` is not found
     ///   * `ZX_ERR_PEER_CLOSED` -- if `request.service_name` is not available from
     ///     the agent (either specified or discovered)
-    [Transitional]
-    ConnectToAgentService(AgentServiceRequest request);
     [Transitional]
     DeprecatedConnectToAgentService(AgentServiceRequest request);
 };

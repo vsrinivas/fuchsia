@@ -50,15 +50,6 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
 
  private:
   // |fuchsia::modular::ComponentContext|
-  void ConnectToAgent(
-      std::string url,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) override;
-
-  // |fuchsia::modular::ComponentContext|
-  void ConnectToAgentService(fuchsia::modular::AgentServiceRequest request) override;
-
-  // |fuchsia::modular::ComponentContext|
   void DeprecatedConnectToAgent(
       std::string url,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
