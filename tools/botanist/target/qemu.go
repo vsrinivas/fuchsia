@@ -333,12 +333,33 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
+			checkForEBUSY(ctx, err)
 			err = fmt.Errorf("QEMU invocation error: %w", err)
 		}
 		t.c <- err
 		os.RemoveAll(workdir)
 	}()
 	return nil
+}
+
+// checkForEBUSY runs an lsof on /dev/net/tun if QEMU startup failed due to an EBUSY.
+func checkForEBUSY(ctx context.Context, err error) {
+	// Only perform the check if the error is an EBUSY.
+	if err == nil || strings.Contains(err.Error(), syscall.EBUSY.Error()) {
+		if err != nil {
+			logger.Debugf(ctx, "error was not an EBUSY")
+		}
+		return
+	}
+	logger.Debugf(ctx, "fxbug.dev/43188: QEMU startup failed with an EBUSY: %#v\n contact rudymathu@ or joshuaseaton@ for triage", err)
+
+	// This command prints out all processes using /dev/net/tun.
+	cmd := exec.Command("lsof", "+c", "0", "/dev/net/tun")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Wait(); err != nil {
+		logger.Errorf(ctx, "running lsof failed: %v", err)
+	}
 }
 
 // Restart stops the QEMU target and starts it again.
