@@ -104,6 +104,7 @@ source_set("block-watcher") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//zircon/public/lib/fbl",
@@ -116,7 +117,6 @@ source_set("block-watcher") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/gpt",

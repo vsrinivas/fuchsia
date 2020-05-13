@@ -8,11 +8,11 @@ executable("iotime") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "iotime.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",

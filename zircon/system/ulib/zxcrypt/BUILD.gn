@@ -73,6 +73,7 @@ zx_library("zxcrypt-fdio") {
   ]
   configs += [ "//build/config/fuchsia:integer-paranoia" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//zircon/public/lib/boringssl",
@@ -83,7 +84,6 @@ zx_library("zxcrypt-fdio") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/kms-stateless",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",

@@ -12,13 +12,13 @@ executable("biotime") {
   testonly = false
   sources = [ "biotime.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/perftest",
   ]

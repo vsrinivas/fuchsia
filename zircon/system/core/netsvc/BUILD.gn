@@ -98,6 +98,7 @@ source_set("netsvc_common") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -107,7 +108,6 @@ source_set("netsvc_common") {
     "//zircon/public/lib/libzbi",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
-    "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/ulib/bootfs",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/gpt",

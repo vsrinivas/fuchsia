@@ -31,16 +31,15 @@ zx_library("gpt") {
       "guid.cc",
     ]
     deps = [
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//zircon/public/lib/cksum",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/mbr",
       "//zircon/public/lib/range",
-      "//zircon/system/fidl/fuchsia-hardware-block:c",
     ]
   }
 
   # TODO(41890): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs +=
-      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }

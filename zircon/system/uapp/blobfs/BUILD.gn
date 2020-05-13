@@ -20,6 +20,7 @@ executable("blobfs") {
   }
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -31,7 +32,6 @@ executable("blobfs") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fs",

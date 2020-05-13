@@ -7,8 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.paver") {
   sources = [ "paver.fidl" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.volume",
-    "//zircon/system/fidl/fuchsia-hardware-block",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-mem",
   ]

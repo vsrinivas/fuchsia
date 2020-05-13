@@ -33,6 +33,7 @@ test("usb-virtual-bus-ums") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ums-test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
@@ -42,7 +43,6 @@ test("usb-virtual-bus-ums") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/usb-virtual-bus-launcher",

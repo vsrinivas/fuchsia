@@ -37,6 +37,7 @@ test("gpt-unit") {
     "..",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -44,7 +45,6 @@ test("gpt-unit") {
     "//zircon/public/lib/mbr",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client",

@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.hardware.block") {
+  sdk_category = "partner"
+  api = "fuchsia.hardware.block.api"
+  sources = [
+    "block.fidl",
+    "ftl.fidl",
+  ]
+  public_deps = [
+    "$zx/vdso/zx",
+    "//zircon/system/fidl/fuchsia-storage-metrics",
+  ]
+}
