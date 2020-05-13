@@ -187,8 +187,9 @@ struct AssocReqTestContext {
   zx::channel sme = {};
   std::optional<wlanif_assoc_req_t> assoc_req = {};
   wlanif_impl_ifc_protocol_t ifc = {};
-  std::optional<bool> assoc_confirmed = false;
-  std::optional<bool> ignore_assoc = false;
+  volatile std::atomic<bool> assoc_received = false;
+  volatile std::atomic<bool> assoc_confirmed = false;
+  volatile std::atomic<bool> ignore_assoc = false;
 };
 
 TEST(AssocReqHandling, MultipleAssocReq) {
@@ -223,6 +224,7 @@ TEST(AssocReqHandling, MultipleAssocReq) {
       conf.association_id = 1;
       wlanif_impl_ifc_assoc_conf(&ASSOC_DEV(ctx)->ifc, &conf);
     }
+    ASSOC_DEV(ctx)->assoc_received = true;
   };
   AssocReqTestContext ctx;
   wlanif_impl_protocol_t proto = {
@@ -247,18 +249,21 @@ TEST(AssocReqHandling, MultipleAssocReq) {
 
   // Wait for assoc req message to propagate through the system. Since there is
   // no response expected, wait for a minimal amount of time.
-  ASSERT_TRUE(timeout_after(ZX_SEC(5), [&]() { return !ctx.assoc_req.has_value(); }));
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.assoc_received; }));
+  ASSERT_TRUE(!ctx.assoc_req.has_value());
   ASSERT_EQ(ctx.assoc_confirmed, false);
 
   // Send assoc request to device and send the conf
   ctx.ignore_assoc = false;
   ctx.assoc_req = {};
+  ctx.assoc_received = false;
   ctx.assoc_confirmed = false;
   mlme_proxy.AssociateReq(wlan_mlme::AssociateRequest{
       .rsne = {},
       .vendor_ies = {},
   });
-  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.assoc_req.has_value(); }));
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.assoc_received; }));
+  ASSERT_TRUE(ctx.assoc_req.has_value());
   ASSERT_EQ(ctx.assoc_confirmed, true);
 
   device.EthUnbind();
