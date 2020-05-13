@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_MEMORY_MONITOR_MONITOR_H_
 #define SRC_DEVELOPER_MEMORY_MONITOR_MONITOR_H_
 
+#include <fuchsia/hardware/ram/metrics/cpp/fidl.h>
 #include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -43,6 +44,7 @@ class Monitor : public fuchsia::memory::Monitor {
   void StopTracing();
 
   void SampleAndPost();
+  void MeasureBandwidthAndPost();
   void PrintHelp();
   zx_status_t Inspect(std::vector<uint8_t>* output, size_t max_bytes);
 
@@ -67,6 +69,8 @@ class Monitor : public fuchsia::memory::Monitor {
   trace::TraceObserver trace_observer_;
   std::unique_ptr<Metrics> metrics_;
   std::unique_ptr<Pressure> pressure_;
+  fuchsia::hardware::ram::metrics::DevicePtr ram_device_;
+  uint64_t pending_bandwidth_measurements_ = 0;
 
   friend class test::MonitorUnitTest;
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);

@@ -21,8 +21,11 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <filesystem>
 #include <iostream>
 
+#include <soc/aml-common/aml-ram.h>
+#include <trace-vthread/event_vthread.h>
 #include <trace/event.h>
 
 #include "src/developer/memory/metrics/capture.h"
@@ -43,6 +46,28 @@ namespace {
 const zx::duration kHighWaterPollFrequency = zx::sec(10);
 const uint64_t kHighWaterThreshold = 10 * 1024 * 1024;
 const zx::duration kMetricsPollFrequency = zx::min(5);
+const char kRamDeviceClassPath[] = "/dev/class/aml-ram";
+const char kTraceNameHighPrecisionBandwidth[] = "memory_monitor:high_precision_bandwidth";
+constexpr uint64_t kMaxPendingBandwidthMeasurements = 4;
+constexpr uint64_t kMemCyclesToMeasure = 792000000 / 20;                 // 50 ms on sherlock
+constexpr uint64_t kMemCyclesToMeasureHighPrecision = 792000000 / 1000;  // 1 ms
+// TODO(48254): Get default channel information through the FIDL API.
+const struct {
+  const char* name;
+  uint64_t mask;
+} kRamDefaultChannels[] = {
+    {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+    {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
+    {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
+    {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+};
+uint64_t CounterToBandwidth(uint64_t counter, uint64_t frequency, uint64_t cycles) {
+  return counter * frequency / cycles;
+}
+zx_ticks_t TimestampToTicks(zx_time_t timestamp) {
+  __uint128_t temp = static_cast<__uint128_t>(timestamp) * zx_ticks_per_second() / ZX_SEC(1);
+  return static_cast<zx_ticks_t>(temp);
+}
 }  // namespace
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
@@ -147,6 +172,21 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     metrics_ = std::make_unique<Metrics>(
         kMetricsPollFrequency, dispatcher, component_context_.get(), logger_.get(),
         [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
+  }
+
+  // Look for optional RAM device that provides bandwidth measurement interface.
+  if (std::filesystem::exists(kRamDeviceClassPath)) {
+    for (const auto& entry : std::filesystem::directory_iterator(kRamDeviceClassPath)) {
+      int fd = open(entry.path().c_str(), O_RDWR);
+      if (fd > -1) {
+        zx::channel handle;
+        zx_status_t status = fdio_get_service_handle(fd, handle.reset_and_get_address());
+        if (status == ZX_OK) {
+          ram_device_.Bind(std::move(handle));
+        }
+        break;
+      }
+    }
   }
 
   pressure_ =
@@ -275,6 +315,51 @@ void Monitor::SampleAndPost() {
   }
 }
 
+void Monitor::MeasureBandwidthAndPost() {
+  // Bandwidth measurements are cheap but they take some time to
+  // perform as they run over a number of memory cycles. In order to
+  // support a relatively small cycle count for measurements, we keep
+  // multiple requests in-flight. This gives us results with high
+  // granularity and relatively good coverage.
+  while (tracing_ && pending_bandwidth_measurements_ < kMaxPendingBandwidthMeasurements) {
+    uint64_t cycles_to_measure = kMemCyclesToMeasure;
+    if (trace_is_category_enabled(kTraceNameHighPrecisionBandwidth)) {
+      cycles_to_measure = kMemCyclesToMeasureHighPrecision;
+    }
+    fuchsia::hardware::ram::metrics::BandwidthMeasurementConfig config = {};
+    config.cycles_to_measure = cycles_to_measure;
+    for (size_t i = 0; i < countof(kRamDefaultChannels); i++) {
+      config.channels[i] = kRamDefaultChannels[i].mask;
+    }
+    ++pending_bandwidth_measurements_;
+    ram_device_->MeasureBandwidth(
+        config, [this, cycles_to_measure](
+                    fuchsia::hardware::ram::metrics::Device_MeasureBandwidth_Result result) {
+          --pending_bandwidth_measurements_;
+          if (result.is_err()) {
+            FX_LOGS(ERROR) << "Bad bandwidth measurement result: " << result.err();
+          } else {
+            const auto& info = result.response().info;
+            TRACE_VTHREAD_COUNTER(kTraceName, "bandwidth_usage", "membw" /*vthread_literal*/,
+                                  1 /*vthread_id*/, 0 /*counter_id*/,
+                                  TimestampToTicks(info.timestamp), kRamDefaultChannels[0].name,
+                                  CounterToBandwidth(info.channels[0].readwrite_cycles,
+                                                     info.frequency, cycles_to_measure),
+                                  kRamDefaultChannels[1].name,
+                                  CounterToBandwidth(info.channels[1].readwrite_cycles,
+                                                     info.frequency, cycles_to_measure),
+                                  kRamDefaultChannels[2].name,
+                                  CounterToBandwidth(info.channels[2].readwrite_cycles,
+                                                     info.frequency, cycles_to_measure),
+                                  kRamDefaultChannels[3].name,
+                                  CounterToBandwidth(info.channels[3].readwrite_cycles,
+                                                     info.frequency, cycles_to_measure));
+          }
+          async::PostTask(dispatcher_, [this] { MeasureBandwidthAndPost(); });
+        });
+  }
+}
+
 void Monitor::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
     if (trace_is_category_enabled(kTraceName)) {
@@ -292,6 +377,9 @@ void Monitor::UpdateState() {
         tracing_ = true;
         if (!logging_) {
           SampleAndPost();
+        }
+        if (ram_device_.is_bound()) {
+          MeasureBandwidthAndPost();
         }
       }
     }

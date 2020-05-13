@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "class/aml-ram"
+        ],
         "features": [
             "isolated-cache-storage"
         ],

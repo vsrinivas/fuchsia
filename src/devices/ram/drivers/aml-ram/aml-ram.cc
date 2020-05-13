@@ -87,7 +87,7 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = device->DdkAdd("ram", DEVICE_ADD_NON_BINDABLE);
+  status = device->DdkAdd("ram", DEVICE_ADD_NON_BINDABLE, nullptr, 0, ZX_PROTOCOL_AMLOGIC_RAM);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-ram: Failed to add ram device, st = %d", status);
     return status;

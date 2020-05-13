@@ -17,6 +17,7 @@ source_set("lib") {
     "pressure.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.ram.metrics",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/lib/sys/cpp",
@@ -30,12 +31,14 @@ source_set("lib") {
   deps = [
     ":memory_metrics_registry",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//src/devices/lib/amlogic",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-vthread",
   ]
 }
 
