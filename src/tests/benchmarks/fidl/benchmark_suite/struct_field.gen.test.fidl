@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-
 struct StructField16 {
     uint8 field1;
     uint8 field2;
@@ -285,7 +284,7 @@ struct StructField256 {
     uint8 field256;
 };
 
-[BindingsDenylist = "rust"]
+[BindingsDenylist = "rust, llcpp, cpp, walker"]
 struct StructField4096 {
     uint8 field1;
     uint8 field2;

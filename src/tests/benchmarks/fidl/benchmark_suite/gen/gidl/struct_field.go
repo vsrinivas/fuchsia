@@ -36,7 +36,7 @@ func init() {
 				Config: config.Config{
 					"size": 4096,
 				},
-				Denylist: []config.Binding{config.Rust},
+				Denylist: []config.Binding{config.Rust, config.LLCPP, config.HLCPP, config.Walker},
 			},
 		},
 	})

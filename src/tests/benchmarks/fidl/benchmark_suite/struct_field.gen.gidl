@@ -290,7 +290,7 @@ benchmark("StructField/256") {
 
 // Struct with 4096 uint8 fields
 benchmark("StructField/4096") {
-    bindings_denylist = [rust],
+    bindings_denylist = [rust, llcpp, cpp, walker],
     value = StructField4096{
         field1: 0,
         field2: 1,

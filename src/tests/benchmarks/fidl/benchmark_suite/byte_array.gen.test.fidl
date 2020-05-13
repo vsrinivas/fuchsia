@@ -6,7 +6,6 @@
 
 library benchmarkfidl;
 
-
 struct ByteArray16 {
     array<uint8>:16 bytes;
 };
@@ -15,12 +14,12 @@ struct ByteArray256 {
     array<uint8>:256 bytes;
 };
 
-[BindingsDenylist = "rust"]
+[BindingsDenylist = "rust, cpp, llcpp, walker"]
 struct ByteArray4096 {
     array<uint8>:4096 bytes;
 };
 
-[BindingsDenylist = "rust"]
+[BindingsDenylist = "rust, cpp, llcpp, walker"]
 struct ByteArray65536 {
     array<uint8>:65536 bytes;
 };
