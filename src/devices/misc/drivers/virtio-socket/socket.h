@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BUS_DRIVERS_VIRTIO_SOCKET_H_
-#define SRC_DEVICES_BUS_DRIVERS_VIRTIO_SOCKET_H_
+#ifndef SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_
+#define SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_
 
 #include <fuchsia/hardware/vsock/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -174,11 +174,15 @@ class SocketDevice : public Device,
   // A Connection may get placed in three different containers. A hash table
   // (connections_), which requires the SinglyLinkedListable storage, a double
   // linked list (has_pending_tx_), and a second double linked list (has_pending_op_).
-  // As DoubleLinkedListable can only be inherited once we define additional
-  // storage in QueuedOpTraits.
-  class Connection : public fbl::RefCounted<Connection>,
-                     public fbl::SinglyLinkedListable<fbl::RefPtr<Connection>>,
-                     public fbl::DoublyLinkedListable<fbl::RefPtr<Connection>> {
+  struct ConnectionHashTag {};
+  struct PendingTxTag {};
+  struct PendingOpTag {};
+  class Connection
+      : public fbl::RefCounted<Connection>,
+        public fbl::ContainableBaseClasses<
+            fbl::TaggedSinglyLinkedListable<fbl::RefPtr<Connection>, ConnectionHashTag>,
+            fbl::TaggedDoublyLinkedListable<fbl::RefPtr<Connection>, PendingTxTag>,
+            fbl::TaggedDoublyLinkedListable<fbl::RefPtr<Connection>, PendingOpTag>> {
    private:
     // A connection moves through different states over its lifetime. These
     // states have a very simple transition system in that they can only
@@ -268,13 +272,6 @@ class SocketDevice : public Device,
 
     static size_t GetHash(const ConnectionKey& addr);
     const ConnectionKey& GetKey() const;
-    // Trait struct that allows us to define state for the additional
-    // linked list this Connection can be in.
-    struct QueuedOpTraits {
-      static fbl::DoublyLinkedListNodeState<fbl::RefPtr<Connection>>& node_state(Connection& conn) {
-        return conn.queued_op_traits_;
-      }
-    };
 
    private:
     // Helper class for walking the physical addresses of a VMO.
@@ -338,13 +335,12 @@ class SocketDevice : public Device,
     uint16_t pending_op_;
     uint32_t cid_;
 
-    // State for an additional linked list.
-    friend struct QueuedOpTraits;
-    fbl::DoublyLinkedListNodeState<fbl::RefPtr<Connection>> queued_op_traits_;
-
     DISALLOW_COPY_ASSIGN_AND_MOVE(Connection);
   };
-  using ConnectionIterator = fbl::HashTable<ConnectionKey, fbl::RefPtr<Connection>>::iterator;
+
+  using ConnectionHashTable =
+      fbl::TaggedHashTable<ConnectionKey, fbl::RefPtr<Connection>, ConnectionHashTag>;
+  using ConnectionIterator = ConnectionHashTable::iterator;
   friend Connection;
 
  private:
@@ -406,12 +402,14 @@ class SocketDevice : public Device,
 
   // List of connections that have pending TX but are waiting for either more
   // credit from the remote, or more TX descriptors.
-  fbl::DoublyLinkedList<fbl::RefPtr<Connection>> has_pending_tx_ TA_GUARDED(lock_);
+  fbl::TaggedDoublyLinkedList<fbl::RefPtr<Connection>, PendingTxTag> has_pending_tx_
+      TA_GUARDED(lock_);
   // List of connections that still need to send an op.
-  fbl::DoublyLinkedList<fbl::RefPtr<Connection>, SocketDevice::Connection::QueuedOpTraits>
-      has_pending_op_ TA_GUARDED(lock_);
+  fbl::TaggedDoublyLinkedList<fbl::RefPtr<Connection>, PendingOpTag> has_pending_op_
+      TA_GUARDED(lock_);
 
-  fbl::HashTable<ConnectionKey, fbl::RefPtr<Connection>> connections_ TA_GUARDED(lock_);
+  ConnectionHashTable connections_ TA_GUARDED(lock_);
+
   bool have_timer_ TA_GUARDED(lock_);
   zx::timer tx_retry_timer_ TA_GUARDED(lock_);
   async::WaitMethod<SocketDevice, &SocketDevice::TimerWaitHandler> timer_wait_handler_
@@ -423,4 +421,4 @@ class SocketDevice : public Device,
 
 }  // namespace virtio
 
-#endif  // SRC_DEVICES_BUS_DRIVERS_VIRTIO_SOCKET_H_
+#endif  // SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_

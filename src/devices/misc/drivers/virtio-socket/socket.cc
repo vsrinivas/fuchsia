@@ -564,7 +564,7 @@ void SocketDevice::PerformCallbackLocked(zx_status_t (*func)(zx_handle_t, const 
 }
 
 bool SocketDevice::QueuedForTxLocked(fbl::RefPtr<Connection> conn) {
-  return conn->fbl::DoublyLinkedListable<fbl::RefPtr<Connection>>::InContainer();
+  return fbl::InContainer<PendingTxTag>(*conn);
 }
 
 void SocketDevice::QueueForTxLocked(fbl::RefPtr<Connection> conn) {
@@ -581,7 +581,7 @@ void SocketDevice::DequeueTxLocked(fbl::RefPtr<Connection> conn) {
 }
 
 bool SocketDevice::QueuedForOpLocked(fbl::RefPtr<Connection> conn) {
-  return Connection::QueuedOpTraits::node_state(*conn).InContainer();
+  return fbl::InContainer<PendingOpTag>(*conn);
 }
 
 void SocketDevice::QueueForOpLocked(fbl::RefPtr<Connection> conn) {
