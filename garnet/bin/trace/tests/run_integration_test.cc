@@ -34,10 +34,10 @@ static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
 int main(int argc, char *argv[]) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  fxl::LogSettings log_settings;
+  syslog::LogSettings log_settings;
   if (!fxl::ParseLogSettings(cl, &log_settings))
     return EXIT_FAILURE;
-  fxl::SetLogSettings(log_settings);
+  syslog::SetLogSettings(log_settings);
 
   if (cl.HasOption("help", nullptr)) {
     PrintUsageString();

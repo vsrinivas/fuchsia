@@ -29,7 +29,7 @@ class TestErrorReporter : public ErrorReporter {
 
  private:
   // |ErrorReporter|
-  void ReportError(fxl::LogSeverity severity, std::string error_string) override;
+  void ReportError(syslog::LogSeverity severity, std::string error_string) override;
 
   std::vector<std::string> reported_errors_;
 };

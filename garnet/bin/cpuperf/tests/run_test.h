@@ -19,6 +19,6 @@
 // value to tspecs.
 constexpr zx_duration_t kTestTimeout = ZX_SEC(60);
 
-bool RunSpec(const std::string& spec_file_path, const fxl::LogSettings& log_settings);
+bool RunSpec(const std::string& spec_file_path, const syslog::LogSettings& log_settings);
 
 #endif  // GARNET_BIN_CPUPERF_TESTS_RUN_TEST_H_

@@ -20,7 +20,7 @@ namespace tracing {
 namespace test {
 
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix,
-                       const fxl::LogSettings& log_settings) {
+                       const syslog::LogSettings& log_settings) {
   // Transfer our log settings to the subprogram.
   std::string log_file_arg;
   std::string verbose_or_quiet_arg;

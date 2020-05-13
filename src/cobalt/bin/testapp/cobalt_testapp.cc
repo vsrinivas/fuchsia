@@ -148,7 +148,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
 
   {
     std::ostringstream stream;
-    stream << "--verbose=" << fxl::GetVlogVerbosity();
+    stream << "--verbose=" << syslog::GetVlogVerbosity();
     launch_info.arguments->push_back(stream.str());
   }
 

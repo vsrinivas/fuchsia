@@ -55,9 +55,9 @@ class H264TestFrameDataProvider final : public H264MultiDecoder::FrameDataProvid
 
 // Set the min logging level so every log will display.
 static void SetMaxLogging() {
-  fxl::LogSettings settings;
+  syslog::LogSettings settings;
   settings.min_log_level = -10;
-  fxl::SetLogSettings(settings);
+  syslog::SetLogSettings(settings);
 }
 
 class TestH264Multi {

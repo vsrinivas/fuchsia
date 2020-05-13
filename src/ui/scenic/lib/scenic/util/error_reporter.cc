@@ -12,18 +12,18 @@ namespace {
 
 class DefaultErrorReporter : public ErrorReporter {
  public:
-  void ReportError(fxl::LogSeverity severity, std::string error_string) override {
+  void ReportError(syslog::LogSeverity severity, std::string error_string) override {
     switch (severity) {
-      case fxl::LOG_INFO:
+      case syslog::LOG_INFO:
         FX_LOGS(INFO) << error_string;
         break;
-      case fxl::LOG_WARNING:
+      case syslog::LOG_WARNING:
         FX_LOGS(WARNING) << error_string;
         break;
-      case fxl::LOG_ERROR:
+      case syslog::LOG_ERROR:
         FX_LOGS(ERROR) << error_string;
         break;
-      case fxl::LOG_FATAL:
+      case syslog::LOG_FATAL:
         FX_LOGS(FATAL) << error_string;
         break;
       default:
@@ -35,7 +35,7 @@ class DefaultErrorReporter : public ErrorReporter {
 
 }  // anonymous namespace
 
-ErrorReporter::Report::Report(ErrorReporter* owner, fxl::LogSeverity severity)
+ErrorReporter::Report::Report(ErrorReporter* owner, syslog::LogSeverity severity)
     : owner_(owner), severity_(severity) {}
 
 ErrorReporter::Report::Report(Report&& other)

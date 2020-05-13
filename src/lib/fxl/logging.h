@@ -9,18 +9,4 @@
 
 #include "src/lib/fxl/log_settings.h"
 
-namespace fxl {
-
-using syslog::GetVlogVerbosity;
-using syslog::LOG_DFATAL;
-using syslog::LOG_ERROR;
-using syslog::LOG_FATAL;
-using syslog::LOG_INFO;
-using syslog::LOG_LEVEL;
-using syslog::LOG_WARNING;
-using syslog::LogSeverity;
-using syslog::ShouldCreateLogMessage;
-
-}  // namespace fxl
-
 #endif  // SRC_LIB_FXL_LOGGING_H_

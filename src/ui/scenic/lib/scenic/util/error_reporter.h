@@ -47,10 +47,10 @@ class ErrorReporter {
    private:
     // Only ErrorReporter can create reports.
     friend class ErrorReporter;
-    Report(ErrorReporter* owner, fxl::LogSeverity severity);
+    Report(ErrorReporter* owner, syslog::LogSeverity severity);
 
     ErrorReporter* owner_;
-    fxl::LogSeverity severity_;
+    syslog::LogSeverity severity_;
     std::ostringstream stream_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Report);
@@ -58,17 +58,17 @@ class ErrorReporter {
 
   // Create a new Report which will, upon destruction, invoke ReportError()
   // upon this ErrorReporter.
-  Report INFO() { return Report(this, fxl::LOG_INFO); }
-  Report WARN() { return Report(this, fxl::LOG_WARNING); }
-  Report ERROR() { return Report(this, fxl::LOG_ERROR); }
-  Report FATAL() { return Report(this, fxl::LOG_FATAL); }
+  Report INFO() { return Report(this, syslog::LOG_INFO); }
+  Report WARN() { return Report(this, syslog::LOG_WARNING); }
+  Report ERROR() { return Report(this, syslog::LOG_ERROR); }
+  Report FATAL() { return Report(this, syslog::LOG_FATAL); }
 
   // Return a default ErrorReporter that is always available, which simply logs
   // the error using FX_LOGS(severity).
   static const std::shared_ptr<ErrorReporter>& Default();
 
  private:
-  virtual void ReportError(fxl::LogSeverity severity, std::string error_string) = 0;
+  virtual void ReportError(syslog::LogSeverity severity, std::string error_string) = 0;
 };
 }  // namespace scenic_impl
 

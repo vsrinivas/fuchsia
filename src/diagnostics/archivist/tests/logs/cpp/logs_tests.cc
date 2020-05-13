@@ -150,8 +150,8 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
       FX_LOG_ERROR,      // 0x50
   };
 
-  fxl::LogSettings settings = {.min_log_level = severities_in_use[0]};
-  fxl::SetLogSettings(settings, {tag});
+  syslog::LogSettings settings = {.min_log_level = severities_in_use[0]};
+  syslog::SetLogSettings(settings, {tag});
 
   for (auto severity : severities_in_use) {
     FX_LOGS(LEVEL(severity)) << message;

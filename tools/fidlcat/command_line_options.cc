@@ -170,7 +170,7 @@ const char* const kHelpHelp = R"(  --help
 // passed to --quiet or --verbose), |multiplier| is a value by which a numerical
 // setting will be multiplied (basically, -1 for verbose and 1 for quiet), and
 // |settings| contains the output.
-bool SetLogSettings(const std::string& level, int multiplier, fxl::LogSettings* settings) {
+bool SetLogSettings(const std::string& level, int multiplier, syslog::LogSettings* settings) {
   if (level == "trace") {
     settings->min_log_level = syslog::LOG_TRACE;
   } else if (level == "debug") {
@@ -195,7 +195,7 @@ bool SetLogSettings(const std::string& level, int multiplier, fxl::LogSettings* 
 }
 
 cmdline::Status ProcessLogOptions(const CommandLineOptions* options) {
-  fxl::LogSettings settings;
+  syslog::LogSettings settings;
   if (options->verbose) {
     if (!SetLogSettings(*options->verbose, -1, &settings)) {
       return cmdline::Status::Error("Unable to parse verbose setting \"" + *options->verbose +
@@ -210,7 +210,7 @@ cmdline::Status ProcessLogOptions(const CommandLineOptions* options) {
   if (options->log_file) {
     settings.log_file = *options->log_file;
   }
-  fxl::SetLogSettings(settings);
+  syslog::SetLogSettings(settings);
   return cmdline::Status::Ok();
 }
 

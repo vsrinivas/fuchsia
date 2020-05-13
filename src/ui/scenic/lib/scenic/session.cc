@@ -431,7 +431,7 @@ void Session::EventAndErrorReporter::FlushEvents() {
   }
 }
 
-void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
+void Session::EventAndErrorReporter::ReportError(syslog::LogSeverity severity,
                                                  std::string error_string) {
   // TODO(SCN-1265): Come up with a better solution to avoid children
   // calling into us during destruction.
@@ -443,13 +443,13 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
   TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::ReportError");
 
   switch (severity) {
-    case fxl::LOG_INFO:
+    case syslog::LOG_INFO:
       FX_LOGS(INFO) << error_string;
       return;
-    case fxl::LOG_WARNING:
+    case syslog::LOG_WARNING:
       FX_LOGS(WARNING) << error_string;
       return;
-    case fxl::LOG_ERROR:
+    case syslog::LOG_ERROR:
       FX_LOGS(ERROR) << "Scenic session error (session_id: " << session_->id()
                      << "): " << error_string;
 
@@ -461,7 +461,7 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
         session_->listener_->OnScenicError(std::move(error_string));
       }
       return;
-    case fxl::LOG_FATAL:
+    case syslog::LOG_FATAL:
       FX_LOGS(FATAL) << error_string;
       return;
     default:

@@ -11,7 +11,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-fxl::LogSettings g_log_settings;
+syslog::LogSettings g_log_settings;
 
 int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);

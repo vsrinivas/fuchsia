@@ -50,13 +50,13 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args);
 // is currently a system app. If that changes then we will need a context
 // to run the trace too.
 bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
-              const fxl::LogSettings& log_settings);
+              const syslog::LogSettings& log_settings);
 
 // N.B. This is a synchronous call that uses an internal async loop.
 // ("synchronous" meaning that it waits for the verifier to complete).
 bool VerifyTspec(const std::string& relative_tspec_path,
                  const std::string& relative_output_file_path,
-                 const fxl::LogSettings& log_settings);
+                 const syslog::LogSettings& log_settings);
 
 }  // namespace test
 }  // namespace tracing

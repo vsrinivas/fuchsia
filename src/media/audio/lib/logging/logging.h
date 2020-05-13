@@ -38,8 +38,8 @@ class Logging {
 
   static void Init(const fx_log_severity_t log_level,
                    const std::initializer_list<std::string>& tags) {
-    fxl::LogSettings settings = {.min_log_level = int8_t(log_level)};
-    fxl::SetLogSettings(settings, tags);
+    syslog::LogSettings settings = {.min_log_level = int8_t(log_level)};
+    syslog::SetLogSettings(settings, tags);
   }
 };
 

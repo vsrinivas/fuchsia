@@ -20,45 +20,45 @@ namespace {
 
 class LogSettingsFixture : public ::testing::Test {
  public:
-  LogSettingsFixture() : old_severity_(GetMinLogLevel()), old_stderr_(dup(STDERR_FILENO)) {}
+  LogSettingsFixture() : old_severity_(syslog::GetMinLogLevel()), old_stderr_(dup(STDERR_FILENO)) {}
   ~LogSettingsFixture() {
-    SetLogSettings({.min_log_level = old_severity_});
+    syslog::SetLogSettings({.min_log_level = old_severity_});
     dup2(old_stderr_.get(), STDERR_FILENO);
   }
 
  private:
-  LogSeverity old_severity_;
+  syslog::LogSeverity old_severity_;
   fbl::unique_fd old_stderr_;
 };
 
 TEST(LogSettings, ParseValidOptions) {
-  LogSettings settings;
-  settings.min_log_level = LOG_FATAL;
+  syslog::LogSettings settings;
+  settings.min_log_level = syslog::LOG_FATAL;
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0"}), &settings));
-  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
   // verbosity scaled between INFO & DEBUG
-  EXPECT_EQ(LOG_INFO - 1, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_INFO - 1, settings.min_log_level);
 
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=0"}), &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_INFO, settings.min_log_level);
 
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=5"}), &settings));
   // verbosity scaled between INFO & DEBUG
-  EXPECT_EQ(LOG_INFO - 5, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_INFO - 5, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=0"}), &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_INFO, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
-  EXPECT_EQ(LOG_WARNING, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_WARNING, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
-  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}), &settings));
@@ -66,44 +66,44 @@ TEST(LogSettings, ParseValidOptions) {
 }
 
 TEST(LogSettings, ParseInvalidOptions) {
-  LogSettings settings;
-  settings.min_log_level = LOG_FATAL;
+  syslog::LogSettings settings;
+  settings.min_log_level = syslog::LOG_FATAL;
 
   EXPECT_FALSE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=-1"}), &settings));
-  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 
   EXPECT_FALSE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=123garbage"}),
                                 &settings));
-  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 
   EXPECT_FALSE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=-1"}), &settings));
-  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 
   EXPECT_FALSE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=123garbage"}), &settings));
-  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 }
 
 TEST_F(LogSettingsFixture, SetValidOptions) {
   EXPECT_TRUE(
       SetLogSettingsFromCommandLine(CommandLineFromInitializerList({"argv0", "--verbose=20"})));
   // verbosity scaled between INFO & DEBUG, but capped at 15 levels
-  EXPECT_EQ(syslog::LOG_DEBUG + 1, GetMinLogLevel());
+  EXPECT_EQ(syslog::LOG_DEBUG + 1, syslog::GetMinLogLevel());
 }
 
 TEST_F(LogSettingsFixture, SetInvalidOptions) {
-  LogSeverity old_severity = GetMinLogLevel();
+  syslog::LogSeverity old_severity = syslog::GetMinLogLevel();
 
   EXPECT_FALSE(SetLogSettingsFromCommandLine(
       CommandLineFromInitializerList({"argv0", "--verbose=garbage"})));
 
-  EXPECT_EQ(old_severity, GetMinLogLevel());
+  EXPECT_EQ(old_severity, syslog::GetMinLogLevel());
 }
 
 TEST_F(LogSettingsFixture, ToArgv) {
-  LogSettings settings;
+  syslog::LogSettings settings;
   EXPECT_TRUE(LogSettingsToArgv(settings).empty());
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
@@ -125,7 +125,7 @@ TEST_F(LogSettingsFixture, ToArgv) {
               std::vector<std::string>{"--verbose=15"});  // verbosity capped
 
   // Reset |settings| back to defaults so we don't pick up previous tests.
-  settings = LogSettings{};
+  settings = syslog::LogSettings{};
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--log-file=/foo"}), &settings));
   EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--log-file=/foo"})

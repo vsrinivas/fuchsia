@@ -101,7 +101,7 @@ class Session final : public fuchsia::ui::scenic::Session {
 
     // |ErrorReporter|
     // Customize behavior of ErrorReporter::ReportError().
-    void ReportError(fxl::LogSeverity severity, std::string error_string) override;
+    void ReportError(syslog::LogSeverity severity, std::string error_string) override;
 
     // Called when the owning session is destroyed.
     void Reset();

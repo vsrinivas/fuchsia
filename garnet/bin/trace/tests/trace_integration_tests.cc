@@ -22,7 +22,7 @@
 #include "src/lib/fxl/test/test_settings.h"
 
 // Defined in gtest_main.cc
-extern fxl::LogSettings g_log_settings;
+extern syslog::LogSettings g_log_settings;
 
 namespace tracing {
 namespace test {

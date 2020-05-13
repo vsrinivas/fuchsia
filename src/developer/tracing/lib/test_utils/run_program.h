@@ -28,7 +28,7 @@ namespace test {
 // For example, if |prefix| is "--foo=" and verbosity is 2, then
 // "--foo=--verbose=2" will be appended to |argv|.
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix,
-                       const fxl::LogSettings& log_settings);
+                       const syslog::LogSettings& log_settings);
 
 // Wrapper around |fdio_spawn_etc()|.
 // If |arg_handle| is not ZX_HANDLE_INVALID, then it is passed to the

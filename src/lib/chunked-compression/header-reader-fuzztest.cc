@@ -53,9 +53,9 @@ fbl::Array<uint8_t> CopyAndFixChecksum(const uint8_t *data, size_t size) {
 // Fuzz test which attempts to parse |data| as a chunked archive header.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // Parse errors are logged at LOG_ERROR, so squelch them to avoid log spam.
-  fxl::LogSettings settings;
-  settings.min_log_level = fxl::LOG_FATAL;
-  fxl::SetLogSettings(settings);
+  syslog::LogSettings settings;
+  settings.min_log_level = syslog::LOG_FATAL;
+  syslog::SetLogSettings(settings);
 
   if (size < kChunkArchiveMinHeaderSize) {
     return 0;

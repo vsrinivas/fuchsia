@@ -179,8 +179,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
 
   ASSERT_TRUE(display_options.dump_messages);
 
-  ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
-  ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
+  ASSERT_TRUE(syslog::ShouldCreateLogMessage(syslog::LOG_ERROR));
+  ASSERT_FALSE(syslog::ShouldCreateLogMessage(syslog::LOG_INFO));
   ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());
   ASSERT_TRUE(std::find(params.begin(), params.end(), "args") != params.end());
 }
@@ -281,8 +281,8 @@ TEST_F(CommandLineOptionsTest, QuietTrumpsVerbose) {
   std::vector<std::string> params;
   auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
                                 &display_options, &params);
-  ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
-  ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
+  ASSERT_TRUE(syslog::ShouldCreateLogMessage(syslog::LOG_ERROR));
+  ASSERT_FALSE(syslog::ShouldCreateLogMessage(syslog::LOG_INFO));
 }
 
 }  // namespace fidlcat

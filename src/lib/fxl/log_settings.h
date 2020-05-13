@@ -7,14 +7,4 @@
 
 #include <lib/syslog/cpp/log_settings.h>
 
-namespace fxl {
-
-using syslog::GetMinLogLevel;
-using syslog::LogSettings;
-using syslog::SetLogSettings;
-
-inline void SetLogTags(const std::initializer_list<std::string>& tags) { syslog::SetTags(tags); }
-
-}  // namespace fxl
-
 #endif  // SRC_LIB_FXL_LOG_SETTINGS_H_

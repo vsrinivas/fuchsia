@@ -56,7 +56,7 @@ static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
 static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
                                   const std::string& relative_output_file_path,
                                   std::vector<std::string>* args,
-                                  const fxl::LogSettings& log_settings) {
+                                  const syslog::LogSettings& log_settings) {
   tracing::Spec spec;
   if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;
@@ -86,7 +86,7 @@ static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
 static void BuildVerificationProgramArgs(const std::string& tspec_path,
                                          const std::string& output_file_path,
                                          std::vector<std::string>* args,
-                                         const fxl::LogSettings& log_settings) {
+                                         const syslog::LogSettings& log_settings) {
   AppendLoggingArgs(args, "", log_settings);
 
   args->push_back("verify");
@@ -198,7 +198,7 @@ static bool RunTraceComponentAndWait(const std::string& app, const std::vector<s
 }
 
 bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
-              const fxl::LogSettings& log_settings) {
+              const syslog::LogSettings& log_settings) {
   std::vector<std::string> args;
   if (!BuildTraceProgramArgs(relative_tspec_path, relative_output_file_path, &args, log_settings)) {
     return false;
@@ -212,7 +212,7 @@ bool RunTspec(const std::string& relative_tspec_path, const std::string& relativ
 
 bool VerifyTspec(const std::string& relative_tspec_path,
                  const std::string& relative_output_file_path,
-                 const fxl::LogSettings& log_settings) {
+                 const syslog::LogSettings& log_settings) {
   tracing::Spec spec;
   if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;

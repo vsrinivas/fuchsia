@@ -12,7 +12,7 @@
 #include "src/lib/fxl/test/test_settings.h"
 #include "verify_test.h"
 
-static fxl::LogSettings g_log_settings;
+static syslog::LogSettings g_log_settings;
 
 static void RunAndVerify(const char* spec_path) {
   ASSERT_TRUE(RunSpec(spec_path, g_log_settings));

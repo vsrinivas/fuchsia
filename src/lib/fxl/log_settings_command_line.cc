@@ -10,8 +10,8 @@
 
 namespace fxl {
 
-bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_settings) {
-  LogSettings settings = *out_settings;
+bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings* out_settings) {
+  syslog::LogSettings settings = *out_settings;
 
   // Don't clobber existing settings, but ensure min log level is initialized.
   // Note that legacy INFO level is also 0.
@@ -30,8 +30,8 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
     }
 
     // verbosity scale sits in the interstitial space between INFO and DEBUG
-    settings.min_log_level =
-        std::max(int(syslog::LOG_DEBUG) + 1, LOG_INFO - (level * syslog::LogVerbosityStepSize));
+    settings.min_log_level = std::max(int(syslog::LOG_DEBUG) + 1,
+                                      syslog::LOG_INFO - (level * syslog::LogVerbosityStepSize));
   }
 
   // --quiet=<level>
@@ -46,7 +46,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
     if (level > 3) {
       level = 3;
     }
-    settings.min_log_level = LOG_INFO + (level * syslog::LogSeverityStepSize);
+    settings.min_log_level = syslog::LOG_INFO + (level * syslog::LogSeverityStepSize);
   }
 
   // --log-file=<file>
@@ -60,7 +60,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, LogSettings* out_set
 }
 
 bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line) {
-  LogSettings settings;
+  syslog::LogSettings settings;
   if (!ParseLogSettings(command_line, &settings))
     return false;
   SetLogSettings(settings);
@@ -69,23 +69,23 @@ bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line) {
 
 bool SetLogSettingsFromCommandLine(const fxl::CommandLine& command_line,
                                    const std::initializer_list<std::string>& tags) {
-  LogSettings settings;
+  syslog::LogSettings settings;
   if (!ParseLogSettings(command_line, &settings))
     return false;
   SetLogSettings(settings, tags);
   return true;
 }
 
-std::vector<std::string> LogSettingsToArgv(const LogSettings& settings) {
+std::vector<std::string> LogSettingsToArgv(const syslog::LogSettings& settings) {
   std::vector<std::string> result;
 
-  if (settings.min_log_level != LOG_INFO) {
+  if (settings.min_log_level != syslog::LOG_INFO) {
     std::string arg;
-    if (settings.min_log_level < LOG_INFO) {
-      arg = StringPrintf("--verbose=%d", (LOG_INFO - settings.min_log_level));
+    if (settings.min_log_level < syslog::LOG_INFO) {
+      arg = StringPrintf("--verbose=%d", (syslog::LOG_INFO - settings.min_log_level));
     } else {
-      arg = StringPrintf("--quiet=%d",
-                         -(LOG_INFO - settings.min_log_level) / syslog::LogSeverityStepSize);
+      arg = StringPrintf(
+          "--quiet=%d", -(syslog::LOG_INFO - settings.min_log_level) / syslog::LogSeverityStepSize);
     }
     result.push_back(arg);
   }
