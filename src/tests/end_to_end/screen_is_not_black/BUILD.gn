@@ -6,12 +6,6 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
-group("screen_is_not_black") {
-  testonly = true
-
-  deps = [ ":tests" ]
-}
-
 group("tests") {
   testonly = true
 
