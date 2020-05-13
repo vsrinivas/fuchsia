@@ -63,12 +63,10 @@ config("private.config") {
   include_dirs = [ "$target_gen_dir/include" ]
 }
 
-# The FIDL compiler translates the sources into generic FIDL JSON IR.
-# This collects the location of that file.
-json_rspfile = "$target_gen_dir/json.rspfile"
-link_output_rspfile("json.rspfile") {
+# Generate a file that contains the path to the generated JSON IR file.
+fidl_library_json_rspfile("json.rspfile") {
   visibility = [ ":*" ]
-  outputs = [ json_rspfile ]
+  output = "$target_gen_dir/json.rspfile"
   deps = [ ":json" ]
 }
 

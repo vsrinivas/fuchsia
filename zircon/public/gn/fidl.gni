@@ -402,3 +402,41 @@ template("fidl_library") {
     }
   }
 }
+
+# Generate a response file containing FIDL library JSON IR file paths.
+#
+# The generated file will contain one line per FIDL library target that is
+# found transitively from 'deps'. This can be used by action scripts to inspect
+# their content or process them outside of 'fidlgen'.
+#
+# Parameters:
+#   output
+#     Required: Single output path for generated file.
+#     Type: path
+#
+#   deps
+#     Required: list of targets. Any fidl_library() target reachable from these
+#     will be included in the generated file.
+#     Type: list(label)
+#
+#   visibility, testing
+#     Optional: usual GN meaning.
+#
+template("fidl_library_json_rspfile") {
+  assert(defined(invoker.output), "Missing 'output' for $target_name")
+  assert(defined(invoker.deps), "Missing 'deps' for $target_name")
+
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                             "testonly",
+                           ])
+    outputs = [ invoker.output ]
+    output_conversion = "list lines"
+
+    # NOTE: metadata keys set by ./fidl/json.gni
+    data_keys = [ "fidl_json" ]
+  }
+}

@@ -32,7 +32,7 @@ fidl_support_fidlc = [
 # See there for details.
 #
 # This produces a group with the metadata schema required by
-# link_output_rspfile() to identify the JSON IR file.
+# fidl_library_json_rspfile() to identify the JSON IR file.
 template("fidl_json_rspfile") {
   group("$target_name.json") {
     forward_variables_from(invoker,
@@ -44,8 +44,9 @@ template("fidl_json_rspfile") {
     # Depend on the fidlc generation step and describe what it produces.
     deps = invoker.fidlc_deps
     metadata = {
-      link_output = rebase_path(invoker.fidlc_outputs, root_build_dir)
-      link_barrier = []
+      # NOTE: the fidl_json metadata key is used by both the ZN and GN build
+      # which implement fidl_library() very differently.
+      fidl_json = rebase_path(invoker.fidlc_outputs, root_build_dir)
     }
   }
 
