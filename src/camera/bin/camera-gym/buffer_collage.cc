@@ -227,8 +227,11 @@ void BufferCollage::RemoveCollection(uint32_t id) {
       Stop();
       return;
     }
-    view_->DetachChild(*it->second.node);
-    it->second.collection->Close();
+    auto& collection_view = it->second;
+    auto image_pipe_id = collection_view.image_pipe_id;
+    view_->DetachChild(*collection_view.node);
+    session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
+    collection_view.collection->Close();
     collection_views_.erase(it);
     UpdateLayout();
   });
