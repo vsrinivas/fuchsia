@@ -19,44 +19,27 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
-use crate::ip::reassembly::FragmentablePacket;
-use crate::ip::{IpProto, Ipv4Option};
-use crate::wire::U16;
+use crate::ip::IpProto;
+use crate::U16;
 
-use self::options::Ipv4OptionsImpl;
+pub(crate) use self::inner::IPV4_MIN_HDR_LEN;
+use self::options::{Ipv4Option, Ipv4OptionsImpl};
 
 const HDR_PREFIX_LEN: usize = 20;
 
-/// The minimum length of an IPv4 header.
-pub(crate) const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
-
 /// The maximum length of an IPv4 header.
-pub(crate) const IPV4_MAX_HDR_LEN: usize = 60;
+const IPV4_MAX_HDR_LEN: usize = 60;
 
 /// The maximum length for options in an IPv4 header.
-pub(crate) const MAX_OPTIONS_LEN: usize = IPV4_MAX_HDR_LEN - HDR_PREFIX_LEN;
+const MAX_OPTIONS_LEN: usize = IPV4_MAX_HDR_LEN - HDR_PREFIX_LEN;
 
-/// The range of bytes within an IPv4 header buffer that the
-/// total length field uses.
-pub(crate) const IPV4_TOTAL_LENGTH_BYTE_RANGE: Range<usize> = 2..4;
-
-/// The range of bytes within an IPv4 header buffer that the
-/// fragment data fields use.
-pub(crate) const IPV4_FRAGMENT_DATA_BYTE_RANGE: Range<usize> = 4..8;
-
-/// The range of bytes within an IPv4 header buffer that the
-/// checksum field uses.
-pub(crate) const IPV4_CHECKSUM_BYTE_RANGE: Range<usize> = 10..12;
-
-#[cfg(test)]
-pub(crate) const IPV4_TTL_OFFSET: usize = 8;
-#[cfg(test)]
-pub(crate) const IPV4_CHECKSUM_OFFSET: usize = 10;
+/// The range of bytes within an IPv4 header buffer that the fragment data fields uses.
+const IPV4_FRAGMENT_DATA_BYTE_RANGE: Range<usize> = 4..8;
 
 #[allow(missing_docs)]
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct HeaderPrefix {
+pub struct HeaderPrefix {
     version_ihl: u8,
     dscp_ecn: u8,
     total_len: U16,
@@ -138,7 +121,7 @@ impl HeaderPrefix {
 ///
 /// `Ipv4Header` provides access to IPv4 header fields as a common
 /// implementation for both [`Ipv4Packet`] and [`Ipv4PacketRaw`]
-pub(crate) trait Ipv4Header {
+pub trait Ipv4Header {
     /// Gets a reference to the IPv4 [`HeaderPrefix`].
     fn get_header_prefix(&self) -> &HeaderPrefix;
 
@@ -206,7 +189,7 @@ pub(crate) trait Ipv4Header {
 /// An `Ipv4Packet` - whether parsed using `parse` or created using
 /// `Ipv4PacketBuilder` - maintains the invariant that the checksum is always
 /// valid.
-pub(crate) struct Ipv4Packet<B> {
+pub struct Ipv4Packet<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     options: Options<B>,
     body: B,
@@ -289,9 +272,7 @@ fn compute_header_checksum(hdr_prefix: &[u8], options: &[u8]) -> [u8; 2] {
 
 impl<B: ByteSlice> Ipv4Packet<B> {
     /// Iterate over the IPv4 header options.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = Ipv4Option> {
+    pub fn iter_options<'a>(&'a self) -> impl Iterator<Item = Ipv4Option<'a>> {
         self.options.iter()
     }
 
@@ -301,12 +282,12 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     /// The packet body.
-    pub(crate) fn body(&self) -> &[u8] {
+    pub fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The size of the header prefix and options.
-    pub(crate) fn header_len(&self) -> usize {
+    pub fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
     }
 
@@ -315,7 +296,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     ///
     /// Return a buffer of this packet's header and options with
     /// the fragment data zeroed out.
-    pub(crate) fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
+    pub fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
         let expected_bytes_len = self.header_len();
         let mut bytes = Vec::with_capacity(expected_bytes_len);
 
@@ -332,8 +313,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    #[cfg(test)]
-    pub(crate) fn builder(&self) -> Ipv4PacketBuilder {
+    pub fn builder(&self) -> Ipv4PacketBuilder {
         let mut s = Ipv4PacketBuilder {
             dscp: self.dscp(),
             ecn: self.ecn(),
@@ -351,12 +331,6 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 }
 
-impl<B: ByteSlice> FragmentablePacket for Ipv4Packet<B> {
-    fn fragment_data(&self) -> (u32, u16, bool) {
-        (u32::from(self.id()), self.fragment_offset(), self.mf_flag())
-    }
-}
-
 impl<B> Ipv4Packet<B>
 where
     B: ByteSliceMut,
@@ -364,7 +338,7 @@ where
     /// Set the Time To Live (TTL).
     ///
     /// Set the TTL and update the header checksum accordingly.
-    pub(crate) fn set_ttl(&mut self, ttl: u8) {
+    pub fn set_ttl(&mut self, ttl: u8) {
         // See the internet_checksum::update documentation for why we need to
         // provide two bytes which are at an even byte offset from the beginning
         // of the header.
@@ -406,7 +380,7 @@ where
 ///
 /// [`Ipv4Packet`] provides a [`FromRaw`] implementation that can be used to
 /// validate an `Ipv4PacketRaw`.
-pub(crate) struct Ipv4PacketRaw<B> {
+pub struct Ipv4PacketRaw<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     options: MaybeParsed<OptionsRaw<B, Ipv4OptionsImpl>, B>,
     body: MaybeParsed<B, B>,
@@ -462,24 +436,36 @@ impl<B: ByteSlice> Ipv4PacketRaw<B> {
     /// `body` returns [`MaybeParsed::Complete`] if the entire body is present
     /// (as determined by the header's "total length" and "internet header
     /// length" fields), and [`MaybeParsed::Incomplete`] otherwise.
-    pub(crate) fn body(&self) -> MaybeParsed<&[u8], &[u8]> {
+    pub fn body(&self) -> MaybeParsed<&[u8], &[u8]> {
         self.body.as_ref().map(|b| b.deref()).map_incomplete(|b| b.deref())
     }
 }
 
-pub(crate) type Options<B> = packet::records::options::Options<B, Ipv4OptionsImpl>;
-pub(crate) type OptionsSerializer<'a, I> =
+/// A records parser for IPv4 options.
+///
+/// See [`Options`] for more details.
+///
+/// [`Options`]: packet::records::options::Options
+type Options<B> = packet::records::options::Options<B, Ipv4OptionsImpl>;
+
+/// A records serializer for IPv4 options.
+///
+/// See [`OptionsSerializer`] for more details.
+///
+/// [`OptionsSerializer`]: packet::records::options::OptionsSerializer
+type OptionsSerializer<'a, I> =
     packet::records::options::OptionsSerializer<'a, Ipv4OptionsImpl, Ipv4Option<'a>, I>;
 
 /// A PacketBuilder for Ipv4 Packets but with options.
 #[derive(Debug)]
-pub(crate) struct Ipv4PacketBuilderWithOptions<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> {
+pub struct Ipv4PacketBuilderWithOptions<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> {
     prefix_builder: Ipv4PacketBuilder,
     options: OptionsSerializer<'a, I>,
 }
 
 impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> Ipv4PacketBuilderWithOptions<'a, I> {
-    pub(crate) fn new<T: IntoIterator<Item = &'a Ipv4Option<'a>, IntoIter = I>>(
+    /// Creates a new IPv4 packet builder without options.
+    pub fn new<T: IntoIterator<Item = &'a Ipv4Option<'a>, IntoIter = I>>(
         prefix_builder: Ipv4PacketBuilder,
         options: T,
     ) -> Option<Ipv4PacketBuilderWithOptions<'a, I>> {
@@ -512,7 +498,7 @@ impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
         PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1 - header_len)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         // implements BufferViewMut
         let mut header = &mut header;
@@ -525,7 +511,7 @@ impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
 
 /// A builder for IPv4 packets.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct Ipv4PacketBuilder {
+pub struct Ipv4PacketBuilder {
     dscp: u8,
     ecn: u8,
     id: u16,
@@ -539,7 +525,7 @@ pub(crate) struct Ipv4PacketBuilder {
 
 impl Ipv4PacketBuilder {
     /// Construct a new `Ipv4PacketBuilder`.
-    pub(crate) fn new<S: Into<Ipv4Addr>, D: Into<Ipv4Addr>>(
+    pub fn new<S: Into<Ipv4Addr>, D: Into<Ipv4Addr>>(
         src_ip: S,
         dst_ip: D,
         ttl: u8,
@@ -563,9 +549,7 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `dscp` panics if `dscp` is greater than 2^6 - 1.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn dscp(&mut self, dscp: u8) {
+    pub fn dscp(&mut self, dscp: u8) {
         assert!(dscp <= 1 << 6, "invalid DCSP: {}", dscp);
         self.dscp = dscp;
     }
@@ -575,24 +559,18 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `ecn` panics if `ecn` is greater than 3.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn ecn(&mut self, ecn: u8) {
+    pub fn ecn(&mut self, ecn: u8) {
         assert!(ecn <= 3, "invalid ECN: {}", ecn);
         self.ecn = ecn;
     }
 
     /// Set the identification.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn id(&mut self, id: u16) {
+    pub fn id(&mut self, id: u16) {
         self.id = id;
     }
 
     /// Set the Don't Fragment (DF) flag.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn df_flag(&mut self, df: bool) {
+    pub fn df_flag(&mut self, df: bool) {
         if df {
             self.flags |= 1 << DF_FLAG_OFFSET;
         } else {
@@ -601,9 +579,7 @@ impl Ipv4PacketBuilder {
     }
 
     /// Set the More Fragments (MF) flag.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn mf_flag(&mut self, mf: bool) {
+    pub fn mf_flag(&mut self, mf: bool) {
         if mf {
             self.flags |= 1 << MF_FLAG_OFFSET;
         } else {
@@ -616,9 +592,7 @@ impl Ipv4PacketBuilder {
     /// # Panics
     ///
     /// `fragment_offset` panics if `fragment_offset` is greater than 2^13 - 1.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn fragment_offset(&mut self, fragment_offset: u16) {
+    pub fn fragment_offset(&mut self, fragment_offset: u16) {
         assert!(fragment_offset < 1 << 13, "invalid fragment offset: {}", fragment_offset);
         self.frag_off = fragment_offset;
     }
@@ -672,7 +646,7 @@ impl PacketBuilder for Ipv4PacketBuilder {
         PacketConstraints::new(IPV4_MIN_HDR_LEN, 0, 0, (1 << 16) - 1 - IPV4_MIN_HDR_LEN)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         self.write_header_prefix(&mut header, &[][..], body.len());
     }
@@ -682,10 +656,63 @@ impl PacketBuilder for Ipv4PacketBuilder {
 const DF_FLAG_OFFSET: u8 = 1;
 const MF_FLAG_OFFSET: u8 = 0;
 
-pub(crate) mod options {
+/// Reassembles a fragmented IPv4 packet into a parsed IPv4 packet.
+pub(crate) fn reassemble_fragmented_packet<
+    B: ByteSliceMut,
+    BV: BufferViewMut<B>,
+    I: Iterator<Item = Vec<u8>>,
+>(
+    mut buffer: BV,
+    header: Vec<u8>,
+    body_fragments: I,
+) -> IpParseResult<Ipv4, Ipv4Packet<B>> {
+    let bytes = buffer.as_mut();
+
+    // First, copy over the header data.
+    bytes[0..header.len()].copy_from_slice(&header[..]);
+    let mut byte_count = header.len();
+
+    // Next, copy over the body fragments.
+    for p in body_fragments {
+        bytes[byte_count..byte_count + p.len()].copy_from_slice(&p[..]);
+        byte_count += p.len();
+    }
+
+    // Fix up the IPv4 header
+
+    // Make sure that the packet length is not more than the maximum
+    // possible IPv4 packet length.
+    if byte_count > usize::from(core::u16::MAX) {
+        return debug_err!(
+            Err(ParseError::Format.into()),
+            "fragmented packet length of {} bytes is too large",
+            byte_count
+        );
+    }
+
+    // We know the call to `unwrap` will not fail because we just copied the header
+    // bytes into `bytes`.
+    let mut header =
+        LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(&mut bytes[..]).unwrap().0;
+
+    // Update the total length field.
+    header.total_len.set(u16::try_from(byte_count).unwrap());
+
+    // Zero out fragment related data since we will now have a
+    // reassembled packet that does not need reassembly.
+    header.flags_frag_off = [0; 2];
+
+    // Update header checksum.
+    header.hdr_checksum = [0; 2];
+    header.hdr_checksum = compute_header_checksum(header.as_bytes(), &[]);
+
+    Ipv4Packet::parse_mut(buffer, ())
+}
+
+/// Parsing and serialization of IPv4 options.
+pub mod options {
     use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 
-    use crate::ip::{Ipv4Option, Ipv4OptionData};
     use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
 
     const OPTION_KIND_EOL: u8 = 0;
@@ -694,8 +721,56 @@ pub(crate) mod options {
 
     const OPTION_RTRALRT_LEN: usize = 2;
 
+    /// An IPv4 header option.
+    ///
+    /// An IPv4 header option comprises metadata about the option (which is stored
+    /// in the kind byte) and the option itself.
+    ///
+    /// See [Wikipedia] or [RFC 791] for more details.
+    ///
+    /// [Wikipedia]: https://en.wikipedia.org/wiki/IPv4#Options
+    /// [RFC 791]: https://tools.ietf.org/html/rfc791#page-15
+    #[derive(PartialEq, Eq, Debug)]
+    pub struct Ipv4Option<'a> {
+        /// Whether this option needs to be copied into all fragments of a
+        /// fragmented packet.
+        pub copied: bool,
+        /// IPv4 option data.
+        // TODO(joshlf): include "Option Class"? The variable-length option data.
+        pub data: Ipv4OptionData<'a>,
+    }
+
+    /// The data associated with an IPv4 header option.
+    ///
+    /// `Ipv4OptionData` represents the variable-length data field of an IPv4 header
+    /// option.
+    #[allow(missing_docs)]
+    #[derive(PartialEq, Eq, Debug)]
+    pub enum Ipv4OptionData<'a> {
+        /// Used to tell routers to inspect the packet.
+        ///
+        /// Used by IGMP host messages per [RFC 2236 section 2].
+        ///
+        /// [RFC 2236 section 2]: https://tools.ietf.org/html/rfc2236#section-2
+        RouterAlert { data: u16 },
+
+        /// An unrecognized IPv4 option.
+        // The maximum header length is 60 bytes, and the fixed-length header is 20
+        // bytes, so there are 40 bytes for the options. That leaves a maximum
+        // options size of 1 kind byte + 1 length byte + 38 data bytes. Data for an
+        // unrecognized option kind.
+        //
+        // Any unrecognized option kind will have its data parsed using this
+        // variant. This allows code to copy unrecognized options into packets when
+        // forwarding.
+        //
+        // `data`'s length is in the range [0, 38].
+        Unrecognized { kind: u8, len: u8, data: &'a [u8] },
+    }
+
+    /// An implementation of [`OptionsImpl`] for IPv4 options.
     #[derive(Debug)]
-    pub(crate) struct Ipv4OptionsImpl;
+    pub(super) struct Ipv4OptionsImpl;
 
     impl OptionsImplLayout for Ipv4OptionsImpl {
         type Error = ();
@@ -704,11 +779,11 @@ pub(crate) mod options {
     impl<'a> OptionsImpl<'a> for Ipv4OptionsImpl {
         type Option = Ipv4Option<'a>;
 
-        fn parse(kind: u8, data: &[u8]) -> Result<Option<Ipv4Option>, ()> {
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Ipv4Option<'a>>, ()> {
             let copied = kind & (1 << 7) > 0;
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
-                    unreachable!("wire::records::options::Options promises to handle EOL and NOP")
+                    unreachable!("records::options::Options promises to handle EOL and NOP")
                 }
                 self::OPTION_KIND_RTRALRT => {
                     if data.len() == OPTION_RTRALRT_LEN {
@@ -796,17 +871,32 @@ pub(crate) mod options {
     }
 }
 
+mod inner {
+    /// The minimum length of an IPv4 header.
+    pub const IPV4_MIN_HDR_LEN: usize = super::HDR_PREFIX_LEN;
+}
+
+/// IPv4 packet parsing and serialization test utilities.
+pub mod testutil {
+    pub use super::inner::IPV4_MIN_HDR_LEN;
+
+    /// The offset to the TTL field within an IPv4 header, in bytes.
+    pub const IPV4_TTL_OFFSET: usize = 8;
+
+    /// The offset to the checksum field within an IPv4 header, in bytes.
+    pub const IPV4_CHECKSUM_OFFSET: usize = 10;
+}
+
 #[cfg(test)]
 mod tests {
     use net_types::ethernet::Mac;
-    use net_types::ip::Ipv4;
     use packet::{Buf, FragmentedBuffer, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;
-    use crate::device::ethernet::EtherType;
-    use crate::ip::IpExt;
+    use crate::ethernet::{
+        EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck,
+    };
     use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
 
     const DEFAULT_SRC_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
     const DEFAULT_DST_MAC: Mac = Mac::new([7, 8, 9, 0, 1, 2]);
@@ -815,7 +905,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_tcp() {
-        use crate::wire::testdata::tls_client_hello_v4::*;
+        use crate::testdata::tls_client_hello_v4::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -837,7 +927,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_udp() {
-        use crate::wire::testdata::dns_request_v4::*;
+        use crate::testdata::dns_request_v4::*;
 
         let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -901,12 +991,7 @@ mod tests {
     fn test_parse_padding() {
         // Test that we properly discard post-packet padding.
         let mut buffer = Buf::new(Vec::new(), ..)
-            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
-                DEFAULT_DST_IP,
-                DEFAULT_DST_IP,
-                0,
-                IpProto::Tcp,
-            ))
+            .encapsulate(Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 0, IpProto::Tcp))
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,

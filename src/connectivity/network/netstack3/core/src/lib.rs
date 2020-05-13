@@ -42,7 +42,6 @@ mod socket;
 #[cfg(test)]
 mod testutil;
 mod transport;
-mod wire;
 
 use log::trace;
 

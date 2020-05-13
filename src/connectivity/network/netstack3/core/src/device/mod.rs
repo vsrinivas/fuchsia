@@ -19,6 +19,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
+use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -36,7 +37,6 @@ use crate::ip::gmp::igmp::{IgmpGroupState, IgmpPacketHandler};
 use crate::ip::gmp::mld::{MldGroupState, MldPacketHandler};
 use crate::ip::gmp::MulticastGroupSet;
 use crate::ip::socket::IpSockUpdate;
-use crate::wire::icmp::{mld::MldPacket, ndp::NdpPacket};
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
 
 /// An execution context which provides a `DeviceId` type for various device

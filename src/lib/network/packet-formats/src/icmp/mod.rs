@@ -9,17 +9,15 @@ mod macros;
 mod common;
 mod icmpv4;
 mod icmpv6;
-pub(crate) mod mld;
-pub(crate) mod ndp;
+pub mod mld;
+pub mod ndp;
 
 #[cfg(test)]
 mod testdata;
 
-pub(crate) use self::common::*;
-pub(crate) use self::icmpv4::*;
-pub(crate) use self::icmpv6::*;
-#[cfg(test)]
-pub(crate) use self::ndp::*;
+pub use self::common::*;
+pub use self::icmpv4::*;
+pub use self::icmpv6::*;
 
 use core::cmp;
 use core::convert::{TryFrom, TryInto};
@@ -41,9 +39,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
-use crate::wire::ipv4::{self, Ipv4PacketRaw};
-use crate::wire::ipv6::Ipv6PacketRaw;
-use crate::wire::U16;
+use crate::ipv4::{self, Ipv4PacketRaw};
+use crate::ipv6::Ipv6PacketRaw;
+use crate::U16;
 
 #[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -75,9 +73,7 @@ impl HeaderPrefix {
 /// Note that `peek_message_type` only inspects certain fields in the header,
 /// and so `peek_message_type` succeeding does not guarantee that a subsequent
 /// call to `parse` will also succeed.
-pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
-    bytes: &[u8],
-) -> ParseResult<MessageType> {
+pub fn peek_message_type<MessageType: TryFrom<u8>>(bytes: &[u8]) -> ParseResult<MessageType> {
     let (hdr_pfx, _) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     MessageType::try_from(hdr_pfx.msg_type).or_else(|_| {
@@ -93,7 +89,7 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
 ///
 /// This trait is kept separate from `IcmpIpExt` to not require a type parameter
 /// that implements `ByteSlice`.
-pub(crate) trait IcmpIpTypes: Ip {
+pub trait IcmpIpTypes: Ip {
     /// The type of an ICMP parameter problem code.
     ///
     /// For `Ipv4`, this is `Icmpv4ParameterProblemCode`, and for `Ipv6` this
@@ -142,6 +138,11 @@ pub trait IcmpIpExt: Ip {
     /// `Icmpv6MessageType`.
     type IcmpMessageType: IcmpMessageType;
 
+    /// The identifier for this ICMP version.
+    ///
+    /// This value will be found in an IPv4 packet's Protocol field (for ICMPv4
+    /// packets) or an IPv6 fixed header's or last extension header's Next
+    /// Heeader field (for ICMPv6 packets).
     const ICMP_IP_PROTO: IpProto;
 
     /// Compute the length of the header of the packet prefix stored in `bytes`.
@@ -187,7 +188,7 @@ impl IcmpIpExt for Ipv6 {
 /// An ICMP or ICMPv6 packet
 ///
 /// 'IcmpPacketType' is implemented by `Icmpv4Packet` and `Icmpv6Packet`
-pub(crate) trait IcmpPacketType<B: ByteSlice, I: Ip>:
+pub trait IcmpPacketType<B: ByteSlice, I: Ip>:
     Sized + ParsablePacket<B, IcmpParseArgs<I::Addr>, Error = ParseError>
 {
 }
@@ -207,7 +208,8 @@ impl<B: ByteSlice> IcmpPacketType<B, Ipv6> for Icmpv6Packet<B> {}
 /// - For NDP messages, the `MessageBody` is of the type `ndp::Options`.
 /// - For all other messages, the `MessageBody` will be of the type
 ///   `OriginalPacket`, which is a thin wrapper around `B`.
-pub(crate) trait MessageBody<B>: Sized {
+pub trait MessageBody<B>: Sized {
+    /// Whether or not a message body is expected in an ICMP packet.
     const EXPECTS_BODY: bool = true;
 
     /// Parse the MessageBody from the provided bytes.
@@ -251,10 +253,11 @@ impl<B> MessageBody<B> for () {
 
 /// A thin wrapper around B which implements `MessageBody`.
 #[derive(Debug)]
-pub(crate) struct OriginalPacket<B>(B);
+pub struct OriginalPacket<B>(B);
 
 impl<B: ByteSlice + Deref<Target = [u8]>> OriginalPacket<B> {
-    pub(crate) fn body<I: IcmpIpExt>(&self) -> &[u8] {
+    /// Returns the the body of the original packet.
+    pub fn body<I: IcmpIpExt>(&self) -> &[u8] {
         // TODO(joshlf): Can these debug_asserts be triggered by external input?
         let header_len = I::header_len(&self.0);
         debug_assert!(header_len <= self.0.len());
@@ -307,7 +310,7 @@ impl<B, O: for<'a> OptionsImpl<'a>> MessageBody<B> for Options<B, O> {
 }
 
 /// An ICMP message.
-pub(crate) trait IcmpMessage<I: IcmpIpExt, B: ByteSlice>:
+pub trait IcmpMessage<I: IcmpIpExt, B: ByteSlice>:
     Sized + Copy + FromBytes + AsBytes + Unaligned
 {
     /// The type of codes used with this message.
@@ -318,6 +321,7 @@ pub(crate) trait IcmpMessage<I: IcmpIpExt, B: ByteSlice>:
     /// parsed code. For example, for TODO, it is the TODO type.
     type Code: Into<u8> + Copy + Debug;
 
+    /// The type of the body used with this message.
     type Body: MessageBody<B>;
 
     /// The type corresponding to this message type.
@@ -378,7 +382,7 @@ unsafe impl<M: AsBytes + Unaligned> AsBytes for Header<M> {
 /// [`IcmpPacket`] provides a [`FromRaw`] implementation that can be used to
 /// validate an [`IcmpPacketRaw`].
 #[derive(Debug)]
-pub(crate) struct IcmpPacketRaw<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
+pub struct IcmpPacketRaw<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
     header: LayoutVerified<B, Header<M>>,
     message_body: B,
     _marker: PhantomData<I>,
@@ -386,7 +390,7 @@ pub(crate) struct IcmpPacketRaw<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketRaw<I, B, M> {
     /// Get the ICMP message.
-    pub(crate) fn message(&self) -> &M {
+    pub fn message(&self) -> &M {
         &self.header.message
     }
 }
@@ -396,21 +400,21 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketRaw<I, B, M> {
 /// An `IcmpPacket` shares its underlying memory with the byte slice it was
 /// parsed from, meaning that no copying or extra allocation is necessary.
 #[derive(Debug)]
-pub(crate) struct IcmpPacket<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
+pub struct IcmpPacket<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
     header: LayoutVerified<B, Header<M>>,
     message_body: M::Body,
     _marker: PhantomData<I>,
 }
 
 /// Arguments required to parse an ICMP packet.
-pub(crate) struct IcmpParseArgs<A: IpAddress> {
+pub struct IcmpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
 impl<A: IpAddress> IcmpParseArgs<A> {
     /// Construct a new `IcmpParseArgs`.
-    pub(crate) fn new<S: Into<A>, D: Into<A>>(src_ip: S, dst_ip: D) -> IcmpParseArgs<A> {
+    pub fn new<S: Into<A>, D: Into<A>>(src_ip: S, dst_ip: D) -> IcmpParseArgs<A> {
         IcmpParseArgs { src_ip: src_ip.into(), dst_ip: dst_ip.into() }
     }
 }
@@ -480,12 +484,12 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     /// Get the ICMP message.
-    pub(crate) fn message(&self) -> &M {
+    pub fn message(&self) -> &M {
         &self.header.message
     }
 
     /// Get the ICMP body.
-    pub(crate) fn body(&self) -> &M::Body {
+    pub fn body(&self) -> &M::Body {
         &self.message_body
     }
 
@@ -493,15 +497,13 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     ///
     /// The code provides extra details about the message. Each message type has
     /// its own set of codes that are allowed.
-    pub(crate) fn code(&self) -> M::Code {
+    pub fn code(&self) -> M::Code {
         // infallible since it was validated in parse
         M::code_from_u8(self.header.prefix.code).unwrap()
     }
 
     /// Construct a builder with the same contents as this packet.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn builder(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketBuilder<I, B, M> {
+    pub fn builder(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketBuilder<I, B, M> {
         IcmpPacketBuilder { src_ip, dst_ip, code: self.code(), msg: *self.message() }
     }
 }
@@ -513,7 +515,7 @@ fn compute_checksum_fragmented<
     M: IcmpMessage<I, B>,
 >(
     header: &Header<M>,
-    message_body: &FragmentedByteSlice<BB>,
+    message_body: &FragmentedByteSlice<'_, BB>,
     src_ip: I::Addr,
     dst_ip: I::Addr,
 ) -> Option<[u8; 2]> {
@@ -563,15 +565,18 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B>>>
     /// the body of that packet as is contained in this message. For IPv4, this
     /// is guaranteed to be 8 bytes. For IPv6, there are no guarantees about the
     /// length.
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    pub(crate) fn original_packet_body(&self) -> &[u8] {
+    pub fn original_packet_body(&self) -> &[u8] {
         self.message_body.body::<I>()
     }
 
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn original_packet(&self) -> &OriginalPacket<B> {
+    /// Returns the original packt that caused this ICMP message.
+    ///
+    /// This ICMP message contains some of the bytes of the packet that caused
+    /// this message to be emitted. `original_packet` returns as much of the
+    /// body of that packet as is contained in this message. For IPv4, this is
+    /// guaranteed to be 8 bytes. For IPv6, there are no guarantees about the
+    /// length.
+    pub fn original_packet(&self) -> &OriginalPacket<B> {
         &self.message_body
     }
 }
@@ -581,7 +586,7 @@ impl<B: ByteSlice, M: IcmpMessage<Ipv4, B, Body = OriginalPacket<B>>> IcmpPacket
     ///
     /// `f` will be invoked on the result of calling `Ipv4PacketRaw::parse` on
     /// the original packet.
-    pub(crate) fn with_original_packet<O, F: FnOnce(Result<Ipv4PacketRaw<&[u8]>, &[u8]>) -> O>(
+    pub fn with_original_packet<O, F: FnOnce(Result<Ipv4PacketRaw<&[u8]>, &[u8]>) -> O>(
         &self,
         f: F,
     ) -> O {
@@ -595,9 +600,7 @@ impl<B: ByteSlice, M: IcmpMessage<Ipv6, B, Body = OriginalPacket<B>>> IcmpPacket
     ///
     /// `f` will be invoked on the result of calling `Ipv6PacketRaw::parse` on
     /// the original packet.
-    // TODO(rheacock): remove `#[allow(dead_code)]` when this is used.
-    #[allow(dead_code)]
-    pub(crate) fn with_original_packet<O, F: FnOnce(Result<Ipv6PacketRaw<&[u8]>, &[u8]>) -> O>(
+    pub fn with_original_packet<O, F: FnOnce(Result<Ipv6PacketRaw<&[u8]>, &[u8]>) -> O>(
         &self,
         f: F,
     ) -> O {
@@ -608,16 +611,14 @@ impl<B: ByteSlice, M: IcmpMessage<Ipv6, B, Body = OriginalPacket<B>>> IcmpPacket
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = ndp::Options<B>>> IcmpPacket<I, B, M> {
     /// Get the pared list of NDP options from the ICMP message.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn ndp_options(&self) -> &ndp::Options<B> {
+    pub fn ndp_options(&self) -> &ndp::Options<B> {
         &self.message_body
     }
 }
 
 /// A builder for ICMP packets.
 #[derive(Debug)]
-pub(crate) struct IcmpPacketBuilder<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
+pub struct IcmpPacketBuilder<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
     src_ip: I::Addr,
     dst_ip: I::Addr,
     code: M::Code,
@@ -626,7 +627,7 @@ pub(crate) struct IcmpPacketBuilder<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I
 
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B, M> {
     /// Construct a new `IcmpPacketBuilder`.
-    pub(crate) fn new<S: Into<I::Addr>, D: Into<I::Addr>>(
+    pub fn new<S: Into<I::Addr>, D: Into<I::Addr>>(
         src_ip: S,
         dst_ip: D,
         code: M::Code,
@@ -658,7 +659,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
         PacketConstraints::new(mem::size_of::<Header<M>>(), 0, 0, core::u32::MAX as usize)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         use packet::BufferViewMut;
 
         let (mut prefix, message_body, _) = buffer.parts();
@@ -693,7 +694,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
 /// associated with these messages is `IcmpUnusedCode`. The only valid numerical
 /// value for this code is 0.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) struct IcmpUnusedCode;
+pub struct IcmpUnusedCode;
 
 impl Into<u8> for IcmpUnusedCode {
     fn into(self) -> u8 {

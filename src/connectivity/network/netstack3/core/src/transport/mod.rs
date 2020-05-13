@@ -55,7 +55,6 @@
 //!       connection will be accepted from a different interface. This is part
 //!       of the "weak host model" vs "strong host model" discussion.
 
-pub(crate) mod tcp;
 pub(crate) mod udp;
 
 use alloc::collections::HashMap;

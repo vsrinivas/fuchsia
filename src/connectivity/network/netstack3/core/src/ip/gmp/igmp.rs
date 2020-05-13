@@ -16,6 +16,15 @@ use log::{debug, error, trace};
 use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr};
 use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
+use packet_formats::igmp::{
+    messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
+    IgmpMessage, IgmpPacketBuilder, MessageType,
+};
+use packet_formats::ip::IpProto;
+use packet_formats::ipv4::{
+    options::{Ipv4Option, Ipv4OptionData},
+    Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
+};
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
@@ -26,12 +35,6 @@ use crate::ip::gmp::{
     Action, Actions, GmpAction, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
     MulticastGroupSet, ProtocolSpecific,
 };
-use crate::ip::{IpProto, Ipv4Option};
-use crate::wire::igmp::{
-    messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
-    IgmpMessage, IgmpPacketBuilder, MessageType,
-};
-use crate::wire::ipv4::{Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
 use crate::Instant;
 
 /// Metadata for sending an IGMP packet.
@@ -300,7 +303,7 @@ where
         IgmpPacketBuilder::<EmptyBuf, M>::new_with_resp_time(group_addr.get(), max_resp_time);
     let builder = match Ipv4PacketBuilderWithOptions::new(
         Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp),
-        &[Ipv4Option { copied: true, data: crate::ip::Ipv4OptionData::RouterAlert { data: 0 } }],
+        &[Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } }],
     ) {
         None => return Err(IgmpError::SendFailure { addr: *group_addr }),
         Some(builder) => builder,
@@ -502,6 +505,7 @@ mod tests {
 
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
+    use packet_formats::igmp::messages::IgmpMembershipQueryV2;
     use rand_xorshift::XorShiftRng;
 
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
@@ -509,7 +513,6 @@ mod tests {
     use crate::device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId};
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::testutil::{new_rng, FakeCryptoRng};
-    use crate::wire::igmp::messages::IgmpMembershipQueryV2;
 
     /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
     /// optional IPv4 address and subnet that may be returned in calls to

@@ -19,10 +19,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
-#[cfg(test)]
-use crate::transport::tcp::TcpOption;
-use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
-use crate::wire::{U16, U32};
+use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize, U16, U32};
 
 use self::options::TcpOptionsImpl;
 
@@ -99,23 +96,21 @@ impl HeaderPrefix {
 /// A `TcpSegment` - whether parsed using `parse` or created using
 /// `TcpSegmentBuilder` - maintains the invariant that the checksum is always
 /// valid.
-pub(crate) struct TcpSegment<B> {
+pub struct TcpSegment<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     options: Options<B, TcpOptionsImpl>,
     body: B,
 }
 
 /// Arguments required to parse a TCP segment.
-pub(crate) struct TcpParseArgs<A: IpAddress> {
+pub struct TcpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
 impl<A: IpAddress> TcpParseArgs<A> {
     /// Construct a new `TcpParseArgs`.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn new(src_ip: A, dst_ip: A) -> TcpParseArgs<A> {
+    pub fn new(src_ip: A, dst_ip: A) -> TcpParseArgs<A> {
         TcpParseArgs { src_ip, dst_ip }
     }
 }
@@ -184,41 +179,36 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
 
 impl<B: ByteSlice> TcpSegment<B> {
     /// Iterate over the TCP header options.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = TcpOption> {
+    pub fn iter_options<'a>(&'a self) -> impl Iterator<Item = options::TcpOption<'a>> {
         self.options.iter()
     }
 
     /// The segment body.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn body(&self) -> &[u8] {
+    pub fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The source port.
-    pub(crate) fn src_port(&self) -> NonZeroU16 {
+    pub fn src_port(&self) -> NonZeroU16 {
         // Infallible because this was already validated in parse
         NonZeroU16::new(self.hdr_prefix.src_port.get()).unwrap()
     }
 
     /// The destination port.
-    pub(crate) fn dst_port(&self) -> NonZeroU16 {
+    pub fn dst_port(&self) -> NonZeroU16 {
         // Infallible because this was already validated in parse
         NonZeroU16::new(self.hdr_prefix.dst_port.get()).unwrap()
     }
 
     /// The sequence number.
-    pub(crate) fn seq_num(&self) -> u32 {
+    pub fn seq_num(&self) -> u32 {
         self.hdr_prefix.seq_num.get()
     }
 
     /// The acknowledgement number.
     ///
     /// If the ACK flag is not set, `ack_num` returns `None`.
-    #[cfg(test)]
-    pub(crate) fn ack_num(&self) -> Option<u32> {
+    pub fn ack_num(&self) -> Option<u32> {
         if self.get_flag(ACK_MASK) {
             Some(self.hdr_prefix.ack.get())
         } else {
@@ -231,27 +221,27 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// The RST flag.
-    pub(crate) fn rst(&self) -> bool {
+    pub fn rst(&self) -> bool {
         self.get_flag(RST_MASK)
     }
 
     /// The SYN flag.
-    pub(crate) fn syn(&self) -> bool {
+    pub fn syn(&self) -> bool {
         self.get_flag(SYN_MASK)
     }
 
     /// The FIN flag.
-    pub(crate) fn fin(&self) -> bool {
+    pub fn fin(&self) -> bool {
         self.get_flag(FIN_MASK)
     }
 
     /// The sender's window size.
-    pub(crate) fn window_size(&self) -> u16 {
+    pub fn window_size(&self) -> u16 {
         self.hdr_prefix.window_size.get()
     }
 
-    // The length of the header prefix and options.
-    pub(crate) fn header_len(&self) -> usize {
+    /// The length of the header prefix and options.
+    pub fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
     }
 
@@ -264,9 +254,7 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
+    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
         let mut s = TcpSegmentBuilder {
             src_ip,
             dst_ip,
@@ -313,7 +301,7 @@ struct PartialHeaderPrefix<B> {
 ///
 /// [`TcpSegment`] provides a [`FromRaw`] implementation that can be used to
 /// validate a `TcpSegmentRaw`.
-pub(crate) struct TcpSegmentRaw<B> {
+pub struct TcpSegmentRaw<B> {
     hdr_prefix: MaybeParsed<LayoutVerified<B, HeaderPrefix>, PartialHeaderPrefix<B>>,
     options: MaybeParsed<OptionsRaw<B, TcpOptionsImpl>, B>,
     body: B,
@@ -375,7 +363,7 @@ where
 
 /// A builder for TCP segments.
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct TcpSegmentBuilder<A: IpAddress> {
+pub struct TcpSegmentBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: u16,
@@ -390,9 +378,7 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
     /// Construct a new `TcpSegmentBuilder`.
     ///
     /// If `ack_num` is `Some`, then the ACK flag will be set.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn new(
+    pub fn new(
         src_ip: A,
         dst_ip: A,
         src_port: NonZeroU16,
@@ -423,17 +409,17 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
     }
 
     /// Set the RST flag.
-    pub(crate) fn rst(&mut self, rst: bool) {
+    pub fn rst(&mut self, rst: bool) {
         self.set_flag(RST_MASK, rst);
     }
 
     /// Set the SYN flag.
-    pub(crate) fn syn(&mut self, syn: bool) {
+    pub fn syn(&mut self, syn: bool) {
         self.set_flag(SYN_MASK, syn);
     }
 
     /// Set the FIN flag.
-    pub(crate) fn fin(&mut self, fin: bool) {
+    pub fn fin(&mut self, fin: bool) {
         self.set_flag(FIN_MASK, fin);
     }
 }
@@ -443,7 +429,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         PacketConstraints::new(TCP_MIN_HDR_LEN, 0, 0, core::usize::MAX)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let mut header = buffer.header();
         // implements BufferViewMut, giving us write_obj_front method
         let mut header = &mut header;
@@ -484,18 +470,18 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
     }
 }
 
-#[cfg(test)]
 const ACK_MASK: u16 = 0b10000;
 const RST_MASK: u16 = 0b00100;
 const SYN_MASK: u16 = 0b00010;
 const FIN_MASK: u16 = 0b00001;
 
-mod options {
+/// Parsing and serialization of TCP options.
+pub mod options {
     use byteorder::{ByteOrder, NetworkEndian};
-    use zerocopy::LayoutVerified;
-
-    use crate::transport::tcp::TcpOption;
     use packet::records::options::{OptionsImpl, OptionsImplLayout};
+    use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
+
+    use crate::U32;
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -505,7 +491,67 @@ mod options {
     const OPTION_KIND_SACK: u8 = 5;
     const OPTION_KIND_TIMESTAMP: u8 = 8;
 
-    pub(crate) struct TcpOptionsImpl;
+    /// A TCP header option.
+    ///
+    /// A TCP header option comprises an option kind byte, a length, and the
+    /// option data itself.
+    ///
+    /// See [Wikipedia] or [RFC 793] for more details.
+    ///
+    /// [Wikipedia]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
+    /// [RFC 793]: https://tools.ietf.org/html/rfc793#page-17
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+    pub enum TcpOption<'a> {
+        /// A Maximum Segment Size (MSS) option.
+        Mss(u16),
+        /// A window scale option.
+        WindowScale(u8),
+        /// A selective ACK permitted option.
+        SackPermitted,
+        /// A selective ACK option.
+        ///
+        /// A variable-length number of selective ACK blocks. The length is in
+        /// the range [0, 4].
+        Sack(&'a [TcpSackBlock]),
+        /// A timestamp option.
+        Timestamp { ts_val: u32, ts_echo_reply: u32 },
+    }
+
+    /// A TCP selective ACK block.
+    ///
+    /// A selective ACK block indicates that the range of bytes `[left_edge,
+    /// right_edge)` have been received.
+    ///
+    /// See [RFC 2018] for more details.
+    ///
+    /// [RFC 2018]: https://tools.ietf.org/html/rfc2018
+    #[derive(Copy, Clone, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
+    #[repr(C)]
+    pub struct TcpSackBlock {
+        left_edge: U32,
+        right_edge: U32,
+    }
+
+    impl TcpSackBlock {
+        /// Returns a `TcpSackBlock` with the specified left and right edge values.
+        pub fn new(left_edge: u32, right_edge: u32) -> TcpSackBlock {
+            TcpSackBlock { left_edge: U32::new(left_edge), right_edge: U32::new(right_edge) }
+        }
+
+        /// Returns the left edge of the SACK block.
+        pub fn left_edge(&self) -> u32 {
+            self.left_edge.get()
+        }
+
+        /// Returns the right edge of the SACK block.
+        pub fn right_edge(&self) -> u32 {
+            self.right_edge.get()
+        }
+    }
+
+    /// An implementation of [`OptionsImpl`] for TCP options.
+    pub struct TcpOptionsImpl;
 
     impl OptionsImplLayout for TcpOptionsImpl {
         type Error = ();
@@ -514,10 +560,10 @@ mod options {
     impl<'a> OptionsImpl<'a> for TcpOptionsImpl {
         type Option = TcpOption<'a>;
 
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption>, ()> {
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption<'a>>, ()> {
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
-                    unreachable!("wire::records::options::Options promises to handle EOL and NOP")
+                    unreachable!("records::options::Options promises to handle EOL and NOP")
                 }
                 self::OPTION_KIND_MSS => {
                     if data.len() != 2 {
@@ -556,6 +602,20 @@ mod options {
             }
         }
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_tcp_sack_block() {
+            let sack = TcpSackBlock::new(1, 2);
+            assert_eq!(sack.left_edge.get(), 1);
+            assert_eq!(sack.right_edge.get(), 2);
+            assert_eq!(sack.left_edge(), 1);
+            assert_eq!(sack.right_edge(), 2);
+        }
+    }
 }
 
 // needed by Result::unwrap_err in the tests below
@@ -574,13 +634,12 @@ mod tests {
     use std::num::NonZeroU16;
 
     use super::*;
-    use crate::ip::IpProto;
+    use crate::compute_transport_checksum;
+    use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
+    use crate::ipv4::{Ipv4Header, Ipv4Packet};
+    use crate::ipv6::Ipv6Packet;
     use crate::testutil::benchmarks::{black_box, Bencher};
     use crate::testutil::*;
-    use crate::wire::compute_transport_checksum;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
-    use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
-    use crate::wire::ipv6::Ipv6Packet;
 
     const TEST_SRC_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_DST_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -591,7 +650,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_ipv4() {
-        use crate::wire::testdata::tls_client_hello_v4::*;
+        use crate::testdata::tls_client_hello_v4::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -618,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_ipv6() {
-        use crate::wire::testdata::syn_v6::*;
+        use crate::testdata::syn_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -866,7 +925,7 @@ mod tests {
     //
 
     fn bench_parse_inner<B: Bencher>(b: &mut B) {
-        use crate::wire::testdata::tls_client_hello_v4::*;
+        use crate::testdata::tls_client_hello_v4::*;
         let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap().0;
 
         b.iter(|| {
@@ -885,7 +944,7 @@ mod tests {
     bench!(bench_parse, bench_parse_inner);
 
     fn bench_serialize_inner<B: Bencher>(b: &mut B) {
-        use crate::wire::testdata::tls_client_hello_v4::*;
+        use crate::testdata::tls_client_hello_v4::*;
 
         let builder = TcpSegmentBuilder::new(
             IPV4_PACKET.metadata.src_ip,

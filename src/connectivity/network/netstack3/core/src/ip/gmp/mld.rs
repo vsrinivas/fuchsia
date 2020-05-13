@@ -19,6 +19,16 @@ use net_types::{
 };
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
+use packet_formats::icmp::mld::{
+    IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
+    MulticastListenerReport,
+};
+use packet_formats::icmp::{mld::MldPacket, IcmpPacketBuilder, IcmpUnusedCode};
+use packet_formats::ip::IpProto;
+use packet_formats::ipv6::ext_hdrs::{
+    ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
+};
+use packet_formats::ipv6::{Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
@@ -29,16 +39,6 @@ use crate::ip::gmp::{
     Action, Actions, GmpAction, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
     MulticastGroupSet, ProtocolSpecific,
 };
-use crate::ip::IpProto;
-use crate::wire::icmp::mld::{
-    IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
-    MulticastListenerReport,
-};
-use crate::wire::icmp::{mld::MldPacket, IcmpPacketBuilder, IcmpUnusedCode};
-use crate::wire::ipv6::ext_hdrs::{
-    ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
-};
-use crate::wire::ipv6::{Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 use crate::Instant;
 
 /// Metadata for sending an MLD packet in an IP packet.
@@ -454,6 +454,8 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
+    use packet_formats::icmp::mld::MulticastListenerQuery;
+    use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
     use rand_xorshift::XorShiftRng;
 
     use super::*;
@@ -463,8 +465,6 @@ mod tests {
     use crate::ip::gmp::{Action, GmpAction, MemberState};
     use crate::testutil;
     use crate::testutil::{new_rng, FakeCryptoRng};
-    use crate::wire::icmp::mld::MulticastListenerQuery;
-    use crate::wire::icmp::{IcmpParseArgs, Icmpv6Packet};
 
     /// A dummy [`MldContext`] that stores the [`MldInterface`] and an optional
     /// IPv6 link-local address that may be returned in calls to

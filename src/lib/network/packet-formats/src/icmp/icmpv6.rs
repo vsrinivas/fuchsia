@@ -4,6 +4,7 @@
 
 //! ICMPv6
 
+use core::convert::TryFrom;
 use core::fmt;
 
 use net_types::ip::{Ipv6, Ipv6Addr};
@@ -11,7 +12,7 @@ use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::wire::U32;
+use crate::U32;
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{
@@ -27,7 +28,7 @@ use super::{
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub(crate) enum Icmpv6Packet<B: ByteSlice> {
+pub enum Icmpv6Packet<B: ByteSlice> {
     DestUnreachable(IcmpPacket<Ipv6, B, IcmpDestUnreachable>),
     PacketTooBig(IcmpPacket<Ipv6, B, Icmpv6PacketTooBig>),
     TimeExceeded(IcmpPacket<Ipv6, B, IcmpTimeExceeded>),
@@ -137,27 +138,30 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
     }
 }
 
-create_net_enum! {
-    pub Icmpv6MessageType,
-    DestUnreachable: DEST_UNREACHABLE = 1,
-    PacketTooBig: PACKET_TOO_BIG = 2,
-    TimeExceeded: TIME_EXCEEDED = 3,
-    ParameterProblem: PARAMETER_PROBLEM = 4,
-    EchoRequest: ECHO_REQUEST = 128,
-    EchoReply: ECHO_REPLY = 129,
+create_protocol_enum!(
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    pub enum Icmpv6MessageType: u8 {
+        DestUnreachable, 1, "Destination Unreachable";
+        PacketTooBig, 2, "Packet Too Big";
+        TimeExceeded, 3, "Time Exceeded";
+        ParameterProblem, 4, "Parameter Problem";
+        EchoRequest, 128, "Echo Request";
+        EchoReply, 129, "Echo Reply";
 
-    // NDP messages
-    RouterSolicitation: ROUTER_SOLICITATION = 133,
-    RouterAdvertisement: ROUTER_ADVERTISEMENT = 134,
-    NeighborSolicitation: NEIGHBOR_SOLICITATION = 135,
-    NeighborAdvertisement: NEIGHBOR_ADVERTISEMENT = 136,
-    Redirect: REDIRECT = 137,
+        // NDP messages
+        RouterSolicitation, 133, "Router Solicitation";
+        RouterAdvertisement, 134, "Router Advertisement";
+        NeighborSolicitation, 135, "Neighbor Solicitation";
+        NeighborAdvertisement, 136, "Neighbor Advertisement";
+        Redirect, 137, "Redirect";
 
-    // MLDv1 messages
-    MulticastListenerQuery: MULTICAST_LISTENER_QUERY = 130,
-    MulticastListenerReport: MULTICAST_LISTENER_REPORT = 131,
-    MulticastListenerDone: MULTICAST_LISTENER_DONE = 132,
-}
+        // MLDv1 messages
+        MulticastListenerQuery, 130, "Multicast Listener Query";
+        MulticastListenerReport, 131, "Multicast Listener Report";
+        MulticastListenerDone, 132, "Multicast Listener Done";
+    }
+);
 
 impl IcmpMessageType for Icmpv6MessageType {
     fn is_err(self) -> bool {
@@ -170,16 +174,19 @@ impl_icmp_message!(Ipv6, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, OriginalP
 
 impl_icmp_message!(Ipv6, IcmpEchoReply, EchoReply, IcmpUnusedCode, OriginalPacket<B>);
 
-create_net_enum! {
-  pub Icmpv6DestUnreachableCode,
-  NoRoute: NO_ROUTE = 0,
-  CommAdministrativelyProhibited: COMM_ADMINISTRATIVELY_PROHIBITED = 1,
-  BeyondScope: BEYOND_SCOPE = 2,
-  AddrUnreachable: ADDR_UNREACHABLE = 3,
-  PortUnreachable: PORT_UNREACHABLE = 4,
-  SrcAddrFailedPolicy: SRC_ADDR_FAILED_POLICY = 5,
-  RejectRoute: REJECT_ROUTE = 6,
-}
+create_protocol_enum!(
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    pub enum Icmpv6DestUnreachableCode: u8 {
+        NoRoute, 0, "No Route";
+        CommAdministrativelyProhibited, 1, "Comm Administratively Prohibited";
+        BeyondScope, 2, "Beyond Scope";
+        AddrUnreachable, 3, "Address Unreachable";
+        PortUnreachable, 4, "Port Unreachable";
+        SrcAddrFailedPolicy, 5, "Source Address Failed Policy";
+        RejectRoute, 6, "Reject Route";
+    }
+);
 
 impl_icmp_message!(
     Ipv6,
@@ -189,55 +196,63 @@ impl_icmp_message!(
     OriginalPacket<B>
 );
 
+/// An ICMPv6 Packet Too Big message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
-pub(crate) struct Icmpv6PacketTooBig {
+pub struct Icmpv6PacketTooBig {
     mtu: U32,
 }
 
 impl Icmpv6PacketTooBig {
-    pub(crate) fn new(mtu: u32) -> Icmpv6PacketTooBig {
+    /// Returns a new `Icmpv6PacketTooBig` with the given MTU value.
+    pub fn new(mtu: u32) -> Icmpv6PacketTooBig {
         Icmpv6PacketTooBig { mtu: U32::new(mtu) }
     }
 
     /// Get the mtu value.
-    pub(crate) fn mtu(&self) -> u32 {
+    pub fn mtu(&self) -> u32 {
         self.mtu.get()
     }
 }
 
 impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, OriginalPacket<B>);
 
-create_net_enum! {
-  pub Icmpv6TimeExceededCode,
-  HopLimitExceeded: HOP_LIMIT_EXCEEDED = 0,
-  FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
-}
+create_protocol_enum!(
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    pub enum Icmpv6TimeExceededCode: u8 {
+        HopLimitExceeded, 0, "Hop Limit Exceeded";
+        FragmentReassemblyTimeExceeded, 1, "Fragment Reassembly Time Exceeded";
+    }
+);
 
 impl_icmp_message!(Ipv6, IcmpTimeExceeded, TimeExceeded, Icmpv6TimeExceededCode, OriginalPacket<B>);
 
-create_net_enum! {
-  pub Icmpv6ParameterProblemCode,
-  ErroneousHeaderField: ERRONEOUS_HEADER_FIELD = 0,
-  UnrecognizedNextHeaderType: UNRECOGNIZED_NEXT_HEADER_TYPE = 1,
-  UnrecognizedIpv6Option: UNRECOGNIZED_IPV6_OPTION = 2,
-}
+create_protocol_enum!(
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    pub enum Icmpv6ParameterProblemCode: u8 {
+        ErroneousHeaderField, 0, "Erroneous Header Field";
+        UnrecognizedNextHeaderType, 1, "Unrecognized Next Header Type";
+        UnrecognizedIpv6Option, 2, "Unrecognized IPv6 Option";
+    }
+);
 
 /// An ICMPv6 Parameter Problem message.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct Icmpv6ParameterProblem {
+pub struct Icmpv6ParameterProblem {
     pointer: U32,
 }
 
 impl Icmpv6ParameterProblem {
-    pub(crate) fn new(pointer: u32) -> Icmpv6ParameterProblem {
+    /// Returns a new `Icmpv6ParameterProblem` with the given pointer.
+    pub fn new(pointer: u32) -> Icmpv6ParameterProblem {
         Icmpv6ParameterProblem { pointer: U32::new(pointer) }
     }
 
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn pointer(self) -> u32 {
+    /// Gets the pointer of the ICMPv6 Parameter Problem message.
+    pub fn pointer(self) -> u32 {
         self.pointer.get()
     }
 }
@@ -256,8 +271,8 @@ mod tests {
     use std::fmt::Debug;
 
     use super::*;
-    use crate::wire::icmp::{IcmpMessage, IcmpPacket, MessageBody};
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+    use crate::icmp::{IcmpMessage, IcmpPacket, MessageBody};
+    use crate::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: IcmpMessage<Ipv6, B> + Debug>(
         src_ip: Ipv6Addr,
@@ -298,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_echo_request() {
-        use crate::wire::testdata::icmp_echo_v6::*;
+        use crate::testdata::icmp_echo_v6::*;
         test_parse_and_serialize::<IcmpEchoRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
             assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
             assert_eq!(icmp.message().id_seq.id.get(), IDENTIFIER);

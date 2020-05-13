@@ -10,7 +10,7 @@ use core::fmt::{self, Debug, Formatter};
 use core::num::NonZeroU16;
 use core::ops::Range;
 
-use net_types::ip::{Ip, IpAddress};
+use net_types::ip::{Ip, IpAddress, IpVersionMarker};
 use packet::{
     BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
     ParsablePacket, ParseMetadata, SerializeBuffer,
@@ -18,9 +18,8 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{IpProto, IpVersionMarker};
-use crate::wire::U16;
-use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
+use crate::ip::IpProto;
+use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize, U16};
 
 pub(crate) const HEADER_BYTES: usize = 8;
 const CHECKSUM_OFFSET: usize = 6;
@@ -43,20 +42,20 @@ struct Header {
 ///
 /// A `UdpPacket` - whether parsed using `parse` or created using `serialize` -
 /// maintains the invariant that the checksum is always valid.
-pub(crate) struct UdpPacket<B> {
+pub struct UdpPacket<B> {
     header: LayoutVerified<B, Header>,
     body: B,
 }
 
 /// Arguments required to parse a UDP packet.
-pub(crate) struct UdpParseArgs<A: IpAddress> {
+pub struct UdpParseArgs<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
 }
 
 impl<A: IpAddress> UdpParseArgs<A> {
     /// Construct a new `UdpParseArgs`.
-    pub(crate) fn new(src_ip: A, dst_ip: A) -> UdpParseArgs<A> {
+    pub fn new(src_ip: A, dst_ip: A) -> UdpParseArgs<A> {
         UdpParseArgs { src_ip, dst_ip }
     }
 }
@@ -126,19 +125,19 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacke
 
 impl<B: ByteSlice> UdpPacket<B> {
     /// The packet body.
-    pub(crate) fn body(&self) -> &[u8] {
+    pub fn body(&self) -> &[u8] {
         self.body.deref()
     }
 
     /// The source UDP port, if any.
     ///
     /// The source port is optional, and may have been omitted by the sender.
-    pub(crate) fn src_port(&self) -> Option<NonZeroU16> {
+    pub fn src_port(&self) -> Option<NonZeroU16> {
         NonZeroU16::new(self.header.src_port.get())
     }
 
     /// The destination UDP port.
-    pub(crate) fn dst_port(&self) -> NonZeroU16 {
+    pub fn dst_port(&self) -> NonZeroU16 {
         // Infallible because it was validated in parse.
         NonZeroU16::new(self.header.dst_port.get()).unwrap()
     }
@@ -152,16 +151,12 @@ impl<B: ByteSlice> UdpPacket<B> {
     /// On IPv6, it is guaranteed that `checksummed` will return true because
     /// IPv6 requires a checksum, and so any UDP packet missing one will fail
     /// validation in `parse`.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn checksummed(&self) -> bool {
+    pub fn checksummed(&self) -> bool {
         self.header.checksum != U16::ZERO
     }
 
     /// Construct a builder with the same contents as this packet.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
+    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
         UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
     }
 }
@@ -196,7 +191,7 @@ struct PartialHeader<B> {
 ///
 /// [`UdpPacket`] provides a [`FromRaw`] implementation that can be used to
 /// validate a `UdpPacketRaw`.
-pub(crate) struct UdpPacketRaw<B> {
+pub struct UdpPacketRaw<B> {
     header: MaybeParsed<LayoutVerified<B, Header>, PartialHeader<B>>,
     body: MaybeParsed<B, B>,
 }
@@ -282,7 +277,7 @@ impl<B: ByteSlice> UdpPacketRaw<B> {
     /// The source UDP port, if any.
     ///
     /// The source port is optional, and may have been omitted by the sender.
-    pub(crate) fn src_port(&self) -> Option<NonZeroU16> {
+    pub fn src_port(&self) -> Option<NonZeroU16> {
         NonZeroU16::new(
             self.header
                 .as_ref()
@@ -297,7 +292,7 @@ impl<B: ByteSlice> UdpPacketRaw<B> {
     ///
     /// UDP packets must not have a destination port of 0; thus, if this
     /// function returns `None`, then the packet is malformed.
-    pub(crate) fn dst_port(&self) -> Option<NonZeroU16> {
+    pub fn dst_port(&self) -> Option<NonZeroU16> {
         NonZeroU16::new(
             self.header
                 .as_ref()
@@ -317,7 +312,7 @@ impl<B: ByteSlice> UdpPacketRaw<B> {
 
 /// A builder for UDP packets.
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct UdpPacketBuilder<A: IpAddress> {
+pub struct UdpPacketBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: Option<NonZeroU16>,
@@ -326,7 +321,7 @@ pub(crate) struct UdpPacketBuilder<A: IpAddress> {
 
 impl<A: IpAddress> UdpPacketBuilder<A> {
     /// Construct a new `UdpPacketBuilder`.
-    pub(crate) fn new(
+    pub fn new(
         src_ip: A,
         dst_ip: A,
         src_port: Option<NonZeroU16>,
@@ -355,7 +350,7 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let total_len = buffer.len();
@@ -412,11 +407,11 @@ mod tests {
     use std::num::NonZeroU16;
 
     use super::*;
+    use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
+    use crate::ipv4::{Ipv4Header, Ipv4Packet};
+    use crate::ipv6::Ipv6Packet;
     use crate::testutil::benchmarks::{black_box, Bencher};
     use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
-    use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
-    use crate::wire::ipv6::Ipv6Packet;
 
     const TEST_SRC_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_DST_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -427,7 +422,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_ipv4() {
-        use crate::wire::testdata::dns_request_v4::*;
+        use crate::testdata::dns_request_v4::*;
 
         let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -459,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_ipv6() {
-        use crate::wire::testdata::dns_request_v6::*;
+        use crate::testdata::dns_request_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -768,7 +763,7 @@ mod tests {
     //
 
     fn bench_parse_inner<B: Bencher>(b: &mut B) {
-        use crate::wire::testdata::dns_request_v4::*;
+        use crate::testdata::dns_request_v4::*;
         let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap().0;
 
         b.iter(|| {
@@ -787,7 +782,7 @@ mod tests {
     bench!(bench_parse, bench_parse_inner);
 
     fn bench_serialize_inner<B: Bencher>(b: &mut B) {
-        use crate::wire::testdata::dns_request_v4::*;
+        use crate::testdata::dns_request_v4::*;
         let builder = UdpPacketBuilder::new(
             IPV4_PACKET.metadata.src_ip,
             IPV4_PACKET.metadata.dst_ip,

@@ -11,24 +11,27 @@ use core::time::Duration;
 
 use net_types::ip::Ipv4;
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
+use packet_formats::ethernet::{
+    testutil::{
+        ETHERNET_DST_MAC_BYTE_OFFSET, ETHERNET_HDR_LEN_NO_TAG, ETHERNET_MIN_BODY_LEN_NO_TAG,
+        ETHERNET_SRC_MAC_BYTE_OFFSET,
+    },
+    EtherType, EthernetFrameBuilder,
+};
+use packet_formats::ip::IpProto;
+use packet_formats::ipv4::{
+    testutil::{IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET},
+    Ipv4PacketBuilder,
+};
 use rand_xorshift::XorShiftRng;
 
-use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
-use crate::ip::IpProto;
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::wire::ethernet::{
-    EthernetFrameBuilder, ETHERNET_DST_MAC_BYTE_OFFSET, ETHERNET_HDR_LEN_NO_TAG,
-    ETHERNET_MIN_BODY_LEN_NO_TAG, ETHERNET_SRC_MAC_BYTE_OFFSET,
-};
-use crate::wire::ipv4::{
-    Ipv4PacketBuilder, IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET,
-};
 use crate::{EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be

@@ -13,7 +13,7 @@ use net_types::ethernet::Mac;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 /// The type of address used by a link device.
-pub(crate) trait LinkAddress:
+pub trait LinkAddress:
     'static + FromBytes + AsBytes + Unaligned + Copy + Clone + Debug + Eq
 {
     /// The length of the address in bytes.
@@ -29,19 +29,6 @@ pub(crate) trait LinkAddress:
     /// `from_bytes` may panic if `bytes` is not **exactly** [`BYTES_LENGTH`]
     /// long.
     fn from_bytes(bytes: &[u8]) -> Self;
-}
-
-/// A [`LinkAddress`] with a broadcast value.
-///
-/// A `BroadcastLinkAddress` is a `LinkAddress` for which at least one address
-/// is a "broadcast" address, indicating that a frame should be received by all
-/// hosts on a link.
-pub(crate) trait BroadcastLinkAddress: LinkAddress {
-    /// The broadcast address.
-    ///
-    /// If the addressing scheme supports multiple broadcast addresses, then
-    /// there is no requirement as to which one is chosen for this constant.
-    const BROADCAST: Self;
 }
 
 impl LinkAddress for Mac {
@@ -60,10 +47,6 @@ impl LinkAddress for Mac {
     }
 }
 
-impl BroadcastLinkAddress for Mac {
-    const BROADCAST: Mac = Mac::BROADCAST;
-}
-
 /// A link device.
 ///
 /// `LinkDevice` is used to identify a particular link device implementation. It
@@ -78,6 +61,8 @@ pub(crate) trait LinkDevice: 'static + Copy + Clone {
 pub(crate) mod testutil {
     use core::convert::TryInto;
     use core::fmt::{self, Display, Formatter};
+
+    use zerocopy::{AsBytes, FromBytes, Unaligned};
 
     use super::*;
     use crate::device::DeviceIdContext;
@@ -105,10 +90,6 @@ pub(crate) mod testutil {
         fn from_bytes(bytes: &[u8]) -> DummyLinkAddress {
             DummyLinkAddress(bytes.try_into().unwrap())
         }
-    }
-
-    impl BroadcastLinkAddress for DummyLinkAddress {
-        const BROADCAST: DummyLinkAddress = DummyLinkAddress([0xFF]);
     }
 
     impl LinkDevice for DummyLinkDevice {

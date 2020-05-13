@@ -4,7 +4,7 @@
 
 //! Parsing and serialization of IPv6 packets.
 
-pub(crate) mod ext_hdrs;
+pub mod ext_hdrs;
 
 use alloc::vec::Vec;
 use core::convert::TryFrom;
@@ -21,11 +21,10 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
-use crate::ip::reassembly::FragmentablePacket;
+use crate::icmp::Icmpv6ParameterProblemCode;
 use crate::ip::{IpProto, Ipv6ExtHdrType};
-use crate::wire::icmp::Icmpv6ParameterProblemCode;
-use crate::wire::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData, HopByHopOptionsImpl};
-use crate::wire::U16;
+use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData, HopByHopOptionsImpl};
+use crate::U16;
 
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,
@@ -34,11 +33,11 @@ use ext_hdrs::{
 };
 
 /// Length of the IPv6 fixed header.
-pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
+pub const IPV6_FIXED_HDR_LEN: usize = 40;
 
 /// The range of bytes within an IPv6 header buffer that the
 /// payload length field uses.
-pub(crate) const IPV6_PAYLOAD_LEN_BYTE_RANGE: Range<usize> = 4..6;
+pub const IPV6_PAYLOAD_LEN_BYTE_RANGE: Range<usize> = 4..6;
 
 // Offset to the Next Header field within the fixed IPv6 header
 const NEXT_HEADER_OFFSET: u8 = 6;
@@ -83,7 +82,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
                 // Pointer calculation didn't overflow so set action to send an ICMP
                 // message to the source of the original packet and the pointer value
                 // to what we calculated.
-                Some(p) => (p, IpParseErrorAction::DiscardPacketSendICMPNoMulticast),
+                Some(p) => (p, IpParseErrorAction::DiscardPacketSendIcmpNoMulticast),
             };
 
             IpParseError::ParameterProblem {
@@ -103,7 +102,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
         } => {
             let (pointer, action) = match pointer.checked_add(IPV6_FIXED_HDR_LEN as u32) {
                 None => (0, IpParseErrorAction::DiscardPacket),
-                Some(p) => (p, IpParseErrorAction::DiscardPacketSendICMPNoMulticast),
+                Some(p) => (p, IpParseErrorAction::DiscardPacketSendIcmpNoMulticast),
             };
 
             IpParseError::ParameterProblem {
@@ -130,11 +129,11 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
                             "Should never end up here because this action should never result in an error"
                         ),
                         ExtensionHeaderOptionAction::DiscardPacket => IpParseErrorAction::DiscardPacket,
-                        ExtensionHeaderOptionAction::DiscardPacketSendICMP => {
-                            IpParseErrorAction::DiscardPacketSendICMP
+                        ExtensionHeaderOptionAction::DiscardPacketSendIcmp => {
+                            IpParseErrorAction::DiscardPacketSendIcmp
                         }
-                        ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast => {
-                            IpParseErrorAction::DiscardPacketSendICMPNoMulticast
+                        ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast => {
+                            IpParseErrorAction::DiscardPacketSendIcmpNoMulticast
                         }
                     };
 
@@ -164,7 +163,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
 #[allow(missing_docs)]
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct FixedHeader {
+pub struct FixedHeader {
     version_tc_flowlabel: [u8; 4],
     payload_len: U16,
     next_hdr: u8,
@@ -234,7 +233,7 @@ impl FixedHeader {
 ///
 /// `Ipv6Header` provides access to IPv6 header fields as a common
 /// implementation for both [`Ipv6Packet`] and [`Ipv6PacketRaw`].
-pub(crate) trait Ipv6Header {
+pub trait Ipv6Header {
     /// Gets a reference to the IPv6 [`FixedHeader`].
     fn get_fixed_header(&self) -> &FixedHeader;
 
@@ -266,7 +265,7 @@ pub(crate) trait Ipv6Header {
 /// An `Ipv6Packet` shares its underlying memory with the byte slice it was
 /// parsed from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
-pub(crate) struct Ipv6Packet<B> {
+pub struct Ipv6Packet<B> {
     fixed_hdr: LayoutVerified<B, FixedHeader>,
     extension_hdrs: Records<B, Ipv6ExtensionHeaderImpl>,
     body: B,
@@ -309,7 +308,7 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
                     pointer: u32::from(NEXT_HEADER_OFFSET),
                     must_send_icmp: false,
                     header_len: (),
-                    action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
+                    action: IpParseErrorAction::DiscardPacketSendIcmpNoMulticast,
                 }),
                 "Unrecognized next header value"
             );
@@ -363,53 +362,34 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
     }
 }
 
-impl<B: ByteSlice> FragmentablePacket for Ipv6Packet<B> {
-    fn fragment_data(&self) -> (u32, u16, bool) {
-        for ext_hdr in self.iter_extension_hdrs() {
-            if let Ipv6ExtensionHeaderData::Fragment { fragment_data } = ext_hdr.data() {
-                return (
-                    fragment_data.identification(),
-                    fragment_data.fragment_offset(),
-                    fragment_data.m_flag(),
-                );
-            }
-        }
-
-        unreachable!(
-            "Should never call this function if the packet does not have a fragment header"
-        );
-    }
-}
-
 impl<B: ByteSlice> Ipv6Packet<B> {
-    pub(crate) fn iter_extension_hdrs<'a>(
-        &'a self,
-    ) -> impl 'a + Iterator<Item = Ipv6ExtensionHeader> {
+    /// Returns an iterator over the extension headers.
+    pub fn iter_extension_hdrs<'a>(&'a self) -> impl Iterator<Item = Ipv6ExtensionHeader<'a>> {
         self.extension_hdrs.iter()
     }
 
     /// The packet body.
-    pub(crate) fn body(&self) -> &[u8] {
+    pub fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The Differentiated Services (DS) field.
-    pub(crate) fn ds(&self) -> u8 {
+    pub fn ds(&self) -> u8 {
         self.fixed_hdr.ds()
     }
 
     /// The Explicit Congestion Notification (ECN).
-    pub(crate) fn ecn(&self) -> u8 {
+    pub fn ecn(&self) -> u8 {
         self.fixed_hdr.ecn()
     }
 
     /// The flow label.
-    pub(crate) fn flowlabel(&self) -> u32 {
+    pub fn flowlabel(&self) -> u32 {
         self.fixed_hdr.flowlabel()
     }
 
     /// The hop limit.
-    pub(crate) fn hop_limit(&self) -> u8 {
+    pub fn hop_limit(&self) -> u8 {
         self.fixed_hdr.hop_limit
     }
 
@@ -418,17 +398,17 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     /// This is found in the fixed header's Next Header if there are no extension
     /// headers, or the Next Header value in the last extension header if there are.
     /// This also  uses the same codes, encoded by the Rust type `IpProto`.
-    pub(crate) fn proto(&self) -> IpProto {
+    pub fn proto(&self) -> IpProto {
         self.proto
     }
 
     /// The source IP address.
-    pub(crate) fn src_ip(&self) -> Ipv6Addr {
+    pub fn src_ip(&self) -> Ipv6Addr {
         self.fixed_hdr.src_ip
     }
 
     /// The destination IP address.
-    pub(crate) fn dst_ip(&self) -> Ipv6Addr {
+    pub fn dst_ip(&self) -> Ipv6Addr {
         self.fixed_hdr.dst_ip
     }
 
@@ -442,7 +422,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     /// # Panics
     ///
     /// Panics if there is no fragment extension header in this packet.
-    pub(crate) fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
+    pub fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
         // Since the final header will not include a fragment header, we don't
         // need to allocate bytes for it (`IPV6_FRAGMENT_EXT_HDR_LEN` bytes).
         let expected_bytes_len = self.header_len() - IPV6_FRAGMENT_EXT_HDR_LEN;
@@ -539,8 +519,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
-    #[cfg(test)]
-    pub(crate) fn builder(&self) -> Ipv6PacketBuilder {
+    pub fn builder(&self) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: self.ds(),
             ecn: self.ecn(),
@@ -555,7 +534,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
 
 impl<B: ByteSliceMut> Ipv6Packet<B> {
     /// Set the hop limit.
-    pub(crate) fn set_hop_limit(&mut self, hlim: u8) {
+    pub fn set_hop_limit(&mut self, hlim: u8) {
         self.fixed_hdr.hop_limit = hlim;
     }
 }
@@ -582,9 +561,18 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
 /// Since we could not finish parsing extension headers, we were unable to
 /// figure out where the body begins.
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct UndefinedBodyBoundsError;
+pub struct UndefinedBodyBoundsError;
 
-pub(crate) struct Ipv6PacketRaw<B> {
+/// A partially parsed and not yet validated IPv6 packet.
+///
+/// `Ipv6PacketRaw` provides minimal parsing of an IPv6 packet, namely
+/// it only requires that the fixed header part ([`HeaderPrefix`]) be retrieved,
+/// all the other parts of the packet may be missing when attempting to create
+/// it.
+///
+/// [`Ipv6Packet`] provides a [`FromRaw`] implementation that can be used to
+/// validate an `Ipv6PacketRaw`.
+pub struct Ipv6PacketRaw<B> {
     /// A raw packet always contains at least a fully parsed `FixedHeader`.
     fixed_hdr: LayoutVerified<B, FixedHeader>,
     /// When `extension_hdrs` is [`MaybeParsed::Complete`], it contains the
@@ -680,7 +668,7 @@ impl<B: ByteSlice> Ipv6PacketRaw<B> {
     /// [`Ok(MaybeParsed::Incomplete)`] if only part of the body is present, or
     /// [`Err(UndefinedBodyBoundsError)`] if the packet's extension headers
     /// failed to parse (in which case we can't locate the body's beginning).
-    pub(crate) fn body(&self) -> Result<MaybeParsed<&[u8], &[u8]>, UndefinedBodyBoundsError> {
+    pub fn body(&self) -> Result<MaybeParsed<&[u8], &[u8]>, UndefinedBodyBoundsError> {
         self.body
             .as_ref()
             .map(|mp| mp.as_ref().map(|b| b.deref()).map_incomplete(|b| b.deref()))
@@ -690,7 +678,7 @@ impl<B: ByteSlice> Ipv6PacketRaw<B> {
 
 /// A builder for IPv6 packets.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct Ipv6PacketBuilder {
+pub struct Ipv6PacketBuilder {
     ds: u8,
     ecn: u8,
     flowlabel: u32,
@@ -702,7 +690,7 @@ pub(crate) struct Ipv6PacketBuilder {
 
 impl Ipv6PacketBuilder {
     /// Construct a new `Ipv6PacketBuilder`.
-    pub(crate) fn new<S: Into<Ipv6Addr>, D: Into<Ipv6Addr>>(
+    pub fn new<S: Into<Ipv6Addr>, D: Into<Ipv6Addr>>(
         src_ip: S,
         dst_ip: D,
         hop_limit: u8,
@@ -724,9 +712,7 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `ds` panics if `ds` is greater than 2^6 - 1.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn ds(&mut self, ds: u8) {
+    pub fn ds(&mut self, ds: u8) {
         assert!(ds <= 1 << 6, "invalid DS: {}", ds);
         self.ds = ds;
     }
@@ -736,9 +722,7 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `ecn` panics if `ecn` is greater than 3.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn ecn(&mut self, ecn: u8) {
+    pub fn ecn(&mut self, ecn: u8) {
         assert!(ecn <= 0b11, "invalid ECN: {}", ecn);
         self.ecn = ecn
     }
@@ -748,9 +732,7 @@ impl Ipv6PacketBuilder {
     /// # Panics
     ///
     /// `flowlabel` panics if `flowlabel` is greater than 2^20 - 1.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn flowlabel(&mut self, flowlabel: u32) {
+    pub fn flowlabel(&mut self, flowlabel: u32) {
         assert!(flowlabel <= 1 << 20, "invalid flowlabel: {:x}", flowlabel);
         self.flowlabel = flowlabel;
     }
@@ -761,10 +743,7 @@ type OptionsSerializer<'a, I> =
 
 /// A builder for Ipv6 packets with HBH Options.
 #[derive(Debug)]
-pub(crate) struct Ipv6PacketBuilderWithHbhOptions<
-    'a,
-    I: Clone + Iterator<Item = &'a HopByHopOption<'a>>,
-> {
+pub struct Ipv6PacketBuilderWithHbhOptions<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> {
     prefix_builder: Ipv6PacketBuilder,
     hbh_options: OptionsSerializer<'a, I>,
 }
@@ -772,7 +751,8 @@ pub(crate) struct Ipv6PacketBuilderWithHbhOptions<
 impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>>
     Ipv6PacketBuilderWithHbhOptions<'a, I>
 {
-    pub(crate) fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
+    /// Creates a IPv6 packet builder with a Hop By Hop Options extension header.
+    pub fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
         prefix_builder: Ipv6PacketBuilder,
         options: T,
     ) -> Option<Ipv6PacketBuilderWithHbhOptions<'a, I>> {
@@ -846,7 +826,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
         PacketConstraints::new(IPV6_FIXED_HDR_LEN, 0, 0, (1 << 16) - 1)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         self.serialize_fixed_hdr(&mut header, body.len(), self.next_hdr);
     }
@@ -860,7 +840,7 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
         PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1)
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         let aligned_hbh_len = self.aligned_hbh_len();
         // The next header in the fixed header now should be 0 (Hop-by-Hop Extension Header)
@@ -882,6 +862,62 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
     }
 }
 
+/// Reassembles a fragmented packet into a parsed IP packet.
+pub(crate) fn reassemble_fragmented_packet<
+    B: ByteSliceMut,
+    BV: BufferViewMut<B>,
+    I: Iterator<Item = Vec<u8>>,
+>(
+    mut buffer: BV,
+    header: Vec<u8>,
+    body_fragments: I,
+) -> IpParseResult<Ipv6, Ipv6Packet<B>> {
+    let bytes = buffer.as_mut();
+
+    // First, copy over the header data.
+    bytes[0..header.len()].copy_from_slice(&header[..]);
+    let mut byte_count = header.len();
+
+    // Next, copy over the body fragments.
+    for p in body_fragments {
+        bytes[byte_count..byte_count + p.len()].copy_from_slice(&p[..]);
+        byte_count += p.len();
+    }
+
+    //
+    // Fix up the IPv6 header
+    //
+
+    // For IPv6, the payload length is the sum of the length of the
+    // extension headers and the packet body. The header as it is stored
+    // includes the IPv6 fixed header and all extension headers, so
+    // `bytes_count` is the sum of the size of the fixed header,
+    // extension headers and packet body. To calculate the payload
+    // length we subtract the size of the fixed header from the total
+    // byte count of a reassembled packet.
+    let payload_length = byte_count - IPV6_FIXED_HDR_LEN;
+
+    // Make sure that the payload length is not more than the maximum
+    // possible IPv4 packet length.
+    if payload_length > usize::from(core::u16::MAX) {
+        return debug_err!(
+            Err(ParseError::Format.into()),
+            "fragmented packet payload length of {} bytes is too large",
+            payload_length
+        );
+    }
+
+    // We know the call to `unwrap` will not fail because we just copied the header
+    // bytes into `bytes`.
+    let mut header =
+        LayoutVerified::<_, FixedHeader>::new_unaligned_from_prefix(&mut bytes[..]).unwrap().0;
+
+    // Update the payload length field.
+    header.payload_len.set(u16::try_from(payload_length).unwrap());
+
+    Ipv6Packet::parse_mut(buffer, ())
+}
+
 #[cfg(test)]
 mod tests {
     use std::ops::Deref;
@@ -890,9 +926,9 @@ mod tests {
 
     use super::ext_hdrs::*;
     use super::*;
+    use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
     use crate::ip::Ipv6ExtHdrType;
     use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
@@ -901,7 +937,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_tcp() {
-        use crate::wire::testdata::syn_v6::*;
+        use crate::testdata::syn_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -923,7 +959,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full_udp() {
-        use crate::wire::testdata::dns_request_v6::*;
+        use crate::testdata::dns_request_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -1024,7 +1060,7 @@ mod tests {
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), [1, 2, 3, 4, 5]);
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = packet.iter_extension_hdrs().collect();
+        let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = packet.iter_extension_hdrs().collect();
         assert_eq!(ext_hdrs.len(), 2);
         // Check first extension header (hop-by-hop options)
         assert_eq!(ext_hdrs[0].next_header, Ipv6ExtHdrType::Routing.into());
@@ -1080,7 +1116,7 @@ mod tests {
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), [1, 2, 3, 4, 5]);
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = packet.iter_extension_hdrs().collect();
+        let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = packet.iter_extension_hdrs().collect();
         assert_eq!(ext_hdrs.len(), 1);
         // Check first extension header (hop-by-hop options)
         assert_eq!(ext_hdrs[0].next_header, IpProto::NoNextHeader.into());
@@ -1122,7 +1158,7 @@ mod tests {
                 pointer: u32::from(NEXT_HEADER_OFFSET),
                 must_send_icmp: false,
                 header_len: (),
-                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
+                action: IpParseErrorAction::DiscardPacketSendIcmpNoMulticast,
             }
         );
 
@@ -1138,7 +1174,7 @@ mod tests {
                 pointer: u32::from(NEXT_HEADER_OFFSET),
                 must_send_icmp: false,
                 header_len: (),
-                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
+                action: IpParseErrorAction::DiscardPacketSendIcmpNoMulticast,
             }
         );
 
@@ -1184,7 +1220,7 @@ mod tests {
                 pointer: IPV6_FIXED_HDR_LEN as u32,
                 must_send_icmp: false,
                 header_len: (),
-                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
+                action: IpParseErrorAction::DiscardPacketSendIcmpNoMulticast,
             }
         );
 
@@ -1223,7 +1259,7 @@ mod tests {
                 pointer: (IPV6_FIXED_HDR_LEN as u32) + 2,
                 must_send_icmp: true,
                 header_len: (),
-                action: IpParseErrorAction::DiscardPacketSendICMPNoMulticast,
+                action: IpParseErrorAction::DiscardPacketSendIcmpNoMulticast,
             }
         );
     }

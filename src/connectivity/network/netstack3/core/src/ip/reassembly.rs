@@ -37,19 +37,15 @@ use core::cmp::Ordering;
 use core::convert::TryFrom;
 use core::time::Duration;
 
-use byteorder::{ByteOrder, NetworkEndian};
-use internet_checksum::Checksum;
-use net_types::ip::{Ip, IpAddress, IpVersion};
-use packet::{BufferViewMut, ParsablePacket};
+use net_types::ip::{Ip, IpAddress};
+use packet::BufferViewMut;
+use packet_formats::ip::{IpExtByteSlice, IpPacket};
+use packet_formats::ipv4::{Ipv4Header, Ipv4Packet};
+use packet_formats::ipv6::{ext_hdrs::Ipv6ExtensionHeaderData, Ipv6Packet};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::context::{StateContext, TimerContext, TimerHandler};
-use crate::ip::{IpExtByteSlice, IpPacket};
-use crate::wire::ipv4::{
-    IPV4_CHECKSUM_BYTE_RANGE, IPV4_FRAGMENT_DATA_BYTE_RANGE, IPV4_TOTAL_LENGTH_BYTE_RANGE,
-};
-use crate::wire::ipv6::{IPV6_FIXED_HDR_LEN, IPV6_PAYLOAD_LEN_BYTE_RANGE};
 
 /// The maximum amount of time from receipt of the first fragment to reassembly of
 /// a packet. Note, "first fragment" does not mean a fragment with offset 0; it means
@@ -110,6 +106,30 @@ pub(crate) trait FragmentablePacket {
     ///
     /// Panics if the packet has no fragment data.
     fn fragment_data(&self) -> (u32, u16, bool);
+}
+
+impl<B: ByteSlice> FragmentablePacket for Ipv4Packet<B> {
+    fn fragment_data(&self) -> (u32, u16, bool) {
+        (u32::from(self.id()), self.fragment_offset(), self.mf_flag())
+    }
+}
+
+impl<B: ByteSlice> FragmentablePacket for Ipv6Packet<B> {
+    fn fragment_data(&self) -> (u32, u16, bool) {
+        for ext_hdr in self.iter_extension_hdrs() {
+            if let Ipv6ExtensionHeaderData::Fragment { fragment_data } = ext_hdr.data() {
+                return (
+                    fragment_data.identification(),
+                    fragment_data.fragment_offset(),
+                    fragment_data.m_flag(),
+                );
+            }
+        }
+
+        unreachable!(
+            "Should never call this function if the packet does not have a fragment header"
+        );
+    }
 }
 
 /// Possible return values for [`IpLayerFragmentCache::process_fragment`].
@@ -635,82 +655,12 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
     header: Vec<u8>,
     mut body_fragments: BinaryHeap<PacketBodyFragment>,
 ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
-    let bytes = buffer.as_mut();
-
-    // First, copy over the header data.
-    bytes[0..header.len()].copy_from_slice(&header[..]);
-    let mut byte_count = header.len();
-
-    // Next, copy over the body fragments in ascending fragment offset order.
-    while !body_fragments.is_empty() {
-        // We know the call to `unwrap` won't panic because we make sure that
-        // `body_fragments` is not empty before each iteration of the loop. If
-        // `body_fragments` is not empty, then the call to `pop` must return a
-        // `Some(p)` where p is a body fragment.
-        let PacketBodyFragment(offset, p) = body_fragments.pop().unwrap();
-        bytes[byte_count..byte_count + p.len()].copy_from_slice(&p[..]);
-        byte_count += p.len();
-    }
-
-    match I::VERSION {
-        IpVersion::V4 => {
-            //
-            // Fix up the IPv4 header
-            //
-
-            // Make sure that the packet length is not more than the maximum
-            // possible IPv4 packet length.
-            if byte_count > (core::u16::MAX as usize) {
-                return Err(FragmentReassemblyError::PacketParsingError);
-            }
-
-            // Update the total length field.
-            NetworkEndian::write_u16(&mut bytes[IPV4_TOTAL_LENGTH_BYTE_RANGE], byte_count as u16);
-
-            // Zero out fragment related data since we will now have a
-            // reassembled packet that does not need reassembly.
-            NetworkEndian::write_u32(&mut bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE], 0);
-
-            // Update header checksum. The header checksum field is at bytes 10
-            // and 11 so do not include them in the checksum calculation.
-            let mut c = Checksum::new();
-            c.add_bytes(&bytes[..IPV4_CHECKSUM_BYTE_RANGE.start]);
-            c.add_bytes(&bytes[IPV4_CHECKSUM_BYTE_RANGE.end..header.len()]);
-            bytes[IPV4_CHECKSUM_BYTE_RANGE].copy_from_slice(&c.checksum()[..]);
-        }
-        IpVersion::V6 => {
-            //
-            // Fix up the IPv6 header
-            //
-
-            // For IPv6, the payload length is the sum of the length of the
-            // extension headers and the packet body. The header as it is stored
-            // includes the IPv6 fixed header and all extension headers, so
-            // `bytes_count` is the sum of the size of the fixed header,
-            // extension headers and packet body. To calculate the payload
-            // length we subtract the size of the fixed header from the total
-            // byte count of a reassembled packet.
-            let payload_length = byte_count - IPV6_FIXED_HDR_LEN;
-
-            // Make sure that the payload length is not more than the maximum
-            // possible IPv4 packet length.
-            if payload_length > (core::u16::MAX as usize) {
-                return Err(FragmentReassemblyError::PacketParsingError);
-            }
-
-            // Update the payload length field.
-            NetworkEndian::write_u16(
-                &mut bytes[IPV6_PAYLOAD_LEN_BYTE_RANGE],
-                payload_length as u16,
-            );
-        }
-    }
-
     // Parse the packet.
-    match <<I as IpExtByteSlice<B>>::Packet as ParsablePacket<B, _>>::parse_mut(buffer, ()) {
-        Ok(p) => Ok(p),
-        _ => Err(FragmentReassemblyError::PacketParsingError),
-    }
+
+    // TODO(https://github.com/rust-lang/rust/issues/59278): Use `BinaryHeap::into_iter_sorted`.
+    let body_fragments = body_fragments.into_sorted_vec().into_iter().map(|x| x.1);
+    <I as IpExtByteSlice<B>>::reassemble_fragmented_packet(buffer, header, body_fragments)
+        .map_err(|_| FragmentReassemblyError::PacketParsingError)
 }
 
 /// Get the header bytes for a packet.
@@ -757,23 +707,24 @@ impl PartialOrd for PacketBodyFragment {
 
 impl Ord for PacketBodyFragment {
     fn cmp(&self, other: &PacketBodyFragment) -> Ordering {
-        self.0.cmp(&other.0)
+        self.0.cmp(&other.0).reverse()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{IpAddress, Ipv4, Ipv6};
     use net_types::Witness;
     use packet::{Buf, ParseBuffer, Serializer};
+    use packet_formats::ip::{IpProto, Ipv6ExtHdrType};
+    use packet_formats::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+    use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::context::testutil::DummyTimerContextExt;
-    use crate::ip::{IpProto, Ipv6ExtHdrType};
     use crate::testutil::{TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
-    use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     /// A dummy [`FragmentContext`] that stores an [`IpLayerFragmentCache`].
     struct DummyFragmentContext<I: Ip> {

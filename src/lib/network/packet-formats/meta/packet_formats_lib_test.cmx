@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/packet_formats_lib_test"
+    }
+}

@@ -17,7 +17,7 @@
 ///   supports a body
 macro_rules! impl_icmp_message {
     ($ip:ident, $type:ident, $msg_variant:ident, $code:tt, $body_type:ty) => {
-        impl<B: ByteSlice> crate::wire::icmp::IcmpMessage<$ip, B> for $type {
+        impl<B: ByteSlice> crate::icmp::IcmpMessage<$ip, B> for $type {
             type Code = $code;
 
             type Body = $body_type;
@@ -38,10 +38,10 @@ macro_rules! impl_icmp_message {
 
 macro_rules! impl_icmp_message_inner_message_type {
     (Ipv4, $msg_variant:ident) => {
-        crate::wire::icmp::icmpv4::Icmpv4MessageType::$msg_variant
+        crate::icmp::icmpv4::Icmpv4MessageType::$msg_variant
     };
     (Ipv6, $msg_variant:ident) => {
-        crate::wire::icmp::icmpv6::Icmpv6MessageType::$msg_variant
+        crate::icmp::icmpv6::Icmpv6MessageType::$msg_variant
     };
 }
 
@@ -54,6 +54,6 @@ macro_rules! impl_icmp_message_inner_code_from_u8 {
         }
     };
     ($code:tt, $var:ident) => {
-        $code::from_u8($var)
+        $code::try_from($var).ok()
     };
 }

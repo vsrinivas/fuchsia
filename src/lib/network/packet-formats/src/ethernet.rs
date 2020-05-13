@@ -5,27 +5,49 @@
 //! Parsing and serialization of Ethernet frames.
 
 use net_types::ethernet::Mac;
+use net_types::ip::{Ip, Ipv4, Ipv6};
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
     SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::device::ethernet::EtherType;
+use self::inner::*;
 use crate::error::{ParseError, ParseResult};
-use crate::wire::{U16, U32};
-
-// used in PacketBuilder impl
-pub(crate) const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
-// used in PacketBuilder impl
-pub(crate) const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
-#[cfg(test)]
-pub(crate) const ETHERNET_DST_MAC_BYTE_OFFSET: usize = 0;
-#[cfg(test)]
-pub(crate) const ETHERNET_SRC_MAC_BYTE_OFFSET: usize = 6;
+use crate::{U16, U32};
 
 const ETHERNET_MIN_ILLEGAL_ETHERTYPE: u16 = 1501;
 const ETHERNET_MAX_ILLEGAL_ETHERTYPE: u16 = 1535;
+
+create_protocol_enum!(
+    /// An EtherType number.
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, Hash, Eq, PartialEq)]
+    pub enum EtherType: u16 {
+        Ipv4, 0x0800, "IPv4";
+        Arp, 0x0806, "ARP";
+        Ipv6, 0x86DD, "IPv6";
+        _, "EtherType {}";
+    }
+);
+
+/// An extension trait adding IP-related functionality to `Ipv4` and `Ipv6`.
+pub trait EthernetIpExt: Ip {
+    /// The `EtherType` value for an associated IP version.
+    const ETHER_TYPE: EtherType;
+}
+
+impl<I: Ip> EthernetIpExt for I {
+    default const ETHER_TYPE: EtherType = EtherType::Ipv4;
+}
+
+impl EthernetIpExt for Ipv4 {
+    const ETHER_TYPE: EtherType = EtherType::Ipv4;
+}
+
+impl EthernetIpExt for Ipv6 {
+    const ETHER_TYPE: EtherType = EtherType::Ipv6;
+}
 
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -42,7 +64,7 @@ const TPID_8021AD: u16 = 0x88a8;
 /// An `EthernetFrame` shares its underlying memory with the byte slice it was
 /// parsed from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
-pub(crate) struct EthernetFrame<B> {
+pub struct EthernetFrame<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
     tag: Option<LayoutVerified<B, U32>>,
     ethertype: LayoutVerified<B, U16>,
@@ -55,7 +77,7 @@ pub(crate) struct EthernetFrame<B> {
 /// total length (including header, but excluding the Frame Check Sequence (FCS)
 /// footer) is less than the required minimum of 60 bytes.
 #[derive(PartialEq)]
-pub(crate) enum EthernetFrameLengthCheck {
+pub enum EthernetFrameLengthCheck {
     /// Check that the Ethernet frame's total length (including header, but
     /// excluding the Frame Check Sequence (FCS) footer) satisfies the required
     /// minimum of 60 bytes.
@@ -140,19 +162,17 @@ impl<B: ByteSlice> ParsablePacket<B, EthernetFrameLengthCheck> for EthernetFrame
 
 impl<B: ByteSlice> EthernetFrame<B> {
     /// The frame body.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn body(&self) -> &[u8] {
+    pub fn body(&self) -> &[u8] {
         &self.body
     }
 
     /// The source MAC address.
-    pub(crate) fn src_mac(&self) -> Mac {
+    pub fn src_mac(&self) -> Mac {
         self.hdr_prefix.src_mac
     }
 
     /// The destination MAC address.
-    pub(crate) fn dst_mac(&self) -> Mac {
+    pub fn dst_mac(&self) -> Mac {
         self.hdr_prefix.dst_mac
     }
 
@@ -161,7 +181,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
     /// `ethertype` returns the `EtherType` from the Ethernet header. However,
     /// some values of the EtherType header field are used to indicate the
     /// length of the frame's body. In this case, `ethertype` returns `None`.
-    pub(crate) fn ethertype(&self) -> Option<EtherType> {
+    pub fn ethertype(&self) -> Option<EtherType> {
         let et = self.ethertype.get();
         if et < ETHERNET_MIN_ILLEGAL_ETHERTYPE {
             return None;
@@ -189,9 +209,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
     }
 
     /// Construct a builder with the same contents as this frame.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn builder(&self) -> EthernetFrameBuilder {
+    pub fn builder(&self) -> EthernetFrameBuilder {
         EthernetFrameBuilder {
             src_mac: self.src_mac(),
             dst_mac: self.dst_mac(),
@@ -202,7 +220,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
 
 /// A builder for Ethernet frames.
 #[derive(Debug)]
-pub(crate) struct EthernetFrameBuilder {
+pub struct EthernetFrameBuilder {
     src_mac: Mac,
     dst_mac: Mac,
     ethertype: u16,
@@ -210,7 +228,7 @@ pub(crate) struct EthernetFrameBuilder {
 
 impl EthernetFrameBuilder {
     /// Construct a new `EthernetFrameBuilder`.
-    pub(crate) fn new(src_mac: Mac, dst_mac: Mac, ethertype: EtherType) -> EthernetFrameBuilder {
+    pub fn new(src_mac: Mac, dst_mac: Mac, ethertype: EtherType) -> EthernetFrameBuilder {
         EthernetFrameBuilder { src_mac, dst_mac, ethertype: ethertype.into() }
     }
 }
@@ -230,7 +248,7 @@ impl PacketBuilder for EthernetFrameBuilder {
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         // NOTE: EtherType values of 1500 and below are used to indicate the
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
@@ -262,6 +280,28 @@ impl PacketBuilder for EthernetFrameBuilder {
             min_frame_size,
         );
     }
+}
+
+/// A private module used to make sure that its contents are only accessible from
+/// the parent module and its `testutil` module.
+mod inner {
+    /// The length of an Ethernet header when it has no tags.
+    pub const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
+
+    /// The minimum length of an Ethernet frame's body when the header contains no tags.
+    pub const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
+}
+
+/// Constants useful for testing.
+pub mod testutil {
+    pub use super::inner::{ETHERNET_HDR_LEN_NO_TAG, ETHERNET_MIN_BODY_LEN_NO_TAG};
+
+    /// Ethernet frame, in bytes.
+    pub const ETHERNET_DST_MAC_BYTE_OFFSET: usize = 0;
+
+    /// The offset to the start of the source MAC address from the start of the
+    /// Ethernet frame, in bytes.
+    pub const ETHERNET_SRC_MAC_BYTE_OFFSET: usize = 6;
 }
 
 #[cfg(test)]

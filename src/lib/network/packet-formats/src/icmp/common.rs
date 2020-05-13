@@ -9,12 +9,12 @@ use core::num::NonZeroU16;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use super::IdAndSeq;
-use crate::wire::U16;
+use crate::U16;
 
 /// An ICMP Destination Unreachable message.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct IcmpDestUnreachable {
+pub struct IcmpDestUnreachable {
     // Rest of Header in ICMP, unused in ICMPv6.
     //
     // RFC 1191 outlines a method for path MTU discovery for IPv4. When sending a
@@ -51,9 +51,7 @@ impl IcmpDestUnreachable {
     /// Create a new ICMP Destination Unreachable message for a message with
     /// Code = Fragmentation Required (4) which requires a next hop MTU value
     /// as defined in RFC 1191 section 4.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn new_for_frag_req(mtu: NonZeroU16) -> Self {
+    pub fn new_for_frag_req(mtu: NonZeroU16) -> Self {
         Self { _unused: [0; 2], next_hop_mtu: U16::new(mtu.get()) }
     }
 
@@ -62,7 +60,7 @@ impl IcmpDestUnreachable {
     /// Note, this field is considered unused in all Destination Unreachable
     /// ICMP messages, except for ICMPv4 Destination Unreachable messages with
     /// Code = Fragmentation Required (4).
-    pub(crate) fn next_hop_mtu(&self) -> Option<NonZeroU16> {
+    pub fn next_hop_mtu(&self) -> Option<NonZeroU16> {
         NonZeroU16::new(self.next_hop_mtu.get())
     }
 }
@@ -70,7 +68,7 @@ impl IcmpDestUnreachable {
 /// An ICMP Echo Request message.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct IcmpEchoRequest {
+pub struct IcmpEchoRequest {
     pub(super) id_seq: IdAndSeq,
     /* The rest of of IcmpEchoRequest is variable-length, so is stored in the
      * message_body field in IcmpPacket */
@@ -78,7 +76,7 @@ pub(crate) struct IcmpEchoRequest {
 
 impl IcmpEchoRequest {
     /// Constructs a new `IcmpEchoRequest`.
-    pub(crate) fn new(id: u16, seq: u16) -> IcmpEchoRequest {
+    pub fn new(id: u16, seq: u16) -> IcmpEchoRequest {
         IcmpEchoRequest { id_seq: IdAndSeq::new(id, seq) }
     }
 
@@ -86,17 +84,17 @@ impl IcmpEchoRequest {
     ///
     /// `reply` constructs an `IcmpEchoReply` with the same ID and sequence
     /// number as the original request.
-    pub(crate) fn reply(self) -> IcmpEchoReply {
+    pub fn reply(self) -> IcmpEchoReply {
         IcmpEchoReply { id_seq: self.id_seq }
     }
 
     /// The ID of this message.
-    pub(crate) fn id(&self) -> u16 {
+    pub fn id(&self) -> u16 {
         self.id_seq.id.get()
     }
 
     /// The sequence number of this message.
-    pub(crate) fn seq(&self) -> u16 {
+    pub fn seq(&self) -> u16 {
         self.id_seq.seq.get()
     }
 }
@@ -104,7 +102,7 @@ impl IcmpEchoRequest {
 /// An ICMP Echo Reply message.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct IcmpEchoReply {
+pub struct IcmpEchoReply {
     pub(super) id_seq: IdAndSeq,
     /* The rest of of IcmpEchoReply is variable-length, so is stored in the
      * message_body field in IcmpPacket */
@@ -112,12 +110,12 @@ pub(crate) struct IcmpEchoReply {
 
 impl IcmpEchoReply {
     /// The ID of this message.
-    pub(crate) fn id(&self) -> u16 {
+    pub fn id(&self) -> u16 {
         self.id_seq.id.get()
     }
 
     /// The sequence number of this message.
-    pub(crate) fn seq(&self) -> u16 {
+    pub fn seq(&self) -> u16 {
         self.id_seq.seq.get()
     }
 }
@@ -125,7 +123,7 @@ impl IcmpEchoReply {
 /// An ICMP Time Exceeded message.
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct IcmpTimeExceeded {
+pub struct IcmpTimeExceeded {
     // Rest of Header in ICMP, unused in ICMPv6
     _unused: [u8; 4],
     /* Body of IcmpTimeExceeded is entirely variable-length, so is stored in

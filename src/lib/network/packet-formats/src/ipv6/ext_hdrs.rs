@@ -21,25 +21,27 @@ pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
 
 /// An IPv6 Extension Header.
 #[derive(Debug)]
-pub(crate) struct Ipv6ExtensionHeader<'a> {
+pub struct Ipv6ExtensionHeader<'a> {
     // Marked as `pub(super)` because it is only used in tests within
-    // the `crate::wire::ipv6` (`super`) module.
+    // the `crate::ipv6` (`super`) module.
     pub(super) next_header: u8,
     data: Ipv6ExtensionHeaderData<'a>,
 }
 
 impl<'a> Ipv6ExtensionHeader<'a> {
-    pub(crate) fn data(&self) -> &Ipv6ExtensionHeaderData<'a> {
+    /// Returns the extension header-specific data.
+    pub fn data(&self) -> &Ipv6ExtensionHeaderData<'a> {
         &self.data
     }
 }
 
 /// The data associated with an IPv6 Extension Header.
+#[allow(missing_docs)]
 #[derive(Debug)]
-pub(crate) enum Ipv6ExtensionHeaderData<'a> {
-    HopByHopOptions { options: Records<&'a [u8], HopByHopOptionsImpl> },
+pub enum Ipv6ExtensionHeaderData<'a> {
+    HopByHopOptions { options: HopByHopOptionsData<'a> },
     Fragment { fragment_data: FragmentData<'a> },
-    DestinationOptions { options: Records<&'a [u8], DestinationOptionsImpl> },
+    DestinationOptions { options: DestinationOptionsData<'a> },
 }
 
 //
@@ -47,8 +49,9 @@ pub(crate) enum Ipv6ExtensionHeaderData<'a> {
 //
 
 /// Possible errors that can happen when parsing IPv6 Extension Headers.
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum Ipv6ExtensionHeaderParsingError {
+pub(super) enum Ipv6ExtensionHeaderParsingError {
     // `pointer` is the offset from the beginning of the first extension header
     // to the point of error. `must_send_icmp` is a flag that requires us to send
     // an ICMP response if true. `header_len` is the size of extension headers before
@@ -76,10 +79,10 @@ pub(crate) enum Ipv6ExtensionHeaderParsingError {
 
 /// Context that gets passed around when parsing IPv6 Extension Headers.
 #[derive(Debug, Clone)]
-pub(crate) struct Ipv6ExtensionHeaderParsingContext {
+pub(super) struct Ipv6ExtensionHeaderParsingContext {
     // Next expected header.
     // Marked as `pub(super)` because it is inly used in tests within
-    // the `crate::wire::ipv6` (`super`) module.
+    // the `crate::ipv6` (`super`) module.
     pub(super) next_header: u8,
 
     // Whether context is being used for iteration or not.
@@ -93,7 +96,9 @@ pub(crate) struct Ipv6ExtensionHeaderParsingContext {
 }
 
 impl Ipv6ExtensionHeaderParsingContext {
-    pub(crate) fn new(next_header: u8) -> Ipv6ExtensionHeaderParsingContext {
+    /// Returns a new `Ipv6ExtensionHeaderParsingContext` which expects the
+    /// first header to have the ID specified by `next_header`.
+    pub(super) fn new(next_header: u8) -> Ipv6ExtensionHeaderParsingContext {
         Ipv6ExtensionHeaderParsingContext {
             iter: false,
             headers_parsed: 0,
@@ -113,7 +118,7 @@ impl RecordsContext for Ipv6ExtensionHeaderParsingContext {
 
 /// Implement the actual parsing of IPv6 Extension Headers.
 #[derive(Debug)]
-pub(crate) struct Ipv6ExtensionHeaderImpl;
+pub(super) struct Ipv6ExtensionHeaderImpl;
 
 impl Ipv6ExtensionHeaderImpl {
     /// Make sure a Next Header value in an extension header is valid.
@@ -196,6 +201,7 @@ impl Ipv6ExtensionHeaderImpl {
                 e,
             )
         })?;
+        let options = HopByHopOptionsData::new(options);
 
         // Update context
         context.next_header = next_header;
@@ -323,6 +329,7 @@ impl Ipv6ExtensionHeaderImpl {
                 e,
             )
         })?;
+        let options = DestinationOptionsData::new(options);
 
         // Update context
         context.next_header = next_header;
@@ -437,8 +444,31 @@ impl<'a> RecordsRawImpl<'a> for Ipv6ExtensionHeaderImpl {
 // Hop-By-Hop Options
 //
 
-pub(crate) type HopByHopOption<'a> = ExtensionHeaderOption<HopByHopOptionData<'a>>;
-pub(crate) type HopByHopOptionsImpl = ExtensionHeaderOptionImpl<HopByHopOptionDataImpl>;
+/// Hop By Hop Options extension header data.
+#[derive(Debug)]
+pub struct HopByHopOptionsData<'a> {
+    options: Records<&'a [u8], HopByHopOptionsImpl>,
+}
+
+impl<'a> HopByHopOptionsData<'a> {
+    /// Returns a new `HopByHopOptionsData` with `options`.
+    fn new(options: Records<&'a [u8], HopByHopOptionsImpl>) -> HopByHopOptionsData<'a> {
+        HopByHopOptionsData { options }
+    }
+
+    /// Returns an iterator over the [`HopByHopOptions`] in this
+    /// `HopByHopOptionsData`.
+    pub fn iter(&'a self) -> impl Iterator<Item = HopByHopOption<'a>> {
+        self.options.iter()
+    }
+}
+
+/// An option found in a Hop By Hop Options extension header.
+pub type HopByHopOption<'a> = ExtensionHeaderOption<HopByHopOptionData<'a>>;
+
+/// An implementation of [`OptionsImpl`] for options found in a Hop By Hop Options
+/// extension header.
+pub(super) type HopByHopOptionsImpl = ExtensionHeaderOptionImpl<HopByHopOptionDataImpl>;
 
 /// Hop-By-Hop Option Type number as per [RFC 2711 section-2.1]
 ///
@@ -451,15 +481,16 @@ const HBH_OPTION_KIND_RTRALRT: u8 = 5;
 const HBH_OPTION_RTRALRT_LEN: usize = 2;
 
 /// HopByHop Options Extension header data.
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum HopByHopOptionData<'a> {
+pub enum HopByHopOptionData<'a> {
     Unrecognized { kind: u8, len: u8, data: &'a [u8] },
     RouterAlert { data: u16 },
 }
 
 /// Impl for Hop By Hop Options parsing.
 #[derive(Debug)]
-pub(crate) struct HopByHopOptionDataImpl;
+pub(super) struct HopByHopOptionDataImpl;
 
 impl ExtensionHeaderOptionDataImplLayout for HopByHopOptionDataImpl {
     type Context = ();
@@ -572,31 +603,35 @@ impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
 
 /// Routing Extension header data.
 #[derive(Debug)]
-pub(crate) struct RoutingData<'a> {
+pub struct RoutingData<'a> {
     bytes: &'a [u8],
     type_specific_data: RoutingTypeSpecificData<'a>,
 }
 
 impl<'a> RoutingData<'a> {
-    pub(crate) fn _routing_type(&self) -> u8 {
+    /// Returns the routing type.
+    pub fn routing_type(&self) -> u8 {
         debug_assert!(self.bytes.len() >= 2);
         self.bytes[0]
     }
 
-    pub(crate) fn _segments_left(&self) -> u8 {
+    /// Returns the segments left.
+    pub fn segments_left(&self) -> u8 {
         debug_assert!(self.bytes.len() >= 2);
         self.bytes[1]
     }
 
-    pub(crate) fn _type_specific_data(&self) -> &RoutingTypeSpecificData<'a> {
+    /// Returns the routing type specific data.
+    pub fn type_specific_data(&self) -> &RoutingTypeSpecificData<'a> {
         &self.type_specific_data
     }
 }
 
 /// Routing Type specific data.
+#[allow(missing_docs)]
 #[derive(Debug)]
-pub(crate) enum RoutingTypeSpecificData<'a> {
-    _Other(&'a u8),
+pub enum RoutingTypeSpecificData<'a> {
+    Other(&'a u8),
 }
 
 //
@@ -615,22 +650,25 @@ pub(crate) enum RoutingTypeSpecificData<'a> {
 /// where Fragment Offset is 13 bits, Res is a reserved 2 bits and M
 /// is a 1 bit flag. Identification is a 32bit value.
 #[derive(Debug)]
-pub(crate) struct FragmentData<'a> {
+pub struct FragmentData<'a> {
     bytes: &'a [u8],
 }
 
 impl<'a> FragmentData<'a> {
-    pub(crate) fn fragment_offset(&self) -> u16 {
+    /// Returns the fragment offset.
+    pub fn fragment_offset(&self) -> u16 {
         debug_assert!(self.bytes.len() == 6);
         (u16::from(self.bytes[0]) << 5) | (u16::from(self.bytes[1]) >> 3)
     }
 
-    pub(crate) fn m_flag(&self) -> bool {
+    /// Returns the more fragments flags.
+    pub fn m_flag(&self) -> bool {
         debug_assert!(self.bytes.len() == 6);
         (self.bytes[1] & 0x1) == 0x01
     }
 
-    pub(crate) fn identification(&self) -> u32 {
+    /// Returns the identification value.
+    pub fn identification(&self) -> u32 {
         debug_assert!(self.bytes.len() == 6);
         NetworkEndian::read_u32(&self.bytes[2..6])
     }
@@ -639,20 +677,43 @@ impl<'a> FragmentData<'a> {
 //
 // Destination Options
 //
-// TODO(rheacock): remove `#[cfg(test)]` when this is used.
-#[cfg(test)]
-type DestinationOption<'a> = ExtensionHeaderOption<DestinationOptionData<'a>>;
-type DestinationOptionsImpl = ExtensionHeaderOptionImpl<DestinationOptionDataImpl>;
 
 /// Destination Options extension header data.
 #[derive(Debug)]
-pub(crate) enum DestinationOptionData<'a> {
+pub struct DestinationOptionsData<'a> {
+    options: Records<&'a [u8], DestinationOptionsImpl>,
+}
+
+impl<'a> DestinationOptionsData<'a> {
+    /// Returns a new `DestinationOptionsData` with `options`.
+    fn new(options: Records<&'a [u8], DestinationOptionsImpl>) -> DestinationOptionsData<'a> {
+        DestinationOptionsData { options }
+    }
+
+    /// Returns an iterator over the [`DestinationOptions`] in this
+    /// `DestinationOptionsData`.
+    pub fn iter(&'a self) -> impl Iterator<Item = DestinationOption<'a>> {
+        self.options.iter()
+    }
+}
+
+/// An option found in a Destination Options extension header.
+pub type DestinationOption<'a> = ExtensionHeaderOption<DestinationOptionData<'a>>;
+
+/// An implementation of [`OptionsImpl`] for options found in a Destination Options
+/// extension header.
+pub(super) type DestinationOptionsImpl = ExtensionHeaderOptionImpl<DestinationOptionDataImpl>;
+
+/// Destination Options extension header data.
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub enum DestinationOptionData<'a> {
     Unrecognized { kind: u8, len: u8, data: &'a [u8] },
 }
 
 /// Impl for Destination Options parsing.
 #[derive(Debug)]
-pub(crate) struct DestinationOptionDataImpl;
+pub(super) struct DestinationOptionDataImpl;
 
 impl ExtensionHeaderOptionDataImplLayout for DestinationOptionDataImpl {
     type Context = ();
@@ -685,7 +746,7 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for DestinationOptionDataImpl {
 
 /// Context that gets passed around when parsing IPv6 Extension Header options.
 #[derive(Debug, Clone)]
-pub(crate) struct ExtensionHeaderOptionContext<C: Sized + Clone> {
+pub(super) struct ExtensionHeaderOptionContext<C: Sized + Clone> {
     // Counter for number of options parsed.
     options_parsed: usize,
 
@@ -709,13 +770,15 @@ impl<C: Sized + Clone + Default> ExtensionHeaderOptionContext<C> {
 impl<C: Sized + Clone> RecordsContext for ExtensionHeaderOptionContext<C> {}
 
 /// Basic associated types required by `ExtensionHeaderOptionDataImpl`.
-pub(crate) trait ExtensionHeaderOptionDataImplLayout {
+pub(super) trait ExtensionHeaderOptionDataImplLayout {
+    /// A context type that can be used to maintain state while parsing multiple
+    /// records.
     type Context: RecordsContext;
 }
 
 /// The result of parsing an extension header option data.
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) enum ExtensionHeaderOptionDataParseResult<D> {
+pub enum ExtensionHeaderOptionDataParseResult<D> {
     /// Successfully parsed data.
     Ok(D),
 
@@ -731,7 +794,7 @@ pub(crate) enum ExtensionHeaderOptionDataParseResult<D> {
 }
 
 /// An implementation of an extension header specific option data parser.
-pub(crate) trait ExtensionHeaderOptionDataImpl<'a>:
+pub(super) trait ExtensionHeaderOptionDataImpl<'a>:
     ExtensionHeaderOptionDataImplLayout
 {
     /// Extension header specific option data.
@@ -766,7 +829,7 @@ pub(crate) trait ExtensionHeaderOptionDataImpl<'a>:
 /// `ExtensionHeaderOptionDataImpl`) handle the extension header specific
 /// option parsing.
 #[derive(Debug)]
-pub(crate) struct ExtensionHeaderOptionImpl<O>(PhantomData<O>);
+pub(super) struct ExtensionHeaderOptionImpl<O>(PhantomData<O>);
 
 impl<O> ExtensionHeaderOptionImpl<O> {
     const PAD1: u8 = 0;
@@ -887,6 +950,7 @@ where
 }
 
 /// Possible errors when parsing extension header options.
+#[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ExtensionHeaderOptionParsingError {
     ErroneousOptionField { pointer: u32 },
@@ -900,7 +964,7 @@ pub(crate) enum ExtensionHeaderOptionParsingError {
 /// to RFC 8200 section 4.2) when an IPv6 processing node does not
 /// recognize an option's type.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub(crate) enum ExtensionHeaderOptionAction {
+pub enum ExtensionHeaderOptionAction {
     /// Skip over the option and continue processing the header.
     /// value = 0.
     SkipAndContinue,
@@ -914,14 +978,14 @@ pub(crate) enum ExtensionHeaderOptionAction {
     /// problem, code 2 (unrecognized option), message to the packet's source
     /// address, pointing to the unrecognized type.
     /// value = 2.
-    DiscardPacketSendICMP,
+    DiscardPacketSendIcmp,
 
     /// Discard the packet and, and only if the packet's destination address
     /// was not a multicast address, send an ICMP parameter problem, code 2
     /// (unrecognized option), message to the packet's source address, pointing
     /// to the unrecognized type.
     /// value = 3.
-    DiscardPacketSendICMPNoMulticast,
+    DiscardPacketSendIcmpNoMulticast,
 }
 
 impl TryFrom<u8> for ExtensionHeaderOptionAction {
@@ -931,8 +995,8 @@ impl TryFrom<u8> for ExtensionHeaderOptionAction {
         match value {
             0 => Ok(ExtensionHeaderOptionAction::SkipAndContinue),
             1 => Ok(ExtensionHeaderOptionAction::DiscardPacket),
-            2 => Ok(ExtensionHeaderOptionAction::DiscardPacketSendICMP),
-            3 => Ok(ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast),
+            2 => Ok(ExtensionHeaderOptionAction::DiscardPacketSendIcmp),
+            3 => Ok(ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast),
             _ => Err(()),
         }
     }
@@ -943,8 +1007,8 @@ impl Into<u8> for ExtensionHeaderOptionAction {
         match self {
             ExtensionHeaderOptionAction::SkipAndContinue => 0,
             ExtensionHeaderOptionAction::DiscardPacket => 1,
-            ExtensionHeaderOptionAction::DiscardPacketSendICMP => 2,
-            ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast => 3,
+            ExtensionHeaderOptionAction::DiscardPacketSendIcmp => 2,
+            ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast => 3,
         }
     }
 }
@@ -955,19 +1019,19 @@ impl Into<u8> for ExtensionHeaderOptionAction {
 /// option data (`data`) defined by an `O`. The common option format is defined in
 /// section 4.2 of RFC 8200, outlining actions and mutability for option types.
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct ExtensionHeaderOption<O> {
+pub struct ExtensionHeaderOption<O> {
     /// Action to take if the option type is unrecognized.
-    pub(crate) action: ExtensionHeaderOptionAction,
+    pub action: ExtensionHeaderOptionAction,
 
     /// Whether or not the option data of the option can change en route to the
     /// packet's final destination. When an Authentication header is present in
     /// the packet, the option data must be treated as 0s when computing or
     /// verifying the packet's authenticating value when the option data can change
     /// en route.
-    pub(crate) mutable: bool,
+    pub mutable: bool,
 
     /// Option data associated with a specific extension header.
-    pub(crate) data: O,
+    pub data: O,
 }
 
 //
@@ -1139,7 +1203,7 @@ mod tests {
         let options =
             Records::<_, HopByHopOptionsImpl>::parse_with_mut_context(&buffer[..], &mut context)
                 .unwrap();
-        let options: Vec<HopByHopOption> = options.iter().collect();
+        let options: Vec<HopByHopOption<'_>> = options.iter().collect();
         assert_eq!(options.len(), 1);
         assert_eq!(options[0].action, ExtensionHeaderOptionAction::SkipAndContinue);
         assert_eq!(context.bytes_parsed, 12);
@@ -1195,7 +1259,7 @@ mod tests {
                 .expect_err("Parsed successfully when we had an unrecognized option type"),
             ExtensionHeaderOptionParsingError::UnrecognizedOption {
                 pointer: 3,
-                action: ExtensionHeaderOptionAction::DiscardPacketSendICMP,
+                action: ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             }
         );
         assert_eq!(context.bytes_parsed, 3);
@@ -1216,7 +1280,7 @@ mod tests {
                 .expect_err("Parsed successfully when we had an unrecognized option type"),
             ExtensionHeaderOptionParsingError::UnrecognizedOption {
                 pointer: 3,
-                action: ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
+                action: ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast,
             }
         );
         assert_eq!(context.bytes_parsed, 3);
@@ -1262,7 +1326,7 @@ mod tests {
         let options =
             Records::<_, DestinationOptionsImpl>::parse_with_mut_context(&buffer[..], &mut context)
                 .unwrap();
-        let options: Vec<DestinationOption> = options.iter().collect();
+        let options: Vec<DestinationOption<'_>> = options.iter().collect();
         assert_eq!(options.len(), 1);
         assert_eq!(options[0].action, ExtensionHeaderOptionAction::SkipAndContinue);
         assert_eq!(context.bytes_parsed, 12);
@@ -1318,7 +1382,7 @@ mod tests {
                 .expect_err("Parsed successfully when we had an unrecognized option type"),
             ExtensionHeaderOptionParsingError::UnrecognizedOption {
                 pointer: 3,
-                action: ExtensionHeaderOptionAction::DiscardPacketSendICMP,
+                action: ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             }
         );
         assert_eq!(context.bytes_parsed, 3);
@@ -1339,7 +1403,7 @@ mod tests {
                 .expect_err("Parsed successfully when we had an unrecognized option type"),
             ExtensionHeaderOptionParsingError::UnrecognizedOption {
                 pointer: 3,
-                action: ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
+                action: ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast,
             }
         );
         assert_eq!(context.bytes_parsed, 3);
@@ -1362,12 +1426,12 @@ mod tests {
         let ext_hdrs =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
                 .unwrap();
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = ext_hdrs.iter().collect();
+        let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = ext_hdrs.iter().collect();
         assert_eq!(ext_hdrs.len(), 1);
         assert_eq!(ext_hdrs[0].next_header, IpProto::Tcp.into());
         if let Ipv6ExtensionHeaderData::HopByHopOptions { options } = ext_hdrs[0].data() {
             // Everything should have been a NOP/ignore except for the unrecognized type
-            let options: Vec<HopByHopOption> = options.iter().collect();
+            let options: Vec<HopByHopOption<'_>> = options.iter().collect();
             assert_eq!(options.len(), 1);
             assert_eq!(options[0].action, ExtensionHeaderOptionAction::SkipAndContinue);
         } else {
@@ -1455,7 +1519,7 @@ mod tests {
             assert_eq!(pointer, 8);
             assert!(must_send_icmp);
             assert_eq!(header_len, 0);
-            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendICMP);
+            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendIcmp);
         } else {
             panic!("Should have matched with UnrecognizedOption: {:?}", error);
         }
@@ -1484,7 +1548,7 @@ mod tests {
             assert_eq!(pointer, 8);
             assert!(must_send_icmp);
             assert_eq!(header_len, 0);
-            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast);
+            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast);
         } else {
             panic!("Should have matched with UnrecognizedOption: {:?}", error);
         }
@@ -1653,7 +1717,7 @@ mod tests {
         let ext_hdrs =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
                 .unwrap();
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = ext_hdrs.iter().collect();
+        let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = ext_hdrs.iter().collect();
         assert_eq!(ext_hdrs.len(), 1);
         assert_eq!(ext_hdrs[0].next_header, IpProto::Tcp.into());
 
@@ -1731,12 +1795,12 @@ mod tests {
         let ext_hdrs =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
                 .unwrap();
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = ext_hdrs.iter().collect();
+        let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = ext_hdrs.iter().collect();
         assert_eq!(ext_hdrs.len(), 1);
         assert_eq!(ext_hdrs[0].next_header, IpProto::Tcp.into());
         if let Ipv6ExtensionHeaderData::DestinationOptions { options } = ext_hdrs[0].data() {
             // Everything should have been a NOP/ignore except for the unrecognized type
-            let options: Vec<DestinationOption> = options.iter().collect();
+            let options: Vec<DestinationOption<'_>> = options.iter().collect();
             assert_eq!(options.len(), 1);
             assert_eq!(options[0].action, ExtensionHeaderOptionAction::SkipAndContinue);
         } else {
@@ -1824,7 +1888,7 @@ mod tests {
             assert_eq!(pointer, 8);
             assert!(must_send_icmp);
             assert_eq!(header_len, 0);
-            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendICMP);
+            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendIcmp);
         } else {
             panic!("Should have matched with UnrecognizedOption: {:?}", error);
         }
@@ -1853,7 +1917,7 @@ mod tests {
             assert_eq!(pointer, 8);
             assert!(must_send_icmp);
             assert_eq!(header_len, 0);
-            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast);
+            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast);
         } else {
             panic!("Should have matched with UnrecognizedOption: {:?}", error);
         }
@@ -1895,7 +1959,7 @@ mod tests {
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
                 .unwrap();
 
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = ext_hdrs.iter().collect();
+        let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = ext_hdrs.iter().collect();
         assert_eq!(ext_hdrs.len(), 2);
 
         // Check first extension header (hop-by-hop options)
@@ -1914,7 +1978,7 @@ mod tests {
         assert_eq!(ext_hdrs[1].next_header, IpProto::Tcp.into());
         if let Ipv6ExtensionHeaderData::DestinationOptions { options } = ext_hdrs[1].data() {
             // Everything should have been a NOP/ignore except for the unrecognized type
-            let options: Vec<DestinationOption> = options.iter().collect();
+            let options: Vec<DestinationOption<'_>> = options.iter().collect();
             assert_eq!(options.len(), 1);
             assert_eq!(options[0].action, ExtensionHeaderOptionAction::SkipAndContinue);
         } else {
@@ -2052,7 +2116,7 @@ mod tests {
             assert_eq!(pointer, 16);
             assert!(must_send_icmp);
             assert_eq!(header_len, 8);
-            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendICMP);
+            assert_eq!(action, ExtensionHeaderOptionAction::DiscardPacketSendIcmp);
         } else {
             panic!("Should have matched with UnrecognizedNextHeader: {:?}", error);
         }

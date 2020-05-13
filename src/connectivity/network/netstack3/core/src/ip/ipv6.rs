@@ -6,14 +6,14 @@
 
 use core::iter::Iterator;
 
-use zerocopy::ByteSlice;
-
-use crate::device::{DeviceId, FrameDestination};
-use crate::wire::ipv6::ext_hdrs::{
+use packet_formats::ipv6::ext_hdrs::{
     DestinationOptionData, ExtensionHeaderOption, FragmentData, HopByHopOptionData,
     Ipv6ExtensionHeaderData, RoutingData,
 };
-use crate::wire::ipv6::Ipv6Packet;
+use packet_formats::ipv6::Ipv6Packet;
+use zerocopy::ByteSlice;
+
+use crate::device::{DeviceId, FrameDestination};
 use crate::{Context, EventDispatcher};
 
 /// What to do with an IPv6 packet after parsing an extension header.
@@ -196,11 +196,12 @@ fn handle_destination_options_ext_hdr<
 mod tests {
     use super::*;
 
-    use crate::ip::IpProto;
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
     use packet::serialize::{Buf, Serializer};
     use packet::ParseBuffer;
+    use packet_formats::ip::IpProto;
+    use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+
+    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
 
     #[test]
     fn test_no_extension_headers() {

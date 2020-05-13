@@ -27,13 +27,20 @@ use core::ops::RangeInclusive;
 use core::time::Duration;
 
 use log::{debug, error, trace};
-
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr, Subnet};
 use net_types::{
     LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
     SpecifiedAddress, Witness,
 };
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
+use packet_formats::icmp::ndp::options::{NdpOption, PrefixInformation};
+use packet_formats::icmp::ndp::{
+    self, NeighborAdvertisement, NeighborSolicitation, Options, RouterAdvertisement,
+    RouterSolicitation,
+};
+use packet_formats::icmp::{ndp::NdpPacket, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
+use packet_formats::ip::IpProto;
+use packet_formats::ipv6::Ipv6PacketBuilder;
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
 
@@ -42,14 +49,6 @@ use crate::device::link::{LinkAddress, LinkDevice};
 use crate::device::{
     AddressConfigurationType, AddressEntry, AddressError, AddressState, DeviceIdContext, Tentative,
 };
-use crate::ip::IpProto;
-use crate::wire::icmp::ndp::options::{NdpOption, PrefixInformation};
-use crate::wire::icmp::ndp::{
-    self, NeighborAdvertisement, NeighborSolicitation, Options, RouterAdvertisement,
-    RouterSolicitation,
-};
-use crate::wire::icmp::{ndp::NdpPacket, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use crate::wire::ipv6::Ipv6PacketBuilder;
 use crate::Instant;
 
 const ZERO_DURATION: Duration = Duration::from_secs(0);
@@ -3505,6 +3504,13 @@ mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
     use packet::{Buf, GrowBuffer, ParseBuffer};
+    use packet_formats::icmp::ndp::{
+        options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
+    };
+    use packet_formats::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
+    use packet_formats::testutil::{
+        parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
+    };
 
     use crate::device::{
         add_ip_addr_subnet, del_ip_addr,
@@ -3514,15 +3520,10 @@ mod tests {
         DeviceLayerTimerIdInner, EthernetDeviceId,
     };
     use crate::testutil::{
-        self, get_counter_val, parse_ethernet_frame,
-        parse_icmp_packet_in_ip_packet_in_ethernet_frame, run_for, set_logger_for_test,
-        trigger_next_timer, DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant,
-        DummyNetwork, TestIpExt, DUMMY_CONFIG_V6,
+        self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork, TestIpExt,
+        DUMMY_CONFIG_V6,
     };
-    use crate::wire::icmp::ndp::{
-        options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
-    };
-    use crate::wire::icmp::{IcmpEchoRequest, IcmpParseArgs, Icmpv6Packet};
     use crate::{Context, Instant, StackStateBuilder, TimerId, TimerIdInner};
 
     // We assume Ethernet since that's what all of our tests use.
@@ -4692,7 +4693,11 @@ mod tests {
         assert!(!trigger_next_timer(&mut ctx));
     }
 
-    impl<B: ByteSlice> Icmpv6Packet<B> {
+    trait UnwrapNdp<B: ByteSlice> {
+        fn unwrap_ndp(self) -> NdpPacket<B>;
+    }
+
+    impl<B: ByteSlice> UnwrapNdp<B> for Icmpv6Packet<B> {
         fn unwrap_ndp(self) -> NdpPacket<B> {
             match self {
                 Icmpv6Packet::Ndp(ndp) => ndp,

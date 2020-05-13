@@ -8,96 +8,17 @@ use alloc::collections::hash_map::Entry;
 use alloc::collections::HashMap;
 use core::hash::Hash;
 use core::marker::PhantomData;
-use core::mem;
 use core::time::Duration;
 
 use log::{debug, error};
-use net_types::{ethernet::Mac, ip::Ipv4Addr};
 use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
-use zerocopy::{AsBytes, FromBytes, Unaligned};
+use packet_formats::arp::{ArpOp, ArpPacket, ArpPacketBuilder, HType, PType};
 
 use crate::context::{
     CounterContext, FrameContext, FrameHandler, StateContext, TimerContext, TimerHandler,
 };
-use crate::device::ethernet::EtherType;
-use crate::device::link::{BroadcastLinkAddress, LinkDevice};
-use crate::wire::arp::{ArpPacket, ArpPacketBuilder};
-
-/// The type of an ARP operation.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[allow(missing_docs)]
-#[repr(u16)]
-pub(crate) enum ArpOp {
-    Request = ArpOp::REQUEST,
-    Response = ArpOp::RESPONSE,
-}
-
-impl ArpOp {
-    const REQUEST: u16 = 0x0001;
-    const RESPONSE: u16 = 0x0002;
-
-    /// Construct an `ArpOp` from a `u16`.
-    ///
-    /// `from_u16` returns the `ArpOp` with the numerical value `u`, or `None`
-    /// if the value is unrecognized.
-    pub(crate) fn from_u16(u: u16) -> Option<ArpOp> {
-        match u {
-            Self::REQUEST => Some(ArpOp::Request),
-            Self::RESPONSE => Some(ArpOp::Response),
-            _ => None,
-        }
-    }
-}
-
-/// A trait to represent an ARP hardware type.
-pub(crate) trait HType: BroadcastLinkAddress + Hash + Eq {
-    /// The hardware type.
-    const HTYPE: ArpHardwareType;
-    /// The in-memory size of an instance of the type.
-    const HLEN: u8;
-}
-
-/// A trait to represent an ARP protocol type.
-pub(crate) trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
-    /// The protocol type.
-    const PTYPE: EtherType;
-    /// The in-memory size of an instance of the type.
-    const PLEN: u8;
-}
-
-impl HType for Mac {
-    const HTYPE: ArpHardwareType = ArpHardwareType::Ethernet;
-    const HLEN: u8 = mem::size_of::<Mac>() as u8;
-}
-
-impl PType for Ipv4Addr {
-    const PTYPE: EtherType = EtherType::Ipv4;
-    const PLEN: u8 = mem::size_of::<Ipv4Addr>() as u8;
-}
-
-/// An ARP hardware protocol.
-#[derive(Debug, PartialEq)]
-#[allow(missing_docs)]
-#[repr(u16)]
-pub(crate) enum ArpHardwareType {
-    Ethernet = ArpHardwareType::ETHERNET,
-}
-
-impl ArpHardwareType {
-    const ETHERNET: u16 = 0x0001;
-
-    /// Construct an `ArpHardwareType` from a `u16`.
-    ///
-    /// `from_u16` returns the `ArpHardwareType` with the numerical value `u`,
-    /// or `None` if the value is unrecognized.
-    pub(crate) fn from_u16(u: u16) -> Option<ArpHardwareType> {
-        match u {
-            Self::ETHERNET => Some(ArpHardwareType::Ethernet),
-            _ => None,
-        }
-    }
-}
+use crate::device::link::LinkDevice;
 
 // NOTE(joshlf): This may seem a bit odd. Why not just say that `ArpDevice` is a
 // sub-trait of `L: LinkDevice` where `L::Address: HType`? Unfortunately, rustc
@@ -788,12 +709,12 @@ mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4Addr;
     use packet::{ParseBuffer, Serializer};
+    use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType, ArpPacketBuilder};
 
     use super::*;
     use crate::context::testutil::{DummyInstant, DummyNetwork, DummyTimerContextExt};
     use crate::context::InstantContext;
-    use crate::device::ethernet::{EtherType, EthernetLinkDevice};
-    use crate::wire::arp::{peek_arp_types, ArpPacketBuilder};
+    use crate::device::ethernet::EthernetLinkDevice;
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -880,8 +801,8 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
         let (hw, proto) = peek_arp_types(buf.as_ref()).unwrap();
-        assert_eq!(hw, crate::device::arp::ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
+        assert_eq!(hw, ArpHardwareType::Ethernet);
+        assert_eq!(proto, ArpNetworkType::Ipv4);
 
         receive_arp_packet::<_, Ipv4Addr, _, _>(ctx, (), buf);
     }

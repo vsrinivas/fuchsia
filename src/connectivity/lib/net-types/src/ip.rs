@@ -75,6 +75,27 @@ pub enum IpVersion {
     V6,
 }
 
+/// A ZST that carries IP version information.
+///
+/// Typically used by types that need to receive external information of which
+/// IP version the type is specialized for, but without any other associated data.
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub struct IpVersionMarker<I> {
+    _marker: core::marker::PhantomData<I>,
+}
+
+impl<I: Ip> Default for IpVersionMarker<I> {
+    fn default() -> Self {
+        Self { _marker: core::marker::PhantomData }
+    }
+}
+
+impl<I: Ip> Debug for IpVersionMarker<I> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "IpVersionMarker<{}>", I::NAME)
+    }
+}
+
 /// An IP address.
 ///
 /// By default, the contained address types are `Ipv4Addr` and `Ipv6Addr`.

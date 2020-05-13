@@ -28,11 +28,16 @@ use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
 use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
+use packet_formats::error::IpParseError;
+use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
+use packet_formats::ip::{IpExt, IpPacket, IpPacketBuilder, IpProto};
+use packet_formats::ipv4::Ipv4Packet;
+use packet_formats::ipv6::Ipv6Packet;
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler};
 use crate::device::{DeviceId, FrameDestination};
-use crate::error::{ExistsError, IpParseError, NotFoundError};
+use crate::error::{ExistsError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::gmp::igmp::IgmpPacketHandler;
 use crate::ip::icmp::{
@@ -48,9 +53,6 @@ use crate::ip::reassembly::{
     IpLayerFragmentCache,
 };
 use crate::ip::socket::{IpSock, IpSockUpdate};
-use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use crate::wire::ipv4::Ipv4Packet;
-use crate::wire::ipv6::Ipv6Packet;
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// Default IPv4 TTL.
@@ -2067,22 +2069,25 @@ mod tests {
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
     use packet::{Buf, ParseBuffer};
-    use rand::Rng;
-    use specialize_ip_macro::ip_test;
-
-    use crate::device::ethernet::EthernetIpExt;
-    use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
-    use crate::ip::path_mtu::get_pmtu;
-    use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
-    use crate::wire::icmp::{
+    use packet_formats::ethernet::{
+        EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
+    };
+    use packet_formats::icmp::{
         IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
         Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
         MessageBody,
     };
-    use crate::wire::ipv4::Ipv4PacketBuilder;
-    use crate::wire::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
-    use crate::wire::ipv6::Ipv6PacketBuilder;
+    use packet_formats::ip::{IpExt, IpExtByteSlice, Ipv6ExtHdrType};
+    use packet_formats::ipv4::Ipv4PacketBuilder;
+    use packet_formats::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
+    use packet_formats::ipv6::Ipv6PacketBuilder;
+    use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
+    use rand::Rng;
+    use specialize_ip_macro::ip_test;
+
+    use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
+    use crate::ip::path_mtu::get_pmtu;
+    use crate::testutil::*;
     use crate::{DeviceId, Mac, StackStateBuilder};
 
     //
@@ -2398,7 +2403,7 @@ mod tests {
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
-            ExtensionHeaderOptionAction::DiscardPacketSendICMP,
+            ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             false,
         );
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
@@ -2420,7 +2425,7 @@ mod tests {
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
-            ExtensionHeaderOptionAction::DiscardPacketSendICMP,
+            ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             true,
         );
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
@@ -2442,7 +2447,7 @@ mod tests {
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
-            ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
+            ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast,
             false,
         );
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
@@ -2464,7 +2469,7 @@ mod tests {
 
         let buf = buf_for_unrecognized_ext_hdr_option_test(
             &mut bytes,
-            ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
+            ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast,
             true,
         );
         // Do not expect an ICMP response for this packet

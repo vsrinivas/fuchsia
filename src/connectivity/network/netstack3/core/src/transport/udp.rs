@@ -9,9 +9,11 @@ use core::num::{NonZeroU16, NonZeroUsize};
 use core::ops::RangeInclusive;
 
 use log::trace;
-use net_types::ip::{Ip, IpAddress};
+use net_types::ip::{Ip, IpAddress, IpVersionMarker};
 use net_types::{SpecifiedAddr, Witness};
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
+use packet_formats::ip::IpProto;
+use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
 use specialize_ip_macro::specialize_ip;
 use thiserror::Error;
 
@@ -20,11 +22,10 @@ use crate::context::{CounterContext, DualStateContext, RngStateContext, RngState
 use crate::data_structures::IdMapCollectionKey;
 use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 use crate::ip::{
-    icmp::IcmpIpExt, BufferIpTransportContext, BufferTransportIpContext, IpPacketFromArgs, IpProto,
-    IpTransportContext, IpVersionMarker, TransportIpContext, TransportReceiveError,
+    icmp::IcmpIpExt, BufferIpTransportContext, BufferTransportIpContext, IpPacketFromArgs,
+    IpTransportContext, TransportIpContext, TransportReceiveError,
 };
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
-use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// A builder for UDP layer state.
@@ -659,9 +660,10 @@ impl<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportCon
         } else if state.send_port_unreachable {
             // Unfortunately, type inference isn't smart enough for us to just
             // do packet.parse_metadata().
-            let meta = ParsablePacket::<_, crate::wire::udp::UdpParseArgs<I::Addr>>::parse_metadata(
-                &packet,
-            );
+            let meta =
+                ParsablePacket::<_, packet_formats::udp::UdpParseArgs<I::Addr>>::parse_metadata(
+                    &packet,
+                );
             core::mem::drop(packet);
             buffer.undo_parse(meta);
             Err((buffer, TransportReceiveError::new_port_unreachable()))
@@ -1040,18 +1042,19 @@ impl<S: Serializer> From<S> for SendError {
 mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, InnerPacketBuilder, Serializer};
+    use packet_formats::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
+    use packet_formats::ip::{IpExt, IpPacketBuilder};
+    use packet_formats::ipv4::{Ipv4Header, Ipv4PacketRaw};
+    use packet_formats::ipv6::{Ipv6Header, Ipv6PacketRaw};
     use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::ip::{
         icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
-        DummyDeviceId, IpDeviceIdContext, IpExt, IpPacketBuilder, IpProto,
+        DummyDeviceId, IpDeviceIdContext,
     };
     use crate::testutil::{set_logger_for_test, FakeCryptoRng, TestIpExt};
-    use crate::wire::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
-    use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
-    use crate::wire::ipv6::{Ipv6Header, Ipv6PacketRaw};
 
     /// The listener data sent through a [`DummyUdpContext`].
     struct ListenData<I: Ip> {

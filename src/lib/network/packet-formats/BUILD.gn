@@ -1,12 +1,13 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
-rustc_library("netstack3-core") {
-  name = "netstack3_core"
+rustc_library("packet-formats") {
+  name = "packet_formats"
   version = "0.1.0"
   edition = "2018"
 
@@ -14,52 +15,47 @@ rustc_library("netstack3-core") {
   configs += [ "//build/config:netstack3_only_specialization_feature" ]
 
   deps = [
-    # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
-    "fakealloc",
-
     # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
-    "fakestd",
     "//garnet/lib/rust/never",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
-    "//src/connectivity/network/netstack3/core/specialize-ip-macro",
-    "//src/lib/mundane",
+    "//src/connectivity/network/netstack3/core/fakestd",
     "//src/lib/network/packet",
-    "//src/lib/network/packet-formats",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",
   ]
 }
 
-rustc_test("netstack3-core_test") {
+rustc_test("packet-formats-lib-test") {
   version = "0.1.0"
   edition = "2018"
-  name = "netstack3_core_lib_test"
+  name = "packet_formats_lib_test"
 
   configs -= [ "//build/config:rust_no_features" ]
   configs += [ "//build/config:netstack3_only_specialization_feature" ]
 
   deps = [
-    # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
-    "fakealloc",
+    # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
     "//garnet/lib/rust/never",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
-    "//src/connectivity/network/netstack3/core/specialize-ip-macro",
-    "//src/lib/mundane",
+    "//src/connectivity/network/netstack3/core/fakestd",
     "//src/lib/network/packet",
-    "//src/lib/network/packet-formats",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",
+  ]
+}
+
+test_package("packet-formats-test") {
+  deps = [ ":packet-formats-lib-test" ]
+  tests = [
+    {
+      name = "packet_formats_lib_test"
+      environments = [ qemu_env ]
+    },
   ]
 }

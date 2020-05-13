@@ -6,24 +6,82 @@
 
 #![allow(private_in_public)]
 
+use core::convert::TryFrom;
 #[cfg(test)]
 use core::fmt::{self, Debug, Formatter};
+use core::hash::Hash;
 use core::mem;
 
 use net_types::ethernet::Mac;
-use net_types::ip::Ipv4Addr;
+use net_types::ip::{IpAddress, Ipv4Addr};
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::device::arp::{ArpHardwareType, ArpOp, HType, PType};
-use crate::device::ethernet::EtherType;
 use crate::error::{ParseError, ParseResult};
-use crate::wire::U16;
+use crate::U16;
 
 #[cfg(test)]
 pub(crate) const ARP_HDR_LEN: usize = 8;
 #[cfg(test)]
 pub(crate) const ARP_ETHERNET_IPV4_PACKET_LEN: usize = 28;
+
+create_protocol_enum!(
+    /// The type of an ARP operation.
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    #[allow(missing_docs)]
+    pub enum ArpOp : u16 {
+        Request, 0x0001, "Request";
+        Response, 0x0002, "Response";
+        _, "ArpOp {}";
+    }
+);
+
+/// A trait to represent an ARP hardware type.
+pub trait HType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
+    /// The hardware type.
+    const HTYPE: ArpHardwareType;
+    /// The in-memory size of an instance of the type.
+    const HLEN: u8;
+    /// The broadcast address for this type.
+    const BROADCAST: Self;
+}
+
+/// A trait to represent an ARP protocol type.
+pub trait PType: FromBytes + AsBytes + Unaligned + Copy + Clone + Hash + Eq {
+    /// The protocol type.
+    const PTYPE: ArpNetworkType;
+    /// The in-memory size of an instance of the type.
+    const PLEN: u8;
+}
+
+impl HType for Mac {
+    const HTYPE: ArpHardwareType = ArpHardwareType::Ethernet;
+    const HLEN: u8 = mem::size_of::<Mac>() as u8;
+    const BROADCAST: Mac = Mac::BROADCAST;
+}
+
+impl PType for Ipv4Addr {
+    const PTYPE: ArpNetworkType = ArpNetworkType::Ipv4;
+    const PLEN: u8 = Ipv4Addr::BYTES;
+}
+
+create_protocol_enum!(
+    /// An ARP hardware protocol.
+    #[derive(PartialEq)]
+    #[allow(missing_docs)]
+    pub enum ArpHardwareType : u16 {
+        Ethernet, 0x0001, "Ethernet";
+    }
+);
+
+create_protocol_enum!(
+    /// An ARP network protocol.
+    #[derive(PartialEq)]
+    #[allow(missing_docs)]
+    pub enum ArpNetworkType : u16 {
+        Ipv4, 0x0800, "IPv4";
+    }
+);
 
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -38,11 +96,11 @@ struct Header {
 impl Header {
     fn new<HwAddr: HType, ProtoAddr: PType>(op: ArpOp) -> Header {
         Header {
-            htype: U16::new(<HwAddr as HType>::HTYPE as u16),
+            htype: U16::new(<HwAddr as HType>::HTYPE.into()),
             hlen: <HwAddr as HType>::HLEN,
             ptype: U16::new(<ProtoAddr as PType>::PTYPE.into()),
             plen: <ProtoAddr as PType>::PLEN,
-            oper: U16::new(op as u16),
+            oper: U16::new(op.into()),
         }
     }
 }
@@ -61,32 +119,30 @@ impl Header {
 /// Note that `peek_arp_types` only inspects certain fields in the header, and
 /// so `peek_arp_types` succeeding does not guarantee that a subsequent call to
 /// `parse` will also succeed.
-pub(crate) fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, EtherType)> {
+pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, ArpNetworkType)> {
     let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-    let hw = ArpHardwareType::from_u16(header.htype.get()).ok_or_else(debug_err_fn!(
+
+    let hw = ArpHardwareType::try_from(header.htype.get()).ok().ok_or_else(debug_err_fn!(
         ParseError::NotSupported,
         "unrecognized hardware protocol: {:x}",
         header.htype.get()
     ))?;
-    let proto = EtherType::from(header.ptype.get());
+    let proto = ArpNetworkType::try_from(header.ptype.get()).ok().ok_or_else(debug_err_fn!(
+        ParseError::NotSupported,
+        "unrecognized network protocol: {:x}",
+        header.ptype.get()
+    ))?;
     let hlen = match hw {
         ArpHardwareType::Ethernet => <Mac as HType>::HLEN,
     };
     let plen = match proto {
-        EtherType::Ipv4 => <Ipv4Addr as PType>::PLEN,
-        _ => {
-            return debug_err!(
-                Err(ParseError::NotSupported),
-                "unsupported network protocol: {}",
-                proto
-            );
-        }
+        ArpNetworkType::Ipv4 => <Ipv4Addr as PType>::PLEN,
     };
     if header.hlen != hlen || header.plen != plen {
         return debug_err!(
             Err(ParseError::Format),
-            "unexpected hardware or protocol address length for protocol {}",
+            "unexpected hardware or protocol address length for protocol {:?}",
             proto
         );
     }
@@ -125,7 +181,7 @@ unsafe impl<HwAddr: AsBytes + Unaligned, ProtoAddr: AsBytes + Unaligned> AsBytes
 /// A `ArpPacket` shares its underlying memory with the byte slice it was parsed
 /// from or serialized to, meaning that no copying or extra allocation is
 /// necessary.
-pub(crate) struct ArpPacket<B, HwAddr, ProtoAddr> {
+pub struct ArpPacket<B, HwAddr, ProtoAddr> {
     header: LayoutVerified<B, Header>,
     body: LayoutVerified<B, Body<HwAddr, ProtoAddr>>,
 }
@@ -151,7 +207,7 @@ where
         // Consume any padding bytes added by the previous layer.
         buffer.take_rest_front();
 
-        if header.htype.get() != <HwAddr as HType>::HTYPE as u16
+        if header.htype.get() != <HwAddr as HType>::HTYPE.into()
             || header.ptype.get() != <ProtoAddr as PType>::PTYPE.into()
         {
             return debug_err!(
@@ -166,12 +222,8 @@ where
             );
         }
 
-        if ArpOp::from_u16(header.oper.get()).is_none() {
-            return debug_err!(
-                Err(ParseError::Format),
-                "unrecognized op code: {:x}",
-                header.oper.get()
-            );
+        if let ArpOp::Other(x) = header.oper.get().into() {
+            return debug_err!(Err(ParseError::Format), "unrecognized op code: {:x}", x);
         }
 
         Ok(ArpPacket { header, body })
@@ -184,35 +236,32 @@ where
     ProtoAddr: Copy + PType + FromBytes + Unaligned,
 {
     /// The type of ARP packet
-    pub(crate) fn operation(&self) -> ArpOp {
-        // This is verified in `parse`, so should be safe to unwrap
-        ArpOp::from_u16(self.header.oper.get()).unwrap()
+    pub fn operation(&self) -> ArpOp {
+        self.header.oper.get().into()
     }
 
     /// The hardware address of the ARP packet sender.
-    pub(crate) fn sender_hardware_address(&self) -> HwAddr {
+    pub fn sender_hardware_address(&self) -> HwAddr {
         self.body.sha
     }
 
     /// The protocol address of the ARP packet sender.
-    pub(crate) fn sender_protocol_address(&self) -> ProtoAddr {
+    pub fn sender_protocol_address(&self) -> ProtoAddr {
         self.body.spa
     }
 
     /// The hardware address of the ARP packet target.
-    pub(crate) fn target_hardware_address(&self) -> HwAddr {
+    pub fn target_hardware_address(&self) -> HwAddr {
         self.body.tha
     }
 
     /// The protocol address of the ARP packet target.
-    pub(crate) fn target_protocol_address(&self) -> ProtoAddr {
+    pub fn target_protocol_address(&self) -> ProtoAddr {
         self.body.tpa
     }
 
     /// Construct a builder with the same contents as this packet.
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    pub(crate) fn builder(&self) -> ArpPacketBuilder<HwAddr, ProtoAddr> {
+    pub fn builder(&self) -> ArpPacketBuilder<HwAddr, ProtoAddr> {
         ArpPacketBuilder {
             op: self.operation(),
             sha: self.sender_hardware_address(),
@@ -225,7 +274,7 @@ where
 
 /// A builder for ARP packets.
 #[derive(Debug)]
-pub(crate) struct ArpPacketBuilder<HwAddr, ProtoAddr> {
+pub struct ArpPacketBuilder<HwAddr, ProtoAddr> {
     op: ArpOp,
     sha: HwAddr,
     spa: ProtoAddr,
@@ -235,7 +284,7 @@ pub(crate) struct ArpPacketBuilder<HwAddr, ProtoAddr> {
 
 impl<HwAddr, ProtoAddr> ArpPacketBuilder<HwAddr, ProtoAddr> {
     /// Construct a new `ArpPacketBuilder`.
-    pub(crate) fn new(
+    pub fn new(
         operation: ArpOp,
         sender_hardware_addr: HwAddr,
         sender_protocol_addr: ProtoAddr,
@@ -285,8 +334,8 @@ mod tests {
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;
+    use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
     use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -295,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full() {
-        use crate::wire::testdata::arp_request::*;
+        use crate::testdata::arp_request::*;
 
         let mut buf = ETHERNET_FRAME.bytes;
         let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
@@ -303,7 +352,7 @@ mod tests {
 
         let (hw, proto) = peek_arp_types(frame.body()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
+        assert_eq!(proto, ArpNetworkType::Ipv4);
 
         let mut body = frame.body();
         let arp = body.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
@@ -338,7 +387,7 @@ mod tests {
         let header = new_header();
         let (hw, proto) = peek_arp_types(&header_to_bytes(header)[..]).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
+        assert_eq!(proto, ArpNetworkType::Ipv4);
 
         // Test that an invalid operation is not rejected; peek_arp_types does
         // not inspect the operation.
@@ -346,7 +395,7 @@ mod tests {
         header.oper = U16::new(3);
         let (hw, proto) = peek_arp_types(&header_to_bytes(header)[..]).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
+        assert_eq!(proto, ArpNetworkType::Ipv4);
     }
 
     #[test]
@@ -357,7 +406,7 @@ mod tests {
         (&mut buf[..ARP_HDR_LEN]).copy_from_slice(&header_to_bytes(new_header()));
         let (hw, proto) = peek_arp_types(&buf[..]).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
-        assert_eq!(proto, EtherType::Ipv4);
+        assert_eq!(proto, ArpNetworkType::Ipv4);
 
         let buf = &mut buf;
         let packet = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();

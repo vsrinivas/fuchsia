@@ -17,7 +17,7 @@ rustc_library("packet") {
   ]
 }
 
-rustc_test("packet_test") {
+rustc_test("packet-lib-test") {
   version = "0.1.0"
   edition = "2018"
   name = "packet_lib_test"
@@ -26,5 +26,15 @@ rustc_test("packet_test") {
     "//garnet/lib/rust/never",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:rand",
+  ]
+}
+
+test_package("packet-test") {
+  deps = [ ":packet-lib-test" ]
+  tests = [
+    {
+      name = "packet_lib_test"
+      environments = [ qemu_env ]
+    },
   ]
 }

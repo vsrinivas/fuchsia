@@ -19,12 +19,12 @@ use packet::serialize::InnerPacketBuilder;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::wire::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody};
-use crate::wire::U16;
+use crate::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody};
+use crate::U16;
 
 /// An ICMPv6 packet with an MLD message.
 #[allow(missing_docs)]
-pub(crate) enum MldPacket<B: ByteSlice> {
+pub enum MldPacket<B: ByteSlice> {
     MulticastListenerQuery(IcmpPacket<Ipv6, B, MulticastListenerQuery>),
     MulticastListenerReport(IcmpPacket<Ipv6, B, MulticastListenerReport>),
     MulticastListenerDone(IcmpPacket<Ipv6, B, MulticastListenerDone>),
@@ -33,27 +33,27 @@ pub(crate) enum MldPacket<B: ByteSlice> {
 /// Multicast Listener Query V1 Message.
 #[repr(C)]
 #[derive(AsBytes, FromBytes, Unaligned, Copy, Clone, Debug)]
-pub(crate) struct MulticastListenerQuery;
+pub struct MulticastListenerQuery;
 
 /// Multicast Listener Report V1 Message.
 #[repr(C)]
 #[derive(AsBytes, FromBytes, Unaligned, Copy, Clone, Debug)]
-pub(crate) struct MulticastListenerReport;
+pub struct MulticastListenerReport;
 
 /// Multicast Listener Done V1 Message.
 #[repr(C)]
 #[derive(AsBytes, FromBytes, Unaligned, Copy, Clone, Debug)]
-pub(crate) struct MulticastListenerDone;
+pub struct MulticastListenerDone;
 
 /// MLD Errors.
 #[derive(Debug)]
-pub(crate) enum MldError {
+pub enum MldError {
     /// Raised when `MaxRespCode` cannot fit in `u16`.
     MaxRespCodeOverflow,
 }
 
 /// The trait for all MLDv1 Messages.
-pub(crate) trait Mldv1MessageType {
+pub trait Mldv1MessageType {
     /// The type used to represent maximum response delay.
     ///
     /// It should be `()` for Report and Done messages,
@@ -68,7 +68,8 @@ pub(crate) trait Mldv1MessageType {
     type GroupAddr: Into<Ipv6Addr> + Debug + Copy;
 }
 
-pub(crate) trait IcmpMldv1MessageType<B: ByteSlice>:
+/// The trait for all ICMPv6 messages holding MLDv1 messages.
+pub trait IcmpMldv1MessageType<B: ByteSlice>:
     Mldv1MessageType + IcmpMessage<Ipv6, B, Code = IcmpUnusedCode>
 {
 }
@@ -77,7 +78,7 @@ pub(crate) trait IcmpMldv1MessageType<B: ByteSlice>:
 ///
 /// The type implementing this trait should be able
 /// to convert itself from/to `U16`
-pub(crate) trait MaxRespCode {
+pub trait MaxRespCode {
     /// Convert to `U16`
     fn as_code(self) -> U16;
 
@@ -95,7 +96,7 @@ impl MaxRespCode for () {
 
 /// Maximum Response Delay used in Query messages.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
-pub(crate) struct Mldv1ResponseDelay(u16);
+pub struct Mldv1ResponseDelay(u16);
 
 impl MaxRespCode for Mldv1ResponseDelay {
     fn as_code(self) -> U16 {
@@ -125,9 +126,9 @@ impl TryFrom<Duration> for Mldv1ResponseDelay {
 /// The layout for an MLDv1 message body.
 #[repr(C)]
 #[derive(AsBytes, FromBytes, Unaligned, Copy, Clone, Debug)]
-pub(crate) struct Mldv1Message {
+pub struct Mldv1Message {
     /// Max Response Delay, in units of milliseconds.
-    pub(crate) max_response_delay: U16,
+    pub max_response_delay: U16,
     /// Initialized to zero by the sender; ignored by receivers.
     reserved: U16,
     /// In a Query message, the Multicast Address field is set to zero when
@@ -137,18 +138,19 @@ pub(crate) struct Mldv1Message {
     /// In a Report or Done message, the Multicast Address field holds a
     /// specific IPv6 multicast address to which the message sender is
     /// listening or is ceasing to listen, respectively.
-    pub(crate) group_addr: Ipv6Addr,
+    pub group_addr: Ipv6Addr,
 }
 
 impl Mldv1Message {
-    pub(crate) fn max_response_delay(&self) -> Duration {
+    /// Gets the response delay value.
+    pub fn max_response_delay(&self) -> Duration {
         Mldv1ResponseDelay(self.max_response_delay.get()).into()
     }
 }
 
 /// The on-wire structure for the body of an MLDv1 message.
 #[derive(Debug)]
-pub(crate) struct Mldv1Body<B: ByteSlice>(LayoutVerified<B, Mldv1Message>);
+pub struct Mldv1Body<B: ByteSlice>(LayoutVerified<B, Mldv1Message>);
 
 impl<B: ByteSlice> Deref for Mldv1Body<B> {
     type Target = Mldv1Message;
@@ -189,7 +191,7 @@ impl_mldv1_message!(MulticastListenerDone, (), MulticastAddr<Ipv6Addr>);
 
 /// The builder for MLDv1 Messages.
 #[derive(Debug)]
-pub(crate) struct Mldv1MessageBuilder<M: Mldv1MessageType> {
+pub struct Mldv1MessageBuilder<M: Mldv1MessageType> {
     max_resp_delay: M::MaxRespDelay,
     group_addr: M::GroupAddr,
 }
@@ -197,9 +199,7 @@ pub(crate) struct Mldv1MessageBuilder<M: Mldv1MessageType> {
 impl<M: Mldv1MessageType<MaxRespDelay = ()>> Mldv1MessageBuilder<M> {
     /// Create an `Mldv1MessageBuilder` without a `max_resp_delay`
     /// for Report and Done messages.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn new(group_addr: M::GroupAddr) -> Self {
+    pub fn new(group_addr: M::GroupAddr) -> Self {
         Mldv1MessageBuilder { max_resp_delay: (), group_addr }
     }
 }
@@ -207,7 +207,7 @@ impl<M: Mldv1MessageType<MaxRespDelay = ()>> Mldv1MessageBuilder<M> {
 impl<M: Mldv1MessageType> Mldv1MessageBuilder<M> {
     /// Create an `Mldv1MessageBuilder` with a `max_resp_delay`
     /// for Query messages.
-    pub(crate) fn new_with_max_resp_delay(
+    pub fn new_with_max_resp_delay(
         group_addr: M::GroupAddr,
         max_resp_delay: M::MaxRespDelay,
     ) -> Self {
@@ -239,18 +239,19 @@ impl<M: Mldv1MessageType> InnerPacketBuilder for Mldv1MessageBuilder<M> {
 
 #[cfg(test)]
 mod tests {
-    use net_types::Witness;
-    use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
     use std::convert::TryInto;
     use std::fmt::Debug;
 
+    use net_types::Witness;
+    use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
+
     use super::*;
+    use crate::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, MessageBody};
     use crate::ip::IpProto;
-    use crate::wire::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, MessageBody};
-    use crate::wire::ipv6::ext_hdrs::{
+    use crate::ipv6::ext_hdrs::{
         ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData, Ipv6ExtensionHeaderData,
     };
-    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
+    use crate::ipv6::{Ipv6Packet, Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 
     fn serialize_to_bytes<
         B: ByteSlice + Debug,
@@ -368,8 +369,8 @@ mod tests {
 
     #[test]
     fn test_mld_parse_and_serialize_query() {
-        use crate::wire::icmp::mld::MulticastListenerQuery;
-        use crate::wire::testdata::mld_router_query::*;
+        use crate::icmp::mld::MulticastListenerQuery;
+        use crate::testdata::mld_router_query::*;
         test_parse_and_serialize::<MulticastListenerQuery, _, _>(
             SRC_IP,
             DST_IP,
@@ -385,8 +386,8 @@ mod tests {
 
     #[test]
     fn test_mld_parse_and_serialize_report() {
-        use crate::wire::icmp::mld::MulticastListenerReport;
-        use crate::wire::testdata::mld_router_report::*;
+        use crate::icmp::mld::MulticastListenerReport;
+        use crate::testdata::mld_router_report::*;
         test_parse_and_serialize::<MulticastListenerReport, _, _>(
             SRC_IP,
             DST_IP,
@@ -402,8 +403,8 @@ mod tests {
 
     #[test]
     fn test_mld_parse_and_serialize_done() {
-        use crate::wire::icmp::mld::MulticastListenerDone;
-        use crate::wire::testdata::mld_router_done::*;
+        use crate::icmp::mld::MulticastListenerDone;
+        use crate::testdata::mld_router_done::*;
         test_parse_and_serialize::<MulticastListenerDone, _, _>(
             SRC_IP,
             DST_IP,
@@ -419,8 +420,8 @@ mod tests {
 
     #[test]
     fn test_mld_serialize_and_parse_query() {
-        use crate::wire::icmp::mld::MulticastListenerQuery;
-        use crate::wire::testdata::mld_router_query::*;
+        use crate::icmp::mld::MulticastListenerQuery;
+        use crate::testdata::mld_router_query::*;
         let bytes = serialize_to_bytes_with_builder::<&[u8], _>(
             SRC_IP,
             DST_IP,
@@ -442,8 +443,8 @@ mod tests {
 
     #[test]
     fn test_mld_serialize_and_parse_report() {
-        use crate::wire::icmp::mld::MulticastListenerReport;
-        use crate::wire::testdata::mld_router_report::*;
+        use crate::icmp::mld::MulticastListenerReport;
+        use crate::testdata::mld_router_report::*;
         let bytes = serialize_to_bytes_with_builder::<&[u8], _>(
             SRC_IP,
             DST_IP,
@@ -465,8 +466,8 @@ mod tests {
 
     #[test]
     fn test_mld_serialize_and_parse_done() {
-        use crate::wire::icmp::mld::MulticastListenerDone;
-        use crate::wire::testdata::mld_router_done::*;
+        use crate::icmp::mld::MulticastListenerDone;
+        use crate::testdata::mld_router_done::*;
         let bytes = serialize_to_bytes_with_builder::<&[u8], _>(
             SRC_IP,
             DST_IP,

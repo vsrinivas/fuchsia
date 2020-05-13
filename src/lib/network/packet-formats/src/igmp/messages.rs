@@ -4,28 +4,34 @@
 
 //! Implementation of IGMP Messages.
 
+use core::convert::TryFrom;
+use core::ops::Deref;
+
 use net_types::ip::Ipv4Addr;
 use packet::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-#[cfg(test)]
-use super::parse_v3_possible_floating_point;
 use super::{
-    peek_message_type, IgmpMessage, IgmpNonEmptyBody, IgmpResponseTimeV2, IgmpResponseTimeV3,
+    parse_v3_possible_floating_point, peek_message_type, IgmpMessage, IgmpNonEmptyBody,
+    IgmpResponseTimeV2, IgmpResponseTimeV3,
 };
-use crate::error::ParseError;
-use crate::wire::igmp::MessageType;
-use crate::wire::U16;
+use crate::error::{ParseError, UnrecognizedProtocolCode};
+use crate::igmp::MessageType;
+use crate::U16;
 
-create_net_enum! {
-    pub(crate) IgmpMessageType,
-    MembershipQuery: MEMBERSHIP_QUERY = 0x11,
-    MembershipReportV1: MEMBERSHIP_REPORT_V1 = 0x12,
-    MembershipReportV2: MEMBERSHIP_REPORT_V2 = 0x16,
-    MembershipReportV3: MEMBERSHIP_REPORT_V3 = 0x22,
-    LeaveGroup: LEAVE_GROUP = 0x17,
-}
+create_protocol_enum!(
+    /// An IGMP message type.
+    #[allow(missing_docs)]
+    #[derive(PartialEq, Copy, Clone)]
+    pub enum IgmpMessageType: u8 {
+        MembershipQuery, 0x11, "Membership Query";
+        MembershipReportV1,0x12, "Membership Report V1";
+        MembershipReportV2,0x16, "Membership Report V2";
+        MembershipReportV3,0x22, "Membership Report V3";
+        LeaveGroup, 0x17, "Leave Group";
+    }
+);
 
 macro_rules! impl_igmp_simple_message_type {
     ($type:ident, $code:tt, $fixed_header:ident) => {
@@ -82,7 +88,7 @@ macro_rules! declare_no_body {
 /// [RFC 2236]: https://tools.ietf.org/html/rfc2236
 /// [RFC 2236 section 1.4]: https://tools.ietf.org/html/rfc2236#section-1.4
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct IgmpMembershipQueryV2;
+pub struct IgmpMembershipQueryV2;
 
 impl<B> MessageType<B> for IgmpMembershipQueryV2 {
     type FixedHeader = Ipv4Addr;
@@ -99,7 +105,7 @@ impl<B> MessageType<B> for IgmpMembershipQueryV2 {
 /// It is defined as the `FixedHeader` type for `IgmpMembershipQueryV3`.
 #[derive(Copy, Clone, Debug, AsBytes, FromBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct MembershipQueryData {
+pub struct MembershipQueryData {
     group_address: Ipv4Addr,
     sqrv: u8,
     qqic: u8,
@@ -122,12 +128,10 @@ impl MembershipQueryData {
     /// The default Query Interval, as defined in [RFC 3376 section 8.2].
     ///
     /// [RFC 3376 section 8.2]: https://tools.ietf.org/html/rfc3376#section-8.2
-    // TODO(rheacock): remove `#[allow(dead_code)]` when this is used.
-    #[allow(dead_code)]
-    pub(crate) const DEFAULT_QUERY_INTERVAL: core::time::Duration =
-        core::time::Duration::from_secs(1250);
+    pub const DEFAULT_QUERY_INTERVAL: core::time::Duration = core::time::Duration::from_secs(1250);
 
-    pub(crate) fn number_of_sources(self) -> u16 {
+    /// Returns the the number of sources.
+    pub fn number_of_sources(self) -> u16 {
         self.number_of_sources.get()
     }
 
@@ -138,9 +142,7 @@ impl MembershipQueryData {
     /// however, suppress the querier election or the normal "host-side"
     /// processing of a Query that a router may be required to perform as a
     /// consequence of itself being a group member.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn suppress_router_side_processing(self) -> bool {
+    pub fn suppress_router_side_processing(self) -> bool {
         (self.sqrv & Self::S_FLAG) != 0
     }
 
@@ -157,9 +159,7 @@ impl MembershipQueryData {
     /// configured value.
     ///
     /// [RFC 3376 section 8.1]: https://tools.ietf.org/html/rfc3376#section-8.1
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    fn querier_robustness_variable(self) -> u8 {
+    pub fn querier_robustness_variable(self) -> u8 {
         self.sqrv & Self::QRV_MSK
     }
 
@@ -173,12 +173,10 @@ impl MembershipQueryData {
     /// `DEFAULT_QUERY_INTERVAL`.
     ///
     /// [RFC 3376 section 8.2]: https://tools.ietf.org/html/rfc3376#section-8.2
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn querier_query_interval(self) -> std::time::Duration {
+    pub fn querier_query_interval(self) -> core::time::Duration {
         // qqic is represented in a packed floating point format and interpreted
         // as units of seconds.
-        std::time::Duration::from_secs(parse_v3_possible_floating_point(self.qqic).into())
+        core::time::Duration::from_secs(parse_v3_possible_floating_point(self.qqic).into())
     }
 }
 
@@ -193,7 +191,7 @@ impl MembershipQueryData {
 ///
 /// [RFC 3376 section 4.1]: https://tools.ietf.org/html/rfc3376#section-4.1
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct IgmpMembershipQueryV3;
+pub struct IgmpMembershipQueryV3;
 
 impl<B> IgmpNonEmptyBody for LayoutVerified<B, [Ipv4Addr]> {}
 
@@ -230,29 +228,33 @@ impl<B> MessageType<B> for IgmpMembershipQueryV3 {
 /// It is defined as the `FixedHeader` type for `IgmpMembershipReportV3`.
 #[derive(Copy, Clone, Debug, AsBytes, FromBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct MembershipReportV3Data {
+pub struct MembershipReportV3Data {
     _reserved: [u8; 2],
     number_of_group_records: U16,
 }
 
 impl MembershipReportV3Data {
-    pub(crate) fn number_of_group_records(self) -> u16 {
+    /// Returns the number of group records.
+    pub fn number_of_group_records(self) -> u16 {
         self.number_of_group_records.get()
     }
 }
 
-create_net_enum! {
+create_protocol_enum!(
     /// Group Record Types as defined in [RFC 3376 section 4.2.12]
     ///
     /// [RFC 3376 section 4.2.12]: https://tools.ietf.org/html/rfc3376#section-4.2.12
-    pub(crate) IgmpGroupRecordType,
-    ModeIsInclude: MODE_IS_INCLUDE = 0x01,
-    ModeIsExclude: MODE_IS_EXCLUDE = 0x02,
-    ChangeToIncludeMode: CHANGE_TO_INCLUDE_MODE = 0x03,
-    ChangeToExcludeMode: CHANGE_TO_EXCLUDE_MODE = 0x04,
-    AllowNewSources : ALLOW_NEW_SOURCES = 0x05,
-    BlockOldSources: BLOCK_OLD_SOURCES = 0x06,
-}
+    #[allow(missing_docs)]
+    #[derive(PartialEq, Copy, Clone)]
+    pub enum IgmpGroupRecordType: u8 {
+        ModeIsInclude, 0x01, "Mode Is Include";
+        ModeIsExclude, 0x02, "Mode Is Exclude";
+        ChangeToIncludeMode, 0x03, "Change To Include Mode";
+        ChangeToExcludeMode, 0x04, "Change To Exclude Mode";
+        AllowNewSources, 0x05, "Allow New Sources";
+        BlockOldSources, 0x06, "Block Old Sources";
+    }
+);
 
 /// Fixed information for IGMPv3 Membership Report's Group Records.
 ///
@@ -264,7 +266,7 @@ create_net_enum! {
 /// [RFC 3376 section 4.2.4]: https://tools.ietf.org/html/rfc3376#section-4.2.4
 #[derive(Copy, Clone, Debug, AsBytes, FromBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct GroupRecordHeader {
+pub struct GroupRecordHeader {
     record_type: u8,
     aux_data_len: u8,
     number_of_sources: U16,
@@ -272,14 +274,14 @@ pub(crate) struct GroupRecordHeader {
 }
 
 impl GroupRecordHeader {
-    pub(crate) fn number_of_sources(self) -> u16 {
+    /// Returns the number of sources.
+    pub fn number_of_sources(self) -> u16 {
         self.number_of_sources.get()
     }
 
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn record_type(self) -> Option<IgmpGroupRecordType> {
-        IgmpGroupRecordType::from_u8(self.record_type)
+    /// Returns the type of the record.
+    pub fn record_type(self) -> Result<IgmpGroupRecordType, UnrecognizedProtocolCode<u8>> {
+        IgmpGroupRecordType::try_from(self.record_type)
     }
 }
 
@@ -298,13 +300,21 @@ impl GroupRecordHeader {
 /// information in Auxiliary Data, if any, is discarded.
 ///
 /// [RFC 3376 section 4.2.10]: https://tools.ietf.org/html/rfc3376#section-4.2.10
-// TODO(rheacock): Remove `allow(dead_code)` when this is used outside of tests.
-// We can't just mark `header` and `sources` as `cfg(test)` because then the
-// input parameter is unused...
-#[allow(dead_code)]
-pub(crate) struct GroupRecord<B> {
+pub struct GroupRecord<B> {
     header: LayoutVerified<B, GroupRecordHeader>,
     sources: LayoutVerified<B, [Ipv4Addr]>,
+}
+
+impl<B: ByteSlice> GroupRecord<B> {
+    /// Returns the group record header.
+    pub fn header(&self) -> &GroupRecordHeader {
+        self.header.deref()
+    }
+
+    /// Returns the group record's sources.
+    pub fn sources(&self) -> &[Ipv4Addr] {
+        self.sources.deref()
+    }
 }
 
 /// IGMPv3 Membership Report message.
@@ -319,7 +329,7 @@ pub(crate) struct GroupRecord<B> {
 ///
 /// [RFC 3376 section 4.2]: https://tools.ietf.org/html/rfc3376#section-4.2
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct IgmpMembershipReportV3;
+pub struct IgmpMembershipReportV3;
 
 impl<B> IgmpNonEmptyBody for LimitedRecords<B, IgmpMembershipReportV3> {}
 
@@ -392,7 +402,7 @@ impl<'a> LimitedRecordsImpl<'a> for IgmpMembershipReportV3 {
 ///
 /// [RFC 1112]: https://tools.ietf.org/html/rfc1112
 #[derive(Debug)]
-pub(crate) struct IgmpMembershipReportV1;
+pub struct IgmpMembershipReportV1;
 
 impl_igmp_simple_message_type!(IgmpMembershipReportV1, MembershipReportV1, Ipv4Addr);
 
@@ -411,7 +421,7 @@ impl_igmp_simple_message_type!(IgmpMembershipReportV1, MembershipReportV1, Ipv4A
 ///
 /// [RFC 2236]: https://tools.ietf.org/html/rfc2236
 #[derive(Debug)]
-pub(crate) struct IgmpMembershipReportV2;
+pub struct IgmpMembershipReportV2;
 
 impl_igmp_simple_message_type!(IgmpMembershipReportV2, MembershipReportV2, Ipv4Addr);
 
@@ -430,7 +440,7 @@ impl_igmp_simple_message_type!(IgmpMembershipReportV2, MembershipReportV2, Ipv4A
 ///
 /// [RFC 2236]: https://tools.ietf.org/html/rfc2236
 #[derive(Debug)]
-pub(crate) struct IgmpLeaveGroup;
+pub struct IgmpLeaveGroup;
 
 impl_igmp_simple_message_type!(IgmpLeaveGroup, LeaveGroup, Ipv4Addr);
 
@@ -440,7 +450,8 @@ impl_igmp_simple_message_type!(IgmpLeaveGroup, LeaveGroup, Ipv4Addr);
 /// the appropriate static type, making it easier to call `parse` without
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
-pub(crate) enum IgmpPacket<B> {
+#[allow(missing_docs)]
+pub enum IgmpPacket<B> {
     MembershipQueryV2(IgmpMessage<B, IgmpMembershipQueryV2>),
     MembershipQueryV3(IgmpMessage<B, IgmpMembershipQueryV3>),
     MembershipReportV1(IgmpMessage<B, IgmpMembershipReportV1>),
@@ -497,8 +508,8 @@ mod tests {
 
     use super::super::IgmpMessage;
     use super::*;
+    use crate::igmp::testdata::*;
     use crate::testutil::set_logger_for_test;
-    use crate::wire::igmp::testdata::*;
 
     const ALL_BUFFERS: [&'static [u8]; 6] = [
         igmp_router_queries::v2::QUERY,
@@ -621,22 +632,22 @@ mod tests {
             let mut iter = igmp.body.iter();
             // look at first group record:
             let rec1 = iter.next().unwrap();
-            assert_eq!(rec1.header.number_of_sources(), NUMBER_OF_SOURCES_1);
-            assert_eq!(rec1.header.record_type, RECORD_TYPE_1);
-            assert_eq!(rec1.header.multicast_address, Ipv4Addr::new(MULTICAST_ADDR_1));
-            assert_eq!(rec1.header.record_type(), Some(IgmpGroupRecordType::ModeIsInclude));
-            assert_eq!(rec1.sources.len(), NUMBER_OF_SOURCES_1 as usize);
-            assert_eq!(rec1.sources[0], Ipv4Addr::new(SRC_1_1));
-            assert_eq!(rec1.sources[1], Ipv4Addr::new(SRC_1_2));
+            assert_eq!(rec1.header().number_of_sources(), NUMBER_OF_SOURCES_1);
+            assert_eq!(rec1.header().record_type, RECORD_TYPE_1);
+            assert_eq!(rec1.header().multicast_address, Ipv4Addr::new(MULTICAST_ADDR_1));
+            assert_eq!(rec1.header().record_type(), Ok(IgmpGroupRecordType::ModeIsInclude));
+            assert_eq!(rec1.sources().len(), NUMBER_OF_SOURCES_1 as usize);
+            assert_eq!(rec1.sources()[0], Ipv4Addr::new(SRC_1_1));
+            assert_eq!(rec1.sources()[1], Ipv4Addr::new(SRC_1_2));
 
             // look at second group record:
             let rec2 = iter.next().unwrap();
-            assert_eq!(rec2.header.number_of_sources(), NUMBER_OF_SOURCES_2);
-            assert_eq!(rec2.header.record_type, RECORD_TYPE_2);
-            assert_eq!(rec2.header.multicast_address, Ipv4Addr::new(MULTICAST_ADDR_2));
-            assert_eq!(rec2.header.record_type(), Some(IgmpGroupRecordType::ModeIsExclude));
-            assert_eq!(rec2.sources.len(), NUMBER_OF_SOURCES_2 as usize);
-            assert_eq!(rec2.sources[0], Ipv4Addr::new(SRC_2_1));
+            assert_eq!(rec2.header().number_of_sources(), NUMBER_OF_SOURCES_2);
+            assert_eq!(rec2.header().record_type, RECORD_TYPE_2);
+            assert_eq!(rec2.header().multicast_address, Ipv4Addr::new(MULTICAST_ADDR_2));
+            assert_eq!(rec2.header().record_type(), Ok(IgmpGroupRecordType::ModeIsExclude));
+            assert_eq!(rec2.sources().len(), NUMBER_OF_SOURCES_2 as usize);
+            assert_eq!(rec2.sources()[0], Ipv4Addr::new(SRC_2_1));
 
             // assert that no other records came in:
             assert_eq!(iter.next().is_none(), true);

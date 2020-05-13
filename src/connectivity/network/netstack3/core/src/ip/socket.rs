@@ -11,13 +11,13 @@ use core::num::NonZeroU8;
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use packet::{BufferMut, Serializer};
+use packet_formats::ip::{IpExt, IpProto};
+use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 
 use crate::device::{AddressEntry, DeviceId};
 use crate::error::NoRouteError;
 use crate::ip::forwarding::ForwardingTable;
-use crate::ip::{IpExt, IpProto};
 use crate::socket::Socket;
-use crate::wire::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// A socket identifying a connection between a local and remote IP host.
@@ -761,6 +761,7 @@ mod tests {
     use net_types::ip::AddrSubnet;
     use net_types::Witness;
     use packet::InnerPacketBuilder;
+    use packet_formats::testutil::parse_ip_packet_in_ethernet_frame;
 
     use super::*;
     use crate::device::{AddressConfigurationType, AddressState};

@@ -9,9 +9,20 @@ use core::fmt::Debug;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use log::{debug, trace};
-use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{MulticastAddress, SpecifiedAddr, Witness};
 use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
+use packet_formats::icmp::{
+    self as wire_icmp, peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage,
+    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
+    IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
+    Icmpv4ParameterProblemCode, Icmpv4RedirectCode, Icmpv4TimeExceededCode,
+    Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem,
+    Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
+};
+use packet_formats::ip::IpExt;
+use packet_formats::ipv4::Ipv4Header;
+use packet_formats::ipv6::{Ipv6Header, UndefinedBodyBoundsError};
 use zerocopy::ByteSlice;
 
 use crate::context::{CounterContext, InstantContext, StateContext};
@@ -26,21 +37,11 @@ use crate::ip::{
     socket::{
         BufferIpSocketContext, IpSock, IpSocket, IpSocketContext, SendError, UnroutableBehavior,
     },
-    BufferIpTransportContext, IpDeviceIdContext, IpExt, IpProto, IpTransportContext,
-    IpVersionMarker, TransportReceiveError,
+    BufferIpTransportContext, IpDeviceIdContext, IpProto, IpTransportContext,
+    TransportReceiveError,
 };
 use crate::socket::Socket;
 use crate::transport::ConnAddrMap;
-use crate::wire::icmp::{
-    self as wire_icmp, peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage,
-    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
-    IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
-    Icmpv4ParameterProblemCode, Icmpv4RedirectCode, Icmpv4TimeExceededCode,
-    Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem,
-    Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
-};
-use crate::wire::ipv4::Ipv4Header;
-use crate::wire::ipv6::{Ipv6Header, UndefinedBodyBoundsError};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// The default number of ICMP error messages to send per second.
@@ -2076,6 +2077,13 @@ mod tests {
 
     use net_types::ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
+    use packet_formats::icmp::{
+        mld::MldPacket, ndp::NdpPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket,
+        IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
+    };
+    use packet_formats::ip::IpPacketBuilder;
+    use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
+    use packet_formats::udp::UdpPacketBuilder;
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
@@ -2084,18 +2092,11 @@ mod tests {
     use crate::ip::gmp::mld::MldPacketHandler;
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
-    use crate::ip::{
-        receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId, IpExt, IpPacketBuilder,
-    };
+    use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
         DUMMY_CONFIG_V6,
     };
-    use crate::wire::icmp::{
-        mld::MldPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode,
-        Icmpv4TimestampRequest, MessageBody, NdpPacket,
-    };
-    use crate::wire::udp::UdpPacketBuilder;
     use crate::StackStateBuilder;
 
     //
@@ -2168,7 +2169,7 @@ mod tests {
         if let Some((expect_message, expect_code)) = expect_message_code {
             assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
             let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
-                crate::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
+                parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
                     &ctx.dispatcher().frames_sent()[0].1,
                     f,
                 )
@@ -2841,7 +2842,7 @@ mod tests {
                 ) {
                     self.increment_counter("IcmpContext::receive_icmp_error");
                     self.get_mut().inner.receive_icmp_error.push(err);
-                    if original_proto == <$ip as crate::wire::icmp::IcmpIpExt>::ICMP_IP_PROTO {
+                    if original_proto == <$ip as packet_formats::icmp::IcmpIpExt>::ICMP_IP_PROTO {
                         <IcmpIpTransportContext as IpTransportContext<$ip, _>>::receive_icmp_error(
                             self,
                             original_src_ip,

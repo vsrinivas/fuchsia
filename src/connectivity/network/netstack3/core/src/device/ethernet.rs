@@ -20,11 +20,15 @@ use net_types::{
     SpecifiedAddr, UnicastAddress, Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
+use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType};
+use packet_formats::ethernet::{
+    EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
+};
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::context::{DualStateContext, FrameContext, InstantContext, StateContext, TimerHandler};
 use crate::device::arp::{
-    self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
+    self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId,
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
@@ -39,8 +43,6 @@ use crate::ip::gmp::mld::{
     MldContext, MldFrameMetadata, MldGroupState, MldHandler, MldReportDelay,
 };
 use crate::ip::gmp::{GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
-use crate::wire::arp::peek_arp_types;
-use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
 #[cfg(test)]
 use crate::Context;
 use crate::Instant;
@@ -59,17 +61,6 @@ impl From<Mac> for FrameDestination {
         }
     }
 }
-
-create_protocol_enum!(
-    /// An EtherType number.
-    #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-    pub(crate) enum EtherType: u16 {
-        Ipv4, 0x0800, "IPv4";
-        Arp, 0x0806, "ARP";
-        Ipv6, 0x86DD, "IPv6";
-        _, "EtherType {}";
-    }
-);
 
 /// A shorthand for `IpDeviceContext` with all of the appropriate type arguments
 /// fixed to their Ethernet values.
@@ -332,23 +323,6 @@ impl<I: Instant> EthernetDeviceState<I> {
     }
 }
 
-/// An extension trait adding IP-related functionality to `Ipv4` and `Ipv6`.
-pub(crate) trait EthernetIpExt: Ip {
-    const ETHER_TYPE: EtherType;
-}
-
-impl<I: Ip> EthernetIpExt for I {
-    default const ETHER_TYPE: EtherType = EtherType::Ipv4;
-}
-
-impl EthernetIpExt for Ipv4 {
-    const ETHER_TYPE: EtherType = EtherType::Ipv4;
-}
-
-impl EthernetIpExt for Ipv6 {
-    const ETHER_TYPE: EtherType = EtherType::Ipv6;
-}
-
 /// A timer ID for Ethernet devices.
 ///
 /// `D` is the type of device ID that identifies different Ethernet devices.
@@ -573,10 +547,9 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
                 return;
             };
             match types {
-                (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
+                (ArpHardwareType::Ethernet, ArpNetworkType::Ipv4) => {
                     arp::receive_arp_packet(ctx, device_id, buffer)
                 }
-                types => debug!("got ARP packet for unsupported types: {:?}", types),
             }
         }
         Some(EtherType::Ipv4) => {
@@ -1592,6 +1565,12 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
 #[cfg(test)]
 mod tests {
     use packet::Buf;
+    use packet_formats::icmp::{IcmpDestUnreachable, IcmpIpExt};
+    use packet_formats::ip::{IpExt, IpPacketBuilder, IpProto};
+    use packet_formats::testdata::{dns_request_v4, dns_request_v6};
+    use packet_formats::testutil::{
+        parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet_in_ethernet_frame,
+    };
     use rand::Rng;
     use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::{ip_test, specialize_ip};
@@ -1604,16 +1583,11 @@ mod tests {
     };
     use crate::ip::{
         dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
-        IpExt, IpPacketBuilder, IpProto,
     };
     use crate::testutil::{
-        add_arp_or_ndp_table_entry, get_counter_val, new_rng,
-        parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet_in_ethernet_frame,
-        DummyEventDispatcher, DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt,
-        DUMMY_CONFIG_V4,
+        add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
+        DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
     };
-    use crate::wire::icmp::{IcmpDestUnreachable, IcmpIpExt};
-    use crate::wire::testdata::{dns_request_v4, dns_request_v6};
     use crate::StackStateBuilder;
 
     struct DummyEthernetContext {

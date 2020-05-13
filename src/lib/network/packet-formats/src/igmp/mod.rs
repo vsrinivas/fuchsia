@@ -6,13 +6,13 @@
 //!
 //! Wire serialization and deserialization functions.
 
-pub(crate) mod messages;
+pub mod messages;
 mod types;
 
 #[cfg(test)]
 mod testdata;
 
-pub(crate) use self::types::*;
+pub use self::types::*;
 
 use core::convert::TryFrom;
 use core::fmt::Debug;
@@ -40,7 +40,7 @@ use crate::error::ParseError;
 ///
 /// `MessageType` specifies the types used for `FixedHeader` and `VariableBody`,
 /// `HeaderPrefix` is shared among all message types.
-pub(crate) trait MessageType<B> {
+pub trait MessageType<B> {
     /// The fixed header type used for the message type.
     ///
     /// These are the bytes immediately following the checksum bytes in an IGMP
@@ -99,7 +99,7 @@ pub(crate) trait MessageType<B> {
 /// response code (in IGMP v2 is in fact called maximum response time). That's
 /// the reasoning behind making this a trait, so it can be specialized
 /// differently with thin wrappers by the messages implementation.
-pub(crate) trait IgmpMaxRespCode {
+pub trait IgmpMaxRespCode {
     /// The serialized value of the response code
     fn as_code(&self) -> u8;
     /// Parses from a code value.
@@ -120,11 +120,11 @@ impl IgmpMaxRespCode for () {
 /// A marker trait for implementers of [`MessageType`]. Only [`MessageType`]s
 /// whose `VariableBody` implements `IgmpNonEmptyBody` (or is `()` for empty
 /// bodies) can be built using [`IgmpPacketBuilder`].
-pub(crate) trait IgmpNonEmptyBody {}
+pub trait IgmpNonEmptyBody {}
 
 /// A builder for IGMP packets.
 #[derive(Debug)]
-pub(crate) struct IgmpPacketBuilder<B, M: MessageType<B>> {
+pub struct IgmpPacketBuilder<B, M: MessageType<B>> {
     max_resp_time: M::MaxRespTime,
     message_header: M::FixedHeader,
     _marker: PhantomData<B>,
@@ -132,16 +132,14 @@ pub(crate) struct IgmpPacketBuilder<B, M: MessageType<B>> {
 
 impl<B, M: MessageType<B, MaxRespTime = ()>> IgmpPacketBuilder<B, M> {
     /// Construct a new `IgmpPacketBuilder`.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn new(msg_header: M::FixedHeader) -> IgmpPacketBuilder<B, M> {
+    pub fn new(msg_header: M::FixedHeader) -> IgmpPacketBuilder<B, M> {
         IgmpPacketBuilder { max_resp_time: (), message_header: msg_header, _marker: PhantomData }
     }
 }
 
 impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
     /// Construct a new `IgmpPacketBuilder` with provided `max_resp_time`.
-    pub(crate) fn new_with_resp_time(
+    pub fn new_with_resp_time(
         msg_header: M::FixedHeader,
         max_resp_time: M::MaxRespTime,
     ) -> IgmpPacketBuilder<B, M> {
@@ -153,7 +151,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
     fn serialize_headers<BB: packet::Fragment>(
         &self,
         mut headers_buff: &mut [u8],
-        body: &FragmentedByteSlice<BB>,
+        body: &FragmentedByteSlice<'_, BB>,
     ) {
         use packet::BufferViewMut;
         let mut bytes = &mut headers_buff;
@@ -199,7 +197,7 @@ where
         )
     }
 
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let (prefix, message_body, _) = buffer.parts();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         self.serialize_headers(prefix, message_body);
@@ -215,7 +213,7 @@ where
 /// meaningful or used in every message.
 #[derive(Default, Debug, AsBytes, FromBytes, Unaligned)]
 #[repr(C)]
-pub(crate) struct HeaderPrefix {
+pub struct HeaderPrefix {
     msg_type: u8,
     /// The Max Response Time field is meaningful only in Membership Query
     /// messages, and specifies the maximum allowed time before sending a
@@ -238,7 +236,7 @@ impl HeaderPrefix {
 /// An `IgmpMessage` is a struct representing an IGMP message in memory;
 /// it holds the 3 IGMP message parts and is characterized by the
 /// `MessageType` trait.
-pub(crate) struct IgmpMessage<B, M: MessageType<B>> {
+pub struct IgmpMessage<B, M: MessageType<B>> {
     prefix: LayoutVerified<B, HeaderPrefix>,
     header: LayoutVerified<B, M::FixedHeader>,
     body: M::VariableBody,
@@ -246,14 +244,12 @@ pub(crate) struct IgmpMessage<B, M: MessageType<B>> {
 
 impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
     /// Construct a builder with the same contents as this packet.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn builder(&self) -> IgmpPacketBuilder<B, M> {
+    pub fn builder(&self) -> IgmpPacketBuilder<B, M> {
         IgmpPacketBuilder::new_with_resp_time(self.header.clone(), self.max_response_time())
     }
 
     /// Gets the interpreted *Max Response Time* for the message
-    pub(crate) fn max_response_time(&self) -> M::MaxRespTime {
+    pub fn max_response_time(&self) -> M::MaxRespTime {
         M::MaxRespTime::from_code(self.prefix.max_resp_code)
     }
 }
@@ -261,7 +257,7 @@ impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
 fn compute_checksum_fragmented<BB: packet::Fragment>(
     header_prefix: &HeaderPrefix,
     header: &[u8],
-    body: &FragmentedByteSlice<BB>,
+    body: &FragmentedByteSlice<'_, BB>,
 ) -> [u8; 2] {
     let mut c = Checksum::new();
     c.add_bytes(&[header_prefix.msg_type, header_prefix.max_resp_code]);
@@ -281,7 +277,8 @@ impl<B, M: MessageType<B>> IgmpMessage<B, M> {
 }
 
 impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> IgmpMessage<B, M> {
-    pub(crate) fn group_addr(&self) -> Ipv4Addr {
+    /// Returns the group address.
+    pub fn group_addr(&self) -> Ipv4Addr {
         *self.header
     }
 }
@@ -339,7 +336,7 @@ impl<B: ByteSlice, M: MessageType<B>> ParsablePacket<B, ()> for IgmpMessage<B, M
 /// Note that `peek_message_type` only inspects certain fields in the header,
 /// and so `peek_message_type` succeeding does not guarantee that a subsequent
 /// call to `parse` will also succeed.
-pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
+pub fn peek_message_type<MessageType: TryFrom<u8>>(
     bytes: &[u8],
 ) -> Result<(MessageType, bool), ParseError> {
     // a long message is any message for which the size exceeds the common HeaderPrefix +
@@ -360,14 +357,17 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+
+    use packet::{ParseBuffer, Serializer};
+
     use super::*;
-    use crate::ip::{IpProto, Ipv4Option, Ipv4OptionData};
-    use crate::wire::igmp::messages::*;
-    use crate::wire::ipv4::{
+    use crate::igmp::messages::*;
+    use crate::ip::IpProto;
+    use crate::ipv4::{
+        options::{Ipv4Option, Ipv4OptionData},
         Ipv4Header, Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
     };
-    use packet::{ParseBuffer, Serializer};
-    use std::fmt::Debug;
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: MessageType<B, VariableBody = ()> + Debug>(
         igmp: &IgmpMessage<B, M>,
@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_igmpv2_report_with_options() {
-        use crate::wire::testdata::igmpv2_membership::report::*;
+        use crate::testdata::igmpv2_membership::report::*;
         test_parse_and_serialize::<IgmpMembershipReportV2, _, _>(
             IP_PACKET_BYTES,
             |ip| {
@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_igmpv2_query_with_options() {
-        use crate::wire::testdata::igmpv2_membership::query::*;
+        use crate::testdata::igmpv2_membership::query::*;
         test_parse_and_serialize::<IgmpMembershipQueryV2, _, _>(
             IP_PACKET_BYTES,
             |ip| {
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn test_parse_and_serialize_igmpv2_leave_with_options() {
-        use crate::wire::testdata::igmpv2_membership::leave::*;
+        use crate::testdata::igmpv2_membership::leave::*;
         test_parse_and_serialize::<IgmpLeaveGroup, _, _>(
             IP_PACKET_BYTES,
             |ip| {

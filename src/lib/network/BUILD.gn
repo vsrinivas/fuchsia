@@ -4,7 +4,10 @@
 
 group("network") {
   testonly = true
-  deps = [ "packet" ]
+  deps = [
+    "packet",
+    "packet-formats",
+  ]
 }
 
 group("tests") {
@@ -12,6 +15,7 @@ group("tests") {
 
   deps = [
     ":network",
-    "packet:packet_test",
+    "packet:packet-test",
+    "packet-formats:packet-formats-test",
   ]
 }
