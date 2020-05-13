@@ -74,6 +74,8 @@ void PrintTo(const AttachmentValue& value, std::ostream* os) {
   *os << fostr::Outdent;
 }
 
+void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
+
 }  // namespace feedback
 
 namespace fuchsia {
