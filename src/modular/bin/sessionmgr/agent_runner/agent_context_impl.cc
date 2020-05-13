@@ -334,7 +334,7 @@ void AgentContextImpl::StopAgentIfIdle() {
 }
 
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
-  FX_DLOGS(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
+  FX_LOGS(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
   operation_queue_.Add(
       std::make_unique<StopCall>(true /* is agent runner terminating? */, this,
                                  [this, callback = std::move(callback)](bool stopped) {

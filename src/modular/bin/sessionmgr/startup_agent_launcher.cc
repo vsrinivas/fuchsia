@@ -119,25 +119,24 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
   agent_data->controller.set_error_handler([this, agent_runner, url](zx_status_t status) {
     auto it = session_agents_.find(url);
     FX_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
-    FX_LOGS(INFO) << url << " session agent appears to have crashed, with status: "
-                  << zx_status_get_string(status);
+    if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
+      FX_LOGS(INFO) << "Session agent " << url << " has terminated, as expected, during shutdown.";
+      return;
+    }
+
+    FX_LOGS(INFO) << "Session agent " << url << " has terminated unexpectedly.";
     auto& agent_data = it->second;
     agent_data.services.Unbind();
     agent_data.controller.Unbind();
-
-    if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
-      FX_LOGS(INFO) << "Not restarting " << url << " because StartupAgentLauncher is terminating.";
+    if (agent_data.restart.ShouldRetry()) {
+      FX_LOGS(INFO) << "Restarting " << url << "...";
+      StartSessionAgent(agent_runner, url);
     } else {
-      if (agent_data.restart.ShouldRetry()) {
-        FX_LOGS(INFO) << "Restarting " << url << "...";
-        StartSessionAgent(agent_runner, url);
-      } else {
-        FX_LOGS(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
-                         << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
-        // Erase so that incoming connection requests fail fast rather than
-        // enqueue forever.
-        session_agents_.erase(it);
-      }
+      FX_LOGS(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
+                        << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
+      // Erase so that incoming connection requests fail fast rather than
+      // enqueue forever.
+      session_agents_.erase(it);
     }
   });
 }
