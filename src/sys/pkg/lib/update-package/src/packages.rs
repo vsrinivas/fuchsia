@@ -80,13 +80,13 @@ pub enum ParsePackageError {
     InvalidLine(String),
 
     #[error("could not open '{0}'")]
-    FailedToOpen(&'static str, io_util::node::OpenError),
+    FailedToOpen(&'static str, #[source] io_util::node::OpenError),
 
-    #[error("could not parse url")]
-    URLParseError(fuchsia_url::errors::ParseError),
+    #[error("could not parse url from line: {0:?}")]
+    URLParseError(String, #[source] fuchsia_url::errors::ParseError),
 
     #[error("error reading file '{0}'")]
-    ReadError(&'static str, io_util::file::ReadError),
+    ReadError(&'static str, #[source] io_util::file::ReadError),
 
     #[error("json parsing error while reading `packages.json`")]
     JsonError(#[source] serde_json::error::Error),
@@ -113,7 +113,7 @@ pub(crate) fn parse_packages(contents: &str) -> Result<Vec<PkgUrl>, ParsePackage
             return Err(err());
         }
         let url = PkgUrl::new_package("fuchsia.com".to_string(), format!("/{}", key), Some(value));
-        out.push(url.map_err(ParsePackageError::URLParseError)?);
+        out.push(url.map_err(|e| ParsePackageError::URLParseError(line.into(), e))?);
     }
     Ok(out)
 }
@@ -191,7 +191,12 @@ mod tests {
     #[test]
     fn expect_error_on_extra_space() {
         let packages = "    ls/0 =     71bad1a35b87a073f72f582065f6b6efec7b6a4a129868f37f6131f02107f1ea  \npkg-resolver/0   =26d43a3fc32eaa65e6981791874b6ab80fae31fbfca1ce8c31ab64275fd4e8c0 ";
-        assert_matches!(parse_packages(packages), Err(ParsePackageError::URLParseError(_)));
+        assert_matches!(
+            parse_packages(packages),
+            Err(ParsePackageError::URLParseError(line, _))
+                if line ==
+                "    ls/0 =     71bad1a35b87a073f72f582065f6b6efec7b6a4a129868f37f6131f02107f1ea  "
+        );
     }
 
     #[test]
