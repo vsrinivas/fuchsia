@@ -197,7 +197,7 @@ fn filter_json_schema_by_selectors(
 ) -> Option<serde_json::Value> {
     let (moniker_key, payload_key) = get_keys_from_schema(&value);
     let moniker_string_opt = value[moniker_key].as_str();
-    let deserialized_hierarchy =
+    let deserialized_hierarchy: Result<NodeHierarchy, _> =
         RawJsonNodeHierarchySerializer::deserialize(value[payload_key].clone());
 
     match (moniker_string_opt, deserialized_hierarchy) {

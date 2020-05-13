@@ -42,16 +42,16 @@ mod utils;
 
 /// Implementers of this trait will provide different ways of formatting an
 /// inspect hierarchy.
-pub trait HierarchySerializer {
+pub trait HierarchySerializer<Key> {
     type Type;
-    fn serialize(hierarchy: NodeHierarchy) -> Self::Type;
+    fn serialize(hierarchy: NodeHierarchy<Key>) -> Self::Type;
 }
 
 /// Implementers of this trait will be able to convert an `Object` type data format that
 /// is encoding a diagnostics data hierarchy into a NodeHierarchy.
-pub trait HierarchyDeserializer {
+pub trait HierarchyDeserializer<Key = String> {
     type Object;
-    fn deserialize(data_format: Self::Object) -> Result<NodeHierarchy, Error>;
+    fn deserialize(data_format: Self::Object) -> Result<NodeHierarchy<Key>, Error>;
 }
 
 /// DEPRECATED:

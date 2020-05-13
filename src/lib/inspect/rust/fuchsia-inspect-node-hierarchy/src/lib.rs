@@ -54,19 +54,20 @@ pub enum ArrayFormat {
     ExponentialHistogram = 2,
 }
 
-/// A hierarchy of Inspect Nodes.
+/// A hierarchy of nodes representing structured data, such as Inspect or
+/// structured log data.
 ///
 /// Each hierarchy consists of properties, and a map of named child hierarchies.
 #[derive(Clone, Debug, PartialEq)]
-pub struct NodeHierarchy {
+pub struct NodeHierarchy<Key = String> {
     /// The name of this node.
     pub name: String,
 
     /// The properties for the node.
-    pub properties: Vec<Property>,
+    pub properties: Vec<Property<Key>>,
 
     /// The children of this node.
-    pub children: Vec<NodeHierarchy>,
+    pub children: Vec<NodeHierarchy<Key>>,
 
     /// Values that were impossible to load.
     pub missing: Vec<MissingValue>,
@@ -98,19 +99,10 @@ pub enum MissingValueReason {
     LinkNeverExpanded,
 }
 
-impl NodeHierarchy {
-    pub fn new_root() -> Self {
-        NodeHierarchy::new("root", vec![], vec![])
-    }
-
-    pub fn new(
-        name: impl Into<String>,
-        properties: Vec<Property>,
-        children: Vec<NodeHierarchy>,
-    ) -> Self {
-        Self { name: name.into(), properties, children, missing: vec![] }
-    }
-
+impl<Key> NodeHierarchy<Key>
+where
+    Key: AsRef<str>,
+{
     /// Sorts the properties and children of the node hierarchy by name.
     pub fn sort(&mut self) {
         if self.properties.iter().all(|p| p.name().parse::<u64>().is_ok()) {
@@ -127,10 +119,24 @@ impl NodeHierarchy {
             child.sort();
         }
     }
+}
+
+impl<Key> NodeHierarchy<Key> {
+    pub fn new_root() -> Self {
+        NodeHierarchy::new("root", vec![], vec![])
+    }
+
+    pub fn new(
+        name: impl Into<String>,
+        properties: Vec<Property<Key>>,
+        children: Vec<NodeHierarchy<Key>>,
+    ) -> Self {
+        Self { name: name.into(), properties, children, missing: vec![] }
+    }
 
     /// Either returns an existing child of `self` with name `name` or creates
     /// a new child with name `name`.
-    pub fn get_or_add_child_mut(&mut self, name: impl Into<String>) -> &mut NodeHierarchy {
+    pub fn get_or_add_child_mut(&mut self, name: impl Into<String>) -> &mut NodeHierarchy<Key> {
         // We have to use indices to iterate here because the borrow checker cannot
         // deduce that there are no borrowed values in the else-branch.
         // TODO(4601): We could make this cleaner by changing the NodeHierarchy
@@ -151,7 +157,7 @@ impl NodeHierarchy {
     ///
     /// Note: It is possible to create multiple children with the same name using this method, but
     /// readers may not support such a case.
-    pub fn add_child(&mut self, insert: NodeHierarchy) {
+    pub fn add_child(&mut self, insert: NodeHierarchy<Key>) {
         self.children.push(insert);
     }
 
@@ -164,7 +170,10 @@ impl NodeHierarchy {
     ///
     /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
     ///        the first node found is returned.
-    pub fn get_or_add_node(&mut self, node_path: Vec<impl Into<String>>) -> &mut NodeHierarchy {
+    pub fn get_or_add_node(
+        &mut self,
+        node_path: Vec<impl Into<String>>,
+    ) -> &mut NodeHierarchy<Key> {
         assert!(!node_path.is_empty());
         let mut iter = node_path.into_iter();
         let first_path_string: String = iter.next().unwrap().into();
@@ -187,12 +196,16 @@ impl NodeHierarchy {
     ///
     /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
     ///       the property is added to the first node found.
-    pub fn add_property(&mut self, node_path: Vec<impl Into<String> + Copy>, property: Property) {
+    pub fn add_property(
+        &mut self,
+        node_path: Vec<impl Into<String> + Copy>,
+        property: Property<Key>,
+    ) {
         self.get_or_add_node(node_path).properties.push(property);
     }
 
     /// Provides an iterator over the node hierarchy returning properties in pre-order.
-    pub fn property_iter(&self) -> impl Iterator<Item = (Vec<&String>, Option<&Property>)> {
+    pub fn property_iter(&self) -> impl Iterator<Item = (Vec<&String>, Option<&Property<Key>>)> {
         TrieIterableType { iterator: NodeHierarchyIterator::new(&self), _marker: PhantomData }
     }
 
@@ -202,7 +215,7 @@ impl NodeHierarchy {
     }
 }
 
-impl TrieIterableNode<String, Property> for NodeHierarchy {
+impl<Key> TrieIterableNode<String, Property<Key>> for NodeHierarchy<Key> {
     fn get_children(&self) -> HashMap<&String, &Self> {
         self.children
             .iter()
@@ -210,22 +223,22 @@ impl TrieIterableNode<String, Property> for NodeHierarchy {
             .collect::<HashMap<&String, &Self>>()
     }
 
-    fn get_values(&self) -> &[Property] {
+    fn get_values(&self) -> &[Property<Key>] {
         return &self.properties;
     }
 }
 
-struct NodeHierarchyIterator<'a> {
-    root: &'a NodeHierarchy,
+struct NodeHierarchyIterator<'a, Key> {
+    root: &'a NodeHierarchy<Key>,
     iterator_initialized: bool,
-    work_stack: Vec<TrieIterableWorkEvent<'a, String, NodeHierarchy>>,
+    work_stack: Vec<TrieIterableWorkEvent<'a, String, NodeHierarchy<Key>>>,
     curr_key: Vec<&'a String>,
-    curr_node: Option<&'a NodeHierarchy>,
+    curr_node: Option<&'a NodeHierarchy<Key>>,
     curr_val_index: usize,
 }
 
-impl<'a> NodeHierarchyIterator<'a> {
-    pub fn new(root: &'a NodeHierarchy) -> Self {
+impl<'a, Key> NodeHierarchyIterator<'a, Key> {
+    pub fn new(root: &'a NodeHierarchy<Key>) -> Self {
         NodeHierarchyIterator {
             root,
             iterator_initialized: false,
@@ -237,8 +250,8 @@ impl<'a> NodeHierarchyIterator<'a> {
     }
 }
 
-impl<'a> TrieIterable<'a, String, Property> for NodeHierarchyIterator<'a> {
-    type Node = NodeHierarchy;
+impl<'a, Key> TrieIterable<'a, String, Property<Key>> for NodeHierarchyIterator<'a, Key> {
+    type Node = NodeHierarchy<Key>;
 
     fn is_initialized(&self) -> bool {
         self.iterator_initialized
@@ -297,7 +310,7 @@ impl<'a> TrieIterable<'a, String, Property> for NodeHierarchyIterator<'a> {
         self.curr_key.clone()
     }
 
-    fn get_next_value(&mut self) -> &'a Property {
+    fn get_next_value(&mut self) -> &'a Property<Key> {
         self.curr_val_index = self.curr_val_index + 1;
         &self
             .curr_node
@@ -319,34 +332,38 @@ pub struct LinkValue {
 }
 
 /// A named property. Each of the fields consists of (name, value).
+///
+/// Key is the type of the property's name and is typically a string. In cases where
+/// there are well known, common property names, an alternative may be used to
+/// reduce copies of the name.
 #[derive(Debug, PartialEq, Clone)]
-pub enum Property {
+pub enum Property<Key = String> {
     /// The value is a string.
-    String(String, String),
+    String(Key, String),
 
     /// The value is a bytes vector.
-    Bytes(String, Vec<u8>),
+    Bytes(Key, Vec<u8>),
 
     /// The value is an integer.
-    Int(String, i64),
+    Int(Key, i64),
 
     /// The value is an unsigned integer.
-    Uint(String, u64),
+    Uint(Key, u64),
 
     /// The value is a double.
-    Double(String, f64),
+    Double(Key, f64),
 
     /// The value is a boolean.
-    Bool(String, bool),
+    Bool(Key, bool),
 
     /// The value is a double array.
-    DoubleArray(String, ArrayValue<f64>),
+    DoubleArray(Key, ArrayValue<f64>),
 
     /// The value is an integer array.
-    IntArray(String, ArrayValue<i64>),
+    IntArray(Key, ArrayValue<i64>),
 
     /// The value is an unsigned integer array.
-    UintArray(String, ArrayValue<u64>),
+    UintArray(Key, ArrayValue<u64>),
 }
 
 #[allow(missing_docs)]
@@ -434,7 +451,10 @@ impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayValue<T> 
     }
 }
 
-impl Property {
+impl<Key> Property<Key>
+where
+    Key: AsRef<str>,
+{
     #[allow(missing_docs)]
     pub fn name(&self) -> &str {
         match self {
@@ -446,7 +466,7 @@ impl Property {
             | Property::UintArray(name, _)
             | Property::Double(name, _)
             | Property::Bool(name, _)
-            | Property::DoubleArray(name, _) => &name,
+            | Property::DoubleArray(name, _) => name.as_ref(),
         }
     }
 }
@@ -533,7 +553,7 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
 //     is a PropertyEntry specifying an integer property named Foo
 //     found at node c.
 #[derive(Debug, PartialEq)]
-pub struct PropertyEntry {
+pub struct PropertyEntry<Key = String> {
     // A forward-slash (/) delimited string of node names from the root node of a hierarchy
     // to the node holding the Property.
     // eg: "root/a/b/c" is a property_node_path specifying that `property`
@@ -542,16 +562,19 @@ pub struct PropertyEntry {
 
     // A clone of the property found in the node hierarchy at the node specified by
     // `property_node_path`.
-    pub property: Property,
+    pub property: Property<Key>,
 }
 
 // Applies a single selector to a NodeHierarchy, returning a vector of tuples for every property
 // in the hierarchy matched by the selector.
 // TODO(47015): Benchmark performance issues with full-filters for selection.
-pub fn select_from_node_hierarchy(
-    root_node: NodeHierarchy,
+pub fn select_from_node_hierarchy<Key>(
+    root_node: NodeHierarchy<Key>,
     selector: Selector,
-) -> Result<Vec<PropertyEntry>, Error> {
+) -> Result<Vec<PropertyEntry<Key>>, Error>
+where
+    Key: AsRef<str> + Clone,
+{
     let single_selector_hierarchy_matcher = (&vec![Arc::new(selector)]).try_into()?;
 
     // TODO(47015): Extraction doesn't require a full tree filter. Instead, the hierarchy
@@ -574,7 +597,7 @@ pub fn select_from_node_hierarchy(
                     property: property.clone(),
                 })
             })
-            .collect::<Vec<PropertyEntry>>()),
+            .collect::<Vec<PropertyEntry<Key>>>()),
         None => Ok(Vec::new()),
     }
 }
@@ -587,15 +610,18 @@ pub fn select_from_node_hierarchy(
 // - If the return type is Ok(None) that implies that the filter encountered no errors AND
 //    the tree was filtered to be empty at the end.
 // - If the return type is Error that implies the filter encountered errors.
-pub fn filter_node_hierarchy(
-    root_node: NodeHierarchy,
+pub fn filter_node_hierarchy<Key>(
+    root_node: NodeHierarchy<Key>,
     hierarchy_matcher: &InspectHierarchyMatcher,
-) -> Result<Option<NodeHierarchy>, Error> {
+) -> Result<Option<NodeHierarchy<Key>>, Error>
+where
+    Key: AsRef<str> + Clone,
+{
     let mut nodes_added = 0;
 
     let mut new_root = NodeHierarchy::new(root_node.name.clone(), vec![], vec![]);
 
-    let mut working_node: &mut NodeHierarchy = &mut new_root;
+    let mut working_node: &mut NodeHierarchy<Key> = &mut new_root;
     let mut working_node_path: Option<String> = None;
     let mut working_property_regex_set: Option<RegexSet> = None;
 
@@ -914,7 +940,7 @@ mod tests {
     #[should_panic]
     // Empty paths are meaningless on insertion and break the method invariant.
     fn no_empty_paths_allowed() {
-        let mut hierarchy = NodeHierarchy::new_root();
+        let mut hierarchy = NodeHierarchy::<String>::new_root();
         let path_1: Vec<&String> = vec![];
         hierarchy.get_or_add_node(path_1);
     }
@@ -924,7 +950,7 @@ mod tests {
     // Paths provided to add must begin at the node we're calling
     // add() on.
     fn path_must_start_at_self() {
-        let mut hierarchy = NodeHierarchy::new_root();
+        let mut hierarchy = NodeHierarchy::<String>::new_root();
         let path_1 = vec!["not_root", "a"];
         hierarchy.get_or_add_node(path_1);
     }

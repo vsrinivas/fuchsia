@@ -17,7 +17,10 @@ use {
         ser::{PrettyFormatter, Serializer as JsonSerializer},
         Map, Value,
     },
-    std::str,
+    std::{
+        fmt::Debug,
+        str::{self, FromStr},
+    },
 };
 
 /// Allows to serialize a `NodeHierarchy` into a Serde JSON Value.
@@ -27,19 +30,22 @@ pub struct JsonNodeHierarchySerializer {}
 pub struct RawJsonNodeHierarchySerializer {}
 
 /// Implements serialization of a `NodeHierarchy` into a Serde JSON Value.
-impl HierarchySerializer for RawJsonNodeHierarchySerializer {
+impl<Key: AsRef<str>> HierarchySerializer<Key> for RawJsonNodeHierarchySerializer {
     type Type = serde_json::Value;
 
-    fn serialize(hierarchy: NodeHierarchy) -> serde_json::Value {
+    fn serialize(hierarchy: NodeHierarchy<Key>) -> serde_json::Value {
         json!(JsonSerializableNodeHierarchy { hierarchy })
     }
 }
 
 /// Implements serialization of a `NodeHierarchy` into a String.
-impl HierarchySerializer for JsonNodeHierarchySerializer {
+impl<Key> HierarchySerializer<Key> for JsonNodeHierarchySerializer
+where
+    Key: AsRef<str>,
+{
     type Type = Result<String, anyhow::Error>;
 
-    fn serialize(hierarchy: NodeHierarchy) -> Result<String, anyhow::Error> {
+    fn serialize(hierarchy: NodeHierarchy<Key>) -> Result<String, anyhow::Error> {
         let mut bytes = vec![];
         let mut serializer =
             JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
@@ -50,35 +56,46 @@ impl HierarchySerializer for JsonNodeHierarchySerializer {
 }
 
 /// Implements deserialization of a `NodeHierarchy` from a String.
-impl HierarchyDeserializer for JsonNodeHierarchySerializer {
+impl<Key> HierarchyDeserializer<Key> for JsonNodeHierarchySerializer
+where
+    Key: FromStr + Debug,
+    Error: From<<Key as FromStr>::Err>,
+{
     // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
     type Object = String;
 
     // TODO(4601): Should this be parsing the outer schema, which includes the envelope of
     // moniker and metadata? Right now it assumes its receiving only the payload as the string.
-    fn deserialize(data_format: String) -> Result<NodeHierarchy, Error> {
+    fn deserialize(data_format: String) -> Result<NodeHierarchy<Key>, Error> {
         let root_node: serde_json::Value = serde_json::from_str(&data_format)?;
         deserialize_json(root_node)
     }
 }
 
 /// Implements deserialization of a `NodeHierarchy` from a Serde JSON Value.
-impl HierarchyDeserializer for RawJsonNodeHierarchySerializer {
+impl<Key> HierarchyDeserializer<Key> for RawJsonNodeHierarchySerializer
+where
+    Key: FromStr + Debug,
+    Error: From<<Key as FromStr>::Err>,
+{
     // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
     type Object = serde_json::Value;
 
-    fn deserialize(data: serde_json::Value) -> Result<NodeHierarchy, Error> {
+    fn deserialize(data: serde_json::Value) -> Result<NodeHierarchy<Key>, Error> {
         deserialize_json(data)
     }
 }
 
 /// A wrapper of a Node hierarchy that allows to serialize it as JSON.
-struct JsonSerializableNodeHierarchy {
+struct JsonSerializableNodeHierarchy<Key> {
     /// The hierarchy that will be serialized.
-    pub hierarchy: NodeHierarchy,
+    pub hierarchy: NodeHierarchy<Key>,
 }
 
-impl Serialize for JsonSerializableNodeHierarchy {
+impl<Key> Serialize for JsonSerializableNodeHierarchy<Key>
+where
+    Key: AsRef<str>,
+{
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut s = serializer.serialize_map(Some(1))?;
         let name = self.hierarchy.name.clone();
@@ -90,8 +107,8 @@ impl Serialize for JsonSerializableNodeHierarchy {
 // The following wrapping structs are used to implement Serialize on them given
 // that it's not possible to implement traits for structs in other crates.
 
-pub(in crate) struct SerializableHierarchyFields<'a> {
-    pub(in crate) hierarchy: &'a NodeHierarchy,
+pub(in crate) struct SerializableHierarchyFields<'a, Key> {
+    pub(in crate) hierarchy: &'a NodeHierarchy<Key>,
 }
 
 struct SerializableArrayValue<'a, T> {
@@ -102,31 +119,35 @@ struct SerializableArrayBucket<'a, T> {
     bucket: &'a ArrayBucket<T>,
 }
 
-impl<'a> Serialize for SerializableHierarchyFields<'a> {
+impl<'a, Key> Serialize for SerializableHierarchyFields<'a, Key>
+where
+    Key: AsRef<str>,
+{
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let items = self.hierarchy.properties.len() + self.hierarchy.children.len();
         let mut s = serializer.serialize_map(Some(items))?;
         for property in self.hierarchy.properties.iter() {
+            let name = property.name();
             let _ = match property {
-                Property::String(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Int(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Uint(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Double(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Bool(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Bytes(name, array) => {
-                    s.serialize_entry(&name, &format!("b64:{}", base64::encode(&array)))?
+                Property::String(_, value) => s.serialize_entry(name, &value)?,
+                Property::Int(_, value) => s.serialize_entry(name, &value)?,
+                Property::Uint(_, value) => s.serialize_entry(name, &value)?,
+                Property::Double(_, value) => s.serialize_entry(name, &value)?,
+                Property::Bool(_, value) => s.serialize_entry(name, &value)?,
+                Property::Bytes(_, array) => {
+                    s.serialize_entry(name, &format!("b64:{}", base64::encode(&array)))?
                 }
-                Property::DoubleArray(name, array) => {
+                Property::DoubleArray(_, array) => {
                     let wrapped_value = SerializableArrayValue { array };
-                    s.serialize_entry(&name, &wrapped_value)?;
+                    s.serialize_entry(name, &wrapped_value)?;
                 }
-                Property::IntArray(name, array) => {
+                Property::IntArray(_, array) => {
                     let wrapped_value = SerializableArrayValue { array };
-                    s.serialize_entry(&name, &wrapped_value)?;
+                    s.serialize_entry(name, &wrapped_value)?;
                 }
-                Property::UintArray(name, array) => {
+                Property::UintArray(_, array) => {
                     let wrapped_value = SerializableArrayValue { array };
-                    s.serialize_entry(&name, &wrapped_value)?;
+                    s.serialize_entry(name, &wrapped_value)?;
                 }
             };
         }
@@ -213,7 +234,11 @@ impl<'a> Serialize for SerializableArrayBucket<'a, f64> {
 ///       }"
 ///
 // TODO(43030): Remove explicit root nodes from serialized diagnostics data.
-fn deserialize_json(root_node: serde_json::Value) -> Result<NodeHierarchy, Error> {
+fn deserialize_json<Key>(root_node: serde_json::Value) -> Result<NodeHierarchy<Key>, Error>
+where
+    Key: FromStr + Debug,
+    Error: From<<Key as FromStr>::Err>,
+{
     match root_node {
         serde_json::Value::Object(v) => {
             if v.len() > 1 {
@@ -558,7 +583,13 @@ fn fetch_object_histogram(contents: &Map<String, Value>) -> Option<&Vec<serde_js
 }
 
 /// Parses a JSON representation of an Inspect histogram into its ArrayValue form.
-fn parse_histogram(name: &String, histogram: &Vec<serde_json::Value>) -> Result<Property, Error> {
+fn parse_histogram<Key>(
+    name: Key,
+    histogram: &Vec<serde_json::Value>,
+) -> Result<Property<Key>, Error>
+where
+    Key: Debug,
+{
     if histogram.len() < 3 {
         bail!(
             "Histograms require a minimum of 5 entries to be validly serialized. We can only
@@ -568,15 +599,15 @@ ormed."
     }
 
     if is_f64_histogram(histogram)? {
-        return Ok(Property::DoubleArray(name.to_string(), parse_f64_histogram(histogram)?));
+        return Ok(Property::DoubleArray(name, parse_f64_histogram(histogram)?));
     }
 
     if is_i64_histogram(histogram)? {
-        return Ok(Property::IntArray(name.to_string(), parse_i64_histogram(histogram)?));
+        return Ok(Property::IntArray(name, parse_i64_histogram(histogram)?));
     }
 
     if is_u64_histogram(histogram)? {
-        return Ok(Property::UintArray(name.to_string(), parse_u64_histogram(histogram)?));
+        return Ok(Property::UintArray(name, parse_u64_histogram(histogram)?));
     }
 
     return Err(format_err!(
@@ -586,26 +617,29 @@ ormed."
 }
 
 /// Parses a JSON array into its numerical Inspect ArrayValue.
-fn parse_array(name: &String, vec: &Vec<serde_json::Value>) -> Result<Property, Error> {
+fn parse_array<Key>(name: Key, vec: &Vec<serde_json::Value>) -> Result<Property<Key>, Error>
+where
+    Key: Debug,
+{
     let array_format = ArrayFormat::Default;
 
     if is_f64_vec(vec) {
         return Ok(Property::DoubleArray(
-            name.to_string(),
+            name,
             ArrayValue::new(transform_numerical_f64_vec(vec)?, array_format),
         ));
     }
 
     if is_i64_vec(vec) {
         return Ok(Property::IntArray(
-            name.to_string(),
+            name,
             ArrayValue::new(transform_numerical_i64_vec(vec)?, array_format),
         ));
     }
 
     if is_u64_vec(vec) {
         return Ok(Property::UintArray(
-            name.to_string(),
+            name,
             ArrayValue::new(transform_numerical_u64_vec(vec)?, array_format),
         ));
     }
@@ -614,13 +648,16 @@ fn parse_array(name: &String, vec: &Vec<serde_json::Value>) -> Result<Property, 
 }
 
 /// Parses a serde_json Number into an Inspect number Property.
-fn parse_number(name: &String, num: &serde_json::Number) -> Result<Property, Error> {
+fn parse_number<Key>(name: Key, num: &serde_json::Number) -> Result<Property<Key>, Error>
+where
+    Key: Debug,
+{
     if num.is_i64() {
-        Ok(Property::Int(name.to_string(), num.as_i64().unwrap()))
+        Ok(Property::Int(name, num.as_i64().unwrap()))
     } else if num.is_u64() {
-        Ok(Property::Uint(name.to_string(), num.as_u64().unwrap()))
+        Ok(Property::Uint(name, num.as_u64().unwrap()))
     } else if num.is_f64() {
-        Ok(Property::Double(name.to_string(), num.as_f64().unwrap()))
+        Ok(Property::Double(name, num.as_f64().unwrap()))
     } else {
         return Err(format_err!("Diagnostics numbers must fit within 64 bits."));
     }
@@ -629,17 +666,21 @@ fn parse_number(name: &String, num: &serde_json::Number) -> Result<Property, Err
 /// Creates a NodeHierarchy from a serde_json Object map, evaluating each of
 /// the entries in the map and parsing them into their relevant Inspect in-memory
 /// representation.
-fn parse_node_object(
+fn parse_node_object<Key>(
     node_name: &String,
     contents: &Map<String, Value>,
-) -> Result<NodeHierarchy, Error> {
-    let mut properties: Vec<Property> = Vec::new();
-    let mut children: Vec<NodeHierarchy> = Vec::new();
+) -> Result<NodeHierarchy<Key>, Error>
+where
+    Key: FromStr + Debug,
+    Error: From<<Key as FromStr>::Err>,
+{
+    let mut properties: Vec<Property<Key>> = Vec::new();
+    let mut children: Vec<NodeHierarchy<Key>> = Vec::new();
     for (name, value) in contents.iter() {
         match value {
             serde_json::Value::Object(obj) => match fetch_object_histogram(obj) {
                 Some(histogram_vec) => {
-                    properties.push(parse_histogram(name, histogram_vec)?);
+                    properties.push(parse_histogram(Key::from_str(name.as_str())?, histogram_vec)?);
                 }
                 None => {
                     let child_node = parse_node_object(name, obj)?;
@@ -647,17 +688,18 @@ fn parse_node_object(
                 }
             },
             serde_json::Value::Bool(val) => {
-                properties.push(Property::Bool(name.to_string(), *val));
+                properties.push(Property::Bool(Key::from_str(name.as_str())?, *val));
             }
             serde_json::Value::Number(num) => {
-                properties.push(parse_number(name, num)?);
+                properties.push(parse_number(Key::from_str(name.as_str())?, num)?);
             }
             serde_json::Value::String(string) => {
-                let string_property = Property::String(name.to_string(), string.to_string());
+                let string_property =
+                    Property::String(Key::from_str(name.as_str())?, string.to_string());
                 properties.push(string_property);
             }
             serde_json::Value::Array(vec) => {
-                properties.push(parse_array(name, vec)?);
+                properties.push(parse_array(Key::from_str(name.as_str())?, vec)?);
             }
             serde_json::Value::Null => {
                 return Err(format_err!("Null isn't an existing part of the diagnostics schema."));
