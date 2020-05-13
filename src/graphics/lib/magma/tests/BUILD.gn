@@ -10,7 +10,9 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 group("tests") {
   testonly = true
   public_deps = [
-    ":magma_abi_conformance_tests",
+    ":magma-abi-conformance-tests",
+    ":magma-abi-conformance-tests-arm",
+    ":magma-abi-conformance-tests-vsi",
     ":magma_info_test",
     ":magma_nonhardware_tests",
     "codegen",
@@ -85,13 +87,44 @@ test_package("magma_nonhardware_tests") {
   ]
 }
 
-test_package("magma_abi_conformance_tests") {
+# Runs on any GPU if the only device present; if multiple
+# GPUs are present the vendor must be specified.
+test_package("magma-abi-conformance-tests") {
   deps = [ "integration" ]
 
   tests = [
     {
       name = "magma_abi_conformance_tests"
-      environments = magma_hardware_envs
+      manifest = "meta/magma-abi-conformance-tests.cmx"
+      environments = magma_hardware_envs - [ arm_gpu_envs ]
+    },
+  ]
+}
+
+# Runs only on ARM devices
+test_package("magma-abi-conformance-tests-arm") {
+  deps = [ "integration" ]
+
+  tests = [
+    {
+      name = "magma_abi_conformance_tests"
+      manifest = "meta/magma-abi-conformance-tests-arm.cmx"
+      environments = arm_gpu_envs
+    },
+  ]
+}
+
+# Runs only on VSI devices
+test_package("magma-abi-conformance-tests-vsi") {
+  deps = [ "integration" ]
+
+  tests = [
+    {
+      name = "magma_abi_conformance_tests"
+      manifest = "meta/magma-abi-conformance-tests-vsi.cmx"
+
+      # TODO(fxb/52079): enable for sherlock
+      environments = []
     },
   ]
 }

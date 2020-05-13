@@ -48,12 +48,65 @@ class TestConnection {
   static std::string device_name() { return kDeviceNameLinux; }
 #elif defined(__Fuchsia__)
   static std::string device_name() {
-    // Return the first entry in the device path
-    for (auto& p : std::filesystem::directory_iterator(kDevicePathFuchsia)) {
-      return p.path();
+    std::string name;
+    magma_device_t device;
+    if (OpenFuchsiaDevice(&name, &device)) {
+      magma_device_release(device);
+      return name;
     }
     return "";
   }
+
+  static bool OpenFuchsiaDevice(std::string* device_name_out, magma_device_t* device_out) {
+    std::string device_name;
+    magma_device_t device = 0;
+
+    for (auto& p : std::filesystem::directory_iterator(kDevicePathFuchsia)) {
+      EXPECT_FALSE(device) << " More than one GPU device found, specify --vendor-id";
+      if (device) {
+        magma_device_release(device);
+        return false;
+      }
+
+      zx::channel server_end, client_end;
+      zx::channel::create(0, &server_end, &client_end);
+
+      zx_status_t zx_status = fdio_service_connect(p.path().c_str(), server_end.release());
+      EXPECT_EQ(ZX_OK, zx_status);
+      if (zx_status != ZX_OK)
+        return false;
+
+      magma_status_t status = magma_device_import(client_end.release(), &device);
+      EXPECT_EQ(MAGMA_STATUS_OK, status);
+      if (status != MAGMA_STATUS_OK)
+        return false;
+
+      device_name = p.path();
+
+      if (gVendorId) {
+        uint64_t vendor_id;
+        status = magma_query2(device, MAGMA_QUERY_VENDOR_ID, &vendor_id);
+        EXPECT_EQ(MAGMA_STATUS_OK, status);
+        if (status != MAGMA_STATUS_OK)
+          return false;
+
+        if (vendor_id == gVendorId) {
+          break;
+        } else {
+          magma_device_release(device);
+          device = 0;
+        }
+      }
+    }
+
+    if (!device)
+      return false;
+
+    *device_name_out = device_name;
+    *device_out = device;
+    return true;
+  }
+
 #else
 #error Unimplemented
 #endif
@@ -61,21 +114,16 @@ class TestConnection {
   static bool is_virtmagma() { return device_name() == kDeviceNameVirt; }
 
   TestConnection() {
+#if defined(__Fuchsia__)
+    std::string device;
+    EXPECT_TRUE(OpenFuchsiaDevice(&device, &device_));
+
+#elif defined(__linux__)
     std::string device = device_name();
     EXPECT_FALSE(device.empty()) << " No GPU device";
     if (device.empty())
       return;
 
-#if defined(__Fuchsia__)
-    zx::channel server_end, client_end;
-    zx::channel::create(0, &server_end, &client_end);
-
-    zx_status_t status = fdio_service_connect(device.c_str(), server_end.release());
-    EXPECT_EQ(status, ZX_OK);
-    if (status == ZX_OK) {
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client_end.release(), &device_));
-    }
-#elif defined(__linux__)
     int fd = open(device.c_str(), O_RDWR);
     EXPECT_TRUE(fd >= 0);
     if (fd >= 0) {
@@ -102,10 +150,10 @@ class TestConnection {
 
   magma_connection_t connection() { return connection_; }
 
-  void Connection() { ASSERT_NE(connection_, nullptr); }
+  void Connection() { ASSERT_TRUE(connection_); }
 
   void Context() {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_TRUE(connection_);
 
     uint32_t context_id[2];
 
@@ -126,6 +174,8 @@ class TestConnection {
   }
 
   void NotificationChannelHandle() {
+    ASSERT_TRUE(connection_);
+
     uint32_t handle = magma_get_notification_channel_handle(connection_);
     EXPECT_NE(0u, handle);
 
@@ -134,12 +184,16 @@ class TestConnection {
   }
 
   void WaitNotificationChannel() {
+    ASSERT_TRUE(connection_);
+
     constexpr uint64_t kOneSecondInNs = 1000000000;
     magma_status_t status = magma_wait_notification_channel(connection_, kOneSecondInNs);
     EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, status);
   }
 
   void ReadNotificationChannel() {
+    ASSERT_TRUE(connection_);
+
     std::array<unsigned char, 1024> buffer;
     uint64_t buffer_size = ~0;
     magma_status_t status =
@@ -149,7 +203,7 @@ class TestConnection {
   }
 
   void Buffer() {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_TRUE(connection_);
 
     uint64_t size = page_size();
     uint64_t actual_size;
@@ -163,7 +217,7 @@ class TestConnection {
   }
 
   void BufferMap() {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_TRUE(connection_);
 
     uint64_t size = page_size();
     uint64_t actual_size;
@@ -182,7 +236,7 @@ class TestConnection {
   }
 
   void BufferExport(uint32_t* handle_out, uint64_t* id_out) {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_TRUE(connection_);
 
     uint64_t size = page_size();
     magma_buffer_t buffer;
@@ -205,7 +259,7 @@ class TestConnection {
   }
 
   void BufferImport(uint32_t handle, uint64_t id) {
-    ASSERT_NE(connection_, nullptr);
+    ASSERT_TRUE(connection_);
 
     magma_buffer_t buffer;
     ASSERT_EQ(MAGMA_STATUS_OK, magma_import(connection_, handle, &buffer));
@@ -432,18 +486,18 @@ class TestConnection {
   }
 
   void SemaphoreExport(uint32_t* handle_out, uint64_t* id_out) {
-    ASSERT_NE(connection_, nullptr);
-    magma_semaphore_t semaphore;
+    ASSERT_TRUE(connection_);
 
+    magma_semaphore_t semaphore;
     ASSERT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
     *id_out = magma_get_semaphore_id(semaphore);
     EXPECT_EQ(magma_export_semaphore(connection_, semaphore, handle_out), MAGMA_STATUS_OK);
   }
 
   void SemaphoreImport(uint32_t handle, uint64_t id) {
-    ASSERT_NE(connection_, nullptr);
-    magma_semaphore_t semaphore;
+    ASSERT_TRUE(connection_);
 
+    magma_semaphore_t semaphore;
     ASSERT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
     EXPECT_EQ(magma_get_semaphore_id(semaphore), id);
   }
@@ -459,6 +513,8 @@ class TestConnection {
   }
 
   void ImmediateCommands() {
+    ASSERT_TRUE(connection_);
+
     uint32_t context_id;
     magma_create_context(connection_, &context_id);
     EXPECT_EQ(magma_get_error(connection_), 0);
@@ -631,24 +687,32 @@ class TestConnection {
   }
 
   void GetDeviceIdImported() {
+    ASSERT_TRUE(device_);
+
     uint64_t device_id = 0;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_DEVICE_ID, &device_id));
     EXPECT_NE(0u, device_id);
   }
 
   void GetVendorIdImported() {
+    ASSERT_TRUE(device_);
+
     uint64_t vendor_id = 0;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
     EXPECT_NE(0u, vendor_id);
   }
 
   void GetMinimumMappableAddressImported() {
+    ASSERT_TRUE(device_);
+
     uint64_t address;
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_query2(device_, MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS, &address));
   }
 
   void QueryReturnsBufferImported() {
+    ASSERT_TRUE(device_);
+
     uint32_t handle_out = 0;
     // Drivers shouldn't allow this value to be queried through this entrypoint.
     EXPECT_NE(MAGMA_STATUS_OK,
@@ -657,6 +721,8 @@ class TestConnection {
   }
 
   void QueryTestRestartSupported() {
+    ASSERT_TRUE(device_);
+
     uint64_t is_supported = 0;
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_query2(device_, MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported));
@@ -671,13 +737,23 @@ class TestConnection {
 
 class TestConnectionWithContext : public TestConnection {
  public:
-  TestConnectionWithContext() { magma_create_context(connection(), &context_id_); }
+  TestConnectionWithContext() {
+    if (connection()) {
+      magma_create_context(connection(), &context_id_);
+    }
+  }
 
-  ~TestConnectionWithContext() { magma_release_context(connection(), context_id_); }
+  ~TestConnectionWithContext() {
+    if (connection()) {
+      magma_release_context(connection(), context_id_);
+    }
+  }
 
   uint32_t context_id() { return context_id_; }
 
   void ExecuteCommandBufferWithResources(uint32_t resource_count) {
+    ASSERT_TRUE(connection());
+
     magma_system_command_buffer command_buffer = {.num_resources = resource_count};
     magma_system_exec_resource resources[resource_count];
 
@@ -690,6 +766,8 @@ class TestConnectionWithContext : public TestConnection {
   }
 
   void ExecuteCommandBufferNoResources() {
+    ASSERT_TRUE(connection());
+
     magma_system_command_buffer command_buffer = {.num_resources = 0};
     magma_execute_command_buffer_with_resources(connection(), context_id(), &command_buffer,
                                                 nullptr /* resources */, nullptr);
@@ -831,6 +909,7 @@ TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
     GTEST_SKIP();
 
   TestConnectionWithContext test;
+  ASSERT_TRUE(test.connection());
 
   auto start = std::chrono::steady_clock::now();
   constexpr uint32_t kTestIterations = 10000;
