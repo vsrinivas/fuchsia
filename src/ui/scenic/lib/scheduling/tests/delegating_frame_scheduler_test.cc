@@ -11,9 +11,26 @@
 namespace scheduling {
 namespace test {
 
+TEST(DelegatingFrameSchedulerTest, SetNullFrameScheduler_ShouldCrash) {
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        DelegatingFrameScheduler delegating_frame_scheduler;
+        delegating_frame_scheduler.SetFrameScheduler(nullptr);
+      },
+      "");
+}
+
+TEST(DelegatingFrameSchedulerTest, SecondSetFrameSchedulerAttempt_ShouldCrash) {
+  DelegatingFrameScheduler delegating_frame_scheduler;
+  auto frame_scheduler1 = std::make_shared<MockFrameScheduler>();
+  auto frame_scheduler2 = std::make_shared<MockFrameScheduler>();
+  delegating_frame_scheduler.SetFrameScheduler(frame_scheduler1);
+  EXPECT_DEATH_IF_SUPPORTED(delegating_frame_scheduler.SetFrameScheduler(frame_scheduler2), "");
+}
+
 TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   std::shared_ptr<MockFrameScheduler> empty_frame_scheduler;
-  DelegatingFrameScheduler delegating_frame_scheduler(nullptr);
+  DelegatingFrameScheduler delegating_frame_scheduler;
 
   auto frame_scheduler1 = std::make_shared<MockFrameScheduler>();
 
@@ -70,21 +87,6 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   EXPECT_EQ(1u, num_set_render_continuosly_callbacks);
   EXPECT_EQ(1u, num_get_future_presentation_infos_callbacks);
   EXPECT_EQ(1u, num_set_on_frame_presented_callback_for_session_callbacks);
-
-  // Set a different frame scheduler, no effect.
-  auto frame_scheduler2 = std::make_shared<MockFrameScheduler>();
-  delegating_frame_scheduler.SetFrameScheduler(frame_scheduler2);
-  EXPECT_EQ(1u, num_register_present_callbacks);
-  EXPECT_EQ(1u, num_schedule_update_callbacks);
-  EXPECT_EQ(1u, num_set_render_continuosly_callbacks);
-  EXPECT_EQ(1u, num_get_future_presentation_infos_callbacks);
-  EXPECT_EQ(1u, num_set_on_frame_presented_callback_for_session_callbacks);
-
-  // Invoke method after initialized, invoked immediately.
-  const auto present_id2 = delegating_frame_scheduler.RegisterPresent(kSessionId, {}, {});
-  delegating_frame_scheduler.ScheduleUpdateForSession(
-      /*presentation_time=*/zx::time(0), {.session_id = kSessionId, .present_id = present_id2});
-  EXPECT_EQ(2u, num_schedule_update_callbacks);
 }
 
 }  // namespace test

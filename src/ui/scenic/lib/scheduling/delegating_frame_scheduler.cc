@@ -103,14 +103,8 @@ void DelegatingFrameScheduler::CallWhenFrameSchedulerAvailable(
 
 void DelegatingFrameScheduler::SetFrameScheduler(
     const std::shared_ptr<FrameScheduler>& frame_scheduler) {
-  if (frame_scheduler_) {
-    FX_LOGS(ERROR) << "DelegatingFrameScheduler can only be set once.";
-    return;
-  }
-  if (!frame_scheduler) {
-    FX_LOGS(ERROR) << "DelegatingFrameScheduler cannot be set to a null value.";
-    return;
-  }
+  FX_CHECK(!frame_scheduler_) << "DelegatingFrameScheduler can only be set once.";
+  FX_CHECK(frame_scheduler) << "DelegatingFrameScheduler cannot be set to a null value.";
   frame_scheduler_ = frame_scheduler;
   for (auto& callback : call_when_frame_scheduler_available_callbacks_) {
     callback(frame_scheduler_.get());
