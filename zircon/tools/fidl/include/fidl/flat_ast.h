@@ -29,12 +29,12 @@
 #include <safemath/checked_math.h>
 
 #include "attributes.h"
-#include "error_reporter.h"
 #include "flat/name.h"
 #include "flat/object.h"
 #include "flat/types.h"
 #include "flat/values.h"
 #include "raw_ast.h"
+#include "reporter.h"
 #include "type_shape.h"
 #include "types.h"
 #include "virtual_source_file.h"
@@ -42,9 +42,9 @@
 namespace fidl {
 namespace flat {
 
-using errors::BaseError;
-using errors::ErrorDef;
-using error_reporter::ErrorReporter;
+using diagnostics::Diagnostic;
+using diagnostics::ErrorDef;
+using reporter::Reporter;
 
 template <typename T>
 struct PtrCompare {
@@ -484,8 +484,8 @@ struct TypeAlias final : public Decl {
 
 class TypeTemplate {
  public:
-  TypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter)
-      : typespace_(typespace), name_(std::move(name)), error_reporter_(error_reporter) {}
+  TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
+      : typespace_(typespace), name_(std::move(name)), reporter_(reporter) {}
 
   TypeTemplate(TypeTemplate&& type_template) = default;
 
@@ -512,7 +512,7 @@ class TypeTemplate {
   Name name_;
 
  private:
-  ErrorReporter* error_reporter_;
+  Reporter* reporter_;
 };
 
 // Typespace provides builders for all types (e.g. array, vector, string), and
@@ -522,7 +522,7 @@ class TypeTemplate {
 // the same type.
 class Typespace {
  public:
-  explicit Typespace(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
+  explicit Typespace(Reporter* reporter) : reporter_(reporter) {}
 
   bool Create(const flat::Name& name, const Type* arg_type,
               const std::optional<types::HandleSubtype>& handle_subtype,
@@ -535,7 +535,7 @@ class Typespace {
   // RootTypes creates a instance with all primitive types. It is meant to be
   // used as the top-level types lookup mechanism, providing definitional
   // meaning to names such as `int64`, or `bool`.
-  static Typespace RootTypes(ErrorReporter* error_reporter);
+  static Typespace RootTypes(Reporter* reporter);
 
  private:
   friend class TypeAliasTypeTemplate;
@@ -550,7 +550,7 @@ class Typespace {
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
   std::vector<std::unique_ptr<Type>> types_;
 
-  ErrorReporter* error_reporter_;
+  Reporter* reporter_;
 };
 
 // AttributeSchema defines a schema for attributes. This includes:
@@ -562,8 +562,8 @@ class Typespace {
 // - A constraint which must be met by the declaration.
 class AttributeSchema {
  public:
-  using Constraint = fit::function<bool(ErrorReporter* error_reporter,
-                                        const raw::Attribute& attribute, const Decl* decl)>;
+  using Constraint =
+      fit::function<bool(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl)>;
 
   // Placement indicates the placement of an attribute, e.g. whether an
   // attribute is placed on an enum declaration, method, or union
@@ -594,16 +594,16 @@ class AttributeSchema {
 
   AttributeSchema(AttributeSchema&& schema) = default;
 
-  void ValidatePlacement(ErrorReporter* error_reporter, const raw::Attribute& attribute,
+  void ValidatePlacement(Reporter* reporter, const raw::Attribute& attribute,
                          Placement placement) const;
 
-  void ValidateValue(ErrorReporter* error_reporter, const raw::Attribute& attribute) const;
+  void ValidateValue(Reporter* reporter, const raw::Attribute& attribute) const;
 
-  void ValidateConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
+  void ValidateConstraint(Reporter* reporter, const raw::Attribute& attribute,
                           const Decl* decl) const;
 
  private:
-  static bool NoOpConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
+  static bool NoOpConstraint(Reporter* reporter, const raw::Attribute& attribute,
                              const Decl* decl) {
     return true;
   }
@@ -628,7 +628,7 @@ class Libraries {
     assert(iter.second && "do not add schemas twice");
   }
 
-  const AttributeSchema* RetrieveAttributeSchema(ErrorReporter* error_reporter,
+  const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter,
                                                  const raw::Attribute& attribute) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
@@ -658,7 +658,7 @@ class Dependencies {
   // were used, i.e. at least one lookup was made to retrieve them.
   // Reports errors directly, and returns true if one error or more was
   // reported.
-  bool VerifyAllDependenciesWereUsed(const Library& for_library, ErrorReporter* error_reporter);
+  bool VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter);
 
   const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
@@ -694,8 +694,8 @@ class Library {
   friend VerifyAttributesStep;
 
  public:
-  Library(const Libraries* all_libraries, ErrorReporter* error_reporter, Typespace* typespace)
-      : all_libraries_(all_libraries), error_reporter_(error_reporter), typespace_(typespace) {}
+  Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace)
+      : all_libraries_(all_libraries), reporter_(reporter), typespace_(typespace) {}
 
   bool ConsumeFile(std::unique_ptr<raw::File> file);
   bool Compile();
@@ -704,11 +704,12 @@ class Library {
   const raw::AttributeList* attributes() const { return attributes_.get(); }
 
  private:
-  bool Fail(std::unique_ptr<BaseError> err);
+  bool Fail(std::unique_ptr<Diagnostic> err);
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const Args&... args);
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, const Args&... args);
+  bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
+            const Args&... args);
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const Name& name, const Args&... args) {
     return Fail(err, name.span(), args...);
@@ -798,7 +799,7 @@ class Library {
   // Validates a single member of a bits or enum. On success, returns nullptr,
   // and on failure returns an error.
   template <typename MemberType>
-  using MemberValidator = fit::function<std::unique_ptr<BaseError>(
+  using MemberValidator = fit::function<std::unique_ptr<Diagnostic>(
       const MemberType& member, const raw::AttributeList* attributes)>;
   template <typename DeclType, typename MemberType>
   bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
@@ -857,7 +858,7 @@ class Library {
   // owned by the various foo_declarations_.
   std::map<Name::Key, Decl*> declarations_;
 
-  ErrorReporter* error_reporter_;
+  Reporter* reporter_;
   Typespace* typespace_;
 
   uint32_t anon_counter_ = 0;
@@ -868,11 +869,9 @@ class Library {
 class StepBase {
  public:
   StepBase(Library* library)
-    : library_(library), checkpoint_(library->error_reporter_->Checkpoint()), done_(false) {}
+      : library_(library), checkpoint_(library->reporter_->Checkpoint()), done_(false) {}
 
-  ~StepBase() {
-    assert(done_ && "Step must be completed before destructor is called");
-  }
+  ~StepBase() { assert(done_ && "Step must be completed before destructor is called"); }
 
   bool Done() {
     done_ = true;
@@ -880,17 +879,16 @@ class StepBase {
   }
 
  protected:
-  Library* library_; // link to library for which this step was created
+  Library* library_;  // link to library for which this step was created
 
  private:
-  ErrorReporter::Counts checkpoint_;
+  Reporter::Counts checkpoint_;
   bool done_;
 };
 
 class ConsumeStep : public StepBase {
  public:
-  ConsumeStep(Library* library)
-    : StepBase(library) {}
+  ConsumeStep(Library* library) : StepBase(library) {}
 
   void ForUsing(std::unique_ptr<raw::Using> using_directive) {
     library_->ConsumeUsing(std::move(using_directive));
@@ -923,22 +921,16 @@ class ConsumeStep : public StepBase {
 
 class CompileStep : public StepBase {
  public:
-  CompileStep(Library* library)
-    : StepBase(library) {}
+  CompileStep(Library* library) : StepBase(library) {}
 
-  void ForDecl(Decl* decl) {
-    library_->CompileDecl(decl);
-  }
+  void ForDecl(Decl* decl) { library_->CompileDecl(decl); }
 };
 
 class VerifyAttributesStep : public StepBase {
  public:
-  VerifyAttributesStep(Library* library)
-    : StepBase(library) {}
+  VerifyAttributesStep(Library* library) : StepBase(library) {}
 
-  void ForDecl(Decl* decl) {
-    library_->VerifyDeclAttributes(decl);
-  }
+  void ForDecl(Decl* decl) { library_->VerifyDeclAttributes(decl); }
 };
 
 // See the comment on Object::Visitor<T> for more details.

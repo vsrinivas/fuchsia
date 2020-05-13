@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_TYPES_H_
-#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_TYPES_H_
+#ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_
+#define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_
 
 #include <cassert>
 #include <set>
@@ -31,7 +31,7 @@ class TypeTemplate;
 class Name;
 }  // namespace flat
 
-namespace errors {
+namespace diagnostics {
 namespace internal {
 
 constexpr std::string_view kFormatMarker = "{}";
@@ -59,7 +59,7 @@ inline std::string FormatErr(std::string_view msg) {
   // ReportError -- and calls to ReportError fail at compile time if the # of
   // args passed in != the number of args in the Error definition.
   assert(msg.find(kFormatMarker) == std::string::npos &&
-        "number of format string parameters '{}' != number of supplied arguments");
+         "number of format string parameters '{}' != number of supplied arguments");
   return std::string(msg);
 }
 
@@ -90,8 +90,8 @@ constexpr size_t count_format_args(std::string_view s) {
 
 }  // namespace internal
 
-struct BaseErrorDef {
-  constexpr BaseErrorDef(std::string_view msg) : msg(msg) {}
+struct DiagnosticDef {
+  constexpr DiagnosticDef(std::string_view msg) : msg(msg) {}
 
   std::string_view msg;
 };
@@ -99,12 +99,30 @@ struct BaseErrorDef {
 // The definition of an error. All instances of ErrorDef are in errors.h.
 // Template args define format parameters in the error message.
 template <typename... Args>
-struct ErrorDef : BaseErrorDef {
-  constexpr ErrorDef(std::string_view msg) : BaseErrorDef(msg) {
+struct ErrorDef : DiagnosticDef {
+  constexpr ErrorDef(std::string_view msg) : DiagnosticDef(msg) {
     // This can't be a static assert because msg is not constexpr.
     assert(sizeof...(Args) == internal::count_format_args(msg) &&
            "number of format string parameters '{}' != number of template arguments");
   }
+};
+
+// The definition of a warning. All instances of WarningDef are in errors.h.
+// Template args define format parameters in the warning message.
+template <typename... Args>
+struct WarningDef : DiagnosticDef {
+  constexpr WarningDef(std::string_view msg) : DiagnosticDef(msg) {
+    // This can't be a static assert because msg is not constexpr.
+    assert(sizeof...(Args) == internal::count_format_args(msg) &&
+           "number of format string parameters '{}' != number of template arguments");
+  }
+};
+
+// A tag that indicates whether a diagnostic is an error or warning. In the
+// future this could be extended to include hints, suggestions, etc.
+enum class DiagnosticKind {
+  kError,
+  kWarning,
 };
 
 // Represents a given instance of an error. Points to the error type it is an
@@ -113,25 +131,34 @@ struct ErrorDef : BaseErrorDef {
 // format parameters passed in to Error's constructor.
 // Exists in order to allow deferral of error reporting and to be able to pass
 // around errors.
-struct BaseError {
-  BaseError(const BaseErrorDef& err, const std::optional<SourceSpan>& span, const std::string msg)
-    : err(err), span(span), msg(msg) {}
-  BaseError(const BaseErrorDef& err, const Token& token, const std::string msg)
-    : err(err), span(token.span()), msg(msg) {}
-  virtual ~BaseError() {}
+struct Diagnostic {
+  Diagnostic(DiagnosticKind kind, const DiagnosticDef& err, const std::optional<SourceSpan>& span,
+             const std::string msg)
+      : kind(kind), err(err), span(span), msg(msg) {}
+  Diagnostic(DiagnosticKind kind, const DiagnosticDef& err, const Token& token,
+             const std::string msg)
+      : kind(kind), err(err), span(token.span()), msg(msg) {}
+  virtual ~Diagnostic() {}
 
-  const BaseErrorDef& err;
+  DiagnosticKind kind;
+  const DiagnosticDef& err;
   std::optional<SourceSpan> span;
   std::string msg;
 };
 
 template <typename... Args>
-struct Error : BaseError {
+struct Error : Diagnostic {
   Error(const ErrorDef<Args...>& err, std::optional<SourceSpan> span, Args... args)
-    : BaseError(err, span, internal::FormatErr(err.msg, args...)) {}
+      : Diagnostic(DiagnosticKind::kError, err, span, internal::FormatErr(err.msg, args...)) {}
 };
 
-}  // namespace errors
+template <typename... Args>
+struct Warning : Diagnostic {
+  Warning(const WarningDef<Args...>& warn, std::optional<SourceSpan> span, Args... args)
+      : Diagnostic(DiagnosticKind::kWarning, warn, span, internal::FormatErr(warn.msg, args...)) {}
+};
+
+}  // namespace diagnostics
 }  // namespace fidl
 
-#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_TYPES_H_
+#endif  // ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_

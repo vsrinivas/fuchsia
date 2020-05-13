@@ -12,7 +12,7 @@
 #include <utility>
 
 #include "fidl/attributes.h"
-#include "fidl/errors.h"
+#include "fidl/diagnostics.h"
 #include "fidl/lexer.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"
@@ -23,7 +23,7 @@
 namespace fidl {
 namespace flat {
 
-using namespace errors;
+using namespace diagnostics;
 
 namespace {
 
@@ -108,8 +108,9 @@ class Compiling {
 };
 
 template <typename T>
-std::unique_ptr<BaseError> ValidateUnknownConstraints(
-    const Decl& decl, types::Strictness decl_strictness, const std::vector<const T*>* members) {
+std::unique_ptr<Diagnostic> ValidateUnknownConstraints(const Decl& decl,
+                                                       types::Strictness decl_strictness,
+                                                       const std::vector<const T*>* members) {
   if (!members)
     return nullptr;
 
@@ -131,11 +132,11 @@ std::unique_ptr<BaseError> ValidateUnknownConstraints(
       continue;
 
     if (is_strict && !is_transitional) {
-      return ErrorReporter::MakeError(ErrUnknownAttributeOnInvalidType, member->name);
+      return Reporter::MakeError(ErrUnknownAttributeOnInvalidType, member->name);
     }
 
     if (found_member) {
-      return ErrorReporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->name);
+      return Reporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->name);
     }
 
     found_member = true;
@@ -197,7 +198,7 @@ const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.io", "NodeInfo"},
 }};
 
-bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error_reporter) {
+bool IsSimple(const Type* type, const TypeShape& typeshape, Reporter* reporter) {
   switch (type->kind) {
     case Type::Kind::kVector: {
       auto vector_type = static_cast<const VectorType*>(type);
@@ -231,8 +232,8 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error
             LibraryName(identifier_type->name.library(), "."), identifier_type->name.decl_name());
         if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
           // Any unions not in the allow-list are treated as non-simple.
-          error_reporter->ReportError(ErrUnionCannotBeSimple, identifier_type->name.span(),
-                                      identifier_type->name);
+          reporter->ReportError(ErrUnionCannotBeSimple, identifier_type->name.span(),
+                                identifier_type->name);
           return false;
         }
       }
@@ -296,7 +297,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
 
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
-    error_reporter_->ReportError(ErrUnknownType, name.span(), name);
+    reporter_->ReportError(ErrUnknownType, name.span(), name);
     return false;
   }
   return type_template->Create({.span = name.span(),
@@ -327,15 +328,15 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
 
 bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*>& err,
                         const std::optional<SourceSpan>& span) const {
-  error_reporter_->ReportError(err, span, this);
+  reporter_->ReportError(err, span, this);
   return false;
 }
 
 class PrimitiveTypeTemplate : public TypeTemplate {
  public:
-  PrimitiveTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter,
-                        const std::string& name, types::PrimitiveSubtype subtype)
-      : TypeTemplate(Name::CreateIntrinsic(name), typespace, error_reporter), subtype_(subtype) {}
+  PrimitiveTypeTemplate(Typespace* typespace, Reporter* reporter, const std::string& name,
+                        types::PrimitiveSubtype subtype)
+      : TypeTemplate(Name::CreateIntrinsic(name), typespace, reporter), subtype_(subtype) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -359,8 +360,8 @@ class PrimitiveTypeTemplate : public TypeTemplate {
 
 class BytesTypeTemplate final : public TypeTemplate {
  public:
-  BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, error_reporter),
+  BytesTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter),
         uint8_type_(kUint8Type) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
@@ -389,8 +390,8 @@ class BytesTypeTemplate final : public TypeTemplate {
 
 class ArrayTypeTemplate final : public TypeTemplate {
  public:
-  ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name::CreateIntrinsic("array"), typespace, error_reporter) {}
+  ArrayTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("array"), typespace, reporter) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -413,8 +414,8 @@ class ArrayTypeTemplate final : public TypeTemplate {
 
 class VectorTypeTemplate final : public TypeTemplate {
  public:
-  VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, error_reporter) {}
+  VectorTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -437,8 +438,8 @@ class VectorTypeTemplate final : public TypeTemplate {
 
 class StringTypeTemplate final : public TypeTemplate {
  public:
-  StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name::CreateIntrinsic("string"), typespace, error_reporter) {}
+  StringTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("string"), typespace, reporter) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -461,8 +462,8 @@ class StringTypeTemplate final : public TypeTemplate {
 
 class HandleTypeTemplate final : public TypeTemplate {
  public:
-  HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, error_reporter) {
+  HandleTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, reporter) {
     same_rights = std::make_unique<Constant>(Constant::Kind::kSynthesized, SourceSpan());
     same_rights->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(kHandleSameRights));
   }
@@ -490,8 +491,8 @@ class HandleTypeTemplate final : public TypeTemplate {
 
 class RequestTypeTemplate final : public TypeTemplate {
  public:
-  RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name::CreateIntrinsic("request"), typespace, error_reporter) {}
+  RequestTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("request"), typespace, reporter) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -520,9 +521,9 @@ class RequestTypeTemplate final : public TypeTemplate {
 
 class TypeDeclTypeTemplate final : public TypeTemplate {
  public:
-  TypeDeclTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
-                       Library* library, TypeDecl* type_decl)
-      : TypeTemplate(std::move(name), typespace, error_reporter),
+  TypeDeclTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Library* library,
+                       TypeDecl* type_decl)
+      : TypeTemplate(std::move(name), typespace, reporter),
         library_(library),
         type_decl_(type_decl) {}
 
@@ -574,9 +575,9 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
 class TypeAliasTypeTemplate final : public TypeTemplate {
  public:
-  TypeAliasTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
-                        Library* library, TypeAlias* decl)
-      : TypeTemplate(std::move(name), typespace, error_reporter), library_(library), decl_(decl) {}
+  TypeAliasTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Library* library,
+                        TypeAlias* decl)
+      : TypeTemplate(std::move(name), typespace, reporter), library_(library), decl_(decl) {}
 
   bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -639,8 +640,8 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
   TypeAlias* decl_;
 };
 
-Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
-  Typespace root_typespace(error_reporter);
+Typespace Typespace::RootTypes(Reporter* reporter) {
+  Typespace root_typespace(reporter);
 
   auto add_template = [&](std::unique_ptr<TypeTemplate> type_template) {
     const Name& name = type_template->name();
@@ -648,8 +649,7 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
   };
 
   auto add_primitive = [&](const std::string& name, types::PrimitiveSubtype subtype) {
-    add_template(
-        std::make_unique<PrimitiveTypeTemplate>(&root_typespace, error_reporter, name, subtype));
+    add_template(std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
   };
 
   add_primitive("bool", types::PrimitiveSubtype::kBool);
@@ -670,16 +670,16 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
   const static auto kByteName = Name::CreateIntrinsic("byte");
   const static auto kBytesName = Name::CreateIntrinsic("bytes");
   root_typespace.templates_.emplace(
-      kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, error_reporter, "uint8",
+      kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, "uint8",
                                                          types::PrimitiveSubtype::kUint8));
-  root_typespace.templates_.emplace(
-      kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, error_reporter));
+  root_typespace.templates_.emplace(kBytesName,
+                                    std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
 
-  add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, error_reporter));
-  add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, error_reporter));
-  add_template(std::make_unique<StringTypeTemplate>(&root_typespace, error_reporter));
-  add_template(std::make_unique<HandleTypeTemplate>(&root_typespace, error_reporter));
-  add_template(std::make_unique<RequestTypeTemplate>(&root_typespace, error_reporter));
+  add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<RequestTypeTemplate>(&root_typespace, reporter));
 
   return root_typespace;
 }
@@ -690,66 +690,62 @@ AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
       allowed_values_(allowed_values),
       constraint_(std::move(constraint)) {}
 
-void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
-                                        const raw::Attribute& attribute,
+void AttributeSchema::ValidatePlacement(Reporter* reporter, const raw::Attribute& attribute,
                                         Placement placement) const {
   if (allowed_placements_.size() == 0)
     return;
   auto iter = allowed_placements_.find(placement);
   if (iter != allowed_placements_.end())
     return;
-  error_reporter->ReportError(ErrInvalidAttributePlacement, attribute.span(), attribute);
+  reporter->ReportError(ErrInvalidAttributePlacement, attribute.span(), attribute);
 }
 
-void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
-                                    const raw::Attribute& attribute) const {
+void AttributeSchema::ValidateValue(Reporter* reporter, const raw::Attribute& attribute) const {
   if (allowed_values_.size() == 0)
     return;
   auto iter = allowed_values_.find(attribute.value);
   if (iter != allowed_values_.end())
     return;
-  error_reporter->ReportError(ErrInvalidAttributeValue, attribute.span(), attribute,
-                              attribute.value, allowed_values_);
+  reporter->ReportError(ErrInvalidAttributeValue, attribute.span(), attribute, attribute.value,
+                        allowed_values_);
 }
 
-void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
-                                         const raw::Attribute& attribute, const Decl* decl) const {
-  auto check = error_reporter->Checkpoint();
-  auto passed = constraint_(error_reporter, attribute, decl);
+void AttributeSchema::ValidateConstraint(Reporter* reporter, const raw::Attribute& attribute,
+                                         const Decl* decl) const {
+  auto check = reporter->Checkpoint();
+  auto passed = constraint_(reporter, attribute, decl);
   if (passed) {
     assert(check.NoNewErrors() && "cannot add errors and pass");
   } else if (check.NoNewErrors()) {
     // TODO(pascallouis): It would be nicer to use the span of
     // the declaration, however we do not keep it around today.
-    error_reporter->ReportError(ErrAttributeConstraintNotSatisfied, attribute.span(), attribute,
-                                attribute.value);
+    reporter->ReportError(ErrAttributeConstraintNotSatisfied, attribute.span(), attribute,
+                          attribute.value);
   }
 }
 
-bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
-                            const Decl* decl) {
+bool SimpleLayoutConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
   assert(decl->kind == Decl::Kind::kStruct);
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
   for (const auto& member : struct_decl->members) {
-    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld),
-                  error_reporter)) {
-      error_reporter->ReportError(ErrMemberMustBeSimple, member.name, member.name.data());
+    if (!IsSimple(member.type_ctor.get()->type, member.typeshape(WireFormat::kOld), reporter)) {
+      reporter->ReportError(ErrMemberMustBeSimple, member.name, member.name.data());
       ok = false;
     }
   }
   return ok;
 }
 
-bool ParseBound(ErrorReporter* error_reporter, const SourceSpan& span, const std::string& input,
+bool ParseBound(Reporter* reporter, const SourceSpan& span, const std::string& input,
                 uint32_t* out_value) {
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      error_reporter->ReportError(ErrBoundIsTooBig, span);
+      reporter->ReportError(ErrBoundIsTooBig, span);
       return false;
     case utils::ParseNumericResult::kMalformed: {
-      error_reporter->ReportError(ErrUnableToParseBound, span, input);
+      reporter->ReportError(ErrUnableToParseBound, span, input);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -757,10 +753,9 @@ bool ParseBound(ErrorReporter* error_reporter, const SourceSpan& span, const std
   }
 }
 
-bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
-                        const Decl* decl) {
+bool MaxBytesConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
   uint32_t bound;
-  if (!ParseBound(error_reporter, attribute.span(), attribute.value, &bound))
+  if (!ParseBound(reporter, attribute.span(), attribute.value, &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -787,16 +782,15 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
       return false;
   }
   if (max_bytes > bound) {
-    error_reporter->ReportError(ErrTooManyBytes, attribute.span(), bound, max_bytes);
+    reporter->ReportError(ErrTooManyBytes, attribute.span(), bound, max_bytes);
     return false;
   }
   return true;
 }
 
-bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
-                          const Decl* decl) {
+bool MaxHandlesConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
   uint32_t bound;
-  if (!ParseBound(error_reporter, attribute.span(), attribute.value, &bound))
+  if (!ParseBound(reporter, attribute.span(), attribute.value, &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -820,14 +814,13 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& a
       return false;
   }
   if (max_handles > bound) {
-    error_reporter->ReportError(ErrTooManyHandles, attribute.span(), bound, max_handles);
+    reporter->ReportError(ErrTooManyHandles, attribute.span(), bound, max_handles);
     return false;
   }
   return true;
 }
 
-bool ResultShapeConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
-                           const Decl* decl) {
+bool ResultShapeConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
   assert(decl->kind == Decl::Kind::kUnion);
   auto union_decl = static_cast<const Union*>(decl);
   assert(union_decl->members.size() == 2);
@@ -849,7 +842,7 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter, const raw::Attribute& 
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    error_reporter->ReportError(ErrInvalidErrorType, decl->name.span());
+    reporter->ReportError(ErrInvalidErrorType, decl->name.span());
     return false;
   }
 
@@ -867,8 +860,7 @@ static std::string Trim(std::string s) {
   return s;
 }
 
-bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
-                         const Decl* decl) {
+bool TransportConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
   // Parse comma separated transports
   const std::string& value = attribute.value;
   std::string::size_type prev_pos = 0;
@@ -890,8 +882,8 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& at
   };
   for (auto transport : transports) {
     if (kValidTransports->count(transport) == 0) {
-      error_reporter->ReportError(ErrInvalidTransportType, decl->name.span(), transport,
-                                  *kValidTransports);
+      reporter->ReportError(ErrInvalidTransportType, decl->name.span(), transport,
+                            *kValidTransports);
       return false;
     }
   }
@@ -1026,7 +1018,7 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
   return last_row[s1_length];
 }
 
-const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_reporter,
+const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
                                                           const raw::Attribute& attribute) const {
   const auto& attribute_name = attribute.name;
   auto iter = attribute_schemas_.find(attribute_name);
@@ -1036,15 +1028,15 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
   }
 
   // Skip typo check?
-  if (error_reporter == nullptr)
+  if (reporter == nullptr)
     return nullptr;
 
   // Match against all known attributes.
   for (const auto& name_and_schema : attribute_schemas_) {
     auto edit_distance = EditDistance(name_and_schema.first, attribute_name);
     if (0 < edit_distance && edit_distance < 2) {
-      error_reporter->ReportWarning(WarnAttributeTypo, attribute.span(), attribute_name,
-                                    name_and_schema.first);
+      reporter->ReportWarning(WarnAttributeTypo, attribute.span(), attribute_name,
+                              name_and_schema.first);
       return nullptr;
     }
   }
@@ -1116,9 +1108,8 @@ bool Dependencies::LookupAndUse(std::string_view filename,
   return true;
 }
 
-bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
-                                                 ErrorReporter* error_reporter) {
-  auto checkpoint = error_reporter->Checkpoint();
+bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter) {
+  auto checkpoint = reporter->Checkpoint();
   for (auto by_name_iter = dependencies_.begin(); by_name_iter != dependencies_.end();
        by_name_iter++) {
     const auto& by_name = *by_name_iter->second;
@@ -1126,8 +1117,8 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
       const auto& ref = name_to_ref.second;
       if (ref->used_)
         continue;
-      error_reporter->ReportError(ErrUnusedImport, ref->span_, for_library.name(),
-                                  ref->library_->name(), ref->library_->name());
+      reporter->ReportError(ErrUnusedImport, ref->span_, for_library.name(), ref->library_->name(),
+                            ref->library_->name());
     }
   }
   return checkpoint.NoNewErrors();
@@ -1146,22 +1137,22 @@ std::string LibraryName(const Library* library, std::string_view separator) {
   return std::string();
 }
 
-bool Library::Fail(std::unique_ptr<BaseError> err) {
+bool Library::Fail(std::unique_ptr<Diagnostic> err) {
   assert(err && "should not report nullptr error");
-  error_reporter_->ReportError(std::move(err));
+  reporter_->ReportError(std::move(err));
   return false;
 }
 
 template <typename... Args>
 bool Library::Fail(const ErrorDef<Args...>& err, const Args&... args) {
-  error_reporter_->ReportError(err, args...);
+  reporter_->ReportError(err, args...);
   return false;
 }
 
 template <typename... Args>
 bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                    const Args&... args) {
-  error_reporter_->ReportError(err, span, args...);
+  reporter_->ReportError(err, span, args...);
   return false;
 }
 
@@ -1170,10 +1161,10 @@ void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(error_reporter_, attribute);
+    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute);
     if (schema != nullptr) {
-      schema->ValidatePlacement(error_reporter_, attribute, placement);
-      schema->ValidateValue(error_reporter_, attribute);
+      schema->ValidatePlacement(reporter_, attribute, placement);
+      schema->ValidateValue(reporter_, attribute);
     }
   }
 }
@@ -1185,7 +1176,7 @@ void Library::ValidateAttributesConstraints(const Decl* decl,
   for (const auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
     if (schema != nullptr)
-      schema->ValidateConstraint(error_reporter_, attribute, decl);
+      schema->ValidateConstraint(reporter_, attribute, decl);
   }
 }
 
@@ -1315,15 +1306,15 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kUnion:
     case Decl::Kind::kProtocol: {
       auto type_decl = static_cast<TypeDecl*>(decl_ptr);
-      auto type_template = std::make_unique<TypeDeclTypeTemplate>(name, typespace_, error_reporter_,
-                                                                  this, type_decl);
+      auto type_template =
+          std::make_unique<TypeDeclTypeTemplate>(name, typespace_, reporter_, this, type_decl);
       typespace_->AddTemplate(std::move(type_template));
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
       auto type_alias_template = std::make_unique<TypeAliasTypeTemplate>(
-          name, typespace_, error_reporter_, this, type_alias_decl);
+          name, typespace_, reporter_, this, type_alias_decl);
       typespace_->AddTemplate(std::move(type_alias_template));
       break;
     }
@@ -1499,8 +1490,8 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   if (!ConsumeConstant(std::move(const_declaration->constant), &constant))
     return;
 
-  RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name),
-                                       std::move(type_ctor), std::move(constant)));
+  RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name), std::move(type_ctor),
+                                       std::move(constant)));
 }
 
 void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
@@ -1693,8 +1684,8 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
                          std::move(member->attributes));
   }
 
-  RegisterDecl(std::make_unique<Service>(std::move(attributes), std::move(name),
-                                         std::move(members)));
+  RegisterDecl(
+      std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
 }
 
 void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
@@ -1717,8 +1708,8 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                          std::move(maybe_default_value), std::move(attributes));
   }
 
-  RegisterDecl(std::make_unique<Struct>(std::move(attributes), std::move(name),
-                                        std::move(members)));
+  RegisterDecl(
+      std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
 }
 
 void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
@@ -1738,7 +1729,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
       if (member->maybe_used->maybe_default_value) {
         // TODO(FIDL-609): Support defaults on tables.
         const auto default_value = member->maybe_used->maybe_default_value.get();
-        error_reporter_->ReportError(ErrDefaultsOnTablesNotSupported, default_value->span());
+        reporter_->ReportError(ErrDefaultsOnTablesNotSupported, default_value->span());
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
         Fail(ErrNullableTableMember, member->span());
@@ -1753,8 +1744,8 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     }
   }
 
-  RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name),
-                                       std::move(members), table_declaration->strictness));
+  RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members),
+                                       table_declaration->strictness));
 }
 
 void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
@@ -1774,7 +1765,7 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
         return;
       if (member->maybe_used->maybe_default_value) {
         const auto default_value = member->maybe_used->maybe_default_value.get();
-        error_reporter_->ReportError(ErrDefaultsOnUnionsNotSupported, default_value->span());
+        reporter_->ReportError(ErrDefaultsOnUnionsNotSupported, default_value->span());
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
         Fail(ErrNullableUnionMember, member->span());
@@ -1788,9 +1779,8 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     }
   }
 
-  RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes),
-                                       std::move(name), std::move(members),
-                                       union_declaration->strictness));
+  RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes), std::move(name),
+                                       std::move(members), union_declaration->strictness));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -1799,7 +1789,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (!attributes_) {
       attributes_ = std::move(file->attributes);
     } else {
-      AttributesBuilder attributes_builder(error_reporter_, std::move(attributes_->attributes));
+      AttributesBuilder attributes_builder(reporter_, std::move(attributes_->attributes));
       for (auto& attribute : file->attributes->attributes) {
         if (!attributes_builder.Insert(std::move(attribute)))
           return false;
@@ -2650,7 +2640,7 @@ bool Library::CompileDecl(Decl* decl) {
 
 void Library::VerifyDeclAttributes(Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
-  auto placement_ok = error_reporter_->Checkpoint();
+  auto placement_ok = reporter_->Checkpoint();
   switch (decl->kind) {
     case Decl::Kind::kBits: {
       auto bits_declaration = static_cast<Bits*>(decl);
@@ -3017,9 +3007,8 @@ bool Library::CompileStruct(Struct* struct_declaration) {
   for (auto& member : struct_declaration->members) {
     auto name_result = scope.Insert(member.name.data(), member.name);
     if (!name_result.ok()) {
-      return Fail(struct_declaration->is_request_or_response ?
-                      ErrDuplicateMethodParameterName :
-                      ErrDuplicateStructMemberName,
+      return Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterName
+                                                             : ErrDuplicateStructMemberName,
                   member.name, name_result.previous_occurrence());
     }
 
@@ -3101,8 +3090,8 @@ bool Library::CompileUnion(Union* union_declaration) {
         used_members.push_back(member.maybe_used.get());
     }
 
-    auto err = ValidateUnknownConstraints(
-        *union_declaration, union_declaration->strictness, &used_members);
+    auto err = ValidateUnknownConstraints(*union_declaration, union_declaration->strictness,
+                                          &used_members);
     if (err) {
       return Fail(std::move(err));
     }
@@ -3125,7 +3114,7 @@ bool Library::CompileTypeAlias(TypeAlias* decl) {
   // partial type constructor.
   bool partial_type_ctor_compiled = false;
   {
-    auto temporary_mode = error_reporter_->OverrideMode(ErrorReporter::ReportingMode::kDoNotReport);
+    auto temporary_mode = reporter_->OverrideMode(Reporter::ReportingMode::kDoNotReport);
     partial_type_ctor_compiled = CompileTypeConstructor(decl->partial_type_ctor.get());
   }
   if (decl->partial_type_ctor->maybe_arg_type_ctor && !partial_type_ctor_compiled) {
@@ -3157,10 +3146,10 @@ bool Library::Compile() {
   if (!verify_attributes_step.Done())
     return false;
 
-  if (!dependencies_.VerifyAllDependenciesWereUsed(*this, error_reporter_))
+  if (!dependencies_.VerifyAllDependenciesWereUsed(*this, reporter_))
     return false;
 
-  return error_reporter_->errors().size() == 0;
+  return reporter_->errors().size() == 0;
 }
 
 bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
@@ -3274,9 +3263,10 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
-  auto validator = [&mask](MemberType member, const raw::AttributeList*) -> std::unique_ptr<BaseError> {
+  auto validator = [&mask](MemberType member,
+                           const raw::AttributeList*) -> std::unique_ptr<Diagnostic> {
     if (!IsPowerOfTwo(member)) {
-      return ErrorReporter::MakeError(ErrBitsMemberMustBePowerOfTwo);
+      return Reporter::MakeError(ErrBitsMemberMustBePowerOfTwo);
     }
     mask |= member;
     return nullptr;
@@ -3293,7 +3283,9 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
 
-  auto validator = [enum_decl](MemberType member, const raw::AttributeList* attributes) -> std::unique_ptr<BaseError> {
+  auto validator = [enum_decl](
+                       MemberType member,
+                       const raw::AttributeList* attributes) -> std::unique_ptr<Diagnostic> {
     switch (enum_decl->strictness) {
       case types::Strictness::kFlexible:
         break;
@@ -3311,9 +3303,8 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
     if (attributes && attributes->HasAttribute("Unknown"))
       return nullptr;
 
-    return ErrorReporter::MakeError(ErrFlexibleEnumMemberWithMaxValue,
-                                    std::to_string(kMax), std::to_string(kMax),
-                                    std::to_string(kMax), std::to_string(kMax));
+    return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::to_string(kMax),
+                               std::to_string(kMax), std::to_string(kMax), std::to_string(kMax));
   };
 
   if (!ValidateMembers<Enum, MemberType>(enum_decl, validator))

@@ -8,19 +8,19 @@
 #include <set>
 #include <vector>
 
-#include "error_reporter.h"
 #include "raw_ast.h"
+#include "reporter.h"
 
 namespace fidl {
 
-using error_reporter::ErrorReporter;
+using reporter::Reporter;
 
 class AttributesBuilder {
  public:
-  AttributesBuilder(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
+  AttributesBuilder(Reporter* reporter) : reporter_(reporter) {}
 
-  AttributesBuilder(ErrorReporter* error_reporter, std::vector<raw::Attribute> attributes)
-      : error_reporter_(error_reporter), attributes_(std::move(attributes)) {
+  AttributesBuilder(Reporter* reporter, std::vector<raw::Attribute> attributes)
+      : reporter_(reporter), attributes_(std::move(attributes)) {
     for (auto& attribute : attributes_) {
       names_.emplace(attribute.name);
     }
@@ -45,7 +45,7 @@ class AttributesBuilder {
 
   InsertResult InsertHelper(raw::Attribute attribute);
 
-  ErrorReporter* error_reporter_;
+  Reporter* reporter_;
   std::vector<raw::Attribute> attributes_;
   std::set<std::string> names_;
 };

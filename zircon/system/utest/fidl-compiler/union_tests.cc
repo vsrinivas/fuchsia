@@ -15,7 +15,7 @@
 namespace {
 
 static bool Compiles(const std::string& source_code,
-                     std::vector<std::unique_ptr<fidl::BaseError>>* out_errors = nullptr) {
+                     std::vector<std::unique_ptr<fidl::Diagnostic>>* out_errors = nullptr) {
   auto library = TestLibrary("test.fidl", source_code);
   return library.Compile();
 }

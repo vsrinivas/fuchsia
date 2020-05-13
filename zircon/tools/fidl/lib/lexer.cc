@@ -10,7 +10,7 @@
 
 namespace fidl {
 
-using namespace errors;
+using namespace diagnostics;
 
 namespace {
 
@@ -339,7 +339,7 @@ Token Lexer::Lex() {
             return LexCommentOrDocComment();
           default: {
             SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
-            error_reporter_->ReportError(ErrInvalidCharacter, span, span.data());
+            reporter_->ReportError(ErrInvalidCharacter, span, span.data());
             continue;
           }
         }  // switch
@@ -380,7 +380,7 @@ Token Lexer::Lex() {
 
       default: {
         SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
-        error_reporter_->ReportError(ErrInvalidCharacter, span, span.data());
+        reporter_->ReportError(ErrInvalidCharacter, span, span.data());
         continue;
       }
     }  // switch

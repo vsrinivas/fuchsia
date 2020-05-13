@@ -5,10 +5,10 @@
 #include "fidl/parser.h"
 
 #include <errno.h>
+#include <lib/fit/function.h>
 
 #include <regex>
 
-#include <lib/fit/function.h>
 #include "fidl/attributes.h"
 #include "fidl/types.h"
 
@@ -61,7 +61,7 @@ bool IsIdentifierValid(const std::string& identifier) {
   return std::regex_match(identifier, kPattern);
 }
 
-template<typename T, typename Fn>
+template <typename T, typename Fn>
 void add(std::vector<std::unique_ptr<T>>* elements, Fn producer_fn) {
   fit::function<std::unique_ptr<T>()> producer(producer_fn);
   auto element = producer();
@@ -71,9 +71,8 @@ void add(std::vector<std::unique_ptr<T>>* elements, Fn producer_fn) {
 
 }  // namespace
 
-Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter,
-               const ExperimentalFlags& experimental_flags)
-    : lexer_(lexer), error_reporter_(error_reporter), experimental_flags_(experimental_flags) {
+Parser::Parser(Lexer* lexer, Reporter* reporter, const ExperimentalFlags& experimental_flags)
+    : lexer_(lexer), reporter_(reporter), experimental_flags_(experimental_flags) {
   handle_subtype_table_ = {
       {"bti", types::HandleSubtype::kBti},
       {"channel", types::HandleSubtype::kChannel},
@@ -120,33 +119,33 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
 
 std::nullptr_t Parser::Fail() { return Fail(ErrUnexpectedToken); }
 
-std::nullptr_t Parser::Fail(std::unique_ptr<BaseError> err) {
+std::nullptr_t Parser::Fail(std::unique_ptr<Diagnostic> err) {
   assert(err && "should not report nullptr error");
   if (Ok()) {
     err->span = last_token_.span();
-    error_reporter_->ReportError(std::move(err));
+    reporter_->ReportError(std::move(err));
   }
   return nullptr;
 }
 
-template <typename ...Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const Args& ...args) {
+template <typename... Args>
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const Args&... args) {
   return Fail(err, last_token_, args...);
 }
 
-template <typename ...Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token, const Args& ...args) {
+template <typename... Args>
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token, const Args&... args) {
   if (Ok()) {
-    error_reporter_->ReportError(err, token, args...);
+    reporter_->ReportError(err, token, args...);
   }
   return nullptr;
 }
 
-template <typename ...Args>
-std::nullptr_t Parser::Fail(
-    const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, const Args& ...args) {
+template <typename... Args>
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
+                            const Args&... args) {
   if (Ok()) {
-    error_reporter_->ReportError(err, span, args...);
+    reporter_->ReportError(err, span, args...);
   }
   return nullptr;
 }
@@ -330,7 +329,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
 
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
     std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope) {
-  AttributesBuilder attributes_builder(error_reporter_);
+  AttributesBuilder attributes_builder(reporter_);
   if (doc_comment) {
     if (!attributes_builder.Insert(std::move(*doc_comment.get())))
       return Fail();
@@ -368,18 +367,19 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
       // disallow any blank lines between this doc comment and the previous one
       std::string_view trailing_whitespace = last_token_.previous_end().data();
       if (std::count(trailing_whitespace.cbegin(), trailing_whitespace.cend(), '\n') > 1)
-        error_reporter_->ReportWarning(WarnBlankLinesWithinDocCommentBlock, previous_token_);
+        reporter_->ReportWarning(WarnBlankLinesWithinDocCommentBlock, previous_token_);
     }
 
     doc_line = ConsumeToken(OfKind(Token::Kind::kDocComment));
     if (!Ok() || !doc_line)
       return Fail();
     // NOTE: we currently explicitly only support UNIX line endings
-    str_value += std::string(doc_line->span().data().data() + 3, doc_line->span().data().size() - 2);
+    str_value +=
+        std::string(doc_line->span().data().data() + 3, doc_line->span().data().size() - 2);
   }
 
   if (Peek().kind() == Token::Kind::kEndOfFile)
-    error_reporter_->ReportWarning(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
+    reporter_->ReportWarning(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
   return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
 }
@@ -392,7 +392,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
     doc_comment = ParseDocComment();
   }
   if (for_parameter && doc_comment) {
-    error_reporter_->ReportError(ErrDocCommentOnParameters, previous_token_);
+    reporter_->ReportError(ErrDocCommentOnParameters, previous_token_);
     return Fail();
   }
   if (Peek().kind() == Token::Kind::kLeftSquare) {
@@ -400,7 +400,7 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
   }
   // no generic attributes, start the attribute list
   if (doc_comment) {
-    AttributesBuilder attributes_builder(error_reporter_);
+    AttributesBuilder attributes_builder(reporter_);
     if (!attributes_builder.Insert(std::move(*doc_comment.get())))
       return Fail();
     return std::make_unique<raw::AttributeList>(scope.GetSourceElement(),
@@ -592,12 +592,12 @@ std::unique_ptr<raw::BitsDeclaration> Parser::ParseBitsDeclaration(
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
-      add(&members, [&]{ return ParseBitsMember(); });
+      add(&members, [&] { return ParseBitsMember(); });
       return More;
     }
   };
 
-  auto checkpoint = error_reporter_->Checkpoint();
+  auto checkpoint = reporter_->Checkpoint();
   while (parse_member() == More) {
     if (!Ok()) {
       const auto result = RecoverToEndOfMember();
@@ -697,12 +697,12 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
-      add(&members, [&]{ return ParseEnumMember(); });
+      add(&members, [&] { return ParseEnumMember(); });
       return More;
     }
   };
 
-  auto checkpoint = error_reporter_->Checkpoint();
+  auto checkpoint = reporter_->Checkpoint();
   while (parse_member() == More) {
     if (!Ok()) {
       const auto result = RecoverToEndOfMember();
@@ -867,7 +867,7 @@ void Parser::ParseProtocolMember(
 
   switch (Peek().kind()) {
     case Token::Kind::kArrow: {
-      add(methods, [&]{ return ParseProtocolEvent(std::move(attributes), scope); });
+      add(methods, [&] { return ParseProtocolEvent(std::move(attributes), scope); });
       break;
     }
     case Token::Kind::kIdentifier: {
@@ -875,8 +875,8 @@ void Parser::ParseProtocolMember(
       if (!Ok())
         break;
       if (Peek().kind() == Token::Kind::kLeftParen) {
-        add(methods, [&]{
-            return ParseProtocolMethod(std::move(attributes), scope, std::move(identifier));
+        add(methods, [&] {
+          return ParseProtocolMethod(std::move(attributes), scope, std::move(identifier));
         });
         break;
       } else if (identifier->span().data() == "compose") {
@@ -982,7 +982,7 @@ std::unique_ptr<raw::ServiceDeclaration> Parser::ParseServiceDeclaration(
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
-      add(&members, [&]{ return ParseServiceMember(); });
+      add(&members, [&] { return ParseServiceMember(); });
       return More;
     }
   };
@@ -1050,7 +1050,7 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
-      add(&members, [&]{ return ParseStructMember(); });
+      add(&members, [&] { return ParseStructMember(); });
       return More;
     }
   };
@@ -1133,8 +1133,8 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
         return Done;
 
       case CASE_TOKEN(Token::Kind::kNumericLiteral):
-      TOKEN_ATTR_CASES: {
-        add(&members, [&]{ return ParseTableMember(); });
+      TOKEN_ATTR_CASES : {
+        add(&members, [&] { return ParseTableMember(); });
         return More;
       }
 
@@ -1231,7 +1231,7 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
     }
   };
 
-  auto checkpoint = error_reporter_->Checkpoint();
+  auto checkpoint = reporter_->Checkpoint();
   while (parse_member() == More) {
     if (!Ok()) {
       const auto result = RecoverToEndOfMember();
@@ -1327,59 +1327,54 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kBits): {
         done_with_library_imports = true;
-        add(&bits_declaration_list, [&]{
-            return ParseBitsDeclaration(std::move(attributes), scope,
-                                        maybe_strictness.value_or(types::Strictness::kStrict));
+        add(&bits_declaration_list, [&] {
+          return ParseBitsDeclaration(std::move(attributes), scope,
+                                      maybe_strictness.value_or(types::Strictness::kStrict));
         });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kConst): {
         done_with_library_imports = true;
-        add(&const_declaration_list, [&]{
-            return ParseConstDeclaration(std::move(attributes), scope);
-        });
+        add(&const_declaration_list,
+            [&] { return ParseConstDeclaration(std::move(attributes), scope); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kEnum): {
         done_with_library_imports = true;
-        add(&enum_declaration_list, [&]{
-            return ParseEnumDeclaration(std::move(attributes), scope,
-                                        maybe_strictness.value_or(types::Strictness::kStrict));
+        add(&enum_declaration_list, [&] {
+          return ParseEnumDeclaration(std::move(attributes), scope,
+                                      maybe_strictness.value_or(types::Strictness::kStrict));
         });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kProtocol): {
         done_with_library_imports = true;
-        add(&protocol_declaration_list, [&]{
-            return ParseProtocolDeclaration(std::move(attributes), scope);
-        });
+        add(&protocol_declaration_list,
+            [&] { return ParseProtocolDeclaration(std::move(attributes), scope); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kService): {
         done_with_library_imports = true;
-        add(&service_declaration_list, [&]{
-            return ParseServiceDeclaration(std::move(attributes), scope);
-        });
+        add(&service_declaration_list,
+            [&] { return ParseServiceDeclaration(std::move(attributes), scope); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kStruct): {
         done_with_library_imports = true;
-        add(&struct_declaration_list, [&]{
-            return ParseStructDeclaration(std::move(attributes), scope);
-        });
+        add(&struct_declaration_list,
+            [&] { return ParseStructDeclaration(std::move(attributes), scope); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kTable): {
         done_with_library_imports = true;
-        add(&table_declaration_list, [&]{
-            return ParseTableDeclaration(std::move(attributes), scope,
-                                         types::Strictness::kFlexible);
+        add(&table_declaration_list, [&] {
+          return ParseTableDeclaration(std::move(attributes), scope, types::Strictness::kFlexible);
         });
         return More;
       }
@@ -1395,8 +1390,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         } else if (done_with_library_imports) {
           // TODO(FIDL-582): Give one week warning, then turn this into
           // an error.
-          error_reporter_->ReportWarning(WarnLibraryImportsMustBeGroupedAtTopOfFile,
-                                         using_decl->span());
+          reporter_->ReportWarning(WarnLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
         }
         using_list.emplace_back(std::move(using_decl));
         return More;
@@ -1405,9 +1399,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kUnion): {
         done_with_library_imports = true;
         ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
-        add(&union_declaration_list, [&]{
-            return ParseUnionDeclaration(std::move(attributes), scope,
-                                  maybe_strictness.value_or(types::Strictness::kStrict));
+        add(&union_declaration_list, [&] {
+          return ParseUnionDeclaration(std::move(attributes), scope,
+                                       maybe_strictness.value_or(types::Strictness::kStrict));
         });
         return More;
       }
@@ -1416,10 +1410,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         auto strictness = maybe_strictness.value_or(types::Strictness::kFlexible);
         switch (strictness) {
           case types::Strictness::kFlexible:
-            error_reporter_->ReportError(ErrXunionDeprecated, last_token_);
+            reporter_->ReportError(ErrXunionDeprecated, last_token_);
             return More;
           case types::Strictness::kStrict:
-            error_reporter_->ReportError(ErrStrictXunionDeprecated, last_token_);
+            reporter_->ReportError(ErrStrictXunionDeprecated, last_token_);
             return More;
         }
     }
@@ -1452,11 +1446,11 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
-  auto p = [&](Token::KindAndSubkind token) -> std::unique_ptr<BaseError> {
+  auto p = [&](Token::KindAndSubkind token) -> std::unique_ptr<Diagnostic> {
     for (const auto& exit_token : exit_tokens) {
       if (token.kind() == exit_token)
         // signal to ReadToken to stop by returning an error
-        return ErrorReporter::MakeError(ErrUnexpectedToken);
+        return Reporter::MakeError(ErrUnexpectedToken);
     }
     // nullptr return value indicates -> yes, consume to ReadToken
     return nullptr;
@@ -1471,11 +1465,11 @@ bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfDecl() {
-  recovered_errors_ = error_reporter_->errors().size();
+  recovered_errors_ = reporter_->errors().size();
 
   static const auto exit_tokens = std::set<Token::Kind>{
-    Token::Kind::kRightCurly,
-    Token::Kind::kEndOfFile,
+      Token::Kind::kRightCurly,
+      Token::Kind::kEndOfFile,
   };
   if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;
@@ -1495,12 +1489,12 @@ Parser::RecoverResult Parser::RecoverToEndOfDecl() {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfMember() {
-  recovered_errors_ = error_reporter_->errors().size();
+  recovered_errors_ = reporter_->errors().size();
 
   static const auto exit_tokens = std::set<Token::Kind>{
-    Token::Kind::kSemicolon,
-    Token::Kind::kRightCurly,
-    Token::Kind::kEndOfFile,
+      Token::Kind::kSemicolon,
+      Token::Kind::kRightCurly,
+      Token::Kind::kEndOfFile,
   };
   if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;
@@ -1517,14 +1511,11 @@ Parser::RecoverResult Parser::RecoverToEndOfMember() {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfParam() {
-  recovered_errors_ = error_reporter_->errors().size();
+  recovered_errors_ = reporter_->errors().size();
 
   static const auto exit_tokens = std::set<Token::Kind>{
-    Token::Kind::kComma,
-    Token::Kind::kRightParen,
-    Token::Kind::kSemicolon,
-    Token::Kind::kRightCurly,
-    Token::Kind::kEndOfFile,
+      Token::Kind::kComma,      Token::Kind::kRightParen, Token::Kind::kSemicolon,
+      Token::Kind::kRightCurly, Token::Kind::kEndOfFile,
   };
   if (!ConsumeTokensUntil(exit_tokens)) {
     return RecoverResult::Failure;

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/error_reporter.h>
-#include <fidl/errors.h>
+#include <fidl/diagnostics.h>
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
+#include <fidl/reporter.h>
 #include <fidl/source_file.h>
 #include <unittest/unittest.h>
 
@@ -576,8 +576,8 @@ protocol P {
   END_TEST;
 }
 
-bool MustHaveThreeMembers(fidl::ErrorReporter* error_reporter,
-                          const fidl::raw::Attribute& attribute, const fidl::flat::Decl* decl) {
+bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::raw::Attribute& attribute,
+                          const fidl::flat::Decl* decl) {
   switch (decl->kind) {
     case fidl::flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const fidl::flat::Struct*>(decl);

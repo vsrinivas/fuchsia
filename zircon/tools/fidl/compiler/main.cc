@@ -241,10 +241,10 @@ enum struct Behavior {
   kJSON,
 };
 
-bool Parse(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_reporter,
+bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
            fidl::flat::Library* library, const fidl::ExperimentalFlags& experimental_flags) {
-  fidl::Lexer lexer(source_file, error_reporter);
-  fidl::Parser parser(&lexer, error_reporter, experimental_flags);
+  fidl::Lexer lexer(source_file, reporter);
+  fidl::Parser parser(&lexer, reporter, experimental_flags);
   auto ast = parser.Parse();
   if (!parser.Success()) {
     return false;
@@ -268,8 +268,8 @@ void Write(std::ostringstream output_stream, const std::string file_path) {
 
 // TODO(pascallouis): remove forward declaration, this was only introduced to
 // reduce diff size while breaking things up.
-int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
-            std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
+int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::string library_name,
+            std::vector<std::pair<Behavior, std::string>> outputs,
             const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags);
 
@@ -373,20 +373,20 @@ int main(int argc, char* argv[]) {
 
   // Ready. Set. Go.
   bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
-  fidl::ErrorReporter error_reporter(warnings_as_errors, enable_color);
-  auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
-  auto status = compile(&error_reporter, &typespace, library_name, std::move(outputs),
-                        source_managers, std::move(experimental_flags));
+  fidl::Reporter reporter(warnings_as_errors, enable_color);
+  auto typespace = fidl::flat::Typespace::RootTypes(&reporter);
+  auto status = compile(&reporter, &typespace, library_name, std::move(outputs), source_managers,
+                        std::move(experimental_flags));
   if (format == "json") {
-    error_reporter.PrintReportsJson();
+    reporter.PrintReportsJson();
   } else {
-    error_reporter.PrintReports();
+    reporter.PrintReports();
   }
   return status;
 }
 
-int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
-            std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
+int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::string library_name,
+            std::vector<std::pair<Behavior, std::string>> outputs,
             const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags) {
   fidl::flat::Libraries all_libraries;
@@ -395,9 +395,9 @@ int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespac
     if (source_manager.sources().empty()) {
       continue;
     }
-    auto library = std::make_unique<fidl::flat::Library>(&all_libraries, error_reporter, typespace);
+    auto library = std::make_unique<fidl::flat::Library>(&all_libraries, reporter, typespace);
     for (const auto& source_file : source_manager.sources()) {
-      if (!Parse(*source_file, error_reporter, library.get(), experimental_flags)) {
+      if (!Parse(*source_file, reporter, library.get(), experimental_flags)) {
         return 1;
       }
     }

@@ -4,27 +4,27 @@
 
 #include <unittest/unittest.h>
 
-#include "fidl/errors.h"
-#include "fidl/error_reporter.h"
+#include "fidl/diagnostics.h"
+#include "fidl/reporter.h"
 #include "test_library.h"
 
 namespace {
 
-using fidl::BaseError;
+using fidl::Diagnostic;
 using fidl::ErrorDef;
-using fidl::ErrorReporter;
+using fidl::Reporter;
 
 constexpr ErrorDef<std::string, std::string> ErrTest(
     "This test error has one string param '{}' and another '{}'.");
 
 bool ReportErrorFormatParams() {
   BEGIN_TEST;
-  ErrorReporter error_reporter;
+  Reporter reporter;
   std::string param1("param1");
   std::string param2("param2");
-  error_reporter.ReportError(ErrTest, param1, param2);
+  reporter.ReportError(ErrTest, param1, param2);
 
-  const auto& errors = error_reporter.errors();
+  const auto& errors = reporter.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0]->msg.c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
@@ -35,12 +35,11 @@ bool MakeErrorThenReportIt() {
   BEGIN_TEST;
   std::string param1("param1");
   std::string param2("param2");
-  std::unique_ptr<BaseError> reported_err = ErrorReporter::MakeError(
-      ErrTest, param1, param2);
-  ErrorReporter error_reporter;
-  error_reporter.ReportError(std::move(reported_err));
+  std::unique_ptr<Diagnostic> reported_err = Reporter::MakeError(ErrTest, param1, param2);
+  Reporter reporter;
+  reporter.ReportError(std::move(reported_err));
 
-  const auto& errors = error_reporter.errors();
+  const auto& errors = reporter.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_STR_STR(errors[0]->msg.c_str(),
                  "This test error has one string param 'param1' and another 'param2'.");
@@ -49,7 +48,7 @@ bool MakeErrorThenReportIt() {
 
 }  // namespace
 
-BEGIN_TEST_CASE(report_error_tests)
+BEGIN_TEST_CASE(reporter_tests)
 RUN_TEST(ReportErrorFormatParams)
 RUN_TEST(MakeErrorThenReportIt)
-END_TEST_CASE(report_error_tests)
+END_TEST_CASE(reporter_tests)

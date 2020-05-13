@@ -6,7 +6,7 @@
 
 namespace fidl {
 
-using namespace errors;
+using namespace diagnostics;
 
 bool AttributesBuilder::Insert(raw::Attribute attribute) {
   auto attribute_name = attribute.name;
@@ -14,7 +14,7 @@ bool AttributesBuilder::Insert(raw::Attribute attribute) {
   auto result = InsertHelper(std::move(attribute));
   switch (result.kind) {
     case InsertResult::Kind::kDuplicate: {
-      error_reporter_->ReportError(ErrDuplicateAttribute, attribute_span, attribute_name);
+      reporter_->ReportError(ErrDuplicateAttribute, attribute_span, attribute_name);
       return false;
     }
     case InsertResult::Kind::kOk:

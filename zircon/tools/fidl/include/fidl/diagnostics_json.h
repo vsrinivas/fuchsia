@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "fidl/error_types.h"
+#include "fidl/diagnostic_types.h"
 #include "fidl/source_span.h"
 #include "json_writer.h"
 
@@ -19,17 +19,7 @@ namespace fidl {
 
 namespace {
 
-using fidl::errors::BaseError;
-
-enum class DiagnosticType {
-  kError,
-  kWarning,
-};
-
-struct Diagnostic {
-  DiagnosticType type;
-  BaseError* error_or_warning;
-};
+using diagnostics::Diagnostic;
 
 }  // namespace
 
@@ -43,20 +33,18 @@ class DiagnosticsJson : public utils::JsonWriter<DiagnosticsJson> {
   using utils::JsonWriter<DiagnosticsJson>::Generate;
   using utils::JsonWriter<DiagnosticsJson>::GenerateArray;
 
-  explicit DiagnosticsJson(const std::vector<std::unique_ptr<BaseError>>& errors,
-                           const std::vector<std::unique_ptr<BaseError>>& warnings)
-      : JsonWriter(json_file_), errors_(errors), warnings_(warnings) {}
+  explicit DiagnosticsJson(std::vector<Diagnostic*> diagnostics)
+      : JsonWriter(json_file_), diagnostics_(diagnostics) {}
 
   ~DiagnosticsJson() = default;
 
   std::ostringstream Produce();
 
-  void Generate(const Diagnostic& diagnostic);
+  void Generate(const Diagnostic* diagnostic);
   void Generate(const SourceSpan& span);
 
  private:
-  const std::vector<std::unique_ptr<BaseError>>& errors_;
-  const std::vector<std::unique_ptr<BaseError>>& warnings_;
+  std::vector<Diagnostic*> diagnostics_;
   std::ostringstream json_file_;
 };
 

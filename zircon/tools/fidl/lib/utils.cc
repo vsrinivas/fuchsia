@@ -190,8 +190,8 @@ std::vector<std::string> FormatFindings(const Findings& findings) {
   for (auto& finding : findings) {
     std::stringstream ss;
     PrintFinding(ss, finding);
-    auto warning = error_reporter::Format("warning", std::make_optional(finding.span()),
-                                          ss.str(), finding.span().data().size());
+    auto warning = reporter::Format("warning", std::make_optional(finding.span()), ss.str(),
+                                    finding.span().data().size());
     lint.push_back(warning);
   }
   return lint;

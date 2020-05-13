@@ -4,8 +4,8 @@
 
 #include <unittest/unittest.h>
 
-#include "fidl/errors.h"
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {

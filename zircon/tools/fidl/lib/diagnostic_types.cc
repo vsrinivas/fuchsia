@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/error_types.h"
+#include "fidl/diagnostic_types.h"
 
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
@@ -10,7 +10,7 @@
 #include "fidl/source_span.h"
 
 namespace fidl {
-namespace errors {
+namespace diagnostics {
 namespace internal {
 
 std::string Display(const std::string& s) { return s; }
@@ -31,9 +31,7 @@ std::string Display(const std::set<std::string>& s) {
 
 std::string Display(const SourceSpan& s) { return s.position_str(); }
 
-std::string Display(const Token::KindAndSubkind& t) {
-  return std::string(Token::Name(t));
-}
+std::string Display(const Token::KindAndSubkind& t) { return std::string(Token::Name(t)); }
 
 std::string Display(const raw::Attribute& a) { return a.name; }
 
@@ -63,5 +61,5 @@ std::string Display(const flat::TypeTemplate* t) { return NameFlatName(t->name()
 std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
 
 }  // namespace internal
-}  // namespace errors
+}  // namespace diagnostics
 }  // namespace fidl

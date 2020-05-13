@@ -199,7 +199,7 @@ if (current_toolchain == default_toolchain) {
       "recoverable_compilation_tests.cc",
       "recoverable_parsing_tests.cc",
       "recursion_detector_tests.cc",
-      "report_error_tests.cc",
+      "reporter_tests.cc",
       "service_tests.cc",
       "span_tests.cc",
       "strictness_tests.cc",

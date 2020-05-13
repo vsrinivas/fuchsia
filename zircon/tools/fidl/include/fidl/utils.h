@@ -12,13 +12,13 @@
 #include <set>
 #include <string>
 
-#include <fidl/error_reporter.h>
 #include <fidl/findings.h>
+#include <fidl/reporter.h>
 
 namespace fidl {
 namespace utils {
 
-using error_reporter::ErrorReporter;
+using reporter::Reporter;
 
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
 constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
@@ -148,7 +148,7 @@ std::string to_upper_camel_case(const std::string& str);
 
 // Used by fidl-lint FormatFindings, and for testing,
 // this generates the linter error message string in the format
-// required for the fidl::ErrorReporter.
+// required for the fidl::Reporter.
 void PrintFinding(std::ostream& os, const Finding& finding);
 
 // Used by fidl-lint main() and for testing, this generates the linter error

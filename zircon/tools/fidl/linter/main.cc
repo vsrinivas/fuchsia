@@ -40,13 +40,13 @@ namespace {
   exit(2);  // Exit code 1 is reserved to indicate lint findings
 }
 
-bool Lint(const fidl::SourceFile& source_file, fidl::Findings* findings,
-          fidl::ErrorReporter* error_reporter, const std::set<std::string>& included_checks,
+bool Lint(const fidl::SourceFile& source_file, fidl::Findings* findings, fidl::Reporter* reporter,
+          const std::set<std::string>& included_checks,
           const std::set<std::string>& excluded_checks, bool exclude_by_default,
           std::set<std::string>* excluded_checks_not_found) {
-  fidl::Lexer lexer(source_file, error_reporter);
+  fidl::Lexer lexer(source_file, reporter);
   fidl::ExperimentalFlags experimental_flags;
-  fidl::Parser parser(&lexer, error_reporter, experimental_flags);
+  fidl::Parser parser(&lexer, reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
   if (!parser.Success()) {
     return false;
@@ -121,16 +121,16 @@ int main(int argc, char* argv[]) {
   excluded_and_disabled_checks.insert("no-trailing-comment");
 
   fidl::Findings findings;
-  fidl::ErrorReporter error_reporter;
+  fidl::Reporter reporter;
   for (const auto& source_file : source_manager.sources()) {
-    Lint(*source_file, &findings, &error_reporter, included_checks, excluded_and_disabled_checks,
+    Lint(*source_file, &findings, &reporter, included_checks, excluded_and_disabled_checks,
          exclude_by_default, &excluded_checks_not_found);
     // Lint() returns true if no findings were added, but that information is not useful to the
     // program at this point. We return a 0 or 1 status code based on the final size of the findings
     // collection.
   }
   if (options.format == "text") {
-    error_reporter.PrintReports();
+    reporter.PrintReports();
     auto lints = fidl::utils::FormatFindings(findings);
     for (const auto& lint : lints) {
       fprintf(stderr, "%s\n", lint.c_str());

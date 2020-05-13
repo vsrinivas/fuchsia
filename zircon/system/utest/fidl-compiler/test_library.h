@@ -23,9 +23,9 @@ static std::unique_ptr<fidl::SourceFile> MakeSourceFile(const std::string& filen
 
 class SharedAmongstLibraries {
  public:
-  SharedAmongstLibraries() : typespace(fidl::flat::Typespace::RootTypes(&error_reporter)) {}
+  SharedAmongstLibraries() : typespace(fidl::flat::Typespace::RootTypes(&reporter)) {}
 
-  fidl::ErrorReporter error_reporter;
+  fidl::Reporter reporter;
   fidl::flat::Typespace typespace;
   fidl::flat::Libraries all_libraries;
   std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries;
@@ -37,12 +37,11 @@ class TestLibrary final {
 
   explicit TestLibrary(SharedAmongstLibraries* shared,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
-      : error_reporter_(&shared->error_reporter),
+      : reporter_(&shared->reporter),
         typespace_(&shared->typespace),
         all_libraries_(&shared->all_libraries),
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
-        library_(
-            std::make_unique<fidl::flat::Library>(all_libraries_, error_reporter_, typespace_)) {
+        library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_)) {
     experimental_flags_ = std::move(experimental_flags);
   }
 
@@ -79,16 +78,16 @@ class TestLibrary final {
   bool Parse(std::unique_ptr<fidl::raw::File>* out_ast_ptr) {
     assert(all_sources_.size() == 1 && "parse can only be used with one source");
     auto source_file = all_sources_.at(0);
-    fidl::Lexer lexer(*source_file, error_reporter_);
-    fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
+    fidl::Lexer lexer(*source_file, reporter_);
+    fidl::Parser parser(&lexer, reporter_, experimental_flags_);
     out_ast_ptr->reset(parser.Parse().release());
     return parser.Success();
   }
 
   bool Compile() {
     for (auto source_file : all_sources_) {
-      fidl::Lexer lexer(*source_file, error_reporter_);
-      fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
+      fidl::Lexer lexer(*source_file, reporter_);
+      fidl::Parser parser(&lexer, reporter_, experimental_flags_);
       auto ast = parser.Parse();
       if (!parser.Success())
         return false;
@@ -104,16 +103,16 @@ class TestLibrary final {
             std::set<std::string>* excluded_checks_not_found = nullptr) {
     assert(all_sources_.size() == 1 && "lint can only be used with one source");
     auto source_file = all_sources_.at(0);
-    fidl::Lexer lexer(*source_file, error_reporter_);
-    fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
+    fidl::Lexer lexer(*source_file, reporter_);
+    fidl::Parser parser(&lexer, reporter_, experimental_flags_);
     auto ast = parser.Parse();
     if (!parser.Success()) {
       std::string_view beginning(source_file->data().data(), 0);
       fidl::SourceSpan span(beginning, *source_file);
-      const auto& error = error_reporter_->errors().at(0);
+      const auto& error = reporter_->errors().at(0);
       size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
-      auto error_msg = fidl::error_reporter::Format("error", error->span, error->msg,
-                                                    false, squiggle_size);
+      auto error_msg =
+          fidl::reporter::Format("error", error->span, error->msg, false, squiggle_size);
       findings->emplace_back(span, "parser-error", error_msg + "\n");
       return false;
     }
@@ -228,7 +227,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  void set_warnings_as_errors(bool value) { error_reporter_->set_warnings_as_errors(value); }
+  void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
 
   const fidl::flat::Library* library() const { return library_.get(); }
 
@@ -245,12 +244,14 @@ class TestLibrary final {
     return fidl::SourceSpan(data, *all_sources_.at(0));
   }
 
-  const std::vector<std::unique_ptr<fidl::BaseError>>& errors() const {
-    return error_reporter_->errors();
+  std::vector<fidl::Diagnostic*> diagnostics() const { return reporter_->diagnostics(); }
+
+  const std::vector<std::unique_ptr<fidl::Diagnostic>>& errors() const {
+    return reporter_->errors();
   }
 
-  const std::vector<std::unique_ptr<fidl::BaseError>>& warnings() const {
-    return error_reporter_->warnings();
+  const std::vector<std::unique_ptr<fidl::Diagnostic>>& warnings() const {
+    return reporter_->warnings();
   }
 
   const std::vector<std::string>& lints() const { return lints_; }
@@ -261,7 +262,7 @@ class TestLibrary final {
 
  protected:
   SharedAmongstLibraries owned_shared_;
-  fidl::ErrorReporter* error_reporter_;
+  fidl::Reporter* reporter_;
   std::vector<std::string> lints_;
   fidl::ExperimentalFlags experimental_flags_;
   fidl::flat::Typespace* typespace_;

@@ -8,26 +8,26 @@
 #include <memory>
 #include <optional>
 
-#include "error_reporter.h"
 #include "experimental_flags.h"
 #include "lexer.h"
 #include "raw_ast.h"
+#include "reporter.h"
 #include "types.h"
 
 namespace fidl {
 
-using namespace errors;
-using error_reporter::ErrorReporter;
+using namespace diagnostics;
+using reporter::Reporter;
 
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_parsing
 // for additional context
 class Parser {
  public:
-  Parser(Lexer* lexer, ErrorReporter* error_reporter, const ExperimentalFlags& experimental_flags);
+  Parser(Lexer* lexer, Reporter* reporter, const ExperimentalFlags& experimental_flags);
 
   std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
-  bool Success() const { return error_reporter_->errors().size() == 0; }
+  bool Success() const { return reporter_->errors().size() == 0; }
 
  private:
   // currently the only usecase for this enum is to identify the case where the parser
@@ -53,7 +53,7 @@ class Parser {
           break;
         case Token::Kind::kDocComment:
           if (state_ == State::kDocCommentThenComment)
-            error_reporter_->ReportWarning(WarnCommentWithinDocCommentBlock, last_token_);
+            reporter_->ReportWarning(WarnCommentWithinDocCommentBlock, last_token_);
           state_ = State::kDocCommentLast;
           return token;
         default:
@@ -148,12 +148,12 @@ class Parser {
   };
 
   // ReadToken matches on the next token using the predicate |p|, which returns
-  // a unique_ptr<BaseError> on failure, or nullptr on a match.
+  // a unique_ptr<Diagnostic> on failure, or nullptr on a match.
   // See #OfKind, and #IdentifierOfSubkind for the two most common predicates.
   // If the predicate doesn't match, ReadToken follows the OnNoMatch enum.
   template <class Predicate>
   std::optional<Token> ReadToken(Predicate p, OnNoMatch on_no_match) {
-    std::unique_ptr<BaseError> error = p(Peek());
+    std::unique_ptr<Diagnostic> error = p(Peek());
     if (error) {
       switch (on_no_match) {
         case OnNoMatch::kReportAndConsume:
@@ -196,21 +196,20 @@ class Parser {
   }
 
   static auto OfKind(Token::Kind expected_kind) {
-    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseError> {
+    return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<Diagnostic> {
       if (actual.kind() != expected_kind) {
-        return ErrorReporter::MakeError(
-            ErrUnexpectedTokenOfKind, actual,
-            Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
+        return Reporter::MakeError(ErrUnexpectedTokenOfKind, actual,
+                                   Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
       }
       return nullptr;
     };
   }
 
   static auto IdentifierOfSubkind(Token::Subkind expected_subkind) {
-    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<BaseError> {
+    return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<Diagnostic> {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
       if (actual.combined() != expected.combined()) {
-        return ErrorReporter::MakeError(
+        return Reporter::MakeError(
             ErrUnexpectedIdentifier, actual,
             Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
       }
@@ -222,13 +221,14 @@ class Parser {
                            std::optional<types::HandleSubtype>* out_handle_subtype);
 
   std::nullptr_t Fail();
-  std::nullptr_t Fail(std::unique_ptr<BaseError> err);
-  template <typename ...Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, const Args& ...args);
-  template <typename ...Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const Args& ...args);
-  template <typename ...Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span, const Args& ...args);
+  std::nullptr_t Fail(std::unique_ptr<Diagnostic> err);
+  template <typename... Args>
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, const Args&... args);
+  template <typename... Args>
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const Args&... args);
+  template <typename... Args>
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
+                      const Args&... args);
 
   std::optional<types::Strictness> MaybeParseStrictness();
 
@@ -332,13 +332,13 @@ class Parser {
   // from".
   // Not to be confused with Parser::Success, which is called after parsing to
   // check if any errors were reported during parsing, regardless of recovery.
-  bool Ok() const { return error_reporter_->errors().size() == recovered_errors_; }
+  bool Ok() const { return reporter_->errors().size() == recovered_errors_; }
   size_t recovered_errors_ = 0;
 
   std::map<std::string_view, types::HandleSubtype> handle_subtype_table_;
 
   Lexer* lexer_;
-  ErrorReporter* error_reporter_;
+  Reporter* reporter_;
   const ExperimentalFlags& experimental_flags_;
 
   // The stack of information interesting to the currently active ASTScope

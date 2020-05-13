@@ -50,11 +50,10 @@ void Usage(const std::string& argv0) {
   exit(1);
 }
 
-bool Format(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_reporter,
-            std::string& output) {
-  fidl::Lexer lexer(source_file, error_reporter);
+bool Format(const fidl::SourceFile& source_file, fidl::Reporter* reporter, std::string& output) {
+  fidl::Lexer lexer(source_file, reporter);
   fidl::ExperimentalFlags experimental_flags;
-  fidl::Parser parser(&lexer, error_reporter, experimental_flags);
+  fidl::Parser parser(&lexer, reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
   if (!parser.Success()) {
     return false;
@@ -110,9 +109,8 @@ int main(int argc, char* argv[]) {
 
   // Process filenames.
   if (pipe) {
-    std::string input(
-        std::istreambuf_iterator<char>(std::cin >> std::noskipws),
-        std::istreambuf_iterator<char>());
+    std::string input(std::istreambuf_iterator<char>(std::cin >> std::noskipws),
+                      std::istreambuf_iterator<char>());
     source_manager.AddSourceFile(std::make_unique<fidl::SourceFile>("stdin", std::move(input)));
   } else {
     for (size_t i = pos; i < args.size(); i++) {
@@ -122,13 +120,13 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  fidl::ErrorReporter error_reporter;
+  fidl::Reporter reporter;
   for (const auto& source_file : source_manager.sources()) {
     std::string output;
-    if (!Format(*source_file, &error_reporter, output)) {
+    if (!Format(*source_file, &reporter, output)) {
       // In the formatter, we do not print the report if there are only
       // warnings.
-      error_reporter.PrintReports();
+      reporter.PrintReports();
       return 1;
     }
     FILE* out_file;

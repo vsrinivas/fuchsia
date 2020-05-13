@@ -4,18 +4,21 @@
 
 #include "fidl/diagnostics_json.h"
 
-#include "fidl/error_types.h"
+#include "fidl/diagnostic_types.h"
 
 namespace fidl {
 
-void DiagnosticsJson::Generate(const Diagnostic& diagnostic) {
+using diagnostics::Diagnostic;
+using diagnostics::DiagnosticKind;
+
+void DiagnosticsJson::Generate(const Diagnostic* diagnostic) {
   GenerateObject([&]() {
-    std::string category = diagnostic.type == DiagnosticType::kError ? "error" : "warning";
+    std::string category = diagnostic->kind == DiagnosticKind::kError ? "error" : "warning";
     GenerateObjectMember("category", "fidlc/" + category, Position::kFirst);
 
-    GenerateObjectMember("message", diagnostic.error_or_warning->msg);
-    if (diagnostic.error_or_warning->span)
-      Generate(diagnostic.error_or_warning->span.value());
+    GenerateObjectMember("message", diagnostic->msg);
+    if (diagnostic->span)
+      Generate(diagnostic->span.value());
   });
 }
 
@@ -40,16 +43,7 @@ void DiagnosticsJson::Generate(const SourceSpan& span) {
 std::ostringstream DiagnosticsJson::Produce() {
   ResetIndentLevel();
 
-  std::vector<Diagnostic> diags;
-  for (auto&& error : errors_) {
-    diags.push_back(Diagnostic{.type = DiagnosticType::kError, .error_or_warning = error.get()});
-  }
-  for (auto&& warning : warnings_) {
-    diags.push_back(
-        Diagnostic{.type = DiagnosticType::kWarning, .error_or_warning = warning.get()});
-  }
-
-  GenerateArray(diags);
+  GenerateArray(diagnostics_);
 
   return std::move(json_file_);
 }

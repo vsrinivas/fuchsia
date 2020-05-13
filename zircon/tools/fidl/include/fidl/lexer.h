@@ -11,13 +11,13 @@
 #include <map>
 #include <string_view>
 
-#include "error_reporter.h"
+#include "reporter.h"
 #include "source_manager.h"
 #include "token.h"
 
 namespace fidl {
 
-using error_reporter::ErrorReporter;
+using reporter::Reporter;
 
 // The lexer does not own the data it operates on. It merely takes a
 // std::string_view and produces a stream of tokens and possibly a failure
@@ -28,8 +28,8 @@ class Lexer {
  public:
   // The Lexer assumes the final character is 0. This substantially
   // simplifies advancing to the next character.
-  Lexer(const SourceFile& source_file, ErrorReporter* error_reporter)
-      : source_file_(source_file), error_reporter_(error_reporter) {
+  Lexer(const SourceFile& source_file, Reporter* reporter)
+      : source_file_(source_file), reporter_(reporter) {
     keyword_table_ = {
 #define KEYWORD(Name, Spelling) {Spelling, Token::Subkind::k##Name},
 #include "fidl/token_definitions.inc"
@@ -62,7 +62,7 @@ class Lexer {
 
   const SourceFile& source_file_;
   std::map<std::string_view, Token::Subkind> keyword_table_;
-  ErrorReporter* error_reporter_;
+  Reporter* reporter_;
 
   const char* current_ = nullptr;
   const char* end_of_file_ = nullptr;

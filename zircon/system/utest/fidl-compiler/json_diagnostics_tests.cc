@@ -13,21 +13,16 @@ namespace fidl {
 
 namespace {
 
-using fidl::BaseError;
-using fidl::ErrorDef;
-using fidl::ErrorReporter;
+using diagnostics::Diagnostic;
 
-#define ASSERT_JSON(ERRORS, WARNINGS, JSON) \
-  ASSERT_TRUE(ExpectJson(ERRORS, WARNINGS, JSON), "Failed");
+#define ASSERT_JSON(DIAGS, JSON) ASSERT_TRUE(ExpectJson(DIAGS, JSON), "Failed");
 
 #define TEST_FAILED (!current_test_info->all_ok)
 
-bool DiagnosticsEmitThisJson(const std::vector<std::unique_ptr<fidl::BaseError>>& errors,
-                             const std::vector<std::unique_ptr<fidl::BaseError>>& warnings,
-                             std::string expected_json) {
+bool DiagnosticsEmitThisJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
   BEGIN_HELPER;
 
-  std::string actual_json = fidl::DiagnosticsJson(errors, warnings).Produce().str();
+  std::string actual_json = DiagnosticsJson(diagnostics).Produce().str();
 
   EXPECT_STRING_EQ(
       expected_json, actual_json,
@@ -46,12 +41,10 @@ bool DiagnosticsEmitThisJson(const std::vector<std::unique_ptr<fidl::BaseError>>
   END_HELPER;
 }
 
-bool ExpectJson(const std::vector<std::unique_ptr<fidl::BaseError>>& errors,
-                const std::vector<std::unique_ptr<fidl::BaseError>>& warnings,
-                std::string expected_json) {
+bool ExpectJson(std::vector<Diagnostic*> diagnostics, std::string expected_json) {
   BEGIN_HELPER;
 
-  ASSERT_TRUE(DiagnosticsEmitThisJson(errors, warnings, expected_json));
+  ASSERT_TRUE(DiagnosticsEmitThisJson(diagnostics, expected_json));
 
   END_HELPER;
 }
@@ -67,10 +60,9 @@ table Table {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  const auto& warnings = library.warnings();
+  const auto& diagnostics = library.diagnostics();
 
-  ASSERT_JSON(errors, warnings, R"JSON([
+  ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
     "message": "Table members cannot be nullable",
@@ -97,10 +89,9 @@ protocol Protocol {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-  const auto& errors = library.errors();
-  const auto& warnings = library.warnings();
+  const auto& diagnostics = library.diagnostics();
 
-  ASSERT_JSON(errors, warnings, R"JSON([
+  ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/warning",
     "message": "suspect attribute with name 'Layort'; did you mean 'Layout'?",
@@ -129,10 +120,9 @@ table Table {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  const auto& warnings = library.warnings();
+  const auto& diagnostics = library.diagnostics();
 
-  ASSERT_JSON(errors, warnings, R"JSON([
+  ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
     "message": "Name collision: P",

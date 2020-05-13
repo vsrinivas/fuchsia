@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/error_reporter.h"
+#include "fidl/reporter.h"
 
 #include <cassert>
 #include <sstream>
@@ -11,7 +11,7 @@
 #include <fidl/token.h>
 
 namespace fidl {
-namespace error_reporter {
+namespace reporter {
 
 std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   std::string squiggle;
@@ -74,19 +74,19 @@ std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
   return error.str();
 }
 
-void ErrorReporter::AddError(std::unique_ptr<BaseError> err) {
+void Reporter::AddError(std::unique_ptr<Diagnostic> diag) {
   if (mode_ == ReportingMode::kDoNotReport)
     return;
-  errors_.push_back(std::move(err));
+  errors_.push_back(std::move(diag));
 }
 
-void ErrorReporter::AddWarning(std::unique_ptr<BaseError> warn) {
+void Reporter::AddWarning(std::unique_ptr<Diagnostic> diag) {
   if (mode_ == ReportingMode::kDoNotReport)
     return;
   if (warnings_as_errors_) {
-    errors_.push_back(std::move(warn));
+    errors_.push_back(std::move(diag));
   } else {
-    warnings_.push_back(std::move(warn));
+    warnings_.push_back(std::move(diag));
   }
 }
 
@@ -96,26 +96,26 @@ void ErrorReporter::AddWarning(std::unique_ptr<BaseError> warn) {
 //     filename:line:col: {error, warning}: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportError(std::unique_ptr<BaseError> err) {
-  assert(err && "should not report nullptr error");
-  AddError(std::move(err));
+void Reporter::ReportError(std::unique_ptr<Diagnostic> diag) {
+  assert(diag && "should not report nullptr error");
+  assert(diag->kind == DiagnosticKind::kError);
+  AddError(std::move(diag));
 }
-void ErrorReporter::ReportWarning(std::unique_ptr<BaseError> warn) {
-  assert(warn && "should not report nullptr warning");
-  AddWarning(std::move(warn));
+void Reporter::ReportWarning(std::unique_ptr<Diagnostic> diag) {
+  assert(diag && "should not report nullptr warning");
+  assert(diag->kind == DiagnosticKind::kWarning);
+  AddWarning(std::move(diag));
 }
 
-void ErrorReporter::PrintReports() {
-  for (const auto& error : errors_) {
-    size_t squiggle_size = error->span ? error->span.value().data().size() : 0;
-    auto error_str = Format("error", error->span, error->msg, enable_color_, squiggle_size);
-    fprintf(stderr, "%s\n", error_str.c_str());
+void Reporter::PrintReports() {
+  const auto diags = diagnostics();
+  for (const auto& diag : diags) {
+    size_t squiggle_size = diag->span ? diag->span->data().size() : 0;
+    std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
+    auto msg = Format(qualifier, diag->span, diag->msg, enable_color_, squiggle_size);
+    fprintf(stderr, "%s\n", msg.c_str());
   }
-  for (const auto& warning : warnings_) {
-    size_t squiggle_size = warning->span ? warning->span.value().data().size() : 0;
-    auto warning_str = Format("warning", warning->span, warning->msg, enable_color_, squiggle_size);
-    fprintf(stderr, "%s\n", warning_str.c_str());
-  }
+
   if (!errors_.empty() && warnings_.empty()) {
     fprintf(stderr, "%zu error(s) reported.\n", errors_.size());
   } else if (errors_.empty() && !warnings_.empty()) {
@@ -126,9 +126,9 @@ void ErrorReporter::PrintReports() {
   }
 }
 
-void ErrorReporter::PrintReportsJson() {
-  fprintf(stderr, "%s", fidl::DiagnosticsJson(errors_, warnings_).Produce().str().c_str());
+void Reporter::PrintReportsJson() {
+  fprintf(stderr, "%s", fidl::DiagnosticsJson(diagnostics()).Produce().str().c_str());
 }
 
-}  // namespace error_reporter
+}  // namespace reporter
 }  // namespace fidl
