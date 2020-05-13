@@ -149,9 +149,9 @@ Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full
 
   ```
   $ cat $FUCHSIA_DIR/local/kernel_cmdline.txt
-  driver.bt_host.log=+trace,+spew,+info,+error,+warn
-  driver.bt_hci_intel.log=+trace,+spew,+info,+error,+warn
-  driver.bt_transport_usb.log=+trace,+info,+error,+warn
+  driver.bt_host.log=trace
+  driver.bt_hci_intel.log=trace
+  driver.bt_transport_usb.log=trace
   ```
 
 (HCI drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_emulator`)
