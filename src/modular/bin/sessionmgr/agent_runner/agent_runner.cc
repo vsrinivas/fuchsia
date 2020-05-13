@@ -166,6 +166,10 @@ void AgentRunner::ConnectToAgent(
     const std::string& requestor_url, const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
+  if (!incoming_services_request) {
+    FX_LOGS(ERROR) << "Invalid fuchsia.sys.ServiceProvider handle provided to "
+                      "ConnectToAgent() by " << requestor_url;
+  }
   EnsureAgentIsRunning(
       agent_url, [this, agent_url, requestor_url,
                   incoming_services_request = std::move(incoming_services_request),
