@@ -20,9 +20,9 @@ zx_library("usb-peripheral-utils") {
   shared = true
   sources = [ "event-watcher.cc" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
   ]
   deps = [
     "//zircon/public/lib/async-loop-cpp",

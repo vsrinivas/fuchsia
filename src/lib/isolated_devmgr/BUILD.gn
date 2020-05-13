@@ -65,8 +65,8 @@ static_library("usb-virtual-bus") {
   ]
   public_deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:fuchsia-hardware-usb-peripheral_llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
   deps = [

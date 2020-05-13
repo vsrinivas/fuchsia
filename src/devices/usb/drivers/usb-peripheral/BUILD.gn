@@ -21,11 +21,11 @@ driver_module("usb-peripheral") {
     "//sdk/banjo/ddk.protocol.usb.function",
     "//sdk/banjo/ddk.protocol.usb.modeswitch",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
   ]
