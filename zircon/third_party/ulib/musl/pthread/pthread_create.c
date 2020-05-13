@@ -37,7 +37,7 @@ __NO_RETURN __NO_SAFESTACK static void start_c11(void* arg) {
   __pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
 
-static void deallocate_region(const struct iovec* region) {
+__NO_SAFESTACK static void deallocate_region(const struct iovec* region) {
   _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)region->iov_base, region->iov_len);
 }
 
