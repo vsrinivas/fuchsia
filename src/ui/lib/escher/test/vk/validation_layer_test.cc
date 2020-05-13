@@ -65,8 +65,7 @@ VK_TEST(ValidationLayer, ValidationLayerIsSupported) {
   std::optional<std::string> validation_layer_name = VulkanInstance::GetValidationLayerName();
 
   ASSERT_TRUE(validation_layer_name);
-  ASSERT_TRUE(*validation_layer_name == "VK_LAYER_KHRONOS_validation" ||
-              *validation_layer_name == "VK_LAYER_LUNARG_standard_validation");
+  ASSERT_TRUE(*validation_layer_name == "VK_LAYER_KHRONOS_validation");
 
   VulkanInstance::Params instance_params{
       {*validation_layer_name},              // layer_names

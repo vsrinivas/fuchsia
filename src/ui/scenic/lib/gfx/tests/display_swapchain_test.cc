@@ -96,7 +96,7 @@ class DisplaySwapchainTest : public Fixture {
 
   static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
     VulkanInstance::Params instance_params(
-        {{"VK_LAYER_LUNARG_standard_validation"},
+        {{"VK_LAYER_KHRONOS_validation"},
          {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
          false});
 
