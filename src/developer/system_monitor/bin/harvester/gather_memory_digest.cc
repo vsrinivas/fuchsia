@@ -26,10 +26,10 @@ std::string KoidPath(zx_koid_t koid, const std::string& path) {
 }
 }  // namespace
 
-void GatherMemoryDigest::Gather() {
+const std::map<std::string, std::string>& GetBucketMap() {
   // See src/developer/memory/metrics/digest.cc:13 kDefaultBucketMatches for a
   // list of bucket names.
-  std::map<std::string, std::string> name_to_path = {
+  static std::map<std::string, std::string> name_to_path = {
       {"ZBI Buffer", "memory_digest:zbi_buffer"},
       {"Graphics", "memory_digest:graphics"},
       {"Video Buffer", "memory_digest:video_buffer"},
@@ -47,6 +47,8 @@ void GatherMemoryDigest::Gather() {
       {"Cast", "memory_digest:cast"},
       {"Archivist", "memory_digest:archivist"},
       {"Cobalt", "memory_digest:cobalt"},
+      {"Audio", "memory_digest:audio"},
+      {"Context", "memory_digest:context"},
 
       // Special entries that are not part of kDefaultBucketMatches.
       {"Orphaned", "memory_digest:orphaned"},
@@ -54,7 +56,10 @@ void GatherMemoryDigest::Gather() {
       {"Free", "memory_digest:free"},
       {"Undigested", "memory_digest:undigested"},
   };
+  return name_to_path;
+}
 
+void GatherMemoryDigest::Gather() {
   memory::Capture capture;
   memory::CaptureState capture_state;
   zx_status_t zx_status = memory::Capture::GetCaptureState(&capture_state);
@@ -76,6 +81,7 @@ void GatherMemoryDigest::Gather() {
   StringSampleList strings;
 
   // Add digest samples.
+  auto name_to_path = GetBucketMap();
   for (auto const& bucket : digest.buckets()) {
     const auto& iter = name_to_path.find(bucket.name());
     if (iter == name_to_path.end()) {

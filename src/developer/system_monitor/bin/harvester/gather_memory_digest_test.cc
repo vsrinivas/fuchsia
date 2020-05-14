@@ -9,6 +9,10 @@
 #include "dockyard_proxy_fake.h"
 #include "root_resource.h"
 
+namespace harvester {
+  const std::map<std::string, std::string>& GetBucketMap();
+}  // namespace harvester.
+
 class GatherMemoryDigestTest : public ::testing::Test {};
 
 TEST_F(GatherMemoryDigestTest, Inspectable) {
@@ -55,4 +59,19 @@ TEST_F(GatherMemoryDigestTest, Inspectable) {
   EXPECT_GT(TEN_GB, private_bytes);
   EXPECT_GT(TEN_GB, scaled_bytes);
   EXPECT_GT(TEN_GB, total_bytes);
+}
+
+TEST_F(GatherMemoryDigestTest, BucketsMatchMemMetrics) {
+  // Verify that all bucket names are recognized.
+  auto name_to_path = harvester::GetBucketMap();
+  for (auto const& bucket : memory::Digester::kDefaultBucketMatches) {
+    const auto& iter = name_to_path.find(bucket.name());
+    if (iter == name_to_path.end()) {
+      // The list of buckets in gather_memory_digest.cc should match the list in
+      // src/developer/memory/metrics/digest.cc:13 kDefaultBucketMatches.
+      // This test is there to remind those editing digest.cc to update
+      // gather_memory_digest.cc as well.
+      ADD_FAILURE() << "Unknown bucket name: " << bucket.name();
+    }
+  }
 }
