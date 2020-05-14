@@ -14,7 +14,7 @@ namespace fidl {
 // Always allocates owned tracking_ptr<> on the heap.
 //
 // Iff your use case involves allocations that never outlive their allocator, consider using
-// BufferAllocator<NBytes>, which has an internal buffer but also provides heap fallback.
+// BufferThenHeapAllocator<NBytes>, which has an internal buffer but also provides heap fallback.
 //
 // HeapAllocator creates allocations which are completely independent of the allocator, which can
 // safely out-live the allocator.  Allocations by different HeapAllocator instances are not tied
