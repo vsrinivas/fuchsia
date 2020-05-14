@@ -68,15 +68,12 @@ class SessionStorage {
   // returned Future when done.
   FuturePtr<> UpdateLastFocusedTimestamp(fidl::StringPtr story_id, int64_t ts);
 
-  // Returns a Future StoryDataPtr for |story_id|. If |story_id| is not a valid
+  // Returns a StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
-  FuturePtr<fuchsia::modular::internal::StoryDataPtr> GetStoryData(fidl::StringPtr story_id);
+  fuchsia::modular::internal::StoryDataPtr GetStoryData(fidl::StringPtr story_id);
 
-  // Returns a Future vector of StoryData for all stories in this session.
-  //
-  // TODO(thatguy): If the return value grows large, an dispatcher stream would
-  // be a more appropriate return value.
-  FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> GetAllStoryData();
+  // Returns a vector of StoryData for all stories in this session.
+  std::vector<fuchsia::modular::internal::StoryData> GetAllStoryData();
 
   // DEPRECATED: Use MergeStoryAnnotations.
   // Sets the annotations for |story_id| to |annotations|. This overwrites all existing annotations.

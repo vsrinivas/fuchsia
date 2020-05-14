@@ -30,17 +30,15 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 
  private:
   void Run() override {
-    session_storage_->GetStoryData(story_name_)
-        ->WeakThen(GetWeakPtr(), [this](fuchsia::modular::internal::StoryDataPtr data) {
-          if (data) {
-            story_id_ = data->story_info().id();
-            ExecuteCommands();
-            return;
-          }
+    auto data = session_storage_->GetStoryData(story_name_);
+    if (data) {
+      story_id_ = data->story_info().id();
+      ExecuteCommands();
+      return;
+    }
 
-          story_id_ = session_storage_->CreateStory(story_name_, /*annotations=*/{});
-          ExecuteCommands();
-        });
+    story_id_ = session_storage_->CreateStory(story_name_, /*annotations=*/{});
+    ExecuteCommands();
   }
 
   void ExecuteCommands() {
@@ -81,14 +79,12 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
       }
     }
 
-    session_storage_->GetStoryData(story_name_)
-        ->WeakThen(GetWeakPtr(), [this](fuchsia::modular::internal::StoryDataPtr data) {
-          if (data) {
-            Annotate(std::move(data));
-          } else {
-            CreateStory();
-          }
-        });
+    auto data = session_storage_->GetStoryData(story_name_);
+    if (data) {
+      Annotate(std::move(data));
+    } else {
+      CreateStory();
+    }
   }
 
   void CreateStory() {

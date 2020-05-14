@@ -25,9 +25,7 @@ using ::testing::ByRef;
 
 class SessionStorageTest : public gtest::RealLoopFixture {
  protected:
-  std::unique_ptr<SessionStorage> CreateStorage() {
-    return std::make_unique<SessionStorage>();
-  }
+  std::unique_ptr<SessionStorage> CreateStorage() { return std::make_unique<SessionStorage>(); }
 };
 
 TEST_F(SessionStorageTest, Create_VerifyData) {
@@ -45,48 +43,27 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   auto story_name = storage->CreateStory("story_name", std::move(annotations));
 
   // Get the StoryData for this story.
-  auto future_data = storage->GetStoryData(story_name);
-  auto done = false;
-  fuchsia::modular::internal::StoryData cached_data;
-  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    ASSERT_TRUE(data);
+  auto cached_data = storage->GetStoryData(story_name);
+  ASSERT_TRUE(cached_data);
 
-    EXPECT_EQ("story_name", data->story_name());
-    EXPECT_EQ(story_name, data->story_info().id());
+  EXPECT_EQ("story_name", cached_data->story_name());
+  EXPECT_EQ(story_name, cached_data->story_info().id());
 
-    EXPECT_TRUE(data->story_info().has_annotations());
-    EXPECT_EQ(1u, data->story_info().annotations().size());
-    EXPECT_THAT(data->story_info().annotations().at(0),
-                annotations::AnnotationEq(ByRef(annotation)));
-
-    done = true;
-
-    cached_data = std::move(*data);
-  });
-  RunLoopUntil([&] { return done; });
+  EXPECT_TRUE(cached_data->story_info().has_annotations());
+  EXPECT_EQ(1u, cached_data->story_info().annotations().size());
+  EXPECT_THAT(cached_data->story_info().annotations().at(0),
+              annotations::AnnotationEq(ByRef(annotation)));
 
   // Get the StoryData again, but this time by its name.
-  future_data = storage->GetStoryData("story_name");
-  done = false;
-  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    ASSERT_TRUE(data);
-    ASSERT_TRUE(fidl::Equals(cached_data, *data));
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
+  auto data = storage->GetStoryData("story_name");
+  ASSERT_TRUE(data);
+  ASSERT_TRUE(fidl::Equals(*cached_data, *data));
 
   // Verify that GetAllStoryData() also returns the same information.
-  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
-  auto future_all_data = storage->GetAllStoryData();
-  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.emplace(std::move(data));
-  });
-  RunLoopUntil([&] { return all_data.has_value(); });
-
-  EXPECT_EQ(1u, all_data->size());
-  EXPECT_TRUE(fidl::Equals(cached_data, all_data->at(0)));
+  auto all_data = storage->GetAllStoryData();
+  EXPECT_EQ(1u, all_data.size());
+  EXPECT_TRUE(fidl::Equals(*cached_data, all_data.at(0)));
 }
-
 
 TEST_F(SessionStorageTest, Create_VerifyData_NoAnntations) {
   // Create a single story with no annotations, and verify that the data we have stored about it is
@@ -95,20 +72,14 @@ TEST_F(SessionStorageTest, Create_VerifyData_NoAnntations) {
 
   storage->CreateStory("story_name", {});
   // Get the StoryData for this story.
-  auto future_data = storage->GetStoryData("story_name");
-  bool done = false;
-  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    ASSERT_TRUE(data);
+  auto data = storage->GetStoryData("story_name");
+  ASSERT_TRUE(data);
 
-    EXPECT_EQ("story_name", data->story_name());
-    EXPECT_EQ("story_name", data->story_info().id());
+  EXPECT_EQ("story_name", data->story_name());
+  EXPECT_EQ("story_name", data->story_info().id());
 
-    EXPECT_TRUE(data->story_info().has_annotations());
-    EXPECT_EQ(0u, data->story_info().annotations().size());
-
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
+  EXPECT_TRUE(data->story_info().has_annotations());
+  EXPECT_EQ(0u, data->story_info().annotations().size());
 }
 
 TEST_F(SessionStorageTest, CreateGetAllDelete) {
@@ -122,28 +93,15 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   auto storage = CreateStorage();
   storage->CreateStory("story_name", /*annotations=*/{});
 
-  auto future_all_data = storage->GetAllStoryData();
-  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
-  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.emplace(std::move(data));
-  });
-
-  RunLoopUntil([&] { return all_data.has_value(); });
+  auto all_data = storage->GetAllStoryData();
+  EXPECT_EQ(1u, all_data.size());
 
   // Then, delete it.
   storage->DeleteStory("story_name");
 
-  // Given the ordering, we expect the story we created to show up.
-  EXPECT_EQ(1u, all_data->size());
-
   // But if we get all data again, we should see no stories.
-  future_all_data = storage->GetAllStoryData();
-  all_data.reset();
-  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.emplace(std::move(data));
-  });
-  RunLoopUntil([&] { return all_data.has_value(); });
-  EXPECT_EQ(0u, all_data->size());
+  all_data = storage->GetAllStoryData();
+  EXPECT_EQ(0u, all_data.size());
 }
 
 TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
@@ -159,42 +117,20 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
 
   EXPECT_NE(story1_name, story2_name);
 
-  auto future_all_data = storage->GetAllStoryData();
-  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
-  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.emplace(std::move(data));
-  });
-  RunLoopUntil([&] { return all_data.has_value(); });
-
-  EXPECT_EQ(2u, all_data->size());
+  auto all_data = storage->GetAllStoryData();
+  EXPECT_EQ(2u, all_data.size());
 
   // Now delete one of them, and we should see that GetAllStoryData() only
   // returns one entry.
   storage->DeleteStory("story1");
 
-  future_all_data = storage->GetAllStoryData();
-  all_data.reset();
-  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.emplace(std::move(data));
-  });
-  RunLoopUntil([&] { return all_data.has_value(); });
-  EXPECT_EQ(1u, all_data->size());
+  all_data = storage->GetAllStoryData();
+  EXPECT_EQ(1u, all_data.size());
 
   // If we try to get the story by id, or by name, we expect both to return
   // null.
-  auto future_data = storage->GetStoryData(story1_name);
-  auto done = false;
-  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_TRUE(data == nullptr);
-    done = true;
-  });
-
-  future_data = storage->GetStoryData("story1");
-  done = false;
-  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_TRUE(data == nullptr);
-    done = true;
-  });
+  EXPECT_TRUE(storage->GetStoryData(story1_name) == nullptr);
+  EXPECT_TRUE(storage->GetStoryData("story1") == nullptr);
 }
 
 TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
@@ -221,17 +157,11 @@ TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
   EXPECT_EQ(story_first_name, story_second_name);
 
   // Only one story should have been created.
-  auto future_all_data = storage->GetAllStoryData();
-  fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
-  future_all_data->Then([&](std::vector<fuchsia::modular::internal::StoryData> data) {
-    all_data.emplace(std::move(data));
-  });
-  RunLoopUntil([&] { return all_data.has_value(); });
-
-  EXPECT_EQ(1u, all_data->size());
+  auto all_data = storage->GetAllStoryData();
+  EXPECT_EQ(1u, all_data.size());
 
   // The story should have the annotation from the first call to CreateStory.
-  const auto& story_info = all_data->at(0).story_info();
+  const auto& story_info = all_data.at(0).story_info();
   EXPECT_TRUE(story_info.has_annotations());
   EXPECT_EQ(1u, story_info.annotations().size());
   EXPECT_THAT(story_info.annotations().at(0), annotations::AnnotationEq(ByRef(annotation)));
@@ -242,13 +172,8 @@ TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
   auto story_name = storage->CreateStory("story", {});
 
   storage->UpdateLastFocusedTimestamp(story_name, 10);
-  auto future_data = storage->GetStoryData(story_name);
-  bool done{};
-  future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-    EXPECT_EQ(10, data->story_info().last_focus_time());
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
+  auto data = storage->GetStoryData(story_name);
+  EXPECT_EQ(10, data->story_info().last_focus_time());
 }
 
 TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {

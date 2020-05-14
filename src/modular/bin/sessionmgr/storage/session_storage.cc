@@ -85,7 +85,7 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_nam
   return Future<>::CreateCompleted("SessionStorage.UpdateLastFocusedTimestamp.ret");
 }
 
-FuturePtr<fuchsia::modular::internal::StoryDataPtr> SessionStorage::GetStoryData(
+fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(
     fidl::StringPtr story_name) {
   fuchsia::modular::internal::StoryDataPtr value{};
   auto it = story_data_backing_store_.find(story_name);
@@ -93,24 +93,18 @@ FuturePtr<fuchsia::modular::internal::StoryDataPtr> SessionStorage::GetStoryData
     value = fuchsia::modular::internal::StoryData::New();
     it->second.Clone(value.get());
   }
-
-  return Future<fuchsia::modular::internal::StoryDataPtr>::CreateCompleted(
-      "SessionStorage.GetStoryData.ret", std::move(value));
+  return value;
 }
 
 // Returns a Future vector of StoryData for all stories in this session.
-FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> SessionStorage::GetAllStoryData() {
+std::vector<fuchsia::modular::internal::StoryData> SessionStorage::GetAllStoryData() {
   std::vector<fuchsia::modular::internal::StoryData> vec{};
-
   for (auto it = story_data_backing_store_.begin(); it != story_data_backing_store_.end(); ++it) {
     fuchsia::modular::internal::StoryData val;
     it->second.Clone(&val);
     vec.push_back(std::move(val));
   }
-
-  auto ret = Future<std::vector<fuchsia::modular::internal::StoryData>>::CreateCompleted(
-      "SessionStorage.GetAllStoryData.ret", std::move(vec));
-  return ret;
+  return vec;
 }
 
 void SessionStorage::UpdateStoryAnnotations(fidl::StringPtr story_name,

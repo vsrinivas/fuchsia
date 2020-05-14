@@ -47,19 +47,6 @@ class SessionCtlAppTest : public modular_testing::TestWithSessionStorage {
     command();
     RunLoopUntil([&] { return done_; });
   }
-
-  fuchsia::modular::internal::StoryDataPtr GetStoryData(const std::string& story_id) {
-    fuchsia::modular::internal::StoryDataPtr sd;
-    done_ = false;
-    session_storage_->GetStoryData(story_id)->Then(
-        [&](fuchsia::modular::internal::StoryDataPtr story_data) {
-          sd = std::move(story_data);
-          done_ = true;
-        });
-    RunLoopUntil([&] { return done_; });
-
-    return sd;
-  }
 };
 
 TEST_F(SessionCtlAppTest, GetUsage) {
@@ -88,7 +75,7 @@ TEST_F(SessionCtlAppTest, AddMod) {
       std::hash<std::string>{}("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx"));
 
   // Assert the story and the mod were added with default story and mod names
-  auto story_data = GetStoryData(default_name_hash);
+  auto story_data = session_storage_->GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
@@ -111,7 +98,7 @@ TEST_F(SessionCtlAppTest, AddModWithoutURL) {
   });
   std::string default_name_hash = std::to_string(
       std::hash<std::string>{}("fuchsia-pkg://fuchsia.com/mod_name#meta/mod_name.cmx"));
-  auto story_data = GetStoryData(default_name_hash);
+  auto story_data = session_storage_->GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_name#meta/mod_name.cmx",
@@ -131,7 +118,7 @@ TEST_F(SessionCtlAppTest, AddModWithColon) {
     });
   });
   std::string default_name_hash = std::to_string(std::hash<std::string>{}("mod_name:0000"));
-  auto story_data = GetStoryData(default_name_hash);
+  auto story_data = session_storage_->GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("mod_name:0000", test_executor_.last_commands().at(0).add_mod().intent.handler);
@@ -151,7 +138,7 @@ TEST_F(SessionCtlAppTest, AddModBadChars) {
   });
   std::string default_name_hash = std::to_string(std::hash<std::string>{}("a:bad/mod/name"));
 
-  auto story_data = GetStoryData(default_name_hash);
+  auto story_data = session_storage_->GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("a:bad/mod/name", test_executor_.last_commands().at(0).add_mod().intent.handler);
@@ -173,7 +160,7 @@ TEST_F(SessionCtlAppTest, AddModWeb) {
   // Assert the story and the mod were added with default story and mod names
   std::string default_name_hash =
       std::to_string(std::hash<std::string>{}("https://www.google.com"));
-  auto story_data = GetStoryData(default_name_hash);
+  auto story_data = session_storage_->GetStoryData(default_name_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(default_name_hash, story_data->story_name());
   EXPECT_EQ("https://www.google.com",
@@ -197,7 +184,7 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
 
   // Assert the story and the mod were added with overriden story and mod names
   auto story_name = "s";
-  auto story_data = GetStoryData(story_name);
+  auto story_data = session_storage_->GetStoryData(story_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, story_data->story_name());
   EXPECT_EQ("m", test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
@@ -254,7 +241,7 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   // Assert session_storage still contains the story
   std::string mod_package_name = fxl::StringPrintf(kFuchsiaPkgPath, mod, mod);
   std::string mod_hash = std::to_string(std::hash<std::string>{}(mod_package_name));
-  auto story_data = GetStoryData(mod_hash);
+  auto story_data = session_storage_->GetStoryData(mod_hash);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(mod_hash, story_data->story_name());
   EXPECT_EQ(mod_package_name,
@@ -288,7 +275,7 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
 
   // Assert session_storage still contains the story
   auto story_name = "s";
-  auto story_data = GetStoryData(story_name);
+  auto story_data = session_storage_->GetStoryData(story_name);
   std::string mod_package_name = fxl::StringPrintf(kFuchsiaPkgPath, mod_name, mod_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, story_data->story_name());
@@ -330,7 +317,7 @@ TEST_F(SessionCtlAppTest, DeleteStory) {
     });
   });
 
-  auto story_data = GetStoryData(story_name);
+  auto story_data = session_storage_->GetStoryData(story_name);
   EXPECT_FALSE(story_data);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
@@ -387,8 +374,8 @@ TEST_F(SessionCtlAppTest, DeleteAllStories) {
     });
   });
 
-  EXPECT_TRUE(GetStoryData(story1));
-  EXPECT_TRUE(GetStoryData(story2));
+  EXPECT_TRUE(session_storage_->GetStoryData(story1));
+  EXPECT_TRUE(session_storage_->GetStoryData(story2));
 
   // Delete all stories
   command_line =
@@ -401,8 +388,8 @@ TEST_F(SessionCtlAppTest, DeleteAllStories) {
                                      });
   });
 
-  EXPECT_FALSE(GetStoryData(story1));
-  EXPECT_FALSE(GetStoryData(story2));
+  EXPECT_FALSE(session_storage_->GetStoryData(story1));
+  EXPECT_FALSE(session_storage_->GetStoryData(story2));
 }
 
 }  // namespace

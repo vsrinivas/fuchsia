@@ -281,16 +281,10 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterCreateStory) {
 
   // The story, and its StoryData, does not exist until the story is created,
   // which is after the commands are executed.
-  bool done{};
-  session_storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
-        EXPECT_EQ(nullptr, data);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  EXPECT_EQ(nullptr, session_storage_->GetStoryData(story_name));
 
   // Execute the commands, implicitly creating the story.
-  done = false;
+  auto done = false;
   story->Execute([&](fuchsia::modular::ExecuteResult result) {
     EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
     done = true;
@@ -368,14 +362,7 @@ TEST_F(PuppetMasterTest, DeleteStory) {
   ptr_->DeleteStory("foo", [&] { done = true; });
   RunLoopUntil([&] { return done; });
 
-  done = false;
-  session_storage_->GetStoryData(story_id)->Then(
-      [&](fuchsia::modular::internal::StoryDataPtr story_data) {
-        EXPECT_EQ(story_data, nullptr);
-        done = true;
-      });
-
-  RunLoopUntil([&] { return done; });
+  EXPECT_EQ(session_storage_->GetStoryData(story_id), nullptr);
 }
 
 TEST_F(PuppetMasterTest, DeleteStoryWithQueuedCommands) {
@@ -506,24 +493,18 @@ TEST_F(PuppetMasterTest, AnnotateInStoryData) {
   RunLoopUntil([&] { return done; });
 
   // GetStoryData should contain the annotations.
-  done = false;
-  session_storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
-        ASSERT_NE(nullptr, story_data);
-        ASSERT_TRUE(story_data->has_story_info());
-        EXPECT_TRUE(story_data->story_info().has_annotations());
+  auto story_data = session_storage_->GetStoryData(story_name);
+  ASSERT_NE(nullptr, story_data);
+  ASSERT_TRUE(story_data->has_story_info());
+  EXPECT_TRUE(story_data->story_info().has_annotations());
 
-        const auto annotations = story_data->mutable_story_info()->mutable_annotations();
-        EXPECT_EQ(3u, annotations->size());
+  const auto annotations2 = story_data->mutable_story_info()->mutable_annotations();
+  EXPECT_EQ(3u, annotations2->size());
 
-        EXPECT_THAT(annotations, Pointee(UnorderedElementsAre(
-                                     annotations::AnnotationEq(ByRef(text_annotation)),
-                                     annotations::AnnotationEq(ByRef(bytes_annotation)),
-                                     annotations::AnnotationEq(ByRef(buffer_annotation)))));
-
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  EXPECT_THAT(annotations2,
+              Pointee(UnorderedElementsAre(annotations::AnnotationEq(ByRef(text_annotation)),
+                                           annotations::AnnotationEq(ByRef(bytes_annotation)),
+                                           annotations::AnnotationEq(ByRef(buffer_annotation)))));
 }
 
 // Verifies that Annotate merges new annotations, preserving existing ones.
@@ -551,22 +532,18 @@ TEST_F(PuppetMasterTest, AnnotateMerge) {
   RunLoopUntil([&] { return done; });
 
   // GetStoryData should contain the first annotation.
-  done = false;
-  session_storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
-        ASSERT_NE(nullptr, story_data);
-        ASSERT_TRUE(story_data->has_story_info());
-        EXPECT_TRUE(story_data->story_info().has_annotations());
+  auto story_data = session_storage_->GetStoryData(story_name);
+  ASSERT_NE(nullptr, story_data);
+  ASSERT_TRUE(story_data->has_story_info());
+  EXPECT_TRUE(story_data->story_info().has_annotations());
 
-        const auto annotations = story_data->mutable_story_info()->mutable_annotations();
-        EXPECT_EQ(1u, annotations->size());
+  {
+    const auto annotations = story_data->mutable_story_info()->mutable_annotations();
+    EXPECT_EQ(1u, annotations->size());
 
-        EXPECT_EQ(annotations->at(0).key, first_annotation.key);
-        EXPECT_EQ(annotations->at(0).value->text(), first_annotation_value.text());
-
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+    EXPECT_EQ(annotations->at(0).key, first_annotation.key);
+    EXPECT_EQ(annotations->at(0).value->text(), first_annotation_value.text());
+  }
 
   // Create another set of annotations that should be merged into the initial one.
   auto second_annotation_value = fuchsia::modular::AnnotationValue{};
@@ -587,23 +564,19 @@ TEST_F(PuppetMasterTest, AnnotateMerge) {
   RunLoopUntil([&] { return done; });
 
   // GetStoryData should now return annotations from both the first and second set.
-  done = false;
-  session_storage_->GetStoryData(story_name)
-      ->Then([&](fuchsia::modular::internal::StoryDataPtr story_data) {
-        ASSERT_NE(nullptr, story_data);
-        ASSERT_TRUE(story_data->has_story_info());
-        EXPECT_TRUE(story_data->story_info().has_annotations());
+  story_data = session_storage_->GetStoryData(story_name);
+  ASSERT_NE(nullptr, story_data);
+  ASSERT_TRUE(story_data->has_story_info());
+  EXPECT_TRUE(story_data->story_info().has_annotations());
 
-        const auto annotations = story_data->mutable_story_info()->mutable_annotations();
-        EXPECT_EQ(2u, annotations->size());
+  {
+    const auto annotations = story_data->mutable_story_info()->mutable_annotations();
+    EXPECT_EQ(2u, annotations->size());
 
-        EXPECT_THAT(annotations, Pointee(UnorderedElementsAre(
-                                     annotations::AnnotationEq(ByRef(first_annotation)),
-                                     annotations::AnnotationEq(ByRef(second_annotation)))));
-
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+    EXPECT_THAT(annotations,
+                Pointee(UnorderedElementsAre(annotations::AnnotationEq(ByRef(first_annotation)),
+                                             annotations::AnnotationEq(ByRef(second_annotation)))));
+  }
 }
 
 // Verifies that Annotate returns an error when one of the annotations has a buffer value that

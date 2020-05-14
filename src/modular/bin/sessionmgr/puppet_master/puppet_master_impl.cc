@@ -48,18 +48,14 @@ void PuppetMasterImpl::DeleteStory(std::string story_name, DeleteStoryCallback d
 }
 
 void PuppetMasterImpl::GetStories(GetStoriesCallback done) {
-  session_storage_->GetAllStoryData()->Then(
-      [done = std::move(done)](
-          const std::vector<fuchsia::modular::internal::StoryData>& all_story_data) {
-        std::vector<std::string> result;
-        result.reserve(all_story_data.size());
+  auto all_story_data = session_storage_->GetAllStoryData();
+  std::vector<std::string> result;
+  result.reserve(all_story_data.size());
 
-        for (auto& story : all_story_data) {
-          result.push_back(story.story_info().id());
-        }
-
-        done(std::move(result));
-      });
+  for (auto& story : all_story_data) {
+    result.push_back(story.story_info().id());
+  }
+  done(std::move(result));
 }
 
 }  // namespace modular
