@@ -64,7 +64,7 @@ source_set("user_pci.proxy") {
   ]
 }
 
-if (enable_user_pci) {
+if (platform_enable_user_pci) {
   driver_module("bus-pci") {
     defines = [ "_ALL_SOURCE" ]
     configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

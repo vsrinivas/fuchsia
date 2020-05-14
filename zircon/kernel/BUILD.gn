@@ -124,7 +124,7 @@ if (current_toolchain == default_toolchain) {
       "DEBUG_PRINT_LEVEL=$kernel_debug_print_level",
     ]
 
-    if (!enable_user_pci) {
+    if (!disable_kernel_pci) {
       defines += [ "WITH_KERNEL_PCIE" ]
     }
 

@@ -11,6 +11,9 @@ import("//build/info/info.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
+# TODO(fxb/32978): This is temporary until the kernel build is unified or
+# kernel PCI is removed.
+import("//src/devices/bus/drivers/pci/pci.gni")
 import("//zircon/public/gn/build_api_module.gni")
 
 declare_args() {
@@ -119,6 +122,9 @@ declare_args() {
                      "//tools:all-hosts",
                    ] + zircon_extra_deps
     forward_variables_from(zircon_extra_args, "*")
+    # TODO(fxb/32978): This is temporary until the kernel build is unified or
+    # kernel PCI is removed.
+    disable_kernel_pci = platform_enable_user_pci
   }
 }
 

@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This variable is used in conjunction with the Zircon variable
+# |disable_kernel_pci| to ensure that the userspace PCI driver is built,
+# userspace PCI support in x86 is built, and that kernel PCI and syscalls are
+# not built.
 declare_args() {
-  enable_user_pci = false
+  platform_enable_user_pci = false
 }

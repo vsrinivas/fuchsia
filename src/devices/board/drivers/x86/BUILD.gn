@@ -5,15 +5,9 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
+import("//src/devices/bus/drivers/pci/pci.gni")
 
 assert(current_cpu == "x64")
-
-declare_args() {
-  # Setting this config to true only makes sense if the zircon enable_user_pci config is also true.
-  # We define a separate config here for the moment due to not quite unified builds and the
-  # difficulty of sharing configs between builds.
-  platform_enable_user_pci = false
-}
 
 group("x86") {
   deps = [ ":platform-bus-x86" ]

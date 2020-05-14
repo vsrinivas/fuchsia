@@ -36,8 +36,9 @@ declare_args() {
   # 3 = Adds detailed internal durations and probes.
   scheduler_tracing_level = 0
 
-  # Enable userspace PCI and disable kernel PCI.
-  enable_user_pci = false
+  # Disable kernel PCI driver support. A counterpart of the the build
+  # flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
+  disable_kernel_pci = false
 
   # Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
   # "ENABLE_KERNEL_LL_DEBUG".
