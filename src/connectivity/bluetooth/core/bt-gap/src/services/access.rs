@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_sys::{self as sys, AccessRequest, AccessRequestStream},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Peer, PeerId},
-    fuchsia_syslog::{fx_log_warn, fx_vlog},
+    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     futures::{Stream, StreamExt},
     parking_lot::Mutex,
     std::{collections::HashMap, mem, sync::Arc},
@@ -17,12 +17,14 @@ use {
 use crate::{host_dispatcher::*, watch_peers::PeerWatcher};
 
 pub async fn run(hd: HostDispatcher, mut stream: AccessRequestStream) -> Result<(), Error> {
+    fx_log_info!("fuchsia.bluetooth.sys.Access session started");
     let mut watch_peers_subscriber = hd.watch_peers().await;
     let peers_seen = Arc::new(Mutex::new(HashMap::new()));
     while let Some(event) = stream.next().await {
         handler(hd.clone(), peers_seen.clone(), &mut watch_peers_subscriber, event?).await?;
     }
-    Err(format_err!("Access service Terminated early"))
+    fx_log_info!("fuchsia.bluetooth.sys.Access session terminated");
+    Ok(())
 }
 
 async fn handler(
