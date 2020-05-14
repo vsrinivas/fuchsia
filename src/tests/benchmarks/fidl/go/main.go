@@ -23,7 +23,7 @@ import (
 const testSuite = "fuchsia.fidl_microbenchmarks"
 
 // Go default is 1s.
-const defaultBenchTime = 2 * time.Second
+const defaultBenchTime = 1 * time.Second
 
 func isFlagSet(name string) bool {
 	isSet := false
