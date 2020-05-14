@@ -16,7 +16,7 @@ pub struct VideoFrame {
 }
 
 impl VideoFrame {
-    pub fn create(format: sysmem::ImageFormat2, _frame_number: usize) -> Self {
+    pub fn create(format: sysmem::ImageFormat2, _step: usize) -> Self {
         // For 4:2:0 YUV, the UV data is 1/2 the size of the Y data,
         // so the size of the frame is 3/2 the size of the Y plane.
         let width = format.bytes_per_row as usize;
@@ -24,8 +24,8 @@ impl VideoFrame {
         let frame_size = width * height * 3usize / 2usize;
         let mut data = vec![0; frame_size];
 
-        // generate checkerboard in Y plane
-        const NUM_BLOCKS: usize = 5usize;
+        // generate checkerboard
+        const NUM_BLOCKS: usize = 8usize;
         let block_size = width / NUM_BLOCKS;
         let mut y_on = true;
         let mut x_on = true;
@@ -35,11 +35,13 @@ impl VideoFrame {
                 x_on = y_on;
             }
             for x in 0..width {
-                let color = if x_on { 0xff } else { 0x00 };
-                data[y * width + x] = color;
                 if x % block_size == 0 {
                     x_on = !x_on;
                 }
+                let (luma, u, v) = if x_on { (255, 128, 128) } else { (0, 128, 128) };
+                data[y * width + x] = luma;
+                data[height * width + (y / 2) * width + (x / 2) * 2] = u;
+                data[height * width + (y / 2) * width + (x / 2) * 2 + 1] = v;
             }
         }
 
@@ -197,6 +199,32 @@ mod test {
         assert_eq!(
             chunks.next().and_then(|chunk| chunk.timestamp),
             Some(zx::Duration::from_seconds(1).into_nanos() as u64 / 60)
+        );
+    }
+
+    #[test]
+    fn pattern_check() {
+        let test_spec = TestSpec {
+            pixel_format: sysmem::PixelFormatType::Nv12,
+            coded_width: 8,
+            coded_height: 8,
+            display_height: 8,
+            display_width: 8,
+            bytes_per_row: 8,
+        };
+
+        let format: VideoUncompressedFormat = test_spec.into();
+        let frame = VideoFrame::create(format.image_format.clone(), 0);
+        assert_eq!(
+            frame.data,
+            vec![
+                255, 0, 255, 0, 255, 0, 255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 255, 0, 255, 0,
+                255, 0, 255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 255, 0, 255, 0, 255, 0, 255, 0, 0,
+                255, 0, 255, 0, 255, 0, 255, 255, 0, 255, 0, 255, 0, 255, 0, 0, 255, 0, 255, 0,
+                255, 0, 255, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+                128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+                128, 128
+            ]
         );
     }
 }
