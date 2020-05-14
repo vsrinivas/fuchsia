@@ -61,9 +61,9 @@ executable_package("basemgr") {
     "//src/modular/lib/modular_config",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   resources = [

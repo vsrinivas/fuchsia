@@ -133,7 +133,6 @@ aggregate_manifest("legacy-aux") {
     "trace-engine",
 #------------------
 #------------------
-    "trace-provider-so",
 #------------------
 #------------------
     "unittest",

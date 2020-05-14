@@ -37,7 +37,7 @@ shared_library("rust-trace-provider") {
   deps = [
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
   sources = [ "trace-provider/trace_provider.cc" ]
 }
@@ -48,6 +48,6 @@ rustc_library("trace-provider") {
   source_root = "trace-provider/src/lib.rs"
   non_rust_deps = [
     ":rust-trace-provider",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

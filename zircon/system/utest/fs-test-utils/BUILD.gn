@@ -41,7 +41,6 @@ test("fs-test-utils") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:c",
@@ -55,6 +54,7 @@ test("fs-test-utils") {
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   # TODO(46861): Fix the leaks and remove this.

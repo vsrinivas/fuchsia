@@ -41,7 +41,7 @@ source_set("virtio") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }
 
@@ -352,7 +352,7 @@ executable("device_tests") {
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/virtio",
   ]
 

@@ -32,8 +32,8 @@ executable("trace-benchmark") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/trace-handler",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-provider:trace-handler",
     "//zircon/system/ulib/trace-vthread",
   ]
 }

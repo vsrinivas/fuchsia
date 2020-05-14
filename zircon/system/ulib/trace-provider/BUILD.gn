@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # Four copies of libtrace-provider are built:
 # (1) trace-provider: Main version that is used by non-drivers.
 #     This copy uses libtrace-engine.so.
@@ -46,10 +58,10 @@ template("trace_provider_library") {
     }
     public_deps += [
       # <trace-provider/provider.h> has #include <lib/async/dispatcher.h>.
-      "$zx/system/ulib/async:headers",
+      "//zircon/public/lib/async",
 
       # <trace-provider/provider.h> has #include <lib/zx/channel.h>.
-      "$zx/system/ulib/zx:headers",
+      "//zircon/public/lib/zx",
     ]
 
     if (!defined(sources)) {
@@ -72,15 +84,18 @@ template("trace_provider_library") {
       deps = []
     }
     deps += [
-      "$zx/system/fidl/fuchsia-tracing-provider:c",
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-tracing-provider:c",
     ]
   }
 }
 
-trace_provider_fdio_connect_sources = [ "fdio_connect.cc" ]
+trace_provider_fdio_connect_sources = [
+  "export.h",
+  "fdio_connect.cc",
+]
 
 trace_provider_fdio_sources = [
   "fdio_connect.cc",
@@ -88,8 +103,8 @@ trace_provider_fdio_sources = [
 ]
 
 trace_provider_fdio_connect_source_deps = [
-  "$zx/system/ulib/fdio",
-  "$zx/system/ulib/zx",
+  "//zircon/public/lib/fdio",
+  "//zircon/public/lib/zx",
 ]
 
 trace_provider_fdio_connect_headers = [ "lib/trace-provider/fdio_connect.h" ]
@@ -98,10 +113,10 @@ trace_provider_fdio_connect_headers = [ "lib/trace-provider/fdio_connect.h" ]
 trace_provider_library("trace-provider") {
   sdk = "source"
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
+  public_deps = [ "//zircon/public/lib/trace-engine" ]
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
-  deps += [ "$zx/system/ulib/trace-engine" ]
+  deps += [ "//zircon/public/lib/trace-engine" ]
 }
 
 # Shared version for the SDK.
@@ -115,13 +130,12 @@ trace_provider_library("trace-provider-so") {
   sdk = "shared"
   shared = true
   static = false
-  extra_configs = [ "$zx_build/public/gn/config:static-libc++" ]
   defines = [ "SHARED_LIBRARY" ]
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
+  public_deps = [ "//zircon/public/lib/trace-engine" ]
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
-  deps += [ "$zx/system/ulib/trace-engine" ]
+  deps += [ "//zircon/public/lib/trace-engine" ]
 }
 
 # Same as trace-provider.
@@ -129,10 +143,10 @@ trace_provider_library("trace-provider-so") {
 trace_provider_library("trace-provider-with-fdio") {
   sdk = "source"
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
+  public_deps = [ "//zircon/public/lib/trace-engine" ]
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
-  deps += [ "$zx/system/ulib/trace-engine" ]
+  deps += [ "//zircon/public/lib/trace-engine" ]
 }
 
 # A special version for programs and shared libraries that can't use
@@ -142,20 +156,20 @@ trace_provider_library("trace-provider-with-fdio") {
 trace_provider_library("trace-provider-with-static-engine") {
   sdk = "static"
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-static.headers" ]
+  public_deps = [ "//zircon/public/lib/trace-engine-static" ]
   sources = []
   deps = []
-  deps += [ "$zx/system/ulib/trace-engine:trace-engine-static" ]
+  deps += [ "//zircon/public/lib/trace-engine-static" ]
 
   # This is used by magma client drivers, so it can't depend on fdio (or other shared libraries
   # besides libc).
-  assert_no_deps = [ "$zx/system/ulib/fdio" ]
+  assert_no_deps = [ "//zircon/public/lib/fdio" ]
 }
 
 # Version for the DDK.
 trace_provider_library("trace-provider-driver") {
-  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver.headers" ]
-  deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver" ]
+  public_deps = [ "//zircon/public/lib/trace-engine-driver" ]
+  deps = [ "//zircon/public/lib/trace-engine-driver" ]
 }
 
 # For apps that use the trace engine, but not via a trace provider.
@@ -167,7 +181,7 @@ zx_library("trace-handler") {
   public_deps = [
     # It is up to the client to choose which engine (shared, static),
     # just reference the headers here.
-    "$zx/system/ulib/trace-engine:trace-engine-headers-for-handler",
+    "//zircon/public/lib/trace-engine-headers-for-handler",
   ]
   sources = [ "handler.cc" ]
 }

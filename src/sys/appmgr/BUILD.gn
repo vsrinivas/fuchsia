@@ -77,13 +77,13 @@ source_set("lib") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-process",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]

@@ -65,6 +65,6 @@ source_set("base_deps") {
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

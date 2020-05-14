@@ -34,13 +34,12 @@ zx_library("perftest") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   # TODO(46944): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   # Add to public_configs since the UB is found in a public header.
-  configs +=
-      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }

@@ -28,5 +28,5 @@ You will need to add these dependencies to your BUILD.gn file:
 
 ```
     "//zircon/public/lib/trace-with-static-engine",
-    "//zircon/public/lib/trace-provider-with-static-engine",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
 ```

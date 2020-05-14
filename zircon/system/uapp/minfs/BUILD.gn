@@ -41,12 +41,12 @@ executable("minfs") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
-    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/minfs",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }
 

@@ -51,7 +51,6 @@ source_set("common") {
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxio",
@@ -62,6 +61,7 @@ source_set("common") {
     "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
