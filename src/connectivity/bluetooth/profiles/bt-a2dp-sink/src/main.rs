@@ -45,6 +45,7 @@ mod inspect_types;
 mod latm;
 mod peer;
 mod player;
+mod volume_relay;
 
 /// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
@@ -86,7 +87,7 @@ const DEFAULT_SESSION_ID: u64 = 0;
 // Duration for A2DP-SNK to wait before assuming role of the initiator.
 // If an L2CAP signaling channel has not been established by this time, A2DP-Sink will
 // create the signaling channel, configure, open and start the stream.
-const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(1);
+const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 
 /// Controls a stream endpoint and the media decoding task which is associated with it.
 #[derive(Debug)]
@@ -419,24 +420,17 @@ async fn connect_after_timeout(
     profile_svc: ProfileProxy,
 ) {
     fx_vlog!(
-        tag: "a2dp-sink",
         1,
-        "A2DP sink - waiting {:?} before assuming INT role for peer {}.",
-        INITIATOR_DELAY,
-        peer_id,
+        "A2DP sink - waiting {}s before connecting to peer {}.",
+        INITIATOR_DELAY.into_seconds(),
+        peer_id
     );
     fuchsia_async::Timer::new(INITIATOR_DELAY.after_now()).await;
     if peers.lock().is_connected(&peer_id) {
-        fx_vlog!(
-            tag: "a2dp-sink",
-            1,
-            "Peer {} has already connected. A2DP sink will not assume the INT role.",
-            peer_id
-        );
         return;
     }
 
-    fx_vlog!(tag: "a2dp-sink", 1, "Remote peer has not established connection. A2DP sink will now assume the INT role.");
+    fx_vlog!(1, "Peer has not established connection. A2DP sink assuming the INT role.");
     let channel = match profile_svc
         .connect(&mut peer_id.into(), PSM_AVDTP, ChannelParameters::new_empty())
         .await
@@ -537,6 +531,11 @@ async fn main() -> Result<(), Error> {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
     fasync::spawn(fs.collect::<()>());
+
+    let abs_vol_relay = volume_relay::VolumeRelay::start();
+    if let Err(e) = &abs_vol_relay {
+        fx_log_info!("Failed to start AbsoluteVolume Relay: {:?}", e);
+    }
 
     let cobalt_logger: CobaltSender = {
         let (sender, reporter) =

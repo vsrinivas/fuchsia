@@ -13,6 +13,7 @@
             "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.media.sessions2.Publisher",
             "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.settings.Audio",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]
