@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
+#define ZIRCON_SYSTEM_ULIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
 
+#include <lib/zx/channel.h>
 #include <limits.h>
+#include <zircon/types.h>
 
 #include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -15,8 +18,6 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <lib/zx/channel.h>
-#include <zircon/types.h>
 
 namespace fdio_internal {
 
@@ -87,9 +88,13 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   void UnlinkFromParent();
   LocalVnode(fbl::RefPtr<LocalVnode> parent, zx::channel remote, fbl::String name);
 
-  struct NameTreeTraits;
-  struct IdTreeTraits;
-  class Entry {
+  struct IdTreeTag {};
+  struct NameTreeTag {};
+
+  class Entry : public fbl::ContainableBaseClasses<
+                    fbl::TaggedWAVLTreeContainable<std::unique_ptr<Entry>, IdTreeTag,
+                                                   fbl::NodeOptions::AllowMultiContainerUptr>,
+                    fbl::TaggedWAVLTreeContainable<Entry*, NameTreeTag>> {
    public:
     Entry(uint64_t id, fbl::RefPtr<LocalVnode> node) : id_(id), node_(node) {}
     ~Entry() = default;
@@ -101,12 +106,6 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
    private:
     uint64_t const id_;
     fbl::RefPtr<LocalVnode> node_;
-
-    // Node states.
-    friend IdTreeTraits;
-    friend NameTreeTraits;
-    fbl::WAVLTreeNodeState<std::unique_ptr<Entry>> id_tree_state_;
-    fbl::WAVLTreeNodeState<Entry*> name_tree_state_;
   };
 
   struct KeyByIdTraits {
@@ -121,22 +120,9 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
     static bool EqualTo(const fbl::String& key1, const fbl::String& key2) { return key1 == key2; }
   };
 
-  struct IdTreeTraits {
-    using PtrTraits = fbl::internal::ContainerPtrTraits<std::unique_ptr<Entry>>;
-    static fbl::WAVLTreeNodeState<std::unique_ptr<Entry>>& node_state(Entry& entry) {
-      return entry.id_tree_state_;
-    }
-  };
-
-  struct NameTreeTraits {
-    using PtrTraits = fbl::internal::ContainerPtrTraits<Entry*>;
-    static fbl::WAVLTreeNodeState<Entry*>& node_state(Entry& entry) {
-      return entry.name_tree_state_;
-    }
-  };
-
-  using EntryByIdMap = fbl::WAVLTree<uint64_t, std::unique_ptr<Entry>, KeyByIdTraits, IdTreeTraits>;
-  using EntryByNameMap = fbl::WAVLTree<fbl::String, Entry*, KeyByNameTraits, NameTreeTraits>;
+  using EntryByIdMap =
+      fbl::TaggedWAVLTree<uint64_t, std::unique_ptr<Entry>, IdTreeTag, KeyByIdTraits>;
+  using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
 
   uint64_t next_node_id_ = 1;
   EntryByIdMap entries_by_id_;
@@ -153,3 +139,5 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 zx_status_t EnumerateRemotes(const LocalVnode& vn, const EnumerateCallback& func);
 
 }  // namespace fdio_internal
+
+#endif  // ZIRCON_SYSTEM_ULIB_FDIO_NAMESPACE_LOCAL_VNODE_H_
