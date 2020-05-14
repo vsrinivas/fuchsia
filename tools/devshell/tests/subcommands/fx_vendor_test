@@ -30,6 +30,32 @@ TEST_fxvendor_exec() {
   btf::expect-mock-args "${cmd_path}" "arg1" "arg2"
 }
 
+# Ensure that when there's a vendor and non-vendor commands with the same name,
+# the vendor version of the command is called when using "fx vendor company1"
+TEST_fxvendor_conflict_vendor() {
+  local vendor_cmd="${BT_TEMP_DIR}/vendor/company1/scripts/devshell/mycommand"
+  local nonvendor_cmd="${BT_TEMP_DIR}/tools/devshell/mycommand"
+  btf::make_mock "${vendor_cmd}"
+  btf::make_mock "${nonvendor_cmd}"
+
+  BT_EXPECT ${fx} vendor company1 mycommand arg1 arg2
+  btf::expect-mock-args "${vendor_cmd}" "arg1" "arg2"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${nonvendor_cmd}.mock_state"
+}
+
+# Ensure that when there's a vendor and non-vendor commands with the same name,
+# the non-vendor version of the command is called by default
+TEST_fxvendor_conflict_nonvendor() {
+  local vendor_cmd="${BT_TEMP_DIR}/vendor/company1/scripts/devshell/mycommand"
+  local nonvendor_cmd="${BT_TEMP_DIR}/tools/devshell/mycommand"
+  btf::make_mock "${vendor_cmd}"
+  btf::make_mock "${nonvendor_cmd}"
+
+  BT_EXPECT ${fx} mycommand argA argB
+  btf::expect-mock-args "${nonvendor_cmd}" "argA" "argB"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${vendor_cmd}.mock_state"
+}
+
 # Test that 'fx vendor company1 mycommand' works for a metadata mycommand.fx file
 TEST_fxvendor_metadata() {
   local binary_path="${BT_TEMP_DIR}/prebuilt/mytool/binary"

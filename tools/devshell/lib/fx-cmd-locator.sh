@@ -45,7 +45,8 @@ function find_executable {
     # no file in regular script directories, look in host_tools
     cmd_path="$(find_host_tools "${cmd_name}")"
   fi
-  echo "$(find_exec_from_path "${cmd_path}")"
+  # If multiple commands match, use the first one
+  echo "$(find_exec_from_path "${cmd_path}" | head -1)"
 }
 
 function find_exec_from_path {
