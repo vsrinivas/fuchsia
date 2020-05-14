@@ -21,9 +21,10 @@
 #include "test-metadata.h"
 
 using driver_integration_test::IsolatedDevmgr;
+using llcpp::fuchsia::device::Controller;
 
-/* TODO(fxb/38095): Fix flakiness and re-enable.
-TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
+// TODO(fxb/38095): Fix flakiness and re-enable.
+TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookSuccess) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
   args.load_drivers.push_back("/boot/driver/ddk-runcompatibilityhook-test.so");
@@ -60,13 +61,17 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  status = fuchsia_device_ControllerRunCompatibilityTests(
-      parent_device_handle.get(), zx::duration(zx::msec(2000)).get(), &call_status);
+  auto resp = Controller::Call::RunCompatibilityTests(
+      zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
+  status = resp.status();
+  call_status = resp->status;
+
   ASSERT_OK(status);
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_OK);
 }
 
-TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
+// TODO(fxb/38095): Fix flakiness and re-enable.
+TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingAddInBind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
 
@@ -100,7 +105,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::RunCompatibilityTests(
+  auto resp = Controller::Call::RunCompatibilityTests(
       zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
   status = resp.status();
   call_status = resp->status;
@@ -109,7 +114,8 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD);
 }
 
-TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind) {
+// TODO(fxb/38095): Fix flakiness and re-enable.
+TEST(DeviceControllerIntegrationTest, DISABLED_RunCompatibilityHookMissingRemoveInUnbind) {
   IsolatedDevmgr devmgr;
   IsolatedDevmgr::Args args;
 
@@ -143,9 +149,11 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind)
   ASSERT_TRUE((parent_device_handle.get() != ZX_HANDLE_INVALID), "");
 
   uint32_t call_status;
-  status = fuchsia_device_ControllerRunCompatibilityTests(
-      parent_device_handle.get(), zx::duration(zx::msec(2000)).get(), &call_status);
+  auto resp = Controller::Call::RunCompatibilityTests(
+      zx::unowned_channel(parent_device_handle.get()), zx::duration(zx::msec(2000)).get());
+  status = resp.status();
+  call_status = resp->status;
+
   ASSERT_OK(status);
   ASSERT_EQ(call_status, fuchsia_device_manager_CompatibilityTestStatus_ERR_UNBIND_TIMEOUT);
 }
-*/

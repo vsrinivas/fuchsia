@@ -239,11 +239,13 @@ void DevfsVnode::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
 
 void DevfsVnode::RunCompatibilityTests(int64_t hook_wait_time,
                                        RunCompatibilityTestsCompleter::Sync completer) {
-  auto status = device_run_compatibility_tests(dev_, hook_wait_time);
-  if (status) {
+  zx_status_t status = device_run_compatibility_tests(dev_, hook_wait_time);
+  if (status == ZX_OK) {
     dev_->PushTestCompatibilityConn([completer = completer.ToAsync()](zx_status_t status) mutable {
-      completer.Reply(std::move(status));
+      completer.Reply(status);
     });
+  } else {
+    completer.Reply(status);
   }
 };
 

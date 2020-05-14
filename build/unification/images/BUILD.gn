@@ -703,7 +703,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
     "//src/devices/tests/ddk-power:ddk-power-manifest",
-    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
     "//zircon/system/ulib/c/test:default-stack-size-default-manifest",
@@ -954,7 +954,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
     "//src/devices/tests/ddk-power:ddk-power-manifest",
-    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
     "//zircon/system/ulib/c/test:default-stack-size-default-manifest",

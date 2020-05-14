@@ -15,18 +15,26 @@
 #include "test-metadata.h"
 
 class TestCompatibilityHookDriver;
-using DeviceType = ddk::Device<TestCompatibilityHookDriver, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<TestCompatibilityHookDriver, ddk::Initializable,
+                               ddk::UnbindableNew>;
 class TestCompatibilityHookDriver : public DeviceType,
                                     public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_COMPAT_CHILD> {
  public:
   TestCompatibilityHookDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:
   struct compatibility_test_metadata metadata_;
+  size_t metadata_size_;
 };
+
+void TestCompatibilityHookDriver::DdkInit(ddk::InitTxn txn) {
+  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &metadata_, metadata_size_);
+  txn.Reply(status);
+}
 
 zx_status_t TestCompatibilityHookDriver::Bind() {
   size_t size;
@@ -40,15 +48,13 @@ zx_status_t TestCompatibilityHookDriver::Bind() {
     return ZX_ERR_INTERNAL;
   }
 
-  status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata_, size, &size);
+  status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata_, size, &metadata_size_);
   if (status != ZX_OK) {
     return status;
   }
 
-  DdkAdd("compatibility-test", DEVICE_ADD_INVISIBLE);
-  status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &metadata_, size);
-  DdkMakeVisible();
-  return status;
+  DdkAdd("compatibility-test");
+  return ZX_OK;
 }
 
 zx_status_t test_compatibility_hook_bind(void* ctx, zx_device_t* device) {
