@@ -189,16 +189,18 @@ List<T> differenceValues<T extends num>(Iterable<T> values) {
 ///   50%:   1.173375
 ///   75%:   1.3925
 ///   max:   26.257833
-String describeValues<T extends num>(List<T> values, {int indent = 0}) => '''
-count: ${values.length}
-mean:  ${values.isNotEmpty ? computeMean(values) : double.nan}
-std:   ${values.length > 1 ? computeStandardDeviation(values) : double.nan}
-min:   ${values.isNotEmpty ? computeMin(values) : double.nan}
-25%:   ${values.isNotEmpty ? computePercentile(values, 25) : double.nan}
-50%:   ${values.isNotEmpty ? computePercentile(values, 50) : double.nan}
-75%:   ${values.isNotEmpty ? computePercentile(values, 75) : double.nan}
-max:   ${values.isNotEmpty ? computeMax(values) : double.nan}
-'''
-    .split('\n')
-    .map((line) => ' ' * indent + line)
-    .join('\n');
+String describeValues<T extends num>(List<T> values,
+        {int indent = 0, List<int> percentiles = const [25, 50, 75]}) =>
+    [
+      'count: ${values.length}',
+      'mean:  ${values.isNotEmpty ? computeMean(values) : double.nan}',
+      'std:   ${values.length > 1 ? computeStandardDeviation(values) : double.nan}',
+      'min:   ${values.isNotEmpty ? computeMin(values) : double.nan}',
+      ...percentiles.map((percentile) {
+        final statName = '$percentile%';
+        final lineStart = '$statName:${' ' * (6 - statName.length)}';
+        return '$lineStart${values.isNotEmpty ? computePercentile(values, percentile) : double.nan}';
+      }),
+      'max:   ${values.isNotEmpty ? computeMax(values) : double.nan}',
+      '',
+    ].map((line) => '${' ' * indent}$line\n').join('');

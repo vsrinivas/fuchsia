@@ -58,6 +58,11 @@ class _AdjacentPairIterator<T, U> extends Iterator<U> {
   U get current => _current;
 }
 
+class _Results {
+  String appName;
+  List<double> drmFpsValues;
+}
+
 /// Compute a list of DRM FPS values for [events] that eventually link to
 /// display driver VSYNC events.
 List<double> _computeDrmFpsValues(Iterable<DurationEvent> events) {
@@ -73,6 +78,48 @@ List<double> _computeDrmFpsValues(Iterable<DurationEvent> events) {
       .toList();
 }
 
+/// Compute DRM FPS metrics for all matching flutter apps in the trace. If
+/// [flutterAppName] is specified, only threads whose name starts with
+/// [flutterAppName] are considered.
+///
+/// Returns a list of results with an entry for each flutter app found.
+List<_Results> _drmFpsMetrics(Model model, {String flutterAppName}) {
+  final results = <_Results>[];
+  // TODO(23073): Should only iterate on flutter processes.
+  final flutterProcesses = model.processes;
+
+  for (final process in flutterProcesses) {
+    final uiThreads = process.threads
+        .where((thread) =>
+            (flutterAppName == null ||
+                thread.name.startsWith(flutterAppName)) &&
+            thread.name.endsWith('.ui'))
+        .toList();
+    for (final uiThread in uiThreads) {
+      final appName =
+          flutterAppName ?? uiThread.name.split(RegExp(r'.ui$')).first;
+      // TODO(48263): Only match "vsync callback".
+      final vsyncCallbackEvents = filterEventsTyped<DurationEvent>(
+              uiThread.events,
+              category: 'flutter',
+              name: 'vsync callback')
+          .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
+              category: 'flutter', name: 'VsyncProcessCallback'));
+      if (vsyncCallbackEvents.length < 2) {
+        throw ArgumentError(
+            'Error, only found ${vsyncCallbackEvents.length} "vsync callback" '
+            'events in trace, and expected to find at least 2');
+      }
+
+      final drmFpsValues = _computeDrmFpsValues(vsyncCallbackEvents);
+      results.add(_Results()
+        ..appName = appName
+        ..drmFpsValues = drmFpsValues);
+    }
+  }
+  return results;
+}
+
 List<TestCaseResults> drmFpsMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
   if (!(extraArgs.containsKey('flutterAppName') &&
@@ -83,76 +130,62 @@ List<TestCaseResults> drmFpsMetricsProcessor(
   }
   final String flutterAppName = extraArgs['flutterAppName'];
 
-  // TODO(PT-212): Should only iterate on flutter processes.
-  // final flutterProcesses = model.processes
-  //     .where((process) => process.name.startsWith('io.flutter.'));
-  final flutterProcesses = model.processes;
+  final results = _drmFpsMetrics(model, flutterAppName: flutterAppName);
 
-  for (final process in flutterProcesses) {
-    final uiThreads = process.threads
-        .where((thread) =>
-            thread.name.startsWith(flutterAppName) &&
-            thread.name.endsWith('.ui'))
-        .toList();
-
-    if (uiThreads.isEmpty) {
-      continue;
-    }
-
-    final uiThread = uiThreads.first;
-    // TODO(48263): Only match "vsync callback".
-    final vsyncCallbackEvents = filterEventsTyped<DurationEvent>(
-            uiThread.events,
-            category: 'flutter',
-            name: 'vsync callback')
-        .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
-            category: 'flutter', name: 'VsyncProcessCallback'));
-    if (vsyncCallbackEvents.length < 2) {
-      throw ArgumentError(
-          'Error, only found ${vsyncCallbackEvents.length} "vsync callback" '
-          'events in trace, and expected to find at least 2');
-    }
-
-    final drmFpsValues = _computeDrmFpsValues(vsyncCallbackEvents);
-    assert(drmFpsValues.isNotEmpty);
-
-    // In a better world, we would not need to separately export percentiles
-    // of the list of DRM FPS values.  Unfortunately though, our performance
-    // metrics dashboard is hard-coded to compute precisely the
-    //     * count
-    //     * maximum
-    //     * mean of logs (i.e. mean([log(x) for x in xs]))
-    //     * mean
-    //     * min
-    //     * sum
-    //     * variance
-    // of lists of values.  So instead, we compute percentiles and export them
-    // as their own metrics, which contain lists of size 1.  Unfortunately this
-    // also means that useless statistics for the percentile metric will be
-    // generated.
-    //
-    // If we ever switch to a performance metrics dashboard that supports
-    // specifying what statistics to compute for a metric, then we should remove
-    // these separate percentile metrics.
-    final p10 = computePercentile(drmFpsValues, 10);
-    final p50 = computePercentile(drmFpsValues, 50);
-    final p90 = computePercentile(drmFpsValues, 90);
-
-    return [
-      TestCaseResults(
-          '${flutterAppName}_drm_fps', Unit.framesPerSecond, drmFpsValues),
-      TestCaseResults(
-          '${flutterAppName}_drm_fps_p10', Unit.framesPerSecond, [p10]),
-      TestCaseResults(
-          '${flutterAppName}_drm_fps_p50', Unit.framesPerSecond, [p50]),
-      TestCaseResults(
-          '${flutterAppName}_drm_fps_p90', Unit.framesPerSecond, [p90]),
-    ];
+  if (results.isEmpty) {
+    throw ArgumentError(
+        'Failed to find any matching flutter process in $model for flutter app '
+        'name $flutterAppName');
   }
 
-  throw ArgumentError(
-      'Failed to find any matching flutter process in $model for flutter app '
-      'name $flutterAppName');
+  final appResult = results.first;
+
+  // In a better world, we would not need to separately export percentiles
+  // of the list of DRM FPS values.  Unfortunately though, our performance
+  // metrics dashboard is hard-coded to compute precisely the
+  //     * count
+  //     * maximum
+  //     * mean of logs (i.e. mean([log(x) for x in xs]))
+  //     * mean
+  //     * min
+  //     * sum
+  //     * variance
+  // of lists of values.  So instead, we compute percentiles and export them
+  // as their own metrics, which contain lists of size 1.  Unfortunately this
+  // also means that useless statistics for the percentile metric will be
+  // generated.
+  //
+  // If we ever switch to a performance metrics dashboard that supports
+  // specifying what statistics to compute for a metric, then we should remove
+  // these separate percentile metrics.
+  final p10 = computePercentile(appResult.drmFpsValues, 10);
+  final p50 = computePercentile(appResult.drmFpsValues, 50);
+  final p90 = computePercentile(appResult.drmFpsValues, 90);
+
+  return [
+    TestCaseResults('${flutterAppName}_drm_fps', Unit.framesPerSecond,
+        appResult.drmFpsValues),
+    TestCaseResults(
+        '${flutterAppName}_drm_fps_p10', Unit.framesPerSecond, [p10]),
+    TestCaseResults(
+        '${flutterAppName}_drm_fps_p50', Unit.framesPerSecond, [p50]),
+    TestCaseResults(
+        '${flutterAppName}_drm_fps_p90', Unit.framesPerSecond, [p90]),
+  ];
+}
+
+List<double> _systemDrmFpsValues(Model model) {
+  final renderFrameEvents = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'gfx',
+      name: 'RenderFrame');
+  if (renderFrameEvents.length < 2) {
+    throw ArgumentError(
+        'Error, only found ${renderFrameEvents.length} "RenderFrame" events in '
+        'trace, and expected to find at least 2');
+  }
+
+  return _computeDrmFpsValues(renderFrameEvents);
 }
 
 // System DRM FPS is similar to the DRM FPS metric above, however instead of
@@ -177,17 +210,7 @@ List<TestCaseResults> drmFpsMetricsProcessor(
 
 List<TestCaseResults> systemDrmFpsMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
-  final renderFrameEvents = filterEventsTyped<DurationEvent>(
-      getAllEvents(model),
-      category: 'gfx',
-      name: 'RenderFrame');
-  if (renderFrameEvents.length < 2) {
-    throw ArgumentError(
-        'Error, only found ${renderFrameEvents.length} "RenderFrame" events in '
-        'trace, and expected to find at least 2');
-  }
-
-  final drmFpsValues = _computeDrmFpsValues(renderFrameEvents);
+  final drmFpsValues = _systemDrmFpsValues(model);
   assert(drmFpsValues.isNotEmpty);
 
   // Export percentiles as separate metrics.  See the comment above in
@@ -202,4 +225,40 @@ List<TestCaseResults> systemDrmFpsMetricsProcessor(
     TestCaseResults('system_drm_fps_p50', Unit.framesPerSecond, [p50]),
     TestCaseResults('system_drm_fps_p90', Unit.framesPerSecond, [p90]),
   ];
+}
+
+String drmFpsMetricsReport(Model model) {
+  final buffer = StringBuffer();
+  final results = _drmFpsMetrics(model);
+
+  for (final appResult in results) {
+    buffer
+      ..write('''
+===
+${appResult.appName} DRM FPS
+===
+
+''')
+      ..write(describeValues(appResult.drmFpsValues,
+          indent: 2, percentiles: [10, 25, 50, 75, 90]));
+  }
+
+  return buffer.toString();
+}
+
+String systemDrmFpsMetricsReport(Model model) {
+  final buffer = StringBuffer();
+  final values = _systemDrmFpsValues(model);
+
+  buffer
+    ..write('''
+===
+System DRM FPS
+===
+
+''')
+    ..write(
+        describeValues(values, indent: 2, percentiles: [10, 25, 50, 75, 90]));
+
+  return buffer.toString();
 }
