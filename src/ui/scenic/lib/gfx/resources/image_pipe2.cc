@@ -191,8 +191,7 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
   }
 
   if (images_.find(image_id) != images_.end()) {
-    error_reporter_->ERROR() << __func__ << ": image with ID " << buffer_collection_id
-                             << " already exists.";
+    error_reporter_->ERROR() << __func__ << ": image with ID " << image_id << " already exists.";
     CloseConnectionAndCleanUp();
     return;
   }
