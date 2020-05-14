@@ -31,7 +31,12 @@ class TransferRing {
   void ResetShortCount() { short_count_ = 0; }
   void IncrementShortCount(size_t size) { short_count_ += size; }
   zx_status_t AddTRB(const TRB& trb, std::unique_ptr<TRBContext> context);
-  zx_status_t AssignContext(TRB* trb, std::unique_ptr<TRBContext> context);
+  zx_status_t AssignContext(TRB* trb, std::unique_ptr<TRBContext> context, TRB* first_trb);
+  // Handles a short packet. This will walk the TRB list up to and including short_trb
+  // and return the number of bytes transferred. Returns ZX_ERR_IO if the transfer was
+  // mis-aligned.
+  zx_status_t HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
+                                size_t short_length);
   // Allocates a TRB but does not configure it.
   // It is the caller's responsibility to fully configure the returned TRB.
   // The caller may optionally rollback a transaction by calling Restore
@@ -54,6 +59,10 @@ class TransferRing {
   // thread. Otherwise thread-safety assumptions are violated.
   zx_status_t DeinitIfActive() __TA_NO_THREAD_SAFETY_ANALYSIS;
   zx_status_t Deinit();
+  bool active() {
+    fbl::AutoLock l(&mutex_);
+    return trbs_;
+  }
   // Only called during initialization when no other threads are running.
   // Would be pointless to hold the mutex here.
   CRCR phys(uint8_t cap_length);

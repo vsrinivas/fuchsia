@@ -183,7 +183,47 @@ zx_status_t TransferRing::AddTRB(const TRB& trb, std::unique_ptr<TRBContext> con
   return ZX_OK;
 }
 
-zx_status_t TransferRing::AssignContext(TRB* trb, std::unique_ptr<TRBContext> context) {
+zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
+                                            size_t short_length) {
+  fbl::AutoLock l(&mutex_);
+  if (pending_trbs_.is_empty()) {
+    return ZX_ERR_IO;
+  }
+  auto target_ctx = pending_trbs_.begin();
+  if (target_ctx->transfer_len_including_short_trb || target_ctx->short_length) {
+    // Controller gave us a duplicate event. Discard it but report an error.
+    // This is non-fatal and may happen frequently on certain controllers.
+    return ZX_ERR_IO;
+  }
+  auto end_ctx = target_ctx;
+  end_ctx++;
+  const TRB* end = nullptr;
+  if (end_ctx != pending_trbs_.end()) {
+    end = end_ctx->first_trb;
+  }
+  TRB* current = target_ctx->first_trb;
+  while (current != end) {
+    *transferred += static_cast<Normal*>(current)->LENGTH();
+    if (current == short_trb) {
+      *first_trb = target_ctx->trb;
+      target_ctx->short_length = short_length;
+      target_ctx->transfer_len_including_short_trb = *transferred;
+      return ZX_OK;
+    }
+    size_t page = reinterpret_cast<size_t>(current) / ZX_PAGE_SIZE;
+    current++;
+    if ((reinterpret_cast<size_t>(current) / ZX_PAGE_SIZE) != page) {
+      return ZX_ERR_IO;
+    }
+    while (Control::FromTRB(current).Type() == Control::Link) {
+      current = PhysToVirtLocked(current->ptr);
+    }
+  }
+  return ZX_ERR_IO;
+}
+
+zx_status_t TransferRing::AssignContext(TRB* trb, std::unique_ptr<TRBContext> context,
+                                        TRB* first_trb) {
   fbl::AutoLock l(&mutex_);
   if (context->token != token_) {
     return ZX_ERR_INVALID_ARGS;
@@ -340,7 +380,7 @@ zx_status_t TransferRing::AllocBuffer(dma_buffer::ContiguousBuffer** out) {
   std::unique_ptr<dma_buffer::ContiguousBuffer> buffer;
   {
     std::unique_ptr<dma_buffer::ContiguousBuffer> buffer_tmp;
-    zx_status_t status = hci_->factory().CreateContiguous(
+    zx_status_t status = hci_->buffer_factory().CreateContiguous(
         *bti_, page_size_, static_cast<uint32_t>(page_size_ == PAGE_SIZE ? 0 : page_size_ >> 12),
         &buffer_tmp);
     if (status != ZX_OK) {

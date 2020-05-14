@@ -36,6 +36,9 @@ struct TRBContext : fbl::DoublyLinkedListable<std::unique_ptr<TRBContext>>,
   std::optional<fit::completer<TRB*, zx_status_t>> completer;
   uint64_t token;
   TRB* trb = nullptr;
+  TRB* first_trb = nullptr;
+  size_t short_length = 0;
+  size_t transfer_len_including_short_trb = 0;
 };
 
 }  // namespace usb_xhci

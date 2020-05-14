@@ -25,6 +25,7 @@ struct UsbHeader {
 /// (Filled in by processor before |UsbRequestComplete()| is called)
 struct UsbResponse {
     /// Status of transaction.
+    /// ZX_ERR_IO_INVALID indicates that the device stalled the transfer.
     zx.status status;
     /// Number of bytes actually transferred (on success).
     zx.off actual;

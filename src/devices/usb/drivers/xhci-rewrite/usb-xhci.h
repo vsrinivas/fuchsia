@@ -333,7 +333,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Sets the test harness
   void set_test_harness(void* harness) { test_harness_ = harness; }
 
-  dma_buffer::BufferFactory& factory() const { return *buffer_factory_; }
+  dma_buffer::BufferFactory& buffer_factory() const { return *buffer_factory_; }
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbXhci);

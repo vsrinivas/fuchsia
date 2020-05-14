@@ -19,13 +19,14 @@ namespace usb_xhci {
 
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
-                                        dma_buffer::BufferFactory* factory, ddk::MmioBuffer* mmio) {
+                                        const dma_buffer::BufferFactory& factory,
+                                        ddk::MmioBuffer* mmio) {
   erst_size_ = erst_size;
   bti_ = &bti;
   page_size_ = page_size;
   is_32bit_ = is_32bit;
   mmio_.emplace(mmio->View(0));
-  zx_status_t status = factory->CreatePaged(bti, ZX_PAGE_SIZE, false, &erst_);
+  zx_status_t status = factory.CreatePaged(bti, ZX_PAGE_SIZE, false, &erst_);
   if (status != ZX_OK) {
     return status;
   }
@@ -79,7 +80,8 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   hci_ = hci;
   hcc_params_1_ = hcc_params_1;
   dcbaa_ = dcbaa;
-  return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, &hci->factory(), mmio_);
+  return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(),
+                        mmio_);
 }
 
 void EventRing::RemovePressure() {
@@ -122,7 +124,7 @@ zx_status_t EventRing::AddSegment() {
   std::unique_ptr<dma_buffer::ContiguousBuffer> buffer;
   {
     std::unique_ptr<dma_buffer::ContiguousBuffer> buffer_tmp;
-    zx_status_t status = hci_->factory().CreateContiguous(
+    zx_status_t status = hci_->buffer_factory().CreateContiguous(
         *bti_, page_size_, static_cast<uint32_t>(page_size_ == PAGE_SIZE ? 0 : page_size_ >> 12),
         &buffer_tmp);
     if (status != ZX_OK) {
@@ -444,8 +446,19 @@ zx_status_t EventRing::HandleIRQ() {
           }
 
           zx_status_t status = ZX_ERR_IO;
+          size_t short_transfer_len = 0;
+          TRB* first_trb = trb;
           if (trb) {
-            status = ring->CompleteTRB(trb, &context);
+            if (completion->CompletionCode() == CommandCompletionEvent::ShortPacket) {
+              ring->HandleShortPacket(trb, &short_transfer_len, &first_trb,
+                                      completion->TransferLength());
+              if (trb != first_trb) {
+                // We'll get a second event for this TRB -- but we need to log the fact that this
+                // was a short transfer.
+                break;
+              }
+            }
+            status = ring->CompleteTRB(first_trb, &context);
             if (status == ZX_ERR_IO && ring->IsIsochronous()) {
               // Out-of-order callback on isochronous ring.
               // This is a very special case where a transfer fails
@@ -482,8 +495,20 @@ zx_status_t EventRing::HandleIRQ() {
             break;
           }
           l.release();
-          context->request->Complete(
-              ZX_OK, context->request->request()->header.length - completion->TransferLength());
+          if ((completion->CompletionCode() != CommandCompletionEvent::Success) &&
+              (completion->CompletionCode() != CommandCompletionEvent::ShortPacket)) {
+            // asix-88179 will stall the endpoint if we're sending data too fast.
+            // The driver expects us to give it a ZX_ERR_IO_INVALID response when
+            // this happens.
+            context->request->Complete(ZX_ERR_IO_INVALID, 0);
+            break;
+          }
+          if (context->short_length || context->transfer_len_including_short_trb) {
+            context->request->Complete(
+                ZX_OK, context->transfer_len_including_short_trb - context->short_length);
+          } else {
+            context->request->Complete(ZX_OK, context->request->request()->header.length);
+          }
           ring->ResetShortCount();
         } break;
         case Control::MFIndexWrapEvent: {

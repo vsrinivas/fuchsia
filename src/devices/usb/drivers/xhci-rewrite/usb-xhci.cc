@@ -137,7 +137,7 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
   // Section 4.3.3
   // 6.2.5 (Input Context initialization)
   std::unique_ptr<dma_buffer::PagedBuffer> buffer;
-  zx_status_t status = hci.factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &buffer);
+  zx_status_t status = hci.buffer_factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &buffer);
   if (status != ZX_OK) {
     return status;
   }
@@ -157,7 +157,6 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
   if (hub_info) {
     slot_context->set_CONTEXT_ENTRIES(1)
         .set_ROUTE_STRING(hub_info->route_string)
-        .set_MULTI_TT(hub_info->multi_tt)
         .set_PORTNO(hub_info->rh_port)
         .set_SPEED(hub_info->speed);
   } else {
@@ -217,7 +216,7 @@ zx_status_t DeviceState::InitializeOutputContextBuffer(
   // Update the DCBAA entry for this slot.
   std::unique_ptr<dma_buffer::PagedBuffer> output_context_buffer;
   zx_status_t status =
-      hci.factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &output_context_buffer);
+      hci.buffer_factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &output_context_buffer);
   if (status != ZX_OK) {
     return status;
   }
@@ -823,7 +822,8 @@ void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(packet_count))
             .set_NO_SNOOP(!has_coherent_cache_)
-            .set_IOC(next == nullptr);
+            .set_IOC(next == nullptr)
+            .set_ISP(next != nullptr);
       } else {
         type = Control::Normal;
         Normal* data = reinterpret_cast<Normal*>(current);
@@ -832,7 +832,8 @@ void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(state->packet_count))
             .set_NO_SNOOP(!has_coherent_cache_)
-            .set_IOC(next == nullptr);
+            .set_IOC(next == nullptr)
+            .set_ISP(next != nullptr);
       }
 
       current->ptr = paddr;
@@ -879,6 +880,9 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
   auto endpoint_context = reinterpret_cast<EndpointContext*>(
       reinterpret_cast<unsigned char*>(control) + (slot_size * (2 + (index + 1))));
+  if (!state.GetTransferRing((index)).active()) {
+    return;
+  }
   pending_transfer.is_isochronous_transfer = state.GetTransferRing(index).IsIsochronous();
   pending_transfer.transfer_ring = &state.GetTransferRing(index);
   pending_transfer.burst_size = endpoint_context->MaxBurstSize() + 1;
@@ -1106,7 +1110,8 @@ void UsbXhci::ControlRequestCommit(UsbRequestState* state) {
     usb_request_cache_flush_invalidate(state->context->request->request(), 0,
                                        state->context->request->request()->header.length);
   }
-  state->transfer_ring->AssignContext(state->status_trb_ptr, std::move(state->context));
+  state->transfer_ring->AssignContext(state->status_trb_ptr, std::move(state->context),
+                                      state->first_trb);
   Control::FromTRB(state->setup)
       .set_Type(Control::Setup)
       .set_Cycle(state->setup_cycle)
@@ -1241,6 +1246,8 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
         bool success = completion->CompletionCode() == CommandCompletionEvent::Success;
         if (success) {
           free_buffers.cancel();
+        } else {
+          return fit::result<TRB*, zx_status_t>(fit::error(ZX_ERR_IO));
         }
         return result;
       })
@@ -1457,10 +1464,10 @@ zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address)
             return result;
           })
           .box());
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
     return status;
   }
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
   return status;
 }
 
@@ -1733,6 +1740,20 @@ int UsbXhci::InitThread(std::unique_ptr<dma_buffer::BufferFactory> factory) {
   buffer_factory_ = std::move(factory);
   // Perform xHCI reset process
   ResetController();
+  // Start DDK interaction thread
+  thrd_t thrd;
+  int thread_status = thrd_create_with_name(
+      &thrd,
+      [](void* ctx) {
+        auto hci = static_cast<UsbXhci*>(ctx);
+        hci->ddk_interaction_loop_.Run();
+        return 0;
+      },
+      this, "ddk_interaction_thread");
+  if (thread_status != thrd_success) {
+    return thread_status;
+  }
+  ddk_interaction_thread_ = thrd;
   // Finish HCI initialization
   zx_status_t status = HciFinalize();
   if (status != ZX_OK) {
@@ -1787,7 +1808,7 @@ zx_status_t UsbXhci::HciFinalize() {
   uint32_t buffers = hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() |
                      ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
   scratchpad_buffers_ = std::make_unique<std::unique_ptr<dma_buffer::ContiguousBuffer>[]>(buffers);
-  if (ROUNDUP(buffers * sizeof(uint64_t), ZX_PAGE_SIZE) > ZX_PAGE_SIZE) {
+  if (fbl::round_up(buffers * sizeof(uint64_t), ZX_PAGE_SIZE) > ZX_PAGE_SIZE) {
     // We can't create multi-page contiguously physical uncached buffers.
     // This is presently not supported in the kernel.
     return ZX_ERR_NOT_SUPPORTED;
@@ -1873,8 +1894,7 @@ zx_status_t UsbXhci::Init() {
       device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 31, "src/devices/usb/drivers/xhci/usb-xhci",
                          profile_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)",
-           status);
+    zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)", status);
   }
   thrd_t init_thread;
   status = DdkAdd("xhci", DEVICE_ADD_INVISIBLE);
@@ -1896,17 +1916,6 @@ zx_status_t UsbXhci::Init() {
     return ZX_OK;
   }
   init_thread_ = init_thread;
-
-  thrd_t thrd;
-  thrd_create_with_name(
-      &thrd,
-      [](void* ctx) {
-        auto hci = static_cast<UsbXhci*>(ctx);
-        hci->ddk_interaction_loop_.Run();
-        return 0;
-      },
-      this, "ddk_interaction_thread");
-  ddk_interaction_thread_ = thrd;
 
   return ZX_OK;
 }
