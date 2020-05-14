@@ -122,37 +122,32 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
   }
 
   void Cont(fuchsia::modular::internal::StoryDataPtr story_data, FlowToken flow) {
-    session_storage_->GetStoryStorage(story_id_)->WeakThen(
-        GetWeakPtr(), [this, story_data = std::move(story_data),
-                       flow](std::shared_ptr<StoryStorage> story_storage) mutable {
-          struct StoryRuntimeContainer container {
-            .executor = std::make_unique<async::Executor>(async_get_default_dispatcher()),
-            .storage = std::move(story_storage), .current_data = std::move(story_data),
-          };
+    auto story_storage = session_storage_->GetStoryStorage(story_id_);
+    struct StoryRuntimeContainer container {
+      .executor = std::make_unique<async::Executor>(async_get_default_dispatcher()),
+      .storage = std::move(story_storage), .current_data = std::move(story_data),
+    };
 
-          container.model_owner =
-              std::make_unique<StoryModelOwner>(story_id_.value_or(""), container.executor.get(),
-                                                std::make_unique<NoopStoryModelStorage>());
-          container.model_observer = container.model_owner->NewObserver();
-          container.InitializeInspect(story_id_, session_inspect_node_);
+    container.model_owner =
+        std::make_unique<StoryModelOwner>(story_id_.value_or(""), container.executor.get(),
+                                          std::make_unique<NoopStoryModelStorage>());
+    container.model_observer = container.model_owner->NewObserver();
+    container.InitializeInspect(story_id_, session_inspect_node_);
 
-          container.controller_impl = std::make_unique<StoryControllerImpl>(
-              session_storage_, container.storage.get(), container.model_owner->NewMutator(),
-              container.model_owner->NewObserver(), story_provider_impl_,
-              container.story_node.get());
-          // Register a listener on the StoryModel so that we can signal
-          // our watchers when relevant data changes.
-          container.model_observer->RegisterListener(
-              [id = story_id_, story_provider = story_provider_impl_](
-                  const fuchsia::modular::storymodel::StoryModel& model) {
-                story_provider->NotifyStoryStateChange(id);
-              });
-
-          auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_.value_or(""),
-                                                                            std::move(container));
-
-          story_runtime_container_ = &it.first->second;
+    container.controller_impl = std::make_unique<StoryControllerImpl>(
+        session_storage_, container.storage.get(), container.model_owner->NewMutator(),
+        container.model_owner->NewObserver(), story_provider_impl_, container.story_node.get());
+    // Register a listener on the StoryModel so that we can signal
+    // our watchers when relevant data changes.
+    container.model_observer->RegisterListener(
+        [id = story_id_, story_provider = story_provider_impl_](
+            const fuchsia::modular::storymodel::StoryModel& model) {
+          story_provider->NotifyStoryStateChange(id);
         });
+
+    auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_.value_or(""),
+                                                                      std::move(container));
+    story_runtime_container_ = &it.first->second;
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned

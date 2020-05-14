@@ -298,29 +298,13 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
 TEST_F(SessionStorageTest, GetStoryStorage) {
   auto storage = CreateStorage();
   auto story_name = storage->CreateStory("story", {});
-
-  bool done{};
-  auto get_story_future = storage->GetStoryStorage(story_name);
-  get_story_future->Then([&](std::shared_ptr<StoryStorage> result) {
-    EXPECT_NE(nullptr, result);
-    done = true;
-  });
-
-  RunLoopUntil([&] { return done; });
+  EXPECT_NE(nullptr, storage->GetStoryStorage(story_name));
 }
 
 TEST_F(SessionStorageTest, GetStoryStorageNoStory) {
   auto storage = CreateStorage();
   storage->CreateStory("story", {});
-
-  bool done{};
-  auto get_story_future = storage->GetStoryStorage("fake");
-  get_story_future->Then([&](std::shared_ptr<StoryStorage> result) {
-    EXPECT_EQ(nullptr, result);
-    done = true;
-  });
-
-  RunLoopUntil([&] { return done; });
+  EXPECT_EQ(nullptr, storage->GetStoryStorage("fake"));
 }
 
 }  // namespace

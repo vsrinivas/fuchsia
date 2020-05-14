@@ -164,8 +164,7 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
   return error;
 }
 
-FuturePtr<std::shared_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
-    fidl::StringPtr story_name) {
+std::shared_ptr<StoryStorage> SessionStorage::GetStoryStorage(fidl::StringPtr story_name) {
   std::shared_ptr<StoryStorage> value(nullptr);
   auto data_it = story_data_backing_store_.find(story_name);
   if (data_it != story_data_backing_store_.end()) {
@@ -177,11 +176,7 @@ FuturePtr<std::shared_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
 
     value = story_storage_backing_store_[story_name];
   }
-
-  auto returned_future = Future<std::shared_ptr<StoryStorage>>::CreateCompleted(
-      "SessionStorage.GetStoryStorage.returned_future", std::move(value));
-
-  return returned_future;
+  return value;
 }
 
 }  // namespace modular

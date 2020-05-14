@@ -15,15 +15,8 @@ std::unique_ptr<modular::SessionStorage> TestWithSessionStorage::MakeSessionStor
 
 std::shared_ptr<modular::StoryStorage> TestWithSessionStorage::GetStoryStorage(
     modular::SessionStorage* const storage, std::string story_id) {
-  std::shared_ptr<modular::StoryStorage> story_storage;
-  bool done{};
-  storage->GetStoryStorage(story_id)->Then([&](std::shared_ptr<modular::StoryStorage> result) {
-    FX_DCHECK(!!result);
-    story_storage = std::move(result);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
+  auto story_storage = storage->GetStoryStorage(story_id);
+  FX_DCHECK(!!story_storage) << story_id;
   return story_storage;
 }
 

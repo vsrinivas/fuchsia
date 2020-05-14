@@ -55,18 +55,16 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
  private:
   void Run() override {
-    executor_->session_storage_->GetStoryStorage(story_id_)->WeakThen(
-        GetWeakPtr(), [this](std::shared_ptr<StoryStorage> story_storage) {
-          if (!story_storage) {
-            fuchsia::modular::ExecuteResult result;
-            result.status = fuchsia::modular::ExecuteStatus::INVALID_STORY_ID;
-            Done(result);
-            return;
-          }
+    auto story_storage = executor_->session_storage_->GetStoryStorage(story_id_);
+    if (!story_storage) {
+      fuchsia::modular::ExecuteResult result;
+      result.status = fuchsia::modular::ExecuteStatus::INVALID_STORY_ID;
+      Done(result);
+      return;
+    }
 
-          story_storage_ = std::move(story_storage);
-          Cont();
-        });
+    story_storage_ = std::move(story_storage);
+    Cont();
   }
 
   void Cont() {

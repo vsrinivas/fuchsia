@@ -98,7 +98,7 @@ class SessionStorage {
 
   // Gets the StoryStorage for the story with the given |story_id| to perform
   // operations on the story such as adding modules, updating links, etc.
-  FuturePtr<std::shared_ptr<StoryStorage>> GetStoryStorage(fidl::StringPtr story_id);
+  std::shared_ptr<StoryStorage> GetStoryStorage(fidl::StringPtr story_id);
 
  private:
   fit::function<void(fidl::StringPtr story_id)> on_story_deleted_;

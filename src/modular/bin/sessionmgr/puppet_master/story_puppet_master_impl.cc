@@ -157,41 +157,38 @@ class AnnotateModuleOperation
       }
     }
 
-    session_storage_->GetStoryStorage(story_name_)
-        ->WeakThen(GetWeakPtr(), [this](std::shared_ptr<StoryStorage> story_storage) {
-          if (story_storage == nullptr) {
-            // Since Modules are created by an external component, and the external component
-            // would only be able to add a Module to a Story that it managed, it isn't possible
-            // for AnnotateModule() to create it's own StoryStorage, if not found. So this is
-            // an error.
-            fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
-            result.set_err(fuchsia::modular::AnnotationError::NOT_FOUND);
-            Done(std::move(result));
-            return;
-          }
-          story_storage_ = std::move(story_storage);
-          auto module_data = story_storage_->ReadModuleDataSync({module_id_});
-          if (module_data != nullptr) {
-            AnnotateModuleIfFirstAttempt(std::move(module_data));
-          } else {
-            // If the module_data is not found, the callback will be called if and
-            // when the ModuleData is stored, later.
-            story_storage_->SubscribeModuleDataUpdated(
-                [&](fuchsia::modular::ModuleData new_module_data) {
-                  if (new_module_data.module_path().back() == module_id_) {
-                    AnnotateModuleIfFirstAttempt(
-                        std::make_unique<fuchsia::modular::ModuleData>(std::move(new_module_data)));
-                    // We've fulfilled our goal.  Signal to story_storage_
-                    // that we're no longer interested in callbacks, so
-                    // it'll drop its reference to this lambda before we
-                    // complete and get deallocated.
-                    return StoryStorage::NotificationInterest::STOP;
-                  }
-                  // Otherwise keep subscribed to other updates
-                  return StoryStorage::NotificationInterest::CONTINUE;
-                });
-          }
-        });
+    auto story_storage = session_storage_->GetStoryStorage(story_name_);
+    if (story_storage == nullptr) {
+      // Since Modules are created by an external component, and the external component
+      // would only be able to add a Module to a Story that it managed, it isn't possible
+      // for AnnotateModule() to create it's own StoryStorage, if not found. So this is
+      // an error.
+      fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
+      result.set_err(fuchsia::modular::AnnotationError::NOT_FOUND);
+      Done(std::move(result));
+      return;
+    }
+    story_storage_ = std::move(story_storage);
+    auto module_data = story_storage_->ReadModuleDataSync({module_id_});
+    if (module_data != nullptr) {
+      AnnotateModuleIfFirstAttempt(std::move(module_data));
+    } else {
+      // If the module_data is not found, the callback will be called if and
+      // when the ModuleData is stored, later.
+      story_storage_->SubscribeModuleDataUpdated([&](fuchsia::modular::ModuleData new_module_data) {
+        if (new_module_data.module_path().back() == module_id_) {
+          AnnotateModuleIfFirstAttempt(
+              std::make_unique<fuchsia::modular::ModuleData>(std::move(new_module_data)));
+          // We've fulfilled our goal.  Signal to story_storage_
+          // that we're no longer interested in callbacks, so
+          // it'll drop its reference to this lambda before we
+          // complete and get deallocated.
+          return StoryStorage::NotificationInterest::STOP;
+        }
+        // Otherwise keep subscribed to other updates
+        return StoryStorage::NotificationInterest::CONTINUE;
+      });
+    }
   }
 
   void AnnotateModuleIfFirstAttempt(fuchsia::modular::ModuleDataPtr module_data) {
