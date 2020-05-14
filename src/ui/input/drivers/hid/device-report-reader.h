@@ -11,6 +11,7 @@
 
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
+#include <fbl/auto_lock.h>
 
 namespace hid_driver {
 
@@ -22,6 +23,16 @@ class DeviceReportsReader
   // The pointer to `base` must stay alive for as long as DeviceReportsReader
   // is alive.
   explicit DeviceReportsReader(HidDevice* base) : base_(base) {}
+
+  ~DeviceReportsReader() {
+    // The lock has to be grabbed to synchronize with any clients who are currently
+    // trying access DeviceReportsReader.
+    fbl::AutoLock lock(&reader_lock_);
+    if (waiting_read_) {
+      waiting_read_->ReplyError(ZX_ERR_PEER_CLOSED);
+      waiting_read_.reset();
+    }
+  }
 
   void ReadReports(ReadReportsCompleter::Sync completer) override;
   zx_status_t WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);

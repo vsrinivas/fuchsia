@@ -5,7 +5,6 @@
 #include "device-report-reader.h"
 
 #include <ddk/trace/event.h>
-#include <fbl/auto_lock.h>
 
 #include "hid.h"
 
