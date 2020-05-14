@@ -90,7 +90,7 @@ reuse the input value if it does not contain handles.
 
 #### User defined types {#user-defined-types}
 
-bits,enums, and tables are always referred to using their generated type `T`.
+Bits, enums, and tables are always referred to using their generated type `T`.
 structs and unions  can be either non-nullable or nullable, and used in an owned
 context or borrowed context, which means that there are four possible equivalent
 Rust types. For a given `struct T` or `union T`, the types are as follows:
@@ -135,7 +135,7 @@ The generated `bitflags` struct always has the complete set of [`[#derive]`
 
 ### Enums {#types-enums}
 
-Given the [enum][lang-enum] definition:
+Given the [enum][lang-enums] definition:
 
 ```fidl
 enum Color {
@@ -239,7 +239,7 @@ original ordinal back onto the wire.
 
 ### Tables {#types-tables}
 
-Given the table definition:
+Given the [table][lang-tables] definition:
 
 ```table
 table User {
@@ -533,9 +533,7 @@ For protocols annotated with the `"Discoverable"` attribute, the Marker type
 additionally implements the `fidl::endpoints::DiscoverableService` trait.
 
 <!-- xrefs -->
-[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
-[lang-libraries]: /docs/reference/fidl/language/language.md#libraries
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
 [lang-structs]: /docs/reference/fidl/language/language.md#structs

@@ -220,7 +220,7 @@ All floating point values represent valid IEEE 754 bit patterns.
 Bit fields and enumerations are stored as their underlying primitive
 type (e.g., `uint32`).
 
-## Handles
+## Handles {#handles}
 
 A handle is a 32-bit integer, but with special treatment.
 When encoded for transfer, the handle's on-wire representation is replaced with
@@ -265,7 +265,7 @@ Arrays are denoted:
 
 ![drawing](images/arrays.png)
 
-### Vectors
+### Vectors {#vectors}
 
 *   Variable-length sequence of homogeneous elements.
 *   Nullable; null vectors and empty vectors are distinct.
@@ -298,7 +298,7 @@ Vectors are denoted as follows:
 
 ![drawing](images/vectors.png)
 
-### Strings
+### Strings {#strings}
 
 Strings are implemented as a vector of `uint8` bytes, with the constraint
 that the bytes MUST be valid UTF-8.
@@ -435,7 +435,7 @@ The structure now takes 40 bytes.
 Note: While `fidlc` could automatically pack structs, like Rust, we chose not
 to do that in order to simplify [ABI compatibility changes][abi-compat].
 
-### Envelopes
+### Envelopes {#envelopes}
 
 An envelope is a container for out-of-line data, used internally by tables
 and extensible unions. It is not exposed to the FIDL language.
@@ -501,7 +501,7 @@ union Value {
 
 ![drawing](images/union.png)
 
-### Transactional Messages
+### Transactional Messages {#transactional-messages}
 
 In a transactional message, there is always a **header**, followed by
 an optional **body**.

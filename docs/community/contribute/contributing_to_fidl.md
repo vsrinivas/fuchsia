@@ -417,7 +417,7 @@ Tab 3> fx test fidl_bindings_test
 ### Compatibility Test
 
 Details about how the compatibility tests work and where the code is located can be
-found in the README at [//garnet/bin/fidl_compatibility_test][compat_readme]
+found in the README at [//garnet/bin/fidl_compatibility_test][compat_readme].
 
 To run the compatibility tests, you first need to have Fuchsia running in an
 emulator:
@@ -706,7 +706,6 @@ fidl fmt --library my_library.fidl -i
 [be-go]: /tools/fidl/fidlgen_go/
 [be-rust]: /tools/fidl/fidlgen_rust/
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
-[compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
 [fidlc-source]: /zircon/tools/fidl/
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
 [fidl-simple]: /src/lib/fidl/c/simple_tests/

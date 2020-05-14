@@ -120,7 +120,7 @@ the `bits` are based on). In the above example, `FileModeMask` has a value of
 
 ### Enums {#enums}
 
-Given the [enum][lang-enum] definition:
+Given the [enum][lang-enums] definition:
 
 ```fidl
 enum Color {
@@ -143,7 +143,7 @@ enum class Color : uint32_t {
 
 ### Structs {#structs}
 
-Given a [struct][lang-struct] declaration:
+Given a [struct][lang-structs] declaration:
 
 ```fidl
 struct Color {
@@ -311,7 +311,7 @@ The FIDL toolchain generates a `User` class with the following methods:
 
 ## Protocols {#protocols}
 
-Given the [protocol][lang-protocol]:
+Given the [protocol][lang-protocols]:
 
 ```fidl
 protocol TicTacToe {
@@ -540,7 +540,6 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 <!-- xrefs -->
 [hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
-[lang-libraries]: /docs/reference/fidl/language/language.md#libraries
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
 [lang-structs]: /docs/reference/fidl/language/language.md#structs

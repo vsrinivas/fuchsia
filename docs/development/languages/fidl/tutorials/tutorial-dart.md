@@ -188,7 +188,7 @@ You should see the output:
 ## `Echo` across languages and runtimes
 As a final exercise, you can now mix & match `Echo` clients and servers as you
 see fit. Let's try having the Dart client call the C++ server (from the
-[C++ version of the example]]tutorial-cpp]).
+[C++ version of the example][tutorial-cpp]).
 
 ```sh
 $ fx shell run fuchsia-pkg://fuchsia.com/echo_client_async_dart#meta/echo_client_async_dart.cmx \

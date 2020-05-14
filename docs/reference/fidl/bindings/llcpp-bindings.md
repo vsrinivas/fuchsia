@@ -641,9 +641,7 @@ Name[]` field on the protocol class, containing the full protocol name.
 /docs/development/languages/fidl/tutorials/tutorial-llcpp.md#async-server
 [llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
 [llcpp-server-example]: /garnet/examples/fidl/echo_server_llcpp
-[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
-[lang-libraries]: /docs/reference/fidl/language/language.md#libraries
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
 [lang-structs]: /docs/reference/fidl/language/language.md#structs

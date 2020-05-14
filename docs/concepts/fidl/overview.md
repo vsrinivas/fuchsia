@@ -622,3 +622,4 @@ reference][language-reference], or the [contributing doc][fidl-contributing].
 [developer-guides]: /docs/development/languages/fidl/
 [fidl-contributing]: /docs/community/contribute/contributing_to_fidl.md
 [compiler-spec]: /docs/development/languages/fidl/guides/
+[attributes]: /docs/reference/fidl/language/attributes.md

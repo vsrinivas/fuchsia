@@ -447,9 +447,7 @@ protocol name.
 
 <!-- xrefs -->
 [go-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-go.md
-[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
-[lang-libraries]: /docs/reference/fidl/language/language.md#libraries
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
