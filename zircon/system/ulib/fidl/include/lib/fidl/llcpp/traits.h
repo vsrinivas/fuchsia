@@ -27,13 +27,6 @@
 // |T::Type|          is a fidl_type_t* pointing to the corresponding coding table, if any.
 //                    If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
 //
-// Additionally, during wire-format migrations, the bindings may need to send/receive bytes in an
-// alternate format different from the one implied by memory layouts of the generated structures:
-//
-// |T::AltType|         is a fidl_type_t* pointing to the coding table for the alternate format.
-// |T::AltPrimarySize|  is the |PrimarySize| of the alternate format.
-// |T::AltMaxOutOfLine| is the |MaxOutOfLine| of the alternate format.
-//
 // Additionally, if |T| is a transactional message:
 //
 // |T::HasFlexibleEnvelope| is a bool specifying if this message contains a flexible xunion or
@@ -240,21 +233,10 @@ struct HasResponseType : std::false_type {};
 template <typename FidlType>
 struct HasResponseType<FidlType, void_t<typename FidlType::ResponseType>> : std::true_type {};
 
-// This can be passed to the various message size calculation utilities to indicate which
-// wire-format are we calculating for.
-enum class WireFormatGuide {
-  // The wire-format that corresponds to the generated LLCPP structures i.e. the in-memory format.
-  kCurrent,
-
-  // An alternate wire-format when a wire-format migration is ongoing.
-  kAlternate
-};
-
 // Calculates the maximum possible message size for a FIDL type,
 // clamped at the Zircon channel transport packet size.
 // TODO(FIDL-771): users of this API should always specify a meaningful direction.
-template <typename FidlType, const MessageDirection Direction,
-          const WireFormatGuide WireFormat = WireFormatGuide::kCurrent>
+template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
   if constexpr (IsResponseType<FidlType>()) {
@@ -264,22 +246,8 @@ constexpr uint32_t ClampedMessageSize() {
   }
   // These can be modified to return the ::Alt variant when a migration
   // is ongoing
-  uint64_t primary = [] {
-    switch (WireFormat) {
-      case WireFormatGuide::kCurrent:
-        return FidlAlign(FidlType::PrimarySize);
-      case WireFormatGuide::kAlternate:
-        return FidlAlign(FidlType::PrimarySize);
-    }
-  }();
-  uint64_t out_of_line = [] {
-    switch (WireFormat) {
-      case WireFormatGuide::kCurrent:
-        return FidlAlign(FidlType::MaxOutOfLine);
-      case WireFormatGuide::kAlternate:
-        return FidlAlign(FidlType::MaxOutOfLine);
-    }
-  }();
+  uint64_t primary = FidlAlign(FidlType::PrimarySize);
+  uint64_t out_of_line = FidlAlign(FidlType::MaxOutOfLine);
   uint64_t sum = primary + out_of_line;
   if (sum > ZX_CHANNEL_MAX_MSG_BYTES) {
     return ZX_CHANNEL_MAX_MSG_BYTES;
