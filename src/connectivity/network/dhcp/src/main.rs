@@ -397,6 +397,7 @@ where
 
         let fut = futures::future::try_join(msg_loops, lease_expiration_handler);
 
+        log::info!("Server starting");
         match futures::future::Abortable::new(fut, abort_registration).await {
             Ok(Ok((_void, ()))) => Err(anyhow::anyhow!("Server futures finished unexpectedly")),
             Ok(Err(error)) => {
