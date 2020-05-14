@@ -15,6 +15,7 @@ rustc_library("lib") {
   deps = [
     "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
@@ -48,7 +49,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -450,6 +450,7 @@ rustc_test("metrics") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -459,7 +460,6 @@ rustc_test("metrics") {
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }
 

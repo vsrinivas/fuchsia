@@ -359,6 +359,7 @@ executable("feedback_data_integration_test") {
   deps = [
     ":zx_object_util",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",
@@ -383,7 +384,6 @@ executable("feedback_data_integration_test") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 

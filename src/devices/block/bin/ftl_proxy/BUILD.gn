@@ -42,11 +42,11 @@ executable("ftl-proxy-bin") {
   deps = [
     ":ftl-util",
     ":local_storage_metrics",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-cobalt:llcpp",
   ]
 }
 

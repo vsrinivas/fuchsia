@@ -29,6 +29,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback-rustc",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
@@ -62,7 +63,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

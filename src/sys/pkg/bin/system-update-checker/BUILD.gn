@@ -14,6 +14,7 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/sysconfig-client",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
@@ -48,7 +49,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

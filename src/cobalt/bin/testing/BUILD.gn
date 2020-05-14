@@ -22,7 +22,7 @@ source_set("fake_logger_lib") {
 
   public_deps = [
     ":log_method",
-    "//zircon/system/fidl/fuchsia-cobalt",
+    "//sdk/fidl/fuchsia.cobalt",
   ]
 }
 

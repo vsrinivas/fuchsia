@@ -16,6 +16,6 @@ source_set("fake_fetchers") {
 
   deps = [
     "..:system_metrics_daemon_lib",
-    "//zircon/system/fidl/fuchsia-cobalt",
+    "//sdk/fidl/fuchsia.cobalt",
   ]
 }

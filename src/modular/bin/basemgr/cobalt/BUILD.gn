@@ -30,8 +30,8 @@ source_set("cobalt") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//src/lib/callback",
     "//src/lib/cobalt/cpp:cobalt_logger",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

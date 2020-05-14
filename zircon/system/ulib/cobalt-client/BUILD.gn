@@ -24,7 +24,7 @@ source_set("cobalt-types-internal") {
     "test:*",
   ]
   public = [ "include/cobalt-client/cpp/types_internal.h" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-cobalt:llcpp" ]
+  public_deps = [ "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp" ]
   public_configs = [ ":includes" ]
 }
 
@@ -43,13 +43,11 @@ source_set("cobalt-collector") {
   ]
   public_deps = [
     ":cobalt-types-internal",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-cobalt:llcpp",
   ]
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
   public_configs = [ ":includes" ]
 }
 
@@ -59,10 +57,10 @@ source_set("cobalt-metrics") {
     "test:*",
   ]
   public = [
-    "include/cobalt-client/cpp/histogram_internal.h",
     "include/cobalt-client/cpp/counter.h",
-    "include/cobalt-client/cpp/histogram.h",
     "include/cobalt-client/cpp/counter_internal.h",
+    "include/cobalt-client/cpp/histogram.h",
+    "include/cobalt-client/cpp/histogram_internal.h",
     "include/cobalt-client/cpp/metric_options.h",
   ]
   sources = [
@@ -92,8 +90,8 @@ zx_library("in-memory-logger") {
   public_deps = [ ":cobalt-metrics" ]
   deps = [
     ":cobalt-types-internal",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-cobalt:llcpp",
   ]
 }

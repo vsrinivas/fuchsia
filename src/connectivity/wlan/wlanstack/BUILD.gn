@@ -28,6 +28,7 @@ rustc_binary("bin") {
     ":wlan_metrics_registry_rustlib",
     "////sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
@@ -62,7 +63,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]

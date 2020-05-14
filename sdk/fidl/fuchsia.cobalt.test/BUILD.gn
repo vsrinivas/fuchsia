@@ -9,5 +9,5 @@ fidl("fuchsia.cobalt.test") {
 
   sources = [ "query.test.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-cobalt" ]
+  public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
 }

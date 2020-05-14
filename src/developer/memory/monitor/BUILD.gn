@@ -17,6 +17,7 @@ source_set("lib") {
     "pressure.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.hardware.ram.metrics",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.memorypressure",
@@ -25,7 +26,6 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/memory/metrics",
     "//zircon/public/lib/trace",
-    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/ulib/inspect",
   ]
   deps = [

@@ -51,8 +51,8 @@ source_set("cobalt") {
 
   public_deps = [
     ":fidl_server",
+    "//sdk/fidl/fuchsia.cobalt",
     "//src/developer/feedback/utils/cobalt",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 
   deps = [

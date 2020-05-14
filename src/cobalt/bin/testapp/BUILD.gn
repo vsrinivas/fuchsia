@@ -49,6 +49,7 @@ executable("cobalt_testapp") {
     ":prober_metrics_registry_cc",
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:base64",
@@ -61,7 +62,6 @@ executable("cobalt_testapp") {
     "//third_party/cobalt/src/registry:cobalt_registry_proto",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 
   configs += [ "//third_party/cobalt:cobalt_config" ]

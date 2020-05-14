@@ -1,24 +1,9 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/unification/fidl_alias.gni")
 
-fidl_library("fuchsia-cobalt") {
-  sdk = true
-  fuzzers = [
-    {
-      protocol = "fuchsia.cobalt.LoggerFactory"
-    },
-    {
-      protocol = "fuchsia.cobalt.Logger"
-    },
-    {
-      protocol = "fuchsia.cobalt.SystemDataUpdater"
-    },
-  ]
-  sources = [
-    "cobalt.fidl",
-    "cobalt_controller.fidl",
-  ]
+fidl_alias("fuchsia-cobalt") {
+  sdk_category = "partner"
 }

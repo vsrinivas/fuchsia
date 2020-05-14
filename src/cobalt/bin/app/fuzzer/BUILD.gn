@@ -10,12 +10,12 @@ source_set("logger_factory_server_provider") {
   sources = [ "logger_factory_server_provider.cc" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/app:lib",
     "//src/cobalt/bin/utils:base64",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 
@@ -25,12 +25,12 @@ source_set("logger_server_provider") {
   sources = [ "logger_server_provider.cc" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/app:lib",
     "//src/cobalt/bin/utils:base64",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 
@@ -40,16 +40,16 @@ source_set("system_data_updater_server_provider") {
   sources = [ "system_data_updater_server_provider.cc" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/app:lib",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 
 fidl_protocol_fuzzer("logger_factory_fuzzer") {
-  fidl = "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt"
+  fidl = "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt"
   protocol = "fuchsia.cobalt.LoggerFactory"
   deps = [ ":logger_factory_server_provider" ]
 
@@ -58,7 +58,7 @@ fidl_protocol_fuzzer("logger_factory_fuzzer") {
 }
 
 fidl_protocol_fuzzer("logger_fuzzer") {
-  fidl = "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt"
+  fidl = "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt"
   protocol = "fuchsia.cobalt.Logger"
   deps = [ ":logger_server_provider" ]
 
@@ -67,7 +67,7 @@ fidl_protocol_fuzzer("logger_fuzzer") {
 }
 
 fidl_protocol_fuzzer("system_data_updater_fuzzer") {
-  fidl = "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt"
+  fidl = "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt"
   protocol = "fuchsia.cobalt.SystemDataUpdater"
   deps = [ ":system_data_updater_server_provider" ]
 

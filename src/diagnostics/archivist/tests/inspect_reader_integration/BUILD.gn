@@ -12,6 +12,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
@@ -31,7 +32,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:timebomb",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }
 

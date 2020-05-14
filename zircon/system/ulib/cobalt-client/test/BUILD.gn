@@ -33,6 +33,7 @@ source_set("collector-test") {
   ]
   include_dirs = [ "../include/" ]
   deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
@@ -42,7 +43,6 @@ source_set("collector-test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-cobalt:llcpp",
     "//zircon/system/ulib/cobalt-client:cobalt-collector",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
   ]

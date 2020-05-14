@@ -118,13 +118,13 @@ source_set("reporter") {
   public_deps = [
     ":reboot_log",
     ":reboot_reason",
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils/cobalt",
     "//src/developer/feedback/utils/fidl:oneshot_ptr",
     "//zircon/public/lib/fit",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 
   deps = [
