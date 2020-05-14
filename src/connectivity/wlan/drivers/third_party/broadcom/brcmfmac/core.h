@@ -27,6 +27,7 @@
 #include <netinet/if_ether.h>
 #include <threads.h>
 
+#include <array>
 #include <atomic>
 #include <mutex>
 
@@ -67,6 +68,8 @@
 #define BRCMF_DRIVER_FIRMWARE_VERSION_LEN 32
 
 #define NDOL_MAX_ENTRIES 8
+
+#define RSSI_HISTOGRAM_LEN 129
 
 static inline bool address_is_multicast(const uint8_t* address) { return 1 & *address; }
 
@@ -253,6 +256,9 @@ struct net_device {
     int multicast;
     int rx_errors;
     int tx_errors;
+    // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
+    std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
+    wlanif_mlme_stats_t mlme_stats;
   } stats;
   zx::channel sme_channel;
   uint32_t features;

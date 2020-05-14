@@ -23,6 +23,59 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 
+/**
+ * DOC: Firmware Signalling
+ *
+ * Firmware can send signals to host and vice versa, which are passed in the
+ * data packets using TLV based header. This signalling layer is on top of the
+ * BDC bus protocol layer.
+ */
+#define BRCMF_FWS_FLAGS_RSSI_SIGNALS 0x0001
+#define BRCMF_FWS_FLAGS_XONXOFF_SIGNALS 0x0002
+#define BRCMF_FWS_FLAGS_CREDIT_STATUS_SIGNALS 0x0004
+#define BRCMF_FWS_FLAGS_HOST_PROPTXSTATUS_ACTIVE 0x0008
+#define BRCMF_FWS_FLAGS_PSQ_GENERATIONFSM_ENABLE 0x0010
+#define BRCMF_FWS_FLAGS_PSQ_ZERO_BUFFER_ENABLE 0x0020
+#define BRCMF_FWS_FLAGS_HOST_RXREORDER_ACTIVE 0x0040
+
+/*
+ * single definition for firmware-driver flow control tlv's.
+ *
+ * each tlv is specified by BRCMF_FWS_TLV_DEF(name, ID, length).
+ * A length value 0 indicates variable length tlv.
+ */
+#define BRCMF_FWS_TLV_DEFLIST                    \
+  BRCMF_FWS_TLV_DEF(MAC_OPEN, 1, 1)              \
+  BRCMF_FWS_TLV_DEF(MAC_CLOSE, 2, 1)             \
+  BRCMF_FWS_TLV_DEF(MAC_REQUEST_CREDIT, 3, 2)    \
+  BRCMF_FWS_TLV_DEF(TXSTATUS, 4, 4)              \
+  BRCMF_FWS_TLV_DEF(PKTTAG, 5, 4)                \
+  BRCMF_FWS_TLV_DEF(MACDESC_ADD, 6, 8)           \
+  BRCMF_FWS_TLV_DEF(MACDESC_DEL, 7, 8)           \
+  BRCMF_FWS_TLV_DEF(RSSI, 8, 1)                  \
+  BRCMF_FWS_TLV_DEF(INTERFACE_OPEN, 9, 1)        \
+  BRCMF_FWS_TLV_DEF(INTERFACE_CLOSE, 10, 1)      \
+  BRCMF_FWS_TLV_DEF(FIFO_CREDITBACK, 11, 6)      \
+  BRCMF_FWS_TLV_DEF(PENDING_TRAFFIC_BMP, 12, 2)  \
+  BRCMF_FWS_TLV_DEF(MAC_REQUEST_PACKET, 13, 3)   \
+  BRCMF_FWS_TLV_DEF(HOST_REORDER_RXPKTS, 14, 10) \
+  BRCMF_FWS_TLV_DEF(TRANS_ID, 18, 6)             \
+  BRCMF_FWS_TLV_DEF(COMP_TXSTATUS, 19, 1)        \
+  BRCMF_FWS_TLV_DEF(FILLER, 255, 0)
+
+#define FWS_TLV_TYPE_SIZE 1
+#define FWS_TLV_LEN_SIZE 2
+#define FWS_TLV_TYPE_OFFSET 0
+#define FWS_TLV_LEN_OFFSET (FWS_TLV_TYPE_OFFSET + FWS_TLV_TYPE_SIZE)
+#define FWS_TLV_DATA_OFFSET (FWS_TLV_LEN_OFFSET + FWS_TLV_LEN_SIZE)
+#define FWS_RSSI_DATA_LEN 1
+/*
+ * enum brcmf_fws_tlv_type - definition of tlv identifiers.
+ */
+#define BRCMF_FWS_TLV_DEF(name, id, len) BRCMF_FWS_TYPE_##name = id,
+enum brcmf_fws_tlv_type { BRCMF_FWS_TLV_DEFLIST BRCMF_FWS_TYPE_INVALID };
+#undef BRCMF_FWS_TLV_DEF
+
 zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws_out);
 void brcmf_fws_detach(struct brcmf_fws_info* fws);
 bool brcmf_fws_queue_netbufs(struct brcmf_fws_info* fws);

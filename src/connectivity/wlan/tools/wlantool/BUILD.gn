@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/lib/fidl/rust/fidl",

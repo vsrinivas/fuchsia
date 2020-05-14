@@ -34,46 +34,6 @@
 #include "proto.h"
 #include "workqueue.h"
 
-/**
- * DOC: Firmware Signalling
- *
- * Firmware can send signals to host and vice versa, which are passed in the
- * data packets using TLV based header. This signalling layer is on top of the
- * BDC bus protocol layer.
- */
-
-/*
- * single definition for firmware-driver flow control tlv's.
- *
- * each tlv is specified by BRCMF_FWS_TLV_DEF(name, ID, length).
- * A length value 0 indicates variable length tlv.
- */
-#define BRCMF_FWS_TLV_DEFLIST                    \
-  BRCMF_FWS_TLV_DEF(MAC_OPEN, 1, 1)              \
-  BRCMF_FWS_TLV_DEF(MAC_CLOSE, 2, 1)             \
-  BRCMF_FWS_TLV_DEF(MAC_REQUEST_CREDIT, 3, 2)    \
-  BRCMF_FWS_TLV_DEF(TXSTATUS, 4, 4)              \
-  BRCMF_FWS_TLV_DEF(PKTTAG, 5, 4)                \
-  BRCMF_FWS_TLV_DEF(MACDESC_ADD, 6, 8)           \
-  BRCMF_FWS_TLV_DEF(MACDESC_DEL, 7, 8)           \
-  BRCMF_FWS_TLV_DEF(RSSI, 8, 1)                  \
-  BRCMF_FWS_TLV_DEF(INTERFACE_OPEN, 9, 1)        \
-  BRCMF_FWS_TLV_DEF(INTERFACE_CLOSE, 10, 1)      \
-  BRCMF_FWS_TLV_DEF(FIFO_CREDITBACK, 11, 6)      \
-  BRCMF_FWS_TLV_DEF(PENDING_TRAFFIC_BMP, 12, 2)  \
-  BRCMF_FWS_TLV_DEF(MAC_REQUEST_PACKET, 13, 3)   \
-  BRCMF_FWS_TLV_DEF(HOST_REORDER_RXPKTS, 14, 10) \
-  BRCMF_FWS_TLV_DEF(TRANS_ID, 18, 6)             \
-  BRCMF_FWS_TLV_DEF(COMP_TXSTATUS, 19, 1)        \
-  BRCMF_FWS_TLV_DEF(FILLER, 255, 0)
-
-/*
- * enum brcmf_fws_tlv_type - definition of tlv identifiers.
- */
-#define BRCMF_FWS_TLV_DEF(name, id, len) BRCMF_FWS_TYPE_##name = id,
-enum brcmf_fws_tlv_type { BRCMF_FWS_TLV_DEFLIST BRCMF_FWS_TYPE_INVALID };
-#undef BRCMF_FWS_TLV_DEF
-
 /*
  * enum brcmf_fws_tlv_len - definition of tlv lengths.
  */
@@ -134,13 +94,6 @@ static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
 /*
  * flags used to enable tlv signalling from firmware.
  */
-#define BRCMF_FWS_FLAGS_RSSI_SIGNALS 0x0001
-#define BRCMF_FWS_FLAGS_XONXOFF_SIGNALS 0x0002
-#define BRCMF_FWS_FLAGS_CREDIT_STATUS_SIGNALS 0x0004
-#define BRCMF_FWS_FLAGS_HOST_PROPTXSTATUS_ACTIVE 0x0008
-#define BRCMF_FWS_FLAGS_PSQ_GENERATIONFSM_ENABLE 0x0010
-#define BRCMF_FWS_FLAGS_PSQ_ZERO_BUFFER_ENABLE 0x0020
-#define BRCMF_FWS_FLAGS_HOST_RXREORDER_ACTIVE 0x0040
 
 #define BRCMF_FWS_MAC_DESC_TABLE_SIZE 32
 #define BRCMF_FWS_MAC_DESC_ID_INVALID 0xff
@@ -611,7 +564,7 @@ static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct b
   }
 
   if (h->items[slot_id].state != BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
-    BRCMF_ERR("slot is not free");
+    BRCMF_ERR("slot is not free: %d", h->items[slot_id].state);
     h->failed_to_push++;
     return ZX_ERR_BAD_STATE;
   }
@@ -976,9 +929,14 @@ static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq
   return;
 }
 
-static zx_status_t brcmf_fws_rssi_indicate(struct brcmf_fws_info* fws, int8_t rssi) {
+static void brcmf_fws_rssi_indicate(struct brcmf_if* ifp, int8_t rssi) {
   BRCMF_DBG(CTL, "rssi %d", rssi);
-  return ZX_OK;
+  // Note that using an unsigned int8 to set the value of index ensures that -128
+  // is handled as well.
+  if (ifp->ndev && (rssi <= 0)) {
+    uint8_t idx = -rssi;
+    ifp->ndev->stats.rssi_buckets[idx]++;
+  }
 }
 
 static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
@@ -1814,18 +1772,18 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
   schedule_status = BRCMF_FWS_NOSCHEDULE;
   while (data_len > 0) {
     /* extract tlv info */
-    type = signal_data[0];
+    type = signal_data[FWS_TLV_TYPE_OFFSET];
 
     /* FILLER type is actually not a TLV, but
      * a single byte that can be skipped.
      */
     if (type == BRCMF_FWS_TYPE_FILLER) {
-      signal_data += 1;
-      data_len -= 1;
+      signal_data += FWS_TLV_TYPE_SIZE;
+      data_len -= FWS_TLV_TYPE_SIZE;
       continue;
     }
-    len = signal_data[1];
-    data = signal_data + 2;
+    len = signal_data[FWS_TLV_LEN_OFFSET];
+    data = signal_data + FWS_TLV_LEN_SIZE;
 
     err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
     BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)",
@@ -1833,7 +1791,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
               tlv_len);
 
     /* abort parsing when length invalid */
-    if (data_len < len + 2) {
+    if (data_len < len + FWS_TLV_LEN_SIZE) {
       break;
     }
 
@@ -1873,7 +1831,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         schedule_status = brcmf_fws_fifocreditback_indicate(fws, data);
         break;
       case BRCMF_FWS_TYPE_RSSI:
-        brcmf_fws_rssi_indicate(fws, *data);
+        brcmf_fws_rssi_indicate(ifp, *data);
         break;
       case BRCMF_FWS_TYPE_TRANS_ID:
         brcmf_fws_dbg_seqnum_check(fws, data);
@@ -1884,8 +1842,8 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         fws->stats.tlv_invalid_type++;
         break;
     }
-    signal_data += len + 2;
-    data_len -= len + 2;
+    signal_data += len + FWS_TLV_LEN_SIZE;
+    data_len -= len + FWS_TLV_LEN_SIZE;
   }
 
   if (data_len != 0) {
@@ -2231,6 +2189,18 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
   fws->drvr = drvr;
   fws->fcmode = static_cast<brcmf_fws_fcmode>(drvr->settings->fcmode);
 
+  /* Setting the iovar may fail if feature is unsupported
+   * so leave the rc as is so driver initialization can
+   * continue. Set mode back to none indicating not enabled.
+   */
+  fws->fw_signals = true;
+  ifp = brcmf_get_ifp(drvr, 0);
+  if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
+    BRCMF_ERR("failed to set bdcv2 tlv signaling");
+    fws->fcmode = BRCMF_FWS_FCMODE_NONE;
+    fws->fw_signals = false;
+  }
+
   if ((drvr->bus_if->always_use_fws_queue == false) && (fws->fcmode == BRCMF_FWS_FCMODE_NONE)) {
     fws->avoid_queueing = true;
     BRCMF_DBG(INFO, "FWS queueing will be avoided");
@@ -2263,18 +2233,6 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
     BRCMF_ERR("register bcmc credit handler failed");
     brcmf_fweh_unregister(drvr, BRCMF_E_FIFO_CREDIT_MAP);
     goto fail;
-  }
-
-  /* Setting the iovar may fail if feature is unsupported
-   * so leave the rc as is so driver initialization can
-   * continue. Set mode back to none indicating not enabled.
-   */
-  fws->fw_signals = true;
-  ifp = brcmf_get_ifp(drvr, 0);
-  if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
-    BRCMF_ERR("failed to set bdcv2 tlv signaling");
-    fws->fcmode = BRCMF_FWS_FCMODE_NONE;
-    fws->fw_signals = false;
   }
 
   if (brcmf_fil_iovar_int_set(ifp, "ampdu_hostreorder", 1, nullptr) != ZX_OK) {

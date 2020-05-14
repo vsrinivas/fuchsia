@@ -1550,6 +1550,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
     }
   }
   cfg->signal_report_timer->Stop();
+  ndev->stats = {};
 
   BRCMF_DBG(TRACE, "Exit");
 }
@@ -3595,46 +3596,56 @@ void brcmf_if_stats_query_req(net_device* ndev) {
   switch (wdev->iftype) {
     case WLAN_INFO_MAC_ROLE_CLIENT: {
       zx_status_t status;
-      struct brcmf_pktcnt_le pktcnt;
-      wlanif_mlme_stats_t mlme_stats = {};
-      response.stats.mlme_stats_list = &mlme_stats;
-      response.stats.mlme_stats_count = 1;
+      brcmf_pktcnt_le pktcnt;
+      wlanif_mlme_stats_t* mlme_stats;
 
-      mlme_stats.tag = WLANIF_MLME_STATS_TYPE_CLIENT;
-      wlanif_client_mlme_stats_t* stats = &mlme_stats.stats.client_mlme_stats;
-      memset(stats, 0, sizeof(*stats));
-      // Retrieve the stats from firmware and fill in the relevant mlme
-      // stats
-      status =
-          brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_GET_PKTCNTS, &pktcnt, sizeof(pktcnt), &fw_err);
-      if (status != ZX_OK) {
-        BRCMF_ERR("could not get pkt cnts: %s, fw err %s", zx_status_get_string(status),
-                  brcmf_fil_get_errstr(fw_err));
+      mlme_stats = &ndev->stats.mlme_stats;
+      *mlme_stats = {};
+      response.stats.mlme_stats_list = mlme_stats;
+
+      mlme_stats->tag = WLANIF_MLME_STATS_TYPE_CLIENT;
+      if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+        response.stats.mlme_stats_count = 1;
+        // Retrieve the stats from firmware and fill in the relevant mlme
+        // stats if the client is associated
+        status =
+            brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_GET_PKTCNTS, &pktcnt, sizeof(pktcnt), &fw_err);
+        if (status != ZX_OK) {
+          BRCMF_ERR("could not get pkt cnts: %s, fw err %s", zx_status_get_string(status),
+                    brcmf_fil_get_errstr(fw_err));
+        } else {
+          BRCMF_DBG(INFO, "Cntrs: rxgood:%d rxbad:%d txgood:%d txbad:%d rxocast:%d",
+                    pktcnt.rx_good_pkt, pktcnt.rx_bad_pkt, pktcnt.tx_good_pkt, pktcnt.tx_bad_pkt,
+                    pktcnt.rx_ocast_good_pkt);
+
+          mlme_stats->stats.client_mlme_stats.rx_frame.in.count =
+              pktcnt.rx_good_pkt + pktcnt.rx_bad_pkt + pktcnt.rx_ocast_good_pkt;
+          mlme_stats->stats.client_mlme_stats.rx_frame.in.name = "Good+Bad+Ocast";
+
+          mlme_stats->stats.client_mlme_stats.rx_frame.out.count =
+              pktcnt.rx_good_pkt + pktcnt.rx_ocast_good_pkt;
+          mlme_stats->stats.client_mlme_stats.rx_frame.out.name = "Good+Ocast";
+
+          mlme_stats->stats.client_mlme_stats.rx_frame.drop.count = pktcnt.rx_bad_pkt;
+          mlme_stats->stats.client_mlme_stats.rx_frame.drop.name = "Bad";
+
+          mlme_stats->stats.client_mlme_stats.tx_frame.in.count =
+              pktcnt.tx_good_pkt + pktcnt.tx_bad_pkt;
+          mlme_stats->stats.client_mlme_stats.tx_frame.in.name = "Good+Bad";
+
+          mlme_stats->stats.client_mlme_stats.tx_frame.out.count = pktcnt.tx_good_pkt;
+          mlme_stats->stats.client_mlme_stats.tx_frame.out.name = "Good";
+
+          mlme_stats->stats.client_mlme_stats.tx_frame.drop.count = pktcnt.tx_bad_pkt;
+          mlme_stats->stats.client_mlme_stats.tx_frame.drop.name = "Bad";
+        }
+        // Pass on the data rssi histogram (populated in fwsignal.cc)
+        mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_list =
+            ndev->stats.rssi_buckets.data();
+        mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_count = RSSI_HISTOGRAM_LEN;
       } else {
-        BRCMF_DBG(INFO, "Cntrs: rxgood:%d rxbad:%d txgood:%d txbad:%d rxocast:%d",
-                  pktcnt.rx_good_pkt, pktcnt.rx_bad_pkt, pktcnt.tx_good_pkt, pktcnt.tx_bad_pkt,
-                  pktcnt.rx_ocast_good_pkt);
-
-        mlme_stats.stats.client_mlme_stats.rx_frame.in.count =
-            pktcnt.rx_good_pkt + pktcnt.rx_bad_pkt + pktcnt.rx_ocast_good_pkt;
-        mlme_stats.stats.client_mlme_stats.rx_frame.in.name = "Good+Bad+Ocast";
-
-        mlme_stats.stats.client_mlme_stats.rx_frame.out.count =
-            pktcnt.rx_good_pkt + pktcnt.rx_ocast_good_pkt;
-        mlme_stats.stats.client_mlme_stats.rx_frame.out.name = "Good+Ocast";
-
-        mlme_stats.stats.client_mlme_stats.rx_frame.drop.count = pktcnt.rx_bad_pkt;
-        mlme_stats.stats.client_mlme_stats.rx_frame.drop.name = "Bad";
-
-        mlme_stats.stats.client_mlme_stats.tx_frame.in.count =
-            pktcnt.tx_good_pkt + pktcnt.tx_bad_pkt;
-        mlme_stats.stats.client_mlme_stats.tx_frame.in.name = "Good+Bad";
-
-        mlme_stats.stats.client_mlme_stats.tx_frame.out.count = pktcnt.tx_good_pkt;
-        mlme_stats.stats.client_mlme_stats.tx_frame.out.name = "Good";
-
-        mlme_stats.stats.client_mlme_stats.tx_frame.drop.count = pktcnt.tx_bad_pkt;
-        mlme_stats.stats.client_mlme_stats.tx_frame.drop.name = "Bad";
+        response.stats.mlme_stats_list = nullptr;
+        response.stats.mlme_stats_count = 0;
       }
       break;
     }

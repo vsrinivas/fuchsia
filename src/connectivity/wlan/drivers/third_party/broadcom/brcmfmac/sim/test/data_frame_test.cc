@@ -93,6 +93,9 @@ class DataFrameTest : public SimTest {
   // Send a data frame to the ap
   void ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr, std::vector<uint8_t>& ethFrame);
 
+  void SendStatsQuery();
+  void ScheduleStatsQuery(zx::duration when);
+
  protected:
   struct AssocContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
@@ -151,6 +154,9 @@ class DataFrameTest : public SimTest {
 
   DataContext data_context_;
 
+  // number of status query responses received
+  size_t status_query_rsp_count_ = 0;
+
  private:
   // StationIfc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
@@ -166,6 +172,7 @@ class DataFrameTest : public SimTest {
   void OnEapolConf(const wlanif_eapol_confirm_t* resp);
   void OnEapolInd(const wlanif_eapol_indication_t* ind);
   void OnDataRecv(const void* data_buffer, size_t data_size);
+  void OnStatsQueryResp(const wlanif_stats_query_response_t* resp);
   static void TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf);
 };
 
@@ -210,6 +217,10 @@ wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
     .eapol_ind =
         [](void* cookie, const wlanif_eapol_indication_t* ind) {
           static_cast<DataFrameTest*>(cookie)->OnEapolInd(ind);
+        },
+    .stats_query_resp =
+        [](void* cookie, const wlanif_stats_query_response_t* response) {
+          static_cast<DataFrameTest*>(cookie)->OnStatsQueryResp(response);
         },
     .data_recv =
         [](void* cookie, const void* data_buffer, size_t data_size, uint32_t flags) {
@@ -305,6 +316,27 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   std::memcpy(resp.data(), data_buffer, data_size);
   data_context_.received_data.push_back(std::move(resp));
   non_eapol_data_count++;
+}
+
+void DataFrameTest::OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {
+  status_query_rsp_count_++;
+  ASSERT_NE(resp->stats.mlme_stats_list, nullptr);
+  uint64_t num_rssi_ind = 0;
+  for (int idx = 0; idx < RSSI_HISTOGRAM_LEN; idx++) {
+    num_rssi_ind +=
+        resp->stats.mlme_stats_list->stats.client_mlme_stats.assoc_data_rssi.hist_list[idx];
+  }
+  ASSERT_NE(num_rssi_ind, 0U);
+}
+
+void DataFrameTest::SendStatsQuery() {
+  client_ifc_->if_impl_ops_->stats_query_req(client_ifc_->if_impl_ctx_);
+}
+
+void DataFrameTest::ScheduleStatsQuery(zx::duration when) {
+  auto fn = std::make_unique<std::function<void()>>();
+  *fn = std::bind(&DataFrameTest::SendStatsQuery, this);
+  env_->ScheduleNotification(std::move(fn), when);
 }
 
 void DataFrameTest::StartAssoc() {
@@ -526,8 +558,9 @@ TEST_F(DataFrameTest, RxDataFrame) {
   data_context_.expected_received_data.push_back(
       CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_IP), kSampleEthBody));
   ScheduleClientTx(ifc_mac_, kClientMacAddress, data_context_.expected_received_data.back(),
-                   zx::sec(10));
+                   zx::msec(100));
 
+  ScheduleStatsQuery(zx::msec(500));
   // Run
   env_->Run();
 
@@ -536,6 +569,8 @@ TEST_F(DataFrameTest, RxDataFrame) {
   EXPECT_EQ(non_eapol_data_count, 1U);
   ASSERT_EQ(data_context_.received_data.size(), data_context_.expected_received_data.size());
   EXPECT_EQ(data_context_.received_data.front(), data_context_.expected_received_data.front());
+  // Confirm that the driver received a status query response
+  EXPECT_EQ(status_query_rsp_count_, 1U);
 }
 
 // Test driver can receive data frames

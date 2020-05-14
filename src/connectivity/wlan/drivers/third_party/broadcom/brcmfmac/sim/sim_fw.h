@@ -237,6 +237,7 @@ class SimFirmware {
     uint32_t wsec = 0;
     struct brcmf_wsec_key_le wsec_key;
     uint32_t wpa_auth = 0;
+    uint32_t tlv = 0;
     bool ap_mode;
     ApConfig ap_config;
   } sim_iface_entry_t;
@@ -252,7 +253,8 @@ class SimFirmware {
   static constexpr uint8_t kMaxIfSupported = 4;
 
   // BCDC interface
-  std::unique_ptr<std::vector<uint8_t>> CreateBcdcBuffer(size_t requested_size, size_t* offset_out);
+  std::unique_ptr<std::vector<uint8_t>> CreateBcdcBuffer(size_t requested_size, size_t data_offset,
+                                                         size_t* offset_out);
   zx_status_t BcdcVarOp(uint16_t ifidx, brcmf_proto_bcdc_dcmd* msg, uint8_t* data, size_t len,
                         bool is_set);
 
@@ -324,7 +326,8 @@ class SimFirmware {
                          std::optional<common::MacAddr> addr = {});
 
   // Send received frame over the bus to the driver
-  void SendFrameToDriver(size_t payload_size, const std::vector<uint8_t>& buffer_in);
+  void SendFrameToDriver(uint16_t ifidx, size_t payload_size, const std::vector<uint8_t>& buffer_in,
+                         simulation::WlanRxInfo& info);
 
   // Get the idx of the SoftAP IF based on Mac address
   int16_t GetIfidxByMac(const common::MacAddr& addr);

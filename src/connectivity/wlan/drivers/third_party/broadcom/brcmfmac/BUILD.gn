@@ -161,6 +161,7 @@ source_set("core") {
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
+    "fwsignal.h",
     "proto.h",
     "regs.h",
     "soc.h",

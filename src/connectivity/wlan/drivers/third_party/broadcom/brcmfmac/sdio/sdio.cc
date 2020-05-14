@@ -3004,6 +3004,7 @@ static zx_status_t brcmf_sdio_bus_preinit(brcmf_bus* bus_if) {
 
   bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
   brcmf_bus_add_txhdrlen(sdiodev->drvr, bus->tx_hdrlen);
+  bus_if->always_use_fws_queue = false;
 
 done:
   return err;

@@ -30,6 +30,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwsignal.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 
 namespace wlan::brcmfmac {
@@ -76,9 +77,10 @@ zx_status_t SimFirmware::BusPreinit() {
 void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
 
 // Returns a bufer that can be used for BCDC-formatted communications, with the requested
-// payload size and an initialized BCDC header. "offset_out" represents the offset of the
-// payload within the returned buffer.
+// payload size and an initialized BCDC header. "data_offset" represents any signalling offset
+// (in words) and "offset_out" represents the offset of the payload within the returned buffer.
 std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(size_t requested_size,
+                                                                    size_t data_offset,
                                                                     size_t* offset_out) {
   size_t header_size = sizeof(brcmf_proto_bcdc_header);
   size_t total_size = header_size + requested_size;
@@ -90,8 +92,7 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(size_t reque
   header->priority = 0xff & BCDC_PRIORITY_MASK;
   header->flags2 = 0;
 
-  // Data immediately follows the header
-  header->data_offset = 0;
+  header->data_offset = data_offset;
 
   *offset_out = header_size;
   return buf;
@@ -1307,8 +1308,19 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
   }
 
   if (!std::strcmp(name, "auth")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
     auto auth = static_cast<const uint32_t*>(value);
     auth_state_.auth_type = *auth;
+  }
+
+  if (!std::strcmp(name, "tlv")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    auto tlv = static_cast<const uint32_t*>(value);
+    iface_tbl_[ifidx].tlv = *tlv;
   }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);
@@ -1396,6 +1408,14 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     }
     int32_t sim_snr = 40;
     memcpy(value_out, &sim_snr, sizeof(sim_snr));
+  } else if (!std::strcmp(name, "tlv")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_BAD_STATE;
+    }
+    memcpy(value_out, &iface_tbl_[ifidx].tlv, sizeof(uint32_t));
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'", name);
@@ -1642,13 +1662,13 @@ void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame,
 
 void SimFirmware::RxDataFrame(const simulation::SimDataFrame* data_frame,
                               simulation::WlanRxInfo& info) {
-  common::MacAddr mac_addr(mac_addr_);
-  // Not intended for us
-  if (data_frame->addr1_ != mac_addr) {
+  auto ifidx = GetIfidxByMac(data_frame->addr1_);
+  if (ifidx == -1) {
+    // Not meant for any of the valid IFs, ignore
     return;
   }
 
-  SendFrameToDriver(data_frame->payload_.size(), data_frame->payload_);
+  SendFrameToDriver(ifidx, data_frame->payload_.size(), data_frame->payload_, info);
 }
 
 // Start or restart the beacon watchdog. This is a timeout event mirroring how the firmware can
@@ -1849,7 +1869,7 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
     size_t requested_size, brcmf_event_msg_be** msg_out_be, size_t* payload_offset_out) {
   size_t total_size = sizeof(brcmf_event) + requested_size;
   size_t event_data_offset;
-  auto buf = CreateBcdcBuffer(total_size, &event_data_offset);
+  auto buf = CreateBcdcBuffer(total_size, 0, &event_data_offset);
 
   uint8_t* buffer_data = buf->data();
   auto event = reinterpret_cast<brcmf_event*>(&buffer_data[event_data_offset]);
@@ -1916,13 +1936,32 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
   brcmf_sim_rx_event(simdev_, std::move(buf));
 }
 
-void SimFirmware::SendFrameToDriver(size_t payload_size, const std::vector<uint8_t>& buffer_in) {
+void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
+                                    const std::vector<uint8_t>& buffer_in,
+                                    simulation::WlanRxInfo& info) {
   size_t header_offset;
-  auto buf = CreateBcdcBuffer(payload_size, &header_offset);
+  size_t signal_size_bytes = 0;
+
+  // If signalling is enabled (for now only RSSI) ensure space is reserved for it
+  if (iface_tbl_[ifidx].tlv & BRCMF_FWS_FLAGS_RSSI_SIGNALS) {
+    signal_size_bytes = FWS_TLV_TYPE_SIZE + FWS_TLV_LEN_SIZE + FWS_RSSI_DATA_LEN;
+  }
+  auto signal_size_words = signal_size_bytes >> 2;
+  auto buf = CreateBcdcBuffer(payload_size + signal_size_bytes, signal_size_words, &header_offset);
 
   if (payload_size != 0) {
     ZX_ASSERT(!buffer_in.empty());
     uint8_t* buf_data = buf->data();
+    if (iface_tbl_[ifidx].tlv & BRCMF_FWS_FLAGS_RSSI_SIGNALS) {
+      // TLV type
+      buf_data[header_offset + FWS_TLV_TYPE_OFFSET] = BRCMF_FWS_TYPE_RSSI;
+      // TLV Length
+      auto len = reinterpret_cast<uint16_t*>(&buf_data[header_offset + FWS_TLV_LEN_OFFSET]);
+      *len = FWS_RSSI_DATA_LEN;
+      // TLV value
+      buf_data[header_offset + FWS_TLV_DATA_OFFSET] = info.signal_strength;
+      header_offset += FWS_TLV_DATA_OFFSET + FWS_RSSI_DATA_LEN;
+    }
     memcpy(&buf_data[header_offset], buffer_in.data(), payload_size);
   }
 
