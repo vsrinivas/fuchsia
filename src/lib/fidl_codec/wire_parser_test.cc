@@ -49,15 +49,13 @@ zx_status_t AsyncLoopForTest::Run() { return impl_->loop()->Run(); }
 async_dispatcher_t* AsyncLoopForTest::dispatcher() { return impl_->loop()->dispatcher(); }
 
 LibraryLoader* InitLoader() {
-  std::vector<std::unique_ptr<std::istream>> library_files;
+  LibraryReadError err;
+  auto loader = new LibraryLoader();
   fidl_codec_test::FidlcodecExamples examples;
   for (const auto& element : examples.map()) {
-    std::unique_ptr<std::istream> file =
-        std::make_unique<std::istringstream>(std::istringstream(element.second));
-    library_files.push_back(std::move(file));
+    loader->AddContent(element.second, &err);
   }
-  LibraryReadError err;
-  return new LibraryLoader(&library_files, &err);
+  return loader;
 }
 
 LibraryLoader* GetLoader() {
@@ -1491,7 +1489,6 @@ TEST_F(WireParserTest, ParseTraversalMain) {
 // Corrupt data tests
 
 TEST_F(WireParserTest, BadSchemaPrintHex) {
-  std::vector<std::unique_ptr<std::istream>> library_files;
   // i32 in the schema is missing "subtype": "int32"
   std::string bad_schema = R"FIDL({
   "version": "0.0.1",
@@ -1576,11 +1573,9 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   "union_declarations": [],
   "xunion_declarations": []
 })FIDL";
-  std::unique_ptr<std::istream> file =
-      std::make_unique<std::istringstream>(std::istringstream(bad_schema));
-  library_files.push_back(std::move(file));
   LibraryReadError err;
-  LibraryLoader loader(&library_files, &err);
+  LibraryLoader loader;
+  loader.AddContent(bad_schema, &err);
   ASSERT_TRUE(err.value == LibraryReadError::ErrorValue::kOk);
   fidl::MessageBuffer buffer;
   fidl::Message message = buffer.CreateEmptyMessage();

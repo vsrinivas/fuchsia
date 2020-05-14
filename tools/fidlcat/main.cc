@@ -123,7 +123,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  std::vector<std::unique_ptr<std::istream>> paths;
+  std::vector<std::string> paths;
   std::vector<std::string> bad_paths;
   ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths, bad_paths);
   if (paths.empty()) {
@@ -140,7 +140,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   fidl_codec::LibraryReadError loader_err;
-  fidl_codec::LibraryLoader loader(&paths, &loader_err);
+  fidl_codec::LibraryLoader loader(paths, &loader_err);
   loader.ParseBuiltinSemantic();
   if (loader_err.value != fidl_codec::LibraryReadError::kOk) {
     FX_LOGS(ERROR) << "Failed to read libraries";

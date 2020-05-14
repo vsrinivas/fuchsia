@@ -233,8 +233,7 @@ fidl_codec::LibraryLoader* GetTestLibraryLoader() {
   if (test_library_loader == nullptr) {
     test_library_loader = new fidl_codec::LibraryLoader();
     fidl_codec::LibraryReadError err;
-    std::unique_ptr<std::istream> file = std::make_unique<std::istringstream>(echo_service);
-    test_library_loader->Add(&file, &err);
+    test_library_loader->AddContent(echo_service, &err);
   }
   return test_library_loader;
 }

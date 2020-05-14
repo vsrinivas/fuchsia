@@ -483,8 +483,8 @@ class Library {
 class LibraryLoader {
  public:
   friend class Library;
-  // Creates a LibraryLoader populated by the given library streams.
-  LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams, LibraryReadError* err);
+  // Creates a LibraryLoader populated by the given library paths.
+  LibraryLoader(const std::vector<std::string>& library_paths, LibraryReadError* err);
 
   // Creates a LibraryLoader with no libraries
   LibraryLoader() = default;
@@ -492,14 +492,18 @@ class LibraryLoader {
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader(const LibraryLoader&) = delete;
 
-  // Add the libraries for all the streams.
-  bool AddAll(std::vector<std::unique_ptr<std::istream>>* library_streams, LibraryReadError* err);
+  // Add the libraries for all the paths.
+  bool AddAll(const std::vector<std::string>& library_paths, LibraryReadError* err);
 
   // Decode all the FIDL files.
   bool DecodeAll();
 
-  // Adds a single library (read from library_stream) to this Loader. Sets err as appropriate.
-  void Add(std::unique_ptr<std::istream>* library_stream, LibraryReadError* err);
+  // Adds a single library to this Loader given its path. Sets err as appropriate.
+  void AddPath(const std::string& path, LibraryReadError* err);
+
+  // Adds a single library to this Loader given its content (the JSON text).
+  // Sets err as appropriate.
+  void AddContent(const std::string& content, LibraryReadError* err);
 
   // Adds a method ordinal to the ordinal map.
   void AddMethod(const InterfaceMethod* method);
@@ -534,23 +538,6 @@ class LibraryLoader {
   }
 
  private:
-  void Add(std::string& ir, LibraryReadError* err) {
-    rapidjson::Document document;
-    err->parse_result = document.Parse<rapidjson::kParseNumbersAsStringsFlag>(ir.c_str());
-    // TODO: This would be a good place to validate that the resulting JSON
-    // matches the schema in zircon/tools/fidl/schema.json.  If there are
-    // errors, we will currently get mysterious crashes.
-    if (document.HasParseError()) {
-      err->value = LibraryReadError::kParseError;
-      return;
-    }
-    std::string library_name = document["name"].GetString();
-    if (representations_.find(library_name) == representations_.end()) {
-      representations_.emplace(std::piecewise_construct, std::forward_as_tuple(library_name),
-                               std::forward_as_tuple(new Library(this, document)));
-    }
-  }
-
   void Delete(const Library* library) {
     // The only way to delete a library is to remove it from representations_, so we don't need to
     // do that explicitly.  However...

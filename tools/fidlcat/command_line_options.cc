@@ -317,7 +317,7 @@ bool EndsWith(const std::string& value, const std::string& suffix) {
 }  // namespace
 
 void ExpandFidlPathsFromOptions(std::vector<std::string> cli_ir_paths,
-                                std::vector<std::unique_ptr<std::istream>>& paths,
+                                std::vector<std::string>& paths,
                                 std::vector<std::string>& bad_paths) {
   // Strip out argfiles before doing path processing.
   for (int64_t i = cli_ir_paths.size() - 1; i >= 0; i--) {
@@ -334,14 +334,14 @@ void ExpandFidlPathsFromOptions(std::vector<std::string> cli_ir_paths,
         continue;
       }
 
-      std::string jsonfile;
-      while (infile >> jsonfile) {
-        if (std::filesystem::path(jsonfile).is_relative()) {
-          jsonfile =
-              enclosing_directory.string() + std::filesystem::path::preferred_separator + jsonfile;
+      std::string jsonfile_path;
+      while (infile >> jsonfile_path) {
+        if (std::filesystem::path(jsonfile_path).is_relative()) {
+          jsonfile_path = enclosing_directory.string() +
+                          std::filesystem::path::preferred_separator + jsonfile_path;
         }
 
-        paths.push_back(std::make_unique<std::ifstream>(jsonfile));
+        paths.push_back(jsonfile_path);
       }
     }
   }
@@ -364,12 +364,12 @@ void ExpandFidlPathsFromOptions(std::vector<std::string> cli_ir_paths,
             cli_ir_paths.push_back(ent_name);
           }
         } else if (EndsWith(ent_name, ".fidl.json")) {
-          paths.push_back(std::make_unique<std::ifstream>(dir_ent.path()));
+          paths.push_back(dir_ent.path());
         }
       }
     } else if (std::filesystem::is_regular_file(current_path) &&
                EndsWith(current_string, ".fidl.json")) {
-      paths.push_back(std::make_unique<std::ifstream>(current_string));
+      paths.push_back(current_string);
     } else {
       bad_paths.push_back(current_string);
     }

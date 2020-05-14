@@ -63,8 +63,7 @@ JSValue LoadLibrary(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
     return JS_EXCEPTION;
   }
   fidl_codec::LibraryReadError loader_err;
-  std::unique_ptr<std::istream> path_ptr(new std::ifstream(path));
-  loader->Add(&path_ptr, &loader_err);
+  loader->AddPath(std::string(path), &loader_err);
 
   return JS_NewBool(ctx, loader_err.value == fidl_codec::LibraryReadError::kOk);
 }
@@ -93,8 +92,7 @@ JSValue LoadLibraryFromString(JSContext* ctx, JSValueConst this_val, int argc, J
   }
   fidl_codec::LibraryReadError loader_err;
   CStringHolder contents(ctx, argv[1]);
-  std::unique_ptr<std::istream> string_ptr(new std::istringstream(contents.get()));
-  loader->Add(&string_ptr, &loader_err);
+  loader->AddContent(std::string(contents.get()), &loader_err);
 
   return JS_NewBool(ctx, loader_err.value == fidl_codec::LibraryReadError::kOk);
 }

@@ -50,7 +50,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 // files, and store them in |paths|.  Paths that are not available in the system
 // will be added to |bad_paths|.
 void ExpandFidlPathsFromOptions(std::vector<std::string> cli_ir_paths,
-                                std::vector<std::unique_ptr<std::istream>>& paths,
+                                std::vector<std::string>& paths,
                                 std::vector<std::string>& bad_paths);
 
 }  // namespace fidlcat

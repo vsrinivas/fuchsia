@@ -73,15 +73,16 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
   // Expand the FIDL paths.
-  std::vector<std::unique_ptr<std::istream>> paths;
+  std::vector<std::string> paths;
   std::vector<std::string> bad_paths;
   ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths, bad_paths);
 
   ASSERT_EQ(files().size(), paths.size());
 
   for (size_t i = 0; i < paths.size(); i++) {
-    std::string file_contents{std::istreambuf_iterator<char>(*paths[i]), {}};
-    ASSERT_TRUE(paths[i]->good());
+    std::ifstream stream(paths[i].c_str());
+    std::string file_contents{std::istreambuf_iterator<char>(stream), {}};
+    ASSERT_TRUE(stream.good());
     ASSERT_EQ(files()[i], file_contents);
   }
   ASSERT_EQ(0U, bad_paths.size());
@@ -105,7 +106,7 @@ TEST_F(CommandLineOptionsTest, BadOptionsTest) {
   ASSERT_TRUE(error.empty());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
-  std::vector<std::unique_ptr<std::istream>> paths;
+  std::vector<std::string> paths;
   std::vector<std::string> bad_paths;
   ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths, bad_paths);
 

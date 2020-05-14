@@ -24,13 +24,11 @@ namespace semantic {
 
 SemanticParserTest::SemanticParserTest() {
   fidl_codec_test::SdkExamples sdk_examples;
-  std::vector<std::unique_ptr<std::istream>> streams;
+
   // Loads all the files in sdk/core.fidl_json.txt.
   for (const auto& element : sdk_examples.map()) {
-    streams.push_back(std::make_unique<std::istringstream>(std::istringstream(element.second)));
+    library_loader_.AddContent(element.second, &err_);
   }
-
-  library_loader_.AddAll(&streams, &err_);
 }
 
 void SemanticParserTest::SetUp() {}

@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <fstream>
+
 #include <rapidjson/error/en.h>
 
 #include "src/lib/fidl_codec/builtin_semantic.h"
@@ -536,19 +538,16 @@ void Library::FieldNotFound(std::string_view container_type, std::string_view co
                  << container_type << ' ' << container_name;
 }
 
-LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams,
-                             LibraryReadError* err) {
-  AddAll(library_streams, err);
+LibraryLoader::LibraryLoader(const std::vector<std::string>& library_paths, LibraryReadError* err) {
+  AddAll(library_paths, err);
 }
 
-bool LibraryLoader::AddAll(std::vector<std::unique_ptr<std::istream>>* library_streams,
-                           LibraryReadError* err) {
+bool LibraryLoader::AddAll(const std::vector<std::string>& library_paths, LibraryReadError* err) {
   bool ok = true;
-  err->value = LibraryReadError::kOk;
   // Go backwards through the streams; we refuse to load the same library twice, and the last one
   // wins.
-  for (auto i = library_streams->rbegin(); i != library_streams->rend(); ++i) {
-    Add(&(*i), err);
+  for (auto path = library_paths.rbegin(); path != library_paths.rend(); ++path) {
+    AddPath(*path, err);
     if (err->value != LibraryReadError::kOk) {
       ok = false;
     }
@@ -567,19 +566,38 @@ bool LibraryLoader::DecodeAll() {
   return ok;
 }
 
-void LibraryLoader::Add(std::unique_ptr<std::istream>* library_stream, LibraryReadError* err) {
-  err->value = LibraryReadError::kOk;
-  std::string ir(std::istreambuf_iterator<char>(**library_stream), {});
-  if ((*library_stream)->fail()) {
+void LibraryLoader::AddPath(const std::string& path, LibraryReadError* err) {
+  std::ifstream infile(path.c_str());
+  std::string content(std::istreambuf_iterator<char>(infile), {});
+  if (infile.fail()) {
     err->value = LibraryReadError ::kIoError;
     return;
   }
-  Add(ir, err);
+  AddContent(content, err);
   if (err->value != LibraryReadError::kOk) {
-    FX_LOGS(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(err->parse_result.Code())
-                   << " at offset " << err->parse_result.Offset();
+    FX_LOGS(ERROR) << path << ": JSON parse error: "
+                   << rapidjson::GetParseError_En(err->parse_result.Code()) << " at offset "
+                   << err->parse_result.Offset();
     return;
   }
+}
+
+void LibraryLoader::AddContent(const std::string& content, LibraryReadError* err) {
+  rapidjson::Document document;
+  err->parse_result = document.Parse<rapidjson::kParseNumbersAsStringsFlag>(content.c_str());
+  // TODO: This would be a good place to validate that the resulting JSON
+  // matches the schema in zircon/tools/fidl/schema.json.  If there are
+  // errors, we will currently get mysterious crashes.
+  if (document.HasParseError()) {
+    err->value = LibraryReadError::kParseError;
+    return;
+  }
+  std::string library_name = document["name"].GetString();
+  if (representations_.find(library_name) == representations_.end()) {
+    representations_.emplace(std::piecewise_construct, std::forward_as_tuple(library_name),
+                             std::forward_as_tuple(new Library(this, document)));
+  }
+  err->value = LibraryReadError::kOk;
 }
 
 void LibraryLoader::AddMethod(const InterfaceMethod* method) {

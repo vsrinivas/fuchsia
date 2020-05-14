@@ -20,34 +20,30 @@ namespace fidl_codec {
 TEST(LibraryLoader, CheckAll) {
   fidl_codec_test::SdkExamples sdk_examples;
   fidl_codec_test::FidlcodecExamples other_examples;
-  std::vector<std::unique_ptr<std::istream>> streams;
+
+  LibraryReadError err;
+  LibraryLoader library_loader;
   // Test all the files in sdk/core.fidl_json.txt.
   for (const auto& element : sdk_examples.map()) {
-    streams.push_back(std::make_unique<std::istringstream>(std::istringstream(element.second)));
+    library_loader.AddContent(element.second, &err);
+    ASSERT_EQ(err.value, LibraryReadError::kOk);
   }
   // Test all the fidl_codec files.
   for (const auto& element : other_examples.map()) {
-    streams.push_back(std::make_unique<std::istringstream>(std::istringstream(element.second)));
+    library_loader.AddContent(element.second, &err);
+    ASSERT_EQ(err.value, LibraryReadError::kOk);
   }
-
   // Do the tests.
-  LibraryReadError err;
-  LibraryLoader library_loader;
-  ASSERT_TRUE(library_loader.AddAll(&streams, &err));
   ASSERT_TRUE(library_loader.DecodeAll());
 }
 
 TEST(LibraryLoader, LoadSimple) {
   fidl_codec_test::FidlcodecExamples examples;
-  std::vector<std::unique_ptr<std::istream>> library_files;
-  for (const auto& element : examples.map()) {
-    std::unique_ptr<std::istream> file =
-        std::make_unique<std::istringstream>(std::istringstream(element.second));
-
-    library_files.push_back(std::move(file));
-  }
   LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(&library_files, &err);
+  LibraryLoader loader;
+  for (const auto& element : examples.map()) {
+    loader.AddContent(element.second, &err);
+  }
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
@@ -72,9 +68,7 @@ TEST(LibraryLoader, LoadSimpleOneAtATime) {
   LibraryLoader loader;
   LibraryReadError err;
   for (const auto& element : examples.map()) {
-    std::unique_ptr<std::istream> file =
-        std::make_unique<std::istringstream>(std::istringstream(element.second));
-    loader.Add(&file, &err);
+    loader.AddContent(element.second, &err);
     ASSERT_EQ(LibraryReadError::kOk, err.value);
   }
 
@@ -94,20 +88,16 @@ TEST(LibraryLoader, LoadSimpleOneAtATime) {
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
 }
 
-// Ensure that, if you load two libraries with the same name, the last one in the list is the one
-// that sticks.
-TEST(LibraryLoader, LoadSecondWins) {
+// Ensure that, if you load two libraries with the same name, the first one loaded wins.
+// LoadAll calls AddContent using the last item in the list. That means that, for LoadAll, the
+// last one wins.
+TEST(LibraryLoader, FirstContentWins) {
   fidl_codec_test::FidlcodecExamples examples;
-  std::vector<std::unique_ptr<std::istream>> library_files;
   std::string frobinator_value;
   const std::string file_to_replace = "frobinator.fidl.json";
   for (const auto& element : examples.map()) {
-    std::unique_ptr<std::istream> file =
-        std::make_unique<std::istringstream>(std::istringstream(element.second));
-
-    library_files.push_back(std::move(file));
-    if (0 == element.first.compare(element.first.length() - file_to_replace.length(),
-                                   file_to_replace.length(), file_to_replace)) {
+    if (element.first.compare(element.first.length() - file_to_replace.length(),
+                              file_to_replace.length(), file_to_replace) == 0) {
       frobinator_value = element.second;
     }
   }
@@ -121,13 +111,18 @@ TEST(LibraryLoader, LoadSecondWins) {
     frobinator_value.replace(pos, old_method.size(), new_method);
     pos = frobinator_value.find(old_method, pos + new_method.size());
   }
-  std::unique_ptr<std::istream> file =
-      std::make_unique<std::istringstream>(std::istringstream(frobinator_value));
-  library_files.push_back(std::move(file));
 
   LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(&library_files, &err);
-  ASSERT_EQ(LibraryReadError::kOk, err.value);
+  LibraryLoader loader;
+
+  // Add the modified version. It will forbid the initial version to load.
+  loader.AddContent(frobinator_value, &err);
+
+  // Adds all the standard versions.
+  for (const auto& element : examples.map()) {
+    loader.AddContent(element.second, &err);
+    ASSERT_EQ(LibraryReadError::kOk, err.value);
+  }
 
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
   ASSERT_NE(library_ptr, nullptr);
@@ -155,17 +150,13 @@ TEST(LibraryLoader, LoadSecondWins) {
 }
 
 TEST(LibraryLoader, InspectTypes) {
-  fidl_codec_test::FidlcodecExamples examples;
-  std::vector<std::unique_ptr<std::istream>> library_files;
-  for (const auto& element : examples.map()) {
-    std::unique_ptr<std::istream> file =
-        std::make_unique<std::istringstream>(std::istringstream(element.second));
-
-    library_files.push_back(std::move(file));
-  }
   LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(&library_files, &err);
-  ASSERT_EQ(LibraryReadError::kOk, err.value);
+  LibraryLoader loader;
+  fidl_codec_test::FidlcodecExamples examples;
+  for (const auto& element : examples.map()) {
+    loader.AddContent(element.second, &err);
+    ASSERT_EQ(LibraryReadError::kOk, err.value);
+  }
 
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.examples");
   ASSERT_NE(library_ptr, nullptr);
@@ -292,17 +283,13 @@ TEST(LibraryLoader, InspectTypes) {
 }
 
 TEST(LibraryLoader, LoadFromOrdinal) {
-  fidl_codec_test::FidlcodecExamples examples;
-  std::vector<std::unique_ptr<std::istream>> library_files;
-  for (const auto& element : examples.map()) {
-    std::unique_ptr<std::istream> file =
-        std::make_unique<std::istringstream>(std::istringstream(element.second));
-
-    library_files.push_back(std::move(file));
-  }
   LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(&library_files, &err);
-  ASSERT_EQ(LibraryReadError::kOk, err.value);
+  LibraryLoader loader;
+  fidl_codec_test::FidlcodecExamples examples;
+  for (const auto& element : examples.map()) {
+    loader.AddContent(element.second, &err);
+    ASSERT_EQ(LibraryReadError::kOk, err.value);
+  }
 
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.sys");
   ASSERT_NE(library_ptr, nullptr);
@@ -331,11 +318,7 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   ASSERT_EQ("OnDirectoryReady", old_ordinal_method->name());
 }
 
-void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_files) {
-  LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(library_files, &err);
-  ASSERT_EQ(LibraryReadError::kOk, err.value);
-
+void OrdinalCompositionBody(LibraryLoader& loader) {
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.examples");
   ASSERT_NE(library_ptr, nullptr);
 
@@ -378,28 +361,32 @@ void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_
 // regardless of the order that the libraries were loaded.
 TEST(LibraryLoader, OrdinalComposition) {
   {
+    LibraryReadError err;
+    LibraryLoader loader;
+
     // Load the libraries in the order in examples.map().
     fidl_codec_test::FidlcodecExamples examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
-    for (const auto& element : examples.map()) {
-      std::unique_ptr<std::istream> file =
-          std::make_unique<std::istringstream>(std::istringstream(element.second));
-
-      library_files.push_back(std::move(file));
+    for (auto element = examples.map().begin(); element != examples.map().end(); ++element) {
+      loader.AddContent(element->second, &err);
+      ASSERT_EQ(LibraryReadError::kOk, err.value);
     }
 
-    OrdinalCompositionBody(&library_files);
+    OrdinalCompositionBody(loader);
   }
   {
+    LibraryReadError err;
+    LibraryLoader loader;
+
     // Load the libraries in the reverse of the order in examples.map().
     fidl_codec_test::FidlcodecExamples examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
-    for (const auto& element : examples.map()) {
-      std::unique_ptr<std::istream> file =
-          std::make_unique<std::istringstream>(std::istringstream(element.second));
-
-      library_files.insert(library_files.begin(), std::move(file));
+    for (auto element = examples.map().rbegin(); element != examples.map().rend(); ++element) {
+      loader.AddContent(element->second, &err);
+      ASSERT_EQ(LibraryReadError::kOk, err.value);
     }
+
+    OrdinalCompositionBody(loader);
   }
 }
 
