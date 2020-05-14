@@ -1706,6 +1706,19 @@ void Coordinator::Suspend(
       std::move(callback));
 }
 
+void Coordinator::SetTerminationSystemState(
+    device_manager_fidl::SystemPowerState state,
+    device_manager_fidl::SystemStateTransition::Interface::SetTerminationSystemStateCompleter::Sync
+        completer) {
+  if (state == device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON) {
+    LOGF(INFO, "Invalid termination state");
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  set_shutdown_system_state(static_cast<power_fidl::statecontrol::SystemPowerState>(state));
+  completer.ReplySuccess();
+}
+
 void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
                                  GetBindProgramCompleter::Sync completer) {
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
@@ -1808,6 +1821,23 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   status = svc_dir->AddEntry(power_fidl::statecontrol::Admin::Name,
                              fbl::MakeRefCounted<fs::Service>(admin2));
   if (status != ZX_OK) {
+    return status;
+  }
+
+  const auto systemstate_transition = [this](zx::channel request) {
+    auto status = fidl::Bind<device_manager_fidl::SystemStateTransition::Interface>(
+        this->config_.dispatcher, std::move(request), this);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           device_manager_fidl::SystemStateTransition::Name, zx_status_get_string(status));
+    }
+    return status;
+  };
+  status = svc_dir->AddEntry(device_manager_fidl::SystemStateTransition::Name,
+                             fbl::MakeRefCounted<fs::Service>(systemstate_transition));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
+         device_manager_fidl::SystemStateTransition::Name, zx_status_get_string(status));
     return status;
   }
 

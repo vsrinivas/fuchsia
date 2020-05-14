@@ -42,6 +42,7 @@
 
 using llcpp::fuchsia::device::manager::SystemPowerState;
 namespace power_fidl = llcpp::fuchsia::hardware::power;
+namespace device_manager_fidl = llcpp::fuchsia::device::manager;
 
 class DriverHostLoaderService;
 class FsProvider;
@@ -201,7 +202,8 @@ struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
 };
 
 class Coordinator : public power_fidl::statecontrol::Admin::Interface,
-                    public llcpp::fuchsia::device::manager::BindDebugger::Interface {
+                    public device_manager_fidl::BindDebugger::Interface,
+                    public device_manager_fidl::SystemStateTransition::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -299,6 +301,9 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   power_fidl::statecontrol::SystemPowerState shutdown_system_state() const {
     return config_.shutdown_system_state;
   }
+  void set_shutdown_system_state(power_fidl::statecontrol::SystemPowerState state) {
+    config_.shutdown_system_state = state;
+  }
 
   void set_running(bool running) { running_ = running; }
   bool system_available() const { return system_available_; }
@@ -348,6 +353,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
+
   // Power state control interface
   void Suspend(
       power_fidl::statecontrol::SystemPowerState state,
@@ -357,6 +363,11 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
   void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
+
+  // SystemStateTransition interface
+  void SetTerminationSystemState(device_manager_fidl::SystemPowerState state,
+                                 device_manager_fidl::SystemStateTransition::Interface::
+                                     SetTerminationSystemStateCompleter::Sync completer) override;
 
  protected:
   std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
