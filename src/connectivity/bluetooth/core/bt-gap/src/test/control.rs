@@ -16,14 +16,13 @@ use {
 
 use crate::{
     host_dispatcher::HostDispatcher, services::start_control_service, store::stash::Stash,
-    test::create_fidl_endpoints,
 };
 
 // Open a channel, spawn the stream, queue a message and close the remote end before running the
 // loop and see if that halts within a timeout
 #[fuchsia_async::run_singlethreaded(test)]
 async fn close_channel_when_client_dropped() -> Result<(), Error> {
-    let (client, server) = create_fidl_endpoints::<ControlMarker>()?;
+    let (client, server) = fidl::endpoints::create_proxy_and_stream::<ControlMarker>()?;
     let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
     let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
     let watch_peers_broker = hanging_get::HangingGetBroker::new(

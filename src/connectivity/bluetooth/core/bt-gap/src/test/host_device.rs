@@ -19,10 +19,7 @@ use {
     std::sync::Arc,
 };
 
-use crate::{
-    host_device::{refresh_host_info, HostDevice, HostListener},
-    test::create_fidl_endpoints,
-};
+use crate::host_device::{refresh_host_info, HostDevice, HostListener};
 
 // An impl that ignores all events
 impl HostListener for () {
@@ -50,7 +47,7 @@ impl HostListener for () {
 // Create a HostDevice with a fake channel, set local name and check it is updated
 #[fuchsia_async::run_singlethreaded(test)]
 async fn host_device_set_local_name() -> Result<(), Error> {
-    let (client, server) = create_fidl_endpoints::<HostMarker>()?;
+    let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
 
     let info = HostInfo {
         id: HostId(1),
@@ -105,7 +102,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_inspect_vmo() -> Result<(), Error> {
-    let (client, server) = create_fidl_endpoints::<HostMarker>()?;
+    let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
 
     let info = HostInfo {
         id: HostId(1),
