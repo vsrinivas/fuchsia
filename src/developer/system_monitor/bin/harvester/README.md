@@ -12,6 +12,6 @@ the Dockyard as soon as reasonable.
 Before running the tests, add `//bundles:tests` to your `fx set` (i.e. args.gn),
 then execute:
 ```
-$ fx run-test system_monitor_harvester_tests
+$ fx test system_monitor_harvester_tests
 ```
-If the test is not already built, `fx run-test` will built it before running it.
+If the test is not already built, `fx test` will build it before running it.
