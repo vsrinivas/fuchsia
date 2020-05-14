@@ -249,6 +249,39 @@ impl<H: UriPathHandler> OncePerPath<H> {
     }
 }
 
+/// Transform a `serde_json::Value`. Implements `UriPathHandler` by assuming the `Response<Body>` is
+/// json-formatted.
+pub trait JsonTransformer: Send + Sync + Clone + 'static {
+    /// Transform a `serde_json::Value`
+    fn transform(&self, v: serde_json::Value) -> serde_json::Value;
+}
+
+impl<F> JsonTransformer for F
+where
+    F: Fn(serde_json::Value) -> serde_json::Value + Send + Sync + Clone + 'static,
+{
+    fn transform(&self, v: serde_json::Value) -> serde_json::Value {
+        (self)(v)
+    }
+}
+
+/// Handler that manipulates requests with json-formatted bodies.
+impl<T: JsonTransformer> UriPathHandler for T {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        async move {
+            let bytes = body_to_bytes(response.into_body()).await;
+            let value = self.transform(serde_json::from_reader(bytes.as_slice()).unwrap());
+            let bytes = serde_json::to_vec(&value).unwrap();
+            Response::builder()
+                .status(hyper::StatusCode::OK)
+                .header(CONTENT_LENGTH, bytes.len())
+                .body(Body::from(bytes))
+                .expect("valid response")
+        }
+        .boxed()
+    }
+}
+
 /// Handler that notifies a channel when it receives a request.
 pub struct NotifyWhenRequested {
     notify: mpsc::UnboundedSender<()>,

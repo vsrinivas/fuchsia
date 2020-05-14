@@ -402,6 +402,26 @@ async fn merkle_for_url_success() {
     .await;
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn merkle_for_url_failure() {
+    // Deleting the `targets` stanza from the targets metadata without updating the signature will
+    // cause validation during the metadata update to fail, but the pkg-resolver does not fail a
+    // resolve when metadata updates fail, instead the pkg-resolver will attempt to fetch the target
+    // description from the tuf-client which will fail with `MissingMetadata(Targets)`.
+    fn delete_targets_stanza(mut v: serde_json::Value) -> serde_json::Value {
+        v["signed"]["targets"].take();
+        v
+    }
+    verify_resolve_emits_cobalt_events_with_metric_id(
+        PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
+        Some(handler::ForPath::new("/2.targets.json", delete_targets_stanza)),
+        Err(Status::INTERNAL),
+        metrics::MERKLE_FOR_URL_METRIC_ID,
+        vec![metrics::MerkleForUrlMetricDimensionResult::TufError],
+    )
+    .await;
+}
+
 // Resolving a package should trigger the creation of a TUF client.
 #[fasync::run_singlethreaded(test)]
 async fn create_tuf_client_success() {
