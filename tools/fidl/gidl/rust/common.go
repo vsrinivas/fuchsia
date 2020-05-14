@@ -5,6 +5,8 @@
 package rust
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,6 +16,31 @@ import (
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 )
+
+func isPrintableASCII(s string) bool {
+	for _, r := range s {
+		if r < 0x20 || r > 0x7e {
+			return false
+		}
+	}
+	return true
+}
+
+func escapeStr(value string) string {
+	var (
+		buf    bytes.Buffer
+		src    = []byte(value)
+		dstLen = hex.EncodedLen(len(src))
+		dst    = make([]byte, dstLen)
+	)
+	hex.Encode(dst, src)
+	for i := 0; i < dstLen; i += 2 {
+		buf.WriteString("\\x")
+		buf.WriteByte(dst[i])
+		buf.WriteByte(dst[i+1])
+	}
+	return buf.String()
+}
 
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
@@ -32,8 +59,13 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("%s::from_primitive(%v).unwrap()", declName(decl), primitive)
 		}
 	case string:
-		// TODO(fxb/39686) Consider Go/Rust escape sequence differences
-		return wrapNullable(decl, fmt.Sprintf("String::from(%q)", value))
+		var expr string
+		if isPrintableASCII(value) {
+			expr = fmt.Sprintf("String::from(%q)", value)
+		} else {
+			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", escapeStr(value))
+		}
+		return wrapNullable(decl, expr)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:

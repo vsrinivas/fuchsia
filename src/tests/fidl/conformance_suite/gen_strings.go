@@ -170,7 +170,7 @@ var cases = []testCase{
 var successTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 success("StringsValidCase{{ .index }}") {
-    bindings_allowlist = [go,],
+    bindings_allowlist = [go,rust,],
     value = StringWrapper {
         str: "{{ .escapedValue }}",
     },
@@ -192,6 +192,12 @@ success("StringsValidCase{{ .index }}") {
 }
 `))
 
+// In Rust, we cannot represent non-UTF8 strings in domain objects since
+// std::string::String validates on construction. We therefore omit Rust
+// from the 'encode_failure' cases since this could not occur.
+//
+// See https://doc.rust-lang.org/std/string/struct.String.html#utf-8
+
 var decodeFailureTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 encode_failure("StringsInvalidCase{{ .index }}") {
@@ -204,7 +210,7 @@ encode_failure("StringsInvalidCase{{ .index }}") {
 
 {{ if .comment }}// {{ .comment }}{{ end }}
 decode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,],
+    bindings_allowlist = [go,rust,],
     type = StringWrapper,
     bytes = {
         old, v1 = [
