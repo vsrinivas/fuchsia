@@ -2,6 +2,7 @@
     "program": {
         "args": [
             "--log-packets",
+            "--syslog",
             "--verbosity=debug"
         ],
         "binary": "bin/netstack"
