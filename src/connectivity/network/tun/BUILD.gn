@@ -13,3 +13,10 @@ group("tests") {
     "network-tun:tests",
   ]
 }
+
+group("config") {
+  deps = [
+    "network-tun",
+    "network-tun:config",
+  ]
+}
