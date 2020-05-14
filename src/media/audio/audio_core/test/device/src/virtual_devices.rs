@@ -347,6 +347,7 @@ async fn default_change_upon_remove_output() -> Result<()> {
 
 #[fasync::run_singlethreaded]
 #[test]
+#[ignore]
 async fn many_devices() -> Result<()> {
     use std::collections::{HashMap, HashSet};
 
