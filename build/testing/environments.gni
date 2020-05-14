@@ -13,11 +13,15 @@ declare_args() {
 
 ### Individual test environments ###
 
-qemu_env = {
+emu_env = {
   dimensions = {
+    # May actually run on QEMU and / or FEMU.
     device_type = "QEMU"
   }
 }
+
+# TODO(fxbug.dev/52133): Remove once all references updated to emu_env.
+qemu_env = emu_env
 
 astro_env = {
   dimensions = {
@@ -82,13 +86,12 @@ if (include_tests_that_fail_on_nuc_asan) {
   nuc_env_fails_on_asan += [ nuc_env ]
 }
 
-# The basic, freely usable test environments supported by the infrastructure.
 basic_envs = []
 if (board_name == "x64") {
   basic_envs += [
-    qemu_env,
+    emu_env,
     nuc_env,
   ]
 } else if (board_name == "qemu-arm64" || board_name == "qemu-x64") {
-  basic_envs += [ qemu_env ]
+  basic_envs += [ emu_env ]
 }
