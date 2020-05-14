@@ -95,4 +95,60 @@ TEST_F(UtilsTest, Dot11ToDataRate) {
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, mac80211_idx_to_data_rate(WLAN_INFO_BAND_COUNT, 0, &data_rate));
 }
 
+struct iter_data {
+  size_t total_count;
+  size_t associated_count;
+};
+
+static void iter_active_interface(void* data_, struct iwl_mvm_vif* mvmvif) {
+  struct iter_data* data = (struct iter_data*)data_;
+
+  data->total_count++;
+  if (mvmvif->associated) {
+    data->associated_count++;
+  }
+}
+
+TEST_F(UtilsTest, IterateActiveInterfaces) {
+  struct iwl_mvm_vif mvmvifs[] = {
+      {
+          .associated = true,
+      },
+      {
+          // Will be NULLed later.
+      },
+      {
+          .associated = false,
+      },
+      {
+          .associated = true,
+      },
+  };
+  uint8_t vif_count = ARRAY_SIZE(mvmvifs);
+  ZX_ASSERT(vif_count <= MAX_NUM_MVMVIF);
+
+  // Initialize the 'mvm' structure (and its 'mvmvif').
+  struct iwl_mvm mvm = {
+      .vif_count = vif_count,
+  };
+  for (size_t i = 0; i < vif_count; ++i) {
+    mvm.mvmvif[i] = &mvmvifs[i];
+  }
+  mvm.mvmvif[1] = NULL;  // Set to NULL to test if the code can handle it.
+
+  // The 'data' used for callback.
+  struct iter_data data = {
+      .total_count = 0,
+      .associated_count = 0,
+  };
+
+  // Iterate it!
+  mtx_lock(&mvm.mutex);
+  ieee80211_iterate_active_interfaces_atomic(&mvm, iter_active_interface, &data);
+  mtx_unlock(&mvm.mutex);
+
+  EXPECT_EQ(3, data.total_count);       // 3 interfaces checked.
+  EXPECT_EQ(2, data.associated_count);  // 2 interfaces associated.
+}
+
 }  // namespace

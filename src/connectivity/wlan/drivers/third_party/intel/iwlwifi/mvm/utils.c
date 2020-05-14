@@ -1427,3 +1427,18 @@ void iwl_mvm_get_sync_time(struct iwl_mvm* mvm, uint32_t* gp2, uint64_t* boottim
     }
 }
 #endif  // NEEDS_PORTING
+
+void ieee80211_iterate_active_interfaces_atomic(struct iwl_mvm* mvm,
+                                                ieee80211_iterate_callback func, void* data) {
+  iwl_assert_lock_held(&mvm->mutex);
+
+  for (uint8_t i = 0; i < mvm->vif_count; i++) {
+    struct iwl_mvm_vif* mvmvif = mvm->mvmvif[i];
+
+    if (!mvmvif) {
+      continue;
+    }
+
+    func(data, mvmvif);
+  }
+}

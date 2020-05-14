@@ -2146,4 +2146,15 @@ zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);
 zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
                                    const wlan_channel_t* chandef);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Interfaces for utils.c
+//
+
+// Traverses the interface list of the 'mvm', and calls back the 'func' with each active interface.
+//
+typedef void (*ieee80211_iterate_callback)(void* data, struct iwl_mvm_vif* mvmvif);
+void ieee80211_iterate_active_interfaces_atomic(struct iwl_mvm* mvm,
+                                                ieee80211_iterate_callback func, void* data);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
