@@ -13,8 +13,9 @@ use {
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue},
     fuchsia_async as fasync,
-    fuchsia_inspect::reader::{self, Property},
+    fuchsia_inspect::reader::{self, NodeHierarchy, Property},
     std::{
+        cmp::Reverse,
         collections::HashMap,
         fmt, fs,
         path::{Path, PathBuf},
@@ -254,6 +255,54 @@ struct Opt {
     log_stats: bool,
 }
 
+// Number of log messages broken down by severity for a given component.
+struct ComponentLogStats {
+    component_url: String,
+    fatal_logs: u64,
+    error_logs: u64,
+    warning_logs: u64,
+    info_logs: u64,
+    debug_logs: u64,
+    trace_logs: u64,
+    total_logs: u64,
+}
+
+impl ComponentLogStats {
+    fn get_sort_key(&self) -> (u64, u64, u64, u64, u64, u64) {
+        (
+            self.fatal_logs,
+            self.error_logs,
+            self.warning_logs,
+            self.info_logs,
+            self.debug_logs,
+            self.trace_logs,
+        )
+    }
+}
+
+impl From<NodeHierarchy> for ComponentLogStats {
+    fn from(node: NodeHierarchy) -> ComponentLogStats {
+        let map = node
+            .properties
+            .into_iter()
+            .map(|x| match x {
+                Property::Uint(name, value) => (name, value),
+                _ => (String::from(""), 0),
+            })
+            .collect::<HashMap<_, _>>();
+        ComponentLogStats {
+            component_url: node.name,
+            fatal_logs: map["fatal_logs"],
+            error_logs: map["error_logs"],
+            warning_logs: map["warning_logs"],
+            info_logs: map["info_logs"],
+            debug_logs: map["debug_logs"],
+            trace_logs: map["trace_logs"],
+            total_logs: map["total_logs"],
+        }
+    }
+}
+
 async fn print_log_stats() -> Result<(), Error> {
     let mut entries = fs::read_dir("/hub/c/archivist.cmx")?.collect::<Vec<_>>();
     if entries.len() == 0 {
@@ -281,30 +330,28 @@ async fn print_log_stats() -> Result<(), Error> {
             format_err!("Failed to find /log_stats/by_component node in the inspect hierarchy"),
         )?;
 
+    let mut stats_list = per_component_node
+        .children
+        .into_iter()
+        .map(|x| ComponentLogStats::from(x))
+        .collect::<Vec<_>>();
+    stats_list.sort_by_key(|x| Reverse(x.get_sort_key()));
+
     println!(
         "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
         "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "Total", "Component"
     );
-
-    for child in per_component_node.children {
-        let map = child
-            .properties
-            .into_iter()
-            .map(|x| match x {
-                Property::Uint(name, value) => (name, value),
-                _ => (String::from(""), 0),
-            })
-            .collect::<HashMap<_, _>>();
+    for stats in stats_list {
         println!(
             "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
-            map["fatal_logs"],
-            map["error_logs"],
-            map["warning_logs"],
-            map["info_logs"],
-            map["debug_logs"],
-            map["trace_logs"],
-            map["total_logs"],
-            child.name
+            stats.fatal_logs,
+            stats.error_logs,
+            stats.warning_logs,
+            stats.info_logs,
+            stats.debug_logs,
+            stats.trace_logs,
+            stats.total_logs,
+            stats.component_url
         );
     }
 
