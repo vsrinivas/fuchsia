@@ -221,6 +221,9 @@ impl ImeService {
                 // In future, Keyboard service will receive keys directly.
                 panic!("Should be handled by keyboard service");
             }
+            uii::ImeServiceRequest::ViewFocusChanged { .. } => {
+                // TODO: implement
+            }
         }
         Ok(())
     }

@@ -6,6 +6,7 @@ library fuchsia.ui.input;
 
 using fuchsia.ui.input2;
 using fuchsia.ui.input3;
+using fuchsia.ui.views;
 
 /// The service provided by an IME
 [Discoverable]
@@ -27,6 +28,9 @@ protocol ImeService {
     // fuchsia.ui.input after fuchsia.ui.input cleanup.
     [Transitional]
     DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
+
+    // Notify IME Service when the currently focused view changes.
+    ViewFocusChanged(fuchsia.ui.views.ViewRef view_ref) -> ();
 };
 
 /// Onscreen keyboard containers connect to this to know when a keyboard
