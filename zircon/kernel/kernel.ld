@@ -362,5 +362,5 @@ ENTRY(IMAGE_ELF_ENTRY)
  */
 
 IMAGE_LOAD_START = __code_start;
-IMAGE_LOAD_END = __data_end;
+IMAGE_LOAD_KERNEL_END = __data_end;
 IMAGE_MEMORY_END = _end;

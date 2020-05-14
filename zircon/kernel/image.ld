@@ -31,10 +31,26 @@ SECTIONS {
 
     .load_image : {
         KEEP(*(.text))
+
+        /*
+         * This includes the fixup code, which overlaps the bss.
+         */
+        IMAGE_LOAD_END = .;
+
+        /*
+         * This is the end of the kernel load image proper, where the bss
+         * starts at runtime and the fixup code starts in the image.
+         */
+        ASSERT(ABSOLUTE(IMAGE_LOAD_KERNEL_END) < ABSOLUTE(IMAGE_LOAD_END),
+               "image symbols bad");
     } :load_image
 
-    IMAGE_RESERVE_END = IMAGE_MEMORY_END +
-        (DEFINED(IMAGE_RESERVE_SIZE) ? IMAGE_RESERVE_SIZE : 0);
+    /*
+     * This is the high bound of the address range that must be reserved.
+     * Since the fixups and the bss overlap and are both of varying sizes,
+     * this might be past IMAGE_LOAD_END (more bss than fixups) or vice versa.
+     */
+    IMAGE_RESERVE_END = IMAGE_MEMORY_END + IMAGE_RESERVE_SIZE;
 
     /*
      * When a boot loader is actually using the ELF headers, it needs to
@@ -43,8 +59,8 @@ SECTIONS {
      * to reserve).  This ensures that the segment has the right p_memsz.
      */
     .bss : {
-        . += ABSOLUTE(IMAGE_RESERVE_END) - ABSOLUTE(.);
-        ASSERT(ABSOLUTE(.) == ABSOLUTE(IMAGE_RESERVE_END), "image layout bad");
+        . = MAX(ABSOLUTE(IMAGE_RESERVE_END), ABSOLUTE(.));
+        ASSERT(ABSOLUTE(.) >= ABSOLUTE(IMAGE_RESERVE_END), "image layout bad");
     }
 }
 
