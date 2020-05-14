@@ -16,15 +16,6 @@ source_set("common") {
   ]
 }
 
-source_set("fxl_logging") {
-  sources = [
-    "log_settings.h",
-    "logging.h",
-  ]
-
-  public_deps = [ "//sdk/lib/syslog/cpp" ]
-}
-
 source_set("memory") {
   visibility = [
     ":*",
