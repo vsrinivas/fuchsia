@@ -16,4 +16,6 @@ fidl("fuchsia.deprecatedtimezone") {
     "deprecated_time_service.fidl",
     "deprecated_time_zone.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

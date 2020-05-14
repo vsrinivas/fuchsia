@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 #include <sys/time.h>
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -22,7 +23,7 @@ const uint32_t kDefaultUpdateAttempts = UINT32_MAX;
 class Timezone {
  public:
   bool Run();
-  bool UpdateSystemTime(uint32_t tries);
+  std::optional<zx::time_utc> UpdateSystemTime(uint32_t tries);
   static bool SetSystemTime(const std::string& rtc_service_path, zx::time_utc time);
   Timezone(std::string server_config_file, std::string rtc_service_path = kRealRtcDevicePath)
       : server_config_file_(std::move(server_config_file)),

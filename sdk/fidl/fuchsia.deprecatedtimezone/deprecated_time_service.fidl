@@ -4,11 +4,19 @@
 
 library fuchsia.deprecatedtimezone;
 
+using zx;
+
+/// The updated time as returned from [`TimeService::Update`].
+struct UpdatedTime {
+    zx.time utc_time;
+};
+
 /// Interface to allow manual updates of the system time.
 [Discoverable]
 protocol TimeService {
 
-    /// Requests an immediate update of the time from network.
+    /// Requests an immediate update of the time from network,
+    /// returing the updated time if successful.
     Update(uint8 num_retries)
-        -> (bool successful);
+        -> (UpdatedTime? new_time);
 };

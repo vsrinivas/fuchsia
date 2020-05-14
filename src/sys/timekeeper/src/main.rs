@@ -94,7 +94,8 @@ async fn maintain_utc(
         let sleep_duration = zx::Duration::from_seconds(2i64.pow(i)); // exponential backoff
         info!("requesting roughtime service update the system time...");
         match time_service.update(1).await {
-            Ok(true) => {
+            Ok(Some(updated_time)) => {
+                info!("adjusted UTC time to {}", Utc.timestamp_nanos(updated_time.utc_time));
                 let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
                 let utc_now = Utc::now().timestamp_nanos();
                 let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
@@ -105,7 +106,7 @@ async fn maintain_utc(
                 notifs.0.lock().set_source(ftime::UtcSource::External, monotonic_before);
                 break;
             }
-            Ok(false) => {
+            Ok(None) => {
                 debug!(
                     "failed to update time, probably a network error. retrying in {}s.",
                     sleep_duration.into_seconds()
@@ -256,7 +257,7 @@ mod tests {
                 time_requests.next().await
             {
                 let () = wait_for_update.next().await.unwrap();
-                responder.send(true).unwrap();
+                responder.send(Some(&mut ftz::UpdatedTime { utc_time: 1024 })).unwrap();
             }
         });
 

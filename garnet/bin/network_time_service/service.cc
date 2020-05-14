@@ -20,12 +20,17 @@ TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
 TimeServiceImpl::~TimeServiceImpl() = default;
 
 void TimeServiceImpl::Update(uint8_t num_retries, UpdateCallback callback) {
-  bool succeeded = time_server_.UpdateSystemTime(num_retries);
-  if (!succeeded) {
+  std::optional<zx::time_utc> result = time_server_.UpdateSystemTime(num_retries);
+  if (!result) {
     FX_LOGS(ERROR) << "Failed to update system time after " << static_cast<int>(num_retries)
                    << " attempts";
   }
-  callback(succeeded);
+  std::unique_ptr<fuchsia::deprecatedtimezone::UpdatedTime> update = nullptr;
+  if (result) {
+    update = fuchsia::deprecatedtimezone::UpdatedTime::New();
+    update->utc_time = result->get();
+  }
+  callback(std::move(update));
 }
 
 }  // namespace network_time_service

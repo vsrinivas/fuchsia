@@ -29,14 +29,14 @@ namespace rtc = fuchsia::hardware::rtc;
 
 bool Timezone::Run() {
   FX_LOGS(INFO) << "started";
-  return UpdateSystemTime(kDefaultUpdateAttempts);
+  return bool(UpdateSystemTime(kDefaultUpdateAttempts));
 }
 
-bool Timezone::UpdateSystemTime(uint32_t tries) {
+std::optional<zx::time_utc> Timezone::UpdateSystemTime(uint32_t tries) {
   TimeServerConfig config;
   if (!config.Parse(server_config_file_)) {
     FX_LOGS(ERROR) << "Failed to parse config file";
-    return false;
+    return std::nullopt;
   }
 
   const RoughTimeServer* server = nullptr;
@@ -51,7 +51,7 @@ bool Timezone::UpdateSystemTime(uint32_t tries) {
 
   if (server == nullptr) {
     FX_LOGS(ERROR) << "No valid server";
-    return false;
+    return std::nullopt;
   }
 
   for (uint32_t i = 0; i < tries; i++) {
@@ -64,19 +64,19 @@ bool Timezone::UpdateSystemTime(uint32_t tries) {
       } else {
         FX_LOGS(ERROR) << "Can't get time due to network error after " << tries
                        << " attempts, abort";
-        return false;
+        return std::nullopt;
       }
       continue;
     } else if (ret.first != OK || !ret.second) {
       FX_LOGS(ERROR) << "Error with roughtime server [" << ret.first << "], abort";
-      return false;
+      return std::nullopt;
     }
     if (SetSystemTime(rtc_service_path_, *ret.second)) {
-      return true;
+      return *ret.second;
     }
   }
   FX_LOGS(ERROR) << "Inexplicably failed to get time after " << tries << " attempts, abort";
-  return false;
+  return std::nullopt;
 }
 
 bool Timezone::SetSystemTime(const std::string& rtc_service_path, zx::time_utc time) {
