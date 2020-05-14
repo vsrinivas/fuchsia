@@ -10,7 +10,7 @@ use {
 };
 
 fn main() {
-    // TODO(fxb/51122): Use Criterion::benchmark_group.
+    // TODO(fxb/52171): Do not use Criterion.
     let all = &benchmark_suite::ALL_BENCHMARKS;
     let (first_label, first_function) = all[0];
     let mut benchmark = Benchmark::new(wall_time_label(first_label), first_function);
@@ -26,7 +26,11 @@ fn main() {
     let c: &mut Criterion = &mut fc;
     *c = mem::take(c)
         .warm_up_time(Duration::from_millis(200))
-        .measurement_time(Duration::from_millis(1800));
+        .measurement_time(Duration::from_millis(1800))
+        // We must reduce the sample size from the default of 100, otherwise
+        // Criterion will sometimes override the 200ms + 1800ms suggested times
+        // and run for much longer.
+        .sample_size(10);
     fc.bench("fuchsia.fidl_microbenchmarks", benchmark);
 }
 
