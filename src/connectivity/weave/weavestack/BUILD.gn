@@ -34,7 +34,6 @@ executable("bin") {
 }
 
 group("weavestack") {
-  testonly = true
   public_deps = [ ":pkg" ]
 }
 

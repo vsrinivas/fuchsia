@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("weave") {
-  testonly = true
   public_deps = [ "weavestack" ]
 }
 
