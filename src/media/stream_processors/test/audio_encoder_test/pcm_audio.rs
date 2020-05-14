@@ -115,7 +115,7 @@ where
         false
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         let data = self.pcm_audio.buffer.as_slice();
         let frame_size = self.pcm_audio.frame_size();
         let mut offset = 0;
@@ -142,7 +142,7 @@ where
             ElementaryStreamChunk {
                 start_access_unit: false,
                 known_end_access_unit: false,
-                data,
+                data: data.to_vec(),
                 significance: Significance::Audio(AudioSignificance::PcmFrames),
                 timestamp: self
                     .timestamp_generator()
@@ -181,7 +181,7 @@ fn elementary_chunk_data() {
         timebase: None,
     };
 
-    let actual: Vec<u8> = stream.stream().flat_map(|chunk| chunk.data.iter()).cloned().collect();
+    let actual: Vec<u8> = stream.stream().flat_map(|chunk| chunk.data.clone()).collect();
     assert_eq!(pcm_audio.buffer, actual);
 }
 

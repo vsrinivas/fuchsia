@@ -46,7 +46,7 @@ pub enum PacketPoll {
     NotReady,
 }
 
-impl<'a, I: Iterator<Item = ElementaryStreamChunk<'a>>> InputPacketStream<I> {
+impl<'a, I: Iterator<Item = ElementaryStreamChunk>> InputPacketStream<I> {
     pub fn new(buffer_set: BufferSet, stream: I, stream_lifetime_ordinal: u64) -> Self {
         // The official # of packets / usable packet_index values can be greater than this (for
         // now), but we don't need to use more packets than buffers, and we know # of packets will
@@ -111,7 +111,7 @@ impl<'a, I: Iterator<Item = ElementaryStreamChunk<'a>>> InputPacketStream<I> {
             });
         }
 
-        buffer.data.write(chunk.data, 0).map_err(Error::VmoWriteFail)?;
+        buffer.data.write(&chunk.data, 0).map_err(Error::VmoWriteFail)?;
 
         Ok(PacketPoll::Ready(Packet {
             header: Some(PacketHeader {

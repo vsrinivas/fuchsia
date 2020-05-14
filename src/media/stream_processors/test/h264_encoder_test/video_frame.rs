@@ -6,7 +6,6 @@ use fidl::encoding::Decodable;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
-use std::cmp;
 use std::rc::Rc;
 use stream_processor_test::*;
 
@@ -65,14 +64,11 @@ impl TimestampGenerator {
 
 pub struct VideoFrameStream {
     pub num_frames: usize,
-    pub frames: Vec<VideoFrame>,
     pub format: sysmem::ImageFormat2,
     pub encoder_settings: Rc<dyn Fn() -> EncoderSettings>,
     pub frames_per_second: usize,
     pub timebase: Option<u64>,
 }
-
-const MAX_FRAMES: usize = 60;
 
 impl VideoFrameStream {
     pub fn create(
@@ -82,10 +78,7 @@ impl VideoFrameStream {
         frames_per_second: usize,
         timebase: Option<u64>,
     ) -> Result<Self> {
-        let frames = (0..cmp::min(num_frames, MAX_FRAMES))
-            .map(|frame_number| VideoFrame::create(format.clone(), frame_number))
-            .collect();
-        Ok(Self { num_frames, frames, format, encoder_settings, frames_per_second, timebase })
+        Ok(Self { num_frames, format, encoder_settings, frames_per_second, timebase })
     }
 
     pub fn timestamp_generator(&self) -> Option<TimestampGenerator> {
@@ -116,13 +109,13 @@ impl ElementaryStream for VideoFrameStream {
         false
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         Box::new((0..self.num_frames).map(move |input_index| {
+            let frame = VideoFrame::create(self.format.clone(), input_index);
             ElementaryStreamChunk {
                 start_access_unit: false,
                 known_end_access_unit: false,
-                // allow looping input frames
-                data: &self.frames[input_index % self.frames.len()].data,
+                data: frame.data,
                 significance: Significance::Video(VideoSignificance::Picture),
                 timestamp: self
                     .timestamp_generator()

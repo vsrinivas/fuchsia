@@ -47,11 +47,11 @@ impl ElementaryStream for H264Stream {
         true
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         Box::new(self.nal_iter().map(|nal| ElementaryStreamChunk {
             start_access_unit: true,
             known_end_access_unit: true,
-            data: nal.data,
+            data: nal.data.to_vec(),
             significance: match nal.kind {
                 H264NalKind::Picture => Significance::Video(VideoSignificance::Picture),
                 H264NalKind::NotPicture => Significance::Video(VideoSignificance::NotPicture),

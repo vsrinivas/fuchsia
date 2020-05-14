@@ -45,11 +45,11 @@ impl ElementaryStream for SbcStream {
         false
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         Box::new(self.frame_iter().map(|frame| ElementaryStreamChunk {
             start_access_unit: false,
             known_end_access_unit: false,
-            data: frame.data,
+            data: frame.data.to_vec(),
             significance: Significance::Audio(AudioSignificance::Encoded),
             timestamp: None,
         }))

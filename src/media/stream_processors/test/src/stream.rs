@@ -41,7 +41,7 @@ pub struct Stream<'a> {
     pub stream_lifetime_ordinal: u64,
     pub input_buffer_ordinals: &'a mut OrdinalSequence,
     pub input_packet_stream:
-        Option<InputPacketStream<Box<dyn Iterator<Item = ElementaryStreamChunk<'a>> + 'a>>>,
+        Option<InputPacketStream<Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a>>>,
     pub output_buffer_ordinals: &'a mut OrdinalSequence,
     pub output_buffer_set: Option<BufferSet>,
     pub current_output_format: Option<Rc<ValidStreamOutputFormat>>,

@@ -12,7 +12,7 @@ pub trait ElementaryStream {
     /// access units, the server must parse and/or buffer the bitstream.
     fn is_access_units(&self) -> bool;
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a>;
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a>;
 
     /// Returns the elementary stream with chunks capped at a given size. Chunks bigger than the cap
     /// will be divided into multiple chunks. Order is retained. Timestamps are not extrapolated.
@@ -20,7 +20,7 @@ pub trait ElementaryStream {
     fn capped_chunks<'a>(
         &'a self,
         max_size: usize,
-    ) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+    ) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         Box::new(self.stream().flat_map(move |chunk| CappedSizeChunks {
             src: chunk,
             offset: 0,
@@ -38,11 +38,11 @@ pub trait ElementaryStream {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct ElementaryStreamChunk<'a> {
+#[derive(Clone, Debug)]
+pub struct ElementaryStreamChunk {
     pub start_access_unit: bool,
     pub known_end_access_unit: bool,
-    pub data: &'a [u8],
+    pub data: Vec<u8>,
     pub significance: Significance,
     pub timestamp: Option<u64>,
 }
@@ -65,14 +65,14 @@ pub enum AudioSignificance {
     Encoded,
 }
 
-struct CappedSizeChunks<'a> {
-    src: ElementaryStreamChunk<'a>,
+struct CappedSizeChunks {
+    src: ElementaryStreamChunk,
     offset: usize,
     max_size: usize,
 }
 
-impl<'a> Iterator for CappedSizeChunks<'a> {
-    type Item = ElementaryStreamChunk<'a>;
+impl Iterator for CappedSizeChunks {
+    type Item = ElementaryStreamChunk;
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset >= self.src.data.len() {
             return None;
@@ -85,7 +85,7 @@ impl<'a> Iterator for CappedSizeChunks<'a> {
         let chunk = ElementaryStreamChunk {
             start_access_unit: self.src.start_access_unit && is_first_subchunk,
             known_end_access_unit: self.src.known_end_access_unit && is_last_subchunk,
-            data: &self.src.data[self.offset..next_offset],
+            data: self.src.data[self.offset..next_offset].to_vec(),
             timestamp: if is_first_subchunk { self.src.timestamp } else { None },
             significance: self.src.significance,
         };
@@ -114,7 +114,7 @@ where
         self.source.is_access_units()
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         let mut timestamps = self.timestamps.clone();
         Box::new(self.source.stream().map(move |mut chunk| {
             match chunk.significance {
@@ -146,11 +146,11 @@ mod test {
             true
         }
 
-        fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
+        fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
             Box::new(self.data.chunks(20).map(|data| ElementaryStreamChunk {
                 start_access_unit: true,
                 known_end_access_unit: true,
-                data,
+                data: data.to_vec(),
                 significance: Significance::Video(VideoSignificance::Picture),
                 timestamp: None,
             }))
