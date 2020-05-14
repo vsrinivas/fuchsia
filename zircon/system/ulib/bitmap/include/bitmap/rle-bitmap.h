@@ -16,7 +16,19 @@
 
 namespace bitmap {
 
-struct RleBitmapElement;
+// Elements of the bitmap list
+struct RleBitmapElement : public fbl::DoublyLinkedListable<std::unique_ptr<RleBitmapElement>> {
+  // The start of this run of 1-bits.
+  size_t bitoff;
+  // The number of 1-bits in this run.
+  size_t bitlen;
+
+  // The (inclusive) start of this run of 1-bits.
+  size_t start() const { return bitoff; }
+
+  // The (exclusive) end of this run of 1-bits.
+  size_t end() const { return bitoff + bitlen; }
+};
 
 using RleBitmapElementPtr = std::unique_ptr<RleBitmapElement>;
 
@@ -105,20 +117,6 @@ class RleBitmap final : public Bitmap {
   // The number of total bits in elems_; i.e. the sum of the bitlen field of all stored
   // RleBitmapElements.
   size_t num_bits_;
-};
-
-// Elements of the bitmap list
-struct RleBitmapElement : public fbl::DoublyLinkedListable<RleBitmapElementPtr> {
-  // The start of this run of 1-bits.
-  size_t bitoff;
-  // The number of 1-bits in this run.
-  size_t bitlen;
-
-  // The (inclusive) start of this run of 1-bits.
-  size_t start() const { return bitoff; }
-
-  // The (exclusive) end of this run of 1-bits.
-  size_t end() const { return bitoff + bitlen; }
 };
 
 }  // namespace bitmap

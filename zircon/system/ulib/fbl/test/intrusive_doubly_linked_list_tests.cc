@@ -32,7 +32,7 @@ class DLLTraits {
 
     using OtherContainerStateType = ContainerStateType;
     using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
-    using OtherContainerType      = DoublyLinkedList<PtrType, OtherContainerTraits>;
+    using OtherContainerType      = DoublyLinkedListCustomTraits<PtrType, OtherContainerTraits>;
 
     struct Tag1 {};
     struct Tag2 {};

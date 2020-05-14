@@ -61,7 +61,7 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
   void CloseClient(MacClientInstance* client) __TA_EXCLUDES(lock_);
 
  private:
-  explicit MacInterface(ddk::MacAddrImplProtocolClient parent) : impl_(parent) {}
+  explicit MacInterface(ddk::MacAddrImplProtocolClient parent);
 
   const ddk::MacAddrImplProtocolClient impl_;
   features_t features_{};

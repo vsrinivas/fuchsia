@@ -47,15 +47,15 @@ class SequenceContainerTestEnvironment;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-template <typename T, NodeOptions Options = NodeOptions::None>
+template <typename PtrType_, NodeOptions Options = NodeOptions::None>
 struct DoublyLinkedListNodeState
-    : public internal::CommonNodeStateBase<DoublyLinkedListNodeState<T, Options>> {
+    : public internal::CommonNodeStateBase<DoublyLinkedListNodeState<PtrType_, Options>> {
  private:
-  using Base = internal::CommonNodeStateBase<DoublyLinkedListNodeState<T, Options>>;
+  using Base = internal::CommonNodeStateBase<DoublyLinkedListNodeState<PtrType_, Options>>;
 
  public:
-  using PtrType = T;  // TODO(50594) : Remove this when we can.
-  using PtrTraits = internal::ContainerPtrTraits<T>;
+  using PtrType = PtrType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
   static constexpr NodeOptions kNodeOptions = Options;
 
   constexpr DoublyLinkedListNodeState() {}
@@ -85,7 +85,7 @@ struct DoublyLinkedListNodeState
   }
 
  private:
-  template <typename, typename, typename, SizeOrder>
+  template <typename, typename, SizeOrder, typename>
   friend class DoublyLinkedList;
   template <typename>
   friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
@@ -95,18 +95,19 @@ struct DoublyLinkedListNodeState
   typename PtrTraits::RawPtrType prev_ = nullptr;
 };
 
-template <typename T, NodeOptions Options, typename TagType>
+template <typename PtrType, NodeOptions Options, typename TagType>
 struct DoublyLinkedListable;
 
-template <typename T>
+template <typename PtrType_, typename TagType_>
 struct DefaultDoublyLinkedListTraits {
  private:
-  using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
+  using ValueType = typename internal::ContainerPtrTraits<PtrType_>::ValueType;
 
  public:
-  using PtrTraits = internal::ContainerPtrTraits<T>;
+  using PtrType = PtrType_;
+  using TagType = TagType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
 
-  template <typename TagType = DefaultObjectTag>
   static auto& node_state(typename PtrTraits::RefType obj) {
     if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
       return obj.ValueType::dll_node_state_;
@@ -114,27 +115,33 @@ struct DefaultDoublyLinkedListTraits {
       return obj.template GetContainableByTag<TagType>().dll_node_state_;
     }
   }
+
+  using NodeState =
+      std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
 };
 
-template <typename T, NodeOptions Options = NodeOptions::None, typename TagType_ = DefaultObjectTag>
+template <typename PtrType_, NodeOptions Options = NodeOptions::None,
+          typename TagType_ = DefaultObjectTag>
 struct DoublyLinkedListable {
  public:
+  using PtrType = PtrType_;
   using TagType = TagType_;
   static constexpr NodeOptions kNodeOptions = Options;
 
   bool InContainer() const {
-    using Node = DoublyLinkedListable<T, Options, TagType>;
+    using Node = DoublyLinkedListable<PtrType, Options, TagType>;
     return Node::dll_node_state_.InContainer();
   }
 
  private:
-  friend struct DefaultDoublyLinkedListTraits<T>;
-  DoublyLinkedListNodeState<T, Options> dll_node_state_;
+  friend struct DefaultDoublyLinkedListTraits<PtrType, TagType>;
+  DoublyLinkedListNodeState<PtrType, Options> dll_node_state_;
 };
 
-template <typename T, typename NodeTraits_ = DefaultDoublyLinkedListTraits<T>,
-          typename TagType_ = DefaultObjectTag, SizeOrder ListSizeOrder_ = SizeOrder::N>
-class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
+template <typename PtrType_, typename TagType_ = DefaultObjectTag,
+          SizeOrder ListSizeOrder_ = SizeOrder::N,
+          typename NodeTraits_ = DefaultDoublyLinkedListTraits<PtrType_, TagType_>>
+class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>
@@ -142,21 +149,19 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
   struct iterator_traits;
   struct const_iterator_traits;
 
-  template <typename NodeTraits, typename = void>
-  struct AddGenericNodeState;
-
  public:
   // Aliases used to reduce verbosity and expose types/traits to tests
   static constexpr SizeOrder ListSizeOrder = ListSizeOrder_;
-  using PtrTraits = internal::ContainerPtrTraits<T>;
-  using NodeTraits = AddGenericNodeState<NodeTraits_>;
-  using PtrType = typename PtrTraits::PtrType;
-  using RawPtrType = typename PtrTraits::RawPtrType;
-  using RawPtrTraits = internal::ContainerPtrTraits<RawPtrType>;
-  using ValueType = typename PtrTraits::ValueType;
+  using PtrType = PtrType_;
   using TagType = TagType_;
+  using NodeTraits = NodeTraits_;
+
+  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+  using RawPtrType = typename PtrTraits::RawPtrType;
+  using ValueType = typename PtrTraits::ValueType;
+  using RefType = typename PtrTraits::RefType;
   using CheckerType = ::fbl::tests::intrusive_containers::DoublyLinkedListChecker;
-  using ContainerType = DoublyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
+  using ContainerType = DoublyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>;
 
   // Declarations of the standard iterator types.
   using iterator = iterator_impl<iterator_traits>;
@@ -170,12 +175,19 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
   static constexpr bool IsSequenced = true;
 
   // Default construction gives an empty list.
-  constexpr DoublyLinkedList() {}
+  constexpr DoublyLinkedList() noexcept {
+    // Make certain that the type of pointer we are expected to manage matches
+    // the type of pointer that our Node type expects to manage.
+    static_assert(std::is_same_v<PtrType, internal::node_ptr_t<NodeTraits, RefType>>,
+                  "DoublyLinkedList's pointer type must match its Node's pointer type");
+  }
 
   // Rvalue construction is permitted, but will result in the move of the list
   // contents from one instance of the list to the other (even for unmanaged
   // pointers)
-  DoublyLinkedList(DoublyLinkedList&& other_list) noexcept { swap(other_list); }
+  DoublyLinkedList(DoublyLinkedList&& other_list) noexcept : DoublyLinkedList() {
+    swap(other_list);
+  }
 
   // Rvalue assignment is permitted for managed lists, and when the target is
   // an empty list of unmanaged pointers.  Like Rvalue construction, it will
@@ -190,17 +202,6 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
   }
 
   ~DoublyLinkedList() {
-    // TODO(50594) : Remove this when we can.
-    //
-    // For now, put this static assert into a function which we know must be
-    // expanded at some point in time.  In a perfect world, we would put this in
-    // the body of the class itself, but right now the compiler seems unable to
-    // deduce the type of NodeTraits::NodeState until the class has been
-    // completely declared because of some complexity that AddGenericNodeState
-    // introduces.
-    static_assert(std::is_same_v<T, typename NodeTraits::NodeState::PtrType>,
-                  "DoublyLinkedList's pointer type must match its Node's pointerType");
-
     // It is considered an error to allow a list of unmanaged pointers to
     // destruct if there are still elements in it.  Managed pointer lists
     // will automatically release their references to their elements.
@@ -622,32 +623,13 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
     }
 
    private:
-    friend class DoublyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
-    using ListPtrType = const DoublyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>*;
+    friend class DoublyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>;
+    using ListPtrType = const DoublyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>*;
 
     iterator_impl(const typename PtrTraits::RawPtrType node)
         : node_(const_cast<typename PtrTraits::RawPtrType>(node)) {}
 
     typename PtrTraits::RawPtrType node_ = nullptr;
-  };
-
-  template <typename BaseNodeTraits>
-  struct AddGenericNodeState<BaseNodeTraits,
-                             std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {
-    using NodeState = std::decay_t<
-        std::invoke_result_t<decltype(BaseNodeTraits::node_state), typename PtrTraits::RefType>>;
-  };
-
-  template <typename BaseNodeTraits>
-  struct AddGenericNodeState<BaseNodeTraits,
-                             std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {
-    static auto& node_state(typename PtrTraits::RefType obj) {
-      return DefaultDoublyLinkedListTraits<T>::template node_state<TagType>(obj);
-    }
-    using NodeState =
-        std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
   };
 
   // The test framework's 'checker' class is our friend.
@@ -796,9 +778,18 @@ class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrde
 // SizedDoublyLinkedList<> is an alias for a DoublyLinkedList<> which keeps
 // track of it's size internally so that it may be accessed in O(1) time.
 //
-template <typename T, typename NodeTraits = DefaultDoublyLinkedListTraits<T>,
-          typename TagType = DefaultObjectTag>
-using SizedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
+template <typename PtrType, typename TagType = DefaultObjectTag,
+          typename NodeTraits = DefaultDoublyLinkedListTraits<PtrType, TagType>>
+using SizedDoublyLinkedList = DoublyLinkedList<PtrType, TagType, SizeOrder::Constant, NodeTraits>;
+
+// DoublyLinkedListCustomTraits<> is an alias for a DoublyLinkedList<> which makes is easier to
+// define a DoublyLinkedList which uses custom node traits.  It defaults to O(n) size, and will not
+// allow users to use a non-default object tag, since lists which use custom node traits are
+// required to use the default tag.
+//
+template <typename PtrType, typename NodeTraits, SizeOrder ListSizeOrder = SizeOrder::N>
+using DoublyLinkedListCustomTraits =
+    DoublyLinkedList<PtrType, DefaultObjectTag, ListSizeOrder, NodeTraits>;
 
 // TaggedDoublyLinkedList<> is intended for use with ContainableBaseClasses<>.
 //
@@ -811,17 +802,12 @@ using SizedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder
 // See comments on ContainableBaseClasses<> in fbl/intrusive_container_utils.h
 // for more details.
 //
-template <typename T, typename TagType, typename NodeTraits = DefaultDoublyLinkedListTraits<T>>
-using TaggedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::N>;
+template <typename PtrType, typename TagType>
+using TaggedDoublyLinkedList = DoublyLinkedList<PtrType, TagType, SizeOrder::N,
+                                                DefaultDoublyLinkedListTraits<PtrType, TagType>>;
 
-template <typename T, typename TagType, NodeOptions Options = NodeOptions::None>
-using TaggedDoublyLinkedListable = DoublyLinkedListable<T, Options, TagType>;
-
-// SizedTaggedDoublyLinkedList<> is a variant of TaggedDoublyLinkedList which
-// also specifies O(1) access size().
-//
-template <typename T, typename TagType, typename NodeTraits = DefaultDoublyLinkedListTraits<T>>
-using SizedTaggedDoublyLinkedList = DoublyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
+template <typename PtrType, typename TagType, NodeOptions Options = NodeOptions::None>
+using TaggedDoublyLinkedListable = DoublyLinkedListable<PtrType, Options, TagType>;
 
 }  // namespace fbl
 

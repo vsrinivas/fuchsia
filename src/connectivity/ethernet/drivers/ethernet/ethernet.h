@@ -61,7 +61,7 @@ using EthDev0Type = ddk::Device<EthDev0, ddk::Openable, ddk::UnbindableNew>;
 
 class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERNET> {
  public:
-  EthDev0(zx_device_t* parent) : EthDev0Type(parent), mac_(parent) {}
+  EthDev0(zx_device_t* parent);
 
   EthDev0(const EthDev0&) = delete;
   EthDev0(EthDev0&&) = delete;

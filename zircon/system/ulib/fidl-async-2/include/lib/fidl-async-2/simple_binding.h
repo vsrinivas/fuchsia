@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_
+#define LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_
 
 //#include <ddk/debug.h>
 #include <fbl/intrusive_double_list.h>
@@ -15,9 +16,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 //#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
 #include <stdarg.h>
+#include <zircon/types.h>
 //#include <memory>
 
 // SimpleBinding
@@ -603,7 +603,7 @@ class SimpleBinding {
       return obj.txn_list_node_state_;
     }
   };
-  using TxnList = fbl::DoublyLinkedList<Txn*, TxnListTraits>;
+  using TxnList = fbl::DoublyLinkedListCustomTraits<Txn*, TxnListTraits>;
   TxnList txn_list_;
 
   // Only non-nullptr during Dispatch().  When not nullptr, this points at a
@@ -623,3 +623,5 @@ class SimpleBinding {
   char bytes_[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
 };
+
+#endif  // LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_

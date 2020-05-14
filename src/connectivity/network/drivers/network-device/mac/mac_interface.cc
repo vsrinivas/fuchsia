@@ -31,6 +31,8 @@ constexpr uint8_t kMacMulticast = 0x01;
 static_assert(MODE_MULTICAST_PROMISCUOUS == MODE_MULTICAST_FILTER << 1u);
 static_assert(MODE_PROMISCUOUS == MODE_MULTICAST_PROMISCUOUS << 1u);
 
+MacInterface::MacInterface(ddk::MacAddrImplProtocolClient parent) : impl_(parent) {}
+
 MacInterface::~MacInterface() {
   ZX_ASSERT_MSG(clients_.is_empty(),
                 "Can't dispose MacInterface while clients are still attached (%ld clients left).",
@@ -247,8 +249,9 @@ zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher, zx::channel 
   auto result = fidl::AsyncBind(
       dispatcher, std::move(req), this,
       fidl::OnUnboundFn<MacClientInstance>(
-          [](MacClientInstance* client_instance, fidl::UnboundReason, zx_status_t, zx::channel)
-              { client_instance->parent_->CloseClient(client_instance); }));
+          [](MacClientInstance* client_instance, fidl::UnboundReason, zx_status_t, zx::channel) {
+            client_instance->parent_->CloseClient(client_instance);
+          }));
   if (result.is_ok()) {
     binding_ = result.take_value();
     return ZX_OK;

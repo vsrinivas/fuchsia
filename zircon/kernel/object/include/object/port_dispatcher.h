@@ -120,7 +120,7 @@ class PortObserver final : public StateObserver {
     static ListNodeState& node_state(PortObserver& obj) { return obj.observer_list_node_state_; }
   };
 
-  using List = fbl::DoublyLinkedList<PortObserver*, PortObserver::ListTraits>;
+  using List = fbl::DoublyLinkedListCustomTraits<PortObserver*, PortObserver::ListTraits>;
 
   PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
                Lock<Mutex>* port_lock, uint64_t key, zx_signals_t signals);

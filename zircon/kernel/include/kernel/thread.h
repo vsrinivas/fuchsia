@@ -387,7 +387,7 @@ struct Thread {
     }
   };
   fbl::DoublyLinkedListNodeState<Thread*> thread_list_node_ TA_GUARDED(thread_lock);
-  using List = fbl::DoublyLinkedList<Thread*, ThreadListTrait>;
+  using List = fbl::DoublyLinkedListCustomTraits<Thread*, ThreadListTrait>;
 
   // active bits
   enum thread_state state_;

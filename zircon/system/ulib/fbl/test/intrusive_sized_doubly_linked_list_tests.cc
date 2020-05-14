@@ -32,7 +32,8 @@ class SizedDLLTraits {
 
     using OtherContainerStateType = ContainerStateType;
     using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
-    using OtherContainerType      = SizedDoublyLinkedList<PtrType, OtherContainerTraits>;
+    using OtherContainerType      = SizedDoublyLinkedList<PtrType, DefaultObjectTag,
+                                                          OtherContainerTraits>;
 
     struct Tag1 {};
     struct Tag2 {};
@@ -43,9 +44,9 @@ class SizedDLLTraits {
                                     TaggedDoublyLinkedListable<PtrType, Tag2>,
                                     TaggedDoublyLinkedListable<PtrType, Tag3>>;
 
-    using TaggedType1 = SizedTaggedDoublyLinkedList<PtrType, Tag1>;
-    using TaggedType2 = SizedTaggedDoublyLinkedList<PtrType, Tag2>;
-    using TaggedType3 = SizedTaggedDoublyLinkedList<PtrType, Tag3>;
+    using TaggedType1 = DoublyLinkedList<PtrType, Tag1, SizeOrder::Constant>;
+    using TaggedType2 = DoublyLinkedList<PtrType, Tag2, SizeOrder::Constant>;
+    using TaggedType3 = DoublyLinkedList<PtrType, Tag3, SizeOrder::Constant>;
   // clang-format on
 };
 

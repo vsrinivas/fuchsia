@@ -66,7 +66,7 @@ class HTDLLTraits {
 
     using OtherContainerTraits    = OtherHashTraits<PtrType>;
     using OtherContainerStateType = OtherHashState<PtrType>;
-    using OtherBucketType         = DoublyLinkedList<PtrType, OtherContainerTraits>;
+    using OtherBucketType         = DoublyLinkedListCustomTraits<PtrType, OtherContainerTraits>;
     using OtherContainerType      = HashTable<OtherKeyType,
                                               PtrType,
                                               OtherBucketType,
@@ -78,20 +78,20 @@ class HTDLLTraits {
     using TestObjBaseType  = HashedTestObjBase<typename ContainerType::KeyType,
                                                typename ContainerType::HashType,
                                                ContainerType::kNumBuckets>;
-
-    struct Tag1 {};
-    struct Tag2 {};
-    struct Tag3 {};
-
-    using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<TaggedDoublyLinkedListable<PtrType, Tag1>,
-                                    TaggedDoublyLinkedListable<PtrType, Tag2>,
-                                    TaggedDoublyLinkedListable<PtrType, Tag3>>;
-
-    using TaggedType1 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag1>>;
-    using TaggedType2 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag2>>;
-    using TaggedType3 = HashTable<size_t, PtrType, TaggedDoublyLinkedList<PtrType, Tag3>>;
   // clang-format on
+
+  struct Tag1 {};
+  struct Tag2 {};
+  struct Tag3 {};
+
+  using TaggedContainableBaseClasses =
+      fbl::ContainableBaseClasses<TaggedDoublyLinkedListable<PtrType, Tag1>,
+                                  TaggedDoublyLinkedListable<PtrType, Tag2>,
+                                  TaggedDoublyLinkedListable<PtrType, Tag3>>;
+
+  using TaggedType1 = HashTable<size_t, PtrType, DoublyLinkedList<PtrType, Tag1>>;
+  using TaggedType2 = HashTable<size_t, PtrType, DoublyLinkedList<PtrType, Tag2>>;
+  using TaggedType3 = HashTable<size_t, PtrType, DoublyLinkedList<PtrType, Tag3>>;
 };
 
 // clang-format off

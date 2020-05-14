@@ -216,6 +216,8 @@ void EthDev::PutTransmitBuffer(TransmitBuffer tx_buffer) {
   free_transmit_buffers_.push(std::move(tx_buffer));
 }
 
+EthDev0::EthDev0(zx_device_t* parent) : EthDev0Type(parent), mac_(parent) {}
+
 void EthDev0::SetStatus(uint32_t status) {
   zxlogf(DEBUG, "eth: status() %08x", status);
 

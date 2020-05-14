@@ -305,7 +305,7 @@ class ProcessDispatcher final
   }
 
  private:
-  using HandleList = fbl::DoublyLinkedList<Handle*, Handle::NodeListTraits>;
+  using HandleList = fbl::DoublyLinkedListCustomTraits<Handle*, Handle::NodeListTraits>;
   // HandleCursor is used to reduce the lock duration while iterate over the handle table.
   //
   // It allows iteration over the handle table to be broken up into multiple critical sections.

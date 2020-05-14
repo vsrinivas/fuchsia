@@ -56,7 +56,7 @@ const auto& FindSLLNode(T& obj) {
 
 template <typename TypeTag = fbl::DefaultObjectTag, typename T>
 const auto& FindDLLNode(T& obj) {
-  return fbl::DefaultDoublyLinkedListTraits<T*>::template node_state<TypeTag>(obj);
+  return fbl::DefaultDoublyLinkedListTraits<T*, TypeTag>::node_state(obj);
 }
 
 template <typename TypeTag = fbl::DefaultObjectTag, typename T>
