@@ -172,6 +172,8 @@ test("blobfs-integration") {
     "integration/fdio_test.h",
     "integration/integration_main.cc",
     "integration/mount_test.cc",
+    "integration/nand_test.cc",
+    "integration/nand_test.h",
     "integration/query_service_test.cc",
     "integration/superblock-test.cc",
     "integration/sync_test.cc",
@@ -182,6 +184,7 @@ test("blobfs-integration") {
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//src/devices/block/bin/ftl_proxy:ftl-util",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
@@ -196,6 +199,7 @@ test("blobfs-integration") {
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/memfs",
+    "//zircon/system/ulib/ramdevice-client",
   ]
 }
 

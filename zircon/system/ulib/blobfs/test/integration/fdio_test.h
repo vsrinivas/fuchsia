@@ -18,6 +18,7 @@
 
 namespace blobfs {
 
+// Test harness that sets up a blobfs and fdio backed by a FakeBlockDevice.
 class FdioTest : public zxtest::Test {
  public:
   FdioTest() = default;
@@ -26,6 +27,8 @@ class FdioTest : public zxtest::Test {
   void TearDown() override;
 
  protected:
+  async::Loop* loop() { return loop_.get(); }
+
   int root_fd() const { return root_fd_.get(); }
   block_client::FakeBlockDevice* block_device() { return block_device_; }
 

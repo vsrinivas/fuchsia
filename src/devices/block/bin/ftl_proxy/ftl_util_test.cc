@@ -13,7 +13,6 @@
 #include <zircon/errors.h>
 
 #include <memory>
-#include <string_view>
 #include <thread>
 
 #include <fbl/ref_ptr.h>
@@ -41,15 +40,15 @@ fuchsia_hardware_nand_RamNandInfo GetConfig() {
 // mount a RamNandDevice an a FTL on top.
 class FtlUtilTest : public ::testing::Test {
  public:
-  static constexpr std::string_view FakeDevFsPath() { return "/fake/dev"; }
-  static constexpr std::string_view FakeBlockClassPath() { return "/fake/dev/class/block"; }
+  static const char* FakeDevFsPath() { return "/fake/dev"; }
+  static const char* FakeBlockClassPath() { return "/fake/dev/class/block"; }
 
   void SetUp() override { CreateIsolatedEnvironment(); }
 
   void TearDown() override {
     fdio_ns_t* name_space;
     ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&name_space));
-    ASSERT_EQ(ZX_OK, fdio_ns_unbind(name_space, FakeDevFsPath().data()));
+    ASSERT_EQ(ZX_OK, fdio_ns_unbind(name_space, FakeDevFsPath()));
   }
 
   void AddRamNandAndFtl() {
@@ -67,8 +66,8 @@ class FtlUtilTest : public ::testing::Test {
 
     fdio_ns_t* name_space;
     ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&name_space));
-    ASSERT_EQ(ZX_OK, fdio_ns_bind_fd(name_space, FakeDevFsPath().data(),
-                                     ram_nand_ctl_->devfs_root().get()));
+    ASSERT_EQ(ZX_OK,
+              fdio_ns_bind_fd(name_space, FakeDevFsPath(), ram_nand_ctl_->devfs_root().get()));
   }
 
   fbl::RefPtr<ramdevice_client::RamNandCtl> ram_nand_ctl_;

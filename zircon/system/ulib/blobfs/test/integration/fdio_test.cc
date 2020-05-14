@@ -9,7 +9,6 @@
 #include <lib/fdio/fd.h>
 
 #include <blobfs/mkfs.h>
-//#include <lib/fdio/io.h>
 
 namespace blobfs {
 
