@@ -1,0 +1,61 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointer;
+
+const uint32 MAX_EVENT = 128;
+
+/// A method for a client to receive pointer events.
+///
+/// The position of a pointer event is defined in the context of a viewport,
+/// situated in the view. The dimensions of the view and viewport, and their
+/// spatial relationship (defined with a transform matrix), are supplied
+/// synchronously in a |ViewParameter| table.  A view may retrieve a pointer's
+/// position in its local coordinate system by applying the viewport-to-view
+/// transform matrix.
+///
+/// The viewport is embedded in an independent and stable coordinate system,
+/// suitable for interpreting pointer events as a gesture; a swipe will be
+/// observed at a constant scale, even under effects such as magnification or
+/// panning. However, other effects, such as enlargening the view's clip bounds,
+/// may trigger a change in the viewport extents.
+protocol EventProvider {
+    /// A method for a client to receive pointer events.
+    ///
+    /// This call is formulated as a "hanging get" pattern: the client asks for
+    /// a set of recent events, and receives them via the callback. This
+    /// pull-based approach ensures that clients consume events at their own
+    /// pace; events don't clog up the channel in an unbounded manner.
+    ///
+    /// Flow control. The caller is allowed at most one in-flight |Watch| call
+    /// at a time; it is a logical error to have concurrent calls to |Watch|.
+    /// Non-compliance results in channel closure.
+    ///
+    /// Client pacing. The server will dispatch events to the caller on a FIFO,
+    /// lossless, best-effort basis, but the caller must allocate enough time to
+    /// keep up with new events. An unresponsive client may be categorized as
+    /// "App Not Responding" and targeted for channel closure.
+    ///
+    /// Responses. The gesture disambiguation scheme relies on a response per
+    /// dispatched event. Responses for *previous* events are fed to the server
+    /// on the *next* call of |Watch| [1]. Each element in the |responses|
+    /// vector is interprted as the pairwise response to the event in the
+    /// previous |events| vector; the vector lengths must match.
+    ///
+    /// Initial response. The first call to |Watch| must be an empty vector.
+    ///
+    /// Event times. The timestamps on each event in the event vector are *not*
+    /// guaranteed monotonic; pointer events from different devices may be
+    /// injected into Scenic at different times. Generally, events from a single
+    /// device are expected to have monotonically increasing timestamps.
+    ///
+    /// View parameters. Occasionally, changes in view or viewport require
+    /// notifying the client. If an |Event| carries |ViewParameters|, these
+    /// parameters apply to successive |PointerSample|s until the next
+    /// |ViewParameters|.
+    ///
+    /// [1] The hanging get pattern enables straightforward API evolution, but
+    /// unfortunately does not admit an idiomatic matching of response to event.
+    Watch(vector<Response>:MAX_EVENT responses) -> (vector<Event>:MAX_EVENT events);
+};

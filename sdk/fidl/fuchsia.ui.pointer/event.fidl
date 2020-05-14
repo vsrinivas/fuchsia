@@ -1,0 +1,198 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointer;
+
+///
+/// Aliases
+///
+
+/// A floating-point two-dimensional point.
+/// - The values are placed in (x, y) order.
+using Point2 = array<float32>:2;
+
+/// A floating-point two-dimensional vector.
+/// - The values are placed in (x, y) order.
+using Vec2 = array<float32>:2;
+
+///
+/// DeviceInfo
+///
+
+/// A characterization of a device that issues pointer event streams.
+/// A device may track multiple pointers, and a pointer's continuous engagement
+/// is modeled as a pointer event stream: a discrete stream of samples that
+/// follow a simple state machine, modeled with |EventPhase|.
+enum DeviceType {
+    /// A device intended for manipulation by direct contact over its surface.
+    TOUCH = 1;
+};
+
+/// Information about a device that issues pointer event streams.
+///
+/// All fields are required.
+table DeviceInfo {
+    /// An identifier for the pointer device that issues pointer event streams.
+    /// A device may own multiple pointers, each with its own pointer id.
+    1: uint32 id;
+
+    /// A characterization of a device that issues pointer event streams.
+    2: DeviceType type;
+};
+
+///
+/// PointerSample
+///
+
+/// The possible states of a pointer event stream's state machine.
+/// An event stream follows these state machines:
+/// ADD - CHANGE* - REMOVE
+/// ADD - CHANGE* - CANCEL
+enum EventPhase {
+    /// The device has started tracking the pointer.
+    ADD = 1;
+
+    /// The device has reported an update to the pointer state.
+    CHANGE = 2;
+
+    /// The device has stopped tracking the pointer.
+    REMOVE = 3;
+
+    /// The event stream is no longer available.
+    CANCEL = 4;
+};
+
+/// A description of each sampled data point in a pointer event stream.
+/// All fields are required.
+table PointerSample {
+    /// An identifier for the pointer device that issues pointer event streams.
+    /// A device may own multiple pointers, each with its own |pointer_id|.
+    1: uint32 device_id;
+
+    /// An identifier of the pointer that issued this event. It is unique only
+    /// to a specific |device_id|. Each (device_id, pointer_id) pointer issues
+    /// at most one pointer event stream at a time.
+    2: uint32 pointer_id;
+
+    /// The state of this event in the pointer event stream's state machine.
+    3: EventPhase phase;
+
+    /// The position of this event, in the viewport's coordinate system.
+    4: Point2 position_in_viewport;
+};
+
+///
+/// EventStreamOwnership
+///
+
+/// The pointer event stream's disposition, sent from server to client.
+enum EventStreamOwnershipStatus {
+    /// The client has been denied ownership of the event stream.
+    DENIED = 1;
+
+    /// The client has been granted ownership of the event stream.
+    GRANTED = 2;
+};
+
+/// The ownership status of a pointer event stream, sent from server to client.
+///
+/// All fields are required.
+table EventStreamOwnership {
+    /// An identifier for the pointer device that issues pointer event streams.
+    /// A device may own multiple pointers, each with its own |pointer_id|.
+    1: uint32 device_id;
+
+    /// An identifier of the pointer that issues a pointer event stream. It is
+    /// unique only to a specific |device_id|. Each (device_id, pointer_id)
+    /// pointer issues at most one pointer event stream at a time.
+    2: uint32 pointer_id;
+
+    /// The pointer event stream's disposition, sent from server to client.
+    3: EventStreamOwnershipStatus status;
+};
+
+///
+/// Event
+///
+
+/// A selection of FIFO data sent over the channel.
+/// Each data may have a different issuance policy.
+flexible union Data {
+    /// The parameters of the associated view and viewport, sufficient to
+    /// correctly interpret the position, orientation, magnitude, and
+    /// inter-event distance of pointer events dispatched to a view.
+    /// - It is issued on connection and on change.
+    1: ViewParameters view_parameters;
+
+    /// A description of the pointer device, sufficient to correctly interpret
+    /// the capabilities and usage intent of the device.
+    /// - It is issued once per device.
+    2: DeviceInfo device_info;
+
+    /// A description of each sampled data point in a pointer event stream.
+    /// - It is issued on every sample in the pointer event stream.
+    3: PointerSample pointer_sample;
+
+    /// The result of gesture disambiguation for a pointer event stream.
+    /// - It is issued once per pointer event stream.
+    4: EventStreamOwnership event_stream_ownership;
+};
+
+/// The self-sufficient, self-consistent collection of pointer-related data,
+/// sent from server to client.
+table Event {
+    /// The time this event was observed.
+    ///
+    /// Required.
+    1: zx.time timestamp;
+
+    /// The event's data.
+    ///
+    /// Required.
+    2: Data data;
+
+    /// An identifier to correlate this event's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    3: uint64 trace_flow_id;
+};
+
+///
+/// Response
+///
+
+/// The possible event stream dispositions that a client can respond with to a
+/// given |PointerSample|. Used as part of a gesture disambiguation scheme.
+///
+/// The responses revolve around the idea of an ownership claim on a pointer event
+/// stream (i.e., current and future events of that event stream). Clients may
+/// assert a claim of ownership on the current event stream, but only one
+/// client's claim is granted by the server; other clients' claims are denied.
+enum ResponseType {
+    /// The client declines ownership of the event stream.
+    NO = 1;
+
+    /// The client has not yet claimed ownership of the event stream.
+    MAYBE = 2;
+
+    /// The client needs to see a subsequent event stream to decide its claim on
+    /// the current event stream.
+    HOLD = 3;
+
+    /// The client claims ownership the event stream.
+    YES = 4;
+};
+
+/// A feedback event per |Event|, sent from client to server.
+///
+/// Only |PointerSample| requires a |ResponseType|; for other events, an empty
+/// |Response| table is sent to the server.
+table Response {
+    /// The event stream disposition that a client responds with for a given
+    /// |PointerSample|.
+    1: ResponseType response_type;
+
+    /// An identifier to correlate this response's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    2: uint64 trace_flow_id;
+};
