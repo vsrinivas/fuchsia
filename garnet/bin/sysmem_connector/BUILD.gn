@@ -49,7 +49,7 @@ executable("sysmem_connector_test_executable") {
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl:fxl_logging",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

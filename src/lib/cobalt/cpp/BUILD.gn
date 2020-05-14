@@ -53,7 +53,7 @@ source_set("cobalt_event_builder") {
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
   public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
-  deps = [ "//src/lib/fxl:fxl_logging" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("metric_event_builder") {
@@ -63,5 +63,5 @@ source_set("metric_event_builder") {
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
   public_deps = [ "//sdk/fidl/fuchsia.cobalt" ]
-  deps = [ "//src/lib/fxl:fxl_logging" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }

@@ -45,8 +45,8 @@ source_set("shared") {
   ]
   sources = [ "wire_format.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/debug/shared",
-    "//src/lib/fxl:fxl_logging",
   ]
 }
 

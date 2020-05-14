@@ -11,8 +11,5 @@ source_set("cli") {
 source_set("logging") {
   sources = [ "logging.h" ]
 
-  public_deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl:fxl_logging",
-  ]
+  public_deps = [ "//sdk/lib/syslog/cpp" ]
 }

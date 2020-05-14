@@ -15,7 +15,6 @@ import os
 import subprocess
 import sys
 
-
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
@@ -25,8 +24,10 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 class Type(object):
     LIB = 'lib'
     DRIVER = 'driver'
+
     @classmethod
-    def all(cls): return [cls.LIB, cls.DRIVER]
+    def all(cls):
+        return [cls.LIB, cls.DRIVER]
 
 
 class Build(object):
@@ -35,16 +36,21 @@ class Build(object):
 
 
 TARGETS = {
-    Type.LIB: {
-        Build.ZN: '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)',
-        Build.GN: '//src/lib/fxl:fxl_logging(//build/toolchain/fuchsia:arm64-shared)',
-    },
-    Type.DRIVER: {
-        Build.ZN: '//system/ulib/ddktl:ddktl-test.binary._build(//public/gn/toolchain:user-x64-clang.shlib)',
-        Build.GN: '//src/media/audio/drivers/virtual_audio:virtual_audio_driver(//build/toolchain/fuchsia:x64-shared)'
-    }
+    Type.LIB:
+        {
+            Build.ZN:
+                '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)',
+            Build.GN:
+                '//sdk/lib/syslog/cpp(//build/toolchain/fuchsia:arm64-shared)',
+        },
+    Type.DRIVER:
+        {
+            Build.ZN:
+                '//system/ulib/ddktl:ddktl-test.binary._build(//public/gn/toolchain:user-x64-clang.shlib)',
+            Build.GN:
+                '//src/media/audio/drivers/virtual_audio:virtual_audio_driver(//build/toolchain/fuchsia:x64-shared)'
+        }
 }
-
 
 DIMENSIONS = [
     'cflags',
@@ -76,14 +82,14 @@ def diff_lists(gn_object, zn_object, dimension):
 
 def main():
     parser = argparse.ArgumentParser(
-            description='Compares C/C++ compilation flags between the GN and ZN builds')
-    parser.add_argument('--build-dir',
-                        help='Path to the GN build dir',
-                        default=os.path.join(FUCHSIA_ROOT, 'out', 'default'))
-    parser.add_argument('--type',
-                        help='Type of target',
-                        choices=Type.all(),
-                        default=Type.LIB)
+        description=
+        'Compares C/C++ compilation flags between the GN and ZN builds')
+    parser.add_argument(
+        '--build-dir',
+        help='Path to the GN build dir',
+        default=os.path.join(FUCHSIA_ROOT, 'out', 'default'))
+    parser.add_argument(
+        '--type', help='Type of target', choices=Type.all(), default=Type.LIB)
     args = parser.parse_args()
 
     source_dir = FUCHSIA_ROOT
@@ -97,8 +103,8 @@ def main():
     else:
         print('Unsupported platform: %s' % sys.platform)
         return 1
-    gn_binary = os.path.join(source_dir, 'prebuilt', 'third_party', 'gn',
-                             platform, 'gn')
+    gn_binary = os.path.join(
+        source_dir, 'prebuilt', 'third_party', 'gn', platform, 'gn')
 
     base_command = [gn_binary, 'desc', '--format=json']
 
@@ -111,15 +117,17 @@ def main():
     zn_target = TARGETS[args.type][Build.ZN]
     print('Getting ZN data... [' + zn_target + ']')
     zircon_dir = os.path.join(source_dir, 'zircon')
-    zn_command = base_command + ['--root=' + zircon_dir, zn_build_dir, zn_target]
+    zn_command = base_command + [
+        '--root=' + zircon_dir, zn_build_dir, zn_target
+    ]
     result = subprocess.check_output(zn_command, cwd=source_dir)
     zn_data = json.loads(result)
 
-    gn_object = gn_data.items()[0][1];
-    zn_object = zn_data.items()[0][1];
+    gn_object = gn_data.items()[0][1]
+    zn_object = zn_data.items()[0][1]
 
     for dimension in DIMENSIONS:
-        diff_lists(gn_object, zn_object, dimension);
+        diff_lists(gn_object, zn_object, dimension)
 
     return 0
 

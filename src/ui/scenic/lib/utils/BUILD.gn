@@ -41,8 +41,8 @@ executable("sequential_fence_signaller_unittest") {
   deps = [
     ":utils",
     "//sdk/lib/fidl/cpp:cpp_base",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/fxl:fxl_logging",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
