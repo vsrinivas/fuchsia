@@ -82,15 +82,18 @@ UserPager::ReadRange UserPager::GetBlockAlignedReadRange(UserPagerInfo* info, ui
 
 UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(UserPagerInfo* info, uint64_t offset,
                                                              uint64_t length) {
-  // TODO(rashaeqbal): Make the cluster size dynamic once we have prefetched read efficiency
-  // metrics from the kernel - what percentage of prefetched pages are actually used.
-  //
-  // For now read read in at least 128KB (if the blob is larger than 128KB). 128KB is completely
-  // arbitrary. Tune this for optimal performance (until we can support dynamic prefetch sizing).
+  // TODO(rashaeqbal): Consider making the cluster size dynamic once we have prefetch read
+  // efficiency metrics from the kernel - i.e. what percentage of prefetched pages are actually
+  // used. Note that dynamic prefetch sizing might not play well with compression, since we
+  // always need to read in entire compressed frames.
   //
   // TODO(rashaeqbal): Consider extending the range backwards as well. Will need some way to track
   // populated ranges.
-  constexpr uint64_t kReadAheadClusterSize = (128 * (1 << 10));
+  //
+  // Read in at least 32KB at a time. This gives us the best performance numbers w.r.t. memory
+  // savings and observed latencies. Detailed results from experiments to tune this can be found in
+  // fxb/48519.
+  constexpr uint64_t kReadAheadClusterSize = (32 * (1 << 10));
 
   size_t read_ahead_offset = offset;
   size_t read_ahead_length = fbl::max(kReadAheadClusterSize, length);
