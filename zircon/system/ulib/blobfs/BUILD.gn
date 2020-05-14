@@ -90,11 +90,11 @@ zx_library("blobfs") {
   ]
   public_deps = [
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/range",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
+    "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
@@ -115,7 +115,6 @@ zx_library("blobfs") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
-    "//zircon/public/lib/range",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
@@ -123,6 +122,7 @@ zx_library("blobfs") {
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]

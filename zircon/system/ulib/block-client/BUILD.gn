@@ -34,7 +34,7 @@ zx_library("block-client") {
   public_deps = [
     # <block-client/cpp/fake-device.h> has #include <range/range.h>.
     # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
-    "//zircon/public/lib/range",
+    "//zircon/system/ulib/range",
 
     # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
     "//zircon/public/lib/zx",
@@ -76,18 +76,18 @@ zx_library("fake-device") {
   public_deps = [
     ":block-client",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/range",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage/buffer",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
-    "//zircon/public/lib/range",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage/buffer",
   ]

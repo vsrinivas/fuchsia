@@ -34,8 +34,8 @@ zx_library("gpt") {
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//zircon/public/lib/cksum",
       "//zircon/public/lib/fit",
-      "//zircon/public/lib/range",
       "//zircon/system/ulib/mbr",
+      "//zircon/system/ulib/range",
     ]
   }
 

@@ -46,13 +46,13 @@ test("block-client-unit") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/range",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
   ]
 }
