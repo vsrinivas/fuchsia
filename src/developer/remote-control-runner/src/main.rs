@@ -3,34 +3,86 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context as _, Error},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    fidl_fuchsia_overnet::MeshControllerProxyInterface,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    futures::{future::try_join, prelude::*},
+    std::io::{Read, Write},
 };
+
+async fn copy_stdin_to_socket(
+    mut tx_socket: futures::io::WriteHalf<fidl::AsyncSocket>,
+) -> Result<(), Error> {
+    let (mut tx_stdin, mut rx_stdin) = futures::channel::mpsc::channel::<Vec<u8>>(2);
+    std::thread::Builder::new()
+        .spawn(move || -> Result<(), Error> {
+            let mut buf = [0u8; 1024];
+            let mut stdin = std::io::stdin();
+            loop {
+                let n = stdin.read(&mut buf)?;
+                if n == 0 {
+                    return Ok(());
+                }
+                let buf = &buf[..n];
+                futures::executor::block_on(tx_stdin.send(buf.to_vec()))?;
+            }
+        })
+        .context("Spawning blocking thread")?;
+    while let Some(buf) = rx_stdin.next().await {
+        tx_socket.write(buf.as_slice()).await?;
+    }
+    Ok(())
+}
+
+async fn copy_socket_to_stdout(
+    mut rx_socket: futures::io::ReadHalf<fidl::AsyncSocket>,
+) -> Result<(), Error> {
+    let (mut tx_stdout, mut rx_stdout) = futures::channel::mpsc::channel::<Vec<u8>>(2);
+    std::thread::Builder::new()
+        .spawn(move || -> Result<(), Error> {
+            let mut stdout = std::io::stdout();
+            while let Some(buf) = futures::executor::block_on(rx_stdout.next()) {
+                let mut buf = buf.as_slice();
+                loop {
+                    let n = stdout.write(buf)?;
+                    if n == buf.len() {
+                        stdout.flush()?;
+                        break;
+                    }
+                    buf = &buf[n..];
+                }
+            }
+            Ok(())
+        })
+        .context("Spawning blocking thread")?;
+    let mut buf = [0u8; 1024];
+    loop {
+        let n = rx_socket.read(&mut buf).await?;
+        tx_stdout.send((&buf[..n]).to_vec()).await?;
+    }
+}
 
 async fn send_request(proxy: RemoteControlProxy) -> Result<(), Error> {
     // We just need to make a request to the RCS - it doesn't really matter
     // what we choose here so long as there are no side effects.
-    let result = proxy.identify_host().await?;
-    match result {
-        Ok(_) => {
-            // NOTE: this string is used as a comparison point to see if this succeeded
-            // by the ffx daemon. If you change this string, also change the corresponding
-            // check in the daemon.
-            println!("Successfully connected to RCS.");
-            Ok(())
-        }
-        // If IdentifyHost fails internally, we don't really care
-        // since we at least know that the RCS is now running.
-        Err(_) => Ok(()),
-    }
+    let _ = proxy.identify_host().await?;
+    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let rcs_proxy = connect_to_service::<RemoteControlMarker>().unwrap();
-    send_request(rcs_proxy).await
+    let rcs_proxy = connect_to_service::<RemoteControlMarker>()?;
+    send_request(rcs_proxy).await?;
+    let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
+    let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
+    let (rx_socket, tx_socket) = futures::AsyncReadExt::split(local_socket);
+    hoist::connect_as_mesh_controller()?
+        .attach_socket_link(remote_socket, fidl_fuchsia_overnet::SocketLinkOptions::empty())?;
+    try_join(copy_socket_to_stdout(rx_socket), copy_stdin_to_socket(tx_socket)).await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

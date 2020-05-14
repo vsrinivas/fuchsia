@@ -8,7 +8,6 @@ use {
     crate::mdns::MdnsTargetFinder,
     crate::ok_or_continue,
     crate::onet,
-    crate::ssh::build_ssh_command,
     crate::target::{RCSConnection, Target, TargetCollection},
     anyhow::{anyhow, Context, Error},
     async_std::task,
@@ -42,39 +41,7 @@ struct RCSActivatorHook {}
 #[async_trait]
 impl DiscoveryHook for RCSActivatorHook {
     async fn on_new_target(&self, target: &Arc<Target>, _tc: &Arc<TargetCollection>) {
-        let addrs_clone = target.addrs().await;
-        let mut state = target.state.lock().await;
-        if state.overnet_started {
-            return;
-        }
-
-        {
-            let mut host_pipe = state.host_pipe.lock().await;
-
-            if host_pipe.is_none() {
-                match onet::connect_to_onet(&target, addrs_clone).await {
-                    Ok(c) => {
-                        host_pipe.replace(c);
-                    }
-                    Err(e) => {
-                        log::warn!(
-                            "failed to start host-pipe process for '{}': {}",
-                            target.nodename,
-                            e
-                        );
-                        return;
-                    }
-                }
-            }
-        }
-
-        match Daemon::start_remote_control(&target).await {
-            Ok(()) => state.overnet_started = true,
-            Err(e) => {
-                log::warn!("unable to start remote control for '{}': {}", target.nodename, e);
-                return;
-            }
-        }
+        Target::run_host_pipe(target.clone()).await;
     }
 }
 
@@ -183,31 +150,11 @@ impl Daemon {
                         Target::from_rcs_connection(remote_control_proxy).await,
                         "unable to convert proxy to target",
                     );
+                    log::info!("Found new target via overnet: {}", target.nodename);
                     tc.merge_insert(target).await;
                 }
             }
         });
-    }
-
-    async fn start_remote_control(target: &Target) -> Result<(), Error> {
-        for _ in 0..MAX_RETRY_COUNT {
-            let args = [
-                "run",
-                "fuchsia-pkg://fuchsia.com/remote-control-runner#meta/remote-control-runner.cmx",
-            ];
-            let mut cmd = build_ssh_command(target.addrs().await, args.to_vec()).await?;
-
-            let output = cmd
-                .stdin(std::process::Stdio::null())
-                .output()
-                .context("Failed to SSH into device")?;
-            if output.stdout.starts_with(b"Successfully") {
-                return Ok(());
-            }
-            task::sleep(RETRY_DELAY).await;
-        }
-
-        Err(anyhow!("Starting RCS failed. Check target system logs for details."))
     }
 
     /// Attempts to get at most one target. If there is more than one target,

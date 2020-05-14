@@ -23,6 +23,8 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//src/connectivity/overnet/lib/hoist",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -50,6 +52,7 @@ package("pkg") {
   binaries = [
     {
       name = "remote_control_runner"
+      shell = true
     },
   ]
 
