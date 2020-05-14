@@ -1,7 +1,9 @@
 toc:
 - title: Overview
   path: {{url_path}}README.md
+- title: API
+  section:
 {{#each table_of_contents ~}}
-- title: {{name}}
-  path: {{@root.url_path}}{{name}}
+  - title: {{name}}
+    path: {{@root.url_path}}{{name}}
 {{/each}}
