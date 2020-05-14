@@ -450,7 +450,8 @@ Any input --manifest that precedes all --output arguments
 just supplies auxiliary files implicitly required by other (later) input
 manifests, but does not add all its files to any --output manifest.  This
 is used for shared libraries and the like.
-''')
+''',
+        fromfile_prefix_chars='@')
     parser.add_argument(
         '--build-id-dir',
         required=False,

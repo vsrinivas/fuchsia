@@ -46,8 +46,9 @@ template("_pm") {
 #   The following two items are only required in order to produce metadata about
 #   the package sets, and may be removed in the future:
 #
-#   package_name (required)
+#   package_name (default: the target name)
 #     [string] Name of the package (should match what is in meta/package)
+#
 #   package_variant (default: "0")
 #     [string] Variant of the package (should match what is in meta/package)
 #
@@ -61,8 +62,9 @@ template("pm_build") {
                            "package_name",
                            "package_variant",
                          ])
-  assert(defined(package_name), "A package name is required")
-  assert(package_name != "", "A package name is required")
+  if (!defined(package_name)) {
+    package_name = target_name
+  }
 
   if (!defined(package_variant)) {
     package_variant = "0"

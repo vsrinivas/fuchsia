@@ -1,0 +1,164 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/manifest.gni")
+import("//src/sys/pkg/bin/pm/pm.gni")
+
+# Defines a Fuchsia package.
+# See: https://fuchsia.dev/fuchsia-src/glossary#fuchsia-package
+#
+# Fuchsia packages are a collection of any number of files (or resources), each
+# with a unique path that is relative to the package's root.
+# Package targets collect resources via their dependencies. These dependencies
+# are typically components, which provide their component manifest as a
+# resource as well as forward their own dependencies on resources. Packages
+# can also depend directly on resources.
+#
+# Packages can be defined as a collection of pairs each representing a file in
+# the package. Each pair consists of the path in the package that is assigned
+# to the file, and a path relative to the build system's output directory where
+# the contents of the file will be sourced from.
+#
+# This mapping is generated at build time, and is known as the package
+# manifest. To view the package manifest, For instance assume you have defined
+# a package at `path/to/project:my_package` and built it:
+# ```
+# $ fx build path/to/project:my_package
+# ```
+# You can then find the path to the generated manifest:
+# ```
+# $ fx outputs out/default path/to/project:my_package_manifest
+# ```
+#
+# The package name is defined by the target name.
+# Some rules apply to package names.
+# See: https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-name
+#
+# It's recommended for a package to depend on one or more `fuchsia_component()`
+# targets. Typically no other dependencies are required.
+#
+# Example:
+# ```
+# fuchsia_package("my-package") {
+#   components = [
+#     ":first_component",
+#     ":second_component",
+#   ]
+# }
+# ```
+#
+# Parameters
+#
+#   package_name (optional)
+#     The name of the package.
+#     Type: string
+#     Default: target_name
+#
+#   components (optional)
+#     `fuchsia_component()` targets to include in the package.
+#     While it's possible for a package to just contain data files, or nothing
+#     at all, typically a package contains at least one component.
+#     Type: list(targets)
+#
+#   data_deps
+#   deps
+#   public_deps
+#   testonly
+#   visibility
+template("fuchsia_package") {
+  package_name = target_name
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+
+  if (!defined(invoker.deps)) {
+    invoker.deps = []
+  }
+  if (defined(invoker.components)) {
+    invoker.deps += invoker.components
+  } else {
+    invoker.components = []
+  }
+
+  # Generate the "meta/package" file
+  meta_package_target = "${target_name}_meta_package"
+  meta_package_file = "$target_out_dir/$meta_package_target.json"
+  generated_file(meta_package_target) {
+    contents = "{\"name\":\"$package_name\",\"version\":\"0\"}"
+    outputs = [ meta_package_file ]
+    output_conversion = "string"
+    visibility = [ ":*" ]
+  }
+
+  metadata_target = "${target_name}_package_metadata"
+  group(metadata_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    metadata = {
+      package_manifest_args = [
+        "--entry=meta/package=" + rebase_path(meta_package_file, root_out_dir),
+        "--entry-manifest=" +
+            get_label_info(":${invoker.target_name}", "label_no_toolchain"),
+      ]
+    }
+  }
+
+  # Generate package manifest args
+  args_target = "${target_name}_manifest_args"
+  args_file = "$target_out_dir/$args_target"
+  generated_file(args_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    deps += [ ":$metadata_target" ]
+    outputs = [ args_file ]
+    data_keys = [ "package_manifest_args" ]
+    output_conversion = "list lines"
+  }
+
+  # Generate package manifest
+  generate_manifest("${target_name}_manifest") {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$meta_package_target" ]
+    sources = [ meta_package_file ]
+    foreach(component, invoker.components) {
+      sources += get_target_outputs(component)
+    }
+    args = [ "@" + rebase_path(args_file, root_build_dir) ]
+  }
+
+  # Build package
+  pm_build(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    manifest = ":${target_name}_manifest"
+  }
+}

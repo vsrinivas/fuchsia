@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/test_spec.gni")
+
+# Defines a test that runs on a Fuchsia device.
+#
+# Invoking this template registers a component and a package such that running
+# the test would involve pushing the package to a Fuchsia device, launching the
+# component, and treating said component as a test.
+#
+# Example:
+# ```
+# fuchsia_test("my-test") {
+#   package = ":my-package"
+#   component = ":my-component"
+# }
+# ```
+# The above can be tested with `fx test fuchsia-pkg://fuchsia.com/my-package#meta/my-component.cmx`.
+#
+# Parameters
+#
+#   package (required)
+#     The `fuchsia_package()` that contains the test component.
+#     Type: label
+#
+#   package_name (optional)
+#     The name of the above (`package_name` argument if specified).
+#     Type: string
+#     Default: get_label_info(package, "name")
+#
+#   component (required)
+#     The component that implements the test.
+#
+#   Additional `test_spec()` parameters will be forwarded.
+template("fuchsia_test") {
+  assert(
+      defined(invoker.package),
+      "A `package` argument was missing when calling fuchsia_test($target_name)")
+  assert(
+      defined(invoker.component),
+      "A `component` argument was missing when calling fuchsia_test($target_name)")
+
+  package_name = get_label_info(invoker.package, "name")
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+
+  manifest_name = get_target_outputs(invoker.component)
+  manifest_name = get_path_info(manifest_name[0], "file")
+
+  test_spec(target_name) {
+    target = invoker.package
+    package_url = "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
+    forward_variables_from(invoker, "*")
+    deps = [
+      component,
+      package,
+    ]
+  }
+}

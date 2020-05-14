@@ -1,0 +1,10 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Entry point for all general purpose GN templates for building and testing
+# Fuchsia components.
+import("fuchsia_component.gni")
+import("fuchsia_package.gni")
+import("fuchsia_resources.gni")
+import("fuchsia_test.gni")
