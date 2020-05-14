@@ -15,12 +15,18 @@ import (
 
 	"netstack/util"
 
+	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
 
+	networking_metrics "networking_metrics_golib"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
@@ -828,5 +834,128 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 		if t.Failed() {
 			t.FailNow()
 		}
+	}
+}
+
+func TestObservationsFromDHCPv6Configuration(t *testing.T) {
+	ndpDisp := newNDPDispatcherForTest()
+	// ndpDispatcher registers novel observations by calling cobaltClient.Register.
+	// When the observations are pulled, we ensure that all novelty since the
+	// last pull is included and duplicate observations are coalesced.
+	type step struct {
+		run  func()
+		want []cobalt.CobaltEvent
+	}
+	tests := []struct {
+		name  string
+		steps []step
+	}{
+		{
+			name: "one_configuration",
+			steps: []step{
+				{
+					run: func() {
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple_configurations",
+			steps: []step{
+				{
+					run: func() {
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6ManagedAddress)
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+						},
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.ManagedAddress)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "pull_between_configurations",
+			steps: []step{
+				{
+					run: func() {
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+						},
+					},
+				},
+				{
+					run: func() {
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "duplicated_configurations",
+			steps: []step{
+				{
+					run: func() {
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, tcpipstack.DHCPv6NoConfiguration)
+					},
+					want: []cobalt.CobaltEvent{
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+						},
+						{
+							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	cobaltClient := NewCobaltClient()
+	ndpDisp.obs.setHasEvents(func() {
+		cobaltClient.Register(&ndpDisp.obs)
+	})
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, step := range test.steps {
+				step.run()
+				got := cobaltClient.Collect()
+				if diff := cmp.Diff(step.want, got,
+					// There's exactly one event code per event.
+					cmpopts.SortSlices(func(a, b cobalt.CobaltEvent) bool {
+						return a.EventCodes[0] > b.EventCodes[0]
+					}),
+					cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+					t.Fatalf("observations mismatch (-want +got):\n%s", diff)
+				}
+			}
+		})
 	}
 }

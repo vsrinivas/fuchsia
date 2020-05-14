@@ -21,13 +21,14 @@ import (
 	"syscall/zx/fidl"
 	"time"
 
-	"fuchsia.googlesource.com/component"
-	"fuchsia.googlesource.com/syslog"
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
 	"netstack/pprof"
 	networking_metrics "networking_metrics_golib"
+
+	"fuchsia.googlesource.com/component"
+	"fuchsia.googlesource.com/syslog"
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
@@ -262,7 +263,11 @@ func Main() {
 
 	ns.netstackService.mu.proxies = make(map[*netstack.NetstackEventProxy]struct{})
 
+	cobaltClient := NewCobaltClient()
 	ndpDisp.ns = ns
+	ndpDisp.obs.setHasEvents(func() {
+		cobaltClient.Register(&ndpDisp.obs)
+	})
 	ndpDisp.start(ctx)
 
 	if err := ns.addLoopback(); err != nil {
@@ -450,7 +455,7 @@ func Main() {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
 	} else {
 		go func() {
-			if err := runCobaltClient(ctx, cobaltLogger, &ns.stats, ns.stack); err != nil {
+			if err := cobaltClient.Run(ctx, cobaltLogger, &ns.stats, ns.stack); err != nil {
 				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 			}
 		}()

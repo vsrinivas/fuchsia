@@ -7,9 +7,14 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"fuchsia.googlesource.com/syslog"
 	"sync"
 	"time"
+
+	"fuchsia.googlesource.com/syslog"
+
+	networking_metrics "networking_metrics_golib"
+
+	"fidl/fuchsia/cobalt"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -137,6 +142,9 @@ type ndpDispatcher struct {
 	// testNotifyCh should only be set by tests.
 	testNotifyCh chan struct{}
 
+	// obs tracks unique observations since the last Cobalt pull.
+	obs dhcpV6Observation
+
 	mu struct {
 		sync.Mutex
 
@@ -230,8 +238,59 @@ func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []s
 	syslog.Infof("ndp: OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
 
+type dhcpV6Observation struct {
+	mu struct {
+		sync.Mutex
+		seen      map[stack.DHCPv6ConfigurationFromNDPRA]int
+		hasEvents func()
+	}
+}
+
+func (o *dhcpV6Observation) setHasEvents(hasEvents func()) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.mu.hasEvents = hasEvents
+}
+
+func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	res := make([]cobalt.CobaltEvent, 0, len(o.mu.seen))
+	for c, count := range o.mu.seen {
+		var code networking_metrics.NetworkingMetricDimensionConfigurationFromNdpra
+		switch c {
+		case stack.DHCPv6NoConfiguration:
+			code = networking_metrics.NoConfiguration
+		case stack.DHCPv6ManagedAddress:
+			code = networking_metrics.ManagedAddress
+		case stack.DHCPv6OtherConfigurations:
+			code = networking_metrics.OtherConfigurations
+		default:
+			syslog.Warnf("ndp: unknown stack.DHCPv6ConfigurationFromNDPRA: %s", c)
+		}
+		for i := 0; i < count; i++ {
+			res = append(res, cobalt.CobaltEvent{
+				MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
+				EventCodes: []uint32{uint32(code)},
+			})
+		}
+	}
+	o.mu.seen = nil
+	return res
+}
+
 // OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
 func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration stack.DHCPv6ConfigurationFromNDPRA) {
+	n.obs.mu.Lock()
+	if n.obs.mu.seen == nil {
+		n.obs.mu.seen = make(map[stack.DHCPv6ConfigurationFromNDPRA]int)
+	}
+	n.obs.mu.seen[configuration] += 1
+	hasEvents := n.obs.mu.hasEvents
+	n.obs.mu.Unlock()
+	if hasEvents != nil {
+		hasEvents()
+	}
 	syslog.Infof("ndp: OnDHCPv6Configuration(%d, %d)", nicID, configuration)
 }
 

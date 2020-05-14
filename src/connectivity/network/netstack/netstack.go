@@ -81,7 +81,46 @@ type stats struct {
 // Map from Cobalt metric ID to metric value.
 type nicStats map[uint32]uint64
 
-func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, stats *stats, stk *stack.Stack) error {
+type cobaltClient struct {
+	mu struct {
+		sync.Mutex
+		observations map[cobaltEventProducer]struct{}
+	}
+}
+
+type cobaltEventProducer interface {
+	events() []cobalt.CobaltEvent
+	// setHasEvents supplies this cobaltEventProducer with a `hasEvents` callback.
+	setHasEvents(hasEvents func())
+}
+
+func NewCobaltClient() *cobaltClient {
+	var c cobaltClient
+	c.mu.observations = make(map[cobaltEventProducer]struct{})
+	return &c
+}
+
+func (c *cobaltClient) Register(o cobaltEventProducer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.mu.observations[o] = struct{}{}
+}
+
+func (c *cobaltClient) Collect() []cobalt.CobaltEvent {
+	c.mu.Lock()
+	os := c.mu.observations
+	c.mu.observations = make(map[cobaltEventProducer]struct{})
+	c.mu.Unlock()
+
+	var events []cobalt.CobaltEvent
+	for o := range os {
+		events = append(events, o.events()...)
+	}
+	return events
+}
+
+func (c *cobaltClient) Run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, stats *stats, stk *stack.Stack) error {
+	// TODO(52146): move stats to a cobaltEventProducer.
 	// Metric                         | Sampling Interval | Aggregation Strategy
 	// SocketCountMax                 | socket creation   | max
 	// SocketsCreated                 | 1 minute          | delta
@@ -145,6 +184,7 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInte
 					Payload:  eventCount(period, tcpConnectionsTimedOut-lastTcpConnectionsTimedOut),
 				},
 			}
+			events = append(events, c.Collect()...)
 
 			nicInfos := stk.NICInfo()
 			for nicid, info := range nicInfos {
