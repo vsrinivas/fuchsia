@@ -5,8 +5,6 @@
 package parser
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"strconv"
@@ -645,50 +643,27 @@ func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 func (p *Parser) parseByteList() ([]byte, error) {
 	var bytes []byte
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
-		// Read the byte size.
-		tok, err := p.consumeToken(tText)
+		tok, err := p.peekToken()
 		if err != nil {
 			return err
 		}
-		if p.peekTokenKind(tText) {
-			// First token was the label. Now get the byte size.
-			tok, _ = p.consumeToken(tText)
-		}
-
-		byteSize, err := strconv.ParseUint(tok.value, 10, 64)
-		if err != nil {
-			return p.newParseError(tok, "error parsing byte block size: %v", err)
-		}
-		if byteSize == 0 {
-			return p.newParseError(tok, "expected non-zero byte size")
-		}
-
-		if _, err := p.consumeToken(tColon); err != nil {
-			return err
-		}
-
-		// Read the type.
-		tok, err = p.consumeToken(tText)
-		if err != nil {
-			return err
-		}
-		var handler func(byteSize int) ([]byte, error)
-		switch tok.value {
-		case "raw":
-			handler = p.parseByteBlockRaw
-		case "num":
-			handler = p.parseByteBlockNum
-		case "padding":
-			handler = p.parseByteBlockPadding
-		default:
-			return p.newParseError(tok, "unknown byte block type %q", tok.value)
-		}
-		if b, err := handler(int(byteSize)); err != nil {
-			return err
-		} else if len(b) != int(byteSize) {
-			return p.newParseError(tok, "byte block produced of incorrect size. got %d, want %d", len(b), byteSize)
-		} else {
+		if tok.kind == tText && 'a' <= tok.value[0] && tok.value[0] <= 'z' {
+			p.nextToken()
+			parse, ok := p.getByteGenParser(tok.value)
+			if !ok {
+				return p.newParseError(tok, "invalid byte syntax: %s", tok.value)
+			}
+			b, err := parse()
+			if err != nil {
+				return err
+			}
 			bytes = append(bytes, b...)
+		} else {
+			b, err := p.parseByte()
+			if err != nil {
+				return err
+			}
+			bytes = append(bytes, b)
 		}
 		return nil
 	})
@@ -696,71 +671,6 @@ func (p *Parser) parseByteList() ([]byte, error) {
 		return nil, err
 	}
 	return bytes, nil
-}
-
-func (p *Parser) parseByteBlockRaw(byteSize int) ([]byte, error) {
-	res := make([]byte, 0, byteSize)
-	err := p.parseCommaSeparated(tLparen, tRparen, func() error {
-		b, err := p.parseByte()
-		if err != nil {
-			return err
-		}
-		res = append(res, b)
-		return nil
-	})
-	return res, err
-}
-
-func (p *Parser) parseByteBlockNum(byteSize int) ([]byte, error) {
-	if _, err := p.consumeToken(tLparen); err != nil {
-		return nil, err
-	}
-	neg := p.peekTokenKind(tNeg)
-	if neg {
-		p.consumeToken(tNeg)
-	}
-	tok, err := p.consumeToken(tText)
-	if err != nil {
-		return nil, err
-	}
-	buf := make([]byte, 8)
-	uintVal, err := strconv.ParseUint(tok.value, 0, 64)
-	if err != nil {
-		return nil, p.newParseError(tok, "error parsing unsigned integer num: %v", err)
-	}
-	if neg {
-		intVal := -int64(uintVal)
-		if intVal>>(uint(byteSize)*8-1) < -1 {
-			return nil, p.newParseError(tok, "num value %d exceeds byte size %d", intVal, byteSize)
-		}
-		uintVal = uint64(intVal)
-	} else {
-		if uintVal>>(uint(byteSize)*8) > 0 {
-			return nil, p.newParseError(tok, "num value %d exceeds byte size %d", uintVal, byteSize)
-		}
-	}
-	binary.LittleEndian.PutUint64(buf, uintVal)
-	if _, err := p.consumeToken(tRparen); err != nil {
-		return nil, err
-	}
-	return buf[:byteSize], nil
-}
-
-func (p *Parser) parseByteBlockPadding(byteSize int) ([]byte, error) {
-	if !p.peekTokenKind(tLparen) {
-		return bytes.Repeat([]byte{0}, byteSize), nil
-	}
-	if _, err := p.consumeToken(tLparen); err != nil {
-		return nil, err
-	}
-	b, err := p.parseByte()
-	if err != nil {
-		return nil, err
-	}
-	if _, err := p.consumeToken(tRparen); err != nil {
-		return nil, err
-	}
-	return bytes.Repeat([]byte{b}, byteSize), nil
 }
 
 func (p *Parser) parseByte() (byte, error) {
@@ -773,7 +683,7 @@ func (p *Parser) parseByte() (byte, error) {
 	}
 	b, err := strconv.ParseUint(tok.value, 0, 8)
 	if err != nil {
-		return 0, p.newParseError(tok, err.Error())
+		return 0, p.newParseError(tok, "invalid byte syntax: %s", tok.value)
 	}
 	return byte(b), nil
 }

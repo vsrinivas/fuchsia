@@ -10,17 +10,23 @@ success("UnionWithBoundString") {
     },
     bytes = {
         old = [
-            tag 8:num(0),
-            size 8:num(4),
-            ptr 8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
-            data 4:raw('a', 'b', 'c', 'd',), 4:padding,
+            // primary object
+            num(0):8, // tag
+            num(4):8, repeat(0xff):8, // boundFiveStr size, present
+
+            // secondary object 1: boundFiveStr
+            'a', 'b', 'c', 'd', padding:4,
         ],
         v1 = [
-            ordinal 8:num(1), num_bytes 4:num(24), num_handles 4:num(0),
-            present 8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
-            size 8:num(4),
-            ptr 8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
-            data 4:raw('a', 'b', 'c', 'd',), 4:padding,
+            // primary object
+            num(1):8, // ordinal
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
+
+            // secondary object 1: union
+            num(4):8, repeat(0xff):8, // boundFiveStr size, present
+
+            // secondary object 2: boundFiveStr
+            'a', 'b', 'c', 'd', padding:4,
         ],
     },
 }
@@ -44,17 +50,15 @@ success("UnionMigration_SingleVariant") {
     },
     bytes = {
         old = [
-            tag 4:num(0), x 4:num(42)
+            num(0):4, num(42):4 // tag, x
         ],
         v1 = [
             // primary object
-            // TOOD(fxb/39578) Change ordinal to 8:num(1) and remove padding.
-            ordinal 4:num(1), 4:padding,
-            num_bytes 4:num(8), num_handles 4:num(0),
-            present 8:raw(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+            num(1):8, // ordinal
+            num(8):4, num(0):4, repeat(0xff):8, // envelope
 
-            // secondary object 1
-            x 4:num(42), 4:padding,
+            // secondary object 1: x
+            num(42):4, padding:4,
         ],
     },
 }
@@ -67,13 +71,15 @@ success("ReverseOrdinalUnion") {
     },
     bytes = {
         old = [
-            tag 4:num(2), 4:padding, x 8:num(42),
+            num(2):4, padding:4, num(42):8, // tag, x
         ],
         v1 = [
-            ordinal 8:num(4),
-            num_bytes 4:num(8), num_handles 4:num(0),
-            present 8:raw(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
-            x 8:num(42),
+            // primary object
+            num(4):8, // ordinal
+            num(8):4, num(0):4, repeat(0xff):8, // envelope
+
+            // secondary object 1: x
+            num(42):8,
         ],
     },
 }

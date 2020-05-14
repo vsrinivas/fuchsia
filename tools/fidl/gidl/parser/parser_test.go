@@ -156,7 +156,7 @@ func TestParseBytes(t *testing.T) {
 		},
 		// base 10
 		{
-			gidl: `{ v1 = [3:raw(1, 2, 3,),] }`,
+			gidl: `{ v1 = [1, 2, 3] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -166,7 +166,7 @@ func TestParseBytes(t *testing.T) {
 		},
 		// base 16
 		{
-			gidl: `{ v1 = [5:raw(0x0, 0xff, 0xA, 0x0a, 7,),] }`,
+			gidl: `{ v1 = [0x0, 0xff, 0xA, 0x0a, 7] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -176,7 +176,7 @@ func TestParseBytes(t *testing.T) {
 		},
 		// character codes
 		{
-			gidl: `{ v1 = [5:raw('h', 'e', 'l', 'l', 'o',),] }`,
+			gidl: `{ v1 = ['h', 'e', 'l', 'l', 'o'] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -186,7 +186,7 @@ func TestParseBytes(t *testing.T) {
 		},
 		// positive number
 		{
-			gidl: `{ v1 = [4:num(2147483647),] }`,
+			gidl: `{ v1 = [num(2147483647):4] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -196,7 +196,7 @@ func TestParseBytes(t *testing.T) {
 		},
 		// negative number
 		{
-			gidl: `{ v1 = [2:num(-32768),] }`,
+			gidl: `{ v1 = [num(-32768):2] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -204,9 +204,9 @@ func TestParseBytes(t *testing.T) {
 				},
 			},
 		},
-		// padding - default of 0
+		// padding
 		{
-			gidl: `{ v1 = [3:padding,] }`,
+			gidl: `{ v1 = [padding:3] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -214,9 +214,9 @@ func TestParseBytes(t *testing.T) {
 				},
 			},
 		},
-		// padding with non default value
+		// repeat a byte
 		{
-			gidl: `{ v1 = [3:padding(0x33),] }`,
+			gidl: `{ v1 = [repeat(0x33):3] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
@@ -224,13 +224,33 @@ func TestParseBytes(t *testing.T) {
 				},
 			},
 		},
-		// multiple byte block types in same list
+		// multiple byte generators in same list
 		{
-			gidl: `{ v1 = [2:num(127), 3:padding(0x33),] }`,
+			gidl: `{ v1 = [num(127):2, repeat(0x33):3] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0x7f, 0x00, 0x33, 0x33, 0x33},
+				},
+			},
+		},
+		// mix plain bytes, characters, and generators
+		{
+			gidl: `{ v1 = [num(127):2, 255, padding:1, 'A'] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: ir.V1WireFormat,
+					Bytes:      []byte{0x7f, 0x00, 0xff, 0x00, 'A'},
+				},
+			},
+		},
+		// trailing comma allowed
+		{
+			gidl: `{ v1 = [1,2,] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: ir.V1WireFormat,
+					Bytes:      []byte{1, 2},
 				},
 			},
 		},
@@ -264,7 +284,7 @@ func TestParseBytes(t *testing.T) {
 		},
 		// multiple wire formats, same bytes (non-empty)
 		{
-			gidl: `{ old, v1 = [3:raw(1, 2, 3,),] }`,
+			gidl: `{ old, v1 = [1, 2, 3] }`,
 			expectedValue: []ir.Encoding{
 				{
 					WireFormat: ir.OldWireFormat,
@@ -279,8 +299,8 @@ func TestParseBytes(t *testing.T) {
 		// multiple wire formats, different bytes
 		{
 			gidl: `{
-				old = [3:raw(1, 2, 3,),],
-				v1 = [3:padding(4),],
+				old = [1, 2, 3],
+				v1 = [repeat(4):3],
 			}`,
 			expectedValue: []ir.Encoding{
 				{
@@ -314,15 +334,23 @@ func TestParseBytesFailures(t *testing.T) {
 			errSubstring: "no bytes",
 		},
 		{
-			gidl:         `{ v1 = [0:raw(),] }`,
+			gidl:         `{ v1 = [PADDING:0] }`,
+			errSubstring: "invalid byte syntax",
+		},
+		{
+			gidl:         `{ v1 = [thisisnotagenerator(1):0] }`,
+			errSubstring: "invalid byte syntax",
+		},
+		{
+			gidl:         `{ v1 = [padding:0] }`,
 			errSubstring: "non-zero",
 		},
 		{
-			gidl:         `{ v1 = [2:num(65536),] }`,
+			gidl:         `{ v1 = [num(65536):2] }`,
 			errSubstring: "exceeds byte size",
 		},
 		{
-			gidl:         `{ v1 = [2:num(-32769),] }`,
+			gidl:         `{ v1 = [num(-32769):2] }`,
 			errSubstring: "exceeds byte size",
 		},
 		{
@@ -356,10 +384,8 @@ func TestParseSuccessCase(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 	}`
@@ -419,10 +445,8 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 	}`
@@ -461,10 +485,8 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 	}`
@@ -529,11 +551,9 @@ func TestParseDecodeFailureCase(t *testing.T) {
 		type = TypeName,
 		bytes = {
 			v1 = [
-				16:raw(
-					1, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-					// one character missing
-				),
+				1, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+				// one character missing
 			],
 		},
 		err = STRING_TOO_LONG,
@@ -659,10 +679,8 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 		bindings_allowlist = [go, rust],
@@ -734,10 +752,8 @@ func TestParseFailsBindingsAllowlist(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 		bindings_allowlist = [go, rust],
@@ -757,10 +773,8 @@ func TestParseFailsBindingsDenylist(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 		bindings_allowlist = [go, rust],
@@ -777,8 +791,8 @@ func TestParseSucceedsMultipleWireFormats(t *testing.T) {
 	success("MultipleWireFormats") {
 		value = MultipleWireFormats {},
 		bytes = {
-			old = [ 1:raw(0) ],
-			v1 = [ 1:raw(1) ],
+			old = [0],
+			v1 = [1],
 		}
 	}`
 	all, err := parse(gidl)
@@ -830,10 +844,8 @@ func TestParseFailsExtraKind(t *testing.T) {
 		},
 		bytes = {
 			v1 = [
-				16:raw(
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				),
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			],
 		},
 	}`

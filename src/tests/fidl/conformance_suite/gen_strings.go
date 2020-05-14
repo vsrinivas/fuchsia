@@ -177,15 +177,15 @@ success("StringsValidCase{{ .index }}") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num({{ .lenValue }}),
-            8:padding(0xff),
+            num({{ .lenValue }}):8,
+            repeat(0xff):8,
 
             // content
 {{- range .bytesValue }}
-            1:raw({{ . }}),
+            {{ . }},
 {{- end }}
 {{- if .padding }}
-            {{ .padding }}:padding(0),
+            padding:{{ .padding }},
 {{- end }}
         ],
     },
@@ -209,15 +209,15 @@ decode_failure("StringsInvalidCase{{ .index }}") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num({{ .lenValue }}),
-            8:padding(0xff),
+            num({{ .lenValue }}):8,
+            repeat(0xff):8,
 
             // content
 {{- range .bytesValue }}
-            1:raw({{ . }}),
+            {{ . }},
 {{- end }}
 {{- if .padding }}
-            {{ .padding }}:padding(0),
+            padding:{{ .padding }},
 {{- end }}
         ],
     },

@@ -16,12 +16,12 @@ success("StringsValidCase1") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(0),
-            7:padding(0),
+            0,
+            padding:7,
         ],
     },
 }
@@ -35,12 +35,12 @@ success("StringsValidCase2") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(127),
-            7:padding(0),
+            127,
+            padding:7,
         ],
     },
 }
@@ -54,13 +54,13 @@ success("StringsValidCase3") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(194),
-            1:raw(128),
-            6:padding(0),
+            194,
+            128,
+            padding:6,
         ],
     },
 }
@@ -74,13 +74,13 @@ success("StringsValidCase4") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(223),
-            1:raw(191),
-            6:padding(0),
+            223,
+            191,
+            padding:6,
         ],
     },
 }
@@ -94,14 +94,14 @@ success("StringsValidCase5") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(225),
-            1:raw(128),
-            1:raw(128),
-            5:padding(0),
+            225,
+            128,
+            128,
+            padding:5,
         ],
     },
 }
@@ -115,14 +115,14 @@ success("StringsValidCase6") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(239),
-            1:raw(191),
-            1:raw(191),
-            5:padding(0),
+            239,
+            191,
+            191,
+            padding:5,
         ],
     },
 }
@@ -136,15 +136,15 @@ success("StringsValidCase7") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(144),
-            1:raw(128),
-            1:raw(128),
-            4:padding(0),
+            240,
+            144,
+            128,
+            128,
+            padding:4,
         ],
     },
 }
@@ -158,15 +158,15 @@ success("StringsValidCase8") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(244),
-            1:raw(143),
-            1:raw(191),
-            1:raw(191),
-            4:padding(0),
+            244,
+            143,
+            191,
+            191,
+            padding:4,
         ],
     },
 }
@@ -187,12 +187,12 @@ decode_failure("StringsInvalidCase1") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(128),
-            7:padding(0),
+            128,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -214,13 +214,13 @@ decode_failure("StringsInvalidCase2") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(194),
-            1:raw(127),
-            6:padding(0),
+            194,
+            127,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -242,13 +242,13 @@ decode_failure("StringsInvalidCase3") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(223),
-            1:raw(192),
-            6:padding(0),
+            223,
+            192,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -270,14 +270,14 @@ decode_failure("StringsInvalidCase4") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(225),
-            1:raw(128),
-            1:raw(127),
-            5:padding(0),
+            225,
+            128,
+            127,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -299,14 +299,14 @@ decode_failure("StringsInvalidCase5") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(239),
-            1:raw(191),
-            1:raw(192),
-            5:padding(0),
+            239,
+            191,
+            192,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -328,15 +328,15 @@ decode_failure("StringsInvalidCase6") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(128),
-            1:raw(128),
-            1:raw(128),
-            4:padding(0),
+            240,
+            128,
+            128,
+            128,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -358,15 +358,15 @@ decode_failure("StringsInvalidCase7") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(247),
-            1:raw(191),
-            1:raw(191),
-            1:raw(192),
-            4:padding(0),
+            247,
+            191,
+            191,
+            192,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -381,13 +381,13 @@ success("StringsValidCase9") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(194),
-            1:raw(128),
-            6:padding(0),
+            194,
+            128,
+            padding:6,
         ],
     },
 }
@@ -408,13 +408,13 @@ decode_failure("StringsInvalidCase8") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(194),
-            1:raw(127),
-            6:padding(0),
+            194,
+            127,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -436,14 +436,14 @@ decode_failure("StringsInvalidCase9") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(225),
-            1:raw(127),
-            1:raw(128),
-            5:padding(0),
+            225,
+            127,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -465,14 +465,14 @@ decode_failure("StringsInvalidCase10") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(225),
-            1:raw(128),
-            1:raw(127),
-            5:padding(0),
+            225,
+            128,
+            127,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -487,15 +487,15 @@ success("StringsValidCase10") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(144),
-            1:raw(128),
-            1:raw(128),
-            4:padding(0),
+            240,
+            144,
+            128,
+            128,
+            padding:4,
         ],
     },
 }
@@ -516,15 +516,15 @@ decode_failure("StringsInvalidCase11") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(127),
-            1:raw(128),
-            1:raw(128),
-            4:padding(0),
+            240,
+            127,
+            128,
+            128,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -546,15 +546,15 @@ decode_failure("StringsInvalidCase12") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(144),
-            1:raw(127),
-            1:raw(128),
-            4:padding(0),
+            240,
+            144,
+            127,
+            128,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -576,15 +576,15 @@ decode_failure("StringsInvalidCase13") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(144),
-            1:raw(128),
-            1:raw(127),
-            4:padding(0),
+            240,
+            144,
+            128,
+            127,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -599,12 +599,12 @@ success("StringsValidCase11") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(47),
-            7:padding(0),
+            47,
+            padding:7,
         ],
     },
 }
@@ -625,13 +625,13 @@ decode_failure("StringsInvalidCase14") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(192),
-            1:raw(175),
-            6:padding(0),
+            192,
+            175,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -653,14 +653,14 @@ decode_failure("StringsInvalidCase15") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(128),
-            1:raw(175),
-            5:padding(0),
+            224,
+            128,
+            175,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -682,15 +682,15 @@ decode_failure("StringsInvalidCase16") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(128),
-            1:raw(128),
-            1:raw(175),
-            4:padding(0),
+            240,
+            128,
+            128,
+            175,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -705,13 +705,13 @@ success("StringsValidCase12") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(216),
-            1:raw(157),
-            6:padding(0),
+            216,
+            157,
+            padding:6,
         ],
     },
 }
@@ -725,13 +725,13 @@ success("StringsValidCase13") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(215),
-            1:raw(182),
-            6:padding(0),
+            215,
+            182,
+            padding:6,
         ],
     },
 }
@@ -745,14 +745,14 @@ success("StringsValidCase14") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(171),
-            1:raw(180),
-            5:padding(0),
+            224,
+            171,
+            180,
+            padding:5,
         ],
     },
 }
@@ -766,14 +766,14 @@ success("StringsValidCase15") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(177),
-            1:raw(146),
-            5:padding(0),
+            224,
+            177,
+            146,
+            padding:5,
         ],
     },
 }
@@ -787,15 +787,15 @@ success("StringsValidCase16") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(158),
-            1:raw(145),
-            1:raw(148),
-            4:padding(0),
+            240,
+            158,
+            145,
+            148,
+            padding:4,
         ],
     },
 }
@@ -809,15 +809,15 @@ success("StringsValidCase17") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(159),
-            1:raw(165),
-            1:raw(184),
-            4:padding(0),
+            240,
+            159,
+            165,
+            184,
+            padding:4,
         ],
     },
 }
@@ -831,8 +831,8 @@ success("StringsValidCase18") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(0),
-            8:padding(0xff),
+            num(0):8,
+            repeat(0xff):8,
 
             // content
         ],
@@ -848,12 +848,12 @@ success("StringsValidCase19") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(97),
-            7:padding(0),
+            97,
+            padding:7,
         ],
     },
 }
@@ -867,14 +867,14 @@ success("StringsValidCase20") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(226),
-            1:raw(130),
-            1:raw(172),
-            5:padding(0),
+            226,
+            130,
+            172,
+            padding:5,
         ],
     },
 }
@@ -888,23 +888,23 @@ success("StringsValidCase21") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(12),
-            8:padding(0xff),
+            num(12):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(0),
-            1:raw(244),
-            1:raw(143),
-            1:raw(191),
-            1:raw(191),
-            1:raw(127),
-            1:raw(240),
-            1:raw(144),
-            1:raw(128),
-            1:raw(128),
-            1:raw(194),
-            1:raw(128),
-            4:padding(0),
+            0,
+            244,
+            143,
+            191,
+            191,
+            127,
+            240,
+            144,
+            128,
+            128,
+            194,
+            128,
+            padding:4,
         ],
     },
 }
@@ -918,18 +918,18 @@ success("StringsValidCase22") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(8),
-            8:padding(0xff),
+            num(8):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(223),
-            1:raw(191),
-            1:raw(239),
-            1:raw(191),
-            1:raw(191),
-            1:raw(225),
-            1:raw(128),
-            1:raw(128),
+            223,
+            191,
+            239,
+            191,
+            191,
+            225,
+            128,
+            128,
         ],
     },
 }
@@ -943,14 +943,14 @@ success("StringsValidCase23") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(239),
-            1:raw(187),
-            1:raw(191),
-            5:padding(0),
+            239,
+            187,
+            191,
+            padding:5,
         ],
     },
 }
@@ -971,12 +971,12 @@ decode_failure("StringsInvalidCase17") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(239),
-            7:padding(0),
+            239,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -998,13 +998,13 @@ decode_failure("StringsInvalidCase18") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(239),
-            1:raw(187),
-            6:padding(0),
+            239,
+            187,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1026,14 +1026,14 @@ decode_failure("StringsInvalidCase19") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(223),
-            1:raw(128),
-            1:raw(128),
-            5:padding(0),
+            223,
+            128,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1055,14 +1055,14 @@ decode_failure("StringsInvalidCase20") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(128),
-            1:raw(128),
-            5:padding(0),
+            224,
+            128,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1077,14 +1077,14 @@ success("StringsValidCase24") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(225),
-            1:raw(128),
-            1:raw(128),
-            5:padding(0),
+            225,
+            128,
+            128,
+            padding:5,
         ],
     },
 }
@@ -1105,13 +1105,13 @@ decode_failure("StringsInvalidCase21") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(195),
-            1:raw(40),
-            6:padding(0),
+            195,
+            40,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1126,12 +1126,12 @@ success("StringsValidCase25") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(13),
-            7:padding(0),
+            13,
+            padding:7,
         ],
     },
 }
@@ -1145,12 +1145,12 @@ success("StringsValidCase26") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(10),
-            7:padding(0),
+            10,
+            padding:7,
         ],
     },
 }
@@ -1164,12 +1164,12 @@ success("StringsValidCase27") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(97),
-            7:padding(0),
+            97,
+            padding:7,
         ],
     },
 }
@@ -1183,13 +1183,13 @@ success("StringsValidCase28") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(194),
-            1:raw(129),
-            6:padding(0),
+            194,
+            129,
+            padding:6,
         ],
     },
 }
@@ -1203,14 +1203,14 @@ success("StringsValidCase29") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(225),
-            1:raw(128),
-            1:raw(191),
-            5:padding(0),
+            225,
+            128,
+            191,
+            padding:5,
         ],
     },
 }
@@ -1224,15 +1224,15 @@ success("StringsValidCase30") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(241),
-            1:raw(128),
-            1:raw(160),
-            1:raw(191),
-            4:padding(0),
+            241,
+            128,
+            160,
+            191,
+            padding:4,
         ],
     },
 }
@@ -1246,14 +1246,14 @@ success("StringsValidCase31") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(239),
-            1:raw(187),
-            1:raw(191),
-            5:padding(0),
+            239,
+            187,
+            191,
+            padding:5,
         ],
     },
 }
@@ -1274,12 +1274,12 @@ decode_failure("StringsInvalidCase22") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(192),
-            7:padding(0),
+            192,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1301,12 +1301,12 @@ decode_failure("StringsInvalidCase23") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(193),
-            7:padding(0),
+            193,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1328,12 +1328,12 @@ decode_failure("StringsInvalidCase24") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(245),
-            7:padding(0),
+            245,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1355,12 +1355,12 @@ decode_failure("StringsInvalidCase25") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(246),
-            7:padding(0),
+            246,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1382,12 +1382,12 @@ decode_failure("StringsInvalidCase26") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(247),
-            7:padding(0),
+            247,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1409,12 +1409,12 @@ decode_failure("StringsInvalidCase27") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(248),
-            7:padding(0),
+            248,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1436,12 +1436,12 @@ decode_failure("StringsInvalidCase28") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(249),
-            7:padding(0),
+            249,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1463,12 +1463,12 @@ decode_failure("StringsInvalidCase29") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(250),
-            7:padding(0),
+            250,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1490,12 +1490,12 @@ decode_failure("StringsInvalidCase30") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(251),
-            7:padding(0),
+            251,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1517,12 +1517,12 @@ decode_failure("StringsInvalidCase31") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(252),
-            7:padding(0),
+            252,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1544,12 +1544,12 @@ decode_failure("StringsInvalidCase32") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(253),
-            7:padding(0),
+            253,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1571,12 +1571,12 @@ decode_failure("StringsInvalidCase33") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(254),
-            7:padding(0),
+            254,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1598,12 +1598,12 @@ decode_failure("StringsInvalidCase34") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(1),
-            8:padding(0xff),
+            num(1):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(255),
-            7:padding(0),
+            255,
+            padding:7,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1625,14 +1625,14 @@ decode_failure("StringsInvalidCase35") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(237),
-            1:raw(160),
-            1:raw(128),
-            5:padding(0),
+            237,
+            160,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1654,14 +1654,14 @@ decode_failure("StringsInvalidCase36") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(237),
-            1:raw(176),
-            1:raw(128),
-            5:padding(0),
+            237,
+            176,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1683,14 +1683,14 @@ decode_failure("StringsInvalidCase37") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(237),
-            1:raw(191),
-            1:raw(191),
-            5:padding(0),
+            237,
+            191,
+            191,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1712,13 +1712,13 @@ decode_failure("StringsInvalidCase38") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(192),
-            1:raw(128),
-            6:padding(0),
+            192,
+            128,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1740,13 +1740,13 @@ decode_failure("StringsInvalidCase39") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(193),
-            1:raw(128),
-            6:padding(0),
+            193,
+            128,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1768,13 +1768,13 @@ decode_failure("StringsInvalidCase40") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(193),
-            1:raw(129),
-            6:padding(0),
+            193,
+            129,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1796,14 +1796,14 @@ decode_failure("StringsInvalidCase41") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(128),
-            1:raw(128),
-            5:padding(0),
+            224,
+            128,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1825,14 +1825,14 @@ decode_failure("StringsInvalidCase42") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(130),
-            1:raw(128),
-            5:padding(0),
+            224,
+            130,
+            128,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1854,14 +1854,14 @@ decode_failure("StringsInvalidCase43") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(3),
-            8:padding(0xff),
+            num(3):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(224),
-            1:raw(159),
-            1:raw(191),
-            5:padding(0),
+            224,
+            159,
+            191,
+            padding:5,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1883,15 +1883,15 @@ decode_failure("StringsInvalidCase44") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(128),
-            1:raw(128),
-            1:raw(141),
-            4:padding(0),
+            240,
+            128,
+            128,
+            141,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1913,15 +1913,15 @@ decode_failure("StringsInvalidCase45") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(128),
-            1:raw(130),
-            1:raw(145),
-            4:padding(0),
+            240,
+            128,
+            130,
+            145,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1943,15 +1943,15 @@ decode_failure("StringsInvalidCase46") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(128),
-            1:raw(160),
-            1:raw(128),
-            4:padding(0),
+            240,
+            128,
+            160,
+            128,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -1973,15 +1973,15 @@ decode_failure("StringsInvalidCase47") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(240),
-            1:raw(143),
-            1:raw(187),
-            1:raw(191),
-            4:padding(0),
+            240,
+            143,
+            187,
+            191,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2003,16 +2003,16 @@ decode_failure("StringsInvalidCase48") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(5),
-            8:padding(0xff),
+            num(5):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(248),
-            1:raw(128),
-            1:raw(128),
-            1:raw(128),
-            1:raw(191),
-            3:padding(0),
+            248,
+            128,
+            128,
+            128,
+            191,
+            padding:3,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2034,17 +2034,17 @@ decode_failure("StringsInvalidCase49") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(6),
-            8:padding(0xff),
+            num(6):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(252),
-            1:raw(128),
-            1:raw(128),
-            1:raw(128),
-            1:raw(160),
-            1:raw(165),
-            2:padding(0),
+            252,
+            128,
+            128,
+            128,
+            160,
+            165,
+            padding:2,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2066,15 +2066,15 @@ decode_failure("StringsInvalidCase50") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(4),
-            8:padding(0xff),
+            num(4):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(244),
-            1:raw(144),
-            1:raw(128),
-            1:raw(128),
-            4:padding(0),
+            244,
+            144,
+            128,
+            128,
+            padding:4,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2096,16 +2096,16 @@ decode_failure("StringsInvalidCase51") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(5),
-            8:padding(0xff),
+            num(5):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(248),
-            1:raw(160),
-            1:raw(191),
-            1:raw(128),
-            1:raw(191),
-            3:padding(0),
+            248,
+            160,
+            191,
+            128,
+            191,
+            padding:3,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2127,17 +2127,17 @@ decode_failure("StringsInvalidCase52") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(6),
-            8:padding(0xff),
+            num(6):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(252),
-            1:raw(156),
-            1:raw(191),
-            1:raw(128),
-            1:raw(191),
-            1:raw(128),
-            2:padding(0),
+            252,
+            156,
+            191,
+            128,
+            191,
+            128,
+            padding:2,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2159,13 +2159,13 @@ decode_failure("StringsInvalidCase53") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(254),
-            1:raw(255),
-            6:padding(0),
+            254,
+            255,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
@@ -2187,13 +2187,13 @@ decode_failure("StringsInvalidCase54") {
     bytes = {
         old, v1 = [
             // length, present
-            8:num(2),
-            8:padding(0xff),
+            num(2):8,
+            repeat(0xff):8,
 
             // content
-            1:raw(255),
-            1:raw(254),
-            6:padding(0),
+            255,
+            254,
+            padding:6,
         ],
     },
     err = STRING_NOT_UTF8,
