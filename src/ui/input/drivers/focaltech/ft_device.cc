@@ -6,13 +6,19 @@
 
 #include <lib/device-protocol/i2c.h>
 #include <lib/focaltech/focaltech.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
@@ -99,15 +105,14 @@ zx_status_t FtDevice::Init() {
     return status;
   }
 
-  status =
-      device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_INT_PIN]);
+  status = device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_INT_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return status;
   }
 
-  status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
-                               &gpios_[FT_RESET_PIN]);
+  status =
+      device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_RESET_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio");
     return status;
@@ -161,6 +166,29 @@ zx_status_t FtDevice::Create(void* ctx, zx_device_t* device) {
   int ret = thrd_create_with_name(&ft_dev->thread_, thunk, reinterpret_cast<void*>(ft_dev.get()),
                                   "focaltouch-thread");
   ZX_DEBUG_ASSERT(ret == thrd_success);
+
+  // Set profile for device thread.
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  {
+    const zx::duration capacity = zx::usec(200);
+    const zx::duration deadline = zx::msec(1);
+    const zx::duration period = deadline;
+
+    zx::profile profile;
+    status =
+        device_get_deadline_profile(ft_dev->zxdev(), capacity.get(), deadline.get(), period.get(),
+                                    "focaltouch-thread", profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      zxlogf(WARN, "focaltouch: Failed to get deadline profile: %s", zx_status_get_string(status));
+    } else {
+      status = zx_object_set_profile(thrd_get_zx_handle(ft_dev->thread_), profile.get(), 0);
+      if (status != ZX_OK) {
+        zxlogf(WARN, "focaltouch: Failed to apply deadline profile to device thread: %s",
+               zx_status_get_string(status));
+      }
+    }
+  }
 
   status = ft_dev->DdkAdd("focaltouch HidDevice");
   if (status != ZX_OK) {

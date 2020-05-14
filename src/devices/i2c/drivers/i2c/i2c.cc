@@ -69,7 +69,7 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
   }
 
   for (uint32_t i = 0; i < bus_count; i++) {
-    auto i2c_bus = fbl::MakeRefCountedChecked<I2cBus>(&ac, i2c, i);
+    auto i2c_bus = fbl::MakeRefCountedChecked<I2cBus>(&ac, this->zxdev_, i2c, i);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }

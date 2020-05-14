@@ -5,12 +5,19 @@
 #include "i2c-bus.h"
 
 #include <lib/device-protocol/i2c.h>
+#include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 #include <zircon/threads.h>
+
+#include <mutex>
 
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
@@ -20,7 +27,8 @@
 
 namespace i2c {
 
-I2cBus::I2cBus(ddk::I2cImplProtocolClient i2c, uint32_t bus_id) : i2c_(i2c), bus_id_(bus_id) {
+I2cBus::I2cBus(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, uint32_t bus_id)
+    : parent_(parent), i2c_(i2c), bus_id_(bus_id) {
   list_initialize(&queued_txns_);
   list_initialize(&free_txns_);
   sync_completion_reset(&txn_signal_);
@@ -36,6 +44,29 @@ zx_status_t I2cBus::Start() {
   snprintf(name, sizeof(name), "I2cBus[%u]", bus_id_);
   auto thunk = [](void* arg) -> int { return static_cast<I2cBus*>(arg)->I2cThread(); };
   thrd_create_with_name(&thread_, thunk, this, name);
+
+  // Set profile for bus transaction thread.
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  {
+    const zx::duration capacity = zx::usec(100);
+    const zx::duration deadline = zx::msec(1);
+    const zx::duration period = deadline;
+
+    zx::profile bus_profile;
+    status = device_get_deadline_profile(parent_, capacity.get(), deadline.get(), period.get(),
+                                         name, bus_profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      zxlogf(WARN, "I2cBus::Start: Failed to get deadline profile: %s",
+             zx_status_get_string(status));
+    } else {
+      status = zx_object_set_profile(thrd_get_zx_handle(thread_), bus_profile.get(), 0);
+      if (status != ZX_OK) {
+        zxlogf(WARN, "I2cBus::Start: Failed to apply deadline profile to bus thread: %s",
+               zx_status_get_string(status));
+      }
+    }
+  }
 
   return ZX_OK;
 }
@@ -108,6 +139,34 @@ int I2cBus::I2cThread() {
 void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
                       i2c_transact_callback callback, void* cookie) {
   TRACE_DURATION("i2c", "I2cBus Queue Transact");
+
+  // TODO(52177): This is a hack to apply a deadline profile to the dispatch
+  // thread for this devhost. Replace this with a proper solution.
+  static std::once_flag profile_flag;
+  std::call_once(profile_flag, [device = parent_] {
+    // Set profile for bus transaction thread.
+    // TODO(40858): Migrate to the role-based API when available, instead of hard
+    // coding parameters.
+    const zx::duration capacity = zx::usec(150);
+    const zx::duration deadline = zx::msec(1);
+    const zx::duration period = deadline;
+
+    zx::profile profile;
+    zx_status_t status =
+        device_get_deadline_profile(device, capacity.get(), deadline.get(), period.get(),
+                                    "I2cBus Dispatcher", profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      zxlogf(WARN, "I2cBus::Transact: Failed to get deadline profile: %s",
+             zx_status_get_string(status));
+    } else {
+      status = zx::thread::self()->set_profile(profile, 0);
+      if (status != ZX_OK) {
+        zxlogf(WARN, "I2cBus::Transact: Failed to apply deadline profile to dispatch thread: %s",
+               zx_status_get_string(status));
+      }
+    }
+  });
+
   size_t writes_length = 0;
   for (size_t i = 0; i < op_count; ++i) {
     if (op_list[i].data_size == 0 || op_list[i].data_size > max_transfer_) {

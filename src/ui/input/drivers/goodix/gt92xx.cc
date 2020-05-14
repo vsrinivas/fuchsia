@@ -4,6 +4,13 @@
 
 #include "gt92xx.h"
 
+#include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
+
 #include <utility>
 
 #include <ddk/binding.h>
@@ -175,6 +182,31 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
   goodix_dev->running_.store(true);
   int ret = thrd_create_with_name(&goodix_dev->thread_, thunk, goodix_dev.get(), "gt92xx-thread");
   ZX_DEBUG_ASSERT(ret == thrd_success);
+
+  // Set profile for bus transaction thread.
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  {
+    const zx::duration capacity = zx::usec(200);
+    const zx::duration deadline = zx::msec(1);
+    const zx::duration period = deadline;
+
+    zx::profile profile;
+    status =
+        device_get_deadline_profile(goodix_dev->zxdev(), capacity.get(), deadline.get(),
+                                    period.get(), "gt92xx-thread", profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      zxlogf(WARN, "Gt92xxDevice::Create: Failed to get deadline profile: %s",
+             zx_status_get_string(status));
+    } else {
+      status = zx_object_set_profile(thrd_get_zx_handle(goodix_dev->thread_), profile.get(), 0);
+      if (status != ZX_OK) {
+        zxlogf(WARN,
+               "Gt92xxDevice::Create: Failed to apply deadline profile to dispatch thread: %s",
+               zx_status_get_string(status));
+      }
+    }
+  }
 
   status = goodix_dev->DdkAdd("gt92xx HidDevice");
   if (status != ZX_OK) {

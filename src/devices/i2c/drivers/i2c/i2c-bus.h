@@ -18,7 +18,7 @@ namespace i2c {
 
 class I2cBus : public fbl::RefCounted<I2cBus> {
  public:
-  explicit I2cBus(ddk::I2cImplProtocolClient i2c, uint32_t bus_id);
+  explicit I2cBus(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, uint32_t bus_id);
   virtual ~I2cBus() = default;
   zx_status_t Start();
   virtual void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
@@ -39,6 +39,7 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
 
   int I2cThread();
 
+  zx_device_t* parent_;
   ddk::I2cImplProtocolClient i2c_;
   const uint32_t bus_id_;
   size_t max_transfer_;

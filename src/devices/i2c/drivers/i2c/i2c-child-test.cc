@@ -33,7 +33,8 @@ TEST(I2cChildTest, Write3BytesOnce) {
   fake_ddk::Bind tester;
   class I2cBusTest : public I2cBus {
    public:
-    explicit I2cBusTest(ddk::I2cImplProtocolClient i2c, uint32_t bus_id) : I2cBus(i2c, bus_id) {}
+    explicit I2cBusTest(ddk::I2cImplProtocolClient i2c, uint32_t bus_id)
+        : I2cBus(fake_ddk::kFakeParent, i2c, bus_id) {}
     void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
                   i2c_transact_callback callback, void* cookie) override {
       if (op_count != 1) {
@@ -76,7 +77,8 @@ TEST(I2cChildTest, Read3BytesOnce) {
   fake_ddk::Bind tester;
   class I2cBusTest : public I2cBus {
    public:
-    explicit I2cBusTest(ddk::I2cImplProtocolClient i2c, uint32_t bus_id) : I2cBus(i2c, bus_id) {}
+    explicit I2cBusTest(ddk::I2cImplProtocolClient i2c, uint32_t bus_id)
+        : I2cBus(fake_ddk::kFakeParent, i2c, bus_id) {}
     void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
                   i2c_transact_callback callback, void* cookie) override {
       if (op_count != 1) {
@@ -128,7 +130,8 @@ TEST(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
   fake_ddk::Bind tester;
   class I2cBusTest : public I2cBus {
    public:
-    explicit I2cBusTest(ddk::I2cImplProtocolClient i2c, uint32_t bus_id) : I2cBus(i2c, bus_id) {}
+    explicit I2cBusTest(ddk::I2cImplProtocolClient i2c, uint32_t bus_id)
+        : I2cBus(fake_ddk::kFakeParent, i2c, bus_id) {}
     void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
                   i2c_transact_callback callback, void* cookie) override {
       if (op_count != 4) {
@@ -193,7 +196,8 @@ TEST(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
 TEST(I2cChildTest, BadTransfers) {
   fake_ddk::Bind tester;
   ddk::I2cImplProtocolClient i2c = {};
-  I2cChildTest server(fake_ddk::kFakeParent, fbl::AdoptRef<I2cBus>(new I2cBus(i2c, 0)), 0);
+  I2cChildTest server(fake_ddk::kFakeParent,
+                      fbl::AdoptRef<I2cBus>(new I2cBus(fake_ddk::kFakeParent, i2c, 0)), 0);
   llcpp::fuchsia::hardware::i2c::Device2::SyncClient client_wrap(std::move(tester.FidlClient()));
 
   {

@@ -10,6 +10,9 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
 #include <zircon/types.h>
 
 #include <bits/limits.h>
@@ -271,6 +274,28 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
 
   thrd_t irqthrd;
   thrd_create_with_name(&irqthrd, aml_i2c_irq_thread, device, "i2c_irq_thread");
+
+  // Set profile for IRQ thread.
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  const zx_duration_t capacity = ZX_USEC(20);
+  const zx_duration_t deadline = ZX_USEC(100);
+  const zx_duration_t period = deadline;
+
+  zx_handle_t irq_profile = ZX_HANDLE_INVALID;
+  status = device_get_deadline_profile(i2c->zxdev, capacity, deadline, period, "aml_i2c_irq_thread",
+                                       &irq_profile);
+  if (status != ZX_OK) {
+    zxlogf(WARN, "aml_i2c_dev_init: Failed to get deadline profile: %s",
+           zx_status_get_string(status));
+  } else {
+    status = zx_object_set_profile(thrd_get_zx_handle(irqthrd), irq_profile, 0);
+    if (status != ZX_OK) {
+      zxlogf(WARN, "aml_i2c_dev_init: Failed to apply deadline profile to IRQ thread: %s",
+             zx_status_get_string(status));
+    }
+    zx_handle_close(irq_profile);
+  }
 
   return ZX_OK;
 }
