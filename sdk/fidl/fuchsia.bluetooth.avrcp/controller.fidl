@@ -14,11 +14,10 @@ protocol PeerManager {
     /// switches.
     GetControllerForTarget(string peer_id, request<Controller> client) -> () error zx.status;
 
-    /// Set the absolute volume handler for the peer specified at `peer_id` to handle absolute
-    /// volume commands and notifications received from the peer. Only one handler may be set with
-    /// a peer at at time. If a second handler is registered it will be dropped and an error will
+    /// Set the absolute volume handler.  Only one handler may be set  at at time.
+    /// If a second handler is registered it will be dropped and an error will
     /// be returned.
-    SetAbsoluteVolumeHandler(string peer_id, AbsoluteVolumeHandler handler) -> () error zx.status;
+    SetAbsoluteVolumeHandler(AbsoluteVolumeHandler handler) -> () error zx.status;
 
     /// Sets an implementation of target handler that will vend delegates for each incoming
     /// remote TG -> local CT connections to handle the commands being sent by the remote TG.

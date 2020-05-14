@@ -121,7 +121,7 @@ fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
     let (volume_client, volume_server) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
 
     // Make a request and start it.  It should be pending.
-    let register_fut = peer_manager_proxy.set_absolute_volume_handler("", volume_client);
+    let register_fut = peer_manager_proxy.set_absolute_volume_handler(volume_client);
     pin_mut!(register_fut);
 
     assert!(exec.run_until_stalled(&mut register_fut).is_pending());
@@ -141,7 +141,7 @@ fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
     let (volume_client_2, _volume_server_2) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
 
     // should succeed if the previous handler was dropped.
-    let register_fut = peer_manager_proxy.set_absolute_volume_handler("", volume_client_2);
+    let register_fut = peer_manager_proxy.set_absolute_volume_handler(volume_client_2);
     pin_mut!(register_fut);
     assert!(exec.run_until_stalled(&mut register_fut).is_pending());
     let request = service_request_receiver.try_next()?.expect("Service request should be handled");
@@ -152,7 +152,7 @@ fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
     let (volume_client_3, _volume_server_3) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
 
     // should fail since the target handler is already set.
-    let register_fut = peer_manager_proxy.set_absolute_volume_handler("", volume_client_3);
+    let register_fut = peer_manager_proxy.set_absolute_volume_handler(volume_client_3);
     pin_mut!(register_fut);
     assert!(exec.run_until_stalled(&mut register_fut).is_pending());
     let request = service_request_receiver.try_next()?.expect("Service request should be handled");

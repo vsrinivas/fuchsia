@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_bluetooth_avrcp as avrcp, fidl_fuchsia_media as media,
     fidl_fuchsia_settings as settings,
     fuchsia_async::{self as fasync, DurationExt, Timer},
-    fuchsia_bluetooth::types::PeerId,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
@@ -97,7 +96,7 @@ impl VolumeRelay {
         mut stop_signal: impl FusedFuture + Unpin,
     ) -> Result<(), Error> {
         let mut volume_requests =
-            connect_avrcp_volume(&mut avrcp, PeerId(0)).await.context("connecting avrcp volume")?;
+            connect_avrcp_volume(&mut avrcp).await.context("connecting avrcp volume")?;
 
         let audio_proxy_clone = audio.clone();
         let mut audio_watch_stream =
@@ -228,12 +227,11 @@ where
 
 async fn connect_avrcp_volume(
     avrcp: &mut avrcp::PeerManagerProxy,
-    peer_id: PeerId,
 ) -> Result<avrcp::AbsoluteVolumeHandlerRequestStream, Error> {
     let (client, request_stream) = endpoints::create_request_stream()?;
 
-    if let Err(e) = avrcp.set_absolute_volume_handler(&peer_id.to_string(), client).await? {
-        fx_log_info!("{} AVRCP failed to set absolute volume handler", peer_id);
+    if let Err(e) = avrcp.set_absolute_volume_handler(client).await? {
+        fx_log_info!("failed to set absolute volume handler");
         return Err(format_err!("Failed setting absolute volume handler: {}", e));
     }
 
@@ -337,7 +335,6 @@ mod tests {
             Poll::Ready(Ok(avrcp::PeerManagerRequest::SetAbsoluteVolumeHandler {
                 handler,
                 responder,
-                ..
             })) => {
                 responder.send(&mut Ok(())).expect("response to handler set");
                 handler

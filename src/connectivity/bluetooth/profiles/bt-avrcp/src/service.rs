@@ -432,7 +432,7 @@ where
                     }
                 }
             }
-            PeerManagerRequest::SetAbsoluteVolumeHandler { handler, responder, peer_id: _ } => {
+            PeerManagerRequest::SetAbsoluteVolumeHandler { handler, responder } => {
                 match handler.into_proxy() {
                     Ok(absolute_volume_handler) => {
                         let (response, register_absolute_volume_handler_request) =
