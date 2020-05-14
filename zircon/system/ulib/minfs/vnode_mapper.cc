@@ -393,12 +393,19 @@ uint64_t VnodeIterator::ComputeContiguousBlockCount() const {
     // level and coalesce all the blocks at that level, but we'll stop as soon as we find an
     // allocated block, even though that indirect block might not point to any allocated blocks.
     for (;;) {
-      const uint64_t max_count = levels_[level].count - index;
-      const uint64_t count_this_level = max_count == 0 || levels_[level].IsSparse()
-                                            ? max_count
-                                            : Coalesce(&levels_[level].view[index], max_count);
-      count += count_this_level * multiplier;
-      if (count_this_level < max_count || ++level >= level_count_)
+      const uint64_t left = levels_[level].count - index;
+      if (left == 0 || levels_[level].IsSparse()) {
+        count += left * multiplier;
+      } else if (levels_[level].view[index] == 0) {
+        uint64_t contiguous = Coalesce(&levels_[level].view[index], left);
+        count += contiguous * multiplier;
+        if (contiguous < left)
+          return count;
+      } else {
+        // We've come to a block that isn't sparse.
+        return count;
+      }
+      if (++level >= level_count_)
         return count;
       multiplier *= kMinfsDirectPerIndirect;
       index = levels_[level].index + 1;

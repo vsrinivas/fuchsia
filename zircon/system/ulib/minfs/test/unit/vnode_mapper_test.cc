@@ -255,6 +255,14 @@ TEST_F(VnodeIteratorTest, WholeFileIsSparse) {
   EXPECT_EQ(0, iterator.GetContiguousBlockCount());
 }
 
+TEST_F(VnodeIteratorTest, SparseFirstIndirectBlockCoalescedCorrectly) {
+  vnode_->GetMutableInode()->inum[1] = 17;
+  VnodeMapper mapper(vnode_.get());
+  VnodeIterator iterator;
+  ASSERT_OK(iterator.Init(&mapper, /*transaction=*/nullptr, kMinfsDirect));
+  EXPECT_EQ(2048, iterator.GetContiguousBlockCount(std::numeric_limits<uint64_t>::max()));
+}
+
 TEST_F(VnodeIteratorTest, AdvanceBeyondMaximumFails) {
   VnodeMapper mapper(vnode_.get());
   VnodeIterator iterator;
