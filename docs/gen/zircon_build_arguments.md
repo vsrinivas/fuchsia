@@ -80,6 +80,18 @@ From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
 
 From //BUILD.gn:17
 
+### disable_kernel_pci
+Disable kernel PCI driver support. A counterpart of the the build
+flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
+
+**Current value for `target_cpu = `:** `false`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:11
+
+**Overridden from the default:** `false`
+
+From //kernel/params.gni:41
+
 ### enable_acpi_debug
 Enable debug output in the ACPI library (used by the ACPI bus driver).
 
@@ -102,14 +114,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:67
-
-### enable_user_pci
-Enable userspace PCI and disable kernel PCI.
-
-**Current value (from the default):** `false`
-
-From //kernel/params.gni:40
+From //kernel/params.gni:68
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -257,7 +262,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value for `target_cpu = `:** `"/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
 
 **Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
@@ -287,7 +292,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:52
+From //kernel/params.gni:53
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -298,7 +303,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:59
+From //kernel/params.gni:60
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -306,7 +311,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:44
+From //kernel/params.gni:45
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -449,7 +454,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
 
 **Overridden from the default:** `false`
 
@@ -460,7 +465,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
 
 **Overridden from the default:** `false`
 
@@ -704,7 +709,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
 
 **Overridden from the default:** `[]`
 
@@ -723,7 +728,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `"zstd"`
 
