@@ -25,9 +25,9 @@ zx_library("storage-metrics") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_c",
+    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_llcpp",
     "//zircon/public/lib/fbl",
-    "//zircon/system/fidl/fuchsia-storage-metrics:c",
-    "//zircon/system/fidl/fuchsia-storage-metrics:llcpp",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.block",
@@ -35,8 +35,8 @@ zx_library("storage-metrics") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_c",
+    "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_llcpp",
     "//zircon/public/lib/fbl",
-    "//zircon/system/fidl/fuchsia-storage-metrics:c",
-    "//zircon/system/fidl/fuchsia-storage-metrics:llcpp",
   ]
 }

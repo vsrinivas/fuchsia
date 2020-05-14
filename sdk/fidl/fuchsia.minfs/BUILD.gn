@@ -8,6 +8,6 @@ fidl("fuchsia.minfs") {
   sources = [ "minfs.fidl" ]
   public_deps = [
     "$zx/vdso/zx",
-    "//zircon/system/fidl/fuchsia-storage-metrics",
+    "//sdk/fidl/fuchsia.storage.metrics",
   ]
 }

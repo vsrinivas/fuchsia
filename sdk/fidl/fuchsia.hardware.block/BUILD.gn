@@ -13,6 +13,6 @@ fidl("fuchsia.hardware.block") {
   ]
   public_deps = [
     "$zx/vdso/zx",
-    "//zircon/system/fidl/fuchsia-storage-metrics",
+    "//sdk/fidl/fuchsia.storage.metrics",
   ]
 }

@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-storage-metrics") {
-  sdk = true
+fidl("fuchsia.storage.metrics") {
+  sdk_category = "partner"
+  api = "fuchsia.storage.metrics.api"
   sources = [ "storage-metrics.fidl" ]
 }
