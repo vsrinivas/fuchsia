@@ -44,7 +44,7 @@ fn h264_stream_output_generated() -> Result<()> {
             pixel_aspect_ratio_width: 0,
             pixel_aspect_ratio_height: 0,
         },
-        num_frames: 4,
+        num_frames: 6,
         settings: Rc::new(move || -> EncoderSettings {
             EncoderSettings::H264(H264EncoderSettings {
                 bit_rate: Some(200000),
@@ -58,9 +58,11 @@ fn h264_stream_output_generated() -> Result<()> {
             H264NalKind::PPS,
             H264NalKind::IDR,
             H264NalKind::NonIDR,
+            H264NalKind::NonIDR,
             H264NalKind::SPS,
             H264NalKind::PPS,
             H264NalKind::IDR,
+            H264NalKind::NonIDR,
             H264NalKind::NonIDR,
         ]),
         output_file: None,

@@ -1679,7 +1679,7 @@ zx_status_t DeviceCtx::EncodeFrame(uint32_t* output_len) {
   pic_order_cnt_lsb_ += 2;
   frame_number_ += 1;
 
-  if (frame_number_ >= gop_size_) {
+  if (frame_number_ > gop_size_) {
     frame_number_ = 0;
     pic_order_cnt_lsb_ = 0;
   }
