@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-tracing-provider") {
-  sdk = true
+fidl("fuchsia.tracing.provider") {
+  sdk_category = "partner"
+  api = "fuchsia.tracing.provider.api"
   sources = [ "provider.fidl" ]
   public_deps = [ "$zx/vdso/zx" ]
 }

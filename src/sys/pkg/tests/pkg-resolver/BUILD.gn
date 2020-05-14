@@ -21,6 +21,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -52,7 +53,6 @@ rustc_library("lib") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -69,6 +69,7 @@ rustc_test("dynamic_repositories_disabled") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -96,7 +97,6 @@ rustc_test("dynamic_repositories_disabled") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -113,6 +113,7 @@ rustc_test("dynamic_rewrite_disabled") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -140,7 +141,6 @@ rustc_test("dynamic_rewrite_disabled") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -157,6 +157,7 @@ rustc_test("pkg_resolve_inspect") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -184,7 +185,6 @@ rustc_test("pkg_resolve_inspect") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -201,6 +201,7 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -229,7 +230,6 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -246,6 +246,7 @@ rustc_test("resolve_recovers_from_http_errors") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -273,7 +274,6 @@ rustc_test("resolve_recovers_from_http_errors") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -290,6 +290,7 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -317,7 +318,6 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 
   # TODO(46772): Fix the leaks and remove this.
@@ -337,6 +337,7 @@ rustc_test("resolve_succeeds") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -367,7 +368,6 @@ rustc_test("resolve_succeeds") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
@@ -384,6 +384,7 @@ rustc_test("get_hash") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -411,7 +412,6 @@ rustc_test("get_hash") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 

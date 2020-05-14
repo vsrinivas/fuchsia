@@ -84,10 +84,10 @@ template("trace_provider_library") {
       deps = []
     }
     deps += [
+      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_c",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-tracing-provider:c",
     ]
   }
 }

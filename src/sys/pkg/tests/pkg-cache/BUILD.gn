@@ -16,6 +16,7 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl/rust/fidl",
@@ -45,7 +46,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 

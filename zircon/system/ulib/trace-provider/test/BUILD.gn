@@ -46,6 +46,7 @@ test("provider-test") {
     "session_test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -54,7 +55,6 @@ test("provider-test") {
     "//zircon/public/lib/trace",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-tracing-provider:c",
     "//zircon/system/ulib/trace-provider",
   ]
 }
