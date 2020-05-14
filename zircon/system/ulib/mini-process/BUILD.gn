@@ -2,7 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/toolchain/environment_redirect.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
 
 zx_library("mini-process") {
   sdk = "shared"
@@ -12,39 +22,31 @@ zx_library("mini-process") {
   sources = [ "mini-process.c" ]
   deps = [
     ":subprocess",
-    "$zx/system/ulib/elf-psabi",
-    "$zx/system/ulib/elfload",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/elf-psabi",
+    "//zircon/public/lib/elfload",
   ]
 }
 
 # This code goes into the mini-process where it doesn't have any runtime
 # environment, so it must be compiled specially.
-if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
-    toolchain.tags) {
+if (toolchain_variant.instrumented) {
   # Instrumented variants will just never work for this code.  So
   # redirect to the default uninstrumented variant to compile this file.
-  environment_redirect("subprocess") {
-    visibility = [ ":*" ]
-    testonly = true
-    exclude_variant_tags = [ "instrumented" ]
-    deps = [ ":subprocess" ]
+  group("subprocess") {
+    public_deps = [ ":subprocess(${toolchain_variant.base})" ]
   }
 } else {
   source_set("subprocess") {
     visibility = [ ":*" ]
-    testonly = true
+    # TODO(44278): Revert to true when converting this file to proper GN build idioms.
+    testonly = false
     sources = [ "subprocess.c" ]
-    deps = [
-      ":headers",
-      "$zx/system/ulib/backtrace-request",
-      "$zx/system/ulib/zircon",
-    ]
+    deps = [   "//zircon/public/lib/backtrace-request" ]
 
     configs += [
       # No real sanitizers should be enabled in this variant anyway.
       # But this also disables SafeStack, which is on by default.
-      "$zx_build/public/gn/config:no_sanitizers",
+      "//build/config:no_sanitizers",
 
       # This defeats optimizations that break the assumptions.
       ":subprocess.config",
@@ -59,5 +61,8 @@ if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
     # the default should not be a problem for this code and might actually be
     # helpful because of its special constraints (see subprocess.c).
     cflags = [ "-O1" ]
+
+    # Needed to pick up the dependency on mini_process.h.
+    include_dirs = [ "include" ]
   }
 }

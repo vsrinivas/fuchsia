@@ -27,11 +27,11 @@ source_set("threads") {
   deps = [
     ":thread-functions",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/mini-process",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/test-exceptions",
   ]
 }
