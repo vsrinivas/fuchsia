@@ -196,7 +196,10 @@ executable("unittests") {
 executable("swapchain_tests") {
   output_name = "gfx_swapchain_tests"
   testonly = true
-  sources = [ "display_swapchain_test.cc" ]
+  sources = [
+    "display_swapchain_mock_test.cc",
+    "display_swapchain_test.cc",
+  ]
   deps = [
     ":testing_deps",
     "//src/lib/fxl/test:gtest_main",

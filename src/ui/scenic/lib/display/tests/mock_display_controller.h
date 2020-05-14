@@ -35,6 +35,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   using SetDisplayColorConversionFn = std::function<void(
       uint64_t, std::array<float, 3>, std::array<float, 9>, std::array<float, 3>)>;
   using ImportEventFn = std::function<void(zx::event event, uint64_t event_id)>;
+  using AcknowledgeVsyncFn = std::function<void(uint64_t cookie)>;
 
   MockDisplayController() : binding_(this) {}
 
@@ -59,7 +60,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   }
 
   void set_display_color_conversion_fn(SetDisplayColorConversionFn fn) {
-    set_display_color_conversion_fn_ = fn;
+    set_display_color_conversion_fn_ = std::move(fn);
   }
 
   void SetDisplayColorConversion(uint64_t display_id, std::array<float, 3> preoffsets,
@@ -70,7 +71,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     }
   }
 
-  void set_check_config_fn(CheckConfigFn fn) { check_config_fn_ = fn; }
+  void set_check_config_fn(CheckConfigFn fn) { check_config_fn_ = std::move(fn); }
 
   void CheckConfig(bool discard, CheckConfigCallback callback) override {
     fuchsia::hardware::display::ConfigResult result = fuchsia::hardware::display::ConfigResult::OK;
@@ -80,6 +81,16 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
       check_config_fn_(discard, &result, &ops);
     }
     callback(std::move(result), std::move(ops));
+  }
+
+  void set_acknowledge_vsync_fn(AcknowledgeVsyncFn acknowledge_vsync_fn) {
+    acknowledge_vsync_fn_ = std::move(acknowledge_vsync_fn);
+  }
+
+  void AcknowledgeVsync(uint64_t cookie) override {
+    if (acknowledge_vsync_fn_) {
+      acknowledge_vsync_fn_(cookie);
+    }
   }
 
   EventSender_& events() { return binding_.events(); }
@@ -94,6 +105,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   CheckConfigFn check_config_fn_;
   SetDisplayColorConversionFn set_display_color_conversion_fn_;
   ImportEventFn import_event_fn_;
+  AcknowledgeVsyncFn acknowledge_vsync_fn_;
 
   fidl::Binding<fuchsia::hardware::display::Controller> binding_;
   zx::channel device_channel_;

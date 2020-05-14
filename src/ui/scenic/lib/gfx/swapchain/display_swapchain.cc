@@ -403,6 +403,11 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
     on_vsync_(zx::time(timestamp));
   }
 
+  // Respond acknowledgement message to display controller.
+  if (cookie) {
+    (*display_controller_)->AcknowledgeVsync(cookie);
+  }
+
   if (image_ids.empty()) {
     return;
   }

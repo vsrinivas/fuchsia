@@ -29,8 +29,9 @@ namespace scenic_impl {
 namespace gfx {
 
 namespace test {
+class DisplaySwapchainMockTest;
 class DisplaySwapchainTest;
-}
+}  // namespace test
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
 // swapchain to present images to a physical display using the Zircon
@@ -76,6 +77,7 @@ class DisplaySwapchain : public Swapchain {
 
  private:
   friend class test::DisplaySwapchainTest;
+  friend class test::DisplaySwapchainMockTest;
 
   struct FrameRecord {
     fxl::WeakPtr<scheduling::FrameTimings> frame_timings;
