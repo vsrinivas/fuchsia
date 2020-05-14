@@ -9,6 +9,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/stream.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
@@ -53,8 +54,8 @@ using digest::MerkleTreeCreator;
 
 bool SupportsPaging(const Inode& inode) {
   CompressionAlgorithm algorithm = AlgorithmForInode(inode);
-  if (algorithm == CompressionAlgorithm::UNCOMPRESSED
-      || algorithm == CompressionAlgorithm::CHUNKED) {
+  if (algorithm == CompressionAlgorithm::UNCOMPRESSED ||
+      algorithm == CompressionAlgorithm::CHUNKED) {
     return true;
   }
   return false;
@@ -173,7 +174,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   }
 
   // Initialize the merkle/data VMOs so that we can write into them.
-  if ((status = PrepareVmosForWriting(nodes[0].index(), inode_.blob_size)) != ZX_OK) {
+  if ((status = PrepareVmosForWriting(nodes[0].index())) != ZX_OK) {
     return status;
   }
 
@@ -634,7 +635,7 @@ zx_status_t Blob::LoadVmosFromDisk() {
   return status;
 }
 
-zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
+zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index) {
   if (IsDataLoaded()) {
     return ZX_OK;
   }
@@ -644,7 +645,7 @@ zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
     FS_TRACE_ERROR("blobfs: Invalid merkle tree size\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
-  data_size = fbl::round_up(data_size, kBlobfsBlockSize);
+  size_t data_vmo_size = fbl::round_up(inode_.blob_size, kBlobfsBlockSize);
 
   zx_status_t status;
 
@@ -663,8 +664,15 @@ zx_status_t Blob::PrepareVmosForWriting(uint32_t node_index, size_t data_size) {
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(node_index, &data_vmo_name);
-  if ((status = data_mapping.CreateAndMap(data_size, data_vmo_name.c_str())) != ZX_OK) {
+  if ((status = data_mapping.CreateAndMap(data_vmo_size, data_vmo_name.c_str())) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to map data vmo: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  status = data_mapping.vmo().set_property(ZX_PROP_VMO_CONTENT_SIZE, &inode_.blob_size,
+                                           sizeof(inode_.blob_size));
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to set content size: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -733,6 +741,26 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
   }
   *info = fs::VnodeRepresentation::File{.observer = std::move(observer)};
   return ZX_OK;
+}
+
+zx_status_t Blob::CreateStream(uint32_t stream_options, zx::stream* out_stream) {
+  if (stream_options != ZX_STREAM_MODE_READ || GetState() != kBlobStateReadable) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t status = LoadVmosFromDisk();
+  if (status != ZX_OK || inode_.blob_size == 0u) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    size_t blob_content_size = 0;
+    zx_status_t status = data_mapping_.vmo().get_property(
+        ZX_PROP_VMO_CONTENT_SIZE, &blob_content_size, sizeof(blob_content_size));
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    ZX_DEBUG_ASSERT(blob_content_size == inode_.blob_size);
+  }
+  return zx::stream::create(stream_options, data_mapping_.vmo(), 0, out_stream);
 }
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
