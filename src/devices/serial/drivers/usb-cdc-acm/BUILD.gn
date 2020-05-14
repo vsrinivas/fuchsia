@@ -20,11 +20,11 @@ driver_module("usb-cdc-acm") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -42,11 +42,11 @@ driver_module("fake-usb-cdc-acm") {
     "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

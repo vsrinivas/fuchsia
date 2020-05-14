@@ -21,7 +21,7 @@ driver_module("virtio_block") {
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddktl",
   ]
 }
 
@@ -31,7 +31,7 @@ source_set("block_lib") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/bus/lib/virtio",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddktl",
   ]
 }
 
@@ -42,7 +42,7 @@ source_set("scsi_lib") {
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/block/lib/scsi",
     "//src/devices/bus/lib/virtio",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddktl",
   ]
 }
 
@@ -59,7 +59,7 @@ driver_module("virtio_scsi") {
     ":scsi_lib",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddktl",
   ]
 }
 

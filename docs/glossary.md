@@ -323,7 +323,7 @@ build Zircon Device Drivers. Device drivers are implemented as ELF shared
 libraries loaded by Zircon's Device Manager.
 
 -   [DDK Overview](/docs/concepts/drivers/overview.md)
--   [DDK includes](/zircon/system/ulib/ddk/include/ddk/)
+-   [DDK includes](/src/lib/ddk/include/ddk/)
 
 ### **Directory capability** {#directory-capability}
 

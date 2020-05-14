@@ -15,7 +15,7 @@ by providing mixins that ensure type safety and perform basic functionality.
 > * [CRTPs &mdash; or Curiously Recurring Template Patterns][crtp].
 
 The mixins that we'll be discussing are defined in
-[`//zircon/system/ulib/ddktl/include/ddktl/device.h`](/zircon/system/ulib/ddktl/include/ddktl/device.h).
+[`//src/lib/ddktl/include/ddktl/device.h`](/src/lib/ddktl/include/ddktl/device.h).
 
 The following mixins are provided:
 
@@ -42,7 +42,7 @@ Deprecated Mixin class      | Function             | Purpose
 `ddk::UnbindableDeprecated` | **DdkUnbindDeprecated()**   | called when this device is being removed
 
 These mixins correspond to the functions defined in the
-[`zx_protocol_device_t`](/zircon/system/ulib/ddk/include/ddk/device.h#74) struct
+[`zx_protocol_device_t`](/src/lib/ddk/include/ddk/device.h#74) struct
 that is used in the [simple, C-based drivers](simple.md).
 
 When defining the class for your device, you specify which functions it will
@@ -313,6 +313,6 @@ This usage is typical.
 [dev/block/zxcrypt/device.cpp]: /src/devices/block/drivers/zxcrypt/device.cc
 [dev/block/zxcrypt/device.h]: /src/devices/block/drivers/zxcrypt/device.h
 [dev/block/zxcrypt]: /src/devices/block/drivers/zxcrypt
-[include/ddktl/device.h]: /zircon/system/ulib/ddktl/include/ddktl/device.h
+[include/ddktl/device.h]: /src/lib/ddktl/include/ddktl/device.h
 [mixins]: https://en.wikipedia.org/wiki/Mixin
 [usb-xhci.cc]: /src/devices/usb/drivers/xhci/usb-xhci.cc

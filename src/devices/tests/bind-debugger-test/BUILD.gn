@@ -19,12 +19,12 @@ executable("tests") {
   deps = [
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
 }
@@ -70,7 +70,7 @@ driver_module("bind-debugger-test-driver") {
   deps = [
     ":bind",
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 }
 

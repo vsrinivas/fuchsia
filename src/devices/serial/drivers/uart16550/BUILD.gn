@@ -27,13 +27,13 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/hwreg-mock",
     "//zircon/public/lib/uart",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

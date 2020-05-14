@@ -77,10 +77,10 @@ driver_module("ath10k_driver") {
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

@@ -25,9 +25,9 @@ driver_module("intel-i2c") {
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
   ]
   public_configs = [ ":internal" ]
 }

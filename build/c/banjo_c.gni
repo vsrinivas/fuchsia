@@ -51,8 +51,8 @@ template("banjo_c_target") {
     # The generated headers #include <ddk/*.h> and #include <ddktl/*.h>
     # files from the libraries (that aren't generated).
     public_deps = [
-      "//zircon/system/ulib/ddk",
-      "//zircon/system/ulib/ddktl",
+      "//src/lib/ddk",
+      "//src/lib/ddktl",
     ]
 
     # Let dependencies use `#include "$file_stem.h"`.
@@ -87,9 +87,7 @@ template("banjo_c_target") {
       testonly = true
     }
 
-    public = [
-      ddktl_mock_header,
-    ]
+    public = [ ddktl_mock_header ]
 
     if (!defined(deps)) {
       deps = []
@@ -127,9 +125,7 @@ template("banjo_dummy_c_target") {
                              "visibility",
                            ])
 
-    public_deps = [
-      "//zircon/public/sysroot",
-    ]
+    public_deps = [ "//zircon/public/sysroot" ]
     libs = [ "zircon" ]
   }
 }

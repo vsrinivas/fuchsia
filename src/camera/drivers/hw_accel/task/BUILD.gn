@@ -11,13 +11,13 @@ source_set("camera-task") {
   deps = [
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
   ]

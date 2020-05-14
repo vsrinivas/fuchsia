@@ -10,8 +10,8 @@ executable("spiutil") {
   }
   sources = [ "spiutil.cc" ]
   deps = [
+    "//src/lib/ddk",
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/spi",
   ]
 }

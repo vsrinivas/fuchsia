@@ -48,10 +48,10 @@ driver_module("vim2") {
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

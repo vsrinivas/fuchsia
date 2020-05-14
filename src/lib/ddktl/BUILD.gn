@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("ddktl") {
+  sdk = "source"
+  sdk_publishable = false
+  sdk_headers = [
+    "ddktl/device-internal.h",
+    "ddktl/device.h",
+  ]
+  sources = []
+  public_deps = [
+    # <ddktl/device-internal.h> has #include <fbl/macros.h>.
+    "//zircon/public/lib/fbl",
+
+    # <ddktl/protocol/display-controller.h> has #include <lib/zx/vmo.h>.
+    "//zircon/public/lib/zx",
+
+    # <ddktl/fidl.h> has #include <ddk/device.h>
+    "//src/lib/ddk",
+  ]
+  deps = [
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+}

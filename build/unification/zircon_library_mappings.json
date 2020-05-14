@@ -1,16 +1,16 @@
 [
   {
-    "label": "//zircon/system/ulib/ddk:ddk",
+    "label": "//src/lib/ddk:ddk",
     "name": "ddk",
     "sdk": false
   },
   {
-    "label": "//zircon/system/ulib/ddk:ddk-device-headers",
+    "label": "//src/lib/ddk:ddk-device-headers",
     "name": "ddk-device-headers",
     "sdk": false
   },
   {
-    "label": "//zircon/system/ulib/ddktl:ddktl",
+    "label": "//src/lib/ddktl:ddktl",
     "name": "ddktl",
     "sdk": false
   },

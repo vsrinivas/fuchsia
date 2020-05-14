@@ -23,13 +23,13 @@ driver_module("ti-lp8556") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -53,14 +53,14 @@ test("ti-lp8556-test") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

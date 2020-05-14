@@ -23,13 +23,13 @@ driver_module("mtk-clk") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

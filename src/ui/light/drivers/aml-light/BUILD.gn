@@ -21,12 +21,12 @@ driver_module("aml-light") {
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -46,6 +46,8 @@ test("aml-light-test") {
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -54,8 +56,6 @@ test("aml-light-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -22,8 +22,8 @@ source_set("perf-mon") {
   }
 
   public_deps = [
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
   ]
 
   deps = [
@@ -51,12 +51,12 @@ driver_module("cpu-trace") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.cpu.insntrace:fuchsia.hardware.cpu.insntrace_llcpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

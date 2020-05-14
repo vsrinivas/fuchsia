@@ -13,10 +13,10 @@ zx_library("device-protocol-pdev") {
     "//sdk/banjo/ddk.protocol.platform.device",
 
     # Banjo protocols have #include <ddk/driver.h>.
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
 
     # Banjo protocols have #include <ddktl/device-internal.h>.
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddktl",
   ]
 
   deps = [

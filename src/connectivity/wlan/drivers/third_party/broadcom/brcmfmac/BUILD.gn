@@ -46,8 +46,8 @@ source_set("debug") {
   sources = [ "debug.cc" ]
   public = [ "debug.h" ]
   public_deps = [
+    "//src/lib/ddk",
     "//zircon/system/public",
-    "//zircon/system/ulib/ddk",
   ]
 }
 
@@ -171,7 +171,7 @@ source_set("core") {
     ":debug",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
   public_deps = [
     ":linuxisms",
@@ -179,12 +179,12 @@ source_set("core") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/devices/lib/broadcom",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/system/public",
-    "//zircon/system/ulib/ddktl",
   ]
   friend = [ "test/*" ]
 }

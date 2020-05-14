@@ -24,12 +24,12 @@ driver_module("ams-light") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -54,13 +54,13 @@ test("ams-light-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hid",
   ]
 }

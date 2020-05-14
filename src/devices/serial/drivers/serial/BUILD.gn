@@ -25,11 +25,11 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

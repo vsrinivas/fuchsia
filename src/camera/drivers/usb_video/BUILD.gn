@@ -31,6 +31,8 @@ driver_module("usb_video_driver") {
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -40,8 +42,6 @@ driver_module("usb_video_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -73,13 +73,13 @@ test("usb-video-test") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

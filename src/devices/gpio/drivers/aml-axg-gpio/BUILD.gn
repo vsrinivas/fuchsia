@@ -23,12 +23,12 @@ driver_module("aml-axg-gpio") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -54,13 +54,13 @@ test("aml-axg-gpio-test") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

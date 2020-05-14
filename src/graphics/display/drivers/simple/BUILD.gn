@@ -14,8 +14,8 @@ source_set("shared") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
   ]
 }
 
@@ -40,7 +40,7 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.display.controller",
       "//sdk/banjo/ddk.protocol.pci",
       "//src/devices/pci/lib/device-protocol-pci",
-      "//zircon/system/ulib/ddk",
+      "//src/lib/ddk",
     ]
   }
   migrated_manifest("simple-$driver-manifest") {

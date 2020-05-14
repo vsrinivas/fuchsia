@@ -22,12 +22,12 @@ driver_module("lp50xx-light") {
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hwreg-i2c",
   ]
 }
@@ -48,13 +48,13 @@ test("lp50xx-light-test") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/hwreg-i2c",
   ]
 }

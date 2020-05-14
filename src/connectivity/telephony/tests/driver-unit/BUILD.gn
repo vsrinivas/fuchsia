@@ -17,6 +17,7 @@ executable("tel-driver-unit-test") {
     "//sdk/lib/sys/cpp",
     "//src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver_src",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr:usb-virtual-bus",
     "//zircon/public/lib/fbl",
@@ -24,6 +25,5 @@ executable("tel-driver-unit-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
   ]
 }

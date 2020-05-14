@@ -19,11 +19,11 @@ driver_module("gpio") {
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -41,14 +41,14 @@ test("gpio-test") {
     "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

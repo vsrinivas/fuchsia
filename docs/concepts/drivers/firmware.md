@@ -83,5 +83,5 @@ MODULE_FIRMWARE := <name>/<path-to-binary-blob>
 This will install the firmware to bootfs under
 `/boot/lib/firmware/$(basename $(MODULE_FIRMWARE))`.
 
-The `load_firmware()` API, defined in [`driver.h`](/zircon/system/ulib/ddk/include/ddk/driver.h)
+The `load_firmware()` API, defined in [`driver.h`](/src/lib/ddk/include/ddk/driver.h)
 loads the firmware pointed to by the path in a VMO.

@@ -36,14 +36,14 @@ source_set("common") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -75,13 +75,13 @@ test("mt-hci-transaction-test") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
   ]
 }
 
@@ -102,6 +102,7 @@ test("mt-hci-request-queue-test") {
     "//src/devices/lib/mt8167",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mock-function",
@@ -109,7 +110,6 @@ test("mt-hci-request-queue-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
   ]
 }
 

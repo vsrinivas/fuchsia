@@ -20,6 +20,7 @@ zx_library("kernel-mexec") {
   sources = [ "kernel-mexec.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
+    "//src/lib/ddk",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -29,7 +30,6 @@ zx_library("kernel-mexec") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device-manager:c",
-    "//zircon/system/ulib/ddk",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 }

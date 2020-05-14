@@ -12,7 +12,7 @@ areas as specified in the
 [source code layout](/docs/concepts/source_code/layout.md) document. Most
 Fuchsia drivers are found under [//src/devices/](/src/devices). They are grouped
 based on the protocols they implement. The driver protocols are defined in
-[ddk/include/ddk/protodefs.h](/zircon/system/ulib/ddk/include/ddk/protodefs.h).
+[ddk/include/ddk/protodefs.h](/src/lib/ddk/include/ddk/protodefs.h).
 For example, a USB ethernet driver goes in
 [//src/connectivity/ethernet/drivers/](/src/connectivity/ethernet/drivers/)
 rather than [//src/devices/usb/drivers/](/src/devices/usb/drivers) because it
@@ -154,9 +154,9 @@ call `device_init_reply()` once initialization is complete.
 `device_init_reply()` does not necessarily need to be called from the `init()`
 hook. For example, it may be called from another worker thread. The device is
 also guaranteed not to be removed until the reply is received. See `init()` in
-[zircon/ddk/device.h](/zircon/system/ulib/ddk/include/ddk/device.h) and
-`device_init_reply()` in
-[zircon/ddk/driver.h](/zircon/system/ulib/ddk/include/ddk/driver.h).
+[src/lib/ddk/include/ddk/device.h](/src/lib/ddk/include/ddk/device.h)
+and `device_init_reply()` in
+[src/lib/ddk/include/ddk/driver.h](/src/lib/ddk/include/ddk/driver.h).
 
 There are generally four outcomes from `bind()`:
 
@@ -198,7 +198,7 @@ device can only have one protocol id. The protocol id corresponds to the class
 the device is published under in devfs.
 
 Device protocol headers are found in
-[ddk/protocol/](/zircon/system/ulib/ddk/include/ddk/protocol). Ops and any data
+[ddk/protocol/](/src/lib/ddk/include/ddk/protocol). Ops and any data
 structures passed between drivers should be defined in this header.
 
 ## Driver operation
@@ -276,7 +276,7 @@ to use this)
 
 ## Logging
 
-[ddk/debug.h](/zircon/system/ulib/ddk/include/ddk/debug.h) defines the
+[ddk/debug.h](/src/lib/ddk/include/ddk/debug.h) defines the
 `zxlogf(<log_level>,...)` macro. The log messages are printed to the system
 debuglog over the network and on the serial port if available for the device. By
 default, `ERROR` and `INFO` are always printed. You can control the log level

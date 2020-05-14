@@ -30,6 +30,8 @@ driver_module("fake-ot-radio-driver") {
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
     "//src/connectivity/openthread/third_party",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -38,8 +40,6 @@ driver_module("fake-ot-radio-driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

@@ -24,11 +24,11 @@ zx_library("designware") {
   deps = [
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }

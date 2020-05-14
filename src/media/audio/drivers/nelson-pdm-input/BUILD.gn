@@ -23,6 +23,8 @@ driver_module("nelson-pdm-input") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -31,8 +33,6 @@ driver_module("nelson-pdm-input") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 migrated_manifest("nelson-pdm-input-manifest") {

@@ -63,9 +63,9 @@ source_set("core") {
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
   ]
 
   public_deps = [
@@ -102,8 +102,8 @@ source_set("pcie") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/ddk",
   ]
 
   # TODO(39324): This driver emits a bunch of -Wthread-safety warnings that

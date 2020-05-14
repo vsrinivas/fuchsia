@@ -19,10 +19,10 @@ driver_module("hisi3660") {
     "//src/devices/clock/lib/hisi",
     "//src/devices/lib/driver",
     "//src/devices/lib/hi3660",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

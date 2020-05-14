@@ -15,9 +15,9 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
 
   public_deps = [
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
+    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/ddk",
   ]
 }
 

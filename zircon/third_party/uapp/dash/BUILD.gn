@@ -68,11 +68,11 @@ executable("dash") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
+    "//src/lib/ddk:ddk-device-headers",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-device-manager:c",
-    "//zircon/system/ulib/ddk:ddk-device-headers",
     "//zircon/third_party/ulib/linenoise",
   ]
 

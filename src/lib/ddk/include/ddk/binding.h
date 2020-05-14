@@ -1,0 +1,10 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SRC_LIB_DDK_INCLUDE_DDK_BINDING_H_
+#define SRC_LIB_DDK_INCLUDE_DDK_BINDING_H_
+
+#include <zircon/driver/binding.h>
+
+#endif  // SRC_LIB_DDK_INCLUDE_DDK_BINDING_H_

@@ -24,10 +24,10 @@ driver_module("usb-peripheral") {
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   # Set default configuration here, rather than relying on usbctl to do it.

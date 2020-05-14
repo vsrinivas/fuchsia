@@ -17,6 +17,7 @@ source_set("src") {
   deps = [
     "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -27,7 +28,6 @@ source_set("src") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inspector",
   ]
@@ -42,6 +42,7 @@ executable("isolated_devmgr") {
   deps = [
     ":src",
     "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
@@ -50,7 +51,6 @@ executable("isolated_devmgr") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
 }
@@ -72,6 +72,7 @@ static_library("usb-virtual-bus") {
   deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
@@ -79,7 +80,6 @@ static_library("usb-virtual-bus") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/devmgr-launcher",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
@@ -100,6 +100,7 @@ executable("test_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
@@ -108,7 +109,6 @@ executable("test_bin") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
 }

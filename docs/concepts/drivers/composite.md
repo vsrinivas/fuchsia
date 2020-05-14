@@ -312,7 +312,7 @@ the other half in
 [fragment.cc]: /zircon/system/core/devmgr/fragment/fragment.cc
 [fragment]: /zircon/system/core/devmgr/fragment/
 [composite.banjo]: /zircon/system/banjo/ddk.protocol.composite/composite.banjo
-[driver.h]: /zircon/system/ulib/ddk/include/ddk/driver.h
+[driver.h]: /src/lib/ddk/include/ddk/driver.h
 [isolate]: driver-development.md#isolate-devices
 
 <!-- diagram source at https://docs.google.com/document/d/1JKLPaHmoISdS23TFHgDmxJgIb78TS_t4TNDnbd6PXiE/edit?usp=sharing -->

@@ -31,7 +31,7 @@ zx_library("zxcrypt-dev") {
     "//zircon/system/ulib/zircon-crypto:zircon-crypto-static",
 
     # <zxcrypt/ddk-volume.h> has #include <ddk/device.h>.
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 
   configs += [ "//build/config/fuchsia:integer-paranoia" ]
@@ -41,12 +41,12 @@ zx_library("zxcrypt-dev") {
   deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.volume",
+    "//src/lib/ddk",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

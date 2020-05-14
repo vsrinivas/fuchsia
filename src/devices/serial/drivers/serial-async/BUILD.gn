@@ -26,6 +26,8 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -34,8 +36,6 @@ source_set("common") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

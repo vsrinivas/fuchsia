@@ -70,8 +70,8 @@ entry_deps = [
   "//src/devices/lib/driver",
   "//src/graphics/lib/magma/src/magma_util:macros",
   "//src/graphics/lib/magma/src/sys_driver",
+  "//src/lib/ddk",
   "//zircon/public/lib/zx",
-  "//zircon/system/ulib/ddk",
 ]
 
 source_set("entry") {
@@ -107,7 +107,7 @@ source_set("device") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pci",
     "//sdk/banjo/ddk.protocol.platform.device",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 
   deps = [
@@ -255,9 +255,9 @@ source_set("logger") {
 
   deps = [
     ":handle",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "$zircon_build_root/public/lib/syslog-static",
     "$zircon_build_root/public/lib/zx",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
   ]
 }
 
@@ -409,7 +409,7 @@ source_set("pdev_driver_gtest") {
 
   deps = [
     "$magma_build_root/tests/helper:platform_device_helper",
+    "//src/lib/ddk",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/ddk",
   ]
 }

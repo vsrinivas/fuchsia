@@ -58,11 +58,11 @@ test("pci-driver") {
     ":pci_fake.proxy",
     ":pci_protocol_test_driver",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
   ]
@@ -82,10 +82,10 @@ driver_module("pci_fake") {
   public_deps = [
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 
@@ -113,9 +113,9 @@ driver_module("pci_protocol_test_driver") {
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

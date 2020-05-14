@@ -1,0 +1,82 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+zx_library("ddk") {
+  sdk = "source"
+  sdk_publishable = false
+  sdk_headers = [
+    "ddk/metadata/bad-block.h",
+    "ddk/metadata/buttons.h",
+    "ddk/metadata/camera.h",
+    "ddk/metadata/clock.h",
+    "ddk/metadata/display.h",
+    "ddk/metadata/gpio.h",
+    "ddk/metadata/gpt.h",
+    "ddk/metadata/i2c.h",
+    "ddk/metadata/init-step.h",
+    "ddk/metadata/lights.h",
+    "ddk/metadata/nand.h",
+    "ddk/metadata/power.h",
+    "ddk/metadata/pwm.h",
+    "ddk/metadata/spi.h",
+    "ddk/metadata/test.h",
+    "ddk/protocol/auxdata.h",
+    "ddk/trace/event.h",
+    "ddk/binding.h",
+    "ddk/debug.h",
+    "ddk/device.h",
+    "ddk/device-power-states.h",
+    "ddk/driver.h",
+    "ddk/fragment-device.h",
+    "ddk/io-buffer.h",
+    "ddk/metadata.h",
+    "ddk/mmio-buffer.h",
+    "ddk/phys-iter.h",
+    "ddk/physiter.h",
+    "ddk/protodefs.h",
+    "ddk/usb-peripheral-config.h",
+    "hw/arch_ops.h",
+    "hw/inout.h",
+    "hw/pci.h",
+    "hw/reg.h",
+    "hw/sdio.h",
+    "hw/sdmmc.h",
+  ]
+  sources = [
+    "io-buffer.c",
+    "mmio-buffer.c",
+    "phys-iter.c",
+  ]
+  public_deps = [
+    # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
+
+    # <ddk/protocol/rawnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>.
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+
+    # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
+    "//zircon/system/fidl/fuchsia-device:c",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_c",
+    "//zircon/public/lib/ddk-platform-defs",
+    "//zircon/system/ulib/syslog",
+
+    # TODO(BLD-353): Exporting this dependency causes problems in the legacy
+    # build.  Instead, users of the ddk library that actually use this header
+    # have to also express a dependency on the trace library.
+    # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
+    #"//zircon/public/lib/trace",
+  ]
+  deps = [
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+  ]
+}
+
+zx_library("ddk-device-headers") {
+  sdk = "source"
+  sdk_publishable = false
+  sdk_headers = [ "ddk/device.h" ]
+  sources = []
+}

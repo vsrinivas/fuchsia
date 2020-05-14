@@ -30,12 +30,12 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -16,11 +16,11 @@ driver_module("hidctl") {
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

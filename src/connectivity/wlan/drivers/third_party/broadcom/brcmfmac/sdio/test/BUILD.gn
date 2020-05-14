@@ -27,9 +27,9 @@ executable("sdio_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio",
     "//src/devices/lib/broadcom",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
-    "//zircon/system/ulib/ddk",
   ]
 }
 

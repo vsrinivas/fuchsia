@@ -17,11 +17,11 @@ driver_module("crash-device") {
   sources = [ "crash_device.cc" ]
   deps = [
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(46921): UBSan has found an instance of undefined behavior in this target.

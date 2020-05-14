@@ -31,6 +31,7 @@ driver_module("aml-securemem") {
     "//sdk/fidl/fuchsia.tee",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -40,7 +41,6 @@ driver_module("aml-securemem") {
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/closure-queue",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }

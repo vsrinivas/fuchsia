@@ -33,10 +33,10 @@ driver_module("rtl88xx_driver") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/public",
-    "//zircon/system/ulib/ddk",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

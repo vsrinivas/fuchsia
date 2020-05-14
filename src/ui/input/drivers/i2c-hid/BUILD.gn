@@ -20,10 +20,10 @@ driver_module("i2c-hid") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -41,12 +41,12 @@ test("i2c-hid-test") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
     "//src/ui/input/testing/fake-hidbus-ifc",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
   ]
 }

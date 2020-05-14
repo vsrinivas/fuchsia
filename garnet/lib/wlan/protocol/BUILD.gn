@@ -18,6 +18,6 @@ source_set("protocol") {
     "//sdk/banjo/ddk.protocol.wlan.info",
     "//sdk/banjo/ddk.protocol.wlan.mac",
     "//sdk/banjo/ddk.protocol.wlanif",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 }

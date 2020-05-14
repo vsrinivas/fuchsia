@@ -92,7 +92,7 @@ lack a way to express the severity of a message.
 [bindable to file descriptors]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/zircon/system/ulib/fdio/include/lib/fdio/fdio.h#36
 [`debuglog_write`]: /docs/reference/syscalls/debuglog_write.md
 [`debuglog_read`]: /docs/reference/syscalls/debuglog_read.md
-[`zxlogf`]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/zircon/system/ulib/ddk/include/ddk/debug.h#96
+[`zxlogf`]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/src/lib/ddk/include/ddk/debug.h#96
 [kernel params]: /docs/reference/kernel/kernel_cmdline.md#drivernamelogflags
 [populated in procargs]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/src/sys/appmgr/realm.cc#140
 [`fuchsia.sys/LaunchInfo`]: https://fuchsia.dev/reference/fidl/fuchsia.sys#LaunchInfo
@@ -100,4 +100,4 @@ lack a way to express the severity of a message.
 [`stdout-to-debuglog`]: /src/sys/lib/stdout-to-debuglog
 [`fuchsia.boot.WriteOnlyLog`]: https://fuchsia.dev/reference/fidl/fuchsia.boot#WriteOnlyLog
 [appmgr]: /src/sys/appmgr/README.md
-[`ddk/debug.h`]: /zircon/system/ulib/ddk/include/ddk/debug.h
+[`ddk/debug.h`]: /src/lib/ddk/include/ddk/debug.h

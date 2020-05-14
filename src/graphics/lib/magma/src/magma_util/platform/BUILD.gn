@@ -30,7 +30,7 @@ source_set("barriers") {
   sources = [ "platform_barriers.h" ]
 
   if (is_fuchsia) {
-    public_deps = [ "//zircon/system/ulib/ddk" ]
+    public_deps = [ "//src/lib/ddk" ]
   }
 }
 

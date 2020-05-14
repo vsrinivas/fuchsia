@@ -93,5 +93,5 @@ The [zx_device_ops_t][device] *get_size* and *get_protocol* hooks are
 unsequenced with respect to all hooks (including concurrent invocations of themselves).
 The one exception to this is that they are sequenced before the *release* hook.
 
-[device]: /zircon/system/ulib/ddk/include/ddk/device.h
-[driver]: /zircon/system/ulib/ddk/include/ddk/driver.h
+[device]: /src/lib/ddk/include/ddk/device.h
+[driver]: /src/lib/ddk/include/ddk/driver.h

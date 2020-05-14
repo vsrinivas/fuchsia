@@ -20,10 +20,10 @@ driver_module("driver") {
   sources = [ "metadata-test.cc" ]
   deps = [
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
   ]
 
   visibility = [ ":*" ]

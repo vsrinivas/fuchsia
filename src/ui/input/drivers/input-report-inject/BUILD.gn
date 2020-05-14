@@ -16,12 +16,12 @@ driver_module("driver") {
     "//sdk/fidl/fuchsia.input.inject:fuchsia.input.inject_llcpp",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/input/lib/input-report-instance-driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

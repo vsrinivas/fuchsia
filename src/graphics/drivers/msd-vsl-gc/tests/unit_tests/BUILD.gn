@@ -21,9 +21,9 @@ executable("nonhardware_tests") {
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
     "//src/graphics/lib/magma/tests/mock:mmio",
+    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/ddk",
   ]
 }
 

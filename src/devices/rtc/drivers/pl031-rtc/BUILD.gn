@@ -16,7 +16,7 @@ driver_module("pl031-rtc") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/bus/lib/device-protocol-platform-device",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
     "//zircon/system/ulib/rtc",
   ]
 }

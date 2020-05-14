@@ -46,9 +46,9 @@ template("driver_source_template") {
       "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
       "//src/graphics/lib/magma/src/sys_driver",
       "//src/graphics/lib/magma/tests/helper:platform_device_helper",
+      "//src/lib/ddk",
+      "//src/lib/ddktl",
       "//third_party/imgtec-pvr-rgx-km:src",
-      "//zircon/system/ulib/ddk",
-      "//zircon/system/ulib/ddktl",
       "//zircon/system/ulib/fidl-utils",
     ]
     if (invoker.developer_build) {

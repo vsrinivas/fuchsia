@@ -19,13 +19,13 @@ driver_module("nand") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

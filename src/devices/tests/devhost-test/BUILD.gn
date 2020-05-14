@@ -22,9 +22,9 @@ driver_module("devhost-test") {
   deps = [
     ":fuchsia.device.devhost.test_llcpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
@@ -42,9 +42,9 @@ driver_module("devhost-test-manual") {
   deps = [
     ":fuchsia.device.devhost.test_llcpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
@@ -61,9 +61,9 @@ driver_module("devhost-test-child") {
   sources = [ "test-driver-child.cc" ]
   deps = [
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.

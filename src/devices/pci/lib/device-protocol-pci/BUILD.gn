@@ -10,7 +10,7 @@ zx_library("device-protocol-pci") {
   sources = [ "pci.cc" ]
   deps = [
     "//src/devices/lib/mmio",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
   public_deps = [
     # <lib/device-protocol/pci.h> has #include <ddk/protocol/pci.h>

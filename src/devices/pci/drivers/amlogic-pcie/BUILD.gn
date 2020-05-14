@@ -27,12 +27,12 @@ driver_module("amlogic-pcie") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/designware",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

@@ -22,7 +22,7 @@ driver_module("machina") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 }
 

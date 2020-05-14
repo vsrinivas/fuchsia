@@ -20,6 +20,8 @@ test("sa-unittest") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
@@ -31,8 +33,6 @@ test("sa-unittest") {
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

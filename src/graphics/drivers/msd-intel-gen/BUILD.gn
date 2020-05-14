@@ -48,8 +48,8 @@ source_set("msd_intel_entry") {
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
     "//src/graphics/lib/magma/src/sys_driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
   ]
   libs = [ "zircon" ]
 }
@@ -70,8 +70,8 @@ source_set("msd_intel_test_entry") {
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
     "//src/graphics/lib/magma/src/sys_driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
   ]
   libs = [ "zircon" ]
   deps += [

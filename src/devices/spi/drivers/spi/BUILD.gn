@@ -21,11 +21,11 @@ driver_module("spi") {
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
 }
@@ -47,12 +47,12 @@ test("spi-test") {
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/spi",
   ]

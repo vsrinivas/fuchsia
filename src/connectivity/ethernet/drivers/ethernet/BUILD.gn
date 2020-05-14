@@ -19,13 +19,13 @@ driver_module("ethernet") {
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
 }
@@ -42,12 +42,12 @@ test("ethernet-unittest") {
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
 

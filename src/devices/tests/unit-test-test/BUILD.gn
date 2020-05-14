@@ -15,7 +15,7 @@ driver_module("unit-test-fail") {
   sources = [ "unit-test-fail.cc" ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 }
 
@@ -29,7 +29,7 @@ driver_module("unit-test-pass") {
   sources = [ "unit-test-pass.cc" ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
   ]
 }
 

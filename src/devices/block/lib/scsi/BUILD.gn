@@ -24,12 +24,12 @@ zx_library("scsi") {
   deps = [
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
   ]
   public_deps = [
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
   ]
 }

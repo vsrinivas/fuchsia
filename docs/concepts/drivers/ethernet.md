@@ -151,7 +151,7 @@ macro directives.
 Note that the first binding instruction compares the field `Protocol` against the hexadecimal
 number `0x70504349` &mdash; that "number" is simply the ASCII encoding of the string "`pPCI`",
 indicating the PCI protocol (you can see all of the encodings in
-`//zircon/system/ulib/ddk/include/ddk/protodefs.h`)
+`//src/lib/ddk/include/ddk/protodefs.h`)
 
 From the `ZIRCON_DRIVER_BEGIN` macro, the `intel_ethernet_driver_ops`
 structure contains the driver operations, in this case just the binding function

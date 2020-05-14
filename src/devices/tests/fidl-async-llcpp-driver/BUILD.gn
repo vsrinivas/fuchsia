@@ -16,11 +16,11 @@ driver_module("fidl-async-llcpp-driver") {
   deps = [
     "//src/devices/lib/driver",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

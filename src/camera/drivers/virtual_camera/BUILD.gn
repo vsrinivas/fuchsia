@@ -37,6 +37,8 @@ source_set("source") {
     "//sdk/lib/syslog/cpp",
     "//src/camera/lib/image_writer:hsv_color_source",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
@@ -46,8 +48,6 @@ source_set("source") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

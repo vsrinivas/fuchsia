@@ -31,9 +31,9 @@ source_set("driver_sources") {
     "//src/graphics/lib/magma/src/magma_util/platform:logger",
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//src/graphics/lib/magma/src/sys_driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//third_party/imgtec-pvr-rgx-km:src_no_hardware",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fidl-utils",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

@@ -39,10 +39,10 @@ group("common") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.pwm",
     "//src/devices/lib/amlogic",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

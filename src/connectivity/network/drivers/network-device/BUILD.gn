@@ -14,9 +14,9 @@ source_set("src") {
   public_deps = [
     "device:device_ddk",
     "mac:mac_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

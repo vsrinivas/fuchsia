@@ -15,11 +15,11 @@ driver_module("realtek-8211f") {
   deps = [
     "//sdk/banjo/ddk.protocol.ethernet.mac",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }
 

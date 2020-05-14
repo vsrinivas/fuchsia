@@ -285,7 +285,7 @@ for data) became available.
 With **ramdisk_queue()** we get passed a block operations structure that indicates
 the expected operation: `BLOCK_OP_READ`, `BLOCK_OP_WRITE`, or `BLOCK_OP_FLUSH`.
 The structure also contains additional fields telling us the offset and size of
-the transfer (from `//zircon/system/ulib/ddk/include/ddk/protocol/block.h`):
+the transfer (from `//src/lib/ddk/include/ddk/protocol/block.h`):
 
 ```c
 // simplified from original

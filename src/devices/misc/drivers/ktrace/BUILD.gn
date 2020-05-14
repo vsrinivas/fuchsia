@@ -15,9 +15,9 @@ driver_module("ktrace") {
   deps = [
     "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel_c",
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
   ]
 }
 

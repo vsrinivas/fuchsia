@@ -19,7 +19,7 @@ zx_library("usb") {
     "//sdk/banjo/ddk.protocol.usb.composite",
 
     # <ddk/usb/usb.h> has #include <ddk/protocol/usb.h>.
-    "//zircon/system/ulib/ddk",
+    "//src/lib/ddk",
 
     # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
     "//src/devices/lib/dev-operation",
@@ -29,8 +29,8 @@ zx_library("usb") {
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/ddk",
-    "//zircon/system/ulib/ddktl",
   ]
 }

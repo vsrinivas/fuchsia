@@ -84,8 +84,8 @@ executable("syz-executor") {
   configs += [ ":warnings" ]
   deps = [
     "//src/devices/lib/driver",
+    "//src/lib/ddk",
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/ddk",
   ]
 }
 

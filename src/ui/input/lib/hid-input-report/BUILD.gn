@@ -47,11 +47,11 @@ test("lib-hid-input-report-test") {
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/fidl/fuchsia.ui.input2",
+    "//src/lib/ddk",
     "//src/ui/lib/key_util",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/ddk",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
