@@ -37,7 +37,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   ddk::CompositeProtocolClient composite(device);
   if (!composite.is_valid()) {
-    THERMAL_ERROR("could not get composite protocol\n");
+    THERMAL_ERROR("could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -45,14 +45,14 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   size_t actual;
   composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
   if (actual != FRAGMENT_COUNT) {
-    THERMAL_ERROR("could not get fragments\n");
+    THERMAL_ERROR("could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   scpi_protocol_t scpi_proto;
   status = device_get_protocol(fragments[FRAGMENT_SCPI], ZX_PROTOCOL_SCPI, &scpi_proto);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not get scpi protocol: %d\n", status);
+    THERMAL_ERROR("could not get scpi protocol: %d", status);
     return status;
   }
 
@@ -60,7 +60,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   status =
       device_get_protocol(fragments[FRAGMENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO, &fan0_gpio_proto);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not get fan0 gpio protocol: %d\n", status);
+    THERMAL_ERROR("could not get fan0 gpio protocol: %d", status);
     return status;
   }
 
@@ -68,7 +68,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   status =
       device_get_protocol(fragments[FRAGMENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO, &fan1_gpio_proto);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not get fan1 gpio protocol: %d\n", status);
+    THERMAL_ERROR("could not get fan1 gpio protocol: %d", status);
     return status;
   }
 
@@ -76,14 +76,14 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   uint32_t sensor_id;
   status = scpi.GetSensor("aml_thermal", &sensor_id);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not thermal get sensor: %d\n", status);
+    THERMAL_ERROR("could not thermal get sensor: %d", status);
     return status;
   }
 
   zx::port port;
   status = zx::port::create(0, &port);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not configure port: %d\n", status);
+    THERMAL_ERROR("could not configure port: %d", status);
     return status;
   }
 
@@ -92,7 +92,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   status = thermal->DdkAdd("vim-thermal");
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not add driver: %d\n", status);
+    THERMAL_ERROR("could not add driver: %d", status);
     return status;
   }
   // devmgr is now in charge of this device.
@@ -190,7 +190,7 @@ zx_status_t AmlThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
 void AmlThermal::JoinWorkerThread() {
   const auto status = thrd_join(worker_, nullptr);
   if (status != thrd_success) {
-    THERMAL_ERROR("worker thread failed: %d\n", status);
+    THERMAL_ERROR("worker thread failed: %d", status);
   }
 }
 
@@ -214,13 +214,13 @@ void AmlThermal::DdkInit(ddk::InitTxn txn) {
 zx_status_t AmlThermal::Init(zx_device_t* dev) {
   auto status = fan0_gpio_.ConfigOut(0);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not configure FAN_CTL0 gpio: %d\n", status);
+    THERMAL_ERROR("could not configure FAN_CTL0 gpio: %d", status);
     return status;
   }
 
   status = fan1_gpio_.ConfigOut(0);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not configure FAN_CTL1 gpio: %d\n", status);
+    THERMAL_ERROR("could not configure FAN_CTL1 gpio: %d", status);
     return status;
   }
 
@@ -228,31 +228,31 @@ zx_status_t AmlThermal::Init(zx_device_t* dev) {
   status = device_get_metadata(dev, DEVICE_METADATA_THERMAL_CONFIG, &info_,
                                sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &read);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not read device metadata: %d\n", status);
+    THERMAL_ERROR("could not read device metadata: %d", status);
     return status;
   } else if (read != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
-    THERMAL_ERROR("could not read device metadata\n");
+    THERMAL_ERROR("could not read device metadata");
     return ZX_ERR_NO_MEMORY;
   }
 
   status = scpi_.GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
                              &info_.opps[0]);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not get bigcluster dvfs opps: %d\n", status);
+    THERMAL_ERROR("could not get bigcluster dvfs opps: %d", status);
     return status;
   }
 
   status = scpi_.GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
                              &info_.opps[1]);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not get littlecluster dvfs opps: %d\n", status);
+    THERMAL_ERROR("could not get littlecluster dvfs opps: %d", status);
     return status;
   }
 
   auto start_thread = [](void* arg) { return static_cast<AmlThermal*>(arg)->Worker(); };
   status = thrd_create_with_name(&worker_, start_thread, this, "aml_thermal_notify_thread");
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not start worker thread: %d\n", status);
+    THERMAL_ERROR("could not start worker thread: %d", status);
     return status;
   }
 
@@ -289,19 +289,19 @@ zx_status_t AmlThermal::SetFanLevel(FanLevel level) {
       fan1_level = 1;
       break;
     default:
-      THERMAL_ERROR("unknown fan level: %d\n", level);
+      THERMAL_ERROR("unknown fan level: %d", level);
       return ZX_ERR_INVALID_ARGS;
   }
 
   auto status = fan0_gpio_.Write(fan0_level);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not set FAN_CTL0 level: %d\n", status);
+    THERMAL_ERROR("could not set FAN_CTL0 level: %d", status);
     return status;
   }
 
   status = fan1_gpio_.Write(fan1_level);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not set FAN_CTL1 level: %d\n", status);
+    THERMAL_ERROR("could not set FAN_CTL1 level: %d", status);
     return status;
   }
 
@@ -319,7 +319,7 @@ int AmlThermal::Worker() {
   // Notify thermal daemon of initial settings.
   status = NotifyThermalDaemon(trip_pt);
   if (status != ZX_OK) {
-    THERMAL_ERROR("could not notify thermal daemon: %d\n", status);
+    THERMAL_ERROR("could not notify thermal daemon: %d", status);
     return status;
   }
 
@@ -327,7 +327,7 @@ int AmlThermal::Worker() {
     uint32_t temp_integer = 0;
     status = scpi_.GetSensorValue(sensor_id_, &temp_integer);
     if (status != ZX_OK) {
-      THERMAL_ERROR("could not read temperature: %d\n", status);
+      THERMAL_ERROR("could not read temperature: %d", status);
       return status;
     }
 
@@ -351,14 +351,14 @@ int AmlThermal::Worker() {
       crit = true;
       status = scpi_.SetDvfsIdx(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 0);
       if (status != ZX_OK) {
-        THERMAL_ERROR("unable to set DVFS OPP for Big cluster\n");
+        THERMAL_ERROR("unable to set DVFS OPP for Big cluster");
         return status;
       }
 
       status =
           scpi_.SetDvfsIdx(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 0);
       if (status != ZX_OK) {
-        THERMAL_ERROR("unable to set DVFS OPP for Little cluster\n");
+        THERMAL_ERROR("unable to set DVFS OPP for Little cluster");
         return status;
       }
     } else {
@@ -369,7 +369,7 @@ int AmlThermal::Worker() {
       // Notify the thermal daemon about which trip point triggered.
       status = NotifyThermalDaemon(trip_pt);
       if (status != ZX_OK) {
-        THERMAL_ERROR("could not notify thermal daemon: %d\n", status);
+        THERMAL_ERROR("could not notify thermal daemon: %d", status);
         return status;
       }
     }
