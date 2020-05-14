@@ -11,10 +11,12 @@ use {
     fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::future::abortable,
     futures::future::AbortHandle,
     futures::prelude::*,
     log::{debug, error, info},
+    rust_measure_tape_for_case::measure,
     serde::{Deserialize, Serialize},
     std::{
         path::Path,
@@ -504,9 +506,18 @@ impl TestServer {
                             while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                                 stream.try_next().await?
                             {
-                                const MAX_CASES_PER_PAGE: usize = 50;
+                                // Paginate cases
+                                let mut bytes_used: usize = 32; // Page overhead of message header + vector
+                                let mut case_count = 0;
+                                for case in iter.clone() {
+                                    bytes_used += measure(&case).num_bytes;
+                                    if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
+                                        break;
+                                    }
+                                    case_count += 1;
+                                }
                                 responder
-                                    .send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))
+                                    .send(&mut iter.by_ref().take(case_count))
                                     .map_err(SuiteServerError::Response)?;
                             }
                             Ok(())

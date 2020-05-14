@@ -3,6 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
+
+measure_tape("measure_tape_for_case") {
+  fidls = [ "//sdk/fidl/fuchsia.test" ]
+  target_type = "fuchsia.test/Case"
+  target_binding = "hlcpp"
+}
 
 source_set("test_suite_lib") {
   sources = [
@@ -11,6 +18,7 @@ source_set("test_suite_lib") {
   ]
 
   public_deps = [
+    ":measure_tape_for_case",
     "//sdk/fidl/fuchsia.test",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

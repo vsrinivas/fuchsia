@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
+#include <measure_tape/hlcpp/measure_tape_for_case.h>
+
 #include "lib/fidl/cpp/clone.h"
 
 namespace example {
@@ -101,18 +103,24 @@ fidl::InterfaceRequestHandler<fuchsia::test::Suite> TestSuite::GetHandler() {
 }
 
 void CaseIterator::GetNext(GetNextCallback callback) {
+  const size_t page_overhead = sizeof(fidl_message_header_t) + sizeof(fidl_vector_t);
+  const size_t max_bytes = ZX_CHANNEL_MAX_MSG_BYTES - page_overhead;
+  size_t bytes_used = 0;
+
   std::vector<Case> cases;
   // Send the next page of Cases
-  const int MAX_CASES_PER_PAGE = 50;
-  int sent = 0;
-  for (; iter_ < test_inputs_.end() && sent < MAX_CASES_PER_PAGE; iter_++, sent++) {
+  for (; iter_ < test_inputs_.end(); iter_++) {
     Case test_case;
     test_case.set_name(iter_->name);
+    bytes_used += measure_tape::fuchsia::test::Measure(test_case).num_bytes;
+    if (bytes_used > max_bytes) {
+      break;
+    }
     cases.emplace_back(std::move(test_case));
   }
   callback(std::move(cases));
 
-  if (sent == 0) {
+  if (bytes_used == 0) {
     done_callback_(this);
   }
 };

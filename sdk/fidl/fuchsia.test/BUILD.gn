@@ -3,9 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
 
 fidl("fuchsia.test") {
   sdk_category = "internal"
 
   sources = [ "suite.fidl" ]
+}
+
+measure_tape("hlcpp_measure_tape_for_case") {
+  fidls = [ "//sdk/fidl/fuchsia.test" ]
+  target_type = "fuchsia.test/Case"
+  target_binding = "hlcpp"
+}
+
+measure_tape("rust_measure_tape_for_case") {
+  fidls = [ "//sdk/fidl/fuchsia.test" ]
+  target_type = "fuchsia.test/Case"
+  target_binding = "rust"
 }

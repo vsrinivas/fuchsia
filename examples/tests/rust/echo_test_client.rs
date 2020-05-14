@@ -55,8 +55,7 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                         while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                             stream.try_next().await?
                         {
-                            const MAX_CASES_PER_PAGE: usize = 50;
-                            responder.send(&mut cases_iter.by_ref().take(MAX_CASES_PER_PAGE))?;
+                            responder.send(&mut cases_iter.by_ref())?;
                         }
                         Ok(())
                     }
