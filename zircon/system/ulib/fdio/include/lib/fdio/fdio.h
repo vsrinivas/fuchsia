@@ -33,6 +33,12 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io);
 // Creates an |fdio_t| that does nothing.
 fdio_t* fdio_null_create(void);
 
+// Creates a file descriptor that does nothing.
+//
+// Returns -1 and sets errno if the function is unable to create the file
+// descriptor (e.g., if the file descriptor table is full).
+int fdio_fd_create_null(void);
+
 // Install an |fdio_t| in the file descriptor table for this process.
 //
 // If fd >= 0, request a specific fd, and starting_fd is ignored.

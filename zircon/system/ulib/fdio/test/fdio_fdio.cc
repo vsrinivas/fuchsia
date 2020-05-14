@@ -23,6 +23,12 @@ TEST(FDIOTest, CreateNull) {
   EXPECT_EQ(3, write(fd.get(), "abc", 3));
 }
 
+TEST(FDIOTest, CreateNullFD) {
+  fbl::unique_fd fd(fdio_fd_create_null());
+  EXPECT_LE(0, fd.get());
+  EXPECT_EQ(3, write(fd.get(), "abc", 3));
+}
+
 TEST(FDIOTest, CreateSocket) {
   zx::socket s1, s2;
   ASSERT_OK(zx::socket::create(0, &s1, &s2));
