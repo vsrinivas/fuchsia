@@ -201,6 +201,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
     glm::vec2 translation_ = glm::vec2(0.f, 0.f);
     glm::vec2 scale_ = glm::vec2(1.f, 1.f);
+
+    // Counterclockwise rotation angle, in radians.
     float angle_ = 0.f;
 
     // Recompute and cache the local matrix each time a component is changed to avoid recomputing

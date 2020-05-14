@@ -11,7 +11,7 @@
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_access.hpp>
-#include <glm/gtx/matrix_transform_2d.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
@@ -770,7 +770,22 @@ void Flatland::MatrixData::SetScale(fuchsia::ui::scenic::internal::Vec2 scale) {
 }
 
 void Flatland::MatrixData::RecomputeMatrix() {
-  matrix_ = glm::scale(glm::rotate(glm::translate(glm::mat3(), translation_), angle_), scale_);
+  // Manually compose the matrix rather than use glm transformations since the order of operations
+  // is always the same. glm matrices are column-major.
+  float* vals = static_cast<float*>(glm::value_ptr(matrix_));
+
+  // Translation in the third column.
+  vals[6] = translation_.x;
+  vals[7] = translation_.y;
+
+  // Rotation and scale combined into the first two columns.
+  const float s = sin(angle_);
+  const float c = cos(angle_);
+
+  vals[0] = c * scale_.x;
+  vals[1] = s * scale_.x;
+  vals[3] = -1.f * s * scale_.y;
+  vals[4] = c * scale_.y;
 }
 
 glm::mat3 Flatland::MatrixData::GetMatrix() const { return matrix_; }
