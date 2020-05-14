@@ -292,9 +292,9 @@ async fn event_capability_ready() -> Result<(), Error> {
     assert_eq!(
         vec![
             "Correctly timed out on 4th event",
-            "Saw /bar on ./child:0",
-            "Saw /foo on ./child:0",
-            "error /bleep on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw /bar on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw /foo on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error /bleep on ./child:0",
         ],
         messages
     );

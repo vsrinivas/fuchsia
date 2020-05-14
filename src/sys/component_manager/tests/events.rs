@@ -1074,6 +1074,10 @@ create_event!(
     payload: {
         data: {
             {
+                name: component_url,
+                ty: String,
+            }
+            {
                 name: path,
                 ty: String,
             }
@@ -1086,6 +1090,10 @@ create_event!(
         },
     },
     error_payload: {
+        {
+            name: component_url,
+            ty: String,
+        }
         {
             name: path,
             ty: String,

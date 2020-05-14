@@ -1645,7 +1645,7 @@ pub mod tests {
         assert_matches!(event.result,
                         Err(EventError {
                             event_error_payload:
-                                EventErrorPayload::CapabilityReady { path }, .. }) if path == "/diagnostics");
+                                EventErrorPayload::CapabilityReady { path, .. }, .. }) if path == "/diagnostics");
     }
 
     #[fasync::run_singlethreaded(test)]

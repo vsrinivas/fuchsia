@@ -116,6 +116,7 @@ mod tests {
                 target_moniker: Some("./foo:0/bar:0".to_string()),
                 event_result: Some(fsys::EventResult::Payload(
                     fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
+                        component_url: Some("http://fuchsia.com/foobar.cmx".to_string()),
                         path: Some("/diagnostics".to_string()),
                         node: Some(node),
                     }),

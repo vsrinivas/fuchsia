@@ -187,7 +187,7 @@ impl EventError {
 #[derive(Clone)]
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityReady { path: String },
+    CapabilityReady { component_url: String, path: String },
     CapabilityRouted,
     Destroyed,
     Discovered,
@@ -257,6 +257,7 @@ impl HooksRegistration {
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityReady {
+        component_url: String,
         path: String,
         node: NodeProxy,
     },

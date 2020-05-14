@@ -210,11 +210,21 @@ impl CapabilityReadyNotifier {
         match node_result {
             Ok(node) => Event::new(
                 target_realm.abs_moniker.clone(),
-                Ok(EventPayload::CapabilityReady { path: target_path, node }),
+                Ok(EventPayload::CapabilityReady {
+                    component_url: target_realm.component_url.clone(),
+                    path: target_path,
+                    node,
+                }),
             ),
             Err(e) => Event::new(
                 target_realm.abs_moniker.clone(),
-                Err(EventError::new(&e, EventErrorPayload::CapabilityReady { path: target_path })),
+                Err(EventError::new(
+                    &e,
+                    EventErrorPayload::CapabilityReady {
+                        component_url: target_realm.component_url.clone(),
+                        path: target_path,
+                    },
+                )),
             ),
         }
     }

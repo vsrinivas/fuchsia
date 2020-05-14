@@ -76,7 +76,8 @@ async fn main() -> Result<(), Error> {
 
                 let _ = echo
                     .echo_string(Some(&format!(
-                        "Saw {} on {}",
+                        "[{}] Saw {} on {}",
+                        payload.component_url,
                         payload.path,
                         event.target_moniker()
                     )))
@@ -85,7 +86,8 @@ async fn main() -> Result<(), Error> {
             Err(error) => {
                 let _ = echo
                     .echo_string(Some(&format!(
-                        "error {} on {}",
+                        "[{}] error {} on {}",
+                        error.component_url,
                         error.path,
                         event.target_moniker()
                     )))

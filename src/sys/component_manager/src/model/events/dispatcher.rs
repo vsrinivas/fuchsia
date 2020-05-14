@@ -105,7 +105,7 @@ impl EventDispatcher {
                 "path".to_string() => DictionaryValue::Str(path.into())
             }),
             Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityReady { path },
+                event_error_payload: EventErrorPayload::CapabilityReady { path, .. },
                 ..
             }) => Some(hashmap! {
                 "path".to_string() => DictionaryValue::Str(path.into())

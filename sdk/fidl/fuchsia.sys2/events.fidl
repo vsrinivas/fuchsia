@@ -126,8 +126,11 @@ flexible union EventErrorPayload {
 
 /// Error payload for CapabilityReady events
 table CapabilityReadyError {
+    /// The url of the component providing the capability.
+    1: fuchsia.url.Url component_url;
+
     /// The path of the capability.
-    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH path;
 };
 
 /// Error payload for CapabilityRouted events
@@ -152,11 +155,14 @@ flexible union EventPayload {
 
 /// Payload for CapabilityReady events
 table CapabilityReadyPayload {
+    /// The url of the component providing the capability.
+    1: fuchsia.url.Url component_url;
+
     /// The path of the capability.
-    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH path;
 
     /// Channel to the node exposed by the event source at `path`.
-    2: fuchsia.io.Node node;
+    3: fuchsia.io.Node node;
 };
 
 /// Payload for CapabilityRouted events

@@ -138,10 +138,7 @@ mod tests {
         fidl_fuchsia_io2 as fio2,
         fuchsia_async::EHandle,
         fuchsia_zircon as zx,
-        std::{
-            convert::TryFrom,
-            sync::Arc,
-        },
+        std::{convert::TryFrom, sync::Arc},
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
     };
 

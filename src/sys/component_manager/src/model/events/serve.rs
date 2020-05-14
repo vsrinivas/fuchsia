@@ -98,9 +98,9 @@ fn maybe_create_event_result(
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
-        Ok(EventPayload::CapabilityReady { path, node }) => {
+        Ok(EventPayload::CapabilityReady { component_url, path, node, .. }) => {
             Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                create_capability_ready_payload(path.to_string(), node)?,
+                create_capability_ready_payload(component_url.to_string(), path.to_string(), node)?,
             ))))
         }
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
@@ -113,10 +113,13 @@ fn maybe_create_event_result(
         }
         Err(EventError {
             source,
-            event_error_payload: EventErrorPayload::CapabilityReady { path },
+            event_error_payload: EventErrorPayload::CapabilityReady { component_url, path },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
-                fsys::CapabilityReadyError { path: Some(path.to_string()) },
+                fsys::CapabilityReadyError {
+                    component_url: Some(component_url.to_string()),
+                    path: Some(path.to_string()),
+                },
             )),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -130,6 +133,7 @@ fn maybe_create_event_result(
 }
 
 fn create_capability_ready_payload(
+    component_url: String,
     path: String,
     node: &NodeProxy,
 ) -> Result<fsys::CapabilityReadyPayload, fidl::Error> {
@@ -144,7 +148,7 @@ fn create_capability_ready_payload(
         Some(node_client_end)
     };
 
-    Ok(fsys::CapabilityReadyPayload { path: Some(path), node })
+    Ok(fsys::CapabilityReadyPayload { component_url: Some(component_url), path: Some(path), node })
 }
 
 fn maybe_create_capability_routed_payload(

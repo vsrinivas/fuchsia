@@ -406,7 +406,7 @@ mod tests {
                 // We get an error cuz the component is not really serving the directory, but is
                 // exposing it. For the purposes of the test, this is enough information.
                 Err(EventError {
-                    event_error_payload: EventErrorPayload::CapabilityReady { path },
+                    event_error_payload: EventErrorPayload::CapabilityReady { path, .. },
                     ..
                 }) if path == "/diagnostics" => {
                     result_capability_ready_monikers.insert(event.event.target_moniker.to_string());
