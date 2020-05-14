@@ -4,10 +4,13 @@
 
 use anyhow::Error;
 use carnelian::{
-    color::Color, make_app_assistant, AnimationMode, App, AppAssistant, Point, Rect, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    color::Color,
+    make_app_assistant,
+    render::{Composition, Context as RenderContext, PreClear, RenderExt},
+    AnimationMode, App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    ViewKey,
 };
-use fuchsia_zircon::Duration;
+use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
 
 #[derive(Default)]
 struct IntegrationTestAppAssistant;
@@ -17,30 +20,34 @@ impl AppAssistant for IntegrationTestAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
-        Ok(Box::new(IntegrationTestViewAssistant { bg_color }))
-    }
-
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Canvas
+        let composition = Composition::new(bg_color);
+        Ok(Box::new(IntegrationTestViewAssistant { bg_color, composition }))
     }
 }
 
 struct IntegrationTestViewAssistant {
     bg_color: Color,
+    composition: Composition,
 }
 
 impl ViewAssistant for IntegrationTestViewAssistant {
-    fn setup(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn setup(&mut self, _: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
-
-        let bounds = Rect::new(Point::zero(), context.size);
-        canvas.fill_rect(&bounds, self.bg_color);
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext,
+    ) -> Result<(), Error> {
+        let image = render_context.get_current_image(context);
+        let ext =
+            RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
+        render_context.render(&self.composition, None, image, &ext);
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())
     }
 

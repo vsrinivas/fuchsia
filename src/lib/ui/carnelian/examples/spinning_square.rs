@@ -12,8 +12,8 @@ use carnelian::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,
         Raster, RenderExt, Style,
     },
-    AnimationMode, App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
+    AnimationMode, App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
@@ -31,12 +31,8 @@ impl AppAssistant for SpinningSquareAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         SpinningSquareViewAssistant::new()
-    }
-
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions::default())
     }
 
     /// Return the list of names of services this app wants to provide
@@ -184,7 +180,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         &mut self,
         render_context: &mut RenderContext,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
@@ -246,7 +242,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {

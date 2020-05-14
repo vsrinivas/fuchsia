@@ -146,12 +146,12 @@ trait PointerEventResponseHandler {
     fn scroll_term(&mut self, scroll: Scroll);
 }
 
-struct PointerEventResponseHandlerImpl<'a, 'b> {
-    ctx: &'a mut ViewAssistantContext<'b>,
+struct PointerEventResponseHandlerImpl<'a> {
+    ctx: &'a mut ViewAssistantContext,
     term: Rc<RefCell<Term<EventProxy>>>,
 }
 
-impl PointerEventResponseHandler for PointerEventResponseHandlerImpl<'_, '_> {
+impl PointerEventResponseHandler for PointerEventResponseHandlerImpl<'_> {
     fn update_view(&mut self) {
         self.ctx.queue_message(make_message(ViewMessages::Update));
     }
@@ -386,7 +386,7 @@ impl TerminalViewAssistant {
 }
 
 impl ViewAssistant for TerminalViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
@@ -394,7 +394,7 @@ impl ViewAssistant for TerminalViewAssistant {
         &mut self,
         render_context: &mut RenderContext,
         ready_event: fuchsia_zircon::Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         ftrace::duration!("terminal", "TerminalViewAssistant:render");
 
@@ -431,7 +431,7 @@ impl ViewAssistant for TerminalViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        _context: &mut ViewAssistantContext<'_>,
+        _context: &mut ViewAssistantContext,
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
@@ -441,7 +441,7 @@ impl ViewAssistant for TerminalViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        ctx: &mut ViewAssistantContext<'_>,
+        ctx: &mut ViewAssistantContext,
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {

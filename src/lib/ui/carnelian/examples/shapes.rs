@@ -15,7 +15,7 @@ use carnelian::{
         RenderExt, Style,
     },
     AnimationMode, App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::default::Vector2D;
 use fuchsia_trace::duration;
@@ -23,7 +23,7 @@ use fuchsia_zircon::{AsHandleRef, Event, Signals};
 use rand::{thread_rng, Rng};
 use std::{collections::BTreeMap, mem};
 
-fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
+fn make_bounds(context: &ViewAssistantContext) -> Rect {
     Rect::new(Point::zero(), context.size)
 }
 
@@ -44,13 +44,13 @@ impl AppAssistant for ShapeDropAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ShapeDropViewAssistant::new()?))
     }
 
-    fn get_mode(&self) -> ViewMode {
+    fn get_render_options(&self) -> RenderOptions {
         let args: Args = argh::from_env();
-        ViewMode::Render(RenderOptions { use_spinel: args.use_spinel })
+        RenderOptions { use_spinel: args.use_spinel, ..RenderOptions::default() }
     }
 }
 
@@ -132,7 +132,7 @@ impl TouchHandler {
         TouchHandler { location: Point::zero(), color, shape_type }
     }
 
-    fn update(&mut self, context: &mut ViewAssistantContext<'_>, location: &IntPoint) {
+    fn update(&mut self, context: &mut ViewAssistantContext, location: &IntPoint) {
         let touch_point = location.to_f32();
         let bounds = make_bounds(context);
         self.location =
@@ -201,7 +201,7 @@ impl ShapeDropViewAssistant {
 
     fn start_animating(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         location: &IntPoint,
         pointer_id: &input::pointer::PointerId,
     ) {
@@ -259,7 +259,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
         &mut self,
         render_context: &mut RenderContext,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         duration!("gfx", "ShapeDropViewAssistant::render");
 
@@ -371,7 +371,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {

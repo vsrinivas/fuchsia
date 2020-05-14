@@ -5,7 +5,7 @@
 use {
     crate::terminal_view::TerminalViewAssistant,
     anyhow::Error,
-    carnelian::{AppAssistant, AppContext, RenderOptions, ViewAssistantPtr, ViewKey, ViewMode},
+    carnelian::{AppAssistant, AppContext, ViewAssistantPtr, ViewKey},
 };
 
 pub struct TerminalAssistant {
@@ -29,15 +29,8 @@ impl AppAssistant for TerminalAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(
-        &mut self,
-        view_key: ViewKey,
-    ) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(TerminalViewAssistant::new(&self.app_context, view_key)))
-    }
-
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions::default())
     }
 }
 
@@ -49,7 +42,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn creates_terminal_view() -> Result<(), Error> {
         let mut app = TerminalAssistant::new_for_test();
-        app.create_view_assistant_render(1)?;
+        app.create_view_assistant(1)?;
         Ok(())
     }
 }

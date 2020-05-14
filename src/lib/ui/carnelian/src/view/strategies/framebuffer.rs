@@ -29,7 +29,7 @@ use std::collections::BTreeMap;
 
 type WaitEvents = BTreeMap<ImageId, Event>;
 
-pub(crate) struct FrameBufferRenderViewStrategy {
+pub(crate) struct FrameBufferViewStrategy {
     frame_buffer: FrameBufferPtr,
     frame_set: FrameSet,
     image_indexes: BTreeMap<ImageId, u32>,
@@ -42,7 +42,7 @@ pub(crate) struct FrameBufferRenderViewStrategy {
 
 const RENDER_FRAME_COUNT: usize = FRAME_COUNT;
 
-impl FrameBufferRenderViewStrategy {
+impl FrameBufferViewStrategy {
     pub(crate) async fn new(
         key: ViewKey,
         render_options: RenderOptions,
@@ -100,7 +100,7 @@ impl FrameBufferRenderViewStrategy {
             wait_events.insert(frame.image_id, wait_event);
         }
         let frame_set = FrameSet::new(fb_image_ids);
-        Ok(Box::new(FrameBufferRenderViewStrategy {
+        Ok(Box::new(FrameBufferViewStrategy {
             frame_buffer: frame_buffer.clone(),
             frame_set: frame_set,
             image_indexes,
@@ -116,7 +116,7 @@ impl FrameBufferRenderViewStrategy {
         &mut self,
         view_details: &ViewDetails,
         image_id: Option<ImageId>,
-    ) -> (ViewAssistantContext<'_>, &mut Context) {
+    ) -> (ViewAssistantContext, &mut Context) {
         let render_context = &mut self.context;
 
         let time_now = Time::get(ClockId::Monotonic);
@@ -145,9 +145,7 @@ impl FrameBufferRenderViewStrategy {
                 metrics: view_details.metrics,
                 presentation_time: time_now + interval_offset,
                 messages: Vec::new(),
-                canvas: None,
                 buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
-                wait_event: None,
                 image_id: actual_image_id,
                 image_index,
             },
@@ -157,7 +155,7 @@ impl FrameBufferRenderViewStrategy {
 }
 
 #[async_trait(?Send)]
-impl ViewStrategy for FrameBufferRenderViewStrategy {
+impl ViewStrategy for FrameBufferViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
             let (framebuffer_context, ..) = self.make_context(view_details, Some(available));

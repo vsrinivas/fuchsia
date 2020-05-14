@@ -149,7 +149,7 @@ impl Context {
         }
     }
     /// Returns the `context`'s current image.
-    pub fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> Image {
+    pub fn get_current_image(&mut self, context: &ViewAssistantContext) -> Image {
         match &mut self.inner {
             ContextInner::Mold(ref mut render_context) => {
                 Image { inner: ImageInner::Mold(render_context.get_current_image(context)) }

@@ -14,7 +14,7 @@ use {
         make_app_assistant,
         render::*,
         AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect, Size2D, Vector2D},
     fuchsia_trace::{self, counter, duration},
@@ -125,16 +125,16 @@ impl AppAssistant for InfiniteScrollAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(InfiniteScrollViewAssistant::new(
             self.args.clone().expect("AppAssistant::setup not run"),
         )))
     }
 
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions {
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions {
             use_spinel: self.args.as_ref().map(|args| args.use_spinel).unwrap_or_default(),
-        })
+        }
     }
 }
 
@@ -1004,7 +1004,7 @@ impl InfiniteScroll {
     fn update(
         &mut self,
         render_context: &mut Context,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         duration!("gfx", "InfiniteScrollViewAssistant::update");
 
@@ -1177,7 +1177,7 @@ impl ViewAssistant for InfiniteScrollViewAssistant {
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         if context.size != self.size || self.infinite_scroll.is_none() {
             let infinite_scroll = InfiniteScroll::new(
@@ -1208,7 +1208,7 @@ impl ViewAssistant for InfiniteScrollViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        _context: &mut ViewAssistantContext<'_>,
+        _context: &mut ViewAssistantContext,
         event: &input::Event,
         _pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {

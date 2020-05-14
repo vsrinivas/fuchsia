@@ -116,7 +116,7 @@ pub trait Context<B: Backend> {
     /// Returns the image at `image_index`.
     fn get_image(&mut self, image_index: u32) -> B::Image;
     /// Returns the `context`'s current image.
-    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> B::Image;
+    fn get_current_image(&mut self, context: &ViewAssistantContext) -> B::Image;
     /// Renders the composition with an optional clip to the image.
     fn render(
         &mut self,
@@ -257,7 +257,7 @@ pub(crate) mod tests {
         fn _generic<B: Backend>(
             token: ClientEnd<BufferCollectionTokenMarker>,
             size: Size2D<u32>,
-            view_context: &ViewAssistantContext<'_>,
+            view_context: &ViewAssistantContext,
         ) {
             let mut context = B::new_context(token, size);
 

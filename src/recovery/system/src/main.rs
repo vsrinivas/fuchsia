@@ -12,7 +12,7 @@ use carnelian::{
         RenderExt, Style,
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Message,
-    Point, RenderOptions, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    Point, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use fuchsia_async as fasync;
 use fuchsia_zircon::{AsHandleRef, Event, Signals};
@@ -46,20 +46,13 @@ impl AppAssistant for RecoveryAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(
-        &mut self,
-        view_key: ViewKey,
-    ) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(RecoveryViewAssistant::new(
             &self.app_context,
             view_key,
             "Fuchsia System Recovery",
             "Waiting...",
         )?))
-    }
-
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions::default())
     }
 }
 
@@ -111,11 +104,7 @@ impl<'a> RecoveryViewAssistant<'a> {
 }
 
 impl ViewAssistant for RecoveryViewAssistant<'_> {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
@@ -123,7 +112,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         &mut self,
         render_context: &mut RenderContext,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let text_size = context.size.height / 12.0;
 

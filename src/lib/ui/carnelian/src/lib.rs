@@ -31,7 +31,7 @@
 //!         Ok(())
 //!     }
 //!
-//!     fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+//!     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
 //!         SampleViewAssistant::new()
 //!     }
 //! }
@@ -49,7 +49,7 @@
 //!         &mut self,
 //!         _render_context: &mut render::Context,
 //!         _buffer_ready_event: Event,
-//!         _view_context: &ViewAssistantContext<'_>,
+//!         _view_context: &ViewAssistantContext,
 //!     ) -> Result<(), Error> {
 //!         Ok(())
 //!     }
@@ -61,13 +61,11 @@
 //! ```
 
 mod app;
-mod canvas;
 pub mod color;
 pub mod drawing;
 pub mod geometry;
 pub mod input;
 pub mod input_ext;
-mod label;
 mod message;
 pub mod render;
 mod view;
@@ -75,11 +73,9 @@ mod view;
 pub use crate::{
     app::{
         make_app_assistant, App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreator,
-        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, RenderOptions, ViewMode,
+        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, RenderOptions,
     },
-    canvas::{measure_text, Canvas, MappingPixelSink, PixelSink},
     geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
-    label::{make_font_description, Label},
     message::{make_message, Message},
     view::{
         AnimationMode, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController,

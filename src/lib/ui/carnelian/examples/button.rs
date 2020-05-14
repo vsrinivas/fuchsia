@@ -10,15 +10,18 @@
 use anyhow::Error;
 use carnelian::{
     color::Color,
-    drawing::{path_for_rectangle, DisplayAligned, DisplayRotation, GlyphMap, Paint, Text},
+    drawing::{
+        make_font_description, path_for_rectangle, DisplayAligned, DisplayRotation, GlyphMap,
+        Paint, Text,
+    },
     input::{self},
-    make_app_assistant, make_font_description, make_message,
+    make_app_assistant, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
         RenderExt, Style,
     },
-    App, AppAssistant, Coord, IntPoint, Message, Point, Rect, RenderOptions, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
+    App, AppAssistant, Coord, IntPoint, Message, Point, Rect, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use euclid::Transform2D;
 use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
@@ -37,12 +40,8 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ButtonViewAssistant::new()?))
-    }
-
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions::default())
     }
 }
 
@@ -187,7 +186,7 @@ impl Button {
 
     pub fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         pointer_event: &input::pointer::Event,
     ) {
         if !self.focused {
@@ -304,7 +303,7 @@ impl ViewAssistant for ButtonViewAssistant {
         &mut self,
         render_context: &mut RenderContext,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         // Emulate the size that Carnelian passes when the display is rotated
         let target_size = self.target_size(context.size);
@@ -431,7 +430,7 @@ impl ViewAssistant for ButtonViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
@@ -475,7 +474,7 @@ impl ViewAssistant for ButtonViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {

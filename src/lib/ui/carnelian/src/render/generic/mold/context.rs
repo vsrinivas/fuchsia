@@ -304,7 +304,7 @@ impl Context<Mold> for MoldContext {
         MoldImage(*index)
     }
 
-    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> MoldImage {
+    fn get_current_image(&mut self, context: &ViewAssistantContext) -> MoldImage {
         self.get_image(context.image_index)
     }
 

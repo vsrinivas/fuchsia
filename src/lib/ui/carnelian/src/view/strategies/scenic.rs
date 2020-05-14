@@ -2,51 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
-    app::MessageInternal,
-    canvas::{Canvas, MappingPixelSink},
-    geometry::{IntSize, UintSize},
+    app::{MessageInternal, RenderOptions},
+    geometry::UintSize,
     input::ScenicInputHandler,
     message::Message,
+    render::{
+        self,
+        generic::{self, Backend},
+        ContextInner,
+    },
     view::{
         scenic_present, scenic_present_done,
         strategies::base::{ViewStrategy, ViewStrategyPtr},
-        Canvases, ScenicResources, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
+        ScenicResources, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
     },
 };
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_images::{
-    AlphaFormat, ColorSpace, ImageInfo, ImagePipe2Marker, ImagePipe2Proxy, MemoryType, PixelFormat,
-    Tiling, Transform,
-};
+use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
 use fidl_fuchsia_sysmem::ImageFormat2;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
-use fuchsia_framebuffer::{
-    sysmem::{minimum_row_bytes, BufferCollectionAllocator},
-    FrameSet, FrameUsage, ImageId,
-};
-use fuchsia_scenic::{Image, ImagePipe2, Material, Memory, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time, Vmo};
+use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
+use fuchsia_scenic::{ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
 use futures::channel::mpsc::UnboundedSender;
-use mapped_vmo::Mapping;
 use std::{
-    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     iter,
-    sync::Arc,
 };
-
-pub(crate) type Vmos = BTreeMap<u64, Vmo>;
-
-// TODO: Remove this workaround once ImagePipe2 works in Femu.
-// https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=6469
-
-enum PlumberTools {
-    SysMem {},
-    Vmo { vmos: Vmos },
-}
 
 struct Plumber {
     pub size: UintSize,
@@ -54,8 +39,8 @@ struct Plumber {
     pub collection_id: u32,
     pub first_image_id: u64,
     pub frame_set: FrameSet,
-    pub canvases: Canvases,
-    pub tools: PlumberTools,
+    pub image_indexes: BTreeMap<ImageId, u32>,
+    pub context: render::Context,
 }
 
 impl Plumber {
@@ -66,91 +51,67 @@ impl Plumber {
         collection_id: u32,
         first_image_id: u64,
         image_pipe_client: &mut ImagePipe2Proxy,
+        render_options: RenderOptions,
     ) -> Result<Plumber, Error> {
+        let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let mut buffer_allocator = BufferCollectionAllocator::new(
             size.width,
             size.height,
             pixel_format,
-            FrameUsage::Cpu,
+            usage,
             buffer_count,
         )?;
         let image_pipe_token = buffer_allocator.duplicate_token().await?;
         image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
-        let buffers_result = buffer_allocator.allocate_buffers(true).await;
-        let mut canvases: Canvases = Canvases::new();
-        let mut image_ids = BTreeSet::new();
-        let tools = if let Ok(buffers) = buffers_result {
-            let linear_stride_bytes =
-                minimum_row_bytes(buffers.settings.image_format_constraints, size.width)?;
-            let buffer_size = linear_stride_bytes * size.height;
-            let mut index = 0;
-            for buffer in &buffers.buffers[0..buffers.buffer_count as usize] {
-                let image_id = index + first_image_id;
-                image_ids.insert(image_id);
-                let vmo = buffer.vmo.as_ref().expect("vmo");
-
-                let mapping = Mapping::create_from_vmo(
-                    vmo,
-                    buffer_size as usize,
-                    zx::VmarFlags::PERM_READ
-                        | zx::VmarFlags::PERM_WRITE
-                        | zx::VmarFlags::MAP_RANGE
-                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
-                )
-                .context("Frame::new() Mapping::create_from_vmo failed")
-                .expect("mapping");
-                let canvas = RefCell::new(Canvas::new(
-                    IntSize::new(size.width as i32, size.height as i32),
-                    MappingPixelSink::new(&Arc::new(mapping)),
-                    linear_stride_bytes,
-                    4,
-                    image_id,
-                    index as u32,
-                ));
-                canvases.insert(image_id, canvas);
-                let uindex = index as u32;
-                image_pipe_client
-                    .add_image(
-                        image_id as u32,
-                        collection_id,
-                        uindex,
-                        &mut make_image_format(size.width, size.height, pixel_format),
-                    )
-                    .expect("add_image");
-                index += 1;
-            }
-            PlumberTools::SysMem {}
-        } else {
-            let linear_stride_bytes = size.width * 4;
-            let buffer_size = linear_stride_bytes * size.height;
-            let mut vmos = Vmos::new();
-            for index in 0..buffer_count as u64 {
-                let image_id = index + first_image_id;
-                image_ids.insert(image_id);
-                let vmo = Vmo::create(buffer_size.into())?;
-                let mapping = Mapping::create_from_vmo(
-                    &vmo,
-                    buffer_size as usize,
-                    zx::VmarFlags::PERM_READ
-                        | zx::VmarFlags::PERM_WRITE
-                        | zx::VmarFlags::MAP_RANGE
-                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
-                )
-                .context("Frame::new() Mapping::create_from_vmo failed")
-                .expect("mapping");
-                let canvas = RefCell::new(Canvas::new(
-                    IntSize::new(size.width as i32, size.height as i32),
-                    MappingPixelSink::new(&Arc::new(mapping)),
-                    linear_stride_bytes,
-                    4,
-                    image_id,
-                    index as u32,
-                ));
-                canvases.insert(image_id, canvas);
-                vmos.insert(image_id, vmo);
-            }
-            PlumberTools::Vmo { vmos }
+        let context_token = buffer_allocator.duplicate_token().await?;
+        let mut context = render::Context {
+            inner: if render_options.use_spinel {
+                ContextInner::Spinel(generic::Spinel::new_context(context_token, size))
+            } else {
+                ContextInner::Mold(generic::Mold::new_context(context_token, size))
+            },
         };
+        let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;
+        let buffers_pixel_format = if render_options.use_spinel {
+            match context.pixel_format() {
+                fuchsia_framebuffer::PixelFormat::Abgr8888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
+                }
+                fuchsia_framebuffer::PixelFormat::Argb8888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::Bgra32
+                }
+                fuchsia_framebuffer::PixelFormat::RgbX888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::Bgra32
+                }
+                fuchsia_framebuffer::PixelFormat::BgrX888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
+                }
+                _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
+            }
+        } else {
+            pixel_format
+        };
+
+        let mut image_ids = BTreeSet::new();
+        let mut image_indexes = BTreeMap::new();
+        let mut index = 0;
+        for _buffer in &buffers.buffers[0..buffers.buffer_count as usize] {
+            let image_id = index + first_image_id;
+            image_ids.insert(image_id);
+            let uindex = index as u32;
+            // Realized the image before passing it to image pipe.
+            let _render_image = context.get_image(uindex);
+            image_pipe_client
+                .add_image(
+                    image_id as u32,
+                    collection_id,
+                    uindex,
+                    &mut make_image_format(size.width, size.height, buffers_pixel_format),
+                )
+                .expect("add_image");
+            image_indexes.insert(image_id, uindex);
+            index += 1;
+        }
         let frame_set = FrameSet::new(image_ids);
         Ok(Plumber {
             size,
@@ -158,38 +119,31 @@ impl Plumber {
             collection_id,
             first_image_id,
             frame_set,
-            canvases,
-            tools,
+            image_indexes,
+            context,
         })
     }
 
     pub fn enter_retirement(&mut self, image_pipe_client: &mut ImagePipe2Proxy) {
-        match &self.tools {
-            PlumberTools::Vmo { .. } => (),
-            PlumberTools::SysMem { .. } => {
-                for image_id in self.first_image_id..self.first_image_id + self.buffer_count as u64
-                {
-                    image_pipe_client.remove_image(image_id as u32).unwrap_or_else(|err| {
-                        eprintln!("image_pipe_client.remove_image {} failed with {}", image_id, err)
-                    });
-                }
-                image_pipe_client.remove_buffer_collection(self.collection_id).unwrap_or_else(
-                    |err| {
-                        eprintln!(
-                            "image_pipe_client.remove_buffer_collection {} failed with {}",
-                            self.collection_id, err
-                        )
-                    },
-                );
-            }
+        for image_id in self.first_image_id..self.first_image_id + self.buffer_count as u64 {
+            image_pipe_client.remove_image(image_id as u32).unwrap_or_else(|err| {
+                eprintln!("image_pipe_client.remove_image {} failed with {}", image_id, err)
+            });
         }
+        image_pipe_client.remove_buffer_collection(self.collection_id).unwrap_or_else(|err| {
+            eprintln!(
+                "image_pipe_client.remove_buffer_collection {} failed with {}",
+                self.collection_id, err
+            )
+        });
     }
 }
 
-const SCENIC_CANVAS_BUFFER_COUNT: usize = 3;
+const RENDER_BUFFER_COUNT: usize = 3;
 
-pub(crate) struct ScenicCanvasViewStrategy {
+pub(crate) struct ScenicViewStrategy {
     #[allow(unused)]
+    render_options: RenderOptions,
     scenic_resources: ScenicResources,
     content_node: ShapeNode,
     content_material: Material,
@@ -202,9 +156,10 @@ pub(crate) struct ScenicCanvasViewStrategy {
     input_handler: ScenicInputHandler,
 }
 
-impl ScenicCanvasViewStrategy {
+impl ScenicViewStrategy {
     pub(crate) async fn new(
         session: &SessionPtr,
+        render_options: RenderOptions,
         view_token: ViewToken,
         control_ref: ViewRefControl,
         view_ref: ViewRef,
@@ -220,7 +175,8 @@ impl ScenicCanvasViewStrategy {
         scenic_resources.root_node.add_child(&content_node);
         let image_pipe_client = image_pipe_client.into_proxy()?;
         session.lock().flush();
-        let strat = ScenicCanvasViewStrategy {
+        let strat = ScenicViewStrategy {
+            render_options,
             scenic_resources,
             image_pipe_client,
             image_pipe,
@@ -235,22 +191,20 @@ impl ScenicCanvasViewStrategy {
         Ok(Box::new(strat))
     }
 
-    fn make_view_assistant_context<'a>(
+    fn make_view_assistant_context(
         view_details: &ViewDetails,
         image_id: ImageId,
-        canvas: Option<&'a RefCell<Canvas<MappingPixelSink>>>,
-    ) -> ViewAssistantContext<'a> {
+        image_index: u32,
+    ) -> ViewAssistantContext {
         ViewAssistantContext {
             key: view_details.key,
             size: view_details.logical_size,
             metrics: view_details.metrics,
             presentation_time: Time::get(ClockId::Monotonic),
             messages: Vec::new(),
-            canvas: canvas,
             buffer_count: None,
-            wait_event: None,
             image_id,
-            image_index: 0,
+            image_index,
         }
     }
 
@@ -258,15 +212,16 @@ impl ScenicCanvasViewStrategy {
         let buffer_collection_id = self.next_buffer_collection;
         self.next_buffer_collection = self.next_buffer_collection.wrapping_add(1);
         let next_image_id = self.next_image_id;
-        self.next_image_id = self.next_image_id.wrapping_add(SCENIC_CANVAS_BUFFER_COUNT as u64);
+        self.next_image_id = self.next_image_id.wrapping_add(RENDER_BUFFER_COUNT as u64);
         self.plumber = Some(
             Plumber::new(
                 size.to_u32(),
                 fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
-                SCENIC_CANVAS_BUFFER_COUNT,
+                RENDER_BUFFER_COUNT,
                 buffer_collection_id,
                 next_image_id,
                 &mut self.image_pipe_client,
+                self.render_options,
             )
             .await
             .expect("VmoPlumber::new"),
@@ -304,17 +259,15 @@ fn make_image_format(
 }
 
 #[async_trait(?Send)]
-impl ViewStrategy for ScenicCanvasViewStrategy {
+impl ViewStrategy for ScenicViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let canvas_context =
-            ScenicCanvasViewStrategy::make_view_assistant_context(view_details, 0, None);
-        view_assistant.setup(&canvas_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
+        let render_context = ScenicViewStrategy::make_view_assistant_context(view_details, 0, 0);
+        view_assistant.setup(&render_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
     }
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
-            let session = self.scenic_resources.session.clone();
             if self.plumber.is_none() {
                 self.create_plumber(size).await.expect("create_plumber");
             } else {
@@ -331,24 +284,30 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
             self.content_node.set_translation(center_x, center_y, -0.1);
             let rectangle = Rectangle::new(
                 self.scenic_resources.session.clone(),
-                view_details.physical_size.width,
-                view_details.physical_size.height,
+                view_details.physical_size.width as f32,
+                view_details.physical_size.height as f32,
             );
             if let Some(available) = plumber.frame_set.get_available_image() {
-                let canvas = plumber.canvases.get(&available).expect("canvas");
+                let available_index =
+                    plumber.image_indexes.get(&available).expect("index for image");
                 self.content_node.set_shape(&rectangle);
-                let canvas_context = ScenicCanvasViewStrategy::make_view_assistant_context(
+                let render_context = ScenicViewStrategy::make_view_assistant_context(
                     view_details,
                     available,
-                    Some(canvas),
+                    *available_index,
                 );
+                let buffer_ready_event = Event::create().expect("Event.create");
+                let buffer_ready_event_for_image_pipe = buffer_ready_event
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .expect("duplicate_handle");
                 view_assistant
-                    .update(&canvas_context)
+                    .render(&mut plumber.context, buffer_ready_event, &render_context)
                     .unwrap_or_else(|e| panic!("Update error: {:?}", e));
                 plumber.frame_set.mark_prepared(available);
-                let wait_event = Event::create().expect("Event.create");
-                let local_event =
-                    wait_event.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("duplicate_handle");
+                let image_freed_event = Event::create().expect("Event.create");
+                let local_event = image_freed_event
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .expect("duplicate_handle");
                 let app_sender = self.scenic_resources.app_sender.clone();
                 let key = view_details.key;
                 let collection_id = plumber.collection_id;
@@ -359,48 +318,16 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
                         .unbounded_send(MessageInternal::ImageFreed(key, available, collection_id))
                         .expect("unbounded_send");
                 });
-                match &plumber.tools {
-                    PlumberTools::Vmo { vmos } => {
-                        session.lock().add_release_fence(wait_event);
-                        let vmo = vmos.get(&available).expect("vmo");
-                        let vmo = vmo
-                            .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                            .expect("duplicating buffer vmo");
-
-                        let linear_stride_bytes = size.width * 4;
-                        let buffer_size = linear_stride_bytes * size.height;
-                        let memory = Memory::new(
-                            session.clone(),
-                            vmo,
-                            buffer_size.into(),
-                            MemoryType::HostMemory,
-                        );
-                        let info = ImageInfo {
-                            width: size.width,
-                            height: size.height,
-                            stride: linear_stride_bytes,
-                            transform: Transform::Normal,
-                            alpha_format: AlphaFormat::Opaque,
-                            pixel_format: PixelFormat::Bgra8,
-                            color_space: ColorSpace::Srgb,
-                            tiling: Tiling::Linear,
-                        };
-                        let image = Image::new(&memory, 0, info);
-                        self.content_material.set_texture(Some(&image));
-                    }
-                    PlumberTools::SysMem { .. } => {
-                        self.content_material.set_texture_resource(Some(&self.image_pipe));
-                        self.image_pipe_client
-                            .present_image(
-                                canvas.borrow().id as u32,
-                                0,
-                                &mut iter::empty(),
-                                &mut iter::once(wait_event),
-                            )
-                            .await
-                            .expect("present_image");
-                    }
-                }
+                self.content_material.set_texture_resource(Some(&self.image_pipe));
+                self.image_pipe_client
+                    .present_image(
+                        available as u32,
+                        0,
+                        &mut iter::once(buffer_ready_event_for_image_pipe),
+                        &mut iter::once(image_freed_event),
+                    )
+                    .await
+                    .expect("#### present_image");
                 plumber.frame_set.mark_presented(available);
             }
         }
@@ -426,15 +353,15 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
     ) -> Vec<Message> {
         let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
 
-        let mut canvas_context =
-            ScenicCanvasViewStrategy::make_view_assistant_context(view_details, 0, None);
+        let mut render_context =
+            ScenicViewStrategy::make_view_assistant_context(view_details, 0, 0);
         for input_event in events {
             view_assistant
-                .handle_input_event(&mut canvas_context, &input_event)
+                .handle_input_event(&mut render_context, &input_event)
                 .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
         }
 
-        canvas_context.messages
+        render_context.messages
     }
 
     fn image_freed(&mut self, image_id: u64, collection_id: u32) {

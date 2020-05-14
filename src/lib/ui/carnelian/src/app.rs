@@ -40,16 +40,6 @@ pub struct RenderOptions {
     pub use_spinel: bool,
 }
 
-/// Mode for all views created by this application
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum ViewMode {
-    /// This app's views do all of their rendering with a Canvas and Carnelian should
-    /// take care of creating such a canvas for view created by this app.
-    Canvas,
-    /// This apps view use the render module.
-    Render(RenderOptions),
-}
-
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
 #[derive(Clone)]
@@ -94,31 +84,9 @@ pub trait AppAssistant {
     /// is going to have to be represented as an `Option`, which is awkward._
     fn setup(&mut self) -> Result<(), Error>;
 
-    /// Called when the Fuchsia view system requests that a scenic view be created
-    /// for apps running in ViewMode::Scenic
-    fn create_view_assistant(
-        &mut self,
-        _: ViewKey,
-        _: &SessionPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        anyhow::bail!("Assistant has ViewMode::Scenic but doesn't implement create_view_assistant.")
-    }
-
-    /// Called when the Fuchsia view system requests that a view be created for
-    /// apps running in ViewMode::Canvas.
-    fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        anyhow::bail!(
-            "Assistant has ViewMode::Canvas but doesn't implement create_view_assistant_canvas."
-        )
-    }
-
-    /// Called when the Fuchsia view system requests that a view be created for
-    /// apps running in ViewMode::Render.
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        anyhow::bail!(
-            "Assistant has ViewMode::Render but doesn't implement create_view_assistant_render."
-        )
-    }
+    /// Called when the Fuchsia view system requests that a view be created, or once at startup
+    /// when running without Scenic.
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error>;
 
     /// Return the list of names of services this app wants to provide
     fn outgoing_services_names(&self) -> Vec<&'static str> {
@@ -134,15 +102,9 @@ pub trait AppAssistant {
         return Err(format_err!("handle_service_connection_request not implemented"));
     }
 
-    /// Mode for all views created by this app
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions::default())
-    }
-
-    /// Return true to indicate that this apps view assistants will
-    /// arrange to have the frame buffer's wait event signaled
-    fn signals_wait_event(&self) -> bool {
-        return false;
+    /// Mode options for rendering
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions::default()
     }
 }
 
@@ -275,16 +237,10 @@ async fn create_app_strategy(
     next_view_key: ViewKey,
     internal_sender: &InternalSender,
 ) -> Result<AppStrategyPtr, Error> {
-    let usage = match assistant.get_mode() {
-        ViewMode::Render(render_options) => {
-            if render_options.use_spinel {
-                FrameUsage::Gpu
-            } else {
-                FrameUsage::Cpu
-            }
-        }
-        _ => FrameUsage::Cpu,
-    };
+    let render_options = assistant.get_render_options();
+
+    let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
+
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
     let fb = FrameBuffer::new(usage, None, Some(sender)).await;
     if fb.is_err() {
@@ -639,24 +595,10 @@ impl App {
         Ok(Session::new(session_proxy))
     }
 
-    // Creates a view assistant for views that are using the canvas view mode feature, either
-    // in Scenic or framebuffer mode.
-    fn create_view_assistant_canvas(&mut self) -> Result<ViewAssistantPtr, Error> {
-        Ok(self.assistant.as_mut().unwrap().create_view_assistant_canvas(self.next_key)?)
-    }
-
     // Creates a view assistant for views that are using the render view mode feature, either
     // in Scenic or framebuffer mode.
-    fn create_view_assistant_render(&mut self) -> Result<ViewAssistantPtr, Error> {
-        Ok(self.assistant.as_mut().unwrap().create_view_assistant_render(self.next_key)?)
-    }
-
-    fn get_view_mode(&self) -> ViewMode {
-        self.assistant.as_ref().unwrap().get_mode()
-    }
-
-    fn get_signals_wait_event(&self) -> bool {
-        self.assistant.as_ref().unwrap().signals_wait_event()
+    fn create_view_assistant(&mut self) -> Result<ViewAssistantPtr, Error> {
+        Ok(self.assistant.as_mut().unwrap().create_view_assistant(self.next_key)?)
     }
 
     async fn create_view_scenic(
@@ -665,18 +607,15 @@ impl App {
         control_ref: ViewRefControl,
         view_ref: ViewRef,
     ) -> Result<(), Error> {
+        let render_options = self.get_render_options();
         let session = self.setup_session()?;
-        let view_mode = self.get_view_mode();
-        let view_assistant = match view_mode {
-            ViewMode::Canvas => self.create_view_assistant_canvas()?,
-            ViewMode::Render { .. } => self.create_view_assistant_render()?,
-        };
+        let view_assistant = self.create_view_assistant()?;
         let mut view_controller = ViewController::new(
             self.next_key,
             view_token,
             control_ref,
             view_ref,
-            view_mode,
+            render_options,
             session,
             view_assistant,
             self.sender.as_ref().expect("sender").clone(),
@@ -692,12 +631,8 @@ impl App {
     }
 
     async fn create_view_framebuffer_async(&mut self) -> Result<(), Error> {
-        let view_mode = self.get_view_mode();
-        let signals_wait_event = self.get_signals_wait_event();
-        let view_assistant = match view_mode {
-            ViewMode::Canvas => self.create_view_assistant_canvas()?,
-            ViewMode::Render { .. } => self.create_view_assistant_render()?,
-        };
+        let render_options = self.get_render_options();
+        let view_assistant = self.create_view_assistant()?;
         let strat = self.strategy.as_mut().unwrap();
         let pixel_format = strat.get_pixel_format();
         strat.post_setup(pixel_format, self.sender.as_ref().expect("sender")).await?;
@@ -705,15 +640,12 @@ impl App {
         let size = strat.get_frame_buffer_size().expect("frame_buffer_size");
         let mut view_controller = ViewController::new_with_frame_buffer(
             self.next_key,
-            view_mode,
+            render_options,
             size,
-            strat.get_pixel_size(),
             pixel_format,
-            strat.get_linear_stride_bytes(),
             view_assistant,
             self.sender.as_ref().expect("sender").clone(),
             strat.get_frame_buffer().unwrap(),
-            signals_wait_event,
         )
         .await?;
 
@@ -800,6 +732,10 @@ impl App {
 
     fn scenic_mode(&mut self) -> bool {
         self.get_strategy().get_scenic_proxy().is_some()
+    }
+
+    fn get_render_options(&self) -> RenderOptions {
+        self.assistant.as_ref().expect("assistant").get_render_options()
     }
 
     pub(crate) fn image_freed(&mut self, view_id: ViewKey, image_id: u64, collection_id: u32) {

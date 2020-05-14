@@ -52,7 +52,7 @@ impl TerminalScene {
     pub fn render<'a, C>(
         &mut self,
         render_context: &mut RenderContext,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
         cells: RenderableCellsIter<'a, C>,
     ) {
         ftrace::duration!("terminal", "Scene:TerminalScene:render2");
@@ -97,7 +97,7 @@ impl TerminalScene {
     pub fn handle_pointer_event(
         &mut self,
         event: &input::pointer::Event,
-        _ctx: &mut ViewAssistantContext<'_>,
+        _ctx: &mut ViewAssistantContext,
     ) -> Option<PointerEventResponse> {
         if self.scroll_bar.is_tracking() {
             return self.handle_primary_pointer_event_for_scroll_bar(&event);

@@ -8,7 +8,6 @@ use {
     carnelian::{
         color::Color, make_app_assistant, render::*, AnimationMode, App, AppAssistant, Point,
         RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-        ViewMode,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
@@ -41,12 +40,12 @@ impl AppAssistant for ClockfaceAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ClockfaceViewAssistant::new()))
     }
 
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 
@@ -346,7 +345,7 @@ impl Clockface {
     fn update(
         &mut self,
         render_context: &mut Context,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         duration!("gfx", "update");
 
@@ -381,7 +380,7 @@ impl ViewAssistant for ClockfaceViewAssistant {
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         if context.size != self.size || self.clockface.is_none() {
             self.size = context.size;

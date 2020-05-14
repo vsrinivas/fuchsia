@@ -763,7 +763,7 @@ impl Context<Spinel> for SpinelContext {
         SpinelImage(*index)
     }
 
-    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> SpinelImage {
+    fn get_current_image(&mut self, context: &ViewAssistantContext) -> SpinelImage {
         self.get_image(context.image_index)
     }
 

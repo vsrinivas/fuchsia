@@ -3,16 +3,13 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{FrameBufferPtr, MessageInternal, ViewMode},
-    canvas::{Canvas, MappingPixelSink},
+    app::{FrameBufferPtr, MessageInternal, RenderOptions},
     geometry::{IntSize, Size},
     input::{self},
     message::Message,
     render::Context,
     view::strategies::{
-        base::ViewStrategyPtr, framebuffer_canvas::FrameBufferViewStrategy,
-        framebuffer_render::FrameBufferRenderViewStrategy, scenic_canvas::ScenicCanvasViewStrategy,
-        scenic_render::RenderViewStrategy,
+        base::ViewStrategyPtr, framebuffer::FrameBufferViewStrategy, scenic::ScenicViewStrategy,
     },
 };
 use anyhow::Error;
@@ -24,7 +21,6 @@ use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::{EntityNode, SessionPtr, View};
 use fuchsia_zircon::{Duration, Event, Time};
 use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt};
-use std::{cell::RefCell, collections::BTreeMap};
 
 mod strategies;
 
@@ -49,7 +45,7 @@ pub enum AnimationMode {
 }
 
 /// parameter struct passed to setup and update trait methods.
-pub struct ViewAssistantContext<'a> {
+pub struct ViewAssistantContext {
     /// A unique key representing this view.
     pub key: ViewKey,
     /// The actual number of pixels in the view.
@@ -57,25 +53,17 @@ pub struct ViewAssistantContext<'a> {
     /// A factor representing pixel density. Use to
     /// calculate sizes for things like fonts.
     pub metrics: Size,
-    /// For update, the time this will be presented.
+    /// For render, the time the rendering will be presented. Currently
+    /// not implemented correctly.
     pub presentation_time: Time,
-    /// For views in canvas mode, this will contain a canvas
-    /// to be used for drawing.
-    pub canvas: Option<&'a RefCell<Canvas<MappingPixelSink>>>,
     /// When running in frame buffer mode, the number of buffers in
     /// the buffer collection
     pub buffer_count: Option<usize>,
-    /// When running in frame buffer mode, the the event to signal
-    /// to indicate that the layer image can swap to the currently
-    /// set frame
-    pub wait_event: Option<&'a Event>,
-
     /// The ID of the Image being rendered in a buffer in
     /// preparation for being displayed. Used to keep track
     /// of what content needs to be rendered for a particular image
     /// in double or triple buffering configurations.
     pub image_id: ImageId,
-
     /// The index of the buffer in a buffer collection that is
     /// being used as the contents of the image specified in
     /// `image_id`.
@@ -84,7 +72,7 @@ pub struct ViewAssistantContext<'a> {
     messages: Vec<Message>,
 }
 
-impl<'a> ViewAssistantContext<'a> {
+impl ViewAssistantContext {
     /// Queue up a message for delivery
     pub fn queue_message(&mut self, message: Message) {
         self.messages.push(message);
@@ -95,25 +83,18 @@ impl<'a> ViewAssistantContext<'a> {
 pub trait ViewAssistant {
     /// This method is called once when a view is created.
     #[allow(unused_variables)]
-    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
-    /// For [`ViewMode::Canvas`] views, this method is called when a view needs to
-    /// be updated.
-    #[allow(unused_variables)]
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    /// For [`ViewMode::Render`] views, this method is called when a view needs to
-    /// be updated.
+    /// This method is called when a view needs to
+    /// be rendered.
     #[allow(unused_variables)]
     fn render(
         &mut self,
         render_context: &mut Context,
         buffer_ready_event: Event,
-        view_context: &ViewAssistantContext<'_>,
+        view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         anyhow::bail!("Assistant has ViewMode::Render but doesn't implement render.")
     }
@@ -125,7 +106,7 @@ pub trait ViewAssistant {
     /// abstraction.
     fn handle_input_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         event: &input::Event,
     ) -> Result<(), Error> {
         match &event.event_type {
@@ -152,7 +133,7 @@ pub trait ViewAssistant {
     /// impl ViewAssistant for SampleViewAssistant {
     ///     fn handle_mouse_event(
     ///         &mut self,
-    ///         context: &mut ViewAssistantContext<'_>,
+    ///         context: &mut ViewAssistantContext,
     ///         event: &input::Event,
     ///         mouse_event: &input::mouse::Event,
     ///     ) -> Result<(), Error> {
@@ -176,7 +157,7 @@ pub trait ViewAssistant {
     /// ```
     fn handle_mouse_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         event: &input::Event,
         mouse_event: &input::mouse::Event,
     ) -> Result<(), Error> {
@@ -204,7 +185,7 @@ pub trait ViewAssistant {
     /// impl ViewAssistant for SampleViewAssistant {
     ///     fn handle_touch_event(
     ///         &mut self,
-    ///         context: &mut ViewAssistantContext<'_>,
+    ///         context: &mut ViewAssistantContext,
     ///         event: &input::Event,
     ///         touch_event: &input::touch::Event,
     ///     ) -> Result<(), Error> {
@@ -218,7 +199,7 @@ pub trait ViewAssistant {
     /// ```
     fn handle_touch_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         event: &input::Event,
         touch_event: &input::touch::Event,
     ) -> Result<(), Error> {
@@ -253,7 +234,7 @@ pub trait ViewAssistant {
     /// impl ViewAssistant for SampleViewAssistant {
     ///     fn handle_pointer_event(
     ///         &mut self,
-    ///         context: &mut ViewAssistantContext<'_>,
+    ///         context: &mut ViewAssistantContext,
     ///         event: &input::Event,
     ///         pointer_event: &input::pointer::Event,
     ///     ) -> Result<(), Error> {
@@ -279,7 +260,7 @@ pub trait ViewAssistant {
     #[allow(unused_variables)]
     fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {
@@ -290,7 +271,7 @@ pub trait ViewAssistant {
     #[allow(unused_variables)]
     fn handle_keyboard_event(
         &mut self,
-        context: &mut ViewAssistantContext<'_>,
+        context: &mut ViewAssistantContext,
         event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
@@ -422,8 +403,6 @@ fn scenic_present_done(scenic_resources: &mut ScenicResources) {
     scenic_resources.pending_present_count -= 1;
 }
 
-pub(crate) type Canvases = BTreeMap<ImageId, RefCell<Canvas<MappingPixelSink>>>;
-
 #[derive(Debug)]
 pub(crate) struct ViewDetails {
     key: ViewKey,
@@ -454,34 +433,20 @@ impl ViewController {
         view_token: ViewToken,
         control_ref: ViewRefControl,
         view_ref: ViewRef,
-        mode: ViewMode,
+        render_options: RenderOptions,
         session: SessionPtr,
         mut view_assistant: ViewAssistantPtr,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewController, Error> {
-        let strategy = match mode {
-            ViewMode::Canvas => {
-                ScenicCanvasViewStrategy::new(
-                    &session,
-                    view_token,
-                    control_ref,
-                    view_ref,
-                    app_sender.clone(),
-                )
-                .await?
-            }
-            ViewMode::Render(render_options) => {
-                RenderViewStrategy::new(
-                    &session,
-                    render_options,
-                    view_token,
-                    control_ref,
-                    view_ref,
-                    app_sender.clone(),
-                )
-                .await?
-            }
-        };
+        let strategy = ScenicViewStrategy::new(
+            &session,
+            render_options,
+            view_token,
+            control_ref,
+            view_ref,
+            app_sender.clone(),
+        )
+        .await?;
 
         let initial_animation_mode = view_assistant.initial_animation_mode();
 
@@ -506,42 +471,22 @@ impl ViewController {
     /// new_with_frame_buffer
     pub(crate) async fn new_with_frame_buffer(
         key: ViewKey,
-        view_mode: ViewMode,
+        render_options: RenderOptions,
         size: IntSize,
-        pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
-        stride: u32,
         mut view_assistant: ViewAssistantPtr,
         app_sender: UnboundedSender<MessageInternal>,
         frame_buffer: FrameBufferPtr,
-        signals_wait_event: bool,
     ) -> Result<ViewController, Error> {
-        let strategy = match view_mode {
-            ViewMode::Render(render_options) => {
-                FrameBufferRenderViewStrategy::new(
-                    key,
-                    render_options,
-                    &size,
-                    pixel_format,
-                    app_sender.clone(),
-                    frame_buffer,
-                )
-                .await?
-            }
-            ViewMode::Canvas => {
-                FrameBufferViewStrategy::new(
-                    key,
-                    &size,
-                    pixel_size,
-                    pixel_format,
-                    stride,
-                    app_sender.clone(),
-                    frame_buffer,
-                    signals_wait_event,
-                )
-                .await?
-            }
-        };
+        let strategy = FrameBufferViewStrategy::new(
+            key,
+            render_options,
+            &size,
+            pixel_format,
+            app_sender.clone(),
+            frame_buffer,
+        )
+        .await?;
         let initial_animation_mode = view_assistant.initial_animation_mode();
         let mut view_controller = ViewController {
             key,

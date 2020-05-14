@@ -15,7 +15,7 @@ use {
             PreClear, Raster, RenderExt, Style,
         },
         AnimationMode, App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey, ViewMode,
+        ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect, Vector2D},
     fuchsia_trace_provider,
@@ -80,7 +80,7 @@ impl AppAssistant for PngAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(PngViewAssistant::new(
             self.filename.clone(),
             self.background.take().unwrap_or(WHITE_COLOR),
@@ -88,8 +88,8 @@ impl AppAssistant for PngAppAssistant {
         )))
     }
 
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 
@@ -135,11 +135,7 @@ impl PngViewAssistant {
 }
 
 impl ViewAssistant for PngViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
@@ -147,7 +143,7 @@ impl ViewAssistant for PngViewAssistant {
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let background = self.background;
         let image_id = context.image_id;
@@ -234,7 +230,7 @@ impl ViewAssistant for PngViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        _context: &mut ViewAssistantContext<'_>,
+        _context: &mut ViewAssistantContext,
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {

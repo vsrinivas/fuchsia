@@ -13,7 +13,7 @@ use {
             Style,
         },
         AnimationMode, App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey, ViewMode,
+        ViewAssistantPtr, ViewKey,
     },
     euclid::{
         default::{Point2D, Transform2D, Vector2D},
@@ -50,12 +50,12 @@ impl AppAssistant for SvgAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(SvgViewAssistant::new()))
     }
 
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions { use_spinel: self.use_spinel }
     }
 }
 
@@ -92,11 +92,7 @@ impl SvgViewAssistant {
 }
 
 impl ViewAssistant for SvgViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
@@ -104,7 +100,7 @@ impl ViewAssistant for SvgViewAssistant {
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let image_id = context.image_id;
         let rendering = self.renderings.entry(image_id).or_insert_with(|| Rendering::new());
@@ -167,7 +163,7 @@ impl ViewAssistant for SvgViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        _context: &mut ViewAssistantContext<'_>,
+        _context: &mut ViewAssistantContext,
         _event: &input::Event,
         pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {

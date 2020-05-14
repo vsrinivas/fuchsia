@@ -11,7 +11,7 @@ use {
         make_app_assistant,
         render::*,
         AnimationMode, App, AppAssistant, Point, RenderOptions, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::{
         default::{Point2D, Rect, Size2D, Transform2D, Vector2D},
@@ -246,12 +246,12 @@ impl AppAssistant for InkAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(InkViewAssistant::new()))
     }
 
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 
@@ -1029,7 +1029,7 @@ impl Ink {
     fn update(
         &mut self,
         render_context: &mut Context,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         duration!("gfx", "update");
 
@@ -1291,7 +1291,7 @@ impl ViewAssistant for InkViewAssistant {
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         if context.size != self.size || self.ink.is_none() {
             let ink = Ink::new(render_context, context.size);
@@ -1315,7 +1315,7 @@ impl ViewAssistant for InkViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        _context: &mut ViewAssistantContext<'_>,
+        _context: &mut ViewAssistantContext,
         event: &input::Event,
         _pointer_event: &input::pointer::Event,
     ) -> Result<(), Error> {

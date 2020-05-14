@@ -14,7 +14,7 @@ use {
             Style,
         },
         AnimationMode, App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::{Transform2D, Vector2D},
     fuchsia_trace_provider,
@@ -47,12 +47,12 @@ impl AppAssistant for GammaAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(GammaViewAssistant::new()))
     }
 
-    fn get_mode(&self) -> ViewMode {
-        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
+    fn get_render_options(&self) -> RenderOptions {
+        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 
@@ -74,7 +74,7 @@ impl ViewAssistant for GammaViewAssistant {
         &mut self,
         render_context: &mut Context,
         ready_event: Event,
-        context: &ViewAssistantContext<'_>,
+        context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let path = self.path.take().unwrap_or_else(|| {
             path_for_rectangle(&Rect::new(Point::zero(), Size::new(1.0, 1.0)), render_context)
