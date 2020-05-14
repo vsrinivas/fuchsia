@@ -20,12 +20,17 @@ class AudioCoreHardwareTest : public TestFixture {
   // environment (not an anechoic enclosure), then 2 frames is a very reasonable limit.
   static constexpr uint32_t kLimitConsecFramesZero = 5;
 
+  static constexpr float kStreamGainDb = 0.0f;
+  static constexpr float kUsageVolume = fuchsia::media::audio::MAX_VOLUME;
+  static constexpr float kUsageGainDb = 0.0f;
+  static constexpr float kDeviceGainDb = 0.0f;
+
   static constexpr fuchsia::media::AudioCaptureUsage kUsage =
       fuchsia::media::AudioCaptureUsage::FOREGROUND;
 
   static constexpr uint32_t kSetGainFlags =
       fuchsia::media::SetAudioGainFlag_GainValid & fuchsia::media::SetAudioGainFlag_MuteValid;
-  static constexpr fuchsia::media::AudioGainInfo kUnityGain{.gain_db = 0.0f, .flags = 0};
+  static constexpr fuchsia::media::AudioGainInfo kDeviceGain{.gain_db = kDeviceGainDb, .flags = 0};
 
   // We'll use just one payload buffer here.
   static constexpr uint32_t kPayloadBufferId = 0;
