@@ -279,6 +279,7 @@ impl SizeAgg {
     self.num_bytes += num_bytes;
   }
 
+  #[allow(dead_code)]
   fn add_num_handles(&mut self, num_handles: usize) {
     self.num_handles += num_handles;
   }
