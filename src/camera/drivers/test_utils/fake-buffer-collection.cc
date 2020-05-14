@@ -4,7 +4,6 @@
 
 #include "fake-buffer-collection.h"
 
-#include <fbl/algorithm.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/global.h>
@@ -14,6 +13,8 @@
 #include <zircon/device/sysmem.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
+
+#include <fbl/algorithm.h>
 
 namespace camera {
 
@@ -53,7 +54,7 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
       .coded_height = height,
       .display_width = width,
       .display_height = height,
-      .layers = (pixel_format_type == fuchsia_sysmem_PixelFormatType_NV12 ? 2u : 1u),
+      .layers = 1,
       .color_space.type = fuchsia_sysmem_ColorSpaceType_SRGB,
       .has_pixel_aspect_ratio = false,
       .pixel_aspect_ratio_width = 1,
