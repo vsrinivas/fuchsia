@@ -23,6 +23,30 @@ namespace media::audio {
 
 class OutputPipeline : public ReadableStream {
  public:
+  explicit OutputPipeline(Format format) : ReadableStream(format) {}
+  ~OutputPipeline() override = default;
+
+  // Returns the loopback |ReadableStream| for this pipeline.
+  virtual std::shared_ptr<ReadableStream> loopback() const = 0;
+
+  // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
+  // this stream will be routed.
+  virtual std::shared_ptr<Mixer> AddInput(
+      std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
+      Mixer::Resampler sampler_hint = Mixer::Resampler::Default) = 0;
+
+  // Removes |stream| from the pipeline.
+  //
+  // It is an error to call |RemoveInput| without exactly one preceeding call to |AddInput| with the
+  // same |stream|.
+  virtual void RemoveInput(const ReadableStream& stream) = 0;
+
+  // Sets the configuration of all effects with the given instance name.
+  virtual void SetEffectConfig(const std::string& instance_name, const std::string& config) = 0;
+};
+
+class OutputPipelineImpl : public OutputPipeline {
+ public:
   // Creates an |OutputPipeline| based on the specification in |config|. The pipeline will
   // ultimately produce output frames via |ReadLock| in the |output_format| requested.
   //
@@ -37,26 +61,19 @@ class OutputPipeline : public ReadableStream {
   //
   // The |sampler| is optionally used to select the type of sampler to be used when joining
   // mix stages together.
-  OutputPipeline(const PipelineConfig& config, uint32_t channels, uint32_t max_block_size_frames,
-                 TimelineFunction reference_clock_to_fractional_frame,
-                 Mixer::Resampler sampler = Mixer::Resampler::Default);
+  OutputPipelineImpl(const PipelineConfig& config, uint32_t channels,
+                     uint32_t max_block_size_frames,
+                     TimelineFunction reference_clock_to_fractional_frame,
+                     Mixer::Resampler sampler = Mixer::Resampler::Default);
+  ~OutputPipelineImpl() override = default;
 
-  // Returns the loopback |ReadableStream| for this pipeline.
-  std::shared_ptr<ReadableStream> loopback() const { return loopback_; }
-
-  // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
-  // this stream will be routed (based on the |PipelineConfig| this pipeline was created with).
-  std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
-                                  Mixer::Resampler sampler_hint = Mixer::Resampler::Default);
-
-  // Removes |stream| from the pipeline.
-  //
-  // It is an error to call |RemoveInput| without exactly one preceeding call to |AddInput| with the
-  // same |stream|.
-  void RemoveInput(const ReadableStream& stream);
-
-  // Sets the configuration of all effects with the given instance name.
-  void SetEffectConfig(const std::string& instance_name, const std::string& config);
+  // |media::audio::OutputPipeline|
+  std::shared_ptr<ReadableStream> loopback() const override { return loopback_; }
+  std::shared_ptr<Mixer> AddInput(
+      std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
+      Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override;
+  void RemoveInput(const ReadableStream& stream) override;
+  void SetEffectConfig(const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,

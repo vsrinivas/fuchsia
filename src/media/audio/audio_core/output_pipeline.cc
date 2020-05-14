@@ -32,11 +32,11 @@ const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group, uint32
 
 }  // namespace
 
-OutputPipeline::OutputPipeline(const PipelineConfig& config, uint32_t channels,
-                               uint32_t max_block_size_frames,
-                               TimelineFunction ref_clock_to_fractional_frame,
-                               Mixer::Resampler sampler)
-    : ReadableStream(FormatForMixGroup(config.root(), channels)) {
+OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config, uint32_t channels,
+                                       uint32_t max_block_size_frames,
+                                       TimelineFunction ref_clock_to_fractional_frame,
+                                       Mixer::Resampler sampler)
+    : OutputPipeline(FormatForMixGroup(config.root(), channels)) {
   uint32_t usage_mask = 0;
   stream_ =
       CreateMixStage(config.root(), channels, max_block_size_frames,
@@ -44,16 +44,16 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, uint32_t channels,
                      &usage_mask, sampler);
 }
 
-std::shared_ptr<Mixer> OutputPipeline::AddInput(std::shared_ptr<ReadableStream> stream,
-                                                const StreamUsage& usage,
-                                                Mixer::Resampler sampler_hint) {
-  TRACE_DURATION("audio", "OutputPipeline::AddInput", "stream", stream.get());
+std::shared_ptr<Mixer> OutputPipelineImpl::AddInput(std::shared_ptr<ReadableStream> stream,
+                                                    const StreamUsage& usage,
+                                                    Mixer::Resampler sampler_hint) {
+  TRACE_DURATION("audio", "OutputPipelineImpl::AddInput", "stream", stream.get());
   streams_.emplace_back(stream, usage);
   return LookupStageForUsage(usage).AddInput(std::move(stream), sampler_hint);
 }
 
-void OutputPipeline::RemoveInput(const ReadableStream& stream) {
-  TRACE_DURATION("audio", "OutputPipeline::RemoveInput", "stream", &stream);
+void OutputPipelineImpl::RemoveInput(const ReadableStream& stream) {
+  TRACE_DURATION("audio", "OutputPipelineImpl::RemoveInput", "stream", &stream);
   auto it = std::find_if(streams_.begin(), streams_.end(),
                          [&stream](auto& pair) { return pair.first.get() == &stream; });
   FX_CHECK(it != streams_.end());
@@ -61,13 +61,14 @@ void OutputPipeline::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-void OutputPipeline::SetEffectConfig(const std::string& instance_name, const std::string& config) {
+void OutputPipelineImpl::SetEffectConfig(const std::string& instance_name,
+                                         const std::string& config) {
   for (auto& effects_stage : effects_stages_) {
     effects_stage->SetEffectConfig(instance_name, config);
   }
 }
 
-std::shared_ptr<ReadableStream> OutputPipeline::CreateMixStage(
+std::shared_ptr<ReadableStream> OutputPipelineImpl::CreateMixStage(
     const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t max_block_size_frames,
     fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, uint32_t* usage_mask,
     Mixer::Resampler sampler) {
@@ -121,7 +122,7 @@ std::shared_ptr<ReadableStream> OutputPipeline::CreateMixStage(
   return root;
 }
 
-MixStage& OutputPipeline::LookupStageForUsage(const StreamUsage& usage) {
+MixStage& OutputPipelineImpl::LookupStageForUsage(const StreamUsage& usage) {
   for (auto& [mix_stage, stage_usages] : mix_stages_) {
     for (const auto& stage_usage : stage_usages) {
       if (stage_usage == usage) {
