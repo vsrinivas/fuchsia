@@ -85,6 +85,7 @@ group("all") {
     "//garnet/lib/rust/ethernet:ethernet-tests",
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext:fidl_fuchsia_hardware_ethernet_ext_tests",
     "//garnet/lib/rust/fidl_fuchsia_net_ext:fidl_fuchsia_net_ext_tests",
+    "//garnet/lib/rust/fidl_fuchsia_net_name_ext:fidl-fuchsia-net-name-ext-tests",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext:fidl_fuchsia_net_stack_ext_tests",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext:fidl_fuchsia_netstack_ext_tests",
     "//garnet/lib/rust/files_async:files_async_tests",
