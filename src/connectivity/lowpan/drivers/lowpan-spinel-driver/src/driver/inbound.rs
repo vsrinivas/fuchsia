@@ -12,9 +12,16 @@ use anyhow::Error;
 impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     /// Method for handling inbound frames and pushing them
     /// to where they need to go.
+    ///
+    /// Specifically, all inbound frames that are property change notifications,
+    /// (PROP_IS, PROP_INSERTED, and PROP_REMOVED) are dispatched
+    /// to the appropriate `on_prop_value_*()` handler. Also, if the TID is
+    /// non-zero, the frame also is also sent to the frame handler for
+    /// response dispatch.
+    ///
+    /// Resets are a special case and are handled directly.
+    /// Everything else is delegated as described above.
     fn on_inbound_frame(&self, frame: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_inbound_frame: {:?}", frame);
-
         // Parse the header.
         let frame = SpinelFrameRef::try_unpack_from_slice(frame).context("on_inbound_frame")?;
 
@@ -24,7 +31,56 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             return Ok(());
         }
 
-        // TODO: Update internal state
+        // Is the command `PropValueIs`, `PropValueInserted`, or `PropValueRemoved`?
+        // If so, dispatch to state update.
+        match frame.cmd {
+            Cmd::PropValueIs => {
+                let prop_value = SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("on_inbound_frame:PropValueIs")?;
+                self.on_prop_value_is(prop_value.prop, prop_value.value)?;
+
+                // We handle resets explicitly here.
+                // An actionable reset is defined as an unsolicited (TID Zero/None)
+                // `Prop::LastStatus` update with a status code in the reset range.
+                // Solicited responses (TID 1-15) are not considered resets.
+                if prop_value.prop == Prop::LastStatus && frame.header.tid().is_none() {
+                    match Status::try_unpack_from_slice(prop_value.value)? {
+                        Status::Reset(x) => {
+                            fx_log_info!("on_inbound_frame: Reset: {:?}", x);
+                            self.frame_handler.clear();
+                            {
+                                let mut driver_state = self.driver_state.lock();
+                                if driver_state.init_state != InitState::WaitingForReset {
+                                    driver_state.prepare_for_init();
+
+                                    // Avoid holding the mutex for longer than we need to.
+                                    std::mem::drop(driver_state);
+
+                                    self.driver_state_change.trigger();
+                                }
+                            }
+                            self.ncp_did_reset.trigger();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            Cmd::PropValueInserted => {
+                let prop_value = SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("on_inbound_frame:PropValueInserted")?;
+                self.on_prop_value_inserted(prop_value.prop, prop_value.value)?;
+            }
+
+            Cmd::PropValueRemoved => {
+                let prop_value = SpinelPropValueRef::try_unpack_from_slice(frame.payload)
+                    .context("on_inbound_frame:PropValueRemoved")?;
+                self.on_prop_value_removed(prop_value.prop, prop_value.value)?;
+            }
+
+            // Ignore all other commands for now.
+            _ => {}
+        }
 
         // Finally pass the frame to the response frame handler.
         self.frame_handler.handle_inbound_frame(frame)
@@ -60,6 +116,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                     // Non-I/O errors cause a reset.
                     err => {
                         fx_log_err!("inbound_frame_stream: Error: {:?}", err);
+                        self.ncp_is_misbehaving();
                         Ok(())
                     }
                 })

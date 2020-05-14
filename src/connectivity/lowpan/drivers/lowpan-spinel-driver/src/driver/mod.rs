@@ -3,14 +3,43 @@
 // found in the LICENSE file.
 
 mod api;
+mod driver_state;
+mod error_adapter;
 mod inbound;
+mod init;
+mod misc;
 mod tasks;
 
 #[cfg(test)]
 mod tests;
 
 use crate::spinel::*;
+use driver_state::*;
+use error_adapter::*;
+use fidl_fuchsia_lowpan::ConnectivityState;
 use fuchsia_syslog::macros::*;
+use fuchsia_zircon::Duration;
+use lowpan_driver_common::AsyncCondition;
+
+#[cfg(not(test))]
+const DEFAULT_TIMEOUT: Duration = Duration::from_seconds(5);
+
+#[cfg(test)]
+const DEFAULT_TIMEOUT: Duration = Duration::from_seconds(90);
+
+/// Convenience macro for handling timeouts.
+#[macro_export]
+macro_rules! ncp_cmd_timeout (
+    ($self:ident) => {
+        move || {
+            fx_log_err!("Timeout");
+            $self.ncp_is_misbehaving();
+            Err(ZxStatus::TIMED_OUT)
+        }
+    };
+);
+
+pub use crate::ncp_cmd_timeout;
 
 /// High-level LoWPAN driver implementation for Spinel-based devices.
 /// It covers the basic high-level state machine as well as
@@ -24,6 +53,15 @@ pub struct SpinelDriver<DS> {
     /// as managing `open`/`close`/`reset` for the Spinel device.
     device_sink: DS,
 
+    /// The protected driver state.
+    driver_state: parking_lot::Mutex<DriverState>,
+
+    /// Condition that fires whenever the above `driver_state` changes.
+    driver_state_change: AsyncCondition,
+
+    /// Condition that fires whenever the device has been reset.
+    ncp_did_reset: AsyncCondition,
+
     did_vend_main_task: std::sync::atomic::AtomicBool,
 }
 
@@ -32,6 +70,9 @@ impl<DS: SpinelDeviceClient> From<DS> for SpinelDriver<DS> {
         SpinelDriver {
             frame_handler: FrameHandler::new(device_sink.clone()),
             device_sink,
+            driver_state: parking_lot::Mutex::new(Default::default()),
+            driver_state_change: AsyncCondition::new(),
+            ncp_did_reset: AsyncCondition::new(),
             did_vend_main_task: Default::default(),
         }
     }

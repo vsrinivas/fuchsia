@@ -8,6 +8,8 @@ use crate::spinel::*;
 use futures::prelude::*;
 use mock::*;
 
+use lowpan_driver_common::Driver as _;
+
 #[fasync::run_until_stalled(test)]
 async fn test_spinel_lowpan_driver() {
     let (device_client, device_stream, ncp_task) = new_fake_spinel_pair();
@@ -16,7 +18,13 @@ async fn test_spinel_lowpan_driver() {
     let driver_stream = driver.wrap_inbound_stream(device_stream);
 
     let app_task = async {
-        // Nothing to do here yet. This will be filled out as features are added.
+        for i in 1u8..32 {
+            traceln!("app_task: Iteration {}", i);
+
+            traceln!("app_task: Attempting a reset...");
+            assert_eq!(driver.reset().await, Ok(()));
+            traceln!("app_task: Did reset!");
+        }
     };
 
     futures::select! {

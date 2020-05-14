@@ -109,7 +109,6 @@ impl SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy> {
     /// else that implements `DeviceProxyInterface`). This is
     /// because we can then directly invoke `take_stream()` (defined below)
     /// to get the [`SpinelDeviceStream`] instance.
-    #[allow(dead_code)]
     pub fn new(device_proxy: fidl_fuchsia_lowpan_spinel::DeviceProxy) -> Self {
         SpinelDeviceSink { device_proxy, send_window: Default::default() }
     }
@@ -123,7 +122,6 @@ impl SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy> {
     ///
     /// The alternative to invoking this method is to call
     /// `SpinelDeviceSink::wrap_event_stream()`.
-    #[allow(dead_code)]
     pub fn take_stream(
         &self,
     ) -> SpinelDeviceStream<

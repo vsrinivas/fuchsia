@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: Remove once other code lands.
-#![allow(dead_code)]
-
 use super::*;
 use crate::prelude::*;
 

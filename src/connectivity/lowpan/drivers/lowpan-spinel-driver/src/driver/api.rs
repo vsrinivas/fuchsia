@@ -7,14 +7,15 @@ use crate::prelude::*;
 use crate::spinel::*;
 
 use async_trait::async_trait;
+use fasync::Time;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters,
     ProvisioningMonitorMarker,
 };
-use futures::stream::BoxStream;
 use futures::future::ready;
-use lowpan_driver_common::{Driver as LowpanDriver, ZxResult};
+use futures::stream::BoxStream;
+use lowpan_driver_common::{Driver as LowpanDriver, FutureExt as _, ZxResult};
 
 /// API-related tasks. Implementation of [`lowpan_driver_common::Driver`].
 #[async_trait]
@@ -86,7 +87,36 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     async fn reset(&self) -> ZxResult<()> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got reset command");
+
+        // Cancel everyone with an outstanding command.
+        self.frame_handler.clear();
+
+        let task = async {
+            if self.get_init_state().is_initialized() {
+                fx_log_info!("reset: Sending reset command");
+                self.frame_handler
+                    .send_request(CmdReset)
+                    .boxed()
+                    .map(|result| match result {
+                        Ok(()) => Ok(()),
+                        Err(e) if e.downcast_ref::<Canceled>().is_some() => Ok(()),
+                        Err(e) => Err(ZxStatus::from(ErrorAdapter(e))),
+                    })
+                    .cancel_upon(self.ncp_did_reset.wait(), Ok(()))
+                    .await?;
+                fx_log_info!("reset: Waiting for driver to start initializing");
+                self.wait_for_state(DriverState::is_initializing).await;
+            }
+
+            fx_log_info!("reset: Waiting for driver to finish initializing");
+            self.wait_for_state(DriverState::is_initialized).await;
+            Ok(())
+        };
+
+        task.on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self)).await?;
+
+        Ok(())
     }
 
     async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>> {
@@ -121,4 +151,3 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         Err(ZxStatus::NOT_SUPPORTED)
     }
 }
-
