@@ -11,7 +11,7 @@ import("//build/fidl/toolchain.gni")
 #
 # Parameters
 #
-#   target_binding (required)
+#   target_bindings (required)
 #     The binding for which to create the measure tape. Both `hlcpp` and `rust`
 #     are supported.
 #
@@ -85,6 +85,11 @@ template("measure_tape") {
       public_deps = fidl_targets
       public_configs = [ ":$config_target_name" ]
     }
+
+    generated_outputs = [
+      out_cc,
+      out_h,
+    ]
   } else if (invoker.target_binding == "rust") {
     import("//build/rust/rustc_library.gni")
 
@@ -105,6 +110,8 @@ template("measure_tape") {
       non_rust_deps = [ ":$gen_target_name" ]
       source_root = rebase_path(out_rs)
     }
+
+    generated_outputs = [ out_rs ]
   }
 
   # code generation
@@ -112,11 +119,7 @@ template("measure_tape") {
     tool = "//tools/fidl/measure-tape/src:measure-tape"
 
     args = gen_args
-    outputs = [
-      out_cc,
-      out_h,
-      out_rs,
-    ]
+    outputs = generated_outputs
     deps = fidl_targets
     forward_variables_from(invoker, [ "testonly" ])
   }
