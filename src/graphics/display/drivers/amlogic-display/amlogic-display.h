@@ -159,7 +159,6 @@ class AmlogicDisplay
   // display dimensions and format
   uint32_t width_;
   uint32_t height_;
-  uint32_t stride_;
   zx_pixel_format_t format_;
 
   const display_setting_t* init_disp_table_ = nullptr;

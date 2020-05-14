@@ -202,12 +202,6 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   return ZX_OK;
 }
 
-static uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
-  // The amlogic display controller needs buffers with a stride that is an even
-  // multiple of 32.
-  return ZX_ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
-}
-
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void AmlogicDisplay::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* intf) {
@@ -446,7 +440,6 @@ zx_status_t AmlogicDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
   format_ = ZX_PIXEL_FORMAT_RGB_x888;
-  stride_ = ComputeLinearStride(width_, format_);
 
   if (dc_intf_.is_valid()) {
     added_display_args_t args;
