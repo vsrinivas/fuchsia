@@ -29,7 +29,7 @@ enum {
   FRAGMENT_COUNT,
 };
 
-// Expects L+R for tweeters + L+R for the 1 Woofer (mixed in HW).
+// Expects L+R for the 1 Woofer (mixed in HW) + L+R for tweeters.
 // The user must perform crossover filtering on these channels.
 constexpr size_t kNumberOfChannels = 4;
 constexpr size_t kMinSampleRate = 48000;
@@ -90,13 +90,13 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
   // 5 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
   aml_audio_->ConfigTdmOutSlot(5, 1, 31, 15, (1 << 1));
 
-  // Lane 0 L channel set to FRDDR slot 0.
-  // Lane 0 R channel set to FRDDR slot 1.
-  // Lane 1 L channel set to FRDDR slot 2.  Mixed with R, see ConfigTdmOutSlot above.
-  // Lane 1 R channel set to FRDDR slot 3.  Mixed with L, see ConfigTdmOutSlot above.
-  aml_audio_->ConfigTdmOutSwaps(0x00003210);
+  // Lane 0 L channel set to FRDDR slot 2.
+  // Lane 0 R channel set to FRDDR slot 3.
+  // Lane 1 L channel set to FRDDR slot 0. Mixed with R, see ConfigTdmOutSlot above.
+  // Lane 1 R channel set to FRDDR slot 1. Mixed with L, see ConfigTdmOutSlot above.
+  aml_audio_->ConfigTdmOutSwaps(0x00001032);
 
-  // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 0 & 1).
+  // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 2 & 3).
   uint32_t mute_slots = (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
                             ? (~static_cast<uint32_t>(channels_to_use_bitmask_)) & 3
                             : 0;
@@ -106,7 +106,7 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
     return status;
   }
 
-  // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 2 & 3).
+  // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 0 & 1).
   mute_slots = (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
                    ? ((~static_cast<uint32_t>(channels_to_use_bitmask_)) & 0xc) >> 2
                    : 0;
