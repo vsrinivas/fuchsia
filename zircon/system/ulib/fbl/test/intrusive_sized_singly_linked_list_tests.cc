@@ -23,30 +23,31 @@ struct OtherListTraits {
 template <typename PtrType>
 class SizedSLLTraits {
  public:
+  using TestObjBaseType = TestObjBase;
+
   // clang-format off
-    using TestObjBaseType         = TestObjBase;
+  using ContainerType           = SizedSinglyLinkedList<PtrType>;
+  using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
+  using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
 
-    using ContainerType           = SizedSinglyLinkedList<PtrType>;
-    using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
-    using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
-
-    using OtherContainerStateType = ContainerStateType;
-    using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
-    using OtherContainerType      = SizedSinglyLinkedList<PtrType, OtherContainerTraits>;
-
-    struct Tag1 {};
-    struct Tag2 {};
-    struct Tag3 {};
-
-    using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
-                                    TaggedSinglyLinkedListable<PtrType, Tag2>,
-                                    TaggedSinglyLinkedListable<PtrType, Tag3>>;
-
-    using TaggedType1 = SizedTaggedSinglyLinkedList<PtrType, Tag1>;
-    using TaggedType2 = SizedTaggedSinglyLinkedList<PtrType, Tag2>;
-    using TaggedType3 = SizedTaggedSinglyLinkedList<PtrType, Tag3>;
+  using OtherContainerStateType = ContainerStateType;
+  using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
+  using OtherContainerType      = SizedSinglyLinkedList<PtrType, DefaultObjectTag,
+                                                        OtherContainerTraits>;
   // clang-format on
+
+  struct Tag1 {};
+  struct Tag2 {};
+  struct Tag3 {};
+
+  using TaggedContainableBaseClasses =
+      fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
+                                  TaggedSinglyLinkedListable<PtrType, Tag2>,
+                                  TaggedSinglyLinkedListable<PtrType, Tag3>>;
+
+  using TaggedType1 = SinglyLinkedList<PtrType, Tag1, SizeOrder::Constant>;
+  using TaggedType2 = SinglyLinkedList<PtrType, Tag2, SizeOrder::Constant>;
+  using TaggedType3 = SinglyLinkedList<PtrType, Tag3, SizeOrder::Constant>;
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is

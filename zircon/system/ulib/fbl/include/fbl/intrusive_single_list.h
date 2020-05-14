@@ -112,15 +112,15 @@
 //
 // void Test() {
 //     using DefaultList = fbl::SinglyLinkedList<fbl::RefPtr<Foo>>;
-//     using TypeAList   = fbl::SinglyLinkedList<fbl::RefPtr<Foo>, Foo::TypeATraits>;
-//     using TypeBList   = fbl::SinglyLinkedList<fbl::RefPtr<Foo>, Foo::TypeBTraits>;
+//     using TypeAList   = fbl::SinglyLinkedListCustomTraits<fbl::RefPtr<Foo>, Foo::TypeATraits>;
+//     using TypeBList   = fbl::SinglyLinkedListCustomTraits<fbl::RefPtr<Foo>, Foo::TypeBTraits>;
 //
 //     DefaultList default_list;
 //     TypeAList a_list;
 //     TypeAList b_list;
 //
-//     for (size_t i = 0; SOME_NUMBER; ++i) {
-//         RefPtr new_foo = AdoptRef(new Foo(...));
+//     for (size_t i = 0; i < SOME_NUMBER; ++i) {
+//         fbl::RefPtr<Foo> new_foo = AdoptRef(new Foo(...));
 //
 //         switch (i & 0x3) {
 //             case 0: break;
@@ -135,6 +135,9 @@
 //         default_list.push_front(std::move(new_foo));
 //     }
 //
+//     // default list contains all the Foo instances we created
+//     // a_list has case 1 and case 3 Foo instances
+//     // b_list has case 2 and case 3 Foo instances
 //     for (const auto& foo : default_list) foo.print();
 //     for (const auto& foo : a_list) foo.print();
 //     for (const auto& foo : b_list) foo.print();
@@ -155,21 +158,21 @@ class SequenceContainerTestEnvironment;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-// SinglyLinkedListNodeState<T>
+// SinglyLinkedListNodeState<PtrType>
 //
-// The state needed to be a member of a SinglyLinkedList<T>.  All members of a
-// specific type SinglyLinkedList<T> must expose a SinglyLinkedListNodeState<T>
+// PtrTypehe state needed to be a member of a SinglyLinkedList<PtrType>.  All members of a
+// specific type SinglyLinkedList<PtrType> must expose a SinglyLinkedListNodeState<PtrType>
 // to the list implementation via the supplied traits.  See
-// DefaultSinglyLinkedListTraits<T>
-template <typename T, NodeOptions Options = NodeOptions::None>
+// DefaultSinglyLinkedListPtrTyperaits<PtrType>
+template <typename PtrType_, NodeOptions Options = NodeOptions::None>
 struct SinglyLinkedListNodeState
-    : public internal::CommonNodeStateBase<SinglyLinkedListNodeState<T, Options>> {
+    : public internal::CommonNodeStateBase<SinglyLinkedListNodeState<PtrType_, Options>> {
  private:
-  using Base = internal::CommonNodeStateBase<SinglyLinkedListNodeState<T, Options>>;
+  using Base = internal::CommonNodeStateBase<SinglyLinkedListNodeState<PtrType_, Options>>;
 
  public:
-  using PtrType = T;  // TODO(50594) : Remove this when we can.
-  using PtrTraits = internal::ContainerPtrTraits<T>;
+  using PtrType = PtrType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType_>;
   static constexpr NodeOptions kNodeOptions = Options;
 
   constexpr SinglyLinkedListNodeState() {}
@@ -199,7 +202,7 @@ struct SinglyLinkedListNodeState
   bool InContainer() const { return (next_ != nullptr); }
 
  private:
-  template <typename, typename, typename, SizeOrder>
+  template <typename, typename, SizeOrder, typename>
   friend class SinglyLinkedList;
   template <typename>
   friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
@@ -208,31 +211,33 @@ struct SinglyLinkedListNodeState
   typename PtrTraits::RawPtrType next_ = nullptr;
 };
 
-template <typename T, NodeOptions Options, typename TagType>
+template <typename PtrType, NodeOptions Options, typename TagType>
 struct SinglyLinkedListable;
 
-// DefaultSinglyLinkedListNodeState<T>
+// DefaultSinglyLinkedListNodeState<PtrType, TagType>
 //
 // The default implementation of traits needed to be a member of a singly linked
 // list.  Any valid traits implementation must expose a static node_state method
-// compatible with DefaultSinglyLinkedListTraits<T>::node_state(...).  To use
-// the default traits, an object may...
+// compatible with DefaultSinglyLinkedListTraits<PtrType, TagType>::node_state(...).
 //
-// 1) Be friends with DefaultSinglyLinkedListTraits<T> and have a private
-//    sll_node_state_ member.
+// To use the default traits, an object may...
+//
+// 1) Be friends with DefaultSinglyLinkedListTraits<PtrType, TagType> and have a
+//    private sll_node_state_ member.
 // 2) Have a public sll_node_state_ member (not recommended)
-// 3) Derive from SinglyLinkedListable<T> or
-//    ContainableBaseClasses<SinglyLinkedListable<T, <your tag type>> [...]>
+// 3) Derive from SinglyLinkedListable<PtrType> or
+//    ContainableBaseClasses<SinglyLinkedListable<PtrType, TagType> [...]>
 //    (easiest)
-template <typename T>
+template <typename PtrType_, typename TagType_ = DefaultObjectTag>
 struct DefaultSinglyLinkedListTraits {
  private:
-  using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
+  using ValueType = typename internal::ContainerPtrTraits<PtrType_>::ValueType;
 
  public:
-  using PtrTraits = internal::ContainerPtrTraits<T>;
+  using PtrType = PtrType_;
+  using TagType = TagType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType_>;
 
-  template <typename TagType = DefaultObjectTag>
   static auto& node_state(typename PtrTraits::RefType obj) {
     if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
       return obj.ValueType::sll_node_state_;
@@ -240,31 +245,37 @@ struct DefaultSinglyLinkedListTraits {
       return obj.template GetContainableByTag<TagType>().sll_node_state_;
     }
   }
+
+  using NodeState =
+      std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
 };
 
-// SinglyLinkedListable<T>
+// SinglyLinkedListable<PtrType>
 //
 // A helper class which makes it simple to exist on a singly linked list.
 // Simply derive your object from SinglyLinkedListable and you are done.
-template <typename T, NodeOptions Options = NodeOptions::None, typename TagType_ = DefaultObjectTag>
+template <typename PtrType_, NodeOptions Options = NodeOptions::None,
+          typename TagType_ = DefaultObjectTag>
 struct SinglyLinkedListable {
  public:
+  using PtrType = PtrType_;
   using TagType = TagType_;
   static constexpr NodeOptions kNodeOptions = Options;
 
   bool InContainer() const {
-    using Node = SinglyLinkedListable<T, Options, TagType>;
+    using Node = SinglyLinkedListable<PtrType, Options, TagType>;
     return Node::sll_node_state_.InContainer();
   }
 
  private:
-  friend struct DefaultSinglyLinkedListTraits<T>;
-  SinglyLinkedListNodeState<T, Options> sll_node_state_;
+  friend struct DefaultSinglyLinkedListTraits<PtrType, TagType>;
+  SinglyLinkedListNodeState<PtrType, Options> sll_node_state_;
 };
 
-template <typename T, typename NodeTraits_ = DefaultSinglyLinkedListTraits<T>,
-          typename TagType_ = DefaultObjectTag, SizeOrder ListSizeOrder_ = SizeOrder::N>
-class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
+template <typename PtrType_, typename TagType_ = DefaultObjectTag,
+          SizeOrder ListSizeOrder_ = SizeOrder::N,
+          typename NodeTraits_ = DefaultSinglyLinkedListTraits<PtrType_, TagType_>>
+class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>
@@ -272,20 +283,19 @@ class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrde
   struct iterator_traits;
   struct const_iterator_traits;
 
-  template <typename NodeTraits, typename = void>
-  struct AddGenericNodeState;
-
  public:
   // Aliases used to reduce verbosity and expose types/traits to tests
   static constexpr SizeOrder ListSizeOrder = ListSizeOrder_;
-  using PtrTraits = internal::ContainerPtrTraits<T>;
-  using NodeTraits = AddGenericNodeState<NodeTraits_>;
-  using PtrType = typename PtrTraits::PtrType;
+  using PtrType = PtrType_;
+  using TagType = TagType_;
+  using NodeTraits = NodeTraits_;
+
+  using PtrTraits = internal::ContainerPtrTraits<PtrType_>;
   using RawPtrType = typename PtrTraits::RawPtrType;
   using ValueType = typename PtrTraits::ValueType;
-  using TagType = TagType_;
+  using RefType = typename PtrTraits::RefType;
   using CheckerType = ::fbl::tests::intrusive_containers::SinglyLinkedListChecker;
-  using ContainerType = SinglyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
+  using ContainerType = SinglyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>;
 
   // Declarations of the standard iterator types.
   using iterator = iterator_impl<iterator_traits>;
@@ -299,12 +309,22 @@ class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrde
   static constexpr bool IsSequenced = true;
 
   // Default construction gives an empty list.
-  constexpr SinglyLinkedList() {}
+  constexpr SinglyLinkedList() noexcept {
+    // Make certain that the type of pointer we are expected to manage matches
+    // the type of pointer that our Node type expects to manage.
+    static_assert(std::is_same_v<PtrType, internal::node_ptr_t<NodeTraits, RefType>>,
+                  "SinglyLinkedList's pointer type must match its Node's pointerType");
+  }
 
   // Rvalue construction is permitted, but will result in the move of the list
   // contents from one instance of the list to the other (even for unmanaged
-  // pointers)
-  SinglyLinkedList(SinglyLinkedList&& other_list) noexcept { swap(other_list); }
+  // pointers).
+  //
+  // Make sure to expand our default constructor as well in order to pick up the
+  // static asserts that we put there.
+  SinglyLinkedList(SinglyLinkedList&& other_list) noexcept : SinglyLinkedList() {
+    swap(other_list);
+  }
 
   // Rvalue assignment is permitted for managed lists, and when the target is
   // an empty list of unmanaged pointers.  Like Rvalue construction, it will
@@ -319,17 +339,6 @@ class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrde
   }
 
   ~SinglyLinkedList() {
-    // TODO(50594) : Remove this when we can.
-    //
-    // For now, put this static assert into a function which we know must be
-    // expanded at some point in time.  In a perfect world, we would put this in
-    // the body of the class itself, but right now the compiler seems unable to
-    // deduce the type of NodeTraits::NodeState until the class has been
-    // completely declared because of some complexity that AddGenericNodeState
-    // introduces.
-    static_assert(std::is_same_v<T, typename NodeTraits::NodeState::PtrType>,
-                  "SinglyLinkedList's pointer type must match its Node's pointerType");
-
     // It is considered an error to allow a list of unmanaged pointers to
     // destruct if there are still elements in it.  Managed pointer lists
     // will automatically release their references to their elements.
@@ -713,31 +722,12 @@ class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrde
     }
 
    private:
-    friend class SinglyLinkedList<T, NodeTraits_, TagType, ListSizeOrder>;
+    friend class SinglyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>;
 
     explicit iterator_impl(typename IterTraits::RawPtrType node)
         : node_(const_cast<typename PtrTraits::RawPtrType>(node)) {}
 
     typename PtrTraits::RawPtrType node_ = nullptr;
-  };
-
-  template <typename BaseNodeTraits>
-  struct AddGenericNodeState<BaseNodeTraits,
-                             std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {
-    using NodeState = std::decay_t<
-        std::invoke_result_t<decltype(BaseNodeTraits::node_state), typename PtrTraits::RefType>>;
-  };
-
-  template <typename BaseNodeTraits>
-  struct AddGenericNodeState<BaseNodeTraits,
-                             std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {
-    static auto& node_state(typename PtrTraits::RefType obj) {
-      return DefaultSinglyLinkedListTraits<T>::template node_state<TagType>(obj);
-    }
-    using NodeState =
-        std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
   };
 
   // The test framework's 'checker' class is our friend.
@@ -770,9 +760,18 @@ class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrde
 // SizedSinglyLinkedList<> is an alias for a SinglyLinkedList<> which keeps
 // track of it's size internally so that it may be accessed in O(1) time.
 //
-template <typename T, typename NodeTraits = DefaultSinglyLinkedListTraits<T>,
-          typename TagType = DefaultObjectTag>
-using SizedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
+template <typename PtrType, typename TagType = DefaultObjectTag,
+          typename NodeTraits = DefaultSinglyLinkedListTraits<PtrType, TagType>>
+using SizedSinglyLinkedList = SinglyLinkedList<PtrType, TagType, SizeOrder::Constant, NodeTraits>;
+
+// SinglyLinkedListCustomTraits<> is an alias for a SinglyLinkedList<> which makes is easier to
+// define a SinglyLinkedList which uses custom node traits.  It defaults to O(n) size, and will not
+// allow users to use a non-default object tag, since lists which use custom node traits are
+// required to use the default tag.
+//
+template <typename PtrType, typename NodeTraits, SizeOrder ListSizeOrder = SizeOrder::N>
+using SinglyLinkedListCustomTraits =
+    SinglyLinkedList<PtrType, DefaultObjectTag, ListSizeOrder, NodeTraits>;
 
 // TaggedSinglyLinkedList<> is intended for use with ContainableBaseClasses<>.
 //
@@ -785,17 +784,12 @@ using SizedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder
 // See comments on ContainableBaseClasses<> in fbl/intrusive_container_utils.h
 // for more details.
 //
-template <typename T, typename TagType, typename NodeTraits = DefaultSinglyLinkedListTraits<T>>
-using TaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::N>;
+template <typename PtrType, typename TagType>
+using TaggedSinglyLinkedList = SinglyLinkedList<PtrType, TagType, SizeOrder::N,
+                                                DefaultSinglyLinkedListTraits<PtrType, TagType>>;
 
-template <typename T, typename TagType, NodeOptions Options = NodeOptions::None>
-using TaggedSinglyLinkedListable = SinglyLinkedListable<T, Options, TagType>;
-
-// SizedTaggedSinglyLinkedList<> is a variant of TaggedSinglyLinkedList which
-// also specifies O(1) access size().
-//
-template <typename T, typename TagType, typename NodeTraits = DefaultSinglyLinkedListTraits<T>>
-using SizedTaggedSinglyLinkedList = SinglyLinkedList<T, NodeTraits, TagType, SizeOrder::Constant>;
+template <typename PtrType, typename TagType, NodeOptions Options = NodeOptions::None>
+using TaggedSinglyLinkedListable = SinglyLinkedListable<PtrType, Options, TagType>;
 
 }  // namespace fbl
 

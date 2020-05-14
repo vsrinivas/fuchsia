@@ -60,7 +60,7 @@ class SafeDeleter {
   }
 
  private:
-  fbl::SinglyLinkedList<Dispatcher*, Dispatcher::DeleterListTraits> pending_;
+  fbl::SinglyLinkedListCustomTraits<Dispatcher*, Dispatcher::DeleterListTraits> pending_;
 };
 
 }  // namespace

@@ -55,43 +55,43 @@ struct OtherHashState {
 template <typename PtrType>
 class HTSLLTraits {
  public:
+  using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
+
   // clang-format off
-    using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
+  using ContainerType           = HashTable<size_t, PtrType>;
+  using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
+  using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
+  using KeyType                 = typename ContainerType::KeyType;
+  using HashType                = typename ContainerType::HashType;
 
-    using ContainerType           = HashTable<size_t, PtrType>;
-    using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
-    using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
-    using KeyType                 = typename ContainerType::KeyType;
-    using HashType                = typename ContainerType::HashType;
+  using OtherContainerTraits    = OtherHashTraits<PtrType>;
+  using OtherContainerStateType = OtherHashState<PtrType>;
+  using OtherBucketType         = SinglyLinkedListCustomTraits<PtrType, OtherContainerTraits>;
+  using OtherContainerType      = HashTable<OtherKeyType,
+                                            PtrType,
+                                            OtherBucketType,
+                                            OtherHashType,
+                                            kOtherNumBuckets,
+                                            OtherContainerTraits,
+                                            OtherContainerTraits>;
 
-    using OtherContainerTraits    = OtherHashTraits<PtrType>;
-    using OtherContainerStateType = OtherHashState<PtrType>;
-    using OtherBucketType         = SinglyLinkedList<PtrType, OtherContainerTraits>;
-    using OtherContainerType      = HashTable<OtherKeyType,
-                                              PtrType,
-                                              OtherBucketType,
-                                              OtherHashType,
-                                              kOtherNumBuckets,
-                                              OtherContainerTraits,
-                                              OtherContainerTraits>;
-
-    using TestObjBaseType  = HashedTestObjBase<typename ContainerType::KeyType,
-                                               typename ContainerType::HashType,
-                                               ContainerType::kNumBuckets>;
-
-    struct Tag1 {};
-    struct Tag2 {};
-    struct Tag3 {};
-
-    using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
-                                    TaggedSinglyLinkedListable<PtrType, Tag2>,
-                                    TaggedSinglyLinkedListable<PtrType, Tag3>>;
-
-    using TaggedType1 = TaggedHashTable<size_t, PtrType, Tag1>;
-    using TaggedType2 = TaggedHashTable<size_t, PtrType, Tag2>;
-    using TaggedType3 = TaggedHashTable<size_t, PtrType, Tag3>;
+  using TestObjBaseType =
+      HashedTestObjBase<typename ContainerType::KeyType, typename ContainerType::HashType,
+                        ContainerType::kNumBuckets>;
   // clang-format on
+
+  struct Tag1 {};
+  struct Tag2 {};
+  struct Tag3 {};
+
+  using TaggedContainableBaseClasses =
+      fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
+                                  TaggedSinglyLinkedListable<PtrType, Tag2>,
+                                  TaggedSinglyLinkedListable<PtrType, Tag3>>;
+
+  using TaggedType1 = TaggedHashTable<size_t, PtrType, Tag1>;
+  using TaggedType2 = TaggedHashTable<size_t, PtrType, Tag2>;
+  using TaggedType3 = TaggedHashTable<size_t, PtrType, Tag3>;
 };
 
 // clang-format off

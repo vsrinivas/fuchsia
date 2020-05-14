@@ -24,29 +24,29 @@ template <typename PtrType>
 class SLLTraits {
  public:
   // clang-format off
-    using TestObjBaseType         = TestObjBase;
+  using TestObjBaseType         = TestObjBase;
 
-    using ContainerType           = SinglyLinkedList<PtrType>;
-    using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
-    using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
+  using ContainerType           = SinglyLinkedList<PtrType>;
+  using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
+  using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
 
-    using OtherContainerStateType = ContainerStateType;
-    using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
-    using OtherContainerType      = SinglyLinkedList<PtrType, OtherContainerTraits>;
-
-    struct Tag1 {};
-    struct Tag2 {};
-    struct Tag3 {};
-
-    using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
-                                    TaggedSinglyLinkedListable<PtrType, Tag2>,
-                                    TaggedSinglyLinkedListable<PtrType, Tag3>>;
-
-    using TaggedType1 = TaggedSinglyLinkedList<PtrType, Tag1>;
-    using TaggedType2 = TaggedSinglyLinkedList<PtrType, Tag2>;
-    using TaggedType3 = TaggedSinglyLinkedList<PtrType, Tag3>;
+  using OtherContainerStateType = ContainerStateType;
+  using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
+  using OtherContainerType      = SinglyLinkedListCustomTraits<PtrType, OtherContainerTraits>;
   // clang-format on
+
+  struct Tag1 {};
+  struct Tag2 {};
+  struct Tag3 {};
+
+  using TaggedContainableBaseClasses =
+      fbl::ContainableBaseClasses<TaggedSinglyLinkedListable<PtrType, Tag1>,
+                                  TaggedSinglyLinkedListable<PtrType, Tag2>,
+                                  TaggedSinglyLinkedListable<PtrType, Tag3>>;
+
+  using TaggedType1 = TaggedSinglyLinkedList<PtrType, Tag1>;
+  using TaggedType2 = TaggedSinglyLinkedList<PtrType, Tag2>;
+  using TaggedType3 = TaggedSinglyLinkedList<PtrType, Tag3>;
 };
 
 // Just a sanity check so we know our metaprogramming nonsense is

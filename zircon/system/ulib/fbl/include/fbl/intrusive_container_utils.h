@@ -471,6 +471,16 @@ constexpr bool valid_sentinel_ptr(const T* ptr) {
 
 DECLARE_HAS_MEMBER_FN(has_node_state, node_state);
 
+// Helpers which can be used to determine the NodeState type and
+// NodeState::PtrType types returned by the node_state method of a TraitClass
+// |RefType|.  These are used primarily in tests and in static_asserts in the
+// code as sanity checks.
+template <typename TraitClass, typename RefType>
+using node_state_t = std::decay_t<std::invoke_result_t<decltype(TraitClass::node_state), RefType>>;
+
+template <typename TraitClass, typename RefType>
+using node_ptr_t = typename node_state_t<TraitClass, RefType>::PtrType;
+
 // SizeTracker is a partially specialized internal class used to track (or
 // explicitly to not track) the size of Lists in the fbl:: containers.  Its
 // behavior and size depends on the SizeOrder template parameter passed to it.

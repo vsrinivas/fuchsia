@@ -51,7 +51,7 @@ DEFINE_NODE_TAGS(9);
 // metaprogramming typing we need to do.
 template <typename TypeTag = fbl::DefaultObjectTag, typename T>
 const auto& FindSLLNode(T& obj) {
-  return fbl::DefaultSinglyLinkedListTraits<T*>::template node_state<TypeTag>(obj);
+  return fbl::DefaultSinglyLinkedListTraits<T*, TypeTag>::node_state(obj);
 }
 
 template <typename TypeTag = fbl::DefaultObjectTag, typename T>
