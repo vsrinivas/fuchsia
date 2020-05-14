@@ -30,7 +30,7 @@ bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thr
 inline void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t,
                                                zx_status_t wait_queue_error) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t != nullptr);
-  DEBUG_ASSERT(list_in_list(&t->wait_queue_state_.queue_node_));
+  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->blocking_wait_queue_ == wait);
 

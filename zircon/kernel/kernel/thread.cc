@@ -410,7 +410,7 @@ zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
     DEBUG_ASSERT(magic_ == THREAD_MAGIC);
     DEBUG_ASSERT(state_ == THREAD_DEATH);
     DEBUG_ASSERT(blocking_wait_queue_ == NULL);
-    DEBUG_ASSERT(!list_in_list(&wait_queue_state_.queue_node_));
+    DEBUG_ASSERT(!wait_queue_state_.InWaitQueue());
 
     // save the return code
     if (out_retcode) {
@@ -531,7 +531,7 @@ void Thread::Forget() {
     thread_list->erase(*this);
   }
 
-  DEBUG_ASSERT(!list_in_list(&wait_queue_state_.queue_node_));
+  DEBUG_ASSERT(!wait_queue_state_.InWaitQueue());
 
   free_thread_resources(this);
 }

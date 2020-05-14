@@ -369,7 +369,7 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
   }
 
   DEBUG_ASSERT(t != nullptr);
-  DEBUG_ASSERT(list_in_list(&t->wait_queue_state_.queue_node_));
+  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
   DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
   DEBUG_ASSERT(t->blocking_wait_queue_ == source);
   DEBUG_ASSERT(source->collection_.Count() > 0);
@@ -487,7 +487,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   WaitQueue* wq = t->blocking_wait_queue_;
   DEBUG_ASSERT(wq != nullptr);
   DEBUG_ASSERT_MAGIC_CHECK(wq);
-  DEBUG_ASSERT(list_in_list(&t->wait_queue_state_.queue_node_));
+  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
 
   if (WAIT_QUEUE_VALIDATION) {
     wq->ValidateQueue();
