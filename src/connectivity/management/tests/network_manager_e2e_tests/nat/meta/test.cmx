@@ -2,16 +2,16 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/network_manager_e2e_tests#meta/network_manager_e2e_nat.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/network-manager-e2e-tests#meta/network_manager_e2e_nat.cmx",
             "environment": {
                 "children": [
                     {
-                        "name": "lan_device",
+                        "name": "lan",
                         "setup": [
                             {
                                 "arguments": [
                                     "-e",
-                                    "lan_device_ep",
+                                    "lan_ep",
                                     "-i",
                                     "192.168.1.2/24",
                                     "-g",
@@ -29,12 +29,12 @@
                         ]
                     },
                     {
-                        "name": "router_device",
+                        "name": "router",
                         "setup": [
                             {
                                 "arguments": [
                                     "-e",
-                                    "router_device_lan_ep",
+                                    "router_lan_ep",
                                     "-i",
                                     "192.168.1.1/24"
                                 ],
@@ -43,7 +43,7 @@
                             {
                                 "arguments": [
                                     "-e",
-                                    "router_device_wan_ep",
+                                    "router_wan_ep",
                                     "-i",
                                     "192.168.0.21/24"
                                 ],
@@ -68,7 +68,7 @@
                         ]
                     }
                 ],
-                "name": "wan_device",
+                "name": "wan",
                 "services": {
                     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
@@ -79,7 +79,7 @@
                     {
                         "arguments": [
                             "-e",
-                            "wan_device_ep",
+                            "wan_ep",
                             "-i",
                             "192.168.0.22/24"
                         ],
@@ -98,10 +98,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "lan_device_ep"
+                            "name": "lan_ep"
                         },
                         {
-                            "name": "router_device_lan_ep"
+                            "name": "router_lan_ep"
                         }
                     ],
                     "name": "lan_net"
@@ -109,10 +109,10 @@
                 {
                     "endpoints": [
                         {
-                            "name": "router_device_wan_ep"
+                            "name": "router_wan_ep"
                         },
                         {
-                            "name": "wan_device_ep"
+                            "name": "wan_ep"
                         }
                     ],
                     "name": "wan_net"

@@ -43,6 +43,8 @@ test_package("network_manager_integration_tests") {
     {
       name = "network_manager_integration_test"
       environments = basic_envs
+
+      # TODO(fxbug.dev/52124): fix this test and re-enable it.
       disabled = true
     },
   ]

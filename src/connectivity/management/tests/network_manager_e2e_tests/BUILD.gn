@@ -11,7 +11,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/network_manager_e2e_nat_test", "")
 }
 
-test_package("network_manager_e2e_tests") {
+test_package("network-manager-e2e-tests") {
   deps = [ "nat:network_manager_e2e_nat" ]
   meta = [
     {
@@ -29,6 +29,17 @@ test_package("network_manager_e2e_tests") {
       name = "network_manager_e2e_nat_test"
       manifest = "nat/meta/test.cmx"
       environments = basic_envs
+
+      # TODO(fxbug.dev/52124): fix this test and re-enable it.
+      disabled = true
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":network-manager-e2e-tests",
+    "//src/connectivity/network/testing/netemul",
   ]
 }
