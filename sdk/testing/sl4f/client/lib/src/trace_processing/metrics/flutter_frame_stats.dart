@@ -219,17 +219,30 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
             thread.name.endsWith('.ui'))
         .toList();
     for (final uiThread in uiThreads) {
-      final appName =
-          flutterAppName ?? uiThread.name.split(RegExp(r'.ui$')).first;
+      final threadPrefix = uiThread.name.split(RegExp(r'.ui$')).first;
+      final appName = flutterAppName ?? threadPrefix;
+      // Zircon truncates thread names to 31 characters (32 with the null byte),
+      // which needs to be accounted for to process apps with particularly long
+      // names.
+      //
+      // Since the prefix came from a thread name with '.ui' removed from the
+      // end, there will be at least three characters available before running
+      // into the limit, so we'll be able to match '.gp' or '.ra' in the worst
+      // case, which avoids confusion with other flutter threads.
+      String gpuThreadName = '$threadPrefix.gpu';
+      if (gpuThreadName.length > 31) {
+        gpuThreadName = gpuThreadName.substring(0, 31);
+      }
+      String rasterThreadName = '$threadPrefix.raster';
+      if (rasterThreadName.length > 31) {
+        rasterThreadName = rasterThreadName.substring(0, 31);
+      }
       // Note: Around March 2020, Flutter renamed the GPU thread the Raster
       // thread instead.  In the far out future it might make sense to only
       // accept ".raster" here, but for now accept both names.
       final rasterThreads = process.threads
           .where((thread) =>
-              thread.name.startsWith(appName) && thread.name.endsWith('.gpu'))
-          .followedBy(process.threads.where((thread) =>
-              thread.name.startsWith(appName) &&
-              thread.name.endsWith('.raster')))
+              thread.name == gpuThreadName || thread.name == rasterThreadName)
           .toList();
       if (rasterThreads.isEmpty) {
         print('Warning, found ui thread but no raster thread for app $appName');

@@ -393,6 +393,21 @@ void main(List<String> args) {
     expect(computeMean(results[3].values), _closeTo(33.31596996));
   });
 
+  test('Flutter frame stats with long name app', () async {
+    final model = createModelFromJsonString(flutterAppLongNameTraceJsonString);
+    final results = flutterFrameStatsMetricsProcessor(
+        model, {'flutterAppName': 'flutter_app_long_name_xy'});
+
+    expect(results[0].label, 'flutter_app_long_name_xy_fps');
+    expect(results[0].values[0], _closeTo(57.65979623262868));
+    expect(results[1].label, 'flutter_app_long_name_xy_frame_build_times');
+    expect(computeMean(results[1].values), _closeTo(1.1693780864197532));
+    expect(results[2].label, 'flutter_app_long_name_xy_frame_rasterizer_times');
+    expect(computeMean(results[2].values), _closeTo(2.0420014880952384));
+    expect(results[3].label, 'flutter_app_long_name_xy_frame_latencies');
+    expect(computeMean(results[3].values), _closeTo(33.31596996));
+  });
+
   test('Flutter frame stats metric (no Scenic edge case)', () async {
     final model = createModelFromJsonString(flutterAppNoScenicTraceJsonString);
     expect(
