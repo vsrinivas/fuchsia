@@ -23,10 +23,19 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     set_constraints_called_ = true;
   }
 
+  void SetName(uint32_t priority, fidl::StringView name,
+               SetNameCompleter::Sync completer) override {
+    EXPECT_EQ(10u, priority);
+    EXPECT_EQ(std::string("Display"), std::string(name.data(), name.size()));
+    set_name_called_ = true;
+  }
+
   bool set_constraints_called() const { return set_constraints_called_; }
+  bool set_name_called() const { return set_name_called_; }
 
  private:
   bool set_constraints_called_ = false;
+  bool set_name_called_ = false;
 };
 
 TEST(AmlogicDisplay, SysmemRequirements) {
@@ -45,4 +54,5 @@ TEST(AmlogicDisplay, SysmemRequirements) {
 
   loop.RunUntilIdle();
   EXPECT_TRUE(collection.set_constraints_called());
+  EXPECT_TRUE(collection.set_name_called());
 }

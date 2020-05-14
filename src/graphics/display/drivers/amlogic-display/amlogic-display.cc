@@ -463,6 +463,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplGetSysmemConnection(zx::channel
 zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
   sysmem::BufferCollectionConstraints constraints = {};
+  const char* buffer_name;
   if (config->type == IMAGE_TYPE_CAPTURE) {
     constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
   } else {
@@ -495,12 +496,24 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
         disp_setting_.h_active * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), kBufferAlignment);
     image_constraints.max_coded_width_times_coded_height =
         disp_setting_.h_active * disp_setting_.v_active;
+    buffer_name = "Display capture";
   } else {
     image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+    buffer_name = "Display";
   }
   image_constraints.bytes_per_row_divisor = kBufferAlignment;
   image_constraints.start_offset_divisor = kBufferAlignment;
 
+  // Set priority to 10 to override the Vulkan driver name priority of 5, but be less than most
+  // application priorities.
+  constexpr uint32_t kNamePriority = 10;
+  auto name_res =
+      sysmem::BufferCollection::Call::SetName(zx::unowned_channel(collection), kNamePriority,
+                                              fidl::unowned_str(buffer_name, strlen(buffer_name)));
+  if (!name_res.ok()) {
+    DISP_ERROR("Failed to set name: %d", name_res.status());
+    return name_res.status();
+  }
   auto res = sysmem::BufferCollection::Call::SetConstraints(zx::unowned_channel(collection), true,
                                                             constraints);
 
