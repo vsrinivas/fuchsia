@@ -26,13 +26,18 @@ rustc_staticlib("lib") {
   edition = "2018"
   public = [ "lookup.h" ]
   deps = [
+    "//src/lib/intl/model:lib",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:rust_icu_common",
+    "//third_party/rust_crates:rust_icu_sys",
     "//third_party/rust_crates:rust_icu_uloc",
   ]
   non_rust_deps = [
     "//third_party/icu",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/syslog",
   ]
   test_deps = [
     ":fuchsia.intl.test-rustc",

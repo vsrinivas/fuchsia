@@ -66,6 +66,14 @@ pub struct Model {
 }
 
 impl Model {
+    pub fn locale(&self) -> &str {
+        &self.locale_id
+    }
+
+    pub fn messages(&self) -> &Messages {
+        &self.messages
+    }
+
     /// Deserializes the Model from the supplied reader.  Use to
     /// create a functional Model from JSON.
     pub fn from_json_reader<R: io::Read>(r: R) -> Result<Model> {

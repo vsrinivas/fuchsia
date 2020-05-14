@@ -62,6 +62,8 @@ class Lookup {
     UNAVAILABLE = 1,
     // The argument passed in by the user is not valid.
     ARGUMENT_ERROR = 2,
+    // Some internal error happened = -1,  Consult logs for details.
+    INTERNAL = 111,
   };
 
   // Makes a new lookup object, which contains information about the passed-in

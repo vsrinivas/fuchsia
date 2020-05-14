@@ -4,10 +4,15 @@
 
 use {
     anyhow::{Context, Result},
-    libc, rust_icu_uloc as uloc,
+    fuchsia_syslog::fx_log_err,
+    intl_model as model, libc, rust_icu_common as ucommon, rust_icu_sys as usys,
+    rust_icu_uloc as uloc,
+    std::collections::BTreeMap,
     std::convert::From,
     std::convert::TryFrom,
     std::ffi,
+    std::fs,
+    std::io,
     std::mem,
     std::str,
 };
@@ -24,18 +29,38 @@ pub enum LookupStatus {
     Unavailable = 1,
     /// The argument passed in by the user is not valid.
     ArgumentError = 2,
+    /// Some internal error happened. Consult logs for details.
+    Internal = 111,
 }
 
-/// The API supported by the Lookup module.
-trait API {
+/// The C API supported by the Lookup module.
+///
+/// The C API is used for FFI interfacing with other languages that support
+/// C ABI FFI.
+trait CApi {
     /// Looks a message up by its unique `message_id`.  A nonzero status is
     /// returned if the message is not found.
     fn string(&self, message_id: u64) -> Result<&ffi::CStr, LookupStatus>;
 }
 
 impl From<str::Utf8Error> for LookupStatus {
-    fn from(_: str::Utf8Error) -> Self {
+    fn from(e: str::Utf8Error) -> Self {
+        fx_log_err!("intl: utf-8: {:?}", e);
         LookupStatus::Unavailable
+    }
+}
+
+impl From<anyhow::Error> for LookupStatus {
+    fn from(e: anyhow::Error) -> Self {
+        fx_log_err!("intl: general: {:?}", e);
+        LookupStatus::Internal
+    }
+}
+
+impl From<ucommon::Error> for LookupStatus {
+    fn from(e: ucommon::Error) -> Self {
+        fx_log_err!("intl: icu: {:?}", e);
+        LookupStatus::Internal
     }
 }
 
@@ -71,7 +96,7 @@ impl FakeLookup {
     }
 }
 
-impl API for FakeLookup {
+impl CApi for FakeLookup {
     /// A fake implementation of `string` for testing.
     ///
     /// Returns "Hello world" if passed an even `message_id`, and `LookupStatus::UNAVAILABLE` when
@@ -138,7 +163,14 @@ pub unsafe extern "C" fn intl_lookup_new(
             }
         }
     }
-    Box::into_raw(Box::new(Lookup::new(&locales[..])))
+    let lookup_or = Lookup::new(&locales[..]);
+    match lookup_or {
+        Ok(lookup) => Box::into_raw(Box::new(lookup)),
+        Err(_) => {
+            *status = LookupStatus::Unavailable as i8;
+            std::ptr::null::<Lookup>()
+        }
+    }
 }
 
 #[no_mangle]
@@ -155,7 +187,7 @@ pub unsafe extern "C" fn intl_lookup_string_fake_for_test(
     generic_string(this, id, status)
 }
 
-unsafe fn generic_string<T: API>(this: *const T, id: u64, status: *mut i8) -> *const libc::c_char {
+unsafe fn generic_string<T: CApi>(this: *const T, id: u64, status: *mut i8) -> *const libc::c_char {
     *status = LookupStatus::OK as i8;
     match this.as_ref().unwrap().string(id) {
         Err(e) => {
@@ -186,41 +218,116 @@ pub unsafe extern "C" fn intl_lookup_string(
     }
 }
 
+// Contains the message catalog ready for external consumption.  Specifically,
+// provides C-style messages
+pub struct Catalog {
+    locale_to_message: BTreeMap<String, BTreeMap<u64, ffi::CString>>,
+}
+
+impl Catalog {
+    fn new() -> Catalog {
+        let locale_to_message = BTreeMap::new();
+        Catalog { locale_to_message }
+    }
+
+    fn add(&mut self, model: model::Model) -> Result<()> {
+        let locale_id = model.locale();
+        let mut messages: BTreeMap<u64, ffi::CString> = BTreeMap::new();
+        for (id, msg) in model.messages() {
+            let c_msg = ffi::CString::new(msg.clone())
+                .with_context(|| format!("interior NUL in  {:?}", msg))?;
+            messages.insert(*id, c_msg);
+        }
+        self.locale_to_message.insert(locale_id.to_string(), messages);
+        Ok(())
+    }
+
+    fn get(&self, locale: &str, id: u64) -> Option<&ffi::CStr> {
+        self.locale_to_message
+            .get(locale)
+            .map(|messages| messages.get(&id))
+            .flatten()
+            .map(|cstring| cstring.as_c_str())
+    }
+}
+
 #[allow(dead_code)] // Clean up before reviewing
 pub struct Lookup {
-    hello: ffi::CString,
-    requested_locales: Vec<uloc::ULoc>,
-    supported_locales: Vec<uloc::ULoc>,
+    requested: Vec<uloc::ULoc>,
+    supported: Vec<uloc::ULoc>,
+    catalog: Catalog,
 }
 
 impl Lookup {
     /// Creates a new instance of Lookup, with the default ways to look up the
     /// data.
-    pub fn new(requested: &[&str]) -> Lookup {
+    pub fn new(requested: &[&str]) -> Result<Lookup> {
         let supported_locales =
-            Lookup::get_available_locales().with_context(|| "while creating Lookup").unwrap();
-        Lookup::new_internal(requested, supported_locales).expect("error (should be corrected)")
+            Lookup::get_available_locales().with_context(|| "while creating Lookup")?;
+        // Load all available locale maps.
+        let catalog = Lookup::load_locales(&supported_locales[..])
+            .with_context(|| "while loading locales")?;
+        Lookup::new_internal(requested, &supported_locales, catalog)
+    }
+
+    // Loads all supported locales from disk.
+    fn load_locales(supported: &[impl AsRef<str>]) -> Result<Catalog> {
+        let mut catalog = Catalog::new();
+
+        // In the future we may decide to load only the locales we actually need.
+        for locale in supported {
+            // Directory names look like: ".../assets/locales/en-US".
+            let mut locale_dir_path = std::path::PathBuf::from(ASSETS_DIR);
+            locale_dir_path.push(locale.as_ref());
+
+            let locale_dir = std::fs::read_dir(&locale_dir_path)
+                .with_context(|| format!("while reading {:?}", &locale_dir_path))?;
+            for entry in locale_dir {
+                let path = entry?.path();
+                let file = fs::File::open(&path)
+                    .with_context(|| format!("while trying to open {:?}", &path))?;
+                let file = io::BufReader::new(file);
+                let model = model::Model::from_json_reader(file)
+                    .with_context(|| format!("while reading {:?}", &path))?;
+                catalog.add(model)?;
+            }
+        }
+        Ok(catalog)
     }
 
     /// Create a new [Lookup] from parts.  Only to be used in tests.
     #[cfg(test)]
-    pub fn new_from_parts(requested: &[impl AsRef<str>], supported: Vec<String>) -> Result<Lookup> {
-        Lookup::new_internal(requested, supported)
+    pub fn new_from_parts(
+        requested: &[&str],
+        supported: &Vec<String>,
+        catalog: Catalog,
+    ) -> Result<Lookup> {
+        Lookup::new_internal(requested, supported, catalog)
     }
 
-    fn new_internal(requested: &[impl AsRef<str>], supported: Vec<String>) -> Result<Lookup> {
-        Ok(Lookup {
-            hello: ffi::CString::new("Hello world!").unwrap(),
-            requested_locales: requested
-                .iter()
-                .map(|l| uloc::ULoc::try_from(l.as_ref()))
-                .map(|r| r.expect("could not parse"))
-                .collect(),
-            supported_locales: supported
-                .into_iter()
-                .map(|s: String| uloc::ULoc::try_from(s.as_str()))
-                .collect::<Result<Vec<_>, _>>()?,
-        })
+    fn new_internal(
+        requested: &[&str],
+        supported: &Vec<String>,
+        catalog: Catalog,
+    ) -> Result<Lookup> {
+        let requested_locales: Vec<uloc::ULoc> = requested
+            .iter()
+            .map(|l| uloc::ULoc::try_from(*l))
+            .map(|r: Result<uloc::ULoc, _>| r.expect("could not parse"))
+            .collect();
+        let supported_locales = supported
+            .iter()
+            .map(|s: &String| uloc::ULoc::try_from(s.as_str()))
+            .collect::<Result<Vec<_>, _>>()
+            .with_context(|| "while determining supported locales")?;
+
+        // Check whether requested locales are available.
+        let (_, accept_result) =
+            uloc::accept_language(requested_locales.clone(), supported_locales.clone())?;
+        if accept_result == usys::UAcceptResult::ULOC_ACCEPT_FAILED {
+            return Err(anyhow::anyhow!("no matching locale found for: requested={:?}", requested));
+        }
+        Ok(Lookup { requested: requested_locales, supported: supported_locales, catalog })
     }
 
     #[cfg(test)]
@@ -255,16 +362,24 @@ impl Lookup {
         Ok(available_locales)
     }
 
-    /// Looks up the message by its key.
-    pub fn str(&self, _: u64) -> Result<&str, LookupStatus> {
-        Ok(self.hello.to_str()?)
+    /// Looks up the message by its key, a rust API version of [API::string].
+    pub fn str(&self, id: u64) -> Result<&str, LookupStatus> {
+        Ok(self
+            .string(id)?
+            .to_str()
+            .with_context(|| format!("str(): while looking up id: {}", &id))?)
     }
 }
 
-impl API for Lookup {
+impl CApi for Lookup {
     /// See the documentation for `API` for details.
-    fn string(&self, _: u64) -> Result<&ffi::CStr, LookupStatus> {
-        Ok(self.hello.as_c_str())
+    fn string(&self, id: u64) -> Result<&ffi::CStr, LookupStatus> {
+        for locale in self.requested.iter() {
+            if let Some(s) = self.catalog.get(&locale.to_language_tag(false)?, id) {
+                return Ok(s);
+            }
+        }
+        Err(LookupStatus::Unavailable)
     }
 }
 
@@ -275,10 +390,52 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn all_lookups_are_the_same() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["foo"]);
-        assert_eq!("Hello world!", l.string(42)?.to_str()?);
-        assert_eq!("Hello world!", l.string(85)?.to_str()?);
+    fn lookup_en() -> Result<(), LookupStatus> {
+        let l = Lookup::new(&vec!["en"])?;
+        assert_eq!("text_string", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
+        assert_eq!("text_string_2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
+        Ok(())
+    }
+
+    #[test]
+    fn lookup_fr() -> Result<(), LookupStatus> {
+        let l = Lookup::new(&vec!["fr"])?;
+        assert_eq!("le string", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
+        assert_eq!("le string 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
+        Ok(())
+    }
+
+    #[test]
+    fn lookup_es() -> Result<(), LookupStatus> {
+        let l = Lookup::new(&vec!["es"])?;
+        assert_eq!("el stringo", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
+        assert_eq!("el stringo 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
+        Ok(())
+    }
+
+    // When "es" is preferred, use it.
+    #[test]
+    fn lookup_es_en() -> Result<(), LookupStatus> {
+        let l = Lookup::new(&vec!["es", "en"])?;
+        assert_eq!("el stringo", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
+        assert_eq!("el stringo 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
+        Ok(())
+    }
+
+    #[test]
+    fn nonexistent_locale_rejected() -> Result<()> {
+        match Lookup::new(&vec!["nonexistent-locale"]) {
+            Ok(_) => Err(anyhow::anyhow!("unexpectedly accepted nonexistent locale")),
+            Err(_) => Ok(()),
+        }
+    }
+
+    #[test]
+    fn locale_fallback_accounted_for() -> Result<()> {
+        // These locales are directly supported by the tests.
+        Lookup::new(&vec!["en"])?;
+        Lookup::new(&vec!["fr"])?;
+        Lookup::new(&vec!["es"])?;
         Ok(())
     }
 
@@ -300,8 +457,8 @@ mod tests {
 
     #[test]
     fn test_real_lookup() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["es"]);
-        assert_eq!("Hello world!", l.str(ftest::MessageIds::StringName as u64)?);
+        let l = Lookup::new(&vec!["es"])?;
+        assert_eq!("el stringo", l.str(ftest::MessageIds::StringName as u64)?);
         Ok(())
     }
 
