@@ -15,6 +15,9 @@ pub enum PowerManagerError {
 
     #[error("Out of space")]
     OutOfSpace(String),
+
+    #[error("Busy")]
+    Busy(String),
 }
 
 impl From<anyhow::Error> for PowerManagerError {

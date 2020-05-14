@@ -45,6 +45,10 @@ pub enum Message {
     /// File a crash report
     /// Arg: the crash report signature
     FileCrashReport(String),
+
+    /// Specify the termination system state, intended to be used in the DriverManagerHandler node.
+    /// Arg: the SystemPowerState value indicating the termination state
+    SetTerminationSystemState(fidl_fuchsia_device_manager::SystemPowerState),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -81,4 +85,7 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     FileCrashReport,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    SetTerminationSystemState,
 }

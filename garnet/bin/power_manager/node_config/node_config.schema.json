@@ -131,6 +131,47 @@
       {
         "properties": {
           "type": {
+            "pattern": "SystemShutdownHandler"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "service_path": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "service_path"
+            ]
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "driver_manager_handler_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "driver_manager_handler_node"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "TemperatureHandler"
           },
           "name": {
