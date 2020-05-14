@@ -13,10 +13,66 @@ use crate::{
     render::{Context as RenderContext, Path, Raster},
 };
 use anyhow::Error;
-use euclid::{Box2D, Vector2D};
+use euclid::{
+    default::{Box2D, Size2D, Vector2D},
+    Angle,
+};
 use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
 use std::collections::BTreeMap;
 use textwrap::wrap_iter;
+
+/// Some Fuchsia device displays are mounted rotated. This value represents
+/// The supported rotations and can be used by views to rotate their content
+/// to display appropriately when running on the frame buffer.
+#[derive(Debug, Clone, Copy)]
+pub enum DisplayRotation {
+    Deg0,
+    Deg90,
+    Deg180,
+    Deg270,
+}
+
+pub struct DisplayAligned;
+
+pub type DisplayAlignedRect = euclid::Rect<Coord, DisplayAligned>;
+
+pub type DisplayTransform2D = euclid::Transform2D<Coord, euclid::UnknownUnit, DisplayAligned>;
+
+impl DisplayRotation {
+    pub fn transform(&self, target_size: &Size2D<Coord>) -> Option<DisplayTransform2D> {
+        let post_translation = match self {
+            DisplayRotation::Deg90 => Vector2D::new(0.0, target_size.width),
+            DisplayRotation::Deg180 => Vector2D::new(target_size.width, target_size.height),
+            DisplayRotation::Deg270 => Vector2D::new(target_size.height, 0.0),
+            DisplayRotation::Deg0 => Vector2D::zero(),
+        }
+        .cast_unit::<DisplayAligned>();
+        self.rotation().and_then(|transform| Some(transform.post_translate(post_translation)))
+    }
+
+    pub fn rotation(&self) -> Option<DisplayTransform2D> {
+        match self {
+            DisplayRotation::Deg0 => None,
+            _ => {
+                let display_rotation = *self;
+                let angle: Angle<Coord> = display_rotation.into();
+                Some(DisplayTransform2D::create_rotation(angle))
+            }
+        }
+    }
+}
+
+impl From<DisplayRotation> for Angle<Coord> {
+    fn from(display_rotation: DisplayRotation) -> Self {
+        let degrees = match display_rotation {
+            DisplayRotation::Deg0 => 0.0,
+            DisplayRotation::Deg90 => 90.0,
+            DisplayRotation::Deg180 => 180.0,
+            DisplayRotation::Deg270 => 270.0,
+        };
+        Angle::degrees(degrees)
+    }
+}
 
 /// Create a render path for the specified rectangle.
 pub fn path_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Path {
@@ -177,13 +233,25 @@ impl<'a> FontFace<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct Glyph {
     pub raster: Raster,
     pub bounding_box: Rect,
+    pub display_bounding_box: DisplayAlignedRect,
 }
 
 impl Glyph {
     pub fn new(context: &mut RenderContext, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
+        Self::new_rotated(context, face, size, id, DisplayRotation::Deg0)
+    }
+
+    pub fn new_rotated(
+        context: &mut RenderContext,
+        face: &FontFace<'_>,
+        size: f32,
+        id: GlyphId,
+        display_rotation: DisplayRotation,
+    ) -> Self {
         let mut path_builder = context.path_builder().expect("path_builder");
         let mut bounding_box = Box2D::zero();
         let scale = Scale::uniform(size);
@@ -227,20 +295,44 @@ impl Glyph {
             ));
         }
 
+        let bounding_box = bounding_box.to_rect();
+        let transform = display_rotation.transform(&Size2D::zero());
+        let display_bounding_box = if let Some(transform) = transform {
+            transform.transform_rect(&bounding_box)
+        } else {
+            bounding_box.cast_unit::<DisplayAligned>()
+        };
         let path = path_builder.build();
         let mut raster_builder = context.raster_builder().expect("raster_builder");
-        raster_builder.add(&path, None);
+        let rotation_transform =
+            display_rotation.rotation().and_then(|transform| Some(transform.to_untyped()));
+        raster_builder.add(&path, rotation_transform.as_ref());
 
-        Self { raster: raster_builder.build(), bounding_box: bounding_box.to_rect() }
+        Self { raster: raster_builder.build(), display_bounding_box, bounding_box }
+    }
+}
+
+#[derive(Debug)]
+pub struct GlyphMap {
+    glyphs: BTreeMap<GlyphId, Glyph>,
+    rotation: DisplayRotation,
+}
+
+impl GlyphMap {
+    pub fn new() -> Self {
+        Self::new_with_rotation(DisplayRotation::Deg0)
+    }
+
+    pub fn new_with_rotation(rotation: DisplayRotation) -> Self {
+        Self { glyphs: BTreeMap::new(), rotation }
     }
 }
 
 pub struct Text {
     pub raster: Raster,
     pub bounding_box: Rect,
+    pub display_bounding_box: DisplayAlignedRect,
 }
-
-pub type GlyphMap = BTreeMap<GlyphId, Glyph>;
 
 impl Text {
     pub fn new(
@@ -249,17 +341,23 @@ impl Text {
         size: f32,
         wrap: usize,
         face: &FontFace<'_>,
-        glyphs: &mut GlyphMap,
+        glyph_map: &mut GlyphMap,
     ) -> Self {
-        let mut bounding_box = Rect::zero();
+        let glyphs = &mut glyph_map.glyphs;
+        let display_rotation = glyph_map.rotation;
+        let mut display_bounding_box = DisplayAlignedRect::zero();
         let scale = Scale::uniform(size);
         let v_metrics = face.font.v_metrics(scale);
         let mut ascent = v_metrics.ascent;
         let mut raster_union = None;
+        let transform = glyph_map
+            .rotation
+            .transform(&Size2D::new(0.0, ascent))
+            .unwrap_or(DisplayTransform2D::identity());
 
         for line in wrap_iter(text, wrap) {
             // TODO: adjust vertical alignment of glyphs to match first glyph.
-            let y_offset = Vector2D::new(0, ascent as i32);
+            let y_offset = transform.transform_vector(Vector2D::new(0.0, ascent)).to_i32();
             let chars = line.chars();
             let mut x: f32 = 0.0;
             let mut last = None;
@@ -271,11 +369,15 @@ impl Text {
 
                 // Lookup glyph entry in cache.
                 // TODO: improve sub pixel placement using a larger cache.
-                let position = y_offset + Vector2D::new(x as i32, 0);
-                let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
+                let position =
+                    y_offset + transform.transform_vector(Vector2D::new(x, 0.0)).to_i32();
+                let glyph = glyphs.entry(id).or_insert_with(|| {
+                    Glyph::new_rotated(context, face, size, id, display_rotation)
+                });
 
                 // Clone and translate raster.
-                let raster = glyph.raster.clone().translate(position);
+                let raster =
+                    glyph.raster.clone().translate(position.cast_unit::<euclid::UnknownUnit>());
                 raster_union = if let Some(raster_union) = raster_union {
                     Some(raster_union + raster)
                 } else {
@@ -283,11 +385,12 @@ impl Text {
                 };
 
                 // Expand bounding box.
-                let glyph_bounding_box = glyph.bounding_box.translate(position.to_f32());
-                if bounding_box.is_empty() {
-                    bounding_box = glyph_bounding_box;
+                let glyph_bounding_box = &glyph.display_bounding_box.translate(position.to_f32());
+
+                if display_bounding_box.is_empty() {
+                    display_bounding_box = *glyph_bounding_box;
                 } else {
-                    bounding_box = bounding_box.union(&glyph_bounding_box);
+                    display_bounding_box = display_bounding_box.union(&glyph_bounding_box);
                 }
 
                 x += w;
@@ -296,7 +399,14 @@ impl Text {
             ascent += size;
         }
 
-        Self { raster: raster_union.expect("raster_union"), bounding_box }
+        let transform = display_rotation.transform(&Size2D::zero());
+        let bounding_box = if let Some(transform) = transform {
+            transform.inverse().expect("inverse").transform_rect(&display_bounding_box)
+        } else {
+            display_bounding_box.cast_unit::<euclid::UnknownUnit>()
+        };
+
+        Self { raster: raster_union.expect("raster_union"), bounding_box, display_bounding_box }
     }
 }
 

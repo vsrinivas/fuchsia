@@ -311,8 +311,8 @@ impl Scene {
             text_disabled,
             scroll_offset_y,
             last_scroll_offset_y: scroll_offset_y,
-            title_glyphs: BTreeMap::new(),
-            body_glyphs: BTreeMap::new(),
+            title_glyphs: GlyphMap::new(),
+            body_glyphs: GlyphMap::new(),
             columns: Vec::new(),
             total_items: 0,
         }
