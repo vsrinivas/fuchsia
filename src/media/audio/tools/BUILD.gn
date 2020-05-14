@@ -4,6 +4,7 @@
 group("tools") {
   testonly = true
   public_deps = [
+    "audio-driver-ctl",
     "signal_generator",
     "virtual_audio_util",
     "vol",

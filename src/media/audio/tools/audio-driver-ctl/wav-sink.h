@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_SINK_H_
+#define SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_SINK_H_
+
+#include <zircon/types.h>
 
 #include <audio-utils/audio-stream.h>
-#include <zircon/types.h>
 
 #include "wav-common.h"
 
@@ -26,3 +28,5 @@ class WAVSink : public WAVCommon, public audio::utils::AudioSink {
   bool format_set_ = false;
   uint64_t bytes_written_ = 0;
 };
+
+#endif  // SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_SINK_H_

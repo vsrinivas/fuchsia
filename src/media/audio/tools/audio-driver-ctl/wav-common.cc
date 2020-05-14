@@ -4,11 +4,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <zircon/assert.h>
-#include <fbl/auto_call.h>
-#include <fbl/algorithm.h>
 #include <lib/fdio/io.h>
 #include <stdio.h>
+#include <zircon/assert.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 
 #include "wav-source.h"
 

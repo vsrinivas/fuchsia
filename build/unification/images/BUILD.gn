@@ -360,7 +360,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/core/sysinfo:sysinfo-manifest",
     "//src/devices/board/drivers/integration-test:integration-test-manifest",
     "//src/devices/board/drivers/machina:machina-manifest",
-    "//zircon/system/uapp/audio:bin-manifest",
+    "//src/media/audio/tools/audio-driver-ctl:bin-manifest",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
     "//zircon/system/uapp/dd:dd-manifest",
@@ -531,7 +531,7 @@ aggregate_manifest("migrated-image") {
       "//src/ui/light/drivers/gpio-light:gpio-light-manifest",
       "//src/ui/light/drivers/lp50xx-light:lp50xx-light-manifest",
       "//src/devices/board/drivers/qemu-arm64:qemu-arm64-manifest",
-      "//zircon/system/uapp/audio:test-manifest",
+      "//src/media/audio/tools/audio-driver-ctl:test-manifest",
       "//zircon/system/utest/platform-bus:test-audio-codec-manifest",
       "//zircon/system/utest/platform-bus:test-board-manifest",
       "//zircon/system/utest/platform-bus:test-child-1-manifest",
@@ -572,7 +572,7 @@ aggregate_manifest("migrated-image") {
 
 aggregate_manifest("migrated-aux") {
   deps = [
-    "//zircon/system/uapp/audio:test-manifest",
+    "//src/media/audio/tools/audio-driver-ctl:test-manifest",
 
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.
@@ -834,7 +834,7 @@ aggregate_manifest("migrated-aux") {
 
 aggregate_manifest("migrated-tests") {
   deps = [
-    "//zircon/system/uapp/audio:test-manifest",
+    "//src/media/audio/tools/audio-driver-ctl:test-manifest",
 
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.

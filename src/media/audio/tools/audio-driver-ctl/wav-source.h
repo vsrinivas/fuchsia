@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_AUDIO_WAV_SOURCE_H_
-#define ZIRCON_SYSTEM_UAPP_AUDIO_WAV_SOURCE_H_
+#ifndef SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_SOURCE_H_
+#define SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_SOURCE_H_
 
 #include <zircon/types.h>
 
@@ -27,4 +27,4 @@ class WAVSource : public WAVCommon, public audio::utils::AudioSource {
   AudioStream::Format audio_format_;
 };
 
-#endif  // ZIRCON_SYSTEM_UAPP_AUDIO_WAV_SOURCE_H_
+#endif  // SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_SOURCE_H_

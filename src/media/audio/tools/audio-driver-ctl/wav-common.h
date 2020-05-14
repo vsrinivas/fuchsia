@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_COMMON_H_
+#define SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_COMMON_H_
 
 #include <endian.h>
 #include <zircon/compiler.h>
@@ -79,3 +80,5 @@ class WAVCommon {
 
   int fd_ = -1;
 };
+
+#endif  // SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_WAV_COMMON_H_

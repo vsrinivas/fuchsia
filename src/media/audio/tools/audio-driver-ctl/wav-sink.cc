@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <limits>
+#include "wav-sink.h"
+
 #include <lib/fdio/io.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
-#include "wav-sink.h"
+#include <limits>
+
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 
 zx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
   WAVHeader wav_hdr;
