@@ -124,13 +124,19 @@ test_package("cobalt_tests_do_not_run_manually") {
           }
           tags = [ "cobalt-prober" ]
         },
-        {
-          dimensions = {
-            device_type = "QEMU"
-          }
-          tags = [ "cobalt-prober" ]
-        },
       ]
+
+      # Internet access on QEMU is currently only supported on arm64.
+      if (target_cpu == "arm64") {
+        environments += [
+          {
+            dimensions = {
+              device_type = "QEMU"
+            }
+            tags = [ "cobalt-prober" ]
+          },
+        ]
+      }
     },
   ]
 }
