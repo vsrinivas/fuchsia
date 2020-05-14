@@ -6,6 +6,7 @@
 #define PLATFORM_HANDLE_H
 
 #include <memory>
+#include <string>
 
 #include "platform_port.h"
 
@@ -23,6 +24,8 @@ class PlatformHandle {
   // or if the handle has a peer and the peer is closed.
   // On success returns true and |key_out| is set.
   virtual bool WaitAsync(PlatformPort* port, uint64_t* key_out) = 0;
+
+  virtual std::string GetName() = 0;
 
   static bool duplicate_handle(uint32_t handle_in, uint32_t* handle_out);
 

@@ -21,6 +21,7 @@ class ZirconPlatformHandle : public PlatformHandle {
   bool GetCount(uint32_t* count_out) override;
 
   bool WaitAsync(PlatformPort* port, uint64_t* key_out) override;
+  std::string GetName() override;
 
   uint32_t release() override { return handle_.release(); }
 

@@ -72,6 +72,7 @@ class TestPlatformSysmemConnection {
 
     auto platform_handle = magma::PlatformHandle::Create(handle);
     EXPECT_NE(nullptr, platform_handle);
+    EXPECT_EQ(0u, platform_handle->GetName().find("MagmaUnprotectedSysmemShared"));
   }
 
   static void TestI420() {

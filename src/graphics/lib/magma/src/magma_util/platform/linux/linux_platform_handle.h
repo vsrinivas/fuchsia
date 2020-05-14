@@ -17,6 +17,7 @@ class LinuxPlatformHandle : public PlatformHandle {
   ~LinuxPlatformHandle() { close(fd_); }
 
   bool GetCount(uint32_t* count_out) override { return DRETF(false, "Not supported"); }
+  std::string GetName() override { return ""; }
 
   uint32_t release() override {
     DASSERT(fd_ >= 0);

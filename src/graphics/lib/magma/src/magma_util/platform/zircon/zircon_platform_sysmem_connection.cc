@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/fidl/llcpp/memory.h>
 #include <lib/zx/channel.h>
 
 #include <limits>
@@ -312,11 +313,22 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   }
 
   Status SetConstraints(PlatformBufferConstraints* constraints) override {
+    auto llcpp_constraints =
+        static_cast<ZirconPlatformBufferConstraints*>(constraints)->constraints();
+
+    const char* buffer_name = llcpp_constraints.buffer_memory_constraints.secure_required
+                                  ? "MagmaProtectedSysmemShared"
+                                  : "MagmaUnprotectedSysmemShared";
+    // These names are very generic, so set a low priority so it's easy to override them.
+    constexpr uint32_t kVulkanPriority = 5;
     zx_status_t status =
-        collection_
-            ->SetConstraints(
-                true, static_cast<ZirconPlatformBufferConstraints*>(constraints)->constraints())
+        collection_->SetName(kVulkanPriority, fidl::unowned_str(buffer_name, strlen(buffer_name)))
             .status();
+    if (status != ZX_OK) {
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting name: %d", status);
+    }
+
+    status = collection_->SetConstraints(true, std::move(llcpp_constraints)).status();
     if (status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting constraints: %d", status);
     }

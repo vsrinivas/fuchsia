@@ -36,6 +36,14 @@ bool ZirconPlatformHandle::WaitAsync(PlatformPort* port, uint64_t* key_out) {
   return true;
 }
 
+std::string ZirconPlatformHandle::GetName() {
+  char name[ZX_MAX_NAME_LEN];
+  zx_status_t status = handle_.get_property(ZX_PROP_NAME, &name, sizeof(name));
+  if (status != ZX_OK)
+    return "";
+  return std::string(name);
+}
+
 // static
 bool PlatformHandle::duplicate_handle(uint32_t handle_in, uint32_t* handle_out) {
   zx_status_t status = zx_handle_duplicate(handle_in, ZX_RIGHT_SAME_RIGHTS, handle_out);
