@@ -323,11 +323,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
   const auto story_name = "story_info_extra_3";
 
   // Create the story.
-  bool done{};
-  session_storage_->CreateStory(story_name, /*annotations=*/{})->Then([&](fidl::StringPtr id) {
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   const std::vector<fuchsia::modular::StoryInfoExtraEntry> kStoryExtraInfo{
       fuchsia::modular::StoryInfoExtraEntry{
@@ -338,7 +334,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
   // Try to SetStoryInfoExtra. It should not return an error even though the story has
   // already been created, since the method is a no-op.
   auto story = ControlStory(story_name);
-  done = false;
+  auto done = false;
   story->SetStoryInfoExtra(
       kStoryExtraInfo, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
         EXPECT_FALSE(result.is_err());
@@ -364,12 +360,8 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 }
 
 TEST_F(PuppetMasterTest, DeleteStory) {
-  std::string story_id;
-
   // Create a story.
-  session_storage_->CreateStory("foo", /*annotations=*/{})->Then([&](fidl::StringPtr id) {
-    story_id = id.value_or("");
-  });
+  auto story_id = session_storage_->CreateStory("foo", /*annotations=*/{});
 
   // Delete it
   bool done{};
@@ -722,7 +714,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataAllVariants) {
   const auto module_name = TEST_NAME(module);
 
   // Allocate story_storage for the story
-  CreateStory(story_name, session_storage_.get());
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   // Get a StoryPuppetMaster
   auto story = ControlStory(story_name);
@@ -802,7 +794,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataWithoutWaiting) {
   const auto module_name = TEST_NAME(module);
 
   // Allocate story_storage for the story
-  CreateStory(story_name, session_storage_.get());
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   // Get a StoryPuppetMaster
   auto story = ControlStory(story_name);
@@ -861,7 +853,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataBeforeAddMod) {
   const auto module_name = TEST_NAME(module);
 
   // Allocate story_storage for the story
-  CreateStory(story_name, session_storage_.get());
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   // Get a StoryPuppetMaster
   auto story = ControlStory(story_name);
@@ -946,7 +938,7 @@ TEST_F(PuppetMasterTest, AnnotateMergeInModuleData) {
   const auto module_name = TEST_NAME(module);
 
   // Allocate story_storage for the story
-  CreateStory(story_name, session_storage_.get());
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   // Get a StoryPuppetMaster
   auto story = ControlStory(story_name);
@@ -1043,7 +1035,7 @@ TEST_F(PuppetMasterTest, AnnotateModuleBufferValueTooBig) {
   const auto module_name = TEST_NAME(module);
 
   // Allocate story_storage for the story
-  CreateStory(story_name, session_storage_.get());
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   // Get a StoryPuppetMaster
   auto story = ControlStory(story_name);
@@ -1097,7 +1089,7 @@ TEST_F(PuppetMasterTest, AnnotateModuleTooMany) {
   const auto module_name = TEST_NAME(module);
 
   // Allocate story_storage for the story
-  CreateStory(story_name, session_storage_.get());
+  session_storage_->CreateStory(story_name, /*annotations=*/{});
 
   // Get a StoryPuppetMaster
   auto story = ControlStory(story_name);

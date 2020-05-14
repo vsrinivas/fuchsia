@@ -36,8 +36,8 @@ class RemoveModCommandRunnerTest : public modular_testing::TestWithSessionStorag
 TEST_F(RemoveModCommandRunnerTest, Execute) {
   auto storage = MakeSessionStorage();
   auto runner = MakeRunner();
-  auto story_id = CreateStory(storage.get());
-  auto story_storage = GetStoryStorage(storage.get(), story_id.value_or(""));
+  auto story_id = storage->CreateStory("story", /*annotations=*/{});
+  auto story_storage = GetStoryStorage(storage.get(), story_id);
 
   auto mod_name = MakeModulePath("mod");
   InitModuleData(story_storage.get(), mod_name);
@@ -67,8 +67,8 @@ TEST_F(RemoveModCommandRunnerTest, Execute) {
 TEST_F(RemoveModCommandRunnerTest, ExecuteNoModuleData) {
   auto storage = MakeSessionStorage();
   auto runner = MakeRunner();
-  auto story_id = CreateStory(storage.get());
-  auto story_storage = GetStoryStorage(storage.get(), story_id.value_or(""));
+  auto story_id = storage->CreateStory("story", /*annotations=*/{});
+  auto story_storage = GetStoryStorage(storage.get(), story_id);
 
   auto mod_name = MakeModulePath("mod");
   fuchsia::modular::RemoveMod remove_mod;
@@ -90,8 +90,8 @@ TEST_F(RemoveModCommandRunnerTest, ExecuteNoModuleData) {
 TEST_F(RemoveModCommandRunnerTest, ExecuteModNameTransitional) {
   auto storage = MakeSessionStorage();
   auto runner = MakeRunner();
-  auto story_id = CreateStory(storage.get());
-  auto story_storage = GetStoryStorage(storage.get(), story_id.value_or(""));
+  auto story_id = storage->CreateStory("story", /*annotations=*/{});
+  auto story_storage = GetStoryStorage(storage.get(), story_id);
 
   auto mod_name_transitional = "mod";
   auto mod_name = MakeModulePath(mod_name_transitional);

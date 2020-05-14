@@ -28,21 +28,6 @@ class SessionStorageTest : public gtest::RealLoopFixture {
   std::unique_ptr<SessionStorage> CreateStorage() {
     return std::make_unique<SessionStorage>();
   }
-
-  // Convenience method to create a story for the test cases where
-  // we're not testing CreateStory().
-  fidl::StringPtr CreateStory(SessionStorage* storage) {
-    auto future_story = storage->CreateStory(/*name=*/nullptr, /*annotations=*/{});
-    bool done{};
-    fidl::StringPtr story_name;
-    future_story->Then([&](fidl::StringPtr name) {
-      done = true;
-      story_name = std::move(name);
-    });
-    RunLoopUntil([&] { return done; });
-
-    return story_name;
-  }
 };
 
 TEST_F(SessionStorageTest, Create_VerifyData) {
@@ -57,25 +42,17 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
       .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
-  auto future_story = storage->CreateStory("story_name", std::move(annotations));
-  bool done{};
-  fidl::StringPtr story_name;
-  future_story->Then([&](fidl::StringPtr name) {
-    done = true;
-    story_name = std::move(name);
-  });
-  RunLoopUntil([&] { return done; });
+  auto story_name = storage->CreateStory("story_name", std::move(annotations));
 
   // Get the StoryData for this story.
   auto future_data = storage->GetStoryData(story_name);
-  done = false;
+  auto done = false;
   fuchsia::modular::internal::StoryData cached_data;
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_TRUE(data);
 
     EXPECT_EQ("story_name", data->story_name());
-    ASSERT_TRUE(story_name.has_value());
-    EXPECT_EQ(story_name.value(), data->story_info().id());
+    EXPECT_EQ(story_name, data->story_info().id());
 
     EXPECT_TRUE(data->story_info().has_annotations());
     EXPECT_EQ(1u, data->story_info().annotations().size());
@@ -116,16 +93,10 @@ TEST_F(SessionStorageTest, Create_VerifyData_NoAnntations) {
   // correct.
   auto storage = CreateStorage();
 
-  auto future_story = storage->CreateStory("story_name", {});
-  bool done{};
-  future_story->Then([&](fidl::StringPtr name) {
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
+  storage->CreateStory("story_name", {});
   // Get the StoryData for this story.
   auto future_data = storage->GetStoryData("story_name");
-  done = false;
+  bool done = false;
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_TRUE(data);
 
@@ -149,13 +120,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // consistency.  Rely only on function call ordering.  We'll switch the
   // interface to be blocking in a future commit.
   auto storage = CreateStorage();
-  bool create_done{};
-  auto future_story = storage->CreateStory("story_name", /*annotations=*/{});
-  future_story->Then([&](fidl::StringPtr story_name) {
-    create_done = true;
-  });
-
-  RunLoopUntil([&] { return create_done; });
+  storage->CreateStory("story_name", /*annotations=*/{});
 
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;
@@ -166,12 +131,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   RunLoopUntil([&] { return all_data.has_value(); });
 
   // Then, delete it.
-  bool delete_done{};
-  auto future_delete = storage->DeleteStory("story_name");
-  future_delete->Then([&]() {
-    delete_done = true;
-  });
-  RunLoopUntil([&] { return delete_done; });
+  storage->DeleteStory("story_name");
 
   // Given the ordering, we expect the story we created to show up.
   EXPECT_EQ(1u, all_data->size());
@@ -194,19 +154,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // * If we GetAllStoryData() we should see both of them.
   auto storage = CreateStorage();
 
-  auto future_story1 = storage->CreateStory("story1", /*annotations=*/{});
-  auto future_story2 = storage->CreateStory("story2", /*annotations=*/{});
-
-  fidl::StringPtr story1_name;
-  fidl::StringPtr story2_name;
-  bool done = false;
-  Wait("SessionStorageTest.CreateMultipleAndDeleteOne.wait", {future_story1, future_story2})
-      ->Then([&](auto results) {
-        story1_name = std::move(results[0]);
-        story2_name = std::move(results[1]);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  auto story1_name = storage->CreateStory("story1", /*annotations=*/{});
+  auto story2_name = storage->CreateStory("story2", /*annotations=*/{});
 
   EXPECT_NE(story1_name, story2_name);
 
@@ -221,8 +170,7 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
 
   // Now delete one of them, and we should see that GetAllStoryData() only
   // returns one entry.
-  bool delete_done{};
-  storage->DeleteStory("story1")->Then([&] { delete_done = true; });
+  storage->DeleteStory("story1");
 
   future_all_data = storage->GetAllStoryData();
   all_data.reset();
@@ -230,14 +178,12 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
     all_data.emplace(std::move(data));
   });
   RunLoopUntil([&] { return all_data.has_value(); });
-
-  EXPECT_TRUE(delete_done);
   EXPECT_EQ(1u, all_data->size());
 
   // If we try to get the story by id, or by name, we expect both to return
   // null.
   auto future_data = storage->GetStoryData(story1_name);
-  done = false;
+  auto done = false;
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     EXPECT_TRUE(data == nullptr);
     done = true;
@@ -249,9 +195,6 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
     EXPECT_TRUE(data == nullptr);
     done = true;
   });
-
-  // TODO(thatguy): Verify that the story's page was also deleted.
-  // MI4-1002
 }
 
 TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
@@ -271,19 +214,8 @@ TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
       .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
-  auto future_story_first = storage->CreateStory("story", std::move(annotations));
-  auto future_story_second = storage->CreateStory("story", /*annotations=*/{});
-
-  fidl::StringPtr story_first_name;
-  fidl::StringPtr story_second_name;
-  bool done = false;
-  Wait("SessionStorageTest.CreateSameStoryOnlyOnce.wait", {future_story_first, future_story_second})
-      ->Then([&](auto results) {
-        story_first_name = std::move(results[0]);
-        story_second_name = std::move(results[1]);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  auto story_first_name = storage->CreateStory("story", std::move(annotations));
+  auto story_second_name = storage->CreateStory("story", /*annotations=*/{});
 
   // Both calls should return the same name because they refer to the same story.
   EXPECT_EQ(story_first_name, story_second_name);
@@ -307,7 +239,7 @@ TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
 
 TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
   auto storage = CreateStorage();
-  auto story_name = CreateStory(storage.get());
+  auto story_name = storage->CreateStory("story", {});
 
   storage->UpdateLastFocusedTimestamp(story_name, 10);
   auto future_data = storage->GetStoryData(story_name);
@@ -339,23 +271,22 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
     deleted = true;
   });
 
-  auto created_story_name = CreateStory(storage.get());
+  auto created_story_name = storage->CreateStory("story", {});
   RunLoopUntil([&] { return updated; });
-  EXPECT_EQ(created_story_name, updated_story_name);
-  ASSERT_TRUE(created_story_name.has_value());
-  EXPECT_EQ(created_story_name.value(), updated_story_data.story_info().id());
+  EXPECT_EQ(created_story_name, updated_story_name.value());
+  EXPECT_EQ(created_story_name, updated_story_data.story_info().id());
 
   // Update something and see a new notification.
   updated = false;
   storage->UpdateLastFocusedTimestamp(created_story_name, 42);
   RunLoopUntil([&] { return updated; });
-  EXPECT_EQ(created_story_name, updated_story_name);
+  EXPECT_EQ(created_story_name, updated_story_name.value());
   EXPECT_EQ(42, updated_story_data.story_info().last_focus_time());
 
   // Delete the story and expect to see a notification.
   storage->DeleteStory(created_story_name);
   RunLoopUntil([&] { return deleted; });
-  EXPECT_EQ(created_story_name, deleted_story_name);
+  EXPECT_EQ(created_story_name, deleted_story_name.value());
 
   // Once a story is already deleted, do not expect another
   // notification.
@@ -366,7 +297,7 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
 
 TEST_F(SessionStorageTest, GetStoryStorage) {
   auto storage = CreateStorage();
-  auto story_name = CreateStory(storage.get());
+  auto story_name = storage->CreateStory("story", {});
 
   bool done{};
   auto get_story_future = storage->GetStoryStorage(story_name);
@@ -380,7 +311,7 @@ TEST_F(SessionStorageTest, GetStoryStorage) {
 
 TEST_F(SessionStorageTest, GetStoryStorageNoStory) {
   auto storage = CreateStorage();
-  CreateStory(storage.get());
+  storage->CreateStory("story", {});
 
   bool done{};
   auto get_story_future = storage->GetStoryStorage("fake");

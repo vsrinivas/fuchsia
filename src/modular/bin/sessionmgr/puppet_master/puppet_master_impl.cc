@@ -43,7 +43,8 @@ void PuppetMasterImpl::DeleteStory(std::string story_name, DeleteStoryCallback d
   }
 
   // Delete the Story storage.
-  session_storage_->DeleteStory(story_name)->Then(std::move(done));
+  session_storage_->DeleteStory(story_name);
+  done();
 }
 
 void PuppetMasterImpl::GetStories(GetStoriesCallback done) {

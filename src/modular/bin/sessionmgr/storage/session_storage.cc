@@ -19,7 +19,7 @@ namespace modular {
 
 SessionStorage::SessionStorage() {}
 
-FuturePtr<fidl::StringPtr> SessionStorage::CreateStory(
+std::string SessionStorage::CreateStory(
     fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
   if (!story_name || story_name->empty()) {
     story_name = uuid::Generate();
@@ -45,19 +45,18 @@ FuturePtr<fidl::StringPtr> SessionStorage::CreateStory(
     }
   }
 
-  return Future<fidl::StringPtr>::CreateCompleted("SessionStorage.CreateStory.ret",
-                                                  std::move(story_name));
+  return story_name.value();
 }
 
-FuturePtr<fidl::StringPtr> SessionStorage::CreateStory(
+std::string SessionStorage::CreateStory(
     std::vector<fuchsia::modular::Annotation> annotations) {
   return CreateStory(/*story_name=*/nullptr, std::move(annotations));
 }
 
-FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_name) {
+void SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   auto it = story_data_backing_store_.find(story_name);
   if (it == story_data_backing_store_.end()) {
-    return Future<>::CreateCompleted("SessionStorage.DeleteStory.ret");
+    return;
   }
 
   story_data_backing_store_.erase(it);
@@ -66,7 +65,7 @@ FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_name) {
     on_story_deleted_(story_name);
   }
 
-  return Future<>::CreateCompleted("SessionStorage.DeleteStory.ret");
+  return;
 }
 
 FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name,

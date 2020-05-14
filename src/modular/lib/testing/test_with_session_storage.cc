@@ -27,29 +27,6 @@ std::shared_ptr<modular::StoryStorage> TestWithSessionStorage::GetStoryStorage(
   return story_storage;
 }
 
-fidl::StringPtr TestWithSessionStorage::CreateStoryImpl(fidl::StringPtr story_id,
-                                                        modular::SessionStorage* const storage) {
-  auto future_story = storage->CreateStory(story_id, /*annotations=*/{});
-  bool done{};
-  future_story->Then([&](fidl::StringPtr id) {
-    done = true;
-    story_id = std::move(id);
-  });
-  RunLoopUntil([&] { return done; });
-
-  return story_id;
-}
-
-void TestWithSessionStorage::CreateStory(const std::string& story_id,
-                                         modular::SessionStorage* const storage) {
-  auto created_story_id = CreateStoryImpl(story_id, storage).value_or("");
-  FX_DCHECK(story_id == created_story_id);
-}
-
-fidl::StringPtr TestWithSessionStorage::CreateStory(modular::SessionStorage* const storage) {
-  return CreateStoryImpl(nullptr, storage);
-}
-
 void TestWithSessionStorage::SetLinkValue(modular::StoryStorage* const story_storage,
                                           const std::string& link_name,
                                           const std::string& link_value) {

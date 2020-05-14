@@ -45,7 +45,7 @@ class SessionStorage {
     on_story_updated_ = std::move(callback);
   }
 
-  // Creates a new story and returns a story id on completion. |story_name| may be null.
+  // Creates a new story and returns a story id. |story_name| may be null.
   //
   // If |story_name| is not provided, a UUID will be generated as the name.
   //
@@ -55,15 +55,14 @@ class SessionStorage {
   // is unclear if internal story IDs should be an implementation detail of
   // SessionStorage, or if they should be exposed to the story runtime
   // architecture.
-  FuturePtr<fidl::StringPtr> CreateStory(
+  std::string CreateStory(
       fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
 
   // Same as above, but defaults |story_name| to nullptr.
-  FuturePtr<fidl::StringPtr> CreateStory(std::vector<fuchsia::modular::Annotation> annotations);
+  std::string CreateStory(std::vector<fuchsia::modular::Annotation> annotations);
 
-  // Deletes the |story_id| from the list of known stories and completes the
-  // returned Future when done.
-  FuturePtr<> DeleteStory(fidl::StringPtr story_id);
+  // Deletes the |story_id| from the list of known stories.
+  void DeleteStory(fidl::StringPtr story_id);
 
   // Sets the last focused timestamp for |story_id| to |ts|. Completes the
   // returned Future when done.

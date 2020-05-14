@@ -64,16 +64,7 @@ class DispatchStoryCommandExecutorTest : public gtest::RealLoopFixture {
   }
 
   fidl::StringPtr CreateStory() {
-    bool done{};
-    fidl::StringPtr ret;
-    session_storage_->CreateStory({} /* extra_info */, {})
-        ->Then([&](fidl::StringPtr story_id) {
-          ret = story_id;
-          done = true;
-        });
-
-    RunLoopUntil([&]() { return done; });
-    return ret;
+    return session_storage_->CreateStory({} /* extra_info */, {});
   }
 
   void AddCommandRunner(fuchsia::modular::StoryCommand::Tag tag,

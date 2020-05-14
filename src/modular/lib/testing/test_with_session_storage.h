@@ -25,12 +25,6 @@ class TestWithSessionStorage : public gtest::RealLoopFixture {
   std::shared_ptr<modular::StoryStorage> GetStoryStorage(modular::SessionStorage* storage,
                                                          std::string story_id);
 
-  // Create a new story with a specific story_id (name)
-  void CreateStory(const std::string& story_id, modular::SessionStorage* storage);
-
-  // Create a new story and return the generated name
-  fidl::StringPtr CreateStory(modular::SessionStorage* storage);
-
   void SetLinkValue(modular::StoryStorage* story_storage, const std::string& link_name,
                     const std::string& link_value);
 

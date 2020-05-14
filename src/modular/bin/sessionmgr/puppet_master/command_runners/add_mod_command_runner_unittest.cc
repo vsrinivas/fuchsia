@@ -22,7 +22,7 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
   void SetUp() override {
     modular_testing::TestWithSessionStorage::SetUp();
     session_storage_ = MakeSessionStorage();
-    story_id_ = CreateStory(session_storage_.get()).value_or("");
+    story_id_ = session_storage_->CreateStory("story", /*annotations=*/{});
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
     runner_ = MakeRunner();
   }

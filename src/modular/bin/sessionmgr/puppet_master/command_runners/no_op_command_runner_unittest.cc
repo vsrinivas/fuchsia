@@ -18,7 +18,7 @@ class NoOpCommandRunnerTest : public modular_testing::TestWithSessionStorage {
     modular_testing::TestWithSessionStorage::SetUp();
     session_storage_ = MakeSessionStorage();
     runner_ = MakeRunner();
-    story_id_ = CreateStory(session_storage_.get()).value_or("");
+    story_id_ = session_storage_->CreateStory("story", /*annotations=*/{});
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
   }
 

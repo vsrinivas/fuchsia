@@ -38,14 +38,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
             return;
           }
 
-          CreateStory();
-        });
-  }
-
-  void CreateStory() {
-    session_storage_->CreateStory(story_name_, /*annotations=*/{})
-        ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id) {
-          story_id_ = std::move(story_id);
+          story_id_ = session_storage_->CreateStory(story_name_, /*annotations=*/{});
           ExecuteCommands();
         });
   }
@@ -106,12 +99,10 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
       return;
     }
 
-    session_storage_->CreateStory(story_name_, std::move(annotations_))
-        ->WeakThen(GetWeakPtr(), [this](fidl::StringPtr story_id) {
-          fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
-          result.set_response({});
-          Done(std::move(result));
-        });
+    session_storage_->CreateStory(story_name_, std::move(annotations_));
+    fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
+    result.set_response({});
+    Done(std::move(result));
   }
 
   void Annotate(fuchsia::modular::internal::StoryDataPtr story_data) {
