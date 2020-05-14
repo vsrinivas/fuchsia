@@ -23,6 +23,7 @@ namespace {
 constexpr int64_t kDefaultMinLeadTime = ZX_MSEC(100);
 constexpr int64_t kTargetLeadTimeDeltaNs = ZX_MSEC(10);
 constexpr int64_t kNoPtsSlipOnStarveNs = ZX_MSEC(500);
+constexpr uint32_t kPayloadVmoSizeInSeconds = 2;
 
 }  // namespace
 
@@ -295,8 +296,8 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   // TODO: What about stream type changes?
 
   // Configure the input for a single VMO of adequate size.
-  size_t size = stream_type.audio()->min_buffer_size(
-      stream_type.audio()->frames_per_second());  // TODO How many seconds?
+  size_t size = stream_type.audio()->min_buffer_size(stream_type.audio()->frames_per_second() *
+                                                     kPayloadVmoSizeInSeconds);
 
   ConfigureInputToUseVmos(size, 0, 0, VmoAllocation::kSingleVmo);
 
