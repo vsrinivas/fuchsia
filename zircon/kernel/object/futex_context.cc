@@ -13,7 +13,7 @@
 
 #include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread_lock.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -457,7 +457,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
   {
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (futex_ref->waiters_.IsEmpty() && futex_ref->waiters_.AssignOwner(nullptr)) {
-      sched_reschedule();
+      Scheduler::Reschedule();
     }
   }
 
@@ -509,7 +509,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
                       : ResetBlockingFutexId<Action::SelectAndAssignOwner>;
 
       if (futex_ref->waiters_.WakeThreads(wake_count, {hook, &wake_op})) {
-        sched_reschedule();
+        Scheduler::Reschedule();
       }
 
       // Either our owner action was RELEASE (in which case we should not have
@@ -680,7 +680,7 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
                           new_requeue_owner);
 
       if (do_resched) {
-        sched_reschedule();
+        Scheduler::Reschedule();
       }
     }
   }

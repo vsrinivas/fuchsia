@@ -249,7 +249,7 @@ struct Thread {
     // PreemptDisable() increments the preempt_disable counter for the
     // current thread.  While preempt_disable is non-zero, preemption of the
     // thread is disabled, including preemption from interrupt handlers.
-    // During this time, any call to Reschedule() or sched_reschedule()
+    // During this time, any call to Reschedule()
     // will only record that a reschedule is pending, and won't do a context
     // switch.
     //
@@ -336,7 +336,7 @@ struct Thread {
     // This is similar to Reschedule(), except that it may only be
     // used inside an interrupt handler while interrupts and preemption
     // are disabled, between PreemptPisable() and
-    // PreemptReenable().  It is similar to sched_reschedule(),
+    // PreemptReenable().  It is similar to Scheduler::Reschedule(),
     // except that it does not need to be called with thread_lock held.
     static void PreemptSetPending() {
       DEBUG_ASSERT(arch_ints_disabled());

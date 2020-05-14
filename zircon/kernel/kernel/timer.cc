@@ -39,7 +39,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
@@ -383,7 +383,7 @@ void timer_tick(zx_time_t now) {
   // service preempt timer before acquiring the timer lock
   if (now >= percpu::Get(cpu).preempt_timer_deadline) {
     percpu::Get(cpu).preempt_timer_deadline = ZX_TIME_INFINITE;
-    sched_preempt_timer_tick(now);
+    Scheduler::TimerTick(SchedTime{now});
   }
 
   Guard<spin_lock_t, NoIrqSave> guard{TimerLock::Get()};

@@ -27,7 +27,7 @@
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
@@ -226,7 +226,7 @@ static void mp_unplug_trampoline(void) {
   Thread* ct = Thread::Current::Get();
   auto unplug_done = reinterpret_cast<Event*>(ct->arg_);
 
-  sched_transition_off_cpu();
+  Scheduler::MigrateUnpinnedThreads();
 
   // Note that before this invocation, but after we stopped accepting
   // interrupts, we may have received a synchronous task to perform.

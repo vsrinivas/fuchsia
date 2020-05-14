@@ -15,7 +15,7 @@
 
 #include <fbl/canary.h>
 #include <kernel/owned_wait_queue.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <kernel/wait.h>

@@ -6,6 +6,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 
+#include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <stdint.h>
 #include <zircon/syscalls/scheduler.h>
@@ -15,14 +16,17 @@
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
-#include <kernel/sched.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
-#include <lib/relaxed_atomic.h>
 
 // Forward declaration.
 struct percpu;
+
+// Ensure this define has a value when not defined globally by the build system.
+#ifndef SCHEDULER_TRACING_LEVEL
+#define SCHEDULER_TRACING_LEVEL 0
+#endif
 
 // Implements fair and deadline scheduling algorithms and manages the associated
 // per-CPU state.
@@ -63,30 +67,8 @@ class Scheduler {
     return total_expected_runtime_ns_.load().raw_value();
   }
 
- private:
-  // Allow percpu to init our cpu number.
-  friend struct percpu;
+  // Public entry points.
 
-  // Befriend the sched API wrappers to enable calling the static methods
-  // below.
-  friend void sched_init_thread(Thread* thread, int priority);
-  friend void sched_block();
-  friend void sched_yield();
-  friend void sched_preempt();
-  friend void sched_reschedule();
-  friend void sched_resched_internal();
-  friend void sched_unblock_idle(Thread* thread);
-  friend void sched_migrate(Thread* thread);
-  friend void sched_inherit_priority(Thread* thread, int priority, bool* local_reschedule,
-                                     cpu_mask_t* cpus_to_reschedule_mask);
-  friend void sched_change_priority(Thread* thread, int priority);
-  friend void sched_change_deadline(Thread* thread, const zx_sched_deadline_params_t& params);
-  friend bool sched_unblock(Thread* t);
-  friend bool sched_unblock_list(struct list_node* list);
-  friend void sched_transition_off_cpu();
-  friend void sched_preempt_timer_tick(zx_time_t now);
-
-  // Static scheduler methods called by the wrapper API above.
   static void InitializeThread(Thread* thread, int priority);
   static void InitializeThread(Thread* thread, const zx_sched_deadline_params_t& params);
   static void Block() TA_REQ(thread_lock);
@@ -94,18 +76,51 @@ class Scheduler {
   static void Preempt() TA_REQ(thread_lock);
   static void Reschedule() TA_REQ(thread_lock);
   static void RescheduleInternal() TA_REQ(thread_lock);
+
+  // Return true if the thread was placed on the current cpu's run queue.
+  // This usually means the caller should locally reschedule soon.
   static bool Unblock(Thread* thread) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
   static bool Unblock(list_node* thread_list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
   static void UnblockIdle(Thread* idle_thread) TA_REQ(thread_lock);
+
   static void Migrate(Thread* thread) TA_REQ(thread_lock);
   static void MigrateUnpinnedThreads() TA_REQ(thread_lock);
+
+  // TimerTick is called when the preemption timer for a CPU has fired.
+  //
+  // This function is logically private and should only be called by timer.cc.
+  static void TimerTick(SchedTime now);
+
+  // Set the inherited priority of a thread.
+  //
+  // Update a mask of affected CPUs along with a flag indicating whether or not a
+  // local reschedule is needed.  After the caller has finished any batch update
+  // operations, it is their responsibility to trigger reschedule operations on
+  // the local CPU (if needed) as well as any other CPUs.  This allows callers to
+  // bacth update the state of several threads in a priority inheritance chain
+  // before finally rescheduling.
+  static void InheritPriority(Thread* t, int pri, bool* local_resched, cpu_mask_t* accum_cpu_mask)
+      TA_REQ(thread_lock);
+
+  // Set the priority of a thread and reset the boost value. This function might reschedule.
+  // pri should be 0 <= to <= MAX_PRIORITY.
+  static void ChangePriority(Thread* t, int pri) TA_REQ(thread_lock);
+
+  // Set the deadline of a thread. This function might reschedule.
+  // This requires: 0 < capacity <= relative_deadline <= period.
+  static void ChangeDeadline(Thread* t, const zx_sched_deadline_params_t& params)
+      TA_REQ(thread_lock);
+
+ private:
+  // Allow percpu to init our cpu number.
+  friend struct percpu;
+
   static void ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);
   static void ChangeDeadline(Thread* thread, const SchedDeadlineParams& params,
                              cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
   static void InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);
-  static void TimerTick(SchedTime now);
 
   // Specifies how to place a thread in the virtual timeline and run queue.
   enum class Placement {

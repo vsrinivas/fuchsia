@@ -29,7 +29,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/type_traits.h>
@@ -313,7 +313,7 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
   }
 
   if (allow_reschedule && need_reschedule) {
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
 
   // compile-time conditionally THREAD_UNLOCK

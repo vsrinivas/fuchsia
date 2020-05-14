@@ -15,7 +15,7 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <kernel/owned_wait_queue.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 #include <ktl/array.h>
@@ -193,7 +193,7 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
     if (OwnedWaitQueue::WakeThreads(ktl::numeric_limits<uint32_t>::max())) {
-      sched_reschedule();
+      Scheduler::Reschedule();
     }
   }
 
@@ -203,7 +203,7 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
     auto hook = [](Thread*, void*) { return Hook::Action::SelectAndAssignOwner; };
 
     if (OwnedWaitQueue::WakeThreads(1u, {hook, nullptr})) {
-      sched_reschedule();
+      Scheduler::Reschedule();
     }
   }
 
@@ -537,7 +537,7 @@ void LockedOwnedWaitQueue::AssignOwner(TestThread* thread) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   if (OwnedWaitQueue::AssignOwner(thread ? thread->thread_ : nullptr)) {
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
 }
 

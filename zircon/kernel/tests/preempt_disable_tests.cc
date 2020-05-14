@@ -10,7 +10,7 @@
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <kernel/interrupt.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 #include <ktl/atomic.h>
@@ -33,12 +33,12 @@ static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
   // another timer callback.
   bool old_preempt_pending = thread->preempt_pending_;
 
-  // Test that sched_reschedule() sets the preempt_pending flag when
+  // Test that Scheduler::Reschedule() sets the preempt_pending flag when
   // preempt_disable is set.
   thread->preempt_pending_ = false;
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
   ASSERT(thread->preempt_pending_);
 

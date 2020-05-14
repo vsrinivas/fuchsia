@@ -11,7 +11,7 @@
 #include <platform.h>
 #include <zircon/errors.h>
 
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 
@@ -107,7 +107,7 @@ inline zx_status_t wait_queue_block_etc_post(WaitQueue* wait, const Deadline& de
 
   ktrace_ptr(TAG_KWAIT_BLOCK, wait, 0, 0);
 
-  sched_block();
+  Scheduler::Block();
 
   ktrace_ptr(TAG_KWAIT_UNBLOCK, wait, current_thread->blocked_status_, 0);
 

@@ -41,7 +41,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
@@ -208,7 +208,7 @@ Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entr
 
   t->retcode_ = 0;
 
-  sched_init_thread(t, priority);
+  Scheduler::InitializeThread(t, priority);
 
   zx_status_t status = t->stack_.Init();
   if (status != ZX_OK) {
@@ -284,9 +284,9 @@ void Thread::Resume() {
     if (state_ == THREAD_INITIAL || state_ == THREAD_SUSPENDED) {
       // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
       // cpu run queue was modified
-      bool local_resched = sched_unblock(this);
+      bool local_resched = Scheduler::Unblock(this);
       if (resched && local_resched) {
-        sched_reschedule();
+        Scheduler::Reschedule();
       }
     }
   }
@@ -334,7 +334,7 @@ zx_status_t Thread::Suspend() {
       // already executed ThreadDispatcher::Start() so all the userspace
       // entry data has been initialized and will be ready to go as soon as
       // the thread is unsuspended.
-      local_resched = sched_unblock(this);
+      local_resched = Scheduler::Unblock(this);
       break;
     case THREAD_READY:
       // thread is ready to run and not blocked or suspended.
@@ -362,14 +362,14 @@ zx_status_t Thread::Suspend() {
       if (interruptable_) {
         blocked_status_ = ZX_ERR_INTERNAL_INTR_RETRY;
 
-        local_resched = sched_unblock(this);
+        local_resched = Scheduler::Unblock(this);
       }
       break;
   }
 
   // reschedule if the local cpu run queue was modified
   if (local_resched) {
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
 
   kcounter_add(thread_suspend_count, 1);
@@ -507,7 +507,7 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
   }
 
   // reschedule
-  sched_resched_internal();
+  Scheduler::RescheduleInternal();
 
   panic("somehow fell through thread_exit()\n");
 }
@@ -601,7 +601,7 @@ void Thread::Kill() {
       break;
     case THREAD_SUSPENDED:
       // thread is suspended, resume it so it can get the kill signal
-      local_resched = sched_unblock(this);
+      local_resched = Scheduler::Unblock(this);
       break;
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
@@ -615,7 +615,7 @@ void Thread::Kill() {
       if (interruptable_) {
         blocked_status_ = ZX_ERR_INTERNAL_INTR_KILLED;
 
-        local_resched = sched_unblock(this);
+        local_resched = Scheduler::Unblock(this);
       }
       break;
     case THREAD_DEATH:
@@ -625,7 +625,7 @@ void Thread::Kill() {
 
   if (local_resched) {
     // reschedule if the local cpu run queue was modified
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
 }
 
@@ -648,7 +648,7 @@ void Thread::SetCpuAffinity(cpu_mask_t affinity) {
   scheduler_state_.hard_affinity_ = affinity;
 
   // let the scheduler deal with it
-  sched_migrate(this);
+  Scheduler::Migrate(this);
 }
 
 void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
@@ -659,7 +659,7 @@ void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
   scheduler_state_.soft_affinity_ = affinity;
 
   // let the scheduler deal with it
-  sched_migrate(this);
+  Scheduler::Migrate(this);
 }
 
 cpu_mask_t Thread::GetSoftCpuAffinity() const {
@@ -722,7 +722,7 @@ static void thread_do_suspend() {
       current_thread->signals_ &= ~THREAD_SIGNAL_SUSPEND;
 
       // directly invoke the context switch, since we've already manipulated this thread's state
-      sched_resched_internal();
+      Scheduler::RescheduleInternal();
 
       // If the thread was killed, we should not allow it to resume.  We
       // shouldn't call user_callback() with THREAD_USER_STATE_RESUME in
@@ -876,7 +876,7 @@ void Thread::Current::Yield() {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   CPU_STATS_INC(yields);
-  sched_yield();
+  Scheduler::Yield();
 }
 
 /**
@@ -899,7 +899,7 @@ void Thread::Current::Preempt() {
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  sched_preempt();
+  Scheduler::Preempt();
 }
 
 /**
@@ -918,7 +918,7 @@ void Thread::Current::Reschedule() {
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  sched_reschedule();
+  Scheduler::Reschedule();
 }
 
 void Thread::Current::CheckPreemptPending() {
@@ -934,7 +934,7 @@ void Thread::Current::CheckPreemptPending() {
     // interrupts are now disabled.
     if (likely(current_thread->preempt_pending_)) {
       // This will set preempt_pending = false for us.
-      sched_reschedule();
+      Scheduler::Reschedule();
     }
   }
 }
@@ -960,8 +960,8 @@ static void thread_sleep_handler(Timer* timer, zx_time_t now, void* arg) {
   t->blocked_status_ = ZX_OK;
 
   // unblock the thread
-  if (sched_unblock(t)) {
-    sched_reschedule();
+  if (Scheduler::Unblock(t)) {
+    Scheduler::Reschedule();
   }
 
   spin_unlock(&thread_lock);
@@ -1026,7 +1026,7 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptab
   current_thread->blocked_status_ = ZX_OK;
 
   current_thread->interruptable_ = interruptable;
-  sched_block();
+  Scheduler::Block();
   current_thread->interruptable_ = false;
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
@@ -1099,7 +1099,7 @@ void thread_construct_first(Thread* t, const char* name) {
   t->signals_ = 0;
 
   // Setup the scheduler state before directly manipulating its members.
-  sched_init_thread(t, HIGHEST_PRIORITY);
+  Scheduler::InitializeThread(t, HIGHEST_PRIORITY);
   t->scheduler_state_.curr_cpu_ = cpu;
   t->scheduler_state_.last_cpu_ = cpu;
   t->scheduler_state_.next_cpu_ = INVALID_CPU;
@@ -1153,7 +1153,7 @@ void Thread::SetPriority(int priority) {
   ASSERT(priority >= LOWEST_PRIORITY && priority <= HIGHEST_PRIORITY);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  sched_change_priority(this, priority);
+  Scheduler::ChangePriority(this, priority);
 }
 
 /**
@@ -1171,7 +1171,7 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
          params.relative_deadline <= params.period);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  sched_change_deadline(this, params);
+  Scheduler::ChangeDeadline(this, params);
 }
 
 /**
@@ -1205,7 +1205,7 @@ void Thread::Current::BecomeIdle() {
 
   // Mark ourself as idle
   t->flags_ |= THREAD_FLAG_IDLE;
-  sched_init_thread(t, IDLE_PRIORITY);
+  Scheduler::InitializeThread(t, IDLE_PRIORITY);
 
   // Pin the thread on the current cpu and mark it as already running
   t->scheduler_state_.last_cpu_ = curr_cpu;
@@ -1221,7 +1221,7 @@ void Thread::Current::BecomeIdle() {
 
     mp_set_cpu_idle(curr_cpu);
 
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
 
   // We're now properly in the idle routine. Reenable interrupts and drop
@@ -1291,7 +1291,7 @@ Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
   t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(cpu_num);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  sched_unblock_idle(t);
+  Scheduler::UnblockIdle(t);
   return t;
 }
 

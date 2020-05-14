@@ -26,7 +26,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/scheduler_internal.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/thread.h>
@@ -1698,35 +1698,9 @@ void Scheduler::TimerTick(SchedTime now) {
   Thread::Current::PreemptSetPending();
 }
 
-// Temporary compatibility with the thread layer.
-
-void sched_init_thread(Thread* thread, int priority) {
-  Scheduler::InitializeThread(thread, priority);
-}
-
-void sched_block() { Scheduler::Block(); }
-
-bool sched_unblock(Thread* thread) { return Scheduler::Unblock(thread); }
-
-bool sched_unblock_list(list_node* list) { return Scheduler::Unblock(list); }
-
-void sched_unblock_idle(Thread* thread) { Scheduler::UnblockIdle(thread); }
-
-void sched_yield() { Scheduler::Yield(); }
-
-void sched_preempt() { Scheduler::Preempt(); }
-
-void sched_reschedule() { Scheduler::Reschedule(); }
-
-void sched_resched_internal() { Scheduler::RescheduleInternal(); }
-
-void sched_transition_off_cpu() { Scheduler::MigrateUnpinnedThreads(); }
-
-void sched_migrate(Thread* thread) { Scheduler::Migrate(thread); }
-
-void sched_inherit_priority(Thread* thread, int priority, bool* local_reschedule,
-                            cpu_mask_t* cpus_to_reschedule_mask) {
-  Scheduler::InheritWeight(thread, priority, cpus_to_reschedule_mask);
+void Scheduler::InheritPriority(Thread* thread, int priority, bool* local_reschedule,
+                                cpu_mask_t* cpus_to_reschedule_mask) {
+  InheritWeight(thread, priority, cpus_to_reschedule_mask);
 
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   if (*cpus_to_reschedule_mask & current_cpu_mask) {
@@ -1734,30 +1708,28 @@ void sched_inherit_priority(Thread* thread, int priority, bool* local_reschedule
   }
 }
 
-void sched_change_priority(Thread* thread, int priority) {
+void Scheduler::ChangePriority(Thread* thread, int priority) {
   cpu_mask_t cpus_to_reschedule_mask = 0;
-  Scheduler::ChangeWeight(thread, priority, &cpus_to_reschedule_mask);
+  ChangeWeight(thread, priority, &cpus_to_reschedule_mask);
 
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   if (cpus_to_reschedule_mask & current_cpu_mask) {
-    Scheduler::Reschedule();
+    Reschedule();
   }
   if (cpus_to_reschedule_mask & ~current_cpu_mask) {
     mp_reschedule(cpus_to_reschedule_mask, 0);
   }
 }
 
-void sched_change_deadline(Thread* thread, const zx_sched_deadline_params_t& params) {
+void Scheduler::ChangeDeadline(Thread* thread, const zx_sched_deadline_params_t& params) {
   cpu_mask_t cpus_to_reschedule_mask = 0;
-  Scheduler::ChangeDeadline(thread, params, &cpus_to_reschedule_mask);
+  ChangeDeadline(thread, params, &cpus_to_reschedule_mask);
 
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   if (cpus_to_reschedule_mask & current_cpu_mask) {
-    Scheduler::Reschedule();
+    Reschedule();
   }
   if (cpus_to_reschedule_mask & ~current_cpu_mask) {
     mp_reschedule(cpus_to_reschedule_mask, 0);
   }
 }
-
-void sched_preempt_timer_tick(zx_time_t now) { Scheduler::TimerTick(SchedTime{now}); }

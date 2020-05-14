@@ -12,7 +12,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/wait_queue_internal.h>
 #include <ktl/popcount.h>
 #include <ktl/type_traits.h>
@@ -342,7 +342,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     int old_queue_prio = bwq ? bwq->BlockedPriority() : -1;
     int new_queue_prio;
 
-    sched_inherit_priority(t, new_prio, &local_resched, accum_cpu_mask);
+    Scheduler::InheritPriority(t, new_prio, &local_resched, accum_cpu_mask);
 
     new_queue_prio = bwq ? bwq->BlockedPriority() : -1;
 
@@ -494,7 +494,7 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
     // All other choices involve waking up this thread, so go ahead and do that now.
     ++woken;
     DequeueThread(t, ZX_OK);
-    if (sched_unblock(t)) {
+    if (Scheduler::Unblock(t)) {
       do_resched = true;
     }
 
@@ -556,7 +556,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
     ZX_DEBUG_ASSERT((res == ZX_ERR_TIMED_OUT) || (res == ZX_ERR_INTERNAL_INTR_KILLED) ||
                     (res == ZX_ERR_INTERNAL_INTR_RETRY));
     if (AssignOwner(new_owner)) {
-      sched_reschedule();
+      Scheduler::Reschedule();
     }
 
     return res;

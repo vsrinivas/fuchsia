@@ -109,7 +109,7 @@ struct TimerQueue {
   //
   // Set/reset the current CPU's preemption timer.
   //
-  // When the preemption timer fires, sched_preempt_timer_tick is called.
+  // When the preemption timer fires, Scheduler::TimerTick is called.
   static void PreemptReset(zx_time_t deadline);
 
   //

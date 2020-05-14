@@ -13,7 +13,7 @@
 #include <trace.h>
 
 #include <kernel/owned_wait_queue.h>
-#include <kernel/sched.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 
@@ -317,9 +317,9 @@ int WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
 
     // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
     // cpu run queue was modified
-    bool local_resched = sched_unblock(t);
+    bool local_resched = Scheduler::Unblock(t);
     if (reschedule && local_resched) {
-      sched_reschedule();
+      Scheduler::Reschedule();
     }
 
     ret = 1;
@@ -427,9 +427,9 @@ int WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
 
   // wake up the new thread(s), putting it in a run queue on a cpu. reschedule if the local
   // cpu run queue was modified
-  bool local_resched = sched_unblock_list(&list);
+  bool local_resched = Scheduler::Unblock(&list);
   if (reschedule && local_resched) {
-    sched_reschedule();
+    Scheduler::Reschedule();
   }
 
   return ret;
@@ -497,8 +497,8 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   internal::wait_queue_dequeue_thread_internal(wq, t, wait_queue_error);
   internal::wait_queue_waiters_priority_changed(wq, old_wq_prio);
 
-  if (sched_unblock(t)) {
-    sched_reschedule();
+  if (Scheduler::Unblock(t)) {
+    Scheduler::Reschedule();
   }
 
   return ZX_OK;
