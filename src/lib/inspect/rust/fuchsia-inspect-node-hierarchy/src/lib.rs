@@ -12,6 +12,7 @@ use {
     regex::RegexSet,
     selectors,
     std::{
+        cmp::Ordering,
         collections::HashMap,
         convert::{TryFrom, TryInto},
         ops::{Add, AddAssign, MulAssign},
@@ -99,22 +100,23 @@ pub enum MissingValueReason {
     LinkNeverExpanded,
 }
 
+/// Compares the names of two properties or nodes. If both are unsigned integers, then it compares
+/// their numerical value.
+fn name_partial_cmp(a: &str, b: &str) -> Ordering {
+    match (a.parse::<u64>(), b.parse::<u64>()) {
+        (Ok(n), Ok(m)) => n.partial_cmp(&m).unwrap(),
+        _ => a.partial_cmp(b).unwrap(),
+    }
+}
+
 impl<Key> NodeHierarchy<Key>
 where
     Key: AsRef<str>,
 {
     /// Sorts the properties and children of the node hierarchy by name.
     pub fn sort(&mut self) {
-        if self.properties.iter().all(|p| p.name().parse::<u64>().is_ok()) {
-            self.properties.sort_by(|p1, p2| {
-                let p1_value = p1.name().parse::<u64>().unwrap();
-                let p2_value = p2.name().parse::<u64>().unwrap();
-                p1_value.partial_cmp(&p2_value).unwrap()
-            });
-        } else {
-            self.properties.sort_by(|p1, p2| p1.name().partial_cmp(p2.name()).unwrap());
-        }
-        self.children.sort_by(|c1, c2| c1.name.partial_cmp(&c2.name).unwrap());
+        self.properties.sort_by(|p1, p2| name_partial_cmp(p1.name(), p2.name()));
+        self.children.sort_by(|c1, c2| name_partial_cmp(&c1.name, &c2.name));
         for child in self.children.iter_mut() {
             child.sort();
         }
@@ -1237,5 +1239,47 @@ mod tests {
             });
             assert_eq!(property_entry_vec, expected_vector);
         }
+    }
+
+    #[test]
+    fn sort_numerical_value() {
+        let mut node_hierarchy = NodeHierarchy::new(
+            "root",
+            vec![
+                Property::Double("2".to_string(), 2.3),
+                Property::Int("0".to_string(), -4),
+                Property::Uint("10".to_string(), 3),
+                Property::String("1".to_string(), "test".to_string()),
+            ],
+            vec![
+                NodeHierarchy::new("123", vec![], vec![]),
+                NodeHierarchy::new("34", vec![], vec![]),
+                NodeHierarchy::new("4", vec![], vec![]),
+                NodeHierarchy::new("023", vec![], vec![]),
+                NodeHierarchy::new("12", vec![], vec![]),
+                NodeHierarchy::new("1", vec![], vec![]),
+            ],
+        );
+        node_hierarchy.sort();
+        assert_eq!(
+            node_hierarchy,
+            NodeHierarchy::new(
+                "root",
+                vec![
+                    Property::Int("0".to_string(), -4),
+                    Property::String("1".to_string(), "test".to_string()),
+                    Property::Double("2".to_string(), 2.3),
+                    Property::Uint("10".to_string(), 3),
+                ],
+                vec![
+                    NodeHierarchy::new("1", vec![], vec![]),
+                    NodeHierarchy::new("4", vec![], vec![]),
+                    NodeHierarchy::new("12", vec![], vec![]),
+                    NodeHierarchy::new("023", vec![], vec![]),
+                    NodeHierarchy::new("34", vec![], vec![]),
+                    NodeHierarchy::new("123", vec![], vec![]),
+                ]
+            )
+        );
     }
 }
