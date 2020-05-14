@@ -21,7 +21,6 @@ class AudioCoreHardwareTest : public TestFixture {
   static constexpr uint32_t kLimitConsecFramesZero = 5;
 
   static constexpr float kStreamGainDb = 0.0f;
-  static constexpr float kUsageVolume = fuchsia::media::audio::MAX_VOLUME;
   static constexpr float kUsageGainDb = 0.0f;
   static constexpr float kDeviceGainDb = 0.0f;
 
@@ -51,7 +50,7 @@ class AudioCoreHardwareTest : public TestFixture {
   void ConnectToAudioCore();
   void ConnectToAudioCapturer();
 
-  void ConnectToGainAndVolumeControls();
+  void ConnectToGainControl();
   void SetGainsToUnity();
 
   void GetDefaultCaptureFormat();
@@ -66,7 +65,6 @@ class AudioCoreHardwareTest : public TestFixture {
   fuchsia::media::AudioCorePtr audio_core_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
 
-  fuchsia::media::audio::VolumeControlPtr usage_volume_control_;
   fuchsia::media::audio::GainControlPtr stream_gain_control_;
 
   std::unordered_set<uint64_t> capture_device_tokens_;

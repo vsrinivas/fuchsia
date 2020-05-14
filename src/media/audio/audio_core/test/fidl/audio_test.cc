@@ -321,7 +321,7 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   // TearDown will validate that parent Audio survived after child unbound.
 }
 
-TEST_F(UsageVolumeControlTest, ConnectToUsageVolume) {
+TEST_F(UsageVolumeControlTest, ConnectToRenderUsageVolume) {
   fuchsia::media::AudioCorePtr audio_core;
   environment()->ConnectToService(audio_core.NewRequest());
   audio_core.set_error_handler(ErrorHandler());
@@ -354,6 +354,20 @@ TEST_F(UsageVolumeControlTest, ConnectToUsageVolume) {
   client1->SetMute(true);
   ExpectCallback();
   EXPECT_EQ(muted, true);
+}
+
+TEST_F(UsageVolumeControlTest, FailToConnectToCaptureUsageVolume) {
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+
+  std::optional<zx_status_t> client_error;
+  fuchsia::media::audio::VolumeControlPtr client;
+  client.set_error_handler([&client_error](zx_status_t status) { client_error = status; });
+
+  audio_core_->BindUsageVolumeControl(fidl::Clone(usage), client.NewRequest());
+  RunLoopUntil([&client_error] { return client_error != std::nullopt; });
+
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, *client_error);
 }
 
 //

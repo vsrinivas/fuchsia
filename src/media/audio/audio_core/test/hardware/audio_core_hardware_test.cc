@@ -16,7 +16,7 @@ void AudioCoreHardwareTest::SetUp() {
   ASSERT_TRUE(WaitForCaptureDevice());
   ConnectToAudioCapturer();
 
-  ConnectToGainAndVolumeControls();
+  ConnectToGainControl();
   SetGainsToUnity();
 
   GetDefaultCaptureFormat();
@@ -103,17 +103,8 @@ void AudioCoreHardwareTest::ConnectToAudioCapturer() {
   audio_capturer_->SetUsage(kUsage);
 }
 
-void AudioCoreHardwareTest::ConnectToGainAndVolumeControls() {
+void AudioCoreHardwareTest::ConnectToGainControl() {
   ASSERT_TRUE(audio_capturer_.is_bound());
-
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(kUsage);
-  audio_core_->BindUsageVolumeControl(std::move(usage), usage_volume_control_.NewRequest());
-
-  usage_volume_control_.set_error_handler(ErrorHandler([](zx_status_t status) {
-    FAIL() << "Client connection to (capture usage) fuchsia.media.audio.VolumeControl: "
-           << zx_status_get_string(status) << " (" << status << ")";
-  }));
 
   audio_capturer_->BindGainControl(stream_gain_control_.NewRequest());
 
@@ -124,15 +115,12 @@ void AudioCoreHardwareTest::ConnectToGainAndVolumeControls() {
 }
 
 // Set gain for this capturer gain control, capture usage and all capture devices.
-// Also set volume on this capture usage
 void AudioCoreHardwareTest::SetGainsToUnity() {
   ASSERT_TRUE(stream_gain_control_.is_bound());
-  ASSERT_TRUE(usage_volume_control_.is_bound());
   ASSERT_TRUE(audio_device_enumerator_.is_bound());
   ASSERT_FALSE(capture_device_tokens_.empty());
 
   stream_gain_control_->SetGain(kStreamGainDb);
-  usage_volume_control_->SetVolume(kUsageVolume);
   audio_core_->SetCaptureUsageGain(kUsage, kUsageGainDb);
 
   for (auto token_id : capture_device_tokens_) {

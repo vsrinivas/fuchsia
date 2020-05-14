@@ -103,7 +103,11 @@ void AudioCoreImpl::BindUsageVolumeControl(
     fuchsia::media::Usage usage,
     fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> volume_control) {
   TRACE_DURATION("audio", "AudioCoreImpl::BindUsageVolumeControl");
-  context_.volume_manager().BindUsageVolumeClient(std::move(usage), std::move(volume_control));
+  if (usage.is_render_usage()) {
+    context_.volume_manager().BindUsageVolumeClient(std::move(usage), std::move(volume_control));
+  } else {
+    volume_control.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 }
 
 void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
