@@ -80,6 +80,10 @@ const char* ClientSettings::Breakpoint::kStopMode_All = "all";
 const char* ClientSettings::Breakpoint::kHitCount = "hit-count";
 const char* ClientSettings::Breakpoint::kHitCountDescription =
     R"(  Number of times the breakpoint gets triggered.)";
+const char* ClientSettings::Breakpoint::kHitMult = "hit-mult";
+const char* ClientSettings::Breakpoint::kHitMultDescription =
+    R"(  The breakpoint will only stop the execution when the hit-count is a multiple
+  of the hit-mult)";
 
 namespace {
 
@@ -106,6 +110,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
        ClientSettings::Breakpoint::kStopMode_Process, ClientSettings::Breakpoint::kStopMode_All});
   schema->AddInt(ClientSettings::Breakpoint::kHitCount,
                  ClientSettings::Breakpoint::kHitCountDescription);
+  schema->AddInt(ClientSettings::Breakpoint::kHitMult,
+                 ClientSettings::Breakpoint::kHitMultDescription, 1);
   return schema;
 }
 
@@ -131,6 +137,8 @@ SettingValue Breakpoint::Settings::GetStorageValue(const std::string& key) const
     return SettingValue(static_cast<int>(settings.byte_size));
   } else if (key == ClientSettings::Breakpoint::kHitCount) {
     return SettingValue(static_cast<int>(bp_->GetStats().hit_count));
+  } else if (key == ClientSettings::Breakpoint::kHitMult) {
+    return SettingValue(settings.hit_mult);
   }
   FX_NOTREACHED();
   return SettingValue();
@@ -166,6 +174,12 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
       return err;
 
     settings.byte_size = value.get_int();
+  } else if (key == ClientSettings::Breakpoint::kHitMult) {
+    int hit_mult = value.get_int();
+    if (hit_mult <= 0)
+      return Err("hit-mult must be positive.");
+
+    settings.hit_mult = hit_mult;
   } else {
     return Err(fxl::StringPrintf("Setting \"%s\" is currently not supported.", key.c_str()));
   }

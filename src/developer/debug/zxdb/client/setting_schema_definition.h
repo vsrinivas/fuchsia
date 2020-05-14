@@ -100,6 +100,8 @@ struct ClientSettings {
 
     static const char* kHitCount;
     static const char* kHitCountDescription;
+    static const char* kHitMult;
+    static const char* kHitMultDescription;
   };
 
   struct Filter {

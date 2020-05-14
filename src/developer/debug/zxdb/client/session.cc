@@ -49,6 +49,37 @@ namespace {
 // buffer size if the stream is corrupt.
 constexpr uint32_t kMaxMessageSize = 16777216;
 
+// Remove conditional breakpoints from stop_info; return whether we'll need to skip this stop_info
+// and continue execution, which happens when the exception is a breakpoint one and all breakpoints
+// in it are conditional.
+bool FilterConditionalBreakpoints(StopInfo* info) {
+  bool skip = false;
+
+  if (info->exception_type == debug_ipc::ExceptionType::kHardware ||
+      info->exception_type == debug_ipc::ExceptionType::kWatchpoint ||
+      info->exception_type == debug_ipc::ExceptionType::kSoftware) {
+    // It's possible that hit_breakpoints is empty even when exception_type is kSoftware,
+    // e.g. the process explicitly called "int 3" on x64. In this case, we should still pause.
+    if (!info->hit_breakpoints.empty()) {
+      skip = true;
+    }
+  }
+
+  auto breakpoint_iter = info->hit_breakpoints.begin();
+  while (breakpoint_iter != info->hit_breakpoints.end()) {
+    Breakpoint* breakpoint = breakpoint_iter->get();
+    // TODO(dangyi): Consider whether to move the condition to Breakpoint class.
+    if (breakpoint->GetStats().hit_count % breakpoint->GetSettings().hit_mult == 0) {
+      skip = false;
+      breakpoint_iter++;
+    } else {
+      info->hit_breakpoints.erase(breakpoint_iter);
+    }
+  }
+
+  return skip;
+}
+
 }  // namespace
 
 // PendingConnection -----------------------------------------------------------
@@ -554,8 +585,15 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
     }
   }
 
-  // This is the main notification of an exception.
-  thread->OnException(info);
+  // Continue if it's a conditional breakpoint.
+  if (FilterConditionalBreakpoints(&info)) {
+    // For simplicity, we're resuming all threads right now.
+    // TODO(dangyi): It's better to continue only the affected threads.
+    system_.Continue();
+  } else {
+    // This is the main notification of an exception.
+    thread->OnException(info);
+  }
 
   // Delete all one-shot breakpoints the backend deleted. This happens after the thread
   // notifications so observers can tell why the thread stopped.

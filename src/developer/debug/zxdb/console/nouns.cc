@@ -583,10 +583,14 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
   // The size is normally not applicable since most breakpoints are software. Hide the size for
   // clarity unless there is a hardware breakpoint.
   bool include_size = false;
+  // The hit_mult is normally 1. Hide it unless there's a breakpoint with a different value.
+  bool include_hit_mult = false;
   for (const auto& bp : breakpoints) {
     if (BreakpointSettings::TypeHasSize(bp->GetSettings().type)) {
       include_size = true;
-      break;
+    }
+    if (bp->GetSettings().hit_mult != 1) {
+      include_hit_mult = true;
     }
   }
 
@@ -621,6 +625,10 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
         row.emplace_back(std::to_string(settings.byte_size));
       else
         row.emplace_back(Syntax::kComment, "n/a");
+    }
+
+    if (include_hit_mult) {
+      row.emplace_back(std::to_string(settings.hit_mult));
     }
 
     if (matched_locs.empty()) {
@@ -661,6 +669,8 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
                                  ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kType)};
   if (include_size)
     col_specs.emplace_back(Align::kRight, 0, ClientSettings::Breakpoint::kSize);
+  if (include_hit_mult)
+    col_specs.emplace_back(Align::kRight, 0, ClientSettings::Breakpoint::kHitMult);
   col_specs.emplace_back(Align::kRight, 0, "#addrs");
   col_specs.emplace_back(Align::kRight, 0, "hit-count");
   col_specs.emplace_back(Align::kLeft, 0, ClientSettings::Breakpoint::kLocation);

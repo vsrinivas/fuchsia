@@ -27,6 +27,7 @@ constexpr int kStopSwitch = 2;
 constexpr int kDisabledSwitch = 3;
 constexpr int kTypeSwitch = 4;
 constexpr int kOneShotSwitch = 5;
+constexpr int kMultSwitch = 6;
 
 const char kBreakShortHelp[] = "break / b: Create a breakpoint.";
 const char kBreakHelp[] =
@@ -57,6 +58,10 @@ Options
   -d
       Creates the breakpoint as initially disabled. Otherwise, it will be
       enabled.
+
+  --hit-mult=<count>
+  -m <count>
+      Only breaks the execution every <count> times the breakpoint is hit.
 
   --one-shot
   -o
@@ -245,6 +250,7 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
 
     if (!BreakpointSettings::TypeHasSize(settings.type))
       return Err("Breakpoint size is only supported for write and read-write breakpoints.");
+    // TODO(dangyi): settings.byte_size should be validated by BreakpointSettings::ValidateSize.
     if (Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), &settings.byte_size);
         err.has_error())
       return err;
@@ -254,6 +260,19 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
 
   // Scope.
   settings.scope = ExecutionScopeForCommand(cmd);
+
+  // Hit mult.
+  if (cmd.HasSwitch(kMultSwitch)) {
+    int hit_mult;
+    if (Err err = StringToInt(cmd.GetSwitchValue(kMultSwitch), &hit_mult);
+        err.has_error())
+      return err;
+    // TODO(dangyi): Unify validation logics with settings.
+    if (hit_mult <= 0)
+      return Err("hit-mult must be positive.");
+
+    settings.hit_mult = hit_mult;
+  }
 
   if (cmd.args().empty()) {
     // Creating a breakpoint with no location implicitly uses the current frame's current
@@ -323,7 +342,8 @@ VerbRecord GetBreakVerbRecord() {
   SwitchRecord one_shot_switch(kOneShotSwitch, false, ClientSettings::Breakpoint::kOneShot, 'o');
   SwitchRecord size_switch(kSizeSwitch, true, ClientSettings::Breakpoint::kSize, 's');
   SwitchRecord stop_switch(kStopSwitch, true, ClientSettings::Breakpoint::kStopMode, 'p');
-  SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
+  SwitchRecord type_switch(kTypeSwitch, true, ClientSettings::Breakpoint::kType, 't');
+  SwitchRecord mult_switch(kMultSwitch, true, ClientSettings::Breakpoint::kHitMult, 'm');
 
   VerbRecord break_record(&RunVerbBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
                           kBreakHelp, CommandGroup::kBreakpoint);
@@ -334,6 +354,7 @@ VerbRecord GetBreakVerbRecord() {
   break_record.switches.push_back(size_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
+  break_record.switches.push_back(mult_switch);
   return break_record;
 }
 

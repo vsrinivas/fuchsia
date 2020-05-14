@@ -35,7 +35,7 @@ class SessionSink : public RemoteAPI {
 
   // Returns the last received resume request sent by the client.
   const debug_ipc::ResumeRequest& resume_request() const { return resume_request_; }
-  int resume_count() const { return resume_count_; }
+  uint32_t resume_count() const { return resume_count_; }
 
   // Clears the last resume request and count.
   void ResetResumeState() {
@@ -94,7 +94,7 @@ class SessionSink : public RemoteAPI {
  private:
   SessionTest* session_test_;
   debug_ipc::ResumeRequest resume_request_;
-  int resume_count_ = 0;
+  uint32_t resume_count_ = 0;
   std::set<uint32_t> set_breakpoint_ids_;
 
   std::vector<debug_ipc::ProcessRecord> records_;
@@ -107,7 +107,7 @@ class SessionThreadObserver : public ThreadObserver {
     breakpoints_.clear();
   }
 
-  int stop_count() const { return stop_count_; }
+  uint32_t stop_count() const { return stop_count_; }
 
   // The breakpoints that triggered from the last stop notification.
   const std::vector<Breakpoint*> breakpoints() const { return breakpoints_; }
@@ -122,7 +122,7 @@ class SessionThreadObserver : public ThreadObserver {
   }
 
  private:
-  int stop_count_ = 0;
+  uint32_t stop_count_ = 0;
   std::vector<Breakpoint*> breakpoints_;
 };
 
@@ -276,6 +276,52 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   EXPECT_TRUE(weak_bp);
   InjectException(notify);
   EXPECT_FALSE(weak_bp);
+}
+
+// Tests a breakpoint with a hit_mult other than 1
+TEST_F(SessionTest, HitMultBreakpoint) {
+  // Make a process and thread for notifying about.
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  InjectThread(kProcessKoid, kThreadKoid);
+  SessionThreadObserver thread_observer;
+  session().thread_observers().AddObserver(&thread_observer);
+
+  // Create a breakpoint.
+  Breakpoint* bp = session().system().CreateNewBreakpoint();
+  constexpr uint64_t kAddress = 0x12345678;
+  BreakpointSettings settings;
+  settings.enabled = true;
+  settings.hit_mult = 2;
+  settings.locations.emplace_back(kAddress);
+  bp->SetSettings(settings);
+
+  debug_ipc::NotifyException notify;
+  notify.type = debug_ipc::ExceptionType::kSoftware;
+  notify.thread.process_koid = kProcessKoid;
+  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  // Don't need stack pointers for this test.
+  notify.thread.frames.emplace_back(kAddress, 0);
+  sink()->PopulateNotificationWithBreakpoints(&notify);
+
+  // Notify of the breakpoint hit, it should continue the execution without notifying the thread.
+  notify.hit_breakpoints[0].hit_count = 1;
+  InjectException(notify);
+  EXPECT_EQ(1u, bp->GetStats().hit_count);
+  EXPECT_EQ(1u, sink()->resume_count());
+  EXPECT_EQ(0u, thread_observer.stop_count());
+
+  // Notifying again should stop the thread.
+  notify.hit_breakpoints[0].hit_count = 2;
+  InjectException(notify);
+  EXPECT_EQ(2u, bp->GetStats().hit_count);
+  EXPECT_EQ(1u, sink()->resume_count());
+  EXPECT_EQ(1u, thread_observer.stop_count());
+
+  // Cleanup.
+  session().thread_observers().RemoveObserver(&thread_observer);
 }
 
 TEST_F(SessionTest, FilterExistingProcesses) {

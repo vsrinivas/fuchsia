@@ -26,6 +26,7 @@ class Thread;
 // setting is not specified.
 struct BreakpointSettings {
   // What to stop when this breakpoint is hit.
+  // TODO(dangyi): Merge this with debug_ipc::Stop.
   enum class StopMode {
     kNone,     // Don't stop anything. Hit counts will still accumulate.
     kThread,   // Stop only the thread that hit the breakpoint.
@@ -76,6 +77,10 @@ struct BreakpointSettings {
 
   // When set, this breakpoint will be automatically deleted when it's hit.
   bool one_shot = false;
+
+  // Break every hit_mult times the breakpoint gets hit. Must be positive.
+  // The breakpoint will become conditional if hit_mult is greater than 1.
+  int hit_mult = 1;
 };
 
 }  // namespace zxdb
