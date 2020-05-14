@@ -450,8 +450,8 @@ void Session::EventAndErrorReporter::ReportError(syslog::LogSeverity severity,
       FX_LOGS(WARNING) << error_string;
       return;
     case syslog::LOG_ERROR:
-      FX_LOGS(ERROR) << "Scenic session error (session_id: " << session_->id()
-                     << "): " << error_string;
+      FX_LOGS(WARNING) << "Scenic session error (session_id: " << session_->id()
+                       << "): " << error_string;
 
       if (error_callback_) {
         error_callback_(error_string);
