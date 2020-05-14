@@ -77,6 +77,17 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let response = wlan_svc.query_phy(&mut req).await.context("error querying phy")?;
             println!("response: {:?}", response);
         }
+        opts::PhyCmd::GetCountry { phy_id } => {
+            let result = wlan_svc.get_country(phy_id).await.context("error getting country")?;
+            match result {
+                Ok(country) => {
+                    println!("response: \"{}\"", std::str::from_utf8(&country.alpha2[..])?);
+                }
+                Err(status) => {
+                    println!("response: Failed with status {:?}", zx::Status::from_raw(status));
+                }
+            }
+        }
         opts::PhyCmd::SetCountry { phy_id, country } => {
             if !is_valid_country_str(&country) {
                 return Err(format_err!(
@@ -852,6 +863,32 @@ mod tests {
         assert!(!is_valid_country_str(&"ABC".to_string()));
         assert!(!is_valid_country_str(&"X".to_string()));
         assert!(!is_valid_country_str(&"❤".to_string()));
+    }
+
+    #[test]
+    fn test_get_country() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlansvc_local, wlansvc_remote) =
+            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
+        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let fut = do_phy(PhyCmd::GetCountry { phy_id: 45 }, wlansvc_local);
+        pin_mut!(fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut wlansvc_stream.next()),
+            Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::GetCountry {
+                phy_id, responder,
+            }))) => {
+                assert_eq!(phy_id, 45);
+                responder.send(
+                    &mut Ok(fidl_fuchsia_wlan_device_service::GetCountryResponse {
+                        alpha2: [40u8, 40u8],
+                    })).expect("failed to send response");
+            }
+        );
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
     }
 
     #[test]

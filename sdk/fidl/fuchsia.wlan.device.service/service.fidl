@@ -61,6 +61,10 @@ struct DestroyIfaceRequest {
     uint16 iface_id;
 };
 
+struct GetCountryResponse {
+    array<byte>:2 alpha2;
+};
+
 struct SetCountryRequest {
     uint16 phy_id;
     array<byte>:2 alpha2;
@@ -100,6 +104,7 @@ protocol DeviceService {
         -> (int32 status, fuchsia.wlan.minstrel.Peer? peer);
 
     WatchDevices(request<DeviceWatcher> watcher);
+    GetCountry(uint16 phy_id) -> (GetCountryResponse resp) error int32;
     SetCountry(SetCountryRequest req) -> (int32 status);
     ClearCountry(ClearCountryRequest req) -> (int32 status);
 };

@@ -148,6 +148,8 @@ pub async fn serve_device_requests(
                     .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
                 Ok(())
             }
+            DeviceServiceRequest::GetCountry { phy_id, responder } => responder
+                .send(&mut get_country(&phys, phy_id).await.map_err(|status| status.into_raw())),
             DeviceServiceRequest::SetCountry { req, responder } => {
                 let status = set_country(&phys, req).await;
                 responder.send(status.into_raw())
@@ -239,6 +241,23 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
     let phy_assigned_id = iface.phy_ownership.phy_assigned_id;
     let mac_addr = iface.device_info.mac_addr;
     Ok(fidl_svc::QueryIfaceResponse { role, id, mac_addr, phy_id, phy_assigned_id })
+}
+
+async fn get_country(
+    phys: &PhyMap,
+    phy_id: u16,
+) -> Result<fidl_svc::GetCountryResponse, zx::Status> {
+    let phy = phys.get(&phy_id).ok_or(Err(zx::Status::NOT_FOUND))?;
+    match phy.proxy.get_country().await {
+        Ok(result) => match result {
+            Ok(country_code) => Ok(fidl_svc::GetCountryResponse { alpha2: country_code.alpha2 }),
+            Err(status) => Err(zx::Status::from_raw(status)),
+        },
+        Err(e) => {
+            error!("Error sending 'GetCountry' request to phy #{}: {}", phy_id, e);
+            Err(zx::Status::INTERNAL)
+        }
+    }
 }
 
 async fn set_country(phys: &PhyMap, req: fidl_svc::SetCountryRequest) -> zx::Status {
@@ -919,7 +938,7 @@ mod tests {
         let (phy, mut phy_stream) = fake_phy("/dev/null");
         let phy_id = 10u16;
         phy_map.insert(phy_id, phy);
-        let alpha2 = fake_alpah2();
+        let alpha2 = fake_alpha2();
 
         // Initiate a QueryPhy request. The returned future should not be able
         // to produce a result immediately
@@ -951,7 +970,7 @@ mod tests {
         let (phy, mut phy_stream) = fake_phy("/dev/null");
         let phy_id = 10u16;
         phy_map.insert(phy_id, phy);
-        let alpha2 = fake_alpah2();
+        let alpha2 = fake_alpha2();
 
         // Initiate a QueryPhy request. The returned future should not be able
         // to produce a result immediately
@@ -974,6 +993,68 @@ mod tests {
         let resp = zx::Status::NOT_SUPPORTED.into_raw();
         responder.send(resp).expect("failed to send the response to SetCountry");
         assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
+    }
+
+    #[test]
+    fn test_get_country() {
+        // Setup environment
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let phy_id = 10u16;
+        phy_map.insert(phy_id, phy);
+        let alpha2 = fake_alpha2();
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::SetCountryRequest()
+        let req_fut = super::get_country(&phy_map, phy_id);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::GetCountry { responder }))) => {
+                // Pretend to be a WLAN PHY to return the result.
+                responder.send(
+                    &mut Ok(fidl_wlan_dev::CountryCode { alpha2 })
+                ).expect("failed to send the response to SetCountry");
+            }
+        );
+
+        assert_eq!(
+            exec.run_until_stalled(&mut req_fut),
+            Poll::Ready(Ok(fidl_svc::GetCountryResponse { alpha2 }))
+        );
+    }
+
+    #[test]
+    fn test_get_country_failure() {
+        // Setup environment
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let phy_id = 10u16;
+        phy_map.insert(phy_id, phy);
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::GetCountryRequest()
+        let req_fut = super::get_country(&phy_map, phy_id);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::GetCountry { responder }))) => {
+                // Pretend to be a WLAN PHY to return the result.
+                // Right now the returned country code is not optional, so we just return garbage.
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))
+                    .expect("failed to send the response to SetCountry");
+            }
+        );
+
+        assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Err(_)));
     }
 
     #[test]
@@ -1147,7 +1228,7 @@ mod tests {
         }
     }
 
-    fn fake_alpah2() -> [u8; 2] {
+    fn fake_alpha2() -> [u8; 2] {
         let mut alpha2: [u8; 2] = [0, 0];
         alpha2.copy_from_slice("MX".as_bytes());
         alpha2

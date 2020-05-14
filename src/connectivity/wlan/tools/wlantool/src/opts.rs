@@ -128,6 +128,13 @@ pub enum PhyCmd {
         /// id of the phy to query
         phy_id: u16,
     },
+    #[structopt(name = "get-country")]
+    /// gets the phy's country used for WLAN regulatory purposes
+    GetCountry {
+        #[structopt(raw(required = "true"))]
+        /// id of the phy to query
+        phy_id: u16,
+    },
     #[structopt(name = "set-country")]
     /// sets the phy's country for WLAN regulatory purpose
     SetCountry {
