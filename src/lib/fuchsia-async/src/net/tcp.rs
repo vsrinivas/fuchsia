@@ -136,23 +136,12 @@ impl Stream for AcceptStream {
     }
 }
 
-enum ConnectState {
-    // The stream has not yet connected to an address.
-    New,
-    // `connect` has been called on the stream but it has not yet completed.
-    Connecting,
-    // `connect` has succeeded. Subsequent attempts to connect will fail.
-    // state.
-    Connected,
-}
-
 /// A single TCP connection.
 ///
 /// This type and references to it implement the `AsyncRead` and `AsyncWrite`
 /// traits. For more on using this type, see the `AsyncReadExt` and `AsyncWriteExt`
 /// traits.
 pub struct TcpStream {
-    state: ConnectState,
     stream: EventedFd<net::TcpStream>,
 }
 
@@ -175,51 +164,15 @@ impl TcpStream {
 
         let stream = sock.to_tcp_stream()?;
         set_nonblock(stream.as_raw_fd())?;
+        let () = match stream.connect(&addr) {
+            Err(e) if e.raw_os_error() == Some(libc::EINPROGRESS) => Ok(()),
+            res => res,
+        }?;
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
         let stream = unsafe { EventedFd::new(stream)? };
-        let stream = TcpStream { state: ConnectState::New, stream };
+        let stream = Some(TcpStream { stream });
 
-        Ok(TcpConnector { addr, stream: Some(stream) })
-    }
-
-    /// Poll on successful connection of this `TcpStream`.
-    /// This function is mainly intended for usage in manual `Future` or `Stream`
-    /// implementations.
-    pub fn async_connect(
-        &mut self,
-        addr: &SocketAddr,
-        cx: &mut Context<'_>,
-    ) -> Poll<io::Result<()>> {
-        match self.state {
-            ConnectState::New => match self.stream.as_ref().connect(addr) {
-                Err(e) => {
-                    if e.raw_os_error() == Some(libc::EINPROGRESS) {
-                        self.state = ConnectState::Connecting;
-                        self.stream.need_write(cx);
-                        Poll::Pending
-                    } else {
-                        Poll::Ready(Err(e))
-                    }
-                }
-                Ok(()) => {
-                    self.state = ConnectState::Connected;
-                    Poll::Ready(Ok(()))
-                }
-            },
-            ConnectState::Connecting => self.stream.poll_writable(cx).map(|res| match res {
-                Err(e) => Err(e.into()),
-                Ok(()) => match self.stream.as_ref().take_error() {
-                    Err(err) | Ok(Some(err)) => Err(err),
-                    Ok(None) => {
-                        self.state = ConnectState::Connected;
-                        Ok(())
-                    }
-                },
-            }),
-            ConnectState::Connected => {
-                Poll::Ready(Err(io::Error::from_raw_os_error(libc::EISCONN)))
-            }
-        }
+        Ok(TcpConnector { need_write: true, stream })
     }
 
     /// Creates a new `fuchsia_async::net::TcpStream` from a `std::net::TcpStream`.
@@ -228,8 +181,7 @@ impl TcpStream {
 
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
         let stream = unsafe { EventedFd::new(stream)? };
-
-        Ok(TcpStream { state: ConnectState::Connected, stream })
+        Ok(TcpStream { stream })
     }
 
     /// Returns a reference to the underlying `std::net::TcpStream`
@@ -272,7 +224,9 @@ impl AsyncWrite for TcpStream {
 
 /// A future which resolves to a connected `TcpStream`.
 pub struct TcpConnector {
-    addr: SocketAddr,
+    // The stream needs to have `need_write` called on it to defeat the optimization in
+    // EventedFd::new which assumes that the operand is immediately readable and writable.
+    need_write: bool,
     stream: Option<TcpStream>,
 }
 
@@ -283,7 +237,16 @@ impl Future for TcpConnector {
         let this = &mut *self;
         {
             let stream = this.stream.as_mut().expect("polled a TcpConnector after completion");
-            ready!(stream.async_connect(&this.addr, cx))?;
+            if this.need_write {
+                this.need_write = false;
+                stream.need_write(cx);
+                return Poll::Pending;
+            }
+            let () = ready!(stream.poll_writable(cx)?);
+            let () = match stream.as_ref().take_error() {
+                Ok(None) => Ok(()),
+                Ok(Some(err)) | Err(err) => Err(err),
+            }?;
         }
         let stream = this.stream.take().unwrap();
         Poll::Ready(Ok(stream))
