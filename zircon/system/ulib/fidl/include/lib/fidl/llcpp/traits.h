@@ -86,11 +86,99 @@ class StringView;
 template <>
 struct IsFidlType<StringView> : public std::true_type {};
 
+template <typename T, typename Enable = void>
+struct IsStringView : std::false_type {};
+template <>
+struct IsStringView<fidl::StringView, void> : std::true_type {};
+template <typename T>
+struct IsStringView<
+    T, typename std::enable_if<IsStringView<typename std::remove_const<T>::type>::value>::type>
+    : std::true_type {};
+
 // Vector (conditional on element)
 template <typename E>
 class VectorView;
 template <typename E>
 struct IsFidlType<VectorView<E>> : public IsFidlType<E> {};
+
+template <typename T, typename Eanble = void>
+struct IsVectorView : std::false_type {};
+template <typename T>
+struct IsVectorView<VectorView<T>, void> : std::true_type {};
+template <typename T>
+struct IsVectorView<
+    T, typename std::enable_if<IsVectorView<typename std::remove_const<T>::type>::value>::type>
+    : std::true_type {};
+
+template <typename T, typename Enable = void>
+struct IsStructOrTable : std::false_type {};
+template <typename MaybeStruct>
+struct IsStructOrTable<
+    MaybeStruct, typename std::enable_if<
+                     !std::is_const<MaybeStruct>::value && fidl::IsFidlType<MaybeStruct>::value &&
+                     std::is_class<MaybeStruct>::value &&
+                     std::is_same<decltype(MaybeStruct::Type), const fidl_type_t *const>::value &&
+                     std::is_same<decltype(MaybeStruct::MaxNumHandles), const uint32_t>::value &&
+                     std::is_same<decltype(MaybeStruct::PrimarySize), const uint32_t>::value &&
+                     std::is_same<decltype(MaybeStruct::MaxOutOfLine), const uint32_t>::value &&
+                     std::is_same<decltype(MaybeStruct::HasPointer), const bool>::value>::type>
+    : std::true_type {};
+template <typename MaybeConstStruct>
+struct IsStructOrTable<
+    MaybeConstStruct,
+    typename std::enable_if<
+        std::is_const<MaybeConstStruct>::value &&
+        IsStructOrTable<typename std::remove_const<MaybeConstStruct>::type>::value>::type>
+    : std::true_type {};
+
+template <typename T, typename Enable = void>
+struct IsTable : std::false_type {};
+template <typename MaybeTable>
+struct IsTable<
+    MaybeTable,
+    typename std::enable_if<
+        !std::is_const<MaybeTable>::value && IsStructOrTable<MaybeTable>::value &&
+        std::is_class<typename MaybeTable::Builder>::value &&
+        std::is_same<decltype(std::declval<typename MaybeTable::Builder>().build()),
+                     MaybeTable>::value &&
+        std::is_class<typename MaybeTable::UnownedBuilder>::value &&
+        std::is_same<decltype(std::declval<typename MaybeTable::UnownedBuilder>().build()),
+                     MaybeTable>::value &&
+        std::is_class<typename MaybeTable::Frame>::value &&
+        // for now they're final, so require final
+        std::is_final<MaybeTable>::value && std::is_final<typename MaybeTable::Frame>::value &&
+        std::is_final<typename MaybeTable::Builder>::value &&
+        std::is_final<typename MaybeTable::UnownedBuilder>::value && true>::type> : std::true_type {
+};
+template <typename MaybeConstTable>
+struct IsTable<MaybeConstTable,
+               typename std::enable_if<
+                   std::is_const<MaybeConstTable>::value &&
+                   IsTable<typename std::remove_const<MaybeConstTable>::type>::value>::type>
+    : std::true_type {};
+
+template <typename T, typename Enable = void>
+struct IsStruct : std::false_type {};
+template <typename MaybeStruct>
+struct IsStruct<MaybeStruct, typename std::enable_if<IsStructOrTable<MaybeStruct>::value &&
+                                                     !IsTable<MaybeStruct>::value>::type>
+    : std::true_type {};
+
+template <typename T, typename Enable = void>
+struct IsTableBuilder : std::false_type {};
+template <typename MaybeTableBuilder>
+struct IsTableBuilder<MaybeTableBuilder,
+                      typename std::enable_if<!std::is_const<MaybeTableBuilder>::value &&
+                                              IsTable<decltype(std::declval<MaybeTableBuilder>()
+                                                                   .build())>::value>::type>
+    : std::true_type {};
+template <typename MaybeConstTableBuilder>
+struct IsTableBuilder<
+    MaybeConstTableBuilder,
+    typename std::enable_if<
+        std::is_const<MaybeConstTableBuilder>::value &&
+        IsTableBuilder<typename std::remove_const<MaybeConstTableBuilder>::type>::value>::type>
+    : std::true_type {};
 
 // Code-gen will explicitly conform the generated FIDL structures to IsFidlType.
 
