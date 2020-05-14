@@ -3,10 +3,10 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t test_name_MyStrictEnumTable;
+extern const struct FidlCodedEnum test_name_MyStrictEnumTable;
 
 
 
 static bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_MyStrictEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"}}};
+const struct FidlCodedEnum test_name_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"};
 

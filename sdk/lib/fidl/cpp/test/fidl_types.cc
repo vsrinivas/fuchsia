@@ -17,9 +17,11 @@ constexpr uint32_t ArrayCount(T const (&array)[N]) {
   return static_cast<uint32_t>(N);
 }
 
-static const fidl_type_t unbounded_nonnullable_string = {
-    .type_tag = kFidlTypeString,
-    {.coded_string = {.max_size = FIDL_MAX_SIZE, .nullable = kFidlNullability_Nonnullable}}};
+static const FidlCodedString unbounded_nonnullable_string = {
+    .tag = kFidlTypeString,
+    .nullable = kFidlNullability_Nonnullable,
+    .max_size = FIDL_MAX_SIZE,
+};
 
 struct unbounded_nonnullable_string_inline_data {
   fidl_message_header_t header;
@@ -36,9 +38,10 @@ static const FidlStructField unbounded_nonnullable_string_fields[] = {
                     offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string), 0),
 };
 
-const fidl_type_t unbounded_nonnullable_string_message_type = {
-    .type_tag = kFidlTypeStruct,
-    {.coded_struct = {.fields = unbounded_nonnullable_string_fields,
-                      .field_count = ArrayCount(unbounded_nonnullable_string_fields),
-                      .size = sizeof(unbounded_nonnullable_string_inline_data),
-                      .name = "unbounded_nonnullable_string_message"}}};
+const FidlCodedStruct unbounded_nonnullable_string_message_type = {
+    .tag = kFidlTypeStruct,
+    .field_count = ArrayCount(unbounded_nonnullable_string_fields),
+    .size = sizeof(unbounded_nonnullable_string_inline_data),
+    .fields = unbounded_nonnullable_string_fields,
+    .name = "unbounded_nonnullable_string_message",
+};

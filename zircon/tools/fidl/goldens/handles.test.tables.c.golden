@@ -3,102 +3,102 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t fidl_test_handles_HandlesTable;
+extern const struct FidlCodedStruct fidl_test_handles_HandlesTable;
 
 
-static const fidl_type_t HandlehandlenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlehandlenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlebtinonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_BTI, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlebtinonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_BTI, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlechannelnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlechannelnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleclocknonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CLOCK, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleclocknonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CLOCK, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandledebuglognonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_LOG, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandledebuglognonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_LOG, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleeventnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_EVENT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleeventnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_EVENT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleeventpairnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_EVENTPAIR, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleeventpairnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_EVENTPAIR, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleexceptionnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_EXCEPTION, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleexceptionnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_EXCEPTION, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlefifononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_FIFO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlefifononnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_FIFO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleguestnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_GUEST, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleguestnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_GUEST, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleinterruptnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_INTERRUPT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleinterruptnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_INTERRUPT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleiommunonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_IOMMU, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleiommunonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_IOMMU, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlejobnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_JOB, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlejobnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_JOB, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlepagernonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_PAGER, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlepagernonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_PAGER, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlepcidevicenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_PCI_DEVICE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlepcidevicenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_PCI_DEVICE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlepmtnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_PMT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlepmtnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_PMT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleportnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_PORT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleportnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_PORT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleprocessnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_PROCESS, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleprocessnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_PROCESS, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleprofilenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_PROFILE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleprofilenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_PROFILE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandleresourcenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_RESOURCE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandleresourcenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_RESOURCE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlesocketnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlesocketnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlesuspendtokennonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_SUSPEND_TOKEN, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlesuspendtokennonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SUSPEND_TOKEN, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlethreadnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_THREAD, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlethreadnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_THREAD, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandletimernonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_TIMER, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandletimernonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_TIMER, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlevcpunonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VCPU, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlevcpunonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VCPU, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlevmarnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMAR, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlevmarnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMAR, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlevmononnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Protocol30fidl_test_handles_SomeProtocolnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle Protocol30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Request30fidl_test_handles_SomeProtocolnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle Request30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
 
 static const struct FidlStructField Fields25fidl_test_handles_Handles[] = {
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=0u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlebtinonnullableTable, .offset=4u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlechannelnonnullableTable, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleclocknonnullableTable, .offset=12u, .padding=0u},
-    /*FidlStructField*/{.type=&HandledebuglognonnullableTable, .offset=16u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleeventnonnullableTable, .offset=20u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleeventpairnonnullableTable, .offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleexceptionnonnullableTable, .offset=28u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlefifononnullableTable, .offset=32u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleguestnonnullableTable, .offset=36u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleinterruptnonnullableTable, .offset=40u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleiommunonnullableTable, .offset=44u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlejobnonnullableTable, .offset=48u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlepagernonnullableTable, .offset=52u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlepcidevicenonnullableTable, .offset=56u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlepmtnonnullableTable, .offset=60u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleportnonnullableTable, .offset=64u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleprocessnonnullableTable, .offset=68u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleprofilenonnullableTable, .offset=72u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleresourcenonnullableTable, .offset=76u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlesocketnonnullableTable, .offset=80u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlesuspendtokennonnullableTable, .offset=84u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlethreadnonnullableTable, .offset=88u, .padding=0u},
-    /*FidlStructField*/{.type=&HandletimernonnullableTable, .offset=92u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevcpunonnullableTable, .offset=96u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevmarnonnullableTable, .offset=100u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=104u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=108u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=112u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=116u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=120u, .padding=0u},
-    /*FidlStructField*/{.type=&Protocol30fidl_test_handles_SomeProtocolnonnullableTable, .offset=124u, .padding=0u},
-    /*FidlStructField*/{.type=&Request30fidl_test_handles_SomeProtocolnonnullableTable, .offset=128u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenonnullableTable), .offset=0u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlebtinonnullableTable), .offset=4u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlechannelnonnullableTable), .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleclocknonnullableTable), .offset=12u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandledebuglognonnullableTable), .offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleeventnonnullableTable), .offset=20u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleeventpairnonnullableTable), .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleexceptionnonnullableTable), .offset=28u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlefifononnullableTable), .offset=32u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleguestnonnullableTable), .offset=36u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleinterruptnonnullableTable), .offset=40u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleiommunonnullableTable), .offset=44u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlejobnonnullableTable), .offset=48u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlepagernonnullableTable), .offset=52u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlepcidevicenonnullableTable), .offset=56u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlepmtnonnullableTable), .offset=60u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleportnonnullableTable), .offset=64u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleprocessnonnullableTable), .offset=68u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleprofilenonnullableTable), .offset=72u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandleresourcenonnullableTable), .offset=76u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlesocketnonnullableTable), .offset=80u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlesuspendtokennonnullableTable), .offset=84u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlethreadnonnullableTable), .offset=88u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandletimernonnullableTable), .offset=92u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlevcpunonnullableTable), .offset=96u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlevmarnonnullableTable), .offset=100u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable), .offset=104u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable), .offset=108u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenonnullableTable), .offset=112u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenonnullableTable), .offset=116u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenonnullableTable), .offset=120u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Protocol30fidl_test_handles_SomeProtocolnonnullableTable), .offset=124u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Request30fidl_test_handles_SomeProtocolnonnullableTable), .offset=128u, .padding=0u}
 };
-const fidl_type_t fidl_test_handles_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields25fidl_test_handles_Handles, .field_count=33u, .size=132u, .name="fidl.test.handles/Handles"}}};
+const struct FidlCodedStruct fidl_test_handles_HandlesTable = {.tag=kFidlTypeStruct, .fields=Fields25fidl_test_handles_Handles, .field_count=33u, .size=132u, .name="fidl.test.handles/Handles"};
 

@@ -5,6 +5,7 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_HLCPP_CODING_TABLE_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_HLCPP_CODING_TABLE_H_
 
+#include <lib/fidl/cpp/coding_traits.h>
 #include <lib/fidl/internal.h>
 
 namespace hlcpp_benchmarks {
@@ -18,13 +19,12 @@ FidlStructField FakeField = FidlStructField(FidlType::FidlType, sizeof(fidl_mess
                                                 EncodedSize<FidlType>);
 
 template <typename FidlType>
-fidl_type_t FidlTypeWithHeader = {
-    .type_tag = kFidlTypeStruct,
-    {.coded_struct = {.fields = &FakeField<FidlType>,
-                      .field_count = 1,
-                      .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
-                                                    EncodedSize<FidlType>),
-                      .name = "Input"}},
+FidlCodedStruct FidlTypeWithHeader = {
+    .tag = kFidlTypeStruct,
+    .field_count = 1,
+    .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) + EncodedSize<FidlType>),
+    .fields = &FakeField<FidlType>,
+    .name = "Input",
 };
 
 }  // namespace hlcpp_benchmarks

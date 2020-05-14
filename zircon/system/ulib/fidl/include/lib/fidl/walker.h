@@ -42,40 +42,41 @@ static_assert(sizeof(fidl_envelope_t) == 16u, "fidl_envelope_t layout");
 
 static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT, "invalid handle equals absence marker");
 
-constexpr uint32_t PrimitiveSize(const FidlCodedPrimitive primitive) {
+constexpr uint32_t PrimitiveSize(const FidlCodedPrimitiveSubtype primitive) {
   switch (primitive) {
-    case kFidlCodedPrimitive_Bool:
-    case kFidlCodedPrimitive_Int8:
-    case kFidlCodedPrimitive_Uint8:
+    case kFidlCodedPrimitiveSubtype_Bool:
+    case kFidlCodedPrimitiveSubtype_Int8:
+    case kFidlCodedPrimitiveSubtype_Uint8:
       return 1;
-    case kFidlCodedPrimitive_Int16:
-    case kFidlCodedPrimitive_Uint16:
+    case kFidlCodedPrimitiveSubtype_Int16:
+    case kFidlCodedPrimitiveSubtype_Uint16:
       return 2;
-    case kFidlCodedPrimitive_Int32:
-    case kFidlCodedPrimitive_Uint32:
-    case kFidlCodedPrimitive_Float32:
+    case kFidlCodedPrimitiveSubtype_Int32:
+    case kFidlCodedPrimitiveSubtype_Uint32:
+    case kFidlCodedPrimitiveSubtype_Float32:
       return 4;
-    case kFidlCodedPrimitive_Int64:
-    case kFidlCodedPrimitive_Uint64:
-    case kFidlCodedPrimitive_Float64:
+    case kFidlCodedPrimitiveSubtype_Int64:
+    case kFidlCodedPrimitiveSubtype_Uint64:
+    case kFidlCodedPrimitiveSubtype_Float64:
       return 8;
   }
   __builtin_unreachable();
 }
 
 constexpr uint32_t TypeSize(const fidl_type_t* type) {
-  switch (type->type_tag) {
+  switch (type->type_tag()) {
     case kFidlTypePrimitive:
-      return PrimitiveSize(type->coded_primitive);
+      return PrimitiveSize(type->coded_primitive().type);
     case kFidlTypeEnum:
-      return PrimitiveSize(type->coded_enum.underlying_type);
+      return PrimitiveSize(type->coded_enum().underlying_type);
     case kFidlTypeBits:
-      return PrimitiveSize(type->coded_bits.underlying_type);
+      return PrimitiveSize(type->coded_bits().underlying_type);
     case kFidlTypeStructPointer:
+      return sizeof(uint64_t);
     case kFidlTypeHandle:
       return sizeof(zx_handle_t);
     case kFidlTypeStruct:
-      return type->coded_struct.size;
+      return type->coded_struct().size;
     case kFidlTypeTable:
       return sizeof(fidl_vector_t);
     case kFidlTypeXUnion:
@@ -83,7 +84,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     case kFidlTypeString:
       return sizeof(fidl_string_t);
     case kFidlTypeArray:
-      return type->coded_array.array_size;
+      return type->coded_array().array_size;
     case kFidlTypeVector:
       return sizeof(fidl_vector_t);
   }
@@ -91,7 +92,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
 }
 
 constexpr bool IsPrimitive(const fidl_type_t* type) {
-  switch (type->type_tag) {
+  switch (type->type_tag()) {
     case kFidlTypePrimitive:
       return true;
     default:
@@ -138,67 +139,67 @@ class Walker final {
   // Functions that manipulate the coding stack frames.
   struct Frame {
     Frame(const fidl_type_t* fidl_type, Position position) : position(position) {
-      switch (fidl_type->type_tag) {
+      switch (fidl_type->type_tag()) {
         case kFidlTypeEnum:
           state = kStateEnum;
-          enum_state.underlying_type = fidl_type->coded_enum.underlying_type;
-          enum_state.validate = fidl_type->coded_enum.validate;
+          enum_state.underlying_type = fidl_type->coded_enum().underlying_type;
+          enum_state.validate = fidl_type->coded_enum().validate;
           break;
         case kFidlTypeBits:
           state = kStateBits;
-          bits_state.underlying_type = fidl_type->coded_bits.underlying_type;
-          bits_state.mask = fidl_type->coded_bits.mask;
+          bits_state.underlying_type = fidl_type->coded_bits().underlying_type;
+          bits_state.mask = fidl_type->coded_bits().mask;
           break;
         case kFidlTypeStruct:
           state = kStateStruct;
-          struct_state.fields = fidl_type->coded_struct.fields;
-          struct_state.field_count = fidl_type->coded_struct.field_count;
+          struct_state.fields = fidl_type->coded_struct().fields;
+          struct_state.field_count = fidl_type->coded_struct().field_count;
           struct_state.field = 0;
-          struct_state.struct_size = fidl_type->coded_struct.size;
+          struct_state.struct_size = fidl_type->coded_struct().size;
           break;
         case kFidlTypeStructPointer:
           state = kStateStructPointer;
-          struct_pointer_state.struct_type = fidl_type->coded_struct_pointer.struct_type;
+          struct_pointer_state.struct_type = fidl_type->coded_struct_pointer().struct_type;
           break;
         case kFidlTypeTable:
           state = kStateTable;
-          table_state.field = fidl_type->coded_table.fields;
-          table_state.remaining_fields = fidl_type->coded_table.field_count;
+          table_state.field = fidl_type->coded_table().fields;
+          table_state.remaining_fields = fidl_type->coded_table().field_count;
           table_state.present_count = 0;
           table_state.ordinal = 0;
           break;
         case kFidlTypeXUnion:
           state = kStateXUnion;
-          xunion_state.fields = fidl_type->coded_xunion.fields;
-          xunion_state.field_count = fidl_type->coded_xunion.field_count;
+          xunion_state.fields = fidl_type->coded_xunion().fields;
+          xunion_state.field_count = fidl_type->coded_xunion().field_count;
           xunion_state.inside_envelope = false;
-          xunion_state.nullable = fidl_type->coded_xunion.nullable;
-          xunion_state.strictness = fidl_type->coded_xunion.strictness;
+          xunion_state.nullable = fidl_type->coded_xunion().nullable;
+          xunion_state.strictness = fidl_type->coded_xunion().strictness;
           break;
         case kFidlTypeArray:
           state = kStateArray;
-          array_state.element = fidl_type->coded_array.element;
-          array_state.array_size = fidl_type->coded_array.array_size;
-          array_state.element_size = fidl_type->coded_array.element_size;
+          array_state.element = fidl_type->coded_array().element;
+          array_state.array_size = fidl_type->coded_array().array_size;
+          array_state.element_size = fidl_type->coded_array().element_size;
           array_state.element_offset = 0;
           break;
         case kFidlTypeString:
           state = kStateString;
-          string_state.max_size = fidl_type->coded_string.max_size;
-          string_state.nullable = fidl_type->coded_string.nullable;
+          string_state.max_size = fidl_type->coded_string().max_size;
+          string_state.nullable = fidl_type->coded_string().nullable;
           break;
         case kFidlTypeHandle:
           state = kStateHandle;
-          handle_state.handle_rights = fidl_type->coded_handle.handle_rights;
-          handle_state.handle_subtype = fidl_type->coded_handle.handle_subtype;
-          handle_state.nullable = fidl_type->coded_handle.nullable;
+          handle_state.handle_rights = fidl_type->coded_handle().handle_rights;
+          handle_state.handle_subtype = fidl_type->coded_handle().handle_subtype;
+          handle_state.nullable = fidl_type->coded_handle().nullable;
           break;
         case kFidlTypeVector:
           state = kStateVector;
-          vector_state.element = fidl_type->coded_vector.element;
-          vector_state.max_count = fidl_type->coded_vector.max_count;
-          vector_state.element_size = fidl_type->coded_vector.element_size;
-          vector_state.nullable = fidl_type->coded_vector.nullable;
+          vector_state.element = fidl_type->coded_vector().element;
+          vector_state.max_count = fidl_type->coded_vector().max_count;
+          vector_state.element_size = fidl_type->coded_vector().element_size;
+          vector_state.nullable = fidl_type->coded_vector().nullable;
           break;
         case kFidlTypePrimitive:
           state = kStatePrimitive;
@@ -292,11 +293,11 @@ class Walker final {
     // example, struct sizes do not need to be present here.
     union {
       struct {
-        FidlCodedPrimitive underlying_type;
+        FidlCodedPrimitiveSubtype underlying_type;
         EnumValidationPredicate validate;
       } enum_state;
       struct {
-        FidlCodedPrimitive underlying_type;
+        FidlCodedPrimitiveSubtype underlying_type;
         uint64_t mask;
       } bits_state;
       struct {
@@ -425,28 +426,28 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
       case Frame::kStateEnum: {
         uint64_t value;
         switch (frame->enum_state.underlying_type) {
-          case kFidlCodedPrimitive_Uint8:
+          case kFidlCodedPrimitiveSubtype_Uint8:
             value = *PtrTo<uint8_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Uint16:
+          case kFidlCodedPrimitiveSubtype_Uint16:
             value = *PtrTo<uint16_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Uint32:
+          case kFidlCodedPrimitiveSubtype_Uint32:
             value = *PtrTo<uint32_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Uint64:
+          case kFidlCodedPrimitiveSubtype_Uint64:
             value = *PtrTo<uint64_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Int8:
+          case kFidlCodedPrimitiveSubtype_Int8:
             value = static_cast<uint64_t>(*PtrTo<int8_t>(frame->position));
             break;
-          case kFidlCodedPrimitive_Int16:
+          case kFidlCodedPrimitiveSubtype_Int16:
             value = static_cast<uint64_t>(*PtrTo<int16_t>(frame->position));
             break;
-          case kFidlCodedPrimitive_Int32:
+          case kFidlCodedPrimitiveSubtype_Int32:
             value = static_cast<uint64_t>(*PtrTo<int32_t>(frame->position));
             break;
-          case kFidlCodedPrimitive_Int64:
+          case kFidlCodedPrimitiveSubtype_Int64:
             value = static_cast<uint64_t>(*PtrTo<int64_t>(frame->position));
             break;
           default:
@@ -463,16 +464,16 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
       case Frame::kStateBits: {
         uint64_t value;
         switch (frame->bits_state.underlying_type) {
-          case kFidlCodedPrimitive_Uint8:
+          case kFidlCodedPrimitiveSubtype_Uint8:
             value = *PtrTo<uint8_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Uint16:
+          case kFidlCodedPrimitiveSubtype_Uint16:
             value = *PtrTo<uint16_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Uint32:
+          case kFidlCodedPrimitiveSubtype_Uint32:
             value = *PtrTo<uint32_t>(frame->position);
             break;
-          case kFidlCodedPrimitive_Uint64:
+          case kFidlCodedPrimitiveSubtype_Uint64:
             value = *PtrTo<uint64_t>(frame->position);
             break;
           default:

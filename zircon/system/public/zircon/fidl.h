@@ -60,8 +60,9 @@ __BEGIN_CDECLS
 #define FIDL_ALIGN(a) (((a) + 7u) & ~7u)
 #define FIDL_ALIGNDECL alignas(FIDL_ALIGNMENT)
 
-// An opaque struct representing the encoding of a particular fidl
-// type.
+// An opaque struct containing metadata for encoding a particular fidl
+// type. The actual length of the struct is different depending on the
+// kind of fidl type it is describing.
 typedef struct fidl_type fidl_type_t;
 
 // Primitive types.

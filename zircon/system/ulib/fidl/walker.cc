@@ -18,9 +18,9 @@ zx_status_t PrimaryObjectSize(const fidl_type_t* type, size_t* out_size, const c
     set_error("fidl type cannot be null");
     return ZX_ERR_INVALID_ARGS;
   }
-  switch (type->type_tag) {
+  switch (type->type_tag()) {
     case kFidlTypeStruct:
-      *out_size = type->coded_struct.size;
+      *out_size = type->coded_struct().size;
       return ZX_OK;
     case kFidlTypeTable:
       *out_size = sizeof(fidl_vector_t);

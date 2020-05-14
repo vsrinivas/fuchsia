@@ -5,24 +5,24 @@
 
 
 
-static const fidl_type_t Request21fidl_test_json_ParentnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle Request21fidl_test_json_ParentnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
-extern const fidl_type_t fidl_test_json_ParentFirstRequestTable;
+extern const struct FidlCodedStruct fidl_test_json_ParentFirstRequestTable;
 static const struct FidlStructField Fields33fidl_test_json_ParentFirstRequest[] = {
-    /*FidlStructField*/{.type=&Request21fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Request21fidl_test_json_ParentnonnullableTable), .offset=16u, .padding=4u}
 };
-const fidl_type_t fidl_test_json_ParentFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields33fidl_test_json_ParentFirstRequest, .field_count=1u, .size=24u, .name="fidl.test.json/ParentFirstRequest"}}};
+const struct FidlCodedStruct fidl_test_json_ParentFirstRequestTable = {.tag=kFidlTypeStruct, .fields=Fields33fidl_test_json_ParentFirstRequest, .field_count=1u, .size=24u, .name="fidl.test.json/ParentFirstRequest"};
 
-extern const fidl_type_t fidl_test_json_ChildFirstRequestTable;
+extern const struct FidlCodedStruct fidl_test_json_ChildFirstRequestTable;
 static const struct FidlStructField Fields32fidl_test_json_ChildFirstRequest[] = {
-    /*FidlStructField*/{.type=&Request21fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Request21fidl_test_json_ParentnonnullableTable), .offset=16u, .padding=4u}
 };
-const fidl_type_t fidl_test_json_ChildFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32fidl_test_json_ChildFirstRequest, .field_count=1u, .size=24u, .name="fidl.test.json/ChildFirstRequest"}}};
+const struct FidlCodedStruct fidl_test_json_ChildFirstRequestTable = {.tag=kFidlTypeStruct, .fields=Fields32fidl_test_json_ChildFirstRequest, .field_count=1u, .size=24u, .name="fidl.test.json/ChildFirstRequest"};
 
-extern const fidl_type_t fidl_test_json_ChildSecondRequestTable;
+extern const struct FidlCodedStruct fidl_test_json_ChildSecondRequestTable;
 static const struct FidlStructField Fields33fidl_test_json_ChildSecondRequest[] = {
-    /*FidlStructField*/{.type=&Request21fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Request21fidl_test_json_ParentnonnullableTable), .offset=16u, .padding=4u}
 };
-const fidl_type_t fidl_test_json_ChildSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields33fidl_test_json_ChildSecondRequest, .field_count=1u, .size=24u, .name="fidl.test.json/ChildSecondRequest"}}};
+const struct FidlCodedStruct fidl_test_json_ChildSecondRequestTable = {.tag=kFidlTypeStruct, .fields=Fields33fidl_test_json_ChildSecondRequest, .field_count=1u, .size=24u, .name="fidl.test.json/ChildSecondRequest"};
 
 

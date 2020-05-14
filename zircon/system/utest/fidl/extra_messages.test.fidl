@@ -5,8 +5,6 @@
 // A set of structs and interface methods designed to exercise FIDL code.
 // For now covering fidl_linearize.
 
-// NOTE: Refer to README.md to regenerate the coding tables whenever these definitions change.
-
 // TODO(fxb/48186) Auto-generate extra_messages.h
 
 library fidl.test.coding;

@@ -3,38 +3,38 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t fidl_test_json_Example_foo_ResponseTable;
-extern const fidl_type_t fidl_test_json_Example_foo_ResultTable;
-extern const fidl_type_t fidl_test_json_Example_foo_ResultNullableRefTable;
+extern const struct FidlCodedStruct fidl_test_json_Example_foo_ResponseTable;
+extern const struct FidlCodedXUnion fidl_test_json_Example_foo_ResultTable;
+extern const struct FidlCodedXUnion fidl_test_json_Example_foo_ResultNullableRefTable;
 
 
-static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-extern const fidl_type_t fidl_test_json_ExamplefooRequestTable;
+extern const struct FidlCodedStruct fidl_test_json_ExamplefooRequestTable;
 static const struct FidlStructField Fields32fidl_test_json_ExamplefooRequest[] = {
-    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable), .offset=16u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_ExamplefooRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32fidl_test_json_ExamplefooRequest, .field_count=1u, .size=32u, .name="fidl.test.json/ExamplefooRequest"}}};
+const struct FidlCodedStruct fidl_test_json_ExamplefooRequestTable = {.tag=kFidlTypeStruct, .fields=Fields32fidl_test_json_ExamplefooRequest, .field_count=1u, .size=32u, .name="fidl.test.json/ExamplefooRequest"};
 
-extern const fidl_type_t fidl_test_json_ExamplefooResponseTable;
+extern const struct FidlCodedStruct fidl_test_json_ExamplefooResponseTable;
 static const struct FidlStructField Fields33fidl_test_json_ExamplefooResponse[] = {
-    /*FidlStructField*/{.type=&fidl_test_json_Example_foo_ResultTable, .offset=16u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_test_json_Example_foo_ResultTable), .offset=16u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_ExamplefooResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields33fidl_test_json_ExamplefooResponse, .field_count=1u, .size=40u, .name="fidl.test.json/ExamplefooResponse"}}};
+const struct FidlCodedStruct fidl_test_json_ExamplefooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields33fidl_test_json_ExamplefooResponse, .field_count=1u, .size=40u, .name="fidl.test.json/ExamplefooResponse"};
 
 
 static const struct FidlStructField Fields35fidl_test_json_Example_foo_Response[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_Example_foo_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35fidl_test_json_Example_foo_Response, .field_count=1u, .size=8u, .name="fidl.test.json/Example_foo_Response"}}};
+const struct FidlCodedStruct fidl_test_json_Example_foo_ResponseTable = {.tag=kFidlTypeStruct, .fields=Fields35fidl_test_json_Example_foo_Response, .field_count=1u, .size=8u, .name="fidl.test.json/Example_foo_Response"};
 
 static const struct FidlXUnionField Fields33fidl_test_json_Example_foo_Result[] = {
-    /*FidlXUnionField*/{.type=&fidl_test_json_Example_foo_ResponseTable, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_json_Example_foo_ResponseTable), .ordinal=1u},
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=2u}
 };
-const fidl_type_t fidl_test_json_Example_foo_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields33fidl_test_json_Example_foo_Result, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/Example_foo_Result", .strictness=kFidlStrictness_Strict}}};
+const struct FidlCodedXUnion fidl_test_json_Example_foo_ResultTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields33fidl_test_json_Example_foo_Result, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/Example_foo_Result", .strictness=kFidlStrictness_Strict};
 static const struct FidlXUnionField Fields44fidl_test_json_Example_foo_ResultNullableRef[] = {
-    /*FidlXUnionField*/{.type=&fidl_test_json_Example_foo_ResponseTable, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_json_Example_foo_ResponseTable), .ordinal=1u},
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=2u}
 };
-const fidl_type_t fidl_test_json_Example_foo_ResultNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields44fidl_test_json_Example_foo_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/Example_foo_Result", .strictness=kFidlStrictness_Strict}}};
+const struct FidlCodedXUnion fidl_test_json_Example_foo_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields44fidl_test_json_Example_foo_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/Example_foo_Result", .strictness=kFidlStrictness_Strict};

@@ -7,25 +7,25 @@
 // Coding tables for primitives are predefined and interned here.
 // This file must be a .c to guarantee that these types are stored directly in
 // .rodata, rather than requiring global ctors to have been run (fxb/39978).
-const fidl_type_t fidl_internal_kBoolTable = {.type_tag = kFidlTypePrimitive,
-                                              .coded_primitive = kFidlCodedPrimitive_Bool};
-const fidl_type_t fidl_internal_kInt8Table = {.type_tag = kFidlTypePrimitive,
-                                              .coded_primitive = kFidlCodedPrimitive_Int8};
-const fidl_type_t fidl_internal_kInt16Table = {.type_tag = kFidlTypePrimitive,
-                                               .coded_primitive = kFidlCodedPrimitive_Int16};
-const fidl_type_t fidl_internal_kInt32Table = {.type_tag = kFidlTypePrimitive,
-                                               .coded_primitive = kFidlCodedPrimitive_Int32};
-const fidl_type_t fidl_internal_kInt64Table = {.type_tag = kFidlTypePrimitive,
-                                               .coded_primitive = kFidlCodedPrimitive_Int64};
-const fidl_type_t fidl_internal_kUint8Table = {.type_tag = kFidlTypePrimitive,
-                                               .coded_primitive = kFidlCodedPrimitive_Uint8};
-const fidl_type_t fidl_internal_kUint16Table = {.type_tag = kFidlTypePrimitive,
-                                                .coded_primitive = kFidlCodedPrimitive_Uint16};
-const fidl_type_t fidl_internal_kUint32Table = {.type_tag = kFidlTypePrimitive,
-                                                .coded_primitive = kFidlCodedPrimitive_Uint32};
-const fidl_type_t fidl_internal_kUint64Table = {.type_tag = kFidlTypePrimitive,
-                                                .coded_primitive = kFidlCodedPrimitive_Uint64};
-const fidl_type_t fidl_internal_kFloat32Table = {.type_tag = kFidlTypePrimitive,
-                                                 .coded_primitive = kFidlCodedPrimitive_Float32};
-const fidl_type_t fidl_internal_kFloat64Table = {.type_tag = kFidlTypePrimitive,
-                                                 .coded_primitive = kFidlCodedPrimitive_Float64};
+const struct FidlCodedPrimitive fidl_internal_kBoolTable = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Bool};
+const struct FidlCodedPrimitive fidl_internal_kInt8Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Int8};
+const struct FidlCodedPrimitive fidl_internal_kInt16Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Int16};
+const struct FidlCodedPrimitive fidl_internal_kInt32Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Int32};
+const struct FidlCodedPrimitive fidl_internal_kInt64Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Int64};
+const struct FidlCodedPrimitive fidl_internal_kUint8Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Uint8};
+const struct FidlCodedPrimitive fidl_internal_kUint16Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Uint16};
+const struct FidlCodedPrimitive fidl_internal_kUint32Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Uint32};
+const struct FidlCodedPrimitive fidl_internal_kUint64Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Uint64};
+const struct FidlCodedPrimitive fidl_internal_kFloat32Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Float32};
+const struct FidlCodedPrimitive fidl_internal_kFloat64Table = {
+    .tag = kFidlTypePrimitive, .type = kFidlCodedPrimitiveSubtype_Float64};

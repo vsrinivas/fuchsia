@@ -1630,28 +1630,28 @@ bool validate_primitives_struct() {
   //   float32 f32;
   //   float64 f64;
   // };
-  static const fidl_type_t kBoolType = {.type_tag = kFidlTypePrimitive,
-                                        .coded_primitive = kFidlCodedPrimitive_Bool};
-  static const fidl_type_t kInt8Type = {.type_tag = kFidlTypePrimitive,
-                                        .coded_primitive = kFidlCodedPrimitive_Int8};
-  static const fidl_type_t kInt16Type = {.type_tag = kFidlTypePrimitive,
-                                         .coded_primitive = kFidlCodedPrimitive_Int16};
-  static const fidl_type_t kInt32Type = {.type_tag = kFidlTypePrimitive,
-                                         .coded_primitive = kFidlCodedPrimitive_Int32};
-  static const fidl_type_t kInt64Type = {.type_tag = kFidlTypePrimitive,
-                                         .coded_primitive = kFidlCodedPrimitive_Int64};
-  static const fidl_type_t kUint8Type = {.type_tag = kFidlTypePrimitive,
-                                         .coded_primitive = kFidlCodedPrimitive_Uint8};
-  static const fidl_type_t kUint16Type = {.type_tag = kFidlTypePrimitive,
-                                          .coded_primitive = kFidlCodedPrimitive_Uint16};
-  static const fidl_type_t kUint32Type = {.type_tag = kFidlTypePrimitive,
-                                          .coded_primitive = kFidlCodedPrimitive_Uint32};
-  static const fidl_type_t kUint64Type = {.type_tag = kFidlTypePrimitive,
-                                          .coded_primitive = kFidlCodedPrimitive_Uint64};
-  static const fidl_type_t kFloat32Type = {.type_tag = kFidlTypePrimitive,
-                                           .coded_primitive = kFidlCodedPrimitive_Float32};
-  static const fidl_type_t kFloat64Type = {.type_tag = kFidlTypePrimitive,
-                                           .coded_primitive = kFidlCodedPrimitive_Float64};
+  static const FidlCodedPrimitive kBoolType = {.tag = kFidlTypePrimitive,
+                                               .type = kFidlCodedPrimitiveSubtype_Bool};
+  static const FidlCodedPrimitive kInt8Type = {.tag = kFidlTypePrimitive,
+                                               .type = kFidlCodedPrimitiveSubtype_Int8};
+  static const FidlCodedPrimitive kInt16Type = {.tag = kFidlTypePrimitive,
+                                                .type = kFidlCodedPrimitiveSubtype_Int16};
+  static const FidlCodedPrimitive kInt32Type = {.tag = kFidlTypePrimitive,
+                                                .type = kFidlCodedPrimitiveSubtype_Int32};
+  static const FidlCodedPrimitive kInt64Type = {.tag = kFidlTypePrimitive,
+                                                .type = kFidlCodedPrimitiveSubtype_Int64};
+  static const FidlCodedPrimitive kUint8Type = {.tag = kFidlTypePrimitive,
+                                                .type = kFidlCodedPrimitiveSubtype_Uint8};
+  static const FidlCodedPrimitive kUint16Type = {.tag = kFidlTypePrimitive,
+                                                 .type = kFidlCodedPrimitiveSubtype_Uint16};
+  static const FidlCodedPrimitive kUint32Type = {.tag = kFidlTypePrimitive,
+                                                 .type = kFidlCodedPrimitiveSubtype_Uint32};
+  static const FidlCodedPrimitive kUint64Type = {.tag = kFidlTypePrimitive,
+                                                 .type = kFidlCodedPrimitiveSubtype_Uint64};
+  static const FidlCodedPrimitive kFloat32Type = {.tag = kFidlTypePrimitive,
+                                                  .type = kFidlCodedPrimitiveSubtype_Float32};
+  static const FidlCodedPrimitive kFloat64Type = {.tag = kFidlTypePrimitive,
+                                                  .type = kFidlCodedPrimitiveSubtype_Float64};
   static const struct FidlStructField kFields[] = {
       {
           &kBoolType,
@@ -1709,14 +1709,15 @@ bool validate_primitives_struct() {
           0u,
       },
   };
-  static const fidl_type_t kPrimitiveStructCodingTable = {
-      .type_tag = kFidlTypeStruct,
-      {.coded_struct = {.fields = kFields,
-                        .field_count = 11u,
-                        .size = 48u,
-                        .name = "fidl.test.coding/PrimitiveStruct"}}};
+  static const FidlCodedStruct kPrimitiveStructCodingTable = {
+      .tag = kFidlTypeStruct,
+      .field_count = 11u,
+      .size = 48u,
+      .fields = kFields,
+      .name = "fidl.test.coding/PrimitiveStruct",
+  };
 
-  uint8_t data[kPrimitiveStructCodingTable.coded_struct.size];
+  uint8_t data[kPrimitiveStructCodingTable.coded_struct().size];
   memset(data, 0, sizeof(data));
 
   const char* error = nullptr;

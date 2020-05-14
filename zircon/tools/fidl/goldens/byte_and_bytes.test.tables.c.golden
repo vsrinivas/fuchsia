@@ -3,21 +3,21 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t example_ByteAndBytesTable;
+extern const struct FidlCodedStruct example_ByteAndBytesTable;
 
 
-static const fidl_type_t Vector4294967295nonnullable5uint8Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=4294967295u, .element_size=1u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=NULL, .max_count=4294967295u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector1024nonnullable5uint8Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector1024nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=NULL, .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector1024nullable5uint8Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nullable}}};
+static const struct FidlCodedVector Vector1024nullable5uint8Table = {.tag=kFidlTypeVector, .element=NULL, .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nullable};
 
 
 static const struct FidlStructField Fields20example_ByteAndBytes[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=1u, .padding=7u},
-    /*FidlStructField*/{.type=&Vector4294967295nonnullable5uint8Table, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector1024nonnullable5uint8Table, .offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector1024nullable5uint8Table, .offset=40u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table), .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table), .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector1024nullable5uint8Table), .offset=40u, .padding=0u}
 };
-const fidl_type_t example_ByteAndBytesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20example_ByteAndBytes, .field_count=4u, .size=56u, .name="example/ByteAndBytes"}}};
+const struct FidlCodedStruct example_ByteAndBytesTable = {.tag=kFidlTypeStruct, .fields=Fields20example_ByteAndBytes, .field_count=4u, .size=56u, .name="example/ByteAndBytes"};
 

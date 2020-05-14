@@ -3,10 +3,10 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t escapeme_DocCommentWithQuotesTable;
+extern const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable;
 
 
 
 static const struct FidlStructField Fields29escapeme_DocCommentWithQuotes[] = {};
-const fidl_type_t escapeme_DocCommentWithQuotesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields29escapeme_DocCommentWithQuotes, .field_count=0u, .size=1u, .name="escapeme/DocCommentWithQuotes"}}};
+const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .fields=Fields29escapeme_DocCommentWithQuotes, .field_count=0u, .size=1u, .name="escapeme/DocCommentWithQuotes"};
 

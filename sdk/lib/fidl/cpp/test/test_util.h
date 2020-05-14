@@ -30,12 +30,12 @@ void WithCodingTableFor(const fidl::Encoder& enc, Callback callback) {
       FidlStructField(T::FidlType, sizeof(fidl_message_header_t), padding_size),
   };
 
-  const fidl_type_t fake_interface_struct = {
-      .type_tag = kFidlTypeStruct,
-      {.coded_struct = {.fields = fake_interface_fields,
-                        .field_count = 1,
-                        .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) + encoded_size),
-                        .name = "Input"}},
+  const FidlCodedStruct fake_interface_struct = {
+      .tag = kFidlTypeStruct,
+      .field_count = 1,
+      .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) + encoded_size),
+      .fields = fake_interface_fields,
+      .name = "Input",
   };
 
   callback(encoded_size, &fake_interface_struct);
@@ -68,15 +68,15 @@ Output DecodedBytes(std::vector<uint8_t> input) {
   // Create a fake coded type for the input object with added header.
   FidlStructField fields_v1[] = {
       FidlStructField(Output::FidlType, sizeof(fidl_message_header_t), 0u)};
-  assert(Output::FidlType->type_tag == kFidlTypeStruct);
-  fidl_type_t obj_with_header_v1 = {
-      .type_tag = kFidlTypeStruct,
-      {.coded_struct = {
-           .fields = fields_v1,
-           .field_count = 1u,
-           .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
-                                         FIDL_ALIGN(Output::FidlType->coded_struct.size)),
-           .name = ""}}};
+  assert(Output::FidlType->type_tag() == kFidlTypeStruct);
+  FidlCodedStruct obj_with_header_v1 = {
+      .tag = kFidlTypeStruct,
+      .field_count = 1u,
+      .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
+                                    FIDL_ALIGN(Output::FidlType->coded_struct().size)),
+      .fields = fields_v1,
+      .name = "",
+  };
   Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
 
   const char* error = nullptr;

@@ -20,7 +20,7 @@ namespace {
 // Manually define the coding table for FIDL messages used in these tests.
 // These will match the llcpp codegen output.
 
-extern const fidl_type_t NonnullableChannelMessageType;
+extern const FidlCodedStruct NonnullableChannelMessageType;
 
 // A message with a single non-nullable channel.
 struct NonnullableChannelMessage {
@@ -43,22 +43,24 @@ struct NonnullableChannelMessage {
       zx::channel* out_channel);
 };
 
-const fidl_type_t NonnullableChannelType = {
-    .type_tag = kFidlTypeHandle,
-    {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_CHANNEL,
-                      .handle_rights = 0,
-                      .nullable = kFidlNullability_Nonnullable}}};
+const FidlCodedHandle NonnullableChannelType = {
+    .tag = kFidlTypeHandle,
+    .nullable = kFidlNullability_Nonnullable,
+    .handle_subtype = ZX_OBJ_TYPE_CHANNEL,
+    .handle_rights = 0,
+};
 const FidlStructField NonnullableChannelMessageFields[] = {
     FidlStructField(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel), 4),
 };
-const fidl_type_t NonnullableChannelMessageType = {
-    .type_tag = kFidlTypeStruct,
-    {.coded_struct = {.fields = NonnullableChannelMessageFields,
-                      .field_count = 1,
-                      .size = sizeof(NonnullableChannelMessage),
-                      .name = "NonnullableChannelMessage"}}};
+const FidlCodedStruct NonnullableChannelMessageType = {
+    .tag = kFidlTypeStruct,
+    .field_count = 1,
+    .size = sizeof(NonnullableChannelMessage),
+    .fields = NonnullableChannelMessageFields,
+    .name = "NonnullableChannelMessage",
+};
 
-extern const fidl_type_t InlinePODStructType;
+extern const FidlCodedStruct InlinePODStructType;
 
 // A message with a uint64_t.
 struct InlinePODStruct {
@@ -80,13 +82,15 @@ struct InlinePODStruct {
 
 // Full-width primitives do not need coding tables.
 const FidlStructField InlinePODStructStructFields[] = {};
-const fidl_type_t InlinePODStructType = {.type_tag = kFidlTypeStruct,
-                                         {.coded_struct = {.fields = InlinePODStructStructFields,
-                                                           .field_count = 0,
-                                                           .size = sizeof(InlinePODStruct),
-                                                           .name = "InlinePODStruct"}}};
+const FidlCodedStruct InlinePODStructType = {
+    .tag = kFidlTypeStruct,
+    .field_count = 0,
+    .size = sizeof(InlinePODStruct),
+    .fields = InlinePODStructStructFields,
+    .name = "InlinePODStruct",
+};
 
-extern const fidl_type_t OutOfLineMessageType;
+extern const FidlCodedStruct OutOfLineMessageType;
 
 // A message with an optional struct.
 struct OutOfLineMessage {
@@ -109,19 +113,22 @@ struct OutOfLineMessage {
                                        fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message);
 };
 
-const fidl_type_t OptionalPointerType = {
-    .type_tag = kFidlTypeStructPointer,
-    {.coded_struct_pointer = {.struct_type = &InlinePODStructType.coded_struct}}};
+const FidlCodedStructPointer OptionalPointerType = {
+    .tag = kFidlTypeStructPointer,
+    .struct_type = &InlinePODStructType.coded_struct(),
+};
 const FidlStructField OutOfLineMessageTypeFields[] = {
     FidlStructField(&OptionalPointerType, offsetof(OutOfLineMessage, optional), 0),
 };
-const fidl_type_t OutOfLineMessageType = {.type_tag = kFidlTypeStruct,
-                                          {.coded_struct = {.fields = OutOfLineMessageTypeFields,
-                                                            .field_count = 1,
-                                                            .size = sizeof(OutOfLineMessage),
-                                                            .name = "OutOfLineMessage"}}};
+const FidlCodedStruct OutOfLineMessageType = {
+    .tag = kFidlTypeStruct,
+    .field_count = 1,
+    .size = sizeof(OutOfLineMessage),
+    .fields = OutOfLineMessageTypeFields,
+    .name = "OutOfLineMessage",
+};
 
-extern const fidl_type_t LargeStructType;
+extern const FidlCodedStruct LargeStructType;
 
 // A message with a large array, such that it need to be heap-allocated.
 struct LargeStruct {
@@ -144,11 +151,13 @@ struct LargeStruct {
 
 // Full-width primitives do not need coding tables.
 const FidlStructField LargeStructStructFields[] = {};
-const fidl_type_t LargeStructType = {.type_tag = kFidlTypeStruct,
-                                     {.coded_struct = {.fields = LargeStructStructFields,
-                                                       .field_count = 0,
-                                                       .size = sizeof(LargeStruct),
-                                                       .name = "LargeStruct"}}};
+const FidlCodedStruct LargeStructType = {
+    .tag = kFidlTypeStruct,
+    .field_count = 0,
+    .size = sizeof(LargeStruct),
+    .fields = LargeStructStructFields,
+    .name = "LargeStruct",
+};
 
 // These two structs are used to test the stack/heap allocation selection in
 // fidl::internal::ResponseStorage

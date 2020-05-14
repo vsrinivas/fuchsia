@@ -3,38 +3,38 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t someotherlibrary_ReferenceMeTable;
-extern const fidl_type_t example_ExampleOfUseOfAliasesTable;
+extern const struct FidlCodedStruct someotherlibrary_ReferenceMeTable;
+extern const struct FidlCodedStruct example_ExampleOfUseOfAliasesTable;
 
 
-static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector5nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector5nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector5nonnullable6uint32Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=5u, .element_size=4u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector5nonnullable6uint32Table = {.tag=kFidlTypeVector, .element=NULL, .max_count=5u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector9nonnullable27String4294967295nonnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&String4294967295nonnullableTable, .max_count=9u, .element_size=16u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector9nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=9u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t Vector5nonnullable28someotherlibrary_ReferenceMeTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&someotherlibrary_ReferenceMeTable, .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedVector Vector5nonnullable28someotherlibrary_ReferenceMeTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&someotherlibrary_ReferenceMeTable), .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlehandlenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedHandle HandlehandlenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const fidl_type_t HandlehandlenullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable}}};
+static const struct FidlCodedHandle HandlehandlenullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
 
 
 static const struct FidlStructField Fields29example_ExampleOfUseOfAliases[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
-    /*FidlStructField*/{.type=&Vector5nonnullable27String4294967295nonnullableTable, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector5nonnullable6uint32Table, .offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector4294967295nonnullable27String4294967295nonnullableTable, .offset=40u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector9nonnullable27String4294967295nonnullableTable, .offset=56u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector5nonnullable27String4294967295nonnullableTable, .offset=72u, .padding=0u},
-    /*FidlStructField*/{.type=&Vector5nonnullable28someotherlibrary_ReferenceMeTable, .offset=88u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=104u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=108u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenullableTable, .offset=112u, .padding=4u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable), .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable6uint32Table), .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable27String4294967295nonnullableTable), .offset=40u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector9nonnullable27String4294967295nonnullableTable), .offset=56u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable), .offset=72u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable28someotherlibrary_ReferenceMeTable), .offset=88u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenonnullableTable), .offset=104u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenonnullableTable), .offset=108u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&HandlehandlenullableTable), .offset=112u, .padding=4u}
 };
-const fidl_type_t example_ExampleOfUseOfAliasesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields29example_ExampleOfUseOfAliases, .field_count=10u, .size=120u, .name="example/ExampleOfUseOfAliases"}}};
+const struct FidlCodedStruct example_ExampleOfUseOfAliasesTable = {.tag=kFidlTypeStruct, .fields=Fields29example_ExampleOfUseOfAliases, .field_count=10u, .size=120u, .name="example/ExampleOfUseOfAliases"};
 

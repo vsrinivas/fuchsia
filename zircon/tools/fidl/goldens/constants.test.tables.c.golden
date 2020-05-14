@@ -3,32 +3,32 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t values_EnumTypeTable;
-extern const fidl_type_t values_EnumTable;
-extern const fidl_type_t values_BitsTypeTable;
-extern const fidl_type_t values_BitsTable;
-extern const fidl_type_t values_StructTable;
+extern const struct FidlCodedEnum values_EnumTypeTable;
+extern const struct FidlCodedEnum values_EnumTable;
+extern const struct FidlCodedBits values_BitsTypeTable;
+extern const struct FidlCodedBits values_BitsTable;
+extern const struct FidlCodedStruct values_StructTable;
 
 
-static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
+static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
 
 static bool EnumValidatorFor_values_EnumType(uint64_t v) { return (v == 1ul) || false; }
-const fidl_type_t values_EnumTypeTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Int32, .validate=&EnumValidatorFor_values_EnumType, .name="values/EnumType"}}};
+const struct FidlCodedEnum values_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .validate=&EnumValidatorFor_values_EnumType, .name="values/EnumType"};
 
 static bool EnumValidatorFor_values_Enum(uint64_t v) { return (v == 170ul) || false; }
-const fidl_type_t values_EnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_values_Enum, .name="values/Enum"}}};
+const struct FidlCodedEnum values_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_values_Enum, .name="values/Enum"};
 
-const fidl_type_t values_BitsTypeTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=131ul, .name="values/BitsType"}}};
+const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=131ul, .name="values/BitsType"};
 
-const fidl_type_t values_BitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=8ul, .name="values/Bits"}}};
+const struct FidlCodedBits values_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=8ul, .name="values/Bits"};
 
 static const struct FidlStructField Fields13values_Struct[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable), .offset=8u, .padding=0u},
     /*FidlStructField*/{.type=NULL, .padding_offset=25u, .padding=3u},
-    /*FidlStructField*/{.type=&values_EnumTable, .offset=28u, .padding=0u},
-    /*FidlStructField*/{.type=&values_BitsTable, .offset=32u, .padding=4u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&values_EnumTable), .offset=28u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&values_BitsTable), .offset=32u, .padding=4u}
 };
-const fidl_type_t values_StructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields13values_Struct, .field_count=5u, .size=40u, .name="values/Struct"}}};
+const struct FidlCodedStruct values_StructTable = {.tag=kFidlTypeStruct, .fields=Fields13values_Struct, .field_count=5u, .size=40u, .name="values/Struct"};
 

@@ -3,13 +3,13 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t dependent_MyEnumTable;
-extern const fidl_type_t example_FooTable;
+extern const struct FidlCodedEnum dependent_MyEnumTable;
+extern const struct FidlCodedStruct example_FooTable;
 
 
 
 static const struct FidlStructField Fields11example_Foo[] = {
-    /*FidlStructField*/{.type=&dependent_MyEnumTable, .offset=0u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&dependent_MyEnumTable), .offset=0u, .padding=0u}
 };
-const fidl_type_t example_FooTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields11example_Foo, .field_count=1u, .size=4u, .name="example/Foo"}}};
+const struct FidlCodedStruct example_FooTable = {.tag=kFidlTypeStruct, .fields=Fields11example_Foo, .field_count=1u, .size=4u, .name="example/Foo"};
 

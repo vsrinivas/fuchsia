@@ -114,38 +114,39 @@ void FormatElementName(StringBuilder* str, const fidl_type_t* type) {
 }
 
 void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
-  switch (type->type_tag) {
+  switch (type->type_tag()) {
     case kFidlTypeEnum:
-      FormatEnumName(str, &type->coded_enum);
+      FormatEnumName(str, &type->coded_enum());
       break;
     case kFidlTypeBits:
-      FormatBitsName(str, &type->coded_bits);
+      FormatBitsName(str, &type->coded_bits());
       break;
     case kFidlTypeStruct:
-      FormatStructName(str, &type->coded_struct);
+      FormatStructName(str, &type->coded_struct());
       break;
     case kFidlTypeStructPointer:
-      FormatStructName(str, type->coded_struct_pointer.struct_type);
+      FormatStructName(str, type->coded_struct_pointer().struct_type);
       str->Append("?");
       break;
     case kFidlTypeArray:
       str->Append("array<");
-      FormatElementName(str, type->coded_array.element);
+      FormatElementName(str, type->coded_array().element);
       str->Append(">");
-      str->AppendPrintf(":%" PRIu32, type->coded_array.array_size / type->coded_array.element_size);
+      str->AppendPrintf(":%" PRIu32,
+                        type->coded_array().array_size / type->coded_array().element_size);
       break;
     case kFidlTypeString:
       str->Append("string");
-      if (type->coded_string.max_size != FIDL_MAX_SIZE) {
-        str->AppendPrintf(":%" PRIu32, type->coded_string.max_size);
+      if (type->coded_string().max_size != FIDL_MAX_SIZE) {
+        str->AppendPrintf(":%" PRIu32, type->coded_string().max_size);
       }
-      FormatNullability(str, type->coded_string.nullable);
+      FormatNullability(str, type->coded_string().nullable);
       break;
     case kFidlTypeHandle:
       str->Append("handle");
-      if (type->coded_handle.handle_subtype) {
+      if (type->coded_handle().handle_subtype) {
         str->Append("<");
-        switch (type->coded_handle.handle_subtype) {
+        switch (type->coded_handle().handle_subtype) {
           case ZX_OBJ_TYPE_NONE:
             str->Append("handle");
             break;
@@ -228,27 +229,27 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
             str->Append("vmo");
             break;
           default:
-            str->AppendPrintf("%" PRIu32, type->coded_handle.handle_subtype);
+            str->AppendPrintf("%" PRIu32, type->coded_handle().handle_subtype);
             break;
         }
         str->Append(">");
       }
-      FormatNullability(str, type->coded_handle.nullable);
+      FormatNullability(str, type->coded_handle().nullable);
       break;
     case kFidlTypeVector:
       str->Append("vector<");
-      FormatElementName(str, type->coded_vector.element);
+      FormatElementName(str, type->coded_vector().element);
       str->Append(">");
-      if (type->coded_vector.max_count != FIDL_MAX_SIZE) {
-        str->AppendPrintf(":%" PRIu32, type->coded_vector.max_count);
+      if (type->coded_vector().max_count != FIDL_MAX_SIZE) {
+        str->AppendPrintf(":%" PRIu32, type->coded_vector().max_count);
       }
-      FormatNullability(str, type->coded_vector.nullable);
+      FormatNullability(str, type->coded_vector().nullable);
       break;
     case kFidlTypeTable:
-      FormatTableName(str, &type->coded_table);
+      FormatTableName(str, &type->coded_table());
       break;
     case kFidlTypeXUnion:
-      FormatXUnionName(str, &type->coded_xunion);
+      FormatXUnionName(str, &type->coded_xunion());
       break;
     case kFidlTypePrimitive:
       ZX_PANIC("unrecognized tag");

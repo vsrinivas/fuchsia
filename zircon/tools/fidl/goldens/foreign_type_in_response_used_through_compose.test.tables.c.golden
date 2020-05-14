@@ -3,17 +3,17 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t bottom_FooTable;
+extern const struct FidlCodedStruct bottom_FooTable;
 
 
-extern const fidl_type_t top_TopGetFooRequestTable;
+extern const struct FidlCodedStruct top_TopGetFooRequestTable;
 static const struct FidlStructField Fields20top_TopGetFooRequest[] = {};
-const fidl_type_t top_TopGetFooRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20top_TopGetFooRequest, .field_count=0u, .size=16u, .name="top/TopGetFooRequest"}}};
+const struct FidlCodedStruct top_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .fields=Fields20top_TopGetFooRequest, .field_count=0u, .size=16u, .name="top/TopGetFooRequest"};
 
-extern const fidl_type_t top_TopGetFooResponseTable;
+extern const struct FidlCodedStruct top_TopGetFooResponseTable;
 static const struct FidlStructField Fields21top_TopGetFooResponse[] = {
-    /*FidlStructField*/{.type=&bottom_FooTable, .offset=16u, .padding=4u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&bottom_FooTable), .offset=16u, .padding=4u}
 };
-const fidl_type_t top_TopGetFooResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields21top_TopGetFooResponse, .field_count=1u, .size=24u, .name="top/TopGetFooResponse"}}};
+const struct FidlCodedStruct top_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields21top_TopGetFooResponse, .field_count=1u, .size=24u, .name="top/TopGetFooResponse"};
 
 

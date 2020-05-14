@@ -27,10 +27,12 @@ bool no_output() {
   BEGIN_TEST;
 
   char buffer[1024];
-  const fidl_type_t type = {.type_tag = kFidlTypeHandle,
-                            {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_NONE,
-                                              .handle_rights = 0,
-                                              .nullable = kFidlNullability_Nonnullable}}};
+  const FidlCodedHandle type = {
+      .tag = kFidlTypeHandle,
+      .nullable = kFidlNullability_Nonnullable,
+      .handle_subtype = ZX_OBJ_TYPE_NONE,
+      .handle_rights = 0,
+  };
 
   EXPECT_EQ(0u, fidl_format_type_name(nullptr, buffer, sizeof(buffer)));
   EXPECT_EQ(0u, fidl_format_type_name(&type, nullptr, sizeof(buffer)));

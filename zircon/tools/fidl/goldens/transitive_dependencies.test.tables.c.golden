@@ -3,14 +3,14 @@
 #include <lib/fidl/internal.h>
 
 
-extern const fidl_type_t bottom_FooTable;
-extern const fidl_type_t middle_BarTable;
-extern const fidl_type_t top_BazTable;
+extern const struct FidlCodedStruct bottom_FooTable;
+extern const struct FidlCodedStruct middle_BarTable;
+extern const struct FidlCodedStruct top_BazTable;
 
 
 
 static const struct FidlStructField Fields7top_Baz[] = {
-    /*FidlStructField*/{.type=&middle_BarTable, .offset=0u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&middle_BarTable), .offset=0u, .padding=0u}
 };
-const fidl_type_t top_BazTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields7top_Baz, .field_count=1u, .size=4u, .name="top/Baz"}}};
+const struct FidlCodedStruct top_BazTable = {.tag=kFidlTypeStruct, .fields=Fields7top_Baz, .field_count=1u, .size=4u, .name="top/Baz"};
 
