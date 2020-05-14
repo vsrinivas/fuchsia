@@ -133,8 +133,11 @@ void Metrics::CollectMetrics() {
 
 void Metrics::WriteDigestToInspect(const memory::Digest& digest) {
   TRACE_DURATION("memory_monitor", "Watcher::Metrics::WriteDigestToInspect");
-
-  inspect_memory_timestamp_.Set(digest.time());
+  // The division is to address JSON int range problem in b/156523968
+  // JSON does not suport 64 bit integers and that some readers use JSON libraries that will
+  // crash if we write a value greater than MAX_INT_3.
+  // The unit in seconds is sufficient.
+  inspect_memory_timestamp_.Set(digest.time() / 1000000000);
   for (auto const& bucket : digest.buckets()) {
     if (inspect_memory_usages_.find(bucket.name()) != inspect_memory_usages_.end()) {
       inspect_memory_usages_[bucket.name()].Set(bucket.size());
