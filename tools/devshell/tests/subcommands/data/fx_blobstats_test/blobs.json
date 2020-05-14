@@ -1,0 +1,80 @@
+[
+  {
+    "source_path": "obj/src/connectivity/wlan/drivers/wlanif/wlanif/meta.far",
+    "merkle": "98af05f927a21388ce087137372a36c8ab14fc2379b0ad30df5166f75ce93dc6",
+    "bytes": 12288,
+    "size": 24576
+  },
+  {
+    "source_path": "arm64-shared/wlanif.so",
+    "merkle": "b5541e63cfe3851040a36c91b2b3330ccf5c862f240192149751e7cadf7423b0",
+    "bytes": 264152,
+    "size": 73728
+  },
+  {
+    "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libunwind.so.1.0",
+    "merkle": "11f0499d7a212545e1d75473aee6dc644ab91f7fab8488a9071cb5e611216464",
+    "bytes": 198040,
+    "size": 24576
+  },
+  {
+    "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/libc.so",
+    "merkle": "24b756bb0b98fe282484272c213a7743c092ea950568e5b4471ea532046f0889",
+    "bytes": 660184,
+    "size": 409600
+  },
+  {
+    "source_path": "obj/vendor/google/gallium/flutter_aot_product_runner.meta/blobs/3b37d0e5f2fbc453d444228601cd503635476d3628606537b9941a1ae621f708",
+    "merkle": "3b37d0e5f2fbc453d444228601cd503635476d3628606537b9941a1ae621f708",
+    "bytes": 8208,
+    "size": 24576
+  },
+  {
+    "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++.so.2.0",
+    "merkle": "b27f3311b14f54dc32e76cbb086e3688f9b8b1fc47f36afec1480732882395f2",
+    "bytes": 853560,
+    "size": 237568
+  },
+  {
+    "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/fdio/libfdio.so",
+    "merkle": "98e137f484f95960352cb692c2a0c330614a6c09869906433a006bc0eba64ee6",
+    "bytes": 291504,
+    "size": 122880
+  },
+  {
+    "source_path": "arm64-shared/libsyslog.so",
+    "merkle": "fd76079fe563e2a86ab0fb030cba7f42215fe6db3b379bb3e065c204ca2f7f7a",
+    "bytes": 198152,
+    "size": 32768
+  },
+  {
+    "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/trace-engine/libtrace-engine.so",
+    "merkle": "e2aec5e19fa0ea4ea4de761e7173da1f16b803b28598b95cf3db5e027ec7657d",
+    "bytes": 45080,
+    "size": 57344
+  },
+  {
+    "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++abi.so.1.0",
+    "merkle": "eb99cf2f1ab180bdeb649201e6df57f34c823f46808604566161de3f7451cc4c",
+    "bytes": 329176,
+    "size": 73728
+  },
+  {
+    "source_path": "arm64-shared/libdriver.so",
+    "merkle": "86d53bda612f1962ea0214f7fa526deefbaa32c8aae4c315fed52b96959dd13d",
+    "bytes": 394984,
+    "size": 122880
+  },
+  {
+    "source_path": "obj/src/developer/feedback/bugreport/bugreport/meta.far",
+    "merkle": "d00f568deaf0db2a298b970cf9e411faf300db52831c5d30742f08c697ce8764",
+    "bytes": 16384,
+    "size": 24576
+  },
+  {
+    "source_path": "bugreport",
+    "merkle": "ac7c38600ced2e25c2692eba4f7e82df550233480e04e51c5fd5d611b36602cd",
+    "bytes": 133456,
+    "size": 40960
+  }
+]

@@ -1,0 +1,56 @@
+[
+    {
+        "source_path": "obj/src/developer/feedback/bugreport/bugreport/meta.far",
+        "path": "meta/",
+        "merkle": "d00f568deaf0db2a298b970cf9e411faf300db52831c5d30742f08c697ce8764",
+        "size": 16384
+    },
+    {
+        "source_path": "arm64-shared/libsyslog.so",
+        "path": "lib/libsyslog.so",
+        "merkle": "fd76079fe563e2a86ab0fb030cba7f42215fe6db3b379bb3e065c204ca2f7f7a",
+        "size": 198152
+    },
+    {
+        "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libunwind.so.1",
+        "path": "lib/libunwind.so.1",
+        "merkle": "11f0499d7a212545e1d75473aee6dc644ab91f7fab8488a9071cb5e611216464",
+        "size": 198040
+    },
+    {
+        "source_path": "bugreport",
+        "path": "bin/bugreport",
+        "merkle": "ac7c38600ced2e25c2692eba4f7e82df550233480e04e51c5fd5d611b36602cd",
+        "size": 133456
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/libc.so",
+        "path": "lib/ld.so.1",
+        "merkle": "24b756bb0b98fe282484272c213a7743c092ea950568e5b4471ea532046f0889",
+        "size": 660184
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/async/libasync-default.so",
+        "path": "lib/libasync-default.so",
+        "merkle": "3b37d0e5f2fbc453d444228601cd503635476d3628606537b9941a1ae621f708",
+        "size": 8208
+    },
+    {
+        "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++.so.2",
+        "path": "lib/libc++.so.2",
+        "merkle": "b27f3311b14f54dc32e76cbb086e3688f9b8b1fc47f36afec1480732882395f2",
+        "size": 853560
+    },
+    {
+        "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++abi.so.1",
+        "path": "lib/libc++abi.so.1",
+        "merkle": "eb99cf2f1ab180bdeb649201e6df57f34c823f46808604566161de3f7451cc4c",
+        "size": 329176
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/fdio/libfdio.so",
+        "path": "lib/libfdio.so",
+        "merkle": "98e137f484f95960352cb692c2a0c330614a6c09869906433a006bc0eba64ee6",
+        "size": 291504
+    }
+]

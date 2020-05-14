@@ -466,6 +466,44 @@ class BlobStats {
       print("");
     }
   }
+
+  Future csvBlobs() async {
+    var csv = new File(pathJoin(outputDir.path, "blobs.csv")).openWrite();
+    csv.writeln("Size,Share,Prop,Saved,Path");
+
+    var blobs = blobsByHash.values.toList();
+    blobs.sort((a, b) => b.size.compareTo(a.size));
+
+    for (var blob in blobs) {
+      var values = [
+        blob.size,
+        blob.count,
+        blob.proportional,
+        blob.saved,
+        blob.sourcePath
+      ];
+      csv.writeln(values.join(','));
+    }
+    await csv.close();
+  }
+
+  Future csvPackages() async {
+    var csv = new File(pathJoin(outputDir.path, "packages.csv")).openWrite();
+    csv.writeln("Size,Prop,Private,Name");
+
+    packages.sort((a, b) => b.proportional.compareTo(a.proportional));
+
+    for (var package in packages) {
+      var values = [
+        package.size,
+        package.proportional,
+        package.private,
+        package.name
+      ];
+      csv.writeln(values.join(','));
+    }
+    await csv.close();
+  }
 }
 
 Future main(List<String> args) async {
@@ -512,6 +550,8 @@ Future main(List<String> args) async {
   stats.printBlobs(40);
   stats.printPackages();
   stats.printOverallSavings();
+  await stats.csvBlobs();
+  await stats.csvPackages();
   await stats.packagesToChromiumBinarySizeTree();
   if (argResults["dart-packages"]) {
     await stats.printDartPackages();

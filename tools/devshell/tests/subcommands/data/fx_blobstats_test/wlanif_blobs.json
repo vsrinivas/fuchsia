@@ -1,0 +1,68 @@
+[
+    {
+        "source_path": "obj/src/connectivity/wlan/drivers/wlanif/wlanif/meta.far",
+        "path": "meta/",
+        "merkle": "98af05f927a21388ce087137372a36c8ab14fc2379b0ad30df5166f75ce93dc6",
+        "size": 12288
+    },
+    {
+        "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libunwind.so.1",
+        "path": "lib/libunwind.so.1",
+        "merkle": "11f0499d7a212545e1d75473aee6dc644ab91f7fab8488a9071cb5e611216464",
+        "size": 198040
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/c/libc.so",
+        "path": "lib/ld.so.1",
+        "merkle": "24b756bb0b98fe282484272c213a7743c092ea950568e5b4471ea532046f0889",
+        "size": 660184
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/async/libasync-default.so",
+        "path": "lib/libasync-default.so",
+        "merkle": "3b37d0e5f2fbc453d444228601cd503635476d3628606537b9941a1ae621f708",
+        "size": 8208
+    },
+    {
+        "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++.so.2",
+        "path": "lib/libc++.so.2",
+        "merkle": "b27f3311b14f54dc32e76cbb086e3688f9b8b1fc47f36afec1480732882395f2",
+        "size": 853560
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/fdio/libfdio.so",
+        "path": "lib/libfdio.so",
+        "merkle": "98e137f484f95960352cb692c2a0c330614a6c09869906433a006bc0eba64ee6",
+        "size": 291504
+    },
+    {
+        "source_path": "arm64-shared/libsyslog.so",
+        "path": "lib/libsyslog.so",
+        "merkle": "fd76079fe563e2a86ab0fb030cba7f42215fe6db3b379bb3e065c204ca2f7f7a",
+        "size": 198152
+    },
+    {
+        "source_path": "../default.zircon/user-arm64-clang.shlib/obj/system/ulib/trace-engine/libtrace-engine.so",
+        "path": "lib/libtrace-engine.so",
+        "merkle": "e2aec5e19fa0ea4ea4de761e7173da1f16b803b28598b95cf3db5e027ec7657d",
+        "size": 45080
+    },
+    {
+        "source_path": "arm64-shared/wlanif.so",
+        "path": "driver/wlanif.so",
+        "merkle": "b5541e63cfe3851040a36c91b2b3330ccf5c862f240192149751e7cadf7423b0",
+        "size": 264152
+    },
+    {
+        "source_path": "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++abi.so.1",
+        "path": "lib/libc++abi.so.1",
+        "merkle": "eb99cf2f1ab180bdeb649201e6df57f34c823f46808604566161de3f7451cc4c",
+        "size": 329176
+    },
+    {
+        "source_path": "arm64-shared/libdriver.so",
+        "path": "lib/libdriver.so",
+        "merkle": "86d53bda612f1962ea0214f7fa526deefbaa32c8aae4c315fed52b96959dd13d",
+        "size": 394984
+    }
+]
