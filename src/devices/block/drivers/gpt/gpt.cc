@@ -302,7 +302,7 @@ zx_status_t PartitionTable::Bind() {
   if (block_info.block_count <= minimum_device_blocks.value()) {
     zxlogf(ERROR, "gpt: block device too small to hold GPT required:%lu found:%lu",
            minimum_device_blocks.value(), block_info.block_count);
-    return minimum_device_blocks.error();
+    return ZX_ERR_NO_SPACE;
   }
 
   uint32_t gpt_block_count = static_cast<uint32_t>(result.value());
@@ -313,8 +313,8 @@ zx_status_t PartitionTable::Bind() {
   // sanity check the default txn size with the block size
   if ((kMaxPartitionTableSize % block_info.block_size) ||
       (kMaxPartitionTableSize < block_info.block_size)) {
-    zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!",
-           kMaxPartitionTableSize, block_info.block_size);
+    zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!", kMaxPartitionTableSize,
+           block_info.block_size);
     return ZX_ERR_BAD_STATE;
   }
 

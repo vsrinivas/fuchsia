@@ -168,7 +168,7 @@ TEST_F(GptDeviceTest, DeviceTooSmall) {
 
   TableRef tab;
   ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab));
-  ASSERT_NOT_OK(tab->Bind());
+  ASSERT_EQ(ZX_ERR_NO_SPACE, tab->Bind());
 }
 
 TEST_F(GptDeviceTest, DdkLifecycle) {

@@ -367,67 +367,67 @@ class variant
   // TODO(eieio): Remove uses of these in favor of non-member get.
   template <size_t Index>
   constexpr auto& get() & {
-    if (storage_.has_value()) {
+    if (storage_.has_value(index_tag<Index>{})) {
       return storage_.get(index_tag<Index>{});
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
   template <size_t Index>
   constexpr const auto& get() const& {
-    if (storage_.has_value()) {
+    if (storage_.has_value(index_tag<Index>{})) {
       return storage_.get(index_tag<Index>{});
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
   template <size_t Index>
   constexpr auto&& get() && {
-    if (storage_.has_value()) {
+    if (storage_.has_value(index_tag<Index>{})) {
       return std::move(storage_.get(index_tag<Index>{}));
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
   template <size_t Index>
   constexpr const auto&& get() const&& {
-    if (storage_.has_value()) {
+    if (storage_.has_value(index_tag<Index>{})) {
       return std::move(storage_.get(index_tag<Index>{}));
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
 
   template <typename T>
   constexpr auto& get() & {
-    if (storage_.has_value()) {
+    if (storage_.has_value(type_tag<T>{})) {
       return storage_.get(type_tag<T>{});
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
   template <typename T>
   constexpr const auto& get() const& {
-    if (storage_.has_value()) {
+    if (storage_.has_value(type_tag<T>{})) {
       return storage_.get(type_tag<T>{});
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
   template <typename T>
   constexpr auto&& get() && {
-    if (storage_.has_value()) {
+    if (storage_.has_value(type_tag<T>{})) {
       return std::move(storage_.get(type_tag<T>{}));
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
   template <typename T>
   constexpr const auto&& get() const&& {
-    if (storage_.has_value()) {
+    if (storage_.has_value(type_tag<T>{})) {
       return std::move(storage_.get(type_tag<T>{}));
     } else {
-      throw_bad_variant_access("Access to empty variant!");
+      throw_bad_variant_access("Bad get<>() from variant!");
     }
   }
 
@@ -497,7 +497,7 @@ class variant
     bool result = true;
     const bool has_value =
         rhs.storage_.visit([&result, &lhs, &rhs](auto, auto active_index_tag, const auto*) {
-          if (!lhs.storage_.has_value()) {
+          if (lhs.storage_.is_empty()) {
             result = true;
           } else if (lhs.index() < rhs.index()) {
             result = true;
@@ -513,7 +513,7 @@ class variant
     bool result = true;
     const bool has_value =
         lhs.storage_.visit([&result, &lhs, &rhs](auto, auto active_index_tag, const auto*) {
-          if (!rhs.storage_.has_value()) {
+          if (rhs.storage_.is_empty()) {
             result = true;
           } else if (lhs.index() > rhs.index()) {
             result = true;
@@ -529,7 +529,7 @@ class variant
     bool result = false;
     const bool has_value =
         lhs.storage_.visit([&result, &lhs, &rhs](auto, auto active_index_tag, const auto*) {
-          if (!rhs.storage_.has_value()) {
+          if (rhs.storage_.is_empty()) {
             result = false;
           } else if (lhs.index() < rhs.index()) {
             result = true;
@@ -545,7 +545,7 @@ class variant
     bool result = false;
     const bool has_value =
         rhs.storage_.visit([&result, &lhs, &rhs](auto, auto active_index_tag, const auto*) {
-          if (!lhs.storage_.has_value()) {
+          if (lhs.storage_.is_empty()) {
             result = false;
           } else if (lhs.index() > rhs.index()) {
             result = true;

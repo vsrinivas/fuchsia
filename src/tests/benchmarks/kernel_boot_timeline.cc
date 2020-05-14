@@ -48,14 +48,17 @@ perftest::ResultsSet BootTimeline() {
   double ms_per_tick = 1000.0 / static_cast<double>(zx_ticks_per_second());
 
   perftest::ResultsSet results;
-  uint64_t last_step_ticks = 0;
+  int64_t last_step_ticks = 0;
   for (auto [name, result_name] : kSteps) {
     auto it = std::find_if(metrics.begin(), metrics.end(),
                            [name = name](const auto& m) { return m.name() == name; });
     ZX_ASSERT_MSG(it != metrics.end(), "%s not found", name);
+    ZX_ASSERT_MSG(it->Contains<inspect_deprecated::hierarchy::IntMetric>(),
+                  "All metrics in kSteps are expected to be IntMetric: name: %s actual format: %d",
+                  name, it->format());
 
-    uint64_t step_ticks = it->Get<inspect_deprecated::hierarchy::UIntMetric>().value();
-    uint64_t elapsed = step_ticks - last_step_ticks;
+    int64_t step_ticks = it->Get<inspect_deprecated::hierarchy::IntMetric>().value();
+    int64_t elapsed = step_ticks - last_step_ticks;
     double elapsed_ms = static_cast<double>(elapsed) * ms_per_tick;
     last_step_ticks = step_ticks;
 

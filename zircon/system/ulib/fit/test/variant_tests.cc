@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/variant.h>
+
 #include <string>
 #include <type_traits>
-
-#include <lib/fit/variant.h>
 
 #include <zxtest/zxtest.h>
 
@@ -57,12 +57,15 @@ struct non_trivial_move {
 };
 
 struct literal_traits {
-  using variant = fit::variant<fit::monostate, int, double>;
+  using a_type = fit::monostate;
+  using b_type = int;
+  using c_type = double;
+  using variant = fit::variant<a_type, b_type, c_type>;
 
-  static constexpr fit::monostate a_value{};
-  static constexpr int b_value = 10;
-  static constexpr double c_value = 2.5;
-  static constexpr double c2_value = 4.2;
+  static constexpr a_type a_value{};
+  static constexpr b_type b_value = 10;
+  static constexpr c_type c_value = 2.5;
+  static constexpr c_type c2_value = 4.2;
 
   static variant a, b, c;
   static constexpr variant const_a{};
@@ -75,12 +78,15 @@ literal_traits::variant literal_traits::b{fit::in_place_index<1>, literal_traits
 literal_traits::variant literal_traits::c{fit::in_place_index<2>, literal_traits::c_value};
 
 struct complex_traits {
-  using variant = fit::variant<fit::monostate, int, std::string>;
+  using a_type = fit::monostate;
+  using b_type = int;
+  using c_type = std::string;
+  using variant = fit::variant<a_type, b_type, c_type>;
 
-  static const fit::monostate a_value;
-  static const int b_value;
-  static const std::string c_value;
-  static const std::string c2_value;
+  static const a_type a_value;
+  static const b_type b_value;
+  static const c_type c_value;
+  static const c_type c2_value;
 
   static variant a, b, c;
   static const variant const_a;
@@ -120,8 +126,8 @@ void accessors() {
 
 template <typename T>
 void copy_move_assign() {
-  using b_type = decltype(T::b_value);
-  using c_type = decltype(T::c_value);
+  using b_type = typename T::b_type;
+  using c_type = typename T::c_type;
 
   typename T::variant x;
   EXPECT_EQ(0, x.index());
@@ -215,6 +221,25 @@ void swapping() {
   EXPECT_TRUE(T::b_value == x.template get<1>());
   EXPECT_EQ(0, y.index());
   EXPECT_TRUE(T::a_value == y.template get<0>());
+}
+
+template <typename T>
+void get_wrong_type() {
+  ASSERT_DEATH([] {
+    using b_type = typename T::b_type;
+    typename T::variant x;
+    EXPECT_EQ(0, x.index());
+    (void)fit::get<b_type>(x);
+  });
+}
+
+template <typename T>
+void get_wrong_index() {
+  ASSERT_DEATH([] {
+    typename T::variant x;
+    EXPECT_EQ(0, x.index());
+    (void)fit::get<1>(x);
+  });
 }
 
 // Test constexpr behavior.
@@ -454,3 +479,9 @@ TEST(Variant, CopyMoveAssign_Literal) { copy_move_assign<literal_traits>(); }
 TEST(Variant, CopyMoveAssign_Complex) { copy_move_assign<complex_traits>(); }
 TEST(Variant, Swapping_Literal) { swapping<literal_traits>(); }
 TEST(Variant, Swapping_Complex) { swapping<complex_traits>(); }
+#if DEATH_TESTS
+TEST(Variant, GetWrongTypeAborts_Literal) { get_wrong_type<literal_traits>(); }
+TEST(Variant, GetWrongTypeAborts_Complex) { get_wrong_type<complex_traits>(); }
+TEST(Variant, GetWrongIndexAborts_Literal) { get_wrong_index<literal_traits>(); }
+TEST(Variant, GetWrongIndexAborts_Complex) { get_wrong_index<complex_traits>(); }
+#endif

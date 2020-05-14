@@ -611,7 +611,15 @@ class indexed_storage<DestructorClass, type_index<Ts, Is>...> {
   ~indexed_storage() = default;
 
   constexpr index_type index() const { return index_; }
-  constexpr bool has_value() const { return index() != empty_index; }
+  constexpr bool is_empty() const { return index() == empty_index; }
+  template <typename T>
+  constexpr bool has_value(type_tag<T>) const {
+    return index() == base_.index(type_tag<T>{});
+  }
+  template <size_t Index>
+  constexpr bool has_value(index_tag<Index>) const {
+    return index() == Index;
+  }
 
   template <typename T>
   constexpr auto& get(type_tag<T>) {

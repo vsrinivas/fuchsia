@@ -244,7 +244,7 @@ class optional : private ::fit::internal::modulate_copy_and_move<T> {
 
   // Availability accessors/operators.
 
-  constexpr bool has_value() const { return storage_.has_value(); }
+  constexpr bool has_value() const { return !storage_.is_empty(); }
   constexpr explicit operator bool() const { return has_value(); }
 
   // Assignment operators.
