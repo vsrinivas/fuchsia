@@ -92,7 +92,7 @@ class Event {
 
   // Only our AutounsignalEvent subclass can also access this, to keep the flags private.
   constexpr Event(bool initial, Flags flags)
-      : magic_(kMagic), result_(initial ? ZX_OK : INT_MAX), flags_(flags) {}
+      : magic_(kMagic), result_(initial ? ZX_OK : kNotSignalled), flags_(flags) {}
 
  private:
   zx_status_t WaitWorker(const Deadline& deadline, bool interruptable, uint signal_mask);
