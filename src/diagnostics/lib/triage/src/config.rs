@@ -70,6 +70,14 @@ impl DiagnosticData {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_inspect(file: &Path) -> Result<DiagnosticData, Error> {
+        let str_file = file.as_os_str().to_string_lossy().to_string();
+        let inspect_text = fs::read_to_string(&file)
+            .context(format!("Couldn't read file '{}' to string", str_file))?;
+        Self::new(str_file, inspect_text)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn text_from_file(directory: &Path, file_name: &str) -> Result<String, Error> {
         let file_path = directory.join(file_name).into_os_string().to_string_lossy().to_string();
         fs::read_to_string(&file_path)

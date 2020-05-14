@@ -8,6 +8,11 @@ use {
     std::process::{Command, Output},
 };
 
+enum Input {
+    Bugreport(String),
+    Inspect(String),
+}
+
 /// Returns the path relative to the current exectuable.
 #[cfg(not(target_os = "fuchsia"))]
 fn path_for_file(filename: &str, relative_to: Option<&Path>) -> Result<String, Error> {
@@ -46,6 +51,12 @@ fn bugreport_path() -> Result<String, Error> {
     path_for_file("bugreport", Some(&Path::new("test_data").join("triage")))
 }
 
+/// This is needed to work correctly in CQ. If this call fails make sure
+/// that you have added the file to the `copy` target in the BUILD.gn file.
+fn inspect_file_path() -> Result<String, Error> {
+    path_for_file("inspect.json", Some(&Path::new("test_data").join("triage").join("bugreport")))
+}
+
 /// Returns the path to the triage binary.
 fn binary_path() -> Result<String, Error> {
     path_for_file("triage", None)
@@ -53,15 +64,23 @@ fn binary_path() -> Result<String, Error> {
 
 /// Executes the command with the given arguments
 fn run_command(
-    bugreport: String,
+    input: Input,
     configs: Vec<String>,
     tags: Vec<String>,
     exclude_tags: Vec<String>,
 ) -> Result<Output, Error> {
     let mut args = Vec::new();
 
-    args.push("--bugreport".to_string());
-    args.push(bugreport);
+    match input {
+        Input::Bugreport(bugreport) => {
+            args.push("--bugreport".to_string());
+            args.push(bugreport);
+        }
+        Input::Inspect(inspect) => {
+            args.push("--inspect".to_string());
+            args.push(inspect);
+        }
+    }
 
     for config in configs {
         args.push("--config".to_string());
@@ -121,6 +140,11 @@ fn bugreport_path_should_find_bugreport() {
 }
 
 #[test]
+fn inspect_file_path_should_find_file() {
+    assert!(inspect_file_path().is_ok(), "should be able to find the inspect.json file");
+}
+
+#[test]
 fn binary_path_should_find_binary() {
     assert!(binary_path().is_ok(), "should be able to find the triage binary");
 }
@@ -146,7 +170,7 @@ macro_rules! integration_test {
         #[test]
         fn $name() -> Result<(), Error> {
             let output = crate::test::integration::run_command(
-                crate::test::integration::bugreport_path()?,
+                Input::Bugreport(crate::test::integration::bugreport_path()?),
                 $config
                     .into_iter()
                     .map(|c| crate::test::integration::config_file_path(c).unwrap())
@@ -176,7 +200,7 @@ fn report_missing_inspect() -> Result<(), Error> {
     //note: we do not use the macro here because we want to not fail on the
     // file conversion logic
     let output = run_command(
-        "not_found_dir".to_string(),
+        Input::Bugreport("not_found_dir".to_string()),
         vec![config_file_path("sample.triage")?],
         vec![],
         vec![],
@@ -193,8 +217,23 @@ fn report_missing_inspect() -> Result<(), Error> {
 fn report_missing_config_file() -> Result<(), Error> {
     //note: we do not use the macro here because we want to not fail on the
     // file conversion logic
-    let output = run_command(bugreport_path()?, vec!["cfg".to_string()], vec![], vec![])?;
+    let output =
+        run_command(Input::Bugreport(bugreport_path()?), vec!["cfg".to_string()], vec![], vec![])?;
     verify_output(output, 0, StringMatch::Contains("Couldn't read config file"));
+    Ok(())
+}
+
+#[test]
+fn reads_inspect_file_directly() -> Result<(), Error> {
+    //note: we do not use the macro here because we want to not fail on the
+    // file conversion logic
+    let output = run_command(
+        Input::Inspect(inspect_file_path()?),
+        vec![config_file_path("sample.triage").unwrap()],
+        vec![],
+        vec![],
+    )?;
+    verify_output(output, 0, StringMatch::DoesNotContain("Couldn't"));
     Ok(())
 }
 

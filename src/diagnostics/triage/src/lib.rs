@@ -20,6 +20,10 @@ pub struct Options {
     #[structopt(long = "bugreport")]
     data_directories: Vec<String>,
 
+    /// Inspect files to read directly.
+    #[structopt(long = "inspect")]
+    inspect_files: Vec<String>,
+
     /// How to print the results.
     #[structopt(long = "output-format", default_value = "text")]
     output_format: OutputFormat,

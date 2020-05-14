@@ -14,6 +14,7 @@
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
 ##    --bugreport <dir>                  Directory to get an inspect.json file from
+##    --inspect <file>                   Path to inspect.json
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
 ##    --test                             (deprecated) Run self-tests (only)
@@ -33,9 +34,14 @@
 ## If no --tag values or --exclude-tag values are included then all of the
 ##   actions will be included.
 ##
-## 0 or more --bugreport paths may be given. Path is relative to CWD, or
-##   absolute. Each path is a directory containing an unpacked "bugreport.zip".
-##   If no --bugreport is given, `fx bugreport` will be invoked and analyzed.
+## 0 or more --bugreport or --inspect paths may be given. 
+##   --bugreport is path to a directory containing an unpacked "bugreport.zip".
+##   For this path, 'fx triage' will analyze all supported filetypes.
+##   Currently, the only supported filetype is inspect.json.
+##   Future versions will add support for different files.
+##   --inspect is a path to an Inspect tree output dump file (e.g. "inspect.json" from bugreport).
+##   If no --bugreport and no --inspect is given,
+##   --bugreport with the result of `fx bugreport` will be invoked and analyzed.
 
 set -e
 trap 'echo Failed: ${BASH_COMMAND}' ERR
@@ -47,6 +53,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"\
 config_paths=( )
 testit=""
 directories=( )
+inspect_files=( )
 tags=( )
 exclude_tags=( )
 flags=""
@@ -65,6 +72,10 @@ while [[ "$1" =~ ^- ]]; do
     --bugreport)
       shift
       directories+=( "$1" )
+      ;;
+    --inspect)
+      shift
+      inspect_files+=( "$1" )
       ;;
     --tag)
       shift
@@ -112,7 +123,7 @@ do
   flags="${flags} --config ${config_file}"
 done
 
-if [ -z "${directories}" ]; then
+if [ -z "${directories}" ] && [ -z "${inspect_files}" ]; then
   temp_dir=$(mktemp -d)
   trap 'rm -rf "${temp_dir}"' EXIT
   fx-command-run bugreport --output-directory "${temp_dir}" > /dev/null
@@ -123,6 +134,11 @@ fi
 for directory in "${directories[@]}"
 do
   flags="${flags} --bugreport ${directory}"
+done
+
+for file in "${inspect_files[@]}"
+do
+  flags="${flags} --inspect ${file}"
 done
 
 for tag in "${tags[@]}"

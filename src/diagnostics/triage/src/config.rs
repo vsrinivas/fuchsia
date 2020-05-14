@@ -36,7 +36,15 @@ pub struct ProgramStateHolder {
 
 /// Parses the inspect.json file and all the config files.
 pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
-    let Options { data_directories, output_format, config_files, tags, exclude_tags, .. } = options;
+    let Options {
+        data_directories,
+        inspect_files,
+        output_format,
+        config_files,
+        tags,
+        exclude_tags,
+        ..
+    } = options;
 
     if config_files.len() == 0 {
         bail!("Need at least one config file; use --config");
@@ -49,6 +57,9 @@ pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
     let diagnostic_data = data_directories
         .into_iter()
         .map(|path| DiagnosticData::from_directory(&Path::new(&path)))
+        .chain(
+            inspect_files.into_iter().map(|path| DiagnosticData::from_inspect(&Path::new(&path))),
+        )
         .collect::<Result<Vec<_>, Error>>()?;
 
     Ok(ProgramStateHolder { parse_result, diagnostic_data, output_format })
