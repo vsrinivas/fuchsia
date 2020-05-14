@@ -584,15 +584,9 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 
     // Last focus time is recorded in SessionStorage, and story provider
     // watchers are notified through watching SessionStorage.
-    auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
-    auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
-      zx_time_t now = 0;
-      zx_clock_get(ZX_CLOCK_UTC, &now);
-      return session_storage_->UpdateLastFocusedTimestamp(story_id, now);
-    });
-    fit::function<void()> callback = [] {};
-    operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::OnFocusChange", on_run, done,
-                                               std::move(callback)));
+    zx_time_t now = 0;
+    zx_clock_get(ZX_CLOCK_UTC, &now);
+    session_storage_->UpdateLastFocusedTimestamp(info->focused_story_id, now);
   }));
 }
 

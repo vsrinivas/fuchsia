@@ -66,7 +66,7 @@ class SessionStorage {
 
   // Sets the last focused timestamp for |story_id| to |ts|. Completes the
   // returned Future when done.
-  FuturePtr<> UpdateLastFocusedTimestamp(fidl::StringPtr story_id, int64_t ts);
+  void UpdateLastFocusedTimestamp(fidl::StringPtr story_id, int64_t ts);
 
   // Returns a StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.

@@ -67,7 +67,7 @@ void SessionStorage::DeleteStory(fidl::StringPtr story_name) {
   return;
 }
 
-FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name,
+void SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_name,
                                                        const int64_t ts) {
   auto it = story_data_backing_store_.find(story_name);
   FX_DCHECK(it != story_data_backing_store_.end())
@@ -81,8 +81,6 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_nam
       on_story_updated_(std::move(story_name), std::move(story_data));
     }
   }
-
-  return Future<>::CreateCompleted("SessionStorage.UpdateLastFocusedTimestamp.ret");
 }
 
 fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(
