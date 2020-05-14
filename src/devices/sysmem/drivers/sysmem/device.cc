@@ -391,7 +391,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap, zx::channel heap_connectio
 }
 
 zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
-  LOG(TRACE, "sysmem RegisterSecureMem begin");
+  LOG(DEBUG, "sysmem RegisterSecureMem begin");
 
   current_close_is_abort_ = std::make_shared<std::atomic_bool>(true);
 
@@ -446,7 +446,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           status = allocator->GetPhysicalMemoryInfo(&base, &size);
           // Should be impossible for this to fail for now.
           ZX_ASSERT(status == ZX_OK);
-          LOG(TRACE,
+          LOG(DEBUG,
               "allocator->GetPhysicalMemoryInfo() heap_type: %08lx base: %016" PRIx64
               " size: %016" PRIx64,
               static_cast<uint64_t>(heap_type), base, size);
@@ -504,7 +504,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           status = secure_allocator->InitPhysical(heap.physical_address);
           // A failing status is fatal for now.
           ZX_ASSERT(status == ZX_OK);
-          LOG(TRACE,
+          LOG(DEBUG,
               "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
               static_cast<uint64_t>(heap.heap), heap.physical_address, heap.size_bytes);
           auto heap_type = static_cast<fuchsia_sysmem_HeapType>(heap.heap);
@@ -514,7 +514,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           allocators_[heap_type] = std::move(secure_allocator);
         }
 
-        LOG(TRACE, "sysmem RegisterSecureMem() done (async)");
+        LOG(DEBUG, "sysmem RegisterSecureMem() done (async)");
       });
 }
 
@@ -530,9 +530,9 @@ zx_status_t Device::SysmemUnregisterSecureMem() {
   *current_close_is_abort_ = false;
   current_close_is_abort_.reset();
   return async::PostTask(loop_.dispatcher(), [this]() {
-    LOG(TRACE, "begin UnregisterSecureMem()");
+    LOG(DEBUG, "begin UnregisterSecureMem()");
     secure_mem_.reset();
-    LOG(TRACE, "end UnregisterSecureMem()");
+    LOG(DEBUG, "end UnregisterSecureMem()");
   });
 }
 

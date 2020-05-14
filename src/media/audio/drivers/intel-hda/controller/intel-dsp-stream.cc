@@ -216,7 +216,7 @@ void IntelDspStream::ProcessRbDeactivate(const dispatcher::Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   fbl::AutoLock lock(obj_lock());
 
-  LOG(TRACE, "ProcessClientRbDeactivate\n");
+  LOG(DEBUG, "ProcessClientRbDeactivate\n");
 
   ZX_DEBUG_ASSERT(channel == rb_channel_.get());
   rb_channel_->Deactivate();
@@ -280,7 +280,7 @@ void IntelDspStream::ProcessClientRbDeactivate(const dispatcher::Channel* channe
   ZX_DEBUG_ASSERT(channel != nullptr);
   fbl::AutoLock lock(obj_lock());
 
-  LOG(TRACE, "ProcessClientRbDeactivate\n");
+  LOG(DEBUG, "ProcessClientRbDeactivate\n");
 
   ZX_DEBUG_ASSERT(channel == client_rb_channel_.get());
   client_rb_channel_->Deactivate();
@@ -312,14 +312,14 @@ zx_status_t IntelDspStream::OnActivateLocked() {
   return ZX_OK;
 }
 
-void IntelDspStream::OnDeactivateLocked() { LOG(TRACE, "OnDeactivateLocked\n"); }
+void IntelDspStream::OnDeactivateLocked() { LOG(DEBUG, "OnDeactivateLocked\n"); }
 
 void IntelDspStream::OnChannelDeactivateLocked(const dispatcher::Channel& channel) {
-  LOG(TRACE, "OnChannelDeactivateLocked\n");
+  LOG(DEBUG, "OnChannelDeactivateLocked\n");
 }
 
 zx_status_t IntelDspStream::OnDMAAssignedLocked() {
-  LOG(TRACE, "OnDMAAssignedLocked\n");
+  LOG(DEBUG, "OnDMAAssignedLocked\n");
   return PublishDeviceLocked();
 }
 
@@ -332,30 +332,30 @@ zx_status_t IntelDspStream::OnUnsolicitedResponseLocked(const CodecResponse& res
 }
 
 zx_status_t IntelDspStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& req) {
-  LOG(TRACE, "BeginChangeStreamFormatLocked\n");
+  LOG(DEBUG, "BeginChangeStreamFormatLocked\n");
   return ZX_OK;
 }
 
 zx_status_t IntelDspStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
-  LOG(TRACE, "FinishChangeStreamFormatLocked\n");
+  LOG(DEBUG, "FinishChangeStreamFormatLocked\n");
   return ZX_OK;
 }
 
 void IntelDspStream::OnGetGainLocked(audio_proto::GetGainResp* out_resp) {
-  LOG(TRACE, "OnGetGainLocked\n");
+  LOG(DEBUG, "OnGetGainLocked\n");
   IntelHDAStreamBase::OnGetGainLocked(out_resp);
 }
 
 void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
                                      audio_proto::SetGainResp* out_resp) {
-  LOG(TRACE, "OnSetGainLocked\n");
+  LOG(DEBUG, "OnSetGainLocked\n");
   IntelHDAStreamBase::OnSetGainLocked(req, out_resp);
 }
 
 void IntelDspStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
                                         const audio_proto::PlugDetectReq& req,
                                         audio_proto::PlugDetectResp* out_resp) {
-  LOG(TRACE, "OnPlugDetectLocked\n");
+  LOG(DEBUG, "OnPlugDetectLocked\n");
   IntelHDAStreamBase::OnPlugDetectLocked(response_channel, req, out_resp);
 }
 

@@ -269,7 +269,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
         if (status == ZX_ERR_TIMED_OUT) {
           zx_time_t now = zx_clock_get_monotonic();
           if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
-            zxlogf(TRACE, "i2c-hid: device_read timed out");
+            zxlogf(DEBUG, "i2c-hid: device_read timed out");
             last_timeout_warning = now;
           }
           continue;
@@ -289,7 +289,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
       dedupe = true;
 
       if (report_len == 0x0) {
-        zxlogf(TRACE, "i2c-hid reset detected");
+        zxlogf(DEBUG, "i2c-hid reset detected");
         // Either host or device reset.
         i2c_pending_reset_ = false;
         i2c_reset_cnd_.Broadcast();
@@ -326,7 +326,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
 }
 
 int I2cHidbus::WorkerThreadIrq() {
-  zxlogf(TRACE, "i2c-hid: using irq");
+  zxlogf(DEBUG, "i2c-hid: using irq");
 
   zx_status_t status = Reset(true);
   if (status != ZX_OK) {
@@ -364,7 +364,7 @@ int I2cHidbus::WorkerThreadIrq() {
         if (status == ZX_ERR_TIMED_OUT) {
           zx_time_t now = zx_clock_get_monotonic();
           if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
-            zxlogf(TRACE, "i2c-hid: device_read timed out");
+            zxlogf(DEBUG, "i2c-hid: device_read timed out");
             last_timeout_warning = now;
           }
           continue;
@@ -375,7 +375,7 @@ int I2cHidbus::WorkerThreadIrq() {
 
       report_len = letoh16(*(uint16_t*)buf);
       if (report_len == 0x0) {
-        zxlogf(TRACE, "i2c-hid reset detected");
+        zxlogf(DEBUG, "i2c-hid reset detected");
         // Either host or device reset.
         i2c_pending_reset_ = false;
         i2c_reset_cnd_.Broadcast();
@@ -456,18 +456,18 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(TRACE, "i2c-hid: desc:");
-  zxlogf(TRACE, "  report desc len: %u", letoh16(hiddesc->wReportDescLength));
-  zxlogf(TRACE, "  report desc reg: %u", letoh16(hiddesc->wReportDescRegister));
-  zxlogf(TRACE, "  input reg:       %u", letoh16(hiddesc->wInputRegister));
-  zxlogf(TRACE, "  max input len:   %u", letoh16(hiddesc->wMaxInputLength));
-  zxlogf(TRACE, "  output reg:      %u", letoh16(hiddesc->wOutputRegister));
-  zxlogf(TRACE, "  max output len:  %u", letoh16(hiddesc->wMaxOutputLength));
-  zxlogf(TRACE, "  command reg:     %u", letoh16(hiddesc->wCommandRegister));
-  zxlogf(TRACE, "  data reg:        %u", letoh16(hiddesc->wDataRegister));
-  zxlogf(TRACE, "  vendor id:       %x", hiddesc->wVendorID);
-  zxlogf(TRACE, "  product id:      %x", hiddesc->wProductID);
-  zxlogf(TRACE, "  version id:      %x", hiddesc->wVersionID);
+  zxlogf(DEBUG, "i2c-hid: desc:");
+  zxlogf(DEBUG, "  report desc len: %u", letoh16(hiddesc->wReportDescLength));
+  zxlogf(DEBUG, "  report desc reg: %u", letoh16(hiddesc->wReportDescRegister));
+  zxlogf(DEBUG, "  input reg:       %u", letoh16(hiddesc->wInputRegister));
+  zxlogf(DEBUG, "  max input len:   %u", letoh16(hiddesc->wMaxInputLength));
+  zxlogf(DEBUG, "  output reg:      %u", letoh16(hiddesc->wOutputRegister));
+  zxlogf(DEBUG, "  max output len:  %u", letoh16(hiddesc->wMaxOutputLength));
+  zxlogf(DEBUG, "  command reg:     %u", letoh16(hiddesc->wCommandRegister));
+  zxlogf(DEBUG, "  data reg:        %u", letoh16(hiddesc->wDataRegister));
+  zxlogf(DEBUG, "  vendor id:       %x", hiddesc->wVendorID);
+  zxlogf(DEBUG, "  product id:      %x", hiddesc->wProductID);
+  zxlogf(DEBUG, "  version id:      %x", hiddesc->wVersionID);
 
   return ZX_OK;
 }

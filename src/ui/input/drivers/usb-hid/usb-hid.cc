@@ -39,8 +39,8 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
     zxlogf(ERROR, "usb-hid: usb_request_mmap failed: %s", zx_status_get_string(status));
     return;
   }
-  zxlogf(SPEW, "usb-hid: callback request status %d", req->response.status);
-  if (zxlog_level_enabled(SPEW)) {
+  zxlogf(TRACE, "usb-hid: callback request status %d", req->response.status);
+  if (zxlog_level_enabled(TRACE)) {
     hexdump(buffer, req->response.actual);
   }
 

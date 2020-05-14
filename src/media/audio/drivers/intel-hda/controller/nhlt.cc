@@ -156,7 +156,7 @@ StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Span<const uint8_t> buffer
 
     // If the returned descriptor is nullopt, we don't support it. Just ignore it.
     if (maybe_config.ValueOrDie().header.link_type != NHLT_LINK_TYPE_SSP) {
-      GLOBAL_LOG(TRACE, "Ignoring non-SSP NHLT descriptor at index %lu.", i);
+      GLOBAL_LOG(DEBUG, "Ignoring non-SSP NHLT descriptor at index %lu.", i);
       continue;
     }
     fbl::AllocChecker ac;

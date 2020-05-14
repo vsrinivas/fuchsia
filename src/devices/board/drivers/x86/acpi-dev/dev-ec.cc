@@ -14,7 +14,7 @@
 #include "dev.h"
 #include "errors.h"
 
-#define xprintf(fmt...) zxlogf(SPEW, fmt)
+#define xprintf(fmt...) zxlogf(TRACE, fmt)
 
 /* EC commands */
 #define EC_CMD_READ 0x80

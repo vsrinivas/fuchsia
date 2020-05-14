@@ -93,7 +93,7 @@ zx_status_t Worker::Run() {
       case kBlockRequest:
         break;
       case kStopRequest:
-        zxlogf(TRACE, "worker %p stopping.", this);
+        zxlogf(DEBUG, "worker %p stopping.", this);
         return ZX_OK;
       default:
         zxlogf(ERROR, "unknown request: 0x%016" PRIx64 "", packet.user.u64[0]);

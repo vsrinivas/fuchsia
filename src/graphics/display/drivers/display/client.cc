@@ -1367,7 +1367,7 @@ void Client::CleanUpCaptureImage() {
 
 void Client::AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) {
   acked_cookie_ = cookie;
-  zxlogf(SPEW, "Cookie %ld Acked\n", cookie);
+  zxlogf(TRACE, "Cookie %ld Acked\n", cookie);
 }
 
 zx_status_t Client::Init(zx::channel server_channel) {
@@ -1538,7 +1538,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   if (number_of_vsyncs_sent_ >= kMaxVsyncMessages) {
     // We have reached/exceeded maximum allowed vsyncs without any acknowledgement. At this point,
     // start storing them
-    zxlogf(SPEW, "Vsync not sent due to none acknowledgment.\n");
+    zxlogf(TRACE, "Vsync not sent due to none acknowledgment.\n");
     ZX_DEBUG_ASSERT(cookie == 0);  // cookie should be zero!
     if (buffered_vsync_messages_.full()) {
       buffered_vsync_messages_.pop();  // discard

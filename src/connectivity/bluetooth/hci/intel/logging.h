@@ -14,4 +14,3 @@
 #define errorf(args...) logf(ERROR, args)
 #define infof(args...) logf(INFO, args)
 #define tracef(args...) logf(TRACE, args)
-#define spewf(args...) logf(SPEW, args)

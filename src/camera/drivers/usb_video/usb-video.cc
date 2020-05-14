@@ -109,7 +109,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         if (assoc_desc == NULL) {
           break;
         }
-        zxlogf(TRACE,
+        zxlogf(DEBUG,
                "USB_DT_INTERFACE_ASSOCIATION bInterfaceCount: %u "
                "bFirstInterface: %u\n",
                assoc_desc->bInterfaceCount, assoc_desc->bFirstInterface);
@@ -123,10 +123,10 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         }
         if (intf->bInterfaceClass == USB_CLASS_VIDEO) {
           if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_CONTROL) {
-            zxlogf(TRACE, "interface USB_SUBCLASS_VIDEO_CONTROL");
+            zxlogf(DEBUG, "interface USB_SUBCLASS_VIDEO_CONTROL");
             break;
           } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_STREAMING) {
-            zxlogf(TRACE,
+            zxlogf(DEBUG,
                    "interface USB_SUBCLASS_VIDEO_STREAMING bAlternateSetting: "
                    "%d\n",
                    intf->bAlternateSetting);
@@ -150,14 +150,14 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
             }
             break;
           } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
-            zxlogf(TRACE,
+            zxlogf(DEBUG,
                    "interface USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION "
                    "bAlternateSetting: %d\n",
                    intf->bAlternateSetting);
             break;
           }
         }
-        zxlogf(TRACE, "USB_DT_INTERFACE %d %d %d", intf->bInterfaceClass,
+        zxlogf(DEBUG, "USB_DT_INTERFACE %d %d %d", intf->bInterfaceClass,
                intf->bInterfaceSubClass, intf->bInterfaceProtocol);
         break;
       }
@@ -175,7 +175,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (control_header == NULL) {
                 break;
               }
-              zxlogf(TRACE, "USB_VIDEO_VC_HEADER dwClockFrequency: %u",
+              zxlogf(DEBUG, "USB_VIDEO_VC_HEADER dwClockFrequency: %u",
                      control_header->dwClockFrequency);
               break;
             }
@@ -186,7 +186,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (desc == NULL) {
                 break;
               }
-              zxlogf(TRACE, "USB_VIDEO_VC_INPUT_TERMINAL wTerminalType: %04X",
+              zxlogf(DEBUG, "USB_VIDEO_VC_INPUT_TERMINAL wTerminalType: %04X",
                      le16toh(desc->wTerminalType));
               break;
             }
@@ -197,21 +197,21 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (desc == NULL) {
                 break;
               }
-              zxlogf(TRACE, "USB_VIDEO_VC_OUTPUT_TERMINAL wTerminalType: %04X",
+              zxlogf(DEBUG, "USB_VIDEO_VC_OUTPUT_TERMINAL wTerminalType: %04X",
                      le16toh(desc->wTerminalType));
               break;
             }
             case USB_VIDEO_VC_SELECTOR_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VC_SELECTOR_UNIT");
+              zxlogf(DEBUG, "USB_VIDEO_VC_SELECTOR_UNIT");
               break;
             case USB_VIDEO_VC_PROCESSING_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VC_PROCESSING_UNIT");
+              zxlogf(DEBUG, "USB_VIDEO_VC_PROCESSING_UNIT");
               break;
             case USB_VIDEO_VC_EXTENSION_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VS_EXTENSION_TYPE");
+              zxlogf(DEBUG, "USB_VIDEO_VS_EXTENSION_TYPE");
               break;
             case USB_VIDEO_VC_ENCODING_UNIT:
-              zxlogf(TRACE, "USB_VIDEO_VS_ENCODING_TYPE");
+              zxlogf(DEBUG, "USB_VIDEO_VS_ENCODING_TYPE");
               break;
           }
         } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_STREAMING) {
@@ -222,14 +222,14 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               if (input_header == NULL) {
                 break;
               }
-              zxlogf(TRACE,
+              zxlogf(DEBUG,
                      "USB_VIDEO_VS_INPUT_HEADER bNumFormats: %u "
                      "bEndpointAddress 0x%x\n",
                      input_header->bNumFormats, input_header->bEndpointAddress);
               break;
             }
             case USB_VIDEO_VS_OUTPUT_HEADER:
-              zxlogf(TRACE, "USB_VIDEO_VS_OUTPUT_HEADER");
+              zxlogf(DEBUG, "USB_VIDEO_VS_OUTPUT_HEADER");
               break;
             case USB_VIDEO_VS_FORMAT_UNCOMPRESSED:
             case USB_VIDEO_VS_FORMAT_MJPEG:
@@ -257,7 +257,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
               break;
           }
         } else if (intf->bInterfaceSubClass == USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION) {
-          zxlogf(TRACE, "USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION");
+          zxlogf(DEBUG, "USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION");
         }
         break;
       }
@@ -273,7 +273,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         // The additional transactions per microframe value is extracted
         // from bits 12..11 of wMaxPacketSize, so it fits in a uint8_t.
         uint8_t per_mf = static_cast<uint8_t>(usb_ep_add_mf_transactions(endp) + 1);
-        zxlogf(TRACE,
+        zxlogf(DEBUG,
                "USB_DT_ENDPOINT %s bEndpointAddress 0x%x packet size %d, %d / "
                "mf\n",
                direction, endp->bEndpointAddress, max_packet_size, per_mf);
@@ -296,7 +296,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         if (desc == NULL) {
           break;
         }
-        zxlogf(TRACE, "USB_VIDEO_CS_ENDPOINT wMaxTransferSize %u", desc->wMaxTransferSize);
+        zxlogf(DEBUG, "USB_VIDEO_CS_ENDPOINT wMaxTransferSize %u", desc->wMaxTransferSize);
         break;
       }
       case USB_DT_SS_EP_COMPANION: {
@@ -341,7 +341,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
         // fall through for unhandled superspeed bulk endpoint
       }
       default:
-        zxlogf(TRACE, "unknown DT %d", header->bDescriptorType);
+        zxlogf(DEBUG, "unknown DT %d", header->bDescriptorType);
         break;
     }
     usb_desc_iter_advance(&iter);

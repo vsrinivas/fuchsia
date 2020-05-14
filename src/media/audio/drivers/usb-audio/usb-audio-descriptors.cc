@@ -40,8 +40,8 @@ fbl::RefPtr<DescriptorListMemory> DescriptorListMemory::Create(usb_protocol_t* p
   }
   usb_get_descriptors(proto, ret->data_, desc_length, &ret->size_);
 
-  if (zxlog_level_enabled(SPEW)) {
-    GLOBAL_LOG(SPEW, "Descriptor List is %zu bytes long\n", ret->size_);
+  if (zxlog_level_enabled(TRACE)) {
+    GLOBAL_LOG(TRACE, "Descriptor List is %zu bytes long\n", ret->size_);
     hexdump8_ex(ret->data_, ret->size_, 0u);
   }
 
@@ -102,7 +102,7 @@ bool DescriptorListMemory::Iterator::ValidateOffset() {
     return false;
   }
 
-  GLOBAL_LOG(SPEW, "Found Descriptor [type 0x%02x, len 0x%02x] at offset 0x%zx/0x%zx\n",
+  GLOBAL_LOG(TRACE, "Found Descriptor [type 0x%02x, len 0x%02x] at offset 0x%zx/0x%zx\n",
              h->bDescriptorType, h->bLength, offset_, mem_->size());
 
   cleanup.cancel();

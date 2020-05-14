@@ -211,7 +211,7 @@ static zx_status_t bootpart_bind(void* ctx, zx_device_t* parent) {
     uint8_to_guid_string(type_guid, part->type_guid);
     uint8_to_guid_string(uniq_guid, part->uniq_guid);
 
-    zxlogf(SPEW,
+    zxlogf(TRACE,
            "bootpart: partition %u (%s) type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64
            "\n",
            i, name, type_guid, uniq_guid, part->name, part->first_block, part->last_block);

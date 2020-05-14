@@ -73,7 +73,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controll
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(512, 0, &vmo);
   if (status != ZX_OK) {
-    zxlogf(TRACE, "sata: error %d allocating vmo", status);
+    zxlogf(DEBUG, "sata: error %d allocating vmo", status);
     return status;
   }
 
@@ -243,10 +243,10 @@ static void sata_queue(void* ctx, block_op_t* bop, block_impl_queue_callback com
       txn->cmd = (BLOCK_OP(bop->command) == BLOCK_OP_READ) ? SATA_CMD_READ_DMA_EXT
                                                            : SATA_CMD_WRITE_DMA_EXT;
       txn->device = 0x40;
-      zxlogf(TRACE, "sata: queue op 0x%x txn %p", bop->command, txn);
+      zxlogf(DEBUG, "sata: queue op 0x%x txn %p", bop->command, txn);
       break;
     case BLOCK_OP_FLUSH:
-      zxlogf(TRACE, "sata: queue FLUSH txn %p", txn);
+      zxlogf(DEBUG, "sata: queue FLUSH txn %p", txn);
       break;
     default:
       block_complete(txn, ZX_ERR_NOT_SUPPORTED);

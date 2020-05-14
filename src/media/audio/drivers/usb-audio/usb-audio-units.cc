@@ -461,11 +461,11 @@ zx_status_t FeatureUnit::Probe(const usb_protocol_t& proto) {
 
   // Dump some diags info if TRACE level logging is enabled.
   if (has_vol()) {
-    GLOBAL_LOG(TRACE, "FeatureUnit id %u: can%s mute, can%s AGC, gain [%.3f, %.3f: step %.3f] dB\n",
+    GLOBAL_LOG(DEBUG, "FeatureUnit id %u: can%s mute, can%s AGC, gain [%.3f, %.3f: step %.3f] dB\n",
                id(), has_mute() ? "" : "not", has_agc() ? "" : "not", vol_min_db(), vol_max_db(),
                vol_res_db());
   } else {
-    GLOBAL_LOG(TRACE, "FeatureUnit id %u: can%s mute, can%s AGC, and has fixed gain\n", id(),
+    GLOBAL_LOG(DEBUG, "FeatureUnit id %u: can%s mute, can%s AGC, and has fixed gain\n", id(),
                has_mute() ? "" : "not", has_agc() ? "" : "not");
   }
 

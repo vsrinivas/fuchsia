@@ -270,7 +270,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         n->self.reset();
       }
     } else {
-      zxlogf(TRACE, "Unknown display %ld removed", displays_removed[i]);
+      zxlogf(DEBUG, "Unknown display %ld removed", displays_removed[i]);
     }
   }
 
@@ -318,7 +318,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       static constexpr uint32_t kEdidRetries = 3;
       do {
         if (edid_attempt != 0) {
-          zxlogf(TRACE, "Error %d/%d initializing edid: \"%s\"", edid_attempt, kEdidRetries,
+          zxlogf(DEBUG, "Error %d/%d initializing edid: \"%s\"", edid_attempt, kEdidRetries,
                  edid_err);
           zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
         }
@@ -334,11 +334,11 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       }
 
       PopulateDisplayAudio(info);
-      if (zxlog_level_enabled(TRACE) && info->edid_audio_.size()) {
-        zxlogf(TRACE, "Supported audio formats:");
+      if (zxlog_level_enabled(DEBUG) && info->edid_audio_.size()) {
+        zxlogf(DEBUG, "Supported audio formats:");
         for (auto range : info->edid_audio_) {
           for (auto rate : audio::utils::FrameRateEnumerator(range)) {
-            zxlogf(TRACE, "  rate=%d, channels=[%d, %d], sample=%x", rate, range.min_channels,
+            zxlogf(DEBUG, "  rate=%d, channels=[%d, %d], sample=%x", rate, range.min_channels,
                    range.max_channels, range.sample_formats);
           }
         }
@@ -362,13 +362,13 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         display_info->horizontal_size_mm = info->edid.horizontal_size_mm();
         display_info->vertical_size_mm = info->edid.vertical_size_mm();
       }
-      if (zxlog_level_enabled(TRACE)) {
+      if (zxlog_level_enabled(DEBUG)) {
         const char* manufacturer = strlen(info->edid.manufacturer_name())
                                        ? info->edid.manufacturer_name()
                                        : info->edid.manufacturer_id();
-        zxlogf(TRACE, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"", manufacturer,
+        zxlogf(DEBUG, "Manufacturer \"%s\", product %d, name \"%s\", serial \"%s\"", manufacturer,
                info->edid.product_code(), info->edid.monitor_name(), info->edid.monitor_serial());
-        info->edid.Print([](const char* str) { zxlogf(TRACE, "%s", str); });
+        info->edid.Print([](const char* str) { zxlogf(DEBUG, "%s", str); });
       }
     } else {
       info->params = display_params.panel.params;
@@ -568,7 +568,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (found_handles != handle_count) {
-    zxlogf(SPEW,
+    zxlogf(TRACE,
            "OnDisplayVsync with %lu unmatched images (found_handles = %lu, handle_count = %lu)\n",
            handle_count - found_handles, found_handles, handle_count);
     return;
@@ -580,7 +580,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     // A previous client applied a config and then disconnected before the vsync. Don't send garbage
     // image IDs to the new primary client.
     if (primary_client_->id() != applied_client_id_) {
-      zxlogf(TRACE,
+      zxlogf(DEBUG,
              "Dropping vsync. This was meant for client[%d], "
              "but client[%d] is currently active.\n",
              applied_client_id_, primary_client_->id());
@@ -739,7 +739,7 @@ void Controller::HandleClientOwnershipChanges() {
 }
 
 void Controller::OnClientDead(ClientProxy* client) {
-  zxlogf(TRACE, "Client %d dead", client->id());
+  zxlogf(DEBUG, "Client %d dead", client->id());
   fbl::AutoLock lock(mtx());
   if (unbinding_) {
     return;
@@ -843,30 +843,30 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   fbl::AllocChecker ac;
   std::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
-    zxlogf(TRACE, "Failed to alloc client task");
+    zxlogf(DEBUG, "Failed to alloc client task");
     return ZX_ERR_NO_MEMORY;
   }
 
   fbl::AutoLock lock(mtx());
   if (unbinding_) {
-    zxlogf(TRACE, "Client connected during unbind");
+    zxlogf(DEBUG, "Client connected during unbind");
     return ZX_ERR_UNAVAILABLE;
   }
 
   if ((is_vc && vc_client_) || (!is_vc && primary_client_)) {
-    zxlogf(TRACE, "Already bound");
+    zxlogf(DEBUG, "Already bound");
     return ZX_ERR_ALREADY_BOUND;
   }
 
   auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, next_client_id_++);
   if (!ac.check()) {
-    zxlogf(TRACE, "Failed to alloc client");
+    zxlogf(DEBUG, "Failed to alloc client");
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = client->Init(std::move(client_channel));
   if (status != ZX_OK) {
-    zxlogf(TRACE, "Failed to init client %d", status);
+    zxlogf(DEBUG, "Failed to init client %d", status);
     return status;
   }
 
@@ -874,13 +874,13 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
                           0 /* prop_count */, 0 /* proto_id */, nullptr /* proxy_args */,
                           device_channel.release());
   if (status != ZX_OK) {
-    zxlogf(TRACE, "Failed to add client %d", status);
+    zxlogf(DEBUG, "Failed to add client %d", status);
     return status;
   }
 
   ClientProxy* client_ptr = client.release();
 
-  zxlogf(TRACE, "New %s client [%d] connected.", is_vc ? "dc-vc" : "dc", client_ptr->id());
+  zxlogf(DEBUG, "New %s client [%d] connected.", is_vc ? "dc-vc" : "dc", client_ptr->id());
 
   if (is_vc) {
     vc_client_ = client_ptr;

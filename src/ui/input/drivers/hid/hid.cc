@@ -416,7 +416,7 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
 
   status = hidbus_.SetIdle(0, 0);
   if (status != ZX_OK) {
-    zxlogf(TRACE, "hid: [W] set_idle failed for %s: %d", name_.data(), status);
+    zxlogf(DEBUG, "hid: [W] set_idle failed for %s: %d", name_.data(), status);
     // continue anyway
   }
 

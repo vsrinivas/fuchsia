@@ -85,7 +85,7 @@ zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
     if (status != ZX_OK) {
         // usb_set_interface() fails on some Realtek chipsets, with no impact on subsequent
         // functionality.
-        zxlogf(TRACE, "rtl88xx: UsbBus::Create() failed to set interface %d alternate %d: %s",
+        zxlogf(DEBUG, "rtl88xx: UsbBus::Create() failed to set interface %d alternate %d: %s",
                usb_iface_desc.bInterfaceNumber, usb_iface_desc.bAlternateSetting,
                zx_status_get_string(status));
     }

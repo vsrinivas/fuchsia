@@ -148,19 +148,19 @@ zx_status_t UsbAudioControlInterface::Initialize(DescriptorListMemory::Iterator*
 
     // Do the search.  If it succeed, we will get a reference to an
     // AudioPath object back.
-    LOG(TRACE, "Beginning trace for Output Terminal id %u\n", iter->id());
+    LOG(DEBUG, "Beginning trace for Output Terminal id %u\n", iter->id());
     auto path = TracePath(static_cast<const OutputTerminal&>(*iter), iter);
     if (path != nullptr) {
-      LOG(TRACE, "Found valid path!\n");
+      LOG(DEBUG, "Found valid path!\n");
 
       zx_status_t status = path->Setup(parent_.usb_proto());
       if (status != ZX_OK) {
-        LOG(TRACE, "Failed to setup path! (status %d)\n", status);
+        LOG(DEBUG, "Failed to setup path! (status %d)\n", status);
       } else {
         paths_.push_back(std::move(path));
       }
     } else {
-      LOG(TRACE, "No valid path found\n");
+      LOG(DEBUG, "No valid path found\n");
     }
   }
 
@@ -189,7 +189,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
   auto cleanup = fbl::MakeAutoCall([&current]() { current->visited() = false; });
   ZX_DEBUG_ASSERT(!current->visited());
   current->visited() = true;
-  LOG(TRACE, "Visiting unit id %u, type %s\n", current->id(), current->type_name());
+  LOG(DEBUG, "Visiting unit id %u, type %s\n", current->id(), current->type_name());
 
   // If we have reached an input terminal, then check to see if it is of the
   // proper type.  If so, create a new path object and start to unwind the
@@ -210,7 +210,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
       return ret;
     }
 
-    LOG(TRACE, "Skipping incompatible input terminal (in type 0x%04hx, out type 0x%04hx)\n",
+    LOG(DEBUG, "Skipping incompatible input terminal (in type 0x%04hx, out type 0x%04hx)\n",
         in_term.terminal_type(), out_term.terminal_type());
     return nullptr;
   }
@@ -225,7 +225,7 @@ std::unique_ptr<AudioPath> UsbAudioControlInterface::TracePath(const OutputTermi
     }
 
     if (next->visited()) {
-      LOG(TRACE, "Skipping already visited unit id %u while tracing from unit id %u\n", source_id,
+      LOG(DEBUG, "Skipping already visited unit id %u while tracing from unit id %u\n", source_id,
           current->id());
       continue;
     }

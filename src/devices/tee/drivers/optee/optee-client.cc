@@ -369,7 +369,7 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
     return std::pair(kInvalidSession, std::move(result));
   }
 
-  LOG(SPEW, "OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
+  LOG(TRACE, "OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
       message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
@@ -438,7 +438,7 @@ OpResult OpteeClient::InvokeCommandInternal(
     return result;
   }
 
-  LOG(SPEW, "InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
+  LOG(TRACE, "InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
       message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
@@ -472,7 +472,7 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
     open_sessions_.erase(session_id);
   }
 
-  LOG(SPEW, "CloseSession returned %" PRIx32 " %" PRIx32 " %" PRIx32, call_code,
+  LOG(TRACE, "CloseSession returned %" PRIx32 " %" PRIx32 " %" PRIx32, call_code,
       message.return_code(), message.return_origin());
   return ZX_OK;
 }
@@ -1022,7 +1022,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   ZX_DEBUG_ASSERT(message != nullptr);
   ZX_DEBUG_ASSERT(provider_channel_.is_valid());
 
-  LOG(SPEW, "received RPC to open file");
+  LOG(TRACE, "received RPC to open file");
 
   SharedMemoryList::iterator mem_iter = FindSharedMemory(message->path_memory_identifier());
   std::optional<SharedMemoryView> path_mem =
@@ -1076,7 +1076,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
     CreateFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to create file");
+  LOG(TRACE, "received RPC to create file");
 
   std::optional<SharedMemoryView> path_mem =
       GetMemoryReference(FindSharedMemory(message->path_memory_identifier()),
@@ -1122,7 +1122,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
     CloseFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to close file");
+  LOG(TRACE, "received RPC to close file");
 
   if (!UntrackFileSystemObject(message->file_system_object_identifier())) {
     LOG(ERROR, "could not find the requested file to close");
@@ -1137,7 +1137,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
 zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to read from file");
+  LOG(TRACE, "received RPC to read from file");
 
   auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
   if (!maybe_file_channel.has_value()) {
@@ -1199,7 +1199,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     WriteFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to write file");
+  LOG(TRACE, "received RPC to write file");
 
   auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
   if (!maybe_file_channel.has_value()) {
@@ -1249,7 +1249,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     TruncateFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to truncate file");
+  LOG(TRACE, "received RPC to truncate file");
 
   auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
   if (!maybe_file_channel.has_value()) {
@@ -1277,7 +1277,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
     RemoveFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to remove file");
+  LOG(TRACE, "received RPC to remove file");
 
   std::optional<SharedMemoryView> path_mem =
       GetMemoryReference(FindSharedMemory(message->path_memory_identifier()),
@@ -1318,7 +1318,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     RenameFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  LOG(SPEW, "received RPC to rename file");
+  LOG(TRACE, "received RPC to rename file");
 
   std::optional<SharedMemoryView> old_path_mem = GetMemoryReference(
       FindSharedMemory(message->old_file_name_memory_identifier()),

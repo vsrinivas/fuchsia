@@ -64,7 +64,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatc
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
-    zxlogf(TRACE, "open succeed, returning");
+    zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
     lowpan_spinel_fidl::Device::SendOnReadyForSendFramesEvent(ot_radio_obj_.fidl_channel_->borrow(),
                                                               kOutboundAllowanceInit);
@@ -121,7 +121,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
     } else {
       ot_radio_obj_.outbound_allowance_--;
       ot_radio_obj_.outbound_cnt_++;
-      zxlogf(TRACE, "Successfully Txed pkt, total tx pkt %lu", ot_radio_obj_.outbound_cnt_);
+      zxlogf(DEBUG, "Successfully Txed pkt, total tx pkt %lu", ot_radio_obj_.outbound_cnt_);
       if ((ot_radio_obj_.outbound_cnt_ & 1) == 0) {
         lowpan_spinel_fidl::Device::SendOnReadyForSendFramesEvent(
             ot_radio_obj_.fidl_channel_->borrow(), kOutboundAllowanceInc);
@@ -133,7 +133,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
     uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync completer) {
-  zxlogf(TRACE, "allow to receive %u frame", number_of_frames);
+  zxlogf(DEBUG, "allow to receive %u frame", number_of_frames);
   ot_radio_obj_.inbound_allowance_ += number_of_frames;
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
@@ -167,7 +167,7 @@ void OtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync co
 }
 
 zx_status_t OtRadioDevice::StartLoopThread() {
-  zxlogf(TRACE, "Start loop thread");
+  zxlogf(DEBUG, "Start loop thread");
   zx_status_t status = loop_.StartThread("ot-stack-loop");
   if (status == ZX_OK) {
     thrd_status_.loop_thrd_running = true;
@@ -342,7 +342,7 @@ zx_status_t OtRadioDevice::DriverUnitTestGetResetEvent() {
 
 zx_status_t OtRadioDevice::AssertResetPin() {
   zx_status_t status = ZX_OK;
-  zxlogf(TRACE, "ot-radio: assert reset pin");
+  zxlogf(DEBUG, "ot-radio: assert reset pin");
 
   status = gpio_[OT_RADIO_RESET_PIN].Write(0);
   if (status != ZX_OK) {
@@ -355,7 +355,7 @@ zx_status_t OtRadioDevice::AssertResetPin() {
 
 zx_status_t OtRadioDevice::Reset() {
   zx_status_t status = ZX_OK;
-  zxlogf(TRACE, "ot-radio: reset");
+  zxlogf(DEBUG, "ot-radio: reset");
 
   status = gpio_[OT_RADIO_RESET_PIN].Write(0);
   if (status != ZX_OK) {
@@ -395,7 +395,7 @@ zx_status_t OtRadioDevice::RadioThread() {
       break;
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       interrupt_.ack();
-      zxlogf(TRACE, "ot-radio: interrupt");
+      zxlogf(DEBUG, "ot-radio: interrupt");
       spinel_framer_->HandleInterrupt();
       ReadRadioPacket();
       while (true) {
@@ -412,7 +412,7 @@ zx_status_t OtRadioDevice::RadioThread() {
       spinel_framer_->SendPacketToRadio(spi_tx_buffer_, spi_tx_buffer_len_);
     }
   }
-  zxlogf(TRACE, "ot-radio: exiting");
+  zxlogf(DEBUG, "ot-radio: exiting");
 
   return status;
 }
@@ -460,7 +460,7 @@ zx_status_t OtRadioDevice::Bind() {
     zxlogf(ERROR, "ot-radio: Could not create device: %d", status);
     return status;
   } else {
-    zxlogf(TRACE, "ot-radio: Added device");
+    zxlogf(DEBUG, "ot-radio: Added device");
   }
   return status;
 }
@@ -532,7 +532,7 @@ zx_status_t OtRadioDevice::Start() {
     // Restart the Radio thread:
     StartRadioThread();
   } else {
-    zxlogf(TRACE, "ot-radio: NCP firmware is already up-to-date");
+    zxlogf(DEBUG, "ot-radio: NCP firmware is already up-to-date");
   }
 #endif
 
@@ -542,7 +542,7 @@ zx_status_t OtRadioDevice::Start() {
     return status;
   }
 
-  zxlogf(TRACE, "ot-radio: Started thread");
+  zxlogf(DEBUG, "ot-radio: Started thread");
 
   cleanup.cancel();
 
@@ -568,7 +568,7 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
   bool response_received = false;
 
   for (attempts = 0; attempts < kGetNcpVersionMaxRetries; attempts++) {
-    zxlogf(TRACE, "ot-radio: sending GetNCPVersionCmd, attempt : %d / %d", attempts + 1,
+    zxlogf(DEBUG, "ot-radio: sending GetNCPVersionCmd, attempt : %d / %d", attempts + 1,
            kGetNcpVersionMaxRetries);
     // Now get the ncp version
     auto status = GetNCPVersion();
@@ -609,7 +609,7 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
   // First make sure that last character is null
   ZX_DEBUG_ASSERT(spi_rx_buffer_len_ <= kMaxFrameSize);
   spi_rx_buffer_[spi_rx_buffer_len_ - 1] = '\0';
-  zxlogf(TRACE, "ot-radio: response received size = %d, value : %s", spi_rx_buffer_len_,
+  zxlogf(DEBUG, "ot-radio: response received size = %d, value : %s", spi_rx_buffer_len_,
          reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
   std::string cur_fw_version;
   cur_fw_version.assign(reinterpret_cast<char*>(&(spi_rx_buffer_[3])));

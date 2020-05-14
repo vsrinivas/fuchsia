@@ -67,7 +67,7 @@ zx_status_t ParseImageHeader(const zx::vmo& fw_vmo, uint32_t* out_i2c_size) {
   ZX_DEBUG_ASSERT(idx < KNumEepromSizes);
   *out_i2c_size = kEepromSizeLUT[idx];
 
-  zxlogf(TRACE, "image header: ctl 0x%02x type 0x%02x i2c eeprom size %u", image_header.image_ctl,
+  zxlogf(DEBUG, "image header: ctl 0x%02x type 0x%02x i2c eeprom size %u", image_header.image_ctl,
          image_header.image_type, *out_i2c_size);
   return ZX_OK;
 }
@@ -130,7 +130,7 @@ zx_status_t FlashProgrammer::EEPROMSlaveWrite(uint8_t eeprom_slave_addr, const z
     req_write_len = fbl::round_up(req_write_len, kVendorReqSizeAlignment);
     status = DeviceWrite(eeprom_slave_addr, eeprom_byte_addr, write_buf, req_write_len);
 
-    zxlogf(TRACE, "EEPROM [%u] write addr %u vmo offset %lu len to write %lu status %d",
+    zxlogf(DEBUG, "EEPROM [%u] write addr %u vmo offset %lu len to write %lu status %d",
            eeprom_slave_addr, eeprom_byte_addr, vmo_offset, req_write_len, status);
 
     if (status != ZX_OK) {
@@ -240,7 +240,7 @@ zx_status_t FlashProgrammer::Create(zx_device_t* parent) {
 }
 
 extern "C" zx_status_t flash_programmer_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "flash_programmer_bind");
+  zxlogf(DEBUG, "flash_programmer_bind");
   return usb::FlashProgrammer::Create(parent);
 }
 

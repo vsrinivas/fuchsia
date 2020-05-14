@@ -154,7 +154,7 @@ int NandDriverImpl::NandRead(uint32_t start_page, uint32_t page_count, void* pag
     }
   }
 
-  zxlogf(SPEW, "FTL: Read page, start %d, len %d", start_page, page_count);
+  zxlogf(TRACE, "FTL: Read page, start %d, len %d", start_page, page_count);
   status = operation.Execute(&parent_);
   if (status == ZX_ERR_IO_DATA_INTEGRITY) {
     return ftl::kNdmUncorrectableEcc;
@@ -220,7 +220,7 @@ int NandDriverImpl::NandWrite(uint32_t start_page, uint32_t page_count, const vo
     memcpy(operation.buffer() + data_size, oob_buffer, oob_size);
   }
 
-  zxlogf(SPEW, "FTL: Write page, start %d, len %d", start_page, page_count);
+  zxlogf(TRACE, "FTL: Write page, start %d, len %d", start_page, page_count);
   status = operation.Execute(&parent_);
   if (status != ZX_OK) {
     return status == ZX_ERR_IO ? ftl::kNdmError : ftl::kNdmFatalError;
@@ -240,7 +240,7 @@ int NandDriverImpl::NandErase(uint32_t page_num) {
   op->erase.first_block = block_num;
   op->erase.num_blocks = 1;
 
-  zxlogf(SPEW, "FTL: Erase block num %d", block_num);
+  zxlogf(TRACE, "FTL: Erase block num %d", block_num);
 
   zx_status_t status = operation.Execute(&parent_);
   if (status != ZX_OK) {

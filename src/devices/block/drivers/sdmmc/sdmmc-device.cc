@@ -120,12 +120,12 @@ zx_status_t SdmmcDevice::SdSendIfCond() {
   req.use_dma = UseDma();
   zx_status_t st = host_.Request(&req);
   if (st != ZX_OK) {
-    zxlogf(TRACE, "sd: SD_SEND_IF_COND failed, retcode = %d", st);
+    zxlogf(DEBUG, "sd: SD_SEND_IF_COND failed, retcode = %d", st);
     return st;
   }
   if ((req.response[0] & 0xfff) != arg) {
     // The card should have replied with the pattern that we sent.
-    zxlogf(TRACE, "sd: SDMMC_SEND_IF_COND got bad reply = %" PRIu32 "", req.response[0]);
+    zxlogf(DEBUG, "sd: SDMMC_SEND_IF_COND got bad reply = %" PRIu32 "", req.response[0]);
     return ZX_ERR_BAD_STATE;
   } else {
     return ZX_OK;
@@ -141,7 +141,7 @@ zx_status_t SdmmcDevice::SdSendRelativeAddr(uint16_t* card_status) {
 
   zx_status_t st = host_.Request(&req);
   if (st != ZX_OK) {
-    zxlogf(TRACE, "sd: SD_SEND_RELATIVE_ADDR failed, retcode = %d", st);
+    zxlogf(DEBUG, "sd: SD_SEND_RELATIVE_ADDR failed, retcode = %d", st);
     return st;
   }
 
@@ -213,17 +213,17 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
   }
 
   if ((st = host_.Request(&req)) != ZX_OK) {
-    zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
+    zxlogf(DEBUG, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
     return st;
   }
 
   if ((st = host_.SetBusFreq(0)) != ZX_OK) {
-    zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
+    zxlogf(DEBUG, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
     return st;
   }
 
   if ((st = host_.SetSignalVoltage(SDMMC_VOLTAGE_V180)) != ZX_OK) {
-    zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
+    zxlogf(DEBUG, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
     return st;
   }
 
@@ -231,7 +231,7 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
   zx::nanosleep(zx::deadline_after(kVoltageStabilizationTime));
 
   if ((st = host_.SetBusFreq(kInitializationFrequencyHz)) != ZX_OK) {
-    zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
+    zxlogf(DEBUG, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d", st);
     return st;
   }
 
@@ -294,7 +294,7 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
   if (st != ZX_OK && reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
     // Do not log error if ABORT fails during reset, as it proved to be harmless.
     // TODO(ravoorir): Is it expected for the command to fail intermittently during reset?
-    zxlogf(TRACE, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d", st);
+    zxlogf(DEBUG, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d", st);
     return st;
   } else if (st != ZX_OK) {
     zxlogf(ERROR, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d", st);
@@ -445,8 +445,8 @@ zx_status_t SdmmcDevice::MmcSendExtCsd(std::array<uint8_t, MMC_EXT_CSD_SIZE>& ex
   req.virt_size = 512;
   req.cmd_flags = MMC_SEND_EXT_CSD_FLAGS;
   zx_status_t st = host_.Request(&req);
-  if (st == ZX_OK && zxlog_level_enabled(SPEW)) {
-    zxlogf(SPEW, "EXT_CSD:");
+  if (st == ZX_OK && zxlog_level_enabled(TRACE)) {
+    zxlogf(TRACE, "EXT_CSD:");
     hexdump8_ex(ext_csd.data(), ext_csd.size(), 0);
   }
   return st;

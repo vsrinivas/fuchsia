@@ -41,47 +41,47 @@ enum {
 void dwc3_print_status(dwc3_t* dwc) {
   auto* mmio = dwc3_mmio(dwc);
   auto dsts = DSTS::Get().ReadFrom(mmio);
-  zxlogf(TRACE, "DSTS: ");
-  zxlogf(TRACE, "USBLNKST: %d ", dsts.USBLNKST());
-  zxlogf(TRACE, "SOFFN: %d ", dsts.SOFFN());
-  zxlogf(TRACE, "CONNECTSPD: %d ", dsts.CONNECTSPD());
+  zxlogf(DEBUG, "DSTS: ");
+  zxlogf(DEBUG, "USBLNKST: %d ", dsts.USBLNKST());
+  zxlogf(DEBUG, "SOFFN: %d ", dsts.SOFFN());
+  zxlogf(DEBUG, "CONNECTSPD: %d ", dsts.CONNECTSPD());
   if (dsts.DCNRD())
-    zxlogf(TRACE, "DCNRD ");
+    zxlogf(DEBUG, "DCNRD ");
   if (dsts.SRE())
-    zxlogf(TRACE, "SRE ");
+    zxlogf(DEBUG, "SRE ");
   if (dsts.RSS())
-    zxlogf(TRACE, "RSS ");
+    zxlogf(DEBUG, "RSS ");
   if (dsts.SSS())
-    zxlogf(TRACE, "SSS ");
+    zxlogf(DEBUG, "SSS ");
   if (dsts.COREIDLE())
-    zxlogf(TRACE, "COREIDLE ");
+    zxlogf(DEBUG, "COREIDLE ");
   if (dsts.DEVCTRLHLT())
-    zxlogf(TRACE, "DEVCTRLHLT ");
+    zxlogf(DEBUG, "DEVCTRLHLT ");
   if (dsts.RXFIFOEMPTY())
-    zxlogf(TRACE, "RXFIFOEMPTY ");
-  zxlogf(TRACE, "");
+    zxlogf(DEBUG, "RXFIFOEMPTY ");
+  zxlogf(DEBUG, "");
 
   auto gsts = GSTS::Get().ReadFrom(mmio);
-  zxlogf(TRACE, "GSTS: ");
-  zxlogf(TRACE, "CBELT: %d ", gsts.CBELT());
-  zxlogf(TRACE, "CURMOD: %d ", gsts.CURMOD());
+  zxlogf(DEBUG, "GSTS: ");
+  zxlogf(DEBUG, "CBELT: %d ", gsts.CBELT());
+  zxlogf(DEBUG, "CURMOD: %d ", gsts.CURMOD());
   if (gsts.SSIC_IP())
-    zxlogf(TRACE, "SSIC_IP ");
+    zxlogf(DEBUG, "SSIC_IP ");
   if (gsts.OTG_IP())
-    zxlogf(TRACE, "OTG_IP ");
+    zxlogf(DEBUG, "OTG_IP ");
   if (gsts.BC_IP())
-    zxlogf(TRACE, "BC_IP ");
+    zxlogf(DEBUG, "BC_IP ");
   if (gsts.ADP_IP())
-    zxlogf(TRACE, "ADP_IP ");
+    zxlogf(DEBUG, "ADP_IP ");
   if (gsts.Host_IP())
-    zxlogf(TRACE, "HOST_IP ");
+    zxlogf(DEBUG, "HOST_IP ");
   if (gsts.Device_IP())
-    zxlogf(TRACE, "DEVICE_IP ");
+    zxlogf(DEBUG, "DEVICE_IP ");
   if (gsts.CSRTimeout())
-    zxlogf(TRACE, "CSR_TIMEOUT ");
+    zxlogf(DEBUG, "CSR_TIMEOUT ");
   if (gsts.BUSERRADDRVLD())
-    zxlogf(TRACE, "BUSERRADDRVLD ");
-  zxlogf(TRACE, "");
+    zxlogf(DEBUG, "BUSERRADDRVLD ");
+  zxlogf(DEBUG, "");
 }
 
 static void dwc3_stop(dwc3_t* dwc) {

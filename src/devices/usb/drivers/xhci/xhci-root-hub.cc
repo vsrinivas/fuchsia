@@ -166,108 +166,108 @@ static const usb_speed_t xhci_rh_speeds[] = {
 };
 
 static void print_portsc(int port, uint32_t portsc) {
-  zxlogf(SPEW, "port %d:", port);
+  zxlogf(TRACE, "port %d:", port);
   if (portsc & PORTSC_CCS)
-    zxlogf(SPEW, " CCS");
+    zxlogf(TRACE, " CCS");
   if (portsc & PORTSC_PED)
-    zxlogf(SPEW, " PED");
+    zxlogf(TRACE, " PED");
   if (portsc & PORTSC_OCA)
-    zxlogf(SPEW, " OCA");
+    zxlogf(TRACE, " OCA");
   if (portsc & PORTSC_PR)
-    zxlogf(SPEW, " PR");
+    zxlogf(TRACE, " PR");
   uint32_t pls = (portsc >> PORTSC_PLS_START) & ((1 << PORTSC_PLS_BITS) - 1);
   switch (pls) {
     case 0:
-      zxlogf(SPEW, " U0");
+      zxlogf(TRACE, " U0");
       break;
     case 1:
-      zxlogf(SPEW, " U1");
+      zxlogf(TRACE, " U1");
       break;
     case 2:
-      zxlogf(SPEW, " U2");
+      zxlogf(TRACE, " U2");
       break;
     case 3:
-      zxlogf(SPEW, " U3");
+      zxlogf(TRACE, " U3");
       break;
     case 4:
-      zxlogf(SPEW, " Disabled");
+      zxlogf(TRACE, " Disabled");
       break;
     case 5:
-      zxlogf(SPEW, " RxDetect");
+      zxlogf(TRACE, " RxDetect");
       break;
     case 6:
-      zxlogf(SPEW, " Inactive");
+      zxlogf(TRACE, " Inactive");
       break;
     case 7:
-      zxlogf(SPEW, " Polling");
+      zxlogf(TRACE, " Polling");
       break;
     case 8:
-      zxlogf(SPEW, " Recovery");
+      zxlogf(TRACE, " Recovery");
       break;
     case 9:
-      zxlogf(SPEW, " Hot Reset");
+      zxlogf(TRACE, " Hot Reset");
       break;
     case 10:
-      zxlogf(SPEW, " Compliance Mode");
+      zxlogf(TRACE, " Compliance Mode");
       break;
     case 11:
-      zxlogf(SPEW, " Test Mode");
+      zxlogf(TRACE, " Test Mode");
       break;
     case 15:
-      zxlogf(SPEW, " Resume");
+      zxlogf(TRACE, " Resume");
       break;
     default:
-      zxlogf(SPEW, " PLS%d", pls);
+      zxlogf(TRACE, " PLS%d", pls);
       break;
   }
   if (portsc & PORTSC_PP)
-    zxlogf(SPEW, " PP");
+    zxlogf(TRACE, " PP");
   uint32_t speed = (portsc >> PORTSC_SPEED_START) & ((1 << PORTSC_SPEED_BITS) - 1);
   switch (speed) {
     case 1:
-      zxlogf(SPEW, " FULL_SPEED");
+      zxlogf(TRACE, " FULL_SPEED");
       break;
     case 2:
-      zxlogf(SPEW, " LOW_SPEED");
+      zxlogf(TRACE, " LOW_SPEED");
       break;
     case 3:
-      zxlogf(SPEW, " HIGH_SPEED");
+      zxlogf(TRACE, " HIGH_SPEED");
       break;
     case 4:
-      zxlogf(SPEW, " SUPER_SPEED");
+      zxlogf(TRACE, " SUPER_SPEED");
       break;
   }
   uint32_t pic = (portsc >> PORTSC_PIC_START) & ((1 << PORTSC_PIC_BITS) - 1);
-  zxlogf(SPEW, " PIC%d", pic);
+  zxlogf(TRACE, " PIC%d", pic);
   if (portsc & PORTSC_LWS)
-    zxlogf(SPEW, " LWS");
+    zxlogf(TRACE, " LWS");
   if (portsc & PORTSC_CSC)
-    zxlogf(SPEW, " CSC");
+    zxlogf(TRACE, " CSC");
   if (portsc & PORTSC_PEC)
-    zxlogf(SPEW, " PEC");
+    zxlogf(TRACE, " PEC");
   if (portsc & PORTSC_WRC)
-    zxlogf(SPEW, " WRC");
+    zxlogf(TRACE, " WRC");
   if (portsc & PORTSC_OCC)
-    zxlogf(SPEW, " OCC");
+    zxlogf(TRACE, " OCC");
   if (portsc & PORTSC_PRC)
-    zxlogf(SPEW, " PRC");
+    zxlogf(TRACE, " PRC");
   if (portsc & PORTSC_PLC)
-    zxlogf(SPEW, " PLC");
+    zxlogf(TRACE, " PLC");
   if (portsc & PORTSC_CEC)
-    zxlogf(SPEW, " CEC");
+    zxlogf(TRACE, " CEC");
   if (portsc & PORTSC_CAS)
-    zxlogf(SPEW, " CAS");
+    zxlogf(TRACE, " CAS");
   if (portsc & PORTSC_WCE)
-    zxlogf(SPEW, " WCE");
+    zxlogf(TRACE, " WCE");
   if (portsc & PORTSC_WDE)
-    zxlogf(SPEW, " WDE");
+    zxlogf(TRACE, " WDE");
   if (portsc & PORTSC_WOE)
-    zxlogf(SPEW, " WOE");
+    zxlogf(TRACE, " WOE");
   if (portsc & PORTSC_DR)
-    zxlogf(SPEW, " DR");
+    zxlogf(TRACE, " DR");
   if (portsc & PORTSC_WPR)
-    zxlogf(SPEW, " WPR");
-  zxlogf(SPEW, "");
+    zxlogf(TRACE, " WPR");
+  zxlogf(TRACE, "");
 }
 
 static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index) {
@@ -335,7 +335,7 @@ static zx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 }
 
 zx_status_t xhci_start_root_hubs(xhci_t* xhci) {
-  zxlogf(TRACE, "xhci_start_root_hubs");
+  zxlogf(DEBUG, "xhci_start_root_hubs");
 
   for (int i = 0; i < XHCI_RH_COUNT; i++) {
     zx_status_t status = xhci_start_root_hub(xhci, &xhci->root_hubs[i], i);
@@ -349,7 +349,7 @@ zx_status_t xhci_start_root_hubs(xhci_t* xhci) {
 }
 
 void xhci_stop_root_hubs(xhci_t* xhci) {
-  zxlogf(TRACE, "xhci_stop_root_hubs");
+  zxlogf(DEBUG, "xhci_stop_root_hubs");
 
   volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
   for (uint8_t i = 0; i < xhci->rh_num_ports; i++) {
@@ -439,7 +439,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
   uint16_t index = le16toh(setup->wIndex);
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
-  zxlogf(SPEW, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d", request_type,
+  zxlogf(TRACE, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d", request_type,
          request, value, index, le16toh(setup->wLength));
 
   if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
@@ -512,7 +512,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
 }
 
 static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_request_t* req) {
-  zxlogf(SPEW, "xhci_rh_handle_intr_req");
+  zxlogf(TRACE, "xhci_rh_handle_intr_req");
   uint8_t status_bits[128 / 8];
   bool have_status = 0;
   uint8_t* ptr = status_bits;
@@ -546,7 +546,7 @@ static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_reque
 }
 
 zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_index) {
-  zxlogf(SPEW, "xhci_rh_usb_request_queue rh_index: %d", rh_index);
+  zxlogf(TRACE, "xhci_rh_usb_request_queue rh_index: %d", rh_index);
 
   xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
@@ -566,7 +566,7 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
 void xhci_handle_root_hub_change(xhci_t* xhci) {
   volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
 
-  zxlogf(TRACE, "xhci_handle_root_hub_change");
+  zxlogf(DEBUG, "xhci_handle_root_hub_change");
 
   for (uint8_t i = 0; i < xhci->rh_num_ports; i++) {
     uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
@@ -574,7 +574,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
         (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
     uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
 
-    if (zxlog_level_enabled(SPEW)) {
+    if (zxlog_level_enabled(TRACE)) {
       print_portsc(i, portsc);
     }
 
@@ -593,7 +593,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
 
       if (portsc & PORTSC_CSC) {
         // connect status change
-        zxlogf(TRACE, "port %d PORTSC_CSC connected: %d", i, connected);
+        zxlogf(DEBUG, "port %d PORTSC_CSC connected: %d", i, connected);
         if (connected) {
           status->wPortStatus |= USB_PORT_CONNECTION;
         } else {
@@ -606,7 +606,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
       }
       if (portsc & PORTSC_PRC) {
         // port reset change
-        zxlogf(TRACE, "port %d PORTSC_PRC enabled: %d", i, enabled);
+        zxlogf(DEBUG, "port %d PORTSC_PRC enabled: %d", i, enabled);
         if (enabled) {
           status->wPortStatus &= static_cast<uint16_t>(~USB_PORT_RESET);
           status->wPortChange |= USB_C_PORT_RESET;

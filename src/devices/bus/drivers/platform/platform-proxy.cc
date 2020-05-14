@@ -223,7 +223,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    zxlogf(SPEW, "%s: received MMIO %u (base %#lx length %#lx handle %#x)", name_, i, mmio.base,
+    zxlogf(TRACE, "%s: received MMIO %u (base %#lx length %#lx handle %#x)", name_, i, mmio.base,
            mmio.length, mmio.resource.get());
   }
 
@@ -249,7 +249,7 @@ zx_status_t PlatformProxy::Init(zx_device_t* parent) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    zxlogf(SPEW, "%s: received IRQ %u (irq %#x handle %#x)", name_, i, irq.irq,
+    zxlogf(TRACE, "%s: received IRQ %u (irq %#x handle %#x)", name_, i, irq.irq,
            irq.resource.get());
   }
 

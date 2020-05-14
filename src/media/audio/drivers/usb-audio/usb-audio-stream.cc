@@ -292,11 +292,11 @@ void UsbAudioStream::DdkRelease() {
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                                        \
   case _cmd:                                                                                     \
     if (req_size != sizeof(req._payload)) {                                                      \
-      LOG(TRACE, "Bad " #_cmd " response length (%u != %zu)\n", req_size, sizeof(req._payload)); \
+      LOG(DEBUG, "Bad " #_cmd " response length (%u != %zu)\n", req_size, sizeof(req._payload)); \
       return ZX_ERR_INVALID_ARGS;                                                                \
     }                                                                                            \
     if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                    \
-      LOG(TRACE, "NO_ACK flag not allowed for " #_cmd "\n");                                     \
+      LOG(DEBUG, "NO_ACK flag not allowed for " #_cmd "\n");                                     \
       return ZX_ERR_INVALID_ARGS;                                                                \
     }                                                                                            \
     return _handler(channel, req._payload, ##__VA_ARGS__);
@@ -343,7 +343,7 @@ zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, b
     HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetStringLocked, false);
     HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomainLocked, false);
     default:
-      LOG(TRACE, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -380,7 +380,7 @@ zx_status_t UsbAudioStream::ProcessRingBufferChannel(dispatcher::Channel* channe
     HREQ(AUDIO_RB_CMD_START, rb_start, OnStartLocked, false);
     HREQ(AUDIO_RB_CMD_STOP, rb_stop, OnStopLocked, false);
     default:
-      LOG(TRACE, "Unrecognized ring buffer command 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized ring buffer command 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -420,7 +420,7 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
 
     res = channel->Write(&resp, sizeof(resp));
     if (res != ZX_OK) {
-      LOG(TRACE, "Failed to send get stream formats response (res %d)\n", res);
+      LOG(DEBUG, "Failed to send get stream formats response (res %d)\n", res);
       return res;
     }
 

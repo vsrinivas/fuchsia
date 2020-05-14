@@ -135,7 +135,7 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
 
 static void hci_event_complete(void* ctx, usb_request_t* req) {
   hci_t* hci = (hci_t*)ctx;
-  zxlogf(SPEW, "bt-transport-usb: Event received");
+  zxlogf(TRACE, "bt-transport-usb: Event received");
   mtx_lock(&hci->mutex);
 
   if (req->response.status != ZX_OK) {
@@ -217,7 +217,7 @@ out2:
 
 static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   hci_t* hci = (hci_t*)ctx;
-  zxlogf(SPEW, "bt-transport-usb: ACL frame received");
+  zxlogf(TRACE, "bt-transport-usb: ACL frame received");
   mtx_lock(&hci->mutex);
 
   if (req->response.status != ZX_OK) {
@@ -596,7 +596,7 @@ static zx_protocol_device_t hci_device_proto = {
 };
 
 static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "hci_bind");
+  zxlogf(DEBUG, "hci_bind");
   usb_protocol_t usb;
 
   zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);

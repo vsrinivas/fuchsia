@@ -331,7 +331,7 @@ void HardwareDspChannel::ProcessIpcReply(const IpcMessage& reply) {
   pending.reply = reply;
   pending.done = true;
 
-  LOG(SPEW, "got reply (status %u) for pending msg, pri 0x%08x ext 0x%08x\n",
+  LOG(TRACE, "got reply (status %u) for pending msg, pri 0x%08x ext 0x%08x\n",
       to_underlying(reply.status()), reply.primary, reply.extension);
 
   if (reply.msg_tgt() == MsgTarget::MODULE_MSG) {
@@ -358,7 +358,7 @@ void HardwareDspChannel::ProcessLargeConfigGetReply(Txn* txn) {
                       "large_param_id mismatch, expected %u got %u\n",
                       txn->request.large_param_id(), txn->reply.large_param_id());
 
-  LOG(SPEW, "got LARGE_CONFIG_GET reply, id %u init_block %d final_block %d data_off_size %u\n",
+  LOG(TRACE, "got LARGE_CONFIG_GET reply, id %u init_block %d final_block %d data_off_size %u\n",
       txn->reply.large_param_id(), txn->reply.init_block(), txn->reply.final_block(),
       txn->reply.data_off_size());
 

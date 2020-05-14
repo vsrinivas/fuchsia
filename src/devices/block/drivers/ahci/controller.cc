@@ -89,7 +89,7 @@ void Controller::Queue(uint32_t portnr, sata_txn_t* txn) {
   Port* port = &ports_[portnr];
   zx_status_t status = port->Queue(txn);
   if (status == ZX_OK) {
-    zxlogf(SPEW, "ahci.%u: queue txn %p offset_dev 0x%" PRIx64 " length 0x%x", port->num(), txn,
+    zxlogf(TRACE, "ahci.%u: queue txn %p offset_dev 0x%" PRIx64 " length 0x%x", port->num(), txn,
            txn->bop.rw.offset_dev, txn->bop.rw.length);
     // hit the worker thread
     sync_completion_signal(&worker_completion_);

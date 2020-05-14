@@ -29,7 +29,7 @@ inline void BlockComplete(sdmmc::BlockOperation& txn, zx_status_t status) {
   if (txn.node()->complete_cb()) {
     txn.Complete(status);
   } else {
-    zxlogf(TRACE, "sdmmc: block op %p completion_cb unset!", txn.operation());
+    zxlogf(DEBUG, "sdmmc: block op %p completion_cb unset!", txn.operation());
   }
 }
 
@@ -344,7 +344,7 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
     }
   }
 
-  zxlogf(TRACE,
+  zxlogf(DEBUG,
          "sdmmc: do_txn blockop 0x%x offset_vmo 0x%" PRIx64
          " length 0x%x blocksize 0x%x"
          " max_transfer_size 0x%x",
@@ -376,7 +376,7 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
     st = mapper.Map(*zx::unowned_vmo(txn.vmo), offset_vmo, length,
                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (st != ZX_OK) {
-      zxlogf(TRACE, "sdmmc: do_txn vmo map error %d", st);
+      zxlogf(DEBUG, "sdmmc: do_txn vmo map error %d", st);
       return st;
     }
     req->virt_buffer = mapper.start();
@@ -388,15 +388,15 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
   if (st != ZX_OK || ((req->blockcount > 1) && !(req->cmd_flags & SDMMC_CMD_AUTO12))) {
     zx_status_t stop_st = sdmmc_.SdmmcStopTransmission();
     if (stop_st != ZX_OK) {
-      zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d", stop_st);
+      zxlogf(DEBUG, "sdmmc: do_txn stop transmission error %d", stop_st);
     }
   }
 
   if (st != ZX_OK) {
-    zxlogf(TRACE, "sdmmc: do_txn error %d", st);
+    zxlogf(DEBUG, "sdmmc: do_txn error %d", st);
   }
 
-  zxlogf(TRACE, "sdmmc: do_txn complete");
+  zxlogf(DEBUG, "sdmmc: do_txn complete");
   return st;
 }
 
@@ -753,7 +753,7 @@ int SdmmcBlockDevice::WorkerThread() {
     }
   }
 
-  zxlogf(TRACE, "sdmmc: worker thread terminated successfully");
+  zxlogf(DEBUG, "sdmmc: worker thread terminated successfully");
   return thrd_success;
 }
 

@@ -217,7 +217,7 @@ void EthDev::PutTransmitBuffer(TransmitBuffer tx_buffer) {
 }
 
 void EthDev0::SetStatus(uint32_t status) {
-  zxlogf(TRACE, "eth: status() %08x", status);
+  zxlogf(DEBUG, "eth: status() %08x", status);
 
   fbl::AutoLock lock(&ethdev_lock_);
   static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DeviceStatus_ONLINE, "");
@@ -333,7 +333,7 @@ int EthDev::Send(eth_fifo_entry_t* entries, size_t count) {
       }
       uint32_t opts = count > 1 ? ETHERNET_TX_OPT_MORE : 0u;
       if (opts) {
-        zxlogf(SPEW, "setting OPT_MORE (%lu packets to go)", count);
+        zxlogf(TRACE, "setting OPT_MORE (%lu packets to go)", count);
       }
       transmit_buffer->operation()->data_buffer =
           reinterpret_cast<char*>(io_buffer_.start()) + e->offset;
@@ -718,7 +718,7 @@ void EthDev::KillLocked() {
     return;
   }
 
-  zxlogf(TRACE, "eth [%s]: kill: tearing down%s", name_,
+  zxlogf(DEBUG, "eth [%s]: kill: tearing down%s", name_,
          (state_ & kStateTransmitThreadCreated) ? " tx thread" : "");
   SetPromiscLocked(false);
 
@@ -738,7 +738,7 @@ void EthDev::KillLocked() {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
     thrd_join(transmit_thread_, &ret);
-    zxlogf(TRACE, "eth [%s]: kill: tx thread exited", name_);
+    zxlogf(DEBUG, "eth [%s]: kill: tx thread exited", name_);
   }
 
   // Ensure that all requests to ethmac were completed.
@@ -761,7 +761,7 @@ void EthDev::KillLocked() {
     paddr_map_ = nullptr;
     pmt_.reset();
   }
-  zxlogf(TRACE, "eth [%s]: all resources released", name_);
+  zxlogf(DEBUG, "eth [%s]: all resources released", name_);
 }
 
 void EthDev::StopAndKill() {
@@ -776,7 +776,7 @@ void EthDev::StopAndKill() {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
     thrd_join(transmit_thread_, &ret);
-    zxlogf(TRACE, "eth [%s]: kill: tx thread exited", name_);
+    zxlogf(DEBUG, "eth [%s]: kill: tx thread exited", name_);
   }
   // Check if it is part of the idle list and remove.
   // It will not be part of active list as StopLocked() would have moved it to Idle.
@@ -812,7 +812,7 @@ EthDev::~EthDev() {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
     thrd_join(transmit_thread_, &ret);
-    zxlogf(TRACE, "eth [%s]: kill: tx thread exited", name_);
+    zxlogf(DEBUG, "eth [%s]: kill: tx thread exited", name_);
   }
   // sync_completion_signal(completion_);
 }

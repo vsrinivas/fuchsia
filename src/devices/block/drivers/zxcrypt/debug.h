@@ -11,6 +11,6 @@
 // "driver.zxcrypt.log=+spew" to the kernel command line arguments when booting.
 #define LOG_ENTRY() LOG_ENTRY_ARGS("")
 #define LOG_ENTRY_ARGS(fmt, ...) \
-  zxlogf(SPEW, "%s:%d - %s(" fmt ")", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+  zxlogf(TRACE, "%s:%d - %s(" fmt ")", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
 #endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_

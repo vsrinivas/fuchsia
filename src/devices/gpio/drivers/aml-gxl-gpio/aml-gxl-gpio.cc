@@ -352,7 +352,7 @@ zx_status_t AmlGxlGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
     }
   }
 
-  zxlogf(TRACE, "GPIO Interrupt index %d allocated", (int)index);
+  zxlogf(DEBUG, "GPIO Interrupt index %d allocated", (int)index);
 
   zx_status_t status;
   const AmlGpioBlock* block;

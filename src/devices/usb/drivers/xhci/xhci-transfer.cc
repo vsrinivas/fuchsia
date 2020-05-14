@@ -71,7 +71,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
   }
 
   int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
-  zxlogf(TRACE, "xhci_reset_endpoint %d %d ep_ctx_state %d", slot_id, ep_index, ep_ctx_state);
+  zxlogf(DEBUG, "xhci_reset_endpoint %d %d ep_ctx_state %d", slot_id, ep_index, ep_ctx_state);
 
   if (ep_ctx_state == EP_CTX_STATE_STOPPED || ep_ctx_state == EP_CTX_STATE_RUNNING) {
     ep->state = EP_STATE_RUNNING;
@@ -226,7 +226,7 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
                      : (state->direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
     control_bits |= XFER_TRB_IDT;  // immediate data flag
     trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
-    if (zxlog_level_enabled(SPEW))
+    if (zxlog_level_enabled(TRACE))
       xhci_print_trb(ring, trb);
     xhci_increment_ring(ring);
   }
@@ -306,7 +306,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
     // before completing control transfer requests
     control_bits |= XFER_TRB_IOC;
     trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
-    if (zxlog_level_enabled(SPEW))
+    if (zxlog_level_enabled(TRACE))
       xhci_print_trb(ring, trb);
     xhci_increment_ring(ring);
     free_trbs--;
@@ -456,7 +456,7 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
 }
 
 zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index) {
-  zxlogf(TRACE, "xhci_cancel_transfers slot_id: %d ep_index: %d", slot_id, ep_index);
+  zxlogf(DEBUG, "xhci_cancel_transfers slot_id: %d ep_index: %d", slot_id, ep_index);
 
   if (slot_id < 1 || slot_id > xhci->max_slots) {
     return ZX_ERR_INVALID_ARGS;
@@ -601,7 +601,7 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
       status = ZX_ERR_TIMED_OUT;
     }
   }
-  zxlogf(TRACE, "xhci_control_transfer got %d", status);
+  zxlogf(DEBUG, "xhci_control_transfer got %d", status);
   if (status == ZX_OK && out_actual != nullptr) {
     *out_actual = req->response.actual;
 
@@ -611,11 +611,11 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
   }
 
   if (usb_request_pool_add(&xhci->free_reqs, req) != ZX_OK) {
-    zxlogf(TRACE, "xhci_control_transfer: Unable to add back request to the free pool");
+    zxlogf(DEBUG, "xhci_control_transfer: Unable to add back request to the free pool");
     usb_request_release(req);
   }
 
-  zxlogf(TRACE, "xhci_control_request returning %d", status);
+  zxlogf(DEBUG, "xhci_control_request returning %d", status);
   return status;
 }
 
@@ -653,11 +653,11 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         result = length;
         break;
       case TRB_CC_BABBLE_DETECTED_ERROR:
-        zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_BABBLE_DETECTED_ERROR");
+        zxlogf(DEBUG, "xhci_handle_transfer_event: TRB_CC_BABBLE_DETECTED_ERROR");
         result = ZX_ERR_IO_OVERRUN;
         break;
       case TRB_CC_TRB_ERROR:
-        zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_TRB_ERROR");
+        zxlogf(DEBUG, "xhci_handle_transfer_event: TRB_CC_TRB_ERROR");
         int ep_ctx_state;
         ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
         /*
@@ -674,7 +674,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
       case TRB_CC_USB_TRANSACTION_ERROR:
       case TRB_CC_STALL_ERROR: {
         int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
-        zxlogf(TRACE, "xhci_handle_transfer_event: cc %d ep_ctx_state %d", cc, ep_ctx_state);
+        zxlogf(DEBUG, "xhci_handle_transfer_event: cc %d ep_ctx_state %d", cc, ep_ctx_state);
         if (ep_ctx_state == EP_CTX_STATE_HALTED) {
           result = ZX_ERR_IO_REFUSED;
         } else {
@@ -685,15 +685,15 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
       case TRB_CC_RING_UNDERRUN:
         // non-fatal error that happens when no transfers are available for isochronous
         // endpoint
-        zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_UNDERRUN");
+        zxlogf(DEBUG, "xhci_handle_transfer_event: TRB_CC_RING_UNDERRUN");
         return;
       case TRB_CC_RING_OVERRUN:
         // non-fatal error that happens when no transfers are available for isochronous
         // endpoint
-        zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_RING_OVERRUN");
+        zxlogf(DEBUG, "xhci_handle_transfer_event: TRB_CC_RING_OVERRUN");
         return;
       case TRB_CC_MISSED_SERVICE_ERROR:
-        zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_MISSED_SERVICE_ERROR");
+        zxlogf(DEBUG, "xhci_handle_transfer_event: TRB_CC_MISSED_SERVICE_ERROR");
         result = ZX_ERR_IO_MISSED_DEADLINE;
         break;
       case TRB_CC_STOPPED:
@@ -781,13 +781,13 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
     if (ep_ctx_state != EP_CTX_STATE_RUNNING) {
-      zxlogf(TRACE, "xhci_handle_transfer_event: ep ep_ctx_state %d cc %d", ep_ctx_state, cc);
+      zxlogf(DEBUG, "xhci_handle_transfer_event: ep ep_ctx_state %d cc %d", ep_ctx_state, cc);
     }
 
     if (!req) {
       // no req expected for this condition code
       if (cc != TRB_CC_STOPPED_LENGTH_INVALID) {
-        zxlogf(TRACE, "xhci_handle_transfer_event: unable to find request to complete!");
+        zxlogf(DEBUG, "xhci_handle_transfer_event: unable to find request to complete!");
       }
       return;
     }
@@ -807,7 +807,7 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
       }
     }
     if (!found_req) {
-      zxlogf(TRACE,
+      zxlogf(DEBUG,
              "xhci_handle_transfer_event: ignoring transfer event for completed "
              "transfer\n");
       return;

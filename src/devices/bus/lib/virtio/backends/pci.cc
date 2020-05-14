@@ -65,7 +65,7 @@ zx_status_t PciBackend::Bind() {
   }
 
   irq_handle_.reset(tmp_handle);
-  zxlogf(SPEW, "%s: irq handle %u", tag(), irq_handle_.get());
+  zxlogf(TRACE, "%s: irq handle %u", tag(), irq_handle_.get());
   return Init();
 }
 

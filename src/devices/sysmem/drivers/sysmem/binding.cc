@@ -36,7 +36,7 @@ zx_status_t sysmem_init(void** out_driver_ctx) {
 }
 
 zx_status_t sysmem_bind(void* driver_ctx, zx_device_t* parent_device) {
-  DRIVER_TRACE("sysmem_bind()");
+  DRIVER_DEBUG("sysmem_bind()");
   Driver* driver = reinterpret_cast<Driver*>(driver_ctx);
 
   auto device = std::make_unique<Device>(parent_device, driver);

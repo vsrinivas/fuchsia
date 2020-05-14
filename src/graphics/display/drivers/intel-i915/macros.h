@@ -22,6 +22,6 @@
 #define LOG_WARN(fmt, ...) zxlogf(WARN, "i915: " fmt, ##__VA_ARGS__)
 #define LOG_INFO(fmt, ...) zxlogf(INFO, "i915: " fmt, ##__VA_ARGS__)
 #define LOG_TRACE(fmt, ...) zxlogf(TRACE, "i915: " fmt, ##__VA_ARGS__)
-#define LOG_SPEW(fmt, ...) zxlogf(SPEW, "i915: " fmt, ##__VA_ARGS__)
+#define LOG_SPEW(fmt, ...) zxlogf(DEBUG, "i915: " fmt, ##__VA_ARGS__)
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_MACROS_H_

@@ -10,12 +10,12 @@
 #include <usb/usb.h>
 
 static void print_controls(usb_video_vc_probe_and_commit_controls* proposal) {
-  zxlogf(TRACE, "bmHint 0x%x", proposal->bmHint);
-  zxlogf(TRACE, "bFormatIndex: %u", proposal->bFormatIndex);
-  zxlogf(TRACE, "bFrameIndex: %u", proposal->bFrameIndex);
-  zxlogf(TRACE, "dwFrameInterval: %u", proposal->dwFrameInterval);
-  zxlogf(TRACE, "dwMaxVideoFrameSize: %u", proposal->dwMaxVideoFrameSize);
-  zxlogf(TRACE, "dwMaxPayloadTransferSize: %u", proposal->dwMaxPayloadTransferSize);
+  zxlogf(DEBUG, "bmHint 0x%x", proposal->bmHint);
+  zxlogf(DEBUG, "bFormatIndex: %u", proposal->bFormatIndex);
+  zxlogf(DEBUG, "bFrameIndex: %u", proposal->bFrameIndex);
+  zxlogf(DEBUG, "dwFrameInterval: %u", proposal->dwFrameInterval);
+  zxlogf(DEBUG, "dwMaxVideoFrameSize: %u", proposal->dwMaxVideoFrameSize);
+  zxlogf(DEBUG, "dwMaxPayloadTransferSize: %u", proposal->dwMaxPayloadTransferSize);
 }
 
 zx_status_t usb_video_negotiate_probe(usb_protocol_t* usb, uint8_t vs_interface_num,
@@ -24,7 +24,7 @@ zx_status_t usb_video_negotiate_probe(usb_protocol_t* usb, uint8_t vs_interface_
   zx_status_t status;
   size_t out_length;
 
-  zxlogf(TRACE, "usb_video_negotiate_probe: PROBE_CONTROL SET_CUR");
+  zxlogf(DEBUG, "usb_video_negotiate_probe: PROBE_CONTROL SET_CUR");
   print_controls(proposal);
   // The wValue field (the fourth parameter) specifies the Control Selector
   // (in this case USB_VIDEO_VS_PROBE_CONTROL) in the high byte,
@@ -39,7 +39,7 @@ zx_status_t usb_video_negotiate_probe(usb_protocol_t* usb, uint8_t vs_interface_
   // The length of returned result varies, so zero this out before hand.
   memset(out_result, 0, sizeof(usb_video_vc_probe_and_commit_controls));
 
-  zxlogf(TRACE, "usb_video_negotiate_probe: PROBE_CONTROL GET_CUR");
+  zxlogf(DEBUG, "usb_video_negotiate_probe: PROBE_CONTROL GET_CUR");
   status = usb_control_in(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_VIDEO_GET_CUR,
                           USB_VIDEO_VS_PROBE_CONTROL << 8, vs_interface_num, ZX_TIME_INFINITE,
                           out_result, sizeof(*out_result), &out_length);
@@ -64,7 +64,7 @@ out:
 
 zx_status_t usb_video_negotiate_commit(usb_protocol_t* usb, uint8_t vs_interface_num,
                                        usb_video_vc_probe_and_commit_controls* ctrls) {
-  zxlogf(TRACE, "usb_video_negotiate_commit: COMMIT_CONTROL SET_CUR");
+  zxlogf(DEBUG, "usb_video_negotiate_commit: COMMIT_CONTROL SET_CUR");
   zx_status_t status = usb_control_out(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                                        USB_VIDEO_SET_CUR, USB_VIDEO_VS_COMMIT_CONTROL << 8,
                                        vs_interface_num, ZX_TIME_INFINITE, ctrls, sizeof(*ctrls));

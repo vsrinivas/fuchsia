@@ -91,7 +91,7 @@ zx_status_t CalculatePllParams(uint32_t input_freq, uint32_t desired_freq, PllPa
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zxlogf(TRACE,
+  zxlogf(DEBUG,
          "alc5663 PLL calculation: input frequency=%u, desired frequency=%u, "
          "calculated frequency=%lu, n=%u, m=%u, k=%u, bypass_m=%d, bypass_k=%u\n",
          input_freq, desired_freq, best_calculated_freq, result.n, result.m, k, result.bypass_m,

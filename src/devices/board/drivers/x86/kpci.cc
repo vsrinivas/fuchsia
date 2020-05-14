@@ -18,7 +18,7 @@
 
 #define PCI_HID ((char*)"PNP0A03")
 #define PCIE_HID ((char*)"PNP0A08")
-#define xprintf(fmt...) zxlogf(SPEW, fmt)
+#define xprintf(fmt...) zxlogf(TRACE, fmt)
 #define PANIC_UNIMPLEMENTED __builtin_trap()
 
 /* Helper routine for translating IRQ routing tables into usable form
@@ -610,6 +610,6 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
            (const char*)&info->Name, status);
   }
 
-  zxlogf(TRACE, "acpi: found pci root #%u", ctx->last_pci());
+  zxlogf(DEBUG, "acpi: found pci root #%u", ctx->last_pci());
   return ZX_OK;
 }

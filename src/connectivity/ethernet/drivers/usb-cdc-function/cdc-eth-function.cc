@@ -252,7 +252,7 @@ static zx_status_t cdc_generate_mac_address(zx_device_t* parent, usb_cdc_t* cdc)
 }
 
 static zx_status_t cdc_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
-  zxlogf(TRACE, "%s:", __func__);
+  zxlogf(DEBUG, "%s:", __func__);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
 
   // No options are supported
@@ -271,7 +271,7 @@ static zx_status_t cdc_ethernet_impl_query(void* ctx, uint32_t options, ethernet
 }
 
 static void cdc_ethernet_impl_stop(void* cookie) {
-  zxlogf(TRACE, "%s:", __func__);
+  zxlogf(DEBUG, "%s:", __func__);
   auto* cdc = static_cast<usb_cdc_t*>(cookie);
   mtx_lock(&cdc->tx_mutex);
   mtx_lock(&cdc->ethernet_mutex);
@@ -281,7 +281,7 @@ static void cdc_ethernet_impl_stop(void* cookie) {
 }
 
 static zx_status_t cdc_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "%s:", __func__);
+  zxlogf(DEBUG, "%s:", __func__);
   auto* cdc = static_cast<usb_cdc_t*>(ctx_cookie);
   zx_status_t status = ZX_OK;
   if (cdc->unbound) {
@@ -542,12 +542,12 @@ static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const void* 
     *out_read_actual = 0;
   }
 
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
 
   // USB_CDC_SET_ETHERNET_PACKET_FILTER is the only control request required by the spec
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
       setup->bRequest == USB_CDC_SET_ETHERNET_PACKET_FILTER) {
-    zxlogf(TRACE, "%s: USB_CDC_SET_ETHERNET_PACKET_FILTER", __func__);
+    zxlogf(DEBUG, "%s: USB_CDC_SET_ETHERNET_PACKET_FILTER", __func__);
     // TODO(voydanoff) implement the requested packet filtering
     return ZX_OK;
   }
@@ -556,7 +556,7 @@ static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const void* 
 }
 
 static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t speed) {
-  zxlogf(TRACE, "%s: %d %d", __func__, configured, speed);
+  zxlogf(DEBUG, "%s: %d %d", __func__, configured, speed);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
 
@@ -586,7 +586,7 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
 }
 
 static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_setting) {
-  zxlogf(TRACE, "%s: %d %d", __func__, interface, alt_setting);
+  zxlogf(DEBUG, "%s: %d %d", __func__, interface, alt_setting);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
 
@@ -647,7 +647,7 @@ usb_function_interface_protocol_ops_t device_ops = {
 };
 
 static void usb_cdc_unbind(void* ctx) {
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   {
     fbl::AutoLock l(&cdc->tx_mutex);
@@ -670,7 +670,7 @@ static void usb_cdc_unbind(void* ctx) {
 }
 
 static void usb_cdc_release(void* ctx) {
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   usb_request_t* req;
 

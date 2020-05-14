@@ -64,7 +64,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dis
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
-    zxlogf(TRACE, "open succeed, returning");
+    zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
     lowpan_spinel_fidl::Device::SendOnReadyForSendFramesEvent(ot_radio_obj_.fidl_channel_->borrow(),
                                                               kOutboundAllowanceInit);
@@ -134,7 +134,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView
 
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
     uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync completer) {
-  zxlogf(TRACE, "allow to receive %u frame", number_of_frames);
+  zxlogf(DEBUG, "allow to receive %u frame", number_of_frames);
   bool prev_no_inbound_allowance = (ot_radio_obj_.inbound_allowance_ == 0) ? true : false;
   ot_radio_obj_.inbound_allowance_ += number_of_frames;
 
@@ -170,7 +170,7 @@ void FakeOtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Syn
 }
 
 zx_status_t FakeOtRadioDevice::StartLoopThread() {
-  zxlogf(TRACE, "Start loop thread");
+  zxlogf(DEBUG, "Start loop thread");
   return loop_.StartThread("ot-stack-loop");
 }
 
@@ -200,7 +200,7 @@ zx_status_t FakeOtRadioDevice::Reset() {
 void FakeOtRadioDevice::TryHandleOutboundFrame() {
   fbl::AutoLock lock(&outbound_lock_);
   if (outbound_queue_.size() > 0) {
-    zxlogf(TRACE, "fake-ot-stack: TryHandleOutboundFrame() outbound_queue_.size():%lu",
+    zxlogf(DEBUG, "fake-ot-stack: TryHandleOutboundFrame() outbound_queue_.size():%lu",
            outbound_queue_.size());
     FrameHandler(std::move(outbound_queue_.front()));
     outbound_queue_.pop();
@@ -309,7 +309,7 @@ zx_status_t FakeOtRadioDevice::RadioThread() {
       break;
     }
   }
-  zxlogf(TRACE, "fake-ot-radio: exiting");
+  zxlogf(DEBUG, "fake-ot-radio: exiting");
 
   return status;
 }
@@ -351,7 +351,7 @@ zx_status_t FakeOtRadioDevice::Bind() {
     zxlogf(ERROR, "fake-ot-radio: Could not create device: %d", status);
     return status;
   } else {
-    zxlogf(TRACE, "fake-ot-radio: Added device");
+    zxlogf(DEBUG, "fake-ot-radio: Added device");
   }
   return status;
 }
@@ -376,7 +376,7 @@ zx_status_t FakeOtRadioDevice::Start() {
     return status;
   }
 
-  zxlogf(TRACE, "fake-ot-radio: Started thread");
+  zxlogf(DEBUG, "fake-ot-radio: Started thread");
 
   cleanup.cancel();
 

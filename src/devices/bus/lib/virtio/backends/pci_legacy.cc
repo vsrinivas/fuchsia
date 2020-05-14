@@ -16,27 +16,27 @@ namespace virtio {
 // bar0_base_ rather than anything having to do with the IO writes.
 void PciLegacyBackend::IoReadLocked(uint16_t offset, uint8_t* val) TA_REQ(lock_) {
   *val = inp(static_cast<uint16_t>(bar0_base_ + offset));
-  zxlogf(SPEW, "%s: IoReadLocked8(%#x) = %#x", tag(), offset, *val);
+  zxlogf(TRACE, "%s: IoReadLocked8(%#x) = %#x", tag(), offset, *val);
 }
 void PciLegacyBackend::IoReadLocked(uint16_t offset, uint16_t* val) TA_REQ(lock_) {
   *val = inpw(static_cast<uint16_t>(bar0_base_ + offset));
-  zxlogf(SPEW, "%s: IoReadLocked16(%#x) = %#x", tag(), offset, *val);
+  zxlogf(TRACE, "%s: IoReadLocked16(%#x) = %#x", tag(), offset, *val);
 }
 void PciLegacyBackend::IoReadLocked(uint16_t offset, uint32_t* val) TA_REQ(lock_) {
   *val = inpd(static_cast<uint16_t>(bar0_base_ + offset));
-  zxlogf(SPEW, "%s: IoReadLocked32(%#x) = %#x", tag(), offset, *val);
+  zxlogf(TRACE, "%s: IoReadLocked32(%#x) = %#x", tag(), offset, *val);
 }
 void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint8_t val) TA_REQ(lock_) {
   outp(static_cast<uint16_t>(bar0_base_ + offset), val);
-  zxlogf(SPEW, "%s: IoWriteLocked8(%#x) = %#x", tag(), offset, val);
+  zxlogf(TRACE, "%s: IoWriteLocked8(%#x) = %#x", tag(), offset, val);
 }
 void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint16_t val) TA_REQ(lock_) {
   outpw(static_cast<uint16_t>(bar0_base_ + offset), val);
-  zxlogf(SPEW, "%s: IoWriteLocked16(%#x) = %#x", tag(), offset, val);
+  zxlogf(TRACE, "%s: IoWriteLocked16(%#x) = %#x", tag(), offset, val);
 }
 void PciLegacyBackend::IoWriteLocked(uint16_t offset, uint32_t val) TA_REQ(lock_) {
   outpd(static_cast<uint16_t>(bar0_base_ + offset), val);
-  zxlogf(SPEW, "%s: IoWriteLocked32(%#x) = %#x", tag(), offset, val);
+  zxlogf(TRACE, "%s: IoWriteLocked32(%#x) = %#x", tag(), offset, val);
 }
 
 zx_status_t PciLegacyBackend::Init() {
@@ -122,7 +122,7 @@ uint16_t PciLegacyBackend::GetRingSize(uint16_t index) {
   uint16_t val;
   IoWriteLocked(VIRTIO_PCI_QUEUE_SELECT, index);
   IoReadLocked(VIRTIO_PCI_QUEUE_SIZE, &val);
-  zxlogf(SPEW, "%s: ring %u size = %u", tag(), index, val);
+  zxlogf(TRACE, "%s: ring %u size = %u", tag(), index, val);
   return val;
 }
 
@@ -134,13 +134,13 @@ void PciLegacyBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t pa_des
   IoWriteLocked(VIRTIO_PCI_QUEUE_SELECT, index);
   IoWriteLocked(VIRTIO_PCI_QUEUE_SIZE, count);
   IoWriteLocked(VIRTIO_PCI_QUEUE_PFN, static_cast<uint32_t>(pa_desc / 4096));
-  zxlogf(SPEW, "%s: set ring %u (# = %u, addr = %#lx)", tag(), index, count, pa_desc);
+  zxlogf(TRACE, "%s: set ring %u (# = %u, addr = %#lx)", tag(), index, count, pa_desc);
 }
 
 void PciLegacyBackend::RingKick(uint16_t ring_index) {
   fbl::AutoLock lock(&lock_);
   IoWriteLocked(VIRTIO_PCI_QUEUE_NOTIFY, ring_index);
-  zxlogf(SPEW, "%s: kicked ring %u", tag(), ring_index);
+  zxlogf(TRACE, "%s: kicked ring %u", tag(), ring_index);
 }
 
 bool PciLegacyBackend::ReadFeature(uint32_t feature) {
@@ -155,7 +155,7 @@ bool PciLegacyBackend::ReadFeature(uint32_t feature) {
   ZX_DEBUG_ASSERT((feature & (feature - 1)) == 0);
   IoReadLocked(VIRTIO_PCI_DEVICE_FEATURES, &val);
   bool is_set = (val & (1u << feature)) > 0;
-  zxlogf(SPEW, "%s: read feature bit %u = %u", tag(), feature, is_set);
+  zxlogf(TRACE, "%s: read feature bit %u = %u", tag(), feature, is_set);
   return is_set;
 }
 
@@ -170,7 +170,7 @@ void PciLegacyBackend::SetFeature(uint32_t feature) {
   ZX_DEBUG_ASSERT((feature & (feature - 1)) == 0);
   IoReadLocked(VIRTIO_PCI_DRIVER_FEATURES, &val);
   IoWriteLocked(VIRTIO_PCI_DRIVER_FEATURES, val | (1u << feature));
-  zxlogf(SPEW, "%s: feature bit %u now set", tag(), feature);
+  zxlogf(TRACE, "%s: feature bit %u now set", tag(), feature);
 }
 
 // Virtio v0.9.5 does not support the FEATURES_OK negotiation so this should
@@ -180,7 +180,7 @@ zx_status_t PciLegacyBackend::ConfirmFeatures() { return ZX_OK; }
 void PciLegacyBackend::DeviceReset() {
   fbl::AutoLock lock(&lock_);
   IoWriteLocked(VIRTIO_PCI_DEVICE_STATUS, 0u);
-  zxlogf(SPEW, "%s: device reset", tag());
+  zxlogf(TRACE, "%s: device reset", tag());
 }
 
 void PciLegacyBackend::SetStatusBits(uint8_t bits) {
@@ -192,12 +192,12 @@ void PciLegacyBackend::SetStatusBits(uint8_t bits) {
 
 void PciLegacyBackend::DriverStatusAck() {
   SetStatusBits(VIRTIO_STATUS_ACKNOWLEDGE | VIRTIO_STATUS_DRIVER);
-  zxlogf(SPEW, "%s: driver acknowledge", tag());
+  zxlogf(TRACE, "%s: driver acknowledge", tag());
 }
 
 void PciLegacyBackend::DriverStatusOk() {
   SetStatusBits(VIRTIO_STATUS_DRIVER_OK);
-  zxlogf(SPEW, "%s: driver ok", tag());
+  zxlogf(TRACE, "%s: driver ok", tag());
 }
 
 uint32_t PciLegacyBackend::IsrStatus() {

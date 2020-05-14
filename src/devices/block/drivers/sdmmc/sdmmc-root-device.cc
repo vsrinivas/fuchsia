@@ -63,7 +63,7 @@ int SdmmcRootDevice::WorkerThread() {
     return thrd_error;
   }
 
-  zxlogf(TRACE, "sdmmc: host caps dma %d 8-bit bus %d max_transfer_size %" PRIu64 "",
+  zxlogf(DEBUG, "sdmmc: host caps dma %d 8-bit bus %d max_transfer_size %" PRIu64 "",
          sdmmc.UseDma() ? 1 : 0, (sdmmc.host_info().caps & SDMMC_HOST_CAP_BUS_WIDTH_8) ? 1 : 0,
          sdmmc.host_info().max_transfer_size);
 

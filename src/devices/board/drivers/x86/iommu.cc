@@ -453,12 +453,12 @@ zx_status_t IommuManager::InitDesc(const ACPI_TABLE_DMAR* dmar) {
 
   status = for_each_record<ACPI_DMAR_HEADER>(
       dmar, [&dmar, &iommu_idx, &iommus](const ACPI_DMAR_HEADER* record_hdr) {
-        zxlogf(SPEW, "DMAR record: %d", record_hdr->Type);
+        zxlogf(TRACE, "DMAR record: %d", record_hdr->Type);
         switch (record_hdr->Type) {
           case ACPI_DMAR_TYPE_HARDWARE_UNIT: {
             const auto* rec = reinterpret_cast<const ACPI_DMAR_HARDWARE_UNIT*>(record_hdr);
 
-            zxlogf(SPEW, "DMAR Hardware Unit: %u %#llx %#x", rec->Segment, rec->Address,
+            zxlogf(TRACE, "DMAR Hardware Unit: %u %#llx %#x", rec->Segment, rec->Address,
                    rec->Flags);
             const bool whole_segment = rec->Flags & ACPI_DMAR_INCLUDE_ALL;
 
@@ -478,15 +478,15 @@ zx_status_t IommuManager::InitDesc(const ACPI_TABLE_DMAR* dmar) {
           }
           case ACPI_DMAR_TYPE_RESERVED_MEMORY: {
             ACPI_DMAR_RESERVED_MEMORY* rec = (ACPI_DMAR_RESERVED_MEMORY*)record_hdr;
-            zxlogf(SPEW, "DMAR Reserved Memory: %u %#llx %#llx", rec->Segment, rec->BaseAddress,
+            zxlogf(TRACE, "DMAR Reserved Memory: %u %#llx %#llx", rec->Segment, rec->BaseAddress,
                    rec->EndAddress);
             uintptr_t addr = reinterpret_cast<uintptr_t>(record_hdr);
             for (uintptr_t scope = addr + 24; scope < addr + rec->Header.Length;) {
               ACPI_DMAR_DEVICE_SCOPE* s = (ACPI_DMAR_DEVICE_SCOPE*)scope;
-              zxlogf(SPEW, "  DMAR Scope: %u, bus %u", s->EntryType, s->Bus);
+              zxlogf(TRACE, "  DMAR Scope: %u, bus %u", s->EntryType, s->Bus);
               for (size_t i = 0; i < (s->Length - sizeof(*s)) / 2; ++i) {
                 uint16_t v = *(uint16_t*)(scope + sizeof(*s) + 2 * i);
-                zxlogf(SPEW, "    Path %ld: %02x.%02x", i, v & 0xffu, (uint16_t)(v >> 8));
+                zxlogf(TRACE, "    Path %ld: %02x.%02x", i, v & 0xffu, (uint16_t)(v >> 8));
               }
               scope += s->Length;
             }

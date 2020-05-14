@@ -260,7 +260,7 @@ zx_status_t NandPartDevice::BadBlockGetBadBlockList(uint32_t* bad_block_list,
   }
 
   *bad_block_count = bad_block_list_.size();
-  zxlogf(TRACE, "nandpart: %s: Bad block count: %zu", name(), *bad_block_count);
+  zxlogf(DEBUG, "nandpart: %s: Bad block count: %zu", name(), *bad_block_count);
 
   if (bad_block_list_len == 0 || bad_block_list_.size() == 0) {
     return ZX_OK;

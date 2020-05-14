@@ -94,7 +94,7 @@ bool AmlPcie::IsLinkUp() {
 zx_status_t AmlPcie::AwaitLinkUp() {
   for (unsigned int i = 0; i < 500000; i++) {
     if (IsLinkUp()) {
-      zxlogf(SPEW, "aml_dw: pcie link up okay");
+      zxlogf(TRACE, "aml_dw: pcie link up okay");
       return ZX_OK;
     }
     zx_nanosleep(zx_deadline_after(ZX_USEC(10)));

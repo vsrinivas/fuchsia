@@ -43,12 +43,12 @@ void Device::Release() {
 
 void Device::IrqWorker() {
   zx_status_t rc;
-  zxlogf(TRACE, "%s: starting irq worker", tag());
+  zxlogf(DEBUG, "%s: starting irq worker", tag());
 
   while (backend_->InterruptValid() == ZX_OK) {
     rc = backend_->WaitForInterrupt();
     if (rc != ZX_OK && rc != ZX_ERR_TIMED_OUT) {
-      zxlogf(SPEW, "%s: error while waiting for interrupt: %s", tag(), zx_status_get_string(rc));
+      zxlogf(TRACE, "%s: error while waiting for interrupt: %s", tag(), zx_status_get_string(rc));
     }
 
     // The hardware interrupt may be masked; unmask it or we will never receive another

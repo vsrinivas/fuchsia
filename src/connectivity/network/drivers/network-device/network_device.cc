@@ -84,7 +84,7 @@ zx_status_t NetworkDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void NetworkDevice::DdkUnbindNew(ddk::UnbindTxn unbindTxn) {
-  zxlogf(TRACE, "network-device: DdkUnbind");
+  zxlogf(DEBUG, "network-device: DdkUnbind");
   device_->Teardown([this, txn = std::move(unbindTxn)]() mutable {
     if (mac_) {
       mac_->Teardown([txn = std::move(txn)]() mutable { txn.Reply(); });
@@ -95,7 +95,7 @@ void NetworkDevice::DdkUnbindNew(ddk::UnbindTxn unbindTxn) {
 }
 
 void NetworkDevice::DdkRelease() {
-  zxlogf(TRACE, "network-device: DdkRelease");
+  zxlogf(DEBUG, "network-device: DdkRelease");
   delete this;
 }
 

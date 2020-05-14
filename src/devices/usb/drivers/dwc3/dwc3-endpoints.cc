@@ -222,7 +222,7 @@ void dwc3_ep_queue(dwc3_t* dwc, unsigned ep_num, usb_request_t* req) {
 }
 
 void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable) {
-  zxlogf(TRACE, "dwc3_ep_set_config %u", ep_num);
+  zxlogf(DEBUG, "dwc3_ep_set_config %u", ep_num);
 
   dwc3_endpoint_t* ep = &dwc->eps[ep_num];
 
@@ -236,7 +236,7 @@ void dwc3_ep_set_config(dwc3_t* dwc, unsigned ep_num, bool enable) {
 }
 
 void dwc3_start_eps(dwc3_t* dwc) {
-  zxlogf(TRACE, "dwc3_start_eps");
+  zxlogf(DEBUG, "dwc3_start_eps");
 
   dwc3_cmd_ep_set_config(dwc, EP0_IN, USB_ENDPOINT_CONTROL, dwc->eps[EP0_IN].max_packet_size, 0,
                          true);

@@ -595,7 +595,7 @@ void CodecAdapterVp9::CoreCodecResetStreamAfterCurrentFrame() {
   // This fences and quiesces the input processing thread, and the current StreamControl thread is
   // the only other thread that modifies is_input_end_of_stream_queued_to_core_, so we know
   // is_input_end_of_stream_queued_to_core_ won't be changing.
-  LOG(TRACE, "before CoreCodecStopStreamInternal()");
+  LOG(DEBUG, "before CoreCodecStopStreamInternal()");
   std::list<CodecInputItem> input_items = CoreCodecStopStreamInternal();
   auto return_any_input_items = fit::defer([this, &input_items] {
     for (auto& input_item : input_items) {
@@ -611,16 +611,16 @@ void CodecAdapterVp9::CoreCodecResetStreamAfterCurrentFrame() {
     return;
   }
 
-  LOG(TRACE, "after stop; before CoreCodecStartStream()");
+  LOG(DEBUG, "after stop; before CoreCodecStartStream()");
 
   CoreCodecStartStream();
 
-  LOG(TRACE, "re-queueing items...");
+  LOG(DEBUG, "re-queueing items...");
   while (!input_items.empty()) {
     QueueInputItem(std::move(input_items.front()));
     input_items.pop_front();
   }
-  LOG(TRACE, "done re-queueing items.");
+  LOG(DEBUG, "done re-queueing items.");
 }
 
 void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -1059,7 +1059,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
 
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
-  LOG(TRACE, "top");
+  LOG(DEBUG, "top");
   // Typically we only get one frame from the FW per UpdateDecodeSize(), but if we submitted more
   // than one frame of a superframe to the FW at once, we _sometimes_ get more than one frame from
   // the FW before the kVp9CommandNalDecodeDone (and before the subsequent UpdateDecodeSize() for
@@ -1114,7 +1114,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   while (true) {
     CodecInputItem item = DequeueInputItem();
     if (!item.is_valid()) {
-      LOG(TRACE, "!item.is_valid()");
+      LOG(DEBUG, "!item.is_valid()");
       return;
     }
 
@@ -1265,13 +1265,13 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // No failures from here down.
     //////////////////////////////
 
-    LOG(TRACE, "InsertPts() - parsed_video_size_: 0x%lx has_timestamp_ish: %u timestamp_ish: %lu",
+    LOG(DEBUG, "InsertPts() - parsed_video_size_: 0x%lx has_timestamp_ish: %u timestamp_ish: %lu",
         parsed_video_size_, item.packet()->has_timestamp_ish(), item.packet()->timestamp_ish());
     video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
                                      item.packet()->timestamp_ish());
 
     uint32_t frame_count = increased_size / 16;
-    LOG(TRACE, "frame_count: 0x%x protected: %u", frame_count, IsPortSecure(kInputPort));
+    LOG(DEBUG, "frame_count: 0x%x protected: %u", frame_count, IsPortSecure(kInputPort));
 
     // Because TeeVp9AddHeaders() doesn't output the frame sizes within a superframe, we
     // intentionally ignore those, even when the input data is non-protected, to keep the handling
@@ -1287,7 +1287,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
     ZX_DEBUG_ASSERT(!queued_frame_sizes_.empty());
 
-    LOG(TRACE, "UpdateDecodeSize() (new)");
+    LOG(DEBUG, "UpdateDecodeSize() (new)");
     decoder->UpdateDecodeSize(queued_frame_sizes_.front());
     queued_frame_sizes_.erase(queued_frame_sizes_.begin());
 
@@ -1318,87 +1318,87 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
   // if the corresponding value were rounded up according to the divisor before
   // we get here.
   if (!output_buffer_collection_info_) {
-    LOG(TRACE, "!output_buffer_collection_info_");
+    LOG(DEBUG, "!output_buffer_collection_info_");
     return false;
   }
   fuchsia::sysmem::BufferCollectionInfo_2& info = output_buffer_collection_info_.value();
   ZX_DEBUG_ASSERT(info.settings.has_image_format_constraints);
   if (min_frame_count > info.buffer_count) {
-    LOG(TRACE, "min_frame_count > info.buffer_count");
+    LOG(DEBUG, "min_frame_count > info.buffer_count");
     return false;
   }
   if (info.buffer_count > max_frame_count) {
     // The vp9_decoder.cc won't exercise this path since the max is always the same, and we won't
     // have allocated a collection with more than max_buffer_count.
-    LOG(TRACE, "info.buffer_count > max_frame_count");
+    LOG(DEBUG, "info.buffer_count > max_frame_count");
     return false;
   }
   if (stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes) {
-    LOG(TRACE, "stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes");
+    LOG(DEBUG, "stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes");
     return false;
   }
   if (display_width % info.settings.image_format_constraints.display_width_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE,
+    LOG(DEBUG,
         "display_width %% info.settings.image_format_constraints.display_width_divisor != 0");
     return false;
   }
   if (display_height % info.settings.image_format_constraints.display_height_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE,
+    LOG(DEBUG,
         "display_height %% info.settings.image_format_constraints.display_height_divisor != 0");
     return false;
   }
   if (coded_width * coded_height >
       info.settings.image_format_constraints.max_coded_width_times_coded_height) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE, "coded_width * coded_height > max_coded_width_times_coded_height");
+    LOG(DEBUG, "coded_width * coded_height > max_coded_width_times_coded_height");
     return false;
   }
 
   if (coded_width < info.settings.image_format_constraints.min_coded_width) {
-    LOG(TRACE,
+    LOG(DEBUG,
         "coded_width < info.settings.image_format_constraints.min_coded_width -- "
         "coded_width: %d min_coded_width: %d",
         coded_width, info.settings.image_format_constraints.min_coded_width);
     return false;
   }
   if (coded_width > info.settings.image_format_constraints.max_coded_width) {
-    LOG(TRACE, "coded_width > info.settings.image_format_constraints.max_coded_width");
+    LOG(DEBUG, "coded_width > info.settings.image_format_constraints.max_coded_width");
     return false;
   }
   if (coded_width % info.settings.image_format_constraints.coded_width_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE, "coded_width %% info.settings.image_format_constraints.coded_width_divisor != 0");
+    LOG(DEBUG, "coded_width %% info.settings.image_format_constraints.coded_width_divisor != 0");
     return false;
   }
   if (coded_height < info.settings.image_format_constraints.min_coded_height) {
-    LOG(TRACE, "coded_height < info.settings.image_format_constraints.min_coded_height");
+    LOG(DEBUG, "coded_height < info.settings.image_format_constraints.min_coded_height");
     return false;
   }
   if (coded_height > info.settings.image_format_constraints.max_coded_height) {
-    LOG(TRACE, "coded_height > info.settings.image_format_constraints.max_coded_height");
+    LOG(DEBUG, "coded_height > info.settings.image_format_constraints.max_coded_height");
     return false;
   }
   if (coded_height % info.settings.image_format_constraints.coded_height_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE, "coded_height %% info.settings.image_format_constraints.coded_height_divisor != 0");
+    LOG(DEBUG, "coded_height %% info.settings.image_format_constraints.coded_height_divisor != 0");
     return false;
   }
   if (stride < info.settings.image_format_constraints.min_bytes_per_row) {
-    LOG(TRACE,
+    LOG(DEBUG,
         "stride < info.settings.image_format_constraints.min_bytes_per_row -- stride: %d "
         "min_bytes_per_row: %d",
         stride, info.settings.image_format_constraints.min_bytes_per_row);
     return false;
   }
   if (stride > info.settings.image_format_constraints.max_bytes_per_row) {
-    LOG(TRACE, "stride > info.settings.image_format_constraints.max_bytes_per_row");
+    LOG(DEBUG, "stride > info.settings.image_format_constraints.max_bytes_per_row");
     return false;
   }
   if (stride % info.settings.image_format_constraints.bytes_per_row_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE, "stride %% info.settings.image_format_constraints.bytes_per_row_divisor != 0");
+    LOG(DEBUG, "stride %% info.settings.image_format_constraints.bytes_per_row_divisor != 0");
     return false;
   }
 

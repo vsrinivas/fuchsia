@@ -35,7 +35,7 @@ void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* f
   if (is_error) {
     zxlogf(ERROR, "[%s %s] %s", prefix1, prefix2, buffer.get());
   } else {
-    zxlogf(TRACE, "[%s %s] %s", prefix1, prefix2, buffer.get());
+    zxlogf(DEBUG, "[%s %s] %s", prefix1, prefix2, buffer.get());
   }
 }
 

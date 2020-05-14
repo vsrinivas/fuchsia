@@ -374,9 +374,9 @@ uint32_t InsntraceDevice::ComputeTopaEntryCount(ipt_per_trace_state_t* per_trace
       (num_entries + IPT_TOPA_MAX_TABLE_ENTRIES - 2) / (IPT_TOPA_MAX_TABLE_ENTRIES - 1);
   uint32_t result = num_entries + num_end_entries;
 
-  zxlogf(SPEW, "IPT: compute_topa_entry_count: num_entries: %u", num_entries);
-  zxlogf(SPEW, "IPT: compute_topa_entry_count: num_end_entries: %u", num_end_entries);
-  zxlogf(SPEW, "IPT: compute_topa_entry_count: total entries: %u", result);
+  zxlogf(TRACE, "IPT: compute_topa_entry_count: num_entries: %u", num_entries);
+  zxlogf(TRACE, "IPT: compute_topa_entry_count: num_end_entries: %u", num_end_entries);
+  zxlogf(TRACE, "IPT: compute_topa_entry_count: total entries: %u", result);
 
   return result;
 }
@@ -388,8 +388,8 @@ size_t InsntraceDevice::ComputeCaptureSize(const ipt_per_trace_state_t* per_trac
   uint32_t curr_table_entry_idx = (uint32_t)per_trace->output_mask_ptrs >> 7;
   uint32_t curr_entry_offset = (uint32_t)(per_trace->output_mask_ptrs >> 32);
 
-  zxlogf(SPEW, "IPT: compute_capture_size: trace %tu", per_trace - per_trace_state_.get());
-  zxlogf(SPEW,
+  zxlogf(TRACE, "IPT: compute_capture_size: trace %tu", per_trace - per_trace_state_.get());
+  zxlogf(TRACE,
          "IPT: curr_table_paddr 0x%" PRIx64 ", curr_table_entry_idx %u, curr_entry_offset %u\n",
          curr_table_paddr, curr_table_entry_idx, curr_entry_offset);
 
@@ -514,7 +514,7 @@ void InsntraceDevice::X86PtFreeBuffer1(ipt_per_trace_state_t* per_trace) {
 
 zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
                                               BufferDescriptor* out_descriptor) {
-  zxlogf(SPEW, "%s: num_chunks %u, chunk_order %u", __func__, config->num_chunks,
+  zxlogf(TRACE, "%s: num_chunks %u, chunk_order %u", __func__, config->num_chunks,
          config->chunk_order);
 
   if (config->num_chunks == 0 || config->num_chunks > MAX_NUM_CHUNKS)

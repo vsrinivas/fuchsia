@@ -27,7 +27,7 @@ GaussPdmInputStream::~GaussPdmInputStream() {}
 
 // static
 zx_status_t GaussPdmInputStream::Create(zx_device_t* parent) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   auto domain = dispatcher::ExecutionDomain::Create();
   if (domain == nullptr) {
@@ -98,7 +98,7 @@ finished:
 }
 
 void GaussPdmInputStream::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
   // Close all of our client event sources if we have not already.
   default_domain_->Deactivate();
 
@@ -107,7 +107,7 @@ void GaussPdmInputStream::DdkUnbindNew(ddk::UnbindTxn txn) {
 }
 
 void GaussPdmInputStream::DdkRelease() {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   // Shutdown irq thread.
   zx_interrupt_destroy(audio_device_.pdm_irq);
@@ -224,7 +224,7 @@ zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* chann
 }
 
 zx_status_t GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* channel) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   fbl::AutoLock lock(&lock_);
@@ -267,7 +267,7 @@ zx_status_t GaussPdmInputStream::ProcessRingBufferChannel(dispatcher::Channel* c
 
 zx_status_t GaussPdmInputStream::OnGetStreamFormats(dispatcher::Channel* channel,
                                                     const audio_proto::StreamGetFmtsReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
   ZX_DEBUG_ASSERT(channel != nullptr);
   uint16_t formats_sent = 0;
   audio_proto::StreamGetFmtsResp resp = {};
@@ -309,7 +309,7 @@ zx_status_t GaussPdmInputStream::OnGetStreamFormats(dispatcher::Channel* channel
 zx_status_t GaussPdmInputStream::OnSetStreamFormat(dispatcher::Channel* channel,
                                                    const audio_proto::StreamSetFmtReq& req,
                                                    bool privileged) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   zx::channel client_rb_channel;
@@ -392,7 +392,7 @@ finished:
 }
 
 int GaussPdmInputStream::IrqThread() {
-  zxlogf(SPEW, "Starting irq thread.");
+  zxlogf(TRACE, "Starting irq thread.");
 
   zx_status_t status;
 
@@ -401,7 +401,7 @@ int GaussPdmInputStream::IrqThread() {
   for (;;) {
     status = zx_interrupt_wait(audio_device_.pdm_irq, nullptr);
     if (status != ZX_OK) {
-      zxlogf(SPEW, "audio_pdm_input: interrupt error: %d.", status);
+      zxlogf(TRACE, "audio_pdm_input: interrupt error: %d.", status);
       break;
     }
 
@@ -426,21 +426,21 @@ int GaussPdmInputStream::IrqThread() {
         data_available >= ring_buffer_size_.load() / notifications_per_ring_.load()) {
       fbl::AutoLock lock(&lock_);
       if (!rb_channel_) {
-        zxlogf(SPEW, "No rb_channel. Ignoring spurious interrupt.");
+        zxlogf(TRACE, "No rb_channel. Ignoring spurious interrupt.");
         continue;
       }
       rb_channel_->Write(&resp, sizeof(resp));
     }
   }
 
-  zxlogf(SPEW, "Leaving irq thread.");
+  zxlogf(TRACE, "Leaving irq thread.");
 
   return ZX_OK;
 }
 
 zx_status_t GaussPdmInputStream::OnGetGain(dispatcher::Channel* channel,
                                            const audio_proto::GetGainReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   ZX_DEBUG_ASSERT(channel != nullptr);
   audio_proto::GetGainResp resp = {};
@@ -473,7 +473,7 @@ zx_status_t GaussPdmInputStream::OnSetGain(dispatcher::Channel* channel,
 
 zx_status_t GaussPdmInputStream::OnPlugDetect(dispatcher::Channel* channel,
                                               const audio_proto::PlugDetectReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
     return ZX_OK;
@@ -542,7 +542,7 @@ zx_status_t GaussPdmInputStream::OnGetClockDomain(dispatcher::Channel* channel,
 
 zx_status_t GaussPdmInputStream::OnGetFifoDepth(dispatcher::Channel* channel,
                                                 const audio_proto::RingBufGetFifoDepthReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   audio_proto::RingBufGetFifoDepthResp resp = {};
 
@@ -555,7 +555,7 @@ zx_status_t GaussPdmInputStream::OnGetFifoDepth(dispatcher::Channel* channel,
 
 zx_status_t GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
                                              const audio_proto::RingBufGetBufferReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   audio_proto::RingBufGetBufferResp resp = {};
   zx::vmo client_rb_handle;
@@ -597,8 +597,8 @@ zx_status_t GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
 
   notifications_per_ring_.store(req.notifications_per_ring);
 
-  zxlogf(SPEW, "ring_buffer_size=%lu", ring_buffer_size_.load());
-  zxlogf(SPEW, "req.notifications_per_ring=%u", req.notifications_per_ring);
+  zxlogf(TRACE, "ring_buffer_size=%lu", ring_buffer_size_.load());
+  zxlogf(TRACE, "req.notifications_per_ring=%u", req.notifications_per_ring);
 
   // Create the ring buffer vmo we will use to share memory with the client.
   resp.result = vmo_helper_.AllocateVmo(audio_device_.bti, ring_buffer_size_.load());
@@ -662,7 +662,7 @@ finished:
 
 zx_status_t GaussPdmInputStream::OnStart(dispatcher::Channel* channel,
                                          const audio_proto::RingBufStartReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   audio_proto::RingBufStartResp resp = {};
   resp.hdr = req.hdr;
@@ -678,7 +678,7 @@ zx_status_t GaussPdmInputStream::OnStart(dispatcher::Channel* channel,
 
 zx_status_t GaussPdmInputStream::OnStop(dispatcher::Channel* channel,
                                         const audio_proto::RingBufStopReq& req) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   audio_proto::RingBufStopResp resp = {};
 
@@ -691,7 +691,7 @@ zx_status_t GaussPdmInputStream::OnStop(dispatcher::Channel* channel,
 }
 
 void GaussPdmInputStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   fbl::AutoLock lock(&lock_);
 
@@ -702,7 +702,7 @@ void GaussPdmInputStream::DeactivateStreamChannel(const dispatcher::Channel* cha
 }
 
 void GaussPdmInputStream::DeactivateRingBufferChannel(const dispatcher::Channel* channel) {
-  zxlogf(SPEW, "%s", __func__);
+  zxlogf(TRACE, "%s", __func__);
 
   fbl::AutoLock lock(&lock_);
 
@@ -719,12 +719,12 @@ void GaussPdmInputStream::DeactivateRingBufferChannel(const dispatcher::Channel*
 }  // namespace audio
 
 extern "C" zx_status_t gauss_pdm_input_bind(void* ctx, zx_device_t* device, void** cookie) {
-  zxlogf(SPEW, "gauss_pdm_input_bind");
+  zxlogf(TRACE, "gauss_pdm_input_bind");
   audio::gauss::GaussPdmInputStream::Create(device);
   return ZX_OK;
 }
 
 extern "C" void gauss_pdm_input_release(void*) {
-  zxlogf(SPEW, "gauss_pdm_input_release");
+  zxlogf(TRACE, "gauss_pdm_input_release");
   dispatcher::ThreadPool::ShutdownAll();
 }

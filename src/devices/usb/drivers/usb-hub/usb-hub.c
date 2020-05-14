@@ -81,48 +81,48 @@ static zx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, port_status
     return ZX_ERR_BAD_STATE;
   }
 
-  zxlogf(TRACE, "usb_hub_get_port_status port %d ", port);
+  zxlogf(DEBUG, "usb_hub_get_port_status port %d ", port);
 
   uint16_t port_change = status.wPortChange;
   if (port_change & USB_C_PORT_CONNECTION) {
-    zxlogf(TRACE, "USB_C_PORT_CONNECTION ");
+    zxlogf(DEBUG, "USB_C_PORT_CONNECTION ");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port,
                       ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_PORT_ENABLE) {
-    zxlogf(TRACE, "USB_C_PORT_ENABLE ");
+    zxlogf(DEBUG, "USB_C_PORT_ENABLE ");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port, ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_PORT_SUSPEND) {
-    zxlogf(TRACE, "USB_C_PORT_SUSPEND ");
+    zxlogf(DEBUG, "USB_C_PORT_SUSPEND ");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port,
                       ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_PORT_OVER_CURRENT) {
-    zxlogf(TRACE, "USB_C_PORT_OVER_CURRENT ");
+    zxlogf(DEBUG, "USB_C_PORT_OVER_CURRENT ");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port,
                       ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_PORT_RESET) {
-    zxlogf(TRACE, "USB_C_PORT_RESET");
+    zxlogf(DEBUG, "USB_C_PORT_RESET");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port, ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_BH_PORT_RESET) {
-    zxlogf(TRACE, "USB_C_BH_PORT_RESET");
+    zxlogf(DEBUG, "USB_C_BH_PORT_RESET");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_BH_PORT_RESET, port,
                       ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_PORT_LINK_STATE) {
-    zxlogf(TRACE, "USB_C_PORT_LINK_STATE");
+    zxlogf(DEBUG, "USB_C_PORT_LINK_STATE");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_LINK_STATE, port,
                       ZX_TIME_INFINITE);
   }
   if (port_change & USB_C_PORT_CONFIG_ERROR) {
-    zxlogf(TRACE, "USB_C_PORT_CONFIG_ERROR");
+    zxlogf(DEBUG, "USB_C_PORT_CONFIG_ERROR");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port,
                       ZX_TIME_INFINITE);
   }
-  zxlogf(TRACE, "");
+  zxlogf(DEBUG, "");
 
   *out_status = status.wPortStatus;
   return ZX_OK;
@@ -160,7 +160,7 @@ static zx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
 }
 
 static void usb_hub_interrupt_complete(void* ctx, usb_request_t* req) {
-  zxlogf(TRACE, "usb_hub_interrupt_complete got %d %" PRIu64 "", req->response.status,
+  zxlogf(DEBUG, "usb_hub_interrupt_complete got %d %" PRIu64 "", req->response.status,
          req->response.actual);
   usb_hub_t* hub = (usb_hub_t*)ctx;
   sync_completion_signal(&hub->completion);
@@ -174,7 +174,7 @@ static void usb_hub_power_on_port(usb_hub_t* hub, int port) {
 static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
   port_status_t status;
 
-  zxlogf(TRACE, "port %d usb_hub_port_enabled", port);
+  zxlogf(DEBUG, "port %d usb_hub_port_enabled", port);
 
   // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
   // wait for USB_PORT_ENABLE == 1 and USB_PORT_RESET == 0
@@ -195,7 +195,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     speed = USB_SPEED_FULL;
   }
 
-  zxlogf(TRACE, "call hub_device_added for port %d", port);
+  zxlogf(DEBUG, "call hub_device_added for port %d", port);
   usb_bus_device_added(&hub->bus, hub->usb_device, port, speed);
   usb_hub_set_port_attached(hub, port, true);
 }
@@ -203,7 +203,7 @@ static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
 static void usb_hub_port_connected(usb_hub_t* hub, int port) {
   port_status_t status;
 
-  zxlogf(TRACE, "port %d usb_hub_port_connected", port);
+  zxlogf(DEBUG, "port %d usb_hub_port_connected", port);
 
   // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
   if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
@@ -234,7 +234,7 @@ static usb_hub_interface_protocol_ops_t _hub_interface = {
 };
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
-  zxlogf(TRACE, "port %d usb_hub_port_disconnected", port);
+  zxlogf(DEBUG, "port %d usb_hub_port_disconnected", port);
   usb_bus_device_removed(&hub->bus, hub->usb_device, port);
   usb_hub_set_port_attached(hub, port, false);
 }
@@ -242,7 +242,7 @@ static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, port_status_t status) {
   port_status_t old_status = hub->port_status[port];
 
-  zxlogf(TRACE, "usb_hub_handle_port_status port: %d status: %04X old_status: %04X", port, status,
+  zxlogf(DEBUG, "usb_hub_handle_port_status port: %d status: %04X old_status: %04X", port, status,
          old_status);
 
   hub->port_status[port] = status;

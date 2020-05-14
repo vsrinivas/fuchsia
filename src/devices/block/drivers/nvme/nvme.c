@@ -360,10 +360,10 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
       cmd.dptr.prp[1] = utxn->phys + sizeof(uint64_t);
     }
 
-    zxlogf(TRACE, "nvme: txn=%p utxn id=%u pages=%zu op=%s", txn, utxn->id, pagecount,
+    zxlogf(DEBUG, "nvme: txn=%p utxn id=%u pages=%zu op=%s", txn, utxn->id, pagecount,
            txn->opcode == NVME_OP_WRITE ? "WR" : "RD");
-    zxlogf(SPEW, "nvme: prp[0]=%016zx prp[1]=%016zx", cmd.dptr.prp[0], cmd.dptr.prp[1]);
-    zxlogf(SPEW, "nvme: pages[] = { %016zx, %016zx, %016zx, %016zx, ... }", pages[0], pages[1],
+    zxlogf(TRACE, "nvme: prp[0]=%016zx prp[1]=%016zx", cmd.dptr.prp[0], cmd.dptr.prp[1]);
+    zxlogf(TRACE, "nvme: pages[] = { %016zx, %016zx, %016zx, %016zx, ... }", pages[0], pages[1],
            pages[2], pages[3]);
 
     if ((r = nvme_io_sq_put(nvme, &cmd)) != ZX_OK) {
@@ -463,7 +463,7 @@ static void io_process_cpls(nvme_device_t* nvme) {
       // further utxns once one has failed
       txn->op.rw.length = 0;
     } else {
-      zxlogf(SPEW, "nvme: utxn #%u txn %p OKAY", cpl.cmd_id, txn);
+      zxlogf(TRACE, "nvme: utxn #%u txn %p OKAY", cpl.cmd_id, txn);
     }
 
     zx_status_t r;
@@ -481,7 +481,7 @@ static void io_process_cpls(nvme_device_t* nvme) {
       mtx_lock(&nvme->lock);
       list_delete(&txn->node);
       mtx_unlock(&nvme->lock);
-      zxlogf(TRACE, "nvme: txn %p %s", txn, txn->flags & TXN_FLAG_FAILED ? "error" : "okay");
+      zxlogf(DEBUG, "nvme: txn %p %s", txn, txn->flags & TXN_FLAG_FAILED ? "error" : "okay");
       txn_complete(txn, txn->flags & TXN_FLAG_FAILED ? ZX_ERR_IO : ZX_OK);
     }
   }
@@ -554,7 +554,7 @@ static void nvme_queue(void* ctx, block_op_t* op, block_impl_queue_callback comp
   txn->pending_utxns = 0;
   txn->flags = 0;
 
-  zxlogf(SPEW, "nvme: io: %s: %ublks @ blk#%zu", txn->opcode == NVME_OP_WRITE ? "wr" : "rd",
+  zxlogf(TRACE, "nvme: io: %s: %ublks @ blk#%zu", txn->opcode == NVME_OP_WRITE ? "wr" : "rd",
          txn->op.rw.length + 1U, txn->op.rw.offset_dev);
 
   mtx_lock(&nvme->lock);

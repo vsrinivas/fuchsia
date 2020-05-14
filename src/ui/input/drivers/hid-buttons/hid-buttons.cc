@@ -64,7 +64,7 @@ int HidButtonsDevice::Thread() {
   while (1) {
     zx_port_packet_t packet;
     zx_status_t status = port_.wait(zx::time::infinite(), &packet);
-    zxlogf(TRACE, "%s msg received on port key %lu", __FUNCTION__, packet.key);
+    zxlogf(DEBUG, "%s msg received on port key %lu", __FUNCTION__, packet.key);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s port wait failed %d", __FUNCTION__, status);
       return thrd_error;
@@ -151,7 +151,7 @@ bool HidButtonsDevice::MatrixScan(uint32_t row, uint32_t col, zx_duration_t dela
   gpio_read(&gpios_[row].gpio, &val);
 
   gpio_config_out(&gpios_[col].gpio, gpios_[col].config.output_value);
-  zxlogf(TRACE, "%s row %u col %u val %u", __FUNCTION__, row, col, val);
+  zxlogf(DEBUG, "%s row %u col %u val %u", __FUNCTION__, row, col, val);
   return static_cast<bool>(val);
 }
 
@@ -178,7 +178,7 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
     } else if (buttons_[i].type == BUTTONS_TYPE_DIRECT) {
       uint8_t val;
       gpio_read(&gpios_[buttons_[i].gpioA_idx].gpio, &val);
-      zxlogf(TRACE, "%s GPIO direct read %u for button %lu", __FUNCTION__, val, i);
+      zxlogf(DEBUG, "%s GPIO direct read %u for button %lu", __FUNCTION__, val, i);
       new_value = val;
     } else {
       zxlogf(ERROR, "%s unknown button type %u", __FUNCTION__, buttons_[i].type);
@@ -189,7 +189,7 @@ zx_status_t HidButtonsDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, 
       new_value = !new_value;
     }
 
-    zxlogf(TRACE, "%s GPIO new value %u for button %lu", __FUNCTION__, new_value, i);
+    zxlogf(DEBUG, "%s GPIO new value %u for button %lu", __FUNCTION__, new_value, i);
     fill_button_in_report(buttons_[i].id, new_value, &input_rpt);
   }
   auto out = static_cast<buttons_input_rpt_t*>(data);
@@ -216,21 +216,21 @@ zx_status_t HidButtonsDevice::HidbusGetProtocol(uint8_t* protocol) { return ZX_E
 zx_status_t HidButtonsDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 uint8_t HidButtonsDevice::ReconfigurePolarity(uint32_t idx, uint64_t int_port) {
-  zxlogf(TRACE, "%s gpio %u port %lu", __FUNCTION__, idx, int_port);
+  zxlogf(DEBUG, "%s gpio %u port %lu", __FUNCTION__, idx, int_port);
   uint8_t current = 0, old;
   gpio_read(&gpios_[idx].gpio, &current);
   do {
     gpio_set_polarity(&gpios_[idx].gpio, current ? GPIO_POLARITY_LOW : GPIO_POLARITY_HIGH);
     old = current;
     gpio_read(&gpios_[idx].gpio, &current);
-    zxlogf(SPEW, "%s old gpio %u new gpio %u", __FUNCTION__, old, current);
+    zxlogf(TRACE, "%s old gpio %u new gpio %u", __FUNCTION__, old, current);
     // If current switches after setup, we setup a new trigger for it (opposite edge).
   } while (current != old);
   return current;
 }
 
 zx_status_t HidButtonsDevice::ConfigureInterrupt(uint32_t idx, uint64_t int_port) {
-  zxlogf(TRACE, "%s gpio %u port %lu", __FUNCTION__, idx, int_port);
+  zxlogf(DEBUG, "%s gpio %u port %lu", __FUNCTION__, idx, int_port);
   zx_status_t status;
   uint8_t current = 0;
   gpio_read(&gpios_[idx].gpio, &current);

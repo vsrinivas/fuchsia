@@ -58,7 +58,7 @@ void PciRootHost::WorkerThreadEntry() {
               break;
             }
             case PciRootHost::Message::kExit:
-              zxlogf(TRACE, "%s received exit signal\n", kWorkerTag);
+              zxlogf(DEBUG, "%s received exit signal\n", kWorkerTag);
               return;
             default:
               zxlogf(ERROR, "%s Unexpected message type received by worker: %d\n", kWorkerTag,
@@ -101,7 +101,7 @@ zx_status_t PciRootHost::WaitForWorkerAck() {
   if (st != ZX_OK) {
     return st;
   }
-  zxlogf(TRACE, "%s received ack\n", kMainTag);
+  zxlogf(DEBUG, "%s received ack\n", kMainTag);
 
   if (in.type != ZX_PKT_TYPE_USER || in.user.u32[0] != PciRootHost::Message::kAck) {
     zxlogf(ERROR, "%s unexpected packet type (%#x) or payload (%#x)\n", kMainTag, in.type,
@@ -155,12 +155,12 @@ zx_status_t PciRootHost::AllocateWindow(AllocationType type, zx_paddr_t base, si
   }
 
   if (st != ZX_OK) {
-    zxlogf(TRACE, "%s failed to allocate %s %#lx-%#lx: %d.\n", kMainTag, allocator_name, base,
+    zxlogf(DEBUG, "%s failed to allocate %s %#lx-%#lx: %d.\n", kMainTag, allocator_name, base,
            base + size, st);
-    if (zxlog_level_enabled(TRACE)) {
-      zxlogf(TRACE, "%s Regions available:\n", kMainTag);
+    if (zxlog_level_enabled(DEBUG)) {
+      zxlogf(DEBUG, "%s Regions available:\n", kMainTag);
       allocator->WalkAvailableRegions([](const ralloc_region_t* r) -> bool {
-        zxlogf(TRACE, "    %#lx - %#lx\n", r->base, r->base + r->size);
+        zxlogf(DEBUG, "    %#lx - %#lx\n", r->base, r->base + r->size);
         return true;
       });
     }
@@ -190,7 +190,7 @@ zx_status_t PciRootHost::AllocateWindow(AllocationType type, zx_paddr_t base, si
 
   // Discard the lifecycle aspect of the returned pointer, we'll be tracking it on the bus
   // side of things.
-  zxlogf(TRACE, "%s assigned %s %#lx-%#lx to PciRoot.\n", kMainTag, allocator_name, new_base,
+  zxlogf(DEBUG, "%s assigned %s %#lx-%#lx to PciRoot.\n", kMainTag, allocator_name, new_base,
          new_base + new_size);
   return ZX_OK;
 }
@@ -200,7 +200,7 @@ zx_status_t PciRootHost::RecordAllocation(RegionAllocator::Region::UPtr region,
   zx::eventpair root_host_endpoint;
   zx_status_t st = zx::eventpair::create(0, &root_host_endpoint, out_endpoint);
   if (st != ZX_OK) {
-    zxlogf(TRACE, "%s Failed to create eventpair: %d\n", kMainTag, st);
+    zxlogf(DEBUG, "%s Failed to create eventpair: %d\n", kMainTag, st);
     return st;
   }
 
@@ -209,7 +209,7 @@ zx_status_t PciRootHost::RecordAllocation(RegionAllocator::Region::UPtr region,
   uint64_t key = ++alloc_key_cnt_;
   st = root_host_endpoint.wait_async(worker_port_, key, ZX_EVENTPAIR_PEER_CLOSED, 0 /* options */);
   if (st != ZX_OK) {
-    zxlogf(TRACE, "%s Failed to set up tracking for resource allocation: %d\n", kMainTag, st);
+    zxlogf(DEBUG, "%s Failed to set up tracking for resource allocation: %d\n", kMainTag, st);
     return st;
   }
 

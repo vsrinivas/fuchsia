@@ -319,11 +319,11 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // preventing us from starting another wait.  Or if we didn't set
   // is_cancelling_input_processing_ = true soon enough, then this call does
   // make WaitForParsingCompleted() return faster.
-  LOG(TRACE, "TryStartCancelParsing()...");
+  LOG(DEBUG, "TryStartCancelParsing()...");
   video_->parser()->TryStartCancelParsing();
-  LOG(TRACE, "TryStartCancelParsing() done.");
+  LOG(DEBUG, "TryStartCancelParsing() done.");
 
-  LOG(TRACE, "stopping input processing thread and recycling input packets...");
+  LOG(DEBUG, "stopping input processing thread and recycling input packets...");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     std::condition_variable stop_input_processing_condition;
@@ -349,13 +349,13 @@ void CodecAdapterH264::CoreCodecStopStream() {
     }
     ZX_DEBUG_ASSERT(!is_cancelling_input_processing_);
   }  // ~lock
-  LOG(TRACE, "stopping input processing thread and recycling input packets done.");
+  LOG(DEBUG, "stopping input processing thread and recycling input packets done.");
 
   // Stop processing queued frames.
   if (video_->core()) {
-    LOG(TRACE, "StopDecoding()...");
+    LOG(DEBUG, "StopDecoding()...");
     video_->core()->StopDecoding();
-    LOG(TRACE, "WaitForIdle()...");
+    LOG(DEBUG, "WaitForIdle()...");
     video_->core()->WaitForIdle();
   }
 
@@ -367,9 +367,9 @@ void CodecAdapterH264::CoreCodecStopStream() {
   // AmlogicVideo to be more re-usable without the stuff in this method, then
   // DecoderCore, then VideoDecoder.
 
-  LOG(TRACE, "ClearDecoderInstance()...");
+  LOG(DEBUG, "ClearDecoderInstance()...");
   video_->ClearDecoderInstance();
-  LOG(TRACE, "ClearDecoderInstance() done.");
+  LOG(DEBUG, "ClearDecoderInstance() done.");
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -716,7 +716,7 @@ void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
   ZX_DEBUG_ASSERT(IsPortSecure(port) || !IsPortSecureRequired(port));
   ZX_DEBUG_ASSERT(!IsPortSecure(port) || IsPortSecurePermitted(port));
   // TODO(dustingreen): Remove after secure video decode works e2e.
-  LOG(TRACE, "CodecAdapterH264::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
+  LOG(DEBUG, "CodecAdapterH264::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
       IsPortSecure(port), port);
 }
 
@@ -888,14 +888,14 @@ void CodecAdapterH264::ProcessInput() {
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
       if (!ParseVideoAnnexB(nullptr, &new_stream_h264[0], new_stream_h264_len)) {
         // This can happen when switching streams.
-        LOG(TRACE, "!ParseVideoAnnexB(new_stream_h264)");
+        LOG(DEBUG, "!ParseVideoAnnexB(new_stream_h264)");
         return;
       }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
       if (!ParseVideoAnnexB(nullptr, bytes.get(), kFlushThroughBytes)) {
         // This can happen when switching streams.
-        LOG(TRACE, "!ParseVideoAnnexB(kFlushThroughBytes)");
+        LOG(DEBUG, "!ParseVideoAnnexB(kFlushThroughBytes)");
         return;
       }
       continue;
@@ -1239,7 +1239,7 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
     DLOG("is_cancelling: %u status: %d", is_cancelling, status);
     video_->parser()->CancelParsing();
     if (is_cancelling || status == ZX_ERR_CANCELED) {
-      LOG(TRACE, "Parsing was cancelled - is_cancelling: %d status: %d", is_cancelling, status);
+      LOG(DEBUG, "Parsing was cancelled - is_cancelling: %d status: %d", is_cancelling, status);
       // Don't fail the current stream in this case.  The current stream is already obsolete.  While
       // CodecImpl will tolerate this without causing the codec to fail or an extraneous
       // OnStreamFailed(), it's better for the core codec to not fail a stream that's being stopped

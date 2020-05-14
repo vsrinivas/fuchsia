@@ -15,6 +15,5 @@
 #define errorf(args...) logf(ERROR, args)
 #define infof(args...) logf(INFO, args)
 #define tracef(args...) logf(TRACE, args)
-#define spewf(args...) logf(SPEW, args)
 
 #endif  // GARNET_DRIVERS_BLUETOOTH_HCI_ATHEROS_LOGGING_H_

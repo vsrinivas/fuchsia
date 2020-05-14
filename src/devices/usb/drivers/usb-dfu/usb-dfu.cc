@@ -173,7 +173,7 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
   size_t len_to_write;
   do {
     len_to_write = fbl::min(fw_size - vmo_offset, static_cast<size_t>(func_desc_.wTransferSize));
-    zxlogf(TRACE, "fetching block %u, offset %lu len %lu", block_num, vmo_offset, len_to_write);
+    zxlogf(DEBUG, "fetching block %u, offset %lu len %lu", block_num, vmo_offset, len_to_write);
     zx_status_t status = fw_vmo.read(write_buf, vmo_offset, len_to_write);
     if (status != ZX_OK) {
       return status;
@@ -204,7 +204,7 @@ zx_status_t Dfu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t Dfu::Bind() {
-  zxlogf(TRACE, "adding DFU, interface %x, v%x.%x", intf_num_, MSB(func_desc_.bcdDFUVersion),
+  zxlogf(DEBUG, "adding DFU, interface %x, v%x.%x", intf_num_, MSB(func_desc_.bcdDFUVersion),
          LSB(func_desc_.bcdDFUVersion));
   zx_status_t status = DdkAdd("usb-dfu", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
@@ -247,7 +247,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
           zxlogf(ERROR, "DFU func desc invalid");
         } else {
           func_desc = *desc;
-          zxlogf(TRACE, "DFU func desc bmAttributes %u wDetachTimeOut %u wTransferSize %u",
+          zxlogf(DEBUG, "DFU func desc bmAttributes %u wDetachTimeOut %u wTransferSize %u",
                  func_desc.bmAttributes, func_desc.wDetachTimeOut, func_desc.wTransferSize);
           break;
         }
@@ -277,7 +277,7 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
 }
 
 zx_status_t dfu_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "dfu_bind");
+  zxlogf(DEBUG, "dfu_bind");
   return usb::Dfu::Create(parent);
 }
 

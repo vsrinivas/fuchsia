@@ -40,7 +40,7 @@ zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
     } else {
       dev->info.state &= ~POWER_STATE_ONLINE;
     }
-    zxlogf(TRACE, "acpi-pwrsrc: call_PSR state change 0x%x -> 0x%x", state, dev->info.state);
+    zxlogf(DEBUG, "acpi-pwrsrc: call_PSR state change 0x%x -> 0x%x", state, dev->info.state);
     if (state != dev->info.state) {
       zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
     }
@@ -51,7 +51,7 @@ zx_status_t call_PSR(acpi_pwrsrc_device_t* dev) {
 
 static void acpi_pwrsrc_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   acpi_pwrsrc_device_t* dev = static_cast<acpi_pwrsrc_device_t*>(ctx);
-  zxlogf(TRACE, "acpi-pwrsrc: notify got event 0x%x", value);
+  zxlogf(DEBUG, "acpi-pwrsrc: notify got event 0x%x", value);
 
   // TODO(fxbug.dev/37719): there seems to exist an ordering problem in
   // some ACPI EC firmware such that the event notification takes place before
@@ -166,7 +166,7 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     return status;
   }
 
-  zxlogf(TRACE, "acpi-pwrsrc: initialized");
+  zxlogf(DEBUG, "acpi-pwrsrc: initialized");
 
   return ZX_OK;
 }

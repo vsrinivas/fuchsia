@@ -29,7 +29,7 @@ struct BlockOperationContext {
 void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* op) {
   auto* ctx = static_cast<BlockOperationContext*>(cookie);
 
-  zxlogf(TRACE, "Completion status: %d", status);
+  zxlogf(DEBUG, "Completion status: %d", status);
   ctx->status = status;
   sync_completion_signal(ctx->completion_event);
   return;
@@ -202,7 +202,7 @@ zx_status_t AmlBadBlock::WriteBadBlockTable(bool use_new_block) {
       bad_block_table_[block] = kNandBlockBad;
       continue;
     }
-    zxlogf(TRACE, "nandpart: BBT write to block %u pages [%u, %u) successful", block, page_,
+    zxlogf(DEBUG, "nandpart: BBT write to block %u pages [%u, %u) successful", block, page_,
            page_ + bbt_page_count);
     break;
   }
@@ -231,7 +231,7 @@ zx_status_t AmlBadBlock::ReadPages(uint32_t nand_page, uint32_t num_pages) {
 }
 
 zx_status_t AmlBadBlock::FindBadBlockTable() {
-  zxlogf(TRACE, "nandpart: Finding bad block table");
+  zxlogf(DEBUG, "nandpart: Finding bad block table");
 
   if (sizeof(OobMetadata) > nand_info_.oob_size) {
     zxlogf(ERROR, "nandpart: OOB is too small. Need %zu, found %u", sizeof(OobMetadata),
@@ -239,7 +239,7 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(TRACE, "nandpart: Starting in block %u. Ending in block %u.",
+  zxlogf(DEBUG, "nandpart: Starting in block %u. Ending in block %u.",
          config_.aml_uboot.table_start_block, config_.aml_uboot.table_end_block);
 
   const uint32_t blocks = config_.aml_uboot.table_end_block - config_.aml_uboot.table_start_block;
@@ -271,7 +271,7 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
       continue;
     }
 
-    zxlogf(TRACE, "Successfully read block %u.", block);
+    zxlogf(DEBUG, "Successfully read block %u.", block);
 
     block_list_[valid_blocks].block = block;
     block_list_[valid_blocks].valid = true;
@@ -279,7 +279,7 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
     // If block has valid BBT entries, see if it has the latest entries.
     if (oob_->magic == kBadBlockTableMagic) {
       if (oob_->generation >= generation_) {
-        zxlogf(TRACE, "Block %u has valid BBT entries!", block);
+        zxlogf(DEBUG, "Block %u has valid BBT entries!", block);
         block_entry_ = &block_list_[valid_blocks];
         generation_ = oob_->generation;
       }
@@ -306,7 +306,7 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
     block_list_[idx].valid = false;
   }
 
-  zxlogf(TRACE, "nandpart: Finding last BBT in block %u", block_entry_->block);
+  zxlogf(DEBUG, "nandpart: Finding last BBT in block %u", block_entry_->block);
 
   // Next find the last valid BBT entry in block.
   bool found_one = false;
@@ -316,20 +316,20 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
   for (; page + bbt_page_count <= nand_info_.pages_per_block; page += bbt_page_count) {
     zx_status_t status = ZX_OK;
     // Check that all pages in current bbt_page_count are valid.
-    zxlogf(TRACE, "Reading pages [%u, %u)", page, page + bbt_page_count);
+    zxlogf(DEBUG, "Reading pages [%u, %u)", page, page + bbt_page_count);
     const uint32_t nand_page = block_entry_->block * nand_info_.pages_per_block + page;
     status = ReadPages(nand_page, bbt_page_count);
     if (status != ZX_OK) {
       // It's fine for entries to be unreadable as long as future ones are
       // readable.
-      zxlogf(TRACE, "nandpart: Unable to read page %u", page);
+      zxlogf(DEBUG, "nandpart: Unable to read page %u", page);
       latest_entry_bad = true;
       continue;
     }
     for (uint32_t i = 0; i < bbt_page_count; i++) {
       if ((oob_ + i)->magic != kBadBlockTableMagic) {
         // Last BBT entry in table was found, so quit looking at future entries.
-        zxlogf(TRACE, "nandpart: Page %u does not contain valid BBT entry", page + i);
+        zxlogf(DEBUG, "nandpart: Page %u does not contain valid BBT entry", page + i);
         break_loop = true;
         break;
       }
@@ -338,7 +338,7 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
       break;
     }
     // Store latest complete BBT.
-    zxlogf(TRACE, "BBT entry in pages (%u, %u] is valid", page, page + bbt_page_count);
+    zxlogf(DEBUG, "BBT entry in pages (%u, %u] is valid", page, page + bbt_page_count);
     latest_entry_bad = false;
     found_one = true;
     page_ = page;

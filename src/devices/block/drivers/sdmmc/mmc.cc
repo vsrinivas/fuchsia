@@ -53,10 +53,10 @@ zx_status_t DecodeCsd(const std::array<uint8_t, SDMMC_CSD_SIZE>& raw_csd) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zxlogf(SPEW, "mmc: CSD version %u spec version %u", (raw_csd[MMC_CSD_SPEC_VERSION] >> 6) & 0x3,
+  zxlogf(TRACE, "mmc: CSD version %u spec version %u", (raw_csd[MMC_CSD_SPEC_VERSION] >> 6) & 0x3,
          spec_vrsn);
-  if (zxlog_level_enabled(SPEW)) {
-    zxlogf(SPEW, "CSD:");
+  if (zxlog_level_enabled(TRACE)) {
+    zxlogf(TRACE, "CSD:");
     hexdump8_ex(raw_csd.data(), SDMMC_CSD_SIZE, 0);
   }
 
@@ -199,7 +199,7 @@ zx_status_t SdmmcBlockDevice::MmcSwitchFreq(uint32_t new_freq) {
 }
 
 zx_status_t SdmmcBlockDevice::MmcDecodeExtCsd() {
-  zxlogf(SPEW, "mmc: EXT_CSD version %u CSD version %u", raw_ext_csd_[192], raw_ext_csd_[194]);
+  zxlogf(TRACE, "mmc: EXT_CSD version %u CSD version %u", raw_ext_csd_[192], raw_ext_csd_[194]);
 
   // Get the capacity for the card
   uint32_t sectors = (raw_ext_csd_[212] << 0) | (raw_ext_csd_[213] << 8) |
@@ -207,7 +207,7 @@ zx_status_t SdmmcBlockDevice::MmcDecodeExtCsd() {
   block_info_.block_count = sectors * kMmcSectorSize / kMmcBlockSize;
   block_info_.block_size = kMmcBlockSize;
 
-  zxlogf(TRACE, "mmc: found card with capacity = %" PRIu64 "B",
+  zxlogf(DEBUG, "mmc: found card with capacity = %" PRIu64 "B",
          block_info_.block_count * block_info_.block_size);
 
   return ZX_OK;
@@ -258,7 +258,7 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
     zxlogf(ERROR, "mmc: MMC_ALL_SEND_CID failed, retcode = %d", st);
     return st;
   }
-  zxlogf(SPEW, "mmc: MMC_ALL_SEND_CID cid 0x%08x 0x%08x 0x%08x 0x%08x", raw_cid_[0], raw_cid_[1],
+  zxlogf(TRACE, "mmc: MMC_ALL_SEND_CID cid 0x%08x 0x%08x 0x%08x 0x%08x", raw_cid_[0], raw_cid_[1],
          raw_cid_[2], raw_cid_[3]);
 
   DecodeCid(raw_cid_);

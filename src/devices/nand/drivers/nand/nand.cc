@@ -210,7 +210,7 @@ zx_status_t NandDevice::WorkerThread() {
     }
   }
 
-  zxlogf(TRACE, "nand: worker thread terminated");
+  zxlogf(DEBUG, "nand: worker thread terminated");
   return ZX_OK;
 }
 
@@ -221,8 +221,8 @@ void NandDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op
 
 void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
   if (completion_cb == nullptr) {
-    zxlogf(TRACE, "nand: nand op %p completion_cb unset!", op);
-    zxlogf(TRACE, "nand: cannot queue command!");
+    zxlogf(DEBUG, "nand: nand op %p completion_cb unset!", op);
+    zxlogf(DEBUG, "nand: cannot queue command!");
     return;
   }
 

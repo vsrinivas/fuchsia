@@ -225,7 +225,7 @@ zx_status_t MtUsb::HandleEp0() {
         if (actual != sizeof(cur_setup_)) {
           return ZX_ERR_IO_INVALID;
         }
-        zxlogf(TRACE, "SETUP bmRequestType %x bRequest %u wValue %u wIndex %u wLength %u",
+        zxlogf(DEBUG, "SETUP bmRequestType %x bRequest %u wValue %u wIndex %u wLength %u",
                setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex, setup->wLength);
 
         if (setup->wLength > 0 && (setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT) {
@@ -580,7 +580,7 @@ int MtUsb::IrqThread() {
       zxlogf(ERROR, "%s: irq_.wait failed: %d", __func__, status);
       return -1;
     }
-    zxlogf(TRACE, " \n%s: got interrupt!", __func__);
+    zxlogf(DEBUG, " \n%s: got interrupt!", __func__);
 
     // Write back these registers to acknowledge the interrupts
     auto intrtx = INTRTX::Get().ReadFrom(mmio).WriteTo(mmio);
@@ -724,7 +724,7 @@ zx_status_t MtUsb::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
   }
   auto ep_num = ep->ep_num;
 
-  zxlogf(TRACE, "%s address %02x ep_num %u direction %u", __func__, ep_address, ep_num,
+  zxlogf(DEBUG, "%s address %02x ep_num %u direction %u", __func__, ep_address, ep_num,
          ep->direction);
 
   fbl::AutoLock lock(&ep->lock);
@@ -789,7 +789,7 @@ zx_status_t MtUsb::UsbDciDisableEp(uint8_t ep_address) {
 
   auto ep_num = ep->ep_num;
 
-  zxlogf(TRACE, "%s address %02x ep_num %u direction %u", __func__, ep_address, ep_num,
+  zxlogf(DEBUG, "%s address %02x ep_num %u direction %u", __func__, ep_address, ep_num,
          ep->direction);
 
   fbl::AutoLock lock(&ep->lock);

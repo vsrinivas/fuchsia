@@ -373,7 +373,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
       break;
     }
     uint32_t intr_stat = readl(&dev->regs->intr_stat);
-    zxlogf(SPEW, "Received i2c interrupt: %x %x", intr_stat, readl(&dev->regs->raw_intr_stat));
+    zxlogf(TRACE, "Received i2c interrupt: %x %x", intr_stat, readl(&dev->regs->raw_intr_stat));
     if (intr_stat & (1u << INTR_RX_UNDER)) {
       // If we hit an underflow, it's a bug.
       zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
@@ -759,7 +759,7 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent, pci_
   uint32_t count = actual / sizeof(auxdata_i2c_device_t);
   uint32_t bus_speed = 0;
   while (count--) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "i2c: got child[%u] bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u"
            " protocol_id=0x%08x\n",
            count, child->is_bus_controller, child->ten_bit, child->address, child->bus_speed,

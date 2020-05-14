@@ -71,7 +71,7 @@ int Cy8cmbr3108::Thread() {
   while (1) {
     zx_port_packet_t packet;
     zx_status_t status = port_.wait(zx::time::infinite(), &packet);
-    zxlogf(TRACE, "%s msg received on port key %lu", __FUNCTION__, packet.key);
+    zxlogf(DEBUG, "%s msg received on port key %lu", __FUNCTION__, packet.key);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s port wait failed %d", __FUNCTION__, status);
       return thrd_error;
@@ -199,7 +199,7 @@ zx_status_t Cy8cmbr3108::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void*
       new_value = true;
     }
 
-    zxlogf(TRACE, "%s new value %u for button %lu", __FUNCTION__, new_value, i);
+    zxlogf(DEBUG, "%s new value %u for button %lu", __FUNCTION__, new_value, i);
     fill_visalia_touch_buttons_report(buttons_[i].id, new_value, &input_rpt);
   }
   auto out = static_cast<visalia_touch_buttons_input_rpt_t*>(data);

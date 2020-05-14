@@ -21,7 +21,7 @@ namespace audio {
 namespace intel_hda {
 
 void IntelHDAController::WakeupIrqHandler() {
-  LOG(SPEW, "Waking up IRQ handler\n");
+  LOG(TRACE, "Waking up IRQ handler\n");
   ZX_DEBUG_ASSERT(irq_wakeup_event_ != nullptr);
   irq_wakeup_event_->Signal();
 }
@@ -68,7 +68,7 @@ void IntelHDAController::SnapshotRIRB() {
 
   ZX_DEBUG_ASSERT(!pending);
 
-  LOG(SPEW, "RIRB has %u pending responses; WP is @%u\n", rirb_snapshot_cnt_, rirb_wr_ptr);
+  LOG(TRACE, "RIRB has %u pending responses; WP is @%u\n", rirb_snapshot_cnt_, rirb_wr_ptr);
 
   if (rirbsts & HDA_REG_RIRBSTS_OIS) {
     // TODO(johngro) : Implement retry behavior for codec command and
@@ -130,7 +130,7 @@ void IntelHDAController::ProcessRIRB() {
       continue;
     }
 
-    LOG(TRACE, "RX[%2u]: 0x%08x%s\n", caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
+    LOG(DEBUG, "RX[%2u]: 0x%08x%s\n", caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
 
     if (!resp.unsolicited()) {
       std::unique_ptr<CodecCmdJob> job;
@@ -194,7 +194,7 @@ void IntelHDAController::SendCodecCmdLocked(CodecCommand cmd) {
 
 zx_status_t IntelHDAController::QueueCodecCmd(std::unique_ptr<CodecCmdJob>&& job) {
   ZX_DEBUG_ASSERT(job != nullptr);
-  LOG(TRACE, "TX: Codec ID %u Node ID %hu Verb 0x%05x\n", job->codec_id(), job->nid(),
+  LOG(DEBUG, "TX: Codec ID %u Node ID %hu Verb 0x%05x\n", job->codec_id(), job->nid(),
       job->verb().val);
 
   // Enter the lock, then check out the state of the ring buffer.  If the
@@ -257,7 +257,7 @@ void IntelHDAController::ProcessCORB() {
   // While we have room in the CORB, and still have commands which are waiting
   // to be sent out, move commands from the pending queue into the in-flight
   // queue.
-  LOG(SPEW, "CORB has space for %u commands; WP is @%u\n", corb_space_, corb_wr_ptr_);
+  LOG(TRACE, "CORB has space for %u commands; WP is @%u\n", corb_space_, corb_wr_ptr_);
   while (corb_space_ && !pending_corb_jobs_.is_empty()) {
     auto job = pending_corb_jobs_.pop_front();
 
@@ -265,7 +265,7 @@ void IntelHDAController::ProcessCORB() {
 
     in_flight_corb_jobs_.push_back(std::move(job));
   }
-  LOG(SPEW, "Update CORB WP; WP is @%u\n", corb_wr_ptr_);
+  LOG(TRACE, "Update CORB WP; WP is @%u\n", corb_wr_ptr_);
 
   // Update the CORB write pointer.
   CommitCORBLocked();

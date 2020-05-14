@@ -13,7 +13,7 @@
 
 __BEGIN_CDECLS
 
-// Log Flags
+// Log severity
 
 // Error messages should indicate unexpected failures.  They
 // should be terse (preferably one-line) but informative.  They
@@ -34,16 +34,16 @@ __BEGIN_CDECLS
 // Info messages are always displayed by default.
 #define DDK_LOG_INFO FX_LOG_INFO
 
-// Trace messages are intended to provide detailed information
+// Debug messages are intended to provide detailed information
 // about what a driver is doing (start/end of transaction, etc)
 // They should aim for terseness, but provide visibility into
 // driver operation.  They are not displayed by default.
-#define DDK_LOG_TRACE FX_LOG_DEBUG
+#define DDK_LOG_DEBUG FX_LOG_DEBUG
 
-// Spew messages are extremely verbose driver state tracing
+// Trace messages are extremely verbose driver state tracing
 // (possibly including register dumps / full state dumps).
 // They are not displayed by default.
-#define DDK_LOG_SPEW FX_LOG_TRACE
+#define DDK_LOG_TRACE FX_LOG_TRACE
 
 // Serial messages are intended for low-level debugging, and
 // should always be written to debuglog. They are not displayed
@@ -64,10 +64,10 @@ bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severit
 // embedded into the log macro and therefor disabled without cost.
 //
 // Example:
-// if (zxlog_level_enabled(TRACE)) {
-//     zxlogf(TRACE, "Scatter gather table has %u entries", sg_table.count);
+// if (zxlog_level_enabled(DEBUG)) {
+//     zxlogf(DEBUG, "Scatter gather table has %u entries", sg_table.count);
 //     for (uint32_t i = 0; i < sg_table.count; ++i) {
-//         zxlogf(TRACE, "[%u] : 0x%08x, %u",
+//         zxlogf(DEBUG, "[%u] : 0x%08x, %u",
 //                i, sg_table.entry[i].base, sg_table.entry[i].base);
 //     }
 // }

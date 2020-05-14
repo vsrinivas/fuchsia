@@ -102,7 +102,7 @@ Status IntelDsp::ParseNhlt() {
   }
   nhlt_ = nhlt.ConsumeValueOrDie();
 
-  if (zxlog_level_enabled(TRACE)) {
+  if (zxlog_level_enabled(DEBUG)) {
     nhlt_->Dump();
   }
 
@@ -124,7 +124,7 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   if (!result.ok()) {
     return PrependMessage("Error parsing NHLT", result);
   }
-  LOG(TRACE, "parse success, found %zu formats\n", nhlt_->i2s_configs().size());
+  LOG(DEBUG, "parse success, found %zu formats\n", nhlt_->i2s_configs().size());
 
   // Perform hardware initialization in a thread.
   state_ = State::INITIALIZING;
@@ -189,18 +189,18 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
 #define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler)    \
   case _ioctl:                                                                 \
     if (req_size != sizeof(req._payload)) {                                    \
-      LOG(TRACE, "Bad " #_payload " request length (%u != %zu)\n", req_size,   \
+      LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)\n", req_size,   \
           sizeof(req._payload));                                               \
       return ZX_ERR_INVALID_ARGS;                                              \
     }                                                                          \
     if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                       \
-      LOG(TRACE, "Cmd " #_payload                                              \
+      LOG(DEBUG, "Cmd " #_payload                                              \
                  " requires acknowledgement, but the "                         \
                  "NOACK flag was set!\n");                                     \
       return ZX_ERR_INVALID_ARGS;                                              \
     }                                                                          \
     if ((_req_driver_chan) && !is_driver_channel) {                            \
-      LOG(TRACE, "Cmd " #_payload " requires a privileged driver channel.\n"); \
+      LOG(DEBUG, "Cmd " #_payload " requires a privileged driver channel.\n"); \
       return ZX_ERR_ACCESS_DENIED;                                             \
     }                                                                          \
     return _handler(channel, req._payload)
@@ -220,25 +220,25 @@ zx_status_t IntelDsp::ProcessClientRequest(dispatcher::Channel* channel, bool is
   ZX_DEBUG_ASSERT(channel != nullptr);
   res = channel->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to read client request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read client request (res %d)\n", res);
     return res;
   }
 
   // Sanity checks.
   if (req_size < sizeof(req.hdr)) {
-    LOG(TRACE, "Client request too small to contain header (%u < %zu)\n", req_size,
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
         sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
   if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
-    LOG(TRACE, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
+    LOG(DEBUG, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Dispatch
-  LOG(SPEW, "Client Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+  LOG(TRACE, "Client Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
       req_size);
 
   switch (cmd_id) {
@@ -246,7 +246,7 @@ zx_status_t IntelDsp::ProcessClientRequest(dispatcher::Channel* channel, bool is
     PROCESS_CMD(false, true, IHDA_CODEC_RELEASE_STREAM, release_stream, ProcessReleaseStream);
     PROCESS_CMD(false, true, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
     default:
-      LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -290,7 +290,7 @@ zx_status_t IntelDsp::ProcessRequestStream(dispatcher::Channel* channel,
   auto stream = controller_->AllocateStream(type);
 
   if (stream != nullptr) {
-    LOG(TRACE, "Decouple stream #%u\n", stream->id());
+    LOG(DEBUG, "Decouple stream #%u\n", stream->id());
     // Decouple stream
     REG_SET_BITS<uint32_t>(&pp_regs_->ppctl, (1 << stream->dma_id()));
 
@@ -328,7 +328,7 @@ zx_status_t IntelDsp::ProcessReleaseStream(dispatcher::Channel* channel,
   if (stream == nullptr)
     return ZX_ERR_BAD_STATE;
 
-  LOG(TRACE, "Couple stream #%u\n", stream->id());
+  LOG(DEBUG, "Couple stream #%u\n", stream->id());
 
   // Couple stream
   REG_CLR_BITS<uint32_t>(&pp_regs_->ppctl, (1 << stream->dma_id()));
@@ -352,7 +352,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
 
   // Sanity check the requested format.
   if (!StreamFormat(req.format).SanityCheck()) {
-    LOG(TRACE, "Invalid encoded stream format 0x%04hx!\n", req.format);
+    LOG(DEBUG, "Invalid encoded stream format 0x%04hx!\n", req.format);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -377,7 +377,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
   zx_status_t res =
       stream->SetStreamFormat(controller_->default_domain(), req.format, &client_channel);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
+    LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
         req.stream_id, res);
     return res;
   }
@@ -389,7 +389,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
   res = channel->Write(&resp, sizeof(resp), std::move(client_channel));
 
   if (res != ZX_OK)
-    LOG(TRACE, "Failed to send stream channel back to codec driver (res %d)\n", res);
+    LOG(DEBUG, "Failed to send stream channel back to codec driver (res %d)\n", res);
 
   return res;
 }
@@ -558,7 +558,7 @@ zx_status_t IntelDsp::Boot() {
     return st;
   }
 
-  LOG(TRACE, "DSP core 0 booted!\n");
+  LOG(DEBUG, "DSP core 0 booted!\n");
   return ZX_OK;
 }
 
@@ -695,7 +695,7 @@ void IntelDsp::DspNotificationReceived(NotificationType type) {
       break;
 
     default:
-      LOG(TRACE, "Received unknown notification type %d from DSP.\n", static_cast<int>(type));
+      LOG(DEBUG, "Received unknown notification type %d from DSP.\n", static_cast<int>(type));
       break;
   }
 }
@@ -758,7 +758,7 @@ void IntelDsp::ProcessIrq() {
   }
   uint32_t adspis = REG_RD(&regs()->adspis);
   if (adspis & ADSP_REG_ADSPIC_CLDMA) {
-    LOG(TRACE, "Got CLDMA irq\n");
+    LOG(DEBUG, "Got CLDMA irq\n");
     uint32_t w = REG_RD(&regs()->cldma.stream.ctl_sts.w);
     REG_WR(&regs()->cldma.stream.ctl_sts.w, w);
   }

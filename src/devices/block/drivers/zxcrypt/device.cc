@@ -117,7 +117,7 @@ void Device::DdkRelease() {
 
   // One way or another we need to release the memory
   auto cleanup = fbl::MakeAutoCall([this]() {
-    zxlogf(TRACE, "zxcrypt device %p released", this);
+    zxlogf(DEBUG, "zxcrypt device %p released", this);
     delete this;
   });
 
@@ -256,7 +256,7 @@ void Device::BlockForward(block_op_t* block, zx_status_t status) {
   LOG_ENTRY_ARGS("block=%p, status=%s", block, zx_status_get_string(status));
 
   if (!block) {
-    zxlogf(SPEW, "early return; no block provided");
+    zxlogf(TRACE, "early return; no block provided");
     return;
   }
   if (status != ZX_OK) {
@@ -322,7 +322,7 @@ void Device::EnqueueWrite(block_op_t* block) {
     list_add_tail(&queue_, &extra->node);
   }
   if (stalled_.load()) {
-    zxlogf(SPEW, "early return; no requests completed since last stall");
+    zxlogf(TRACE, "early return; no requests completed since last stall");
     return;
   }
 
@@ -338,7 +338,7 @@ void Device::EnqueueWrite(block_op_t* block) {
     uint64_t len = block->rw.length;
     if ((rc = map_.Find(false, hint_, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES &&
         (rc = map_.Find(false, 0, map_.size(), len, &off)) == ZX_ERR_NO_RESOURCES) {
-      zxlogf(TRACE, "zxcrypt device %p stalled pending request completion", this);
+      zxlogf(DEBUG, "zxcrypt device %p stalled pending request completion", this);
       stalled_.store(true);
       break;
     }
@@ -394,7 +394,7 @@ void Device::BlockCallback(void* cookie, zx_status_t status, block_op_t* block) 
   block->rw.offset_vmo = extra->offset_vmo;
 
   if (status != ZX_OK) {
-    zxlogf(TRACE, "parent device returned %s", zx_status_get_string(status));
+    zxlogf(DEBUG, "parent device returned %s", zx_status_get_string(status));
     device->BlockComplete(block, status);
     return;
   }

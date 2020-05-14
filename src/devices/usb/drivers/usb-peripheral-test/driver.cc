@@ -181,7 +181,7 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const
                                                  size_t read_size, size_t* out_read_actual) {
   size_t length = le16toh(setup->wLength);
 
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
       setup->bRequest == USB_PERIPHERAL_TEST_SET_DATA) {
     if (length > sizeof(test_data_)) {
@@ -224,7 +224,7 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup, const
 }
 
 zx_status_t UsbTest::UsbFunctionInterfaceSetConfigured(bool configured, usb_speed_t speed) {
-  zxlogf(TRACE, "%s: %d %d", __func__, configured, speed);
+  zxlogf(DEBUG, "%s: %d %d", __func__, configured, speed);
   zx_status_t status;
 
   if (configured) {
@@ -265,12 +265,12 @@ zx_status_t UsbTest::UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t
 }
 
 void UsbTest::DdkUnbindNew(ddk::UnbindTxn txn) {
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
   txn.Reply();
 }
 
 void UsbTest::DdkRelease() {
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
   delete this;
 }
 

@@ -32,7 +32,7 @@ uint32_t Alc5514Device::ReadReg(uint32_t addr) {
     return -1;
   }
 
-  zxlogf(SPEW, "alc5514: register 0x%08x read 0x%08x", addr, betoh32(val));
+  zxlogf(TRACE, "alc5514: register 0x%08x read 0x%08x", addr, betoh32(val));
   return betoh32(val);
 }
 
@@ -46,7 +46,7 @@ void Alc5514Device::WriteReg(uint32_t addr, uint32_t val) {
            status);
   }
 
-  zxlogf(SPEW, "alc5514: register 0x%08x write 0x%08x", addr, val);
+  zxlogf(TRACE, "alc5514: register 0x%08x write 0x%08x", addr, val);
 }
 
 void Alc5514Device::UpdateReg(uint32_t addr, uint32_t mask, uint32_t bits) {

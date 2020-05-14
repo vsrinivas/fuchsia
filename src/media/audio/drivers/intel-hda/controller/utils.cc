@@ -51,7 +51,7 @@ fbl::RefPtr<fzl::VmarManager> CreateDriverVmars() {
   constexpr size_t VMAR_SIZE =
       2 * (MAX_SIZE_PER_CONTROLLER + ((MAX_ALLOCS_PER_CONTROLLER - 1) * (512u << 10)));
 
-  GLOBAL_LOG(TRACE, "Allocating 0x%zx byte VMAR for registers.\n", VMAR_SIZE);
+  GLOBAL_LOG(DEBUG, "Allocating 0x%zx byte VMAR for registers.\n", VMAR_SIZE);
 
   return fzl::VmarManager::Create(VMAR_SIZE);
 }

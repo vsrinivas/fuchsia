@@ -128,13 +128,13 @@ zx_status_t Asix88179Ethernet::ReadPhy(uint8_t register_address, uint16_t* data)
                                       AX88179_REQ_PHY, AX88179_PHY_ID, register_address,
                                       ZX_TIME_INFINITE, data, sizeof(*data), &out_length);
   if (out_length == sizeof(*data)) {
-    zxlogf(SPEW, "ax88179: read phy %#x: %#x", register_address, *data);
+    zxlogf(TRACE, "ax88179: read phy %#x: %#x", register_address, *data);
   }
   return status;
 }
 
 zx_status_t Asix88179Ethernet::WritePhy(uint8_t register_address, uint16_t data) {
-  zxlogf(SPEW, "ax88179: write phy %#x: %#x", register_address, data);
+  zxlogf(TRACE, "ax88179: write phy %#x: %#x", register_address, data);
   return usb_.ControlOut(USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
                          AX88179_PHY_ID, register_address, ZX_TIME_INFINITE, &data, sizeof(data));
 }
@@ -168,7 +168,7 @@ zx_status_t Asix88179Ethernet::ConfigureMediumMode() {
   }
 
   unsigned int mode = (data & (AX88179_PHYSR_SPEED | AX88179_PHYSR_DUPLEX)) >> 13;
-  zxlogf(TRACE, "ax88179: medium mode: %#x", mode);
+  zxlogf(DEBUG, "ax88179: medium mode: %#x", mode);
   if (mode == 4 || mode > 5) {
     zxlogf(ERROR, "ax88179: mode invalid (mode=%u)", mode);
     return ZX_ERR_NOT_SUPPORTED;
@@ -242,19 +242,19 @@ zx_status_t Asix88179Ethernet::Receive(usb::Request<>& request) {
 
     bool drop = false;
     if (*packet_header & AX88179_RX_DROPPKT) {
-      zxlogf(SPEW, "ax88179: %s DropPkt", __func__);
+      zxlogf(TRACE, "ax88179: %s DropPkt", __func__);
       drop = true;
     }
     if (*packet_header & AX88179_RX_MIIER) {
-      zxlogf(SPEW, "ax88179: %s MII-Er", __func__);
+      zxlogf(TRACE, "ax88179: %s MII-Er", __func__);
       drop = true;
     }
     if (*packet_header & AX88179_RX_CRCER) {
-      zxlogf(SPEW, "ax88179: %s CRC-Er", __func__);
+      zxlogf(TRACE, "ax88179: %s CRC-Er", __func__);
       drop = true;
     }
     if (!(*packet_header & AX88179_RX_OK)) {
-      zxlogf(SPEW, "ax88179: %s !GoodPkt", __func__);
+      zxlogf(TRACE, "ax88179: %s !GoodPkt", __func__);
       drop = true;
     }
     if (!drop) {
@@ -279,10 +279,10 @@ void Asix88179Ethernet::ReadComplete(usb_request_t* usb_request) {
   fbl::AutoLock lock(&lock_);
 
   if (usb_request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "ax88179: ReadComplete usb_reset_endpoint");
+    zxlogf(DEBUG, "ax88179: ReadComplete usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_in_address_);
   } else if (usb_request->response.status == ZX_ERR_IO_INVALID) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "ax88179: ReadComplete Slowing down the requests by %ld usec"
            " and resetting the recv endpoint\n",
            kEthernetReceiveDelay.to_usecs());
@@ -315,10 +315,10 @@ void Asix88179Ethernet::WriteComplete(usb_request_t* usb_request) {
   }
 
   if (usb_request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "ax88179: WriteComplete usb_reset_endpoint");
+    zxlogf(DEBUG, "ax88179: WriteComplete usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_out_address_);
   } else if (usb_request->response.status == ZX_ERR_IO_INVALID) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "ax88179: WriteComplete Slowing down the requests by %ld usec"
            " and resetting the transmit endpoint\n",
            kEthernetTransmitDelay.to_usecs());
@@ -383,12 +383,12 @@ void Asix88179Ethernet::InterruptComplete(usb_request_t* usb_request) {
           usb_.RequestQueue(pending_request->take(), &read_request_complete_);
         }
 
-        zxlogf(TRACE, "ax88179: now online");
+        zxlogf(DEBUG, "ax88179: now online");
         if (ifc_.is_valid()) {
           ifc_.Status(ETHERNET_STATUS_ONLINE);
         }
       } else if (!online && was_online) {
-        zxlogf(TRACE, "ax88179: now offline");
+        zxlogf(DEBUG, "ax88179: now offline");
         if (ifc_.is_valid()) {
           ifc_.Status(0);
         }
@@ -648,7 +648,7 @@ void Asix88179Ethernet::DumpRegister(const char* name, uint8_t register_address)
   if (status != ZX_OK) {
     zxlogf(ERROR, "ax88179: could not read reg %s : %d", name, status);
   } else {
-    zxlogf(SPEW, "ax88179: reg %s = %" PRIx64 "", name, data.value);
+    zxlogf(TRACE, "ax88179: reg %s = %" PRIx64 "", name, data.value);
   }
 }
 

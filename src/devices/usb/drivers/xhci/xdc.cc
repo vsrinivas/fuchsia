@@ -409,7 +409,7 @@ static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id)
   xdc_update_instance_write_signal(inst, xdc->writable);
   mtx_unlock(&xdc->write_lock);
 
-  zxlogf(TRACE, "registered stream id %u", stream_id);
+  zxlogf(DEBUG, "registered stream id %u", stream_id);
   return ZX_OK;
 }
 
@@ -621,7 +621,7 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 }
 
 static void xdc_shutdown(xdc_t* xdc) {
-  zxlogf(TRACE, "xdc_shutdown");
+  zxlogf(DEBUG, "xdc_shutdown");
   uint64_t usb_req_size = sizeof(usb_request_t);
 
   xdc->suspended.store(true);
@@ -660,7 +660,7 @@ static void xdc_shutdown(xdc_t* xdc) {
 
   mtx_unlock(&xdc->lock);
 
-  zxlogf(TRACE, "xdc_shutdown succeeded");
+  zxlogf(DEBUG, "xdc_shutdown succeeded");
 }
 
 static void xdc_free(xdc_t* xdc) {
@@ -688,7 +688,7 @@ static void xdc_free(xdc_t* xdc) {
 
 static void xdc_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
                         uint8_t suspend_reason) {
-  zxlogf(TRACE, "xdc_suspend %u", suspend_reason);
+  zxlogf(DEBUG, "xdc_suspend %u", suspend_reason);
   auto* xdc = static_cast<xdc_t*>(ctx);
 
   // TODO(jocelyndang) do different things based on the flags.
@@ -821,11 +821,11 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
           mtx_unlock(&xdc->instance_list_lock);
           return;
         }
-        zxlogf(TRACE, "setting host stream id %u as online", state->stream_id);
+        zxlogf(DEBUG, "setting host stream id %u as online", state->stream_id);
         host_stream->stream_id = state->stream_id;
         list_add_tail(&xdc->host_streams, &host_stream->node);
       } else {
-        zxlogf(TRACE, "setting host stream id %u as offline", state->stream_id);
+        zxlogf(DEBUG, "setting host stream id %u as offline", state->stream_id);
         list_delete(&host_stream->node);
       }
 
@@ -835,7 +835,7 @@ static void xdc_handle_msg(xdc_t* xdc, xdc_msg_t* msg) {
       list_for_every_entry (&xdc->instance_list, test, xdc_instance_t, node) {
         mtx_lock(&test->lock);
         if (test->has_stream_id && test->stream_id == state->stream_id) {
-          zxlogf(TRACE, "stream id %u is now %s to the host", state->stream_id,
+          zxlogf(DEBUG, "stream id %u is now %s to the host", state->stream_id,
                  state->online ? "connected" : "disconnected");
           test->connected = state->online;
           match = test;
@@ -958,16 +958,16 @@ static void xdc_handle_port_status_change(xdc_t* xdc, xdc_poll_state_t* poll_sta
     if (poll_state->connected) {
       poll_state->last_conn = zx_clock_get_monotonic();
     }
-    zxlogf(TRACE, "Port: Connect Status Change, connected: %d", poll_state->connected != 0);
+    zxlogf(DEBUG, "Port: Connect Status Change, connected: %d", poll_state->connected != 0);
   }
   if (dcportsc & DCPORTSC_PRC) {
-    zxlogf(TRACE, "Port: Port Reset complete");
+    zxlogf(DEBUG, "Port: Port Reset complete");
   }
   if (dcportsc & DCPORTSC_PLC) {
-    zxlogf(TRACE, "Port: Port Link Status Change");
+    zxlogf(DEBUG, "Port: Port Link Status Change");
   }
   if (dcportsc & DCPORTSC_CEC) {
-    zxlogf(TRACE, "Port: Port Config Error detected");
+    zxlogf(DEBUG, "Port: Port Config Error detected");
   }
 
   // Ack change events.
@@ -1014,7 +1014,7 @@ bool xdc_update_state(xdc_t* xdc, xdc_poll_state_t* poll_state) {
   uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
 
   if (dcctrl & DCCTRL_DRC) {
-    zxlogf(TRACE, "xdc configured exit");
+    zxlogf(DEBUG, "xdc configured exit");
     // Need to clear the bit to re-enable the DCDB.
     // TODO(jocelyndang): check if we need to update the transfer ring as per 7.6.4.4.
     XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, dcctrl);
@@ -1077,7 +1077,7 @@ void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_
     case XDC_EP_STATE_DEAD:
       return;
     case XDC_EP_STATE_RUNNING:
-      zxlogf(TRACE, "%s ep transitioned from running to halted", ep->name);
+      zxlogf(DEBUG, "%s ep transitioned from running to halted", ep->name);
       ep->state = XDC_EP_STATE_HALTED;
       return;
     case XDC_EP_STATE_STOPPED:
@@ -1106,7 +1106,7 @@ static void xdc_endpoint_clear_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_st
       break;  // Already cleared the halt.
     case XDC_EP_STATE_HALTED:
       // The DbC has received the ClearFeature(ENDPOINT_HALT) request from the host.
-      zxlogf(TRACE, "%s ep transitioned from halted to stopped", ep->name);
+      zxlogf(DEBUG, "%s ep transitioned from halted to stopped", ep->name);
       ep->state = XDC_EP_STATE_STOPPED;
       break;
     default:
@@ -1159,10 +1159,10 @@ zx_status_t xdc_poll(xdc_t* xdc) {
   uint64_t usb_req_size = sizeof(usb_request_t);
 
   for (;;) {
-    zxlogf(TRACE, "xdc_poll: waiting for a new instance");
+    zxlogf(DEBUG, "xdc_poll: waiting for a new instance");
     // Wait for at least one active instance before polling.
     sync_completion_wait(&xdc->has_instance_completion, ZX_TIME_INFINITE);
-    zxlogf(TRACE, "xdc_poll: instance completion signaled, about to enter poll loop");
+    zxlogf(DEBUG, "xdc_poll: instance completion signaled, about to enter poll loop");
     sync_completion_reset(&xdc->has_instance_completion);
 
     for (;;) {
@@ -1174,7 +1174,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
         // If all pending writes have completed, exit the poll loop.
         mtx_lock(&xdc->lock);
         if (list_is_empty(&xdc->eps[OUT_EP_IDX].pending_reqs)) {
-          zxlogf(TRACE, "xdc_poll: no active instances, exiting inner poll loop");
+          zxlogf(DEBUG, "xdc_poll: no active instances, exiting inner poll loop");
           mtx_unlock(&xdc->lock);
           // Wait for a new instance to be active.
           break;
@@ -1221,7 +1221,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
 static int xdc_start_thread(void* arg) {
   auto* xdc = static_cast<xdc_t*>(arg);
 
-  zxlogf(TRACE, "about to enable XHCI DBC");
+  zxlogf(DEBUG, "about to enable XHCI DBC");
   XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, DCCTRL_LSE | DCCTRL_DCE);
 
   return xdc_poll(xdc);

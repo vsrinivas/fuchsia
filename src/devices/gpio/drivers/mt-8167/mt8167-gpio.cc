@@ -29,9 +29,9 @@ int Mt8167GpioDevice::Thread() {
     uint32_t index = eint_.GetNextInterrupt(0);
     while (index != ExtendedInterruptReg::kInvalidInterruptIdx && index < interrupts_.size() &&
            interrupts_[index].is_valid()) {
-      zxlogf(TRACE, "%s msg on port key %lu  EINT %u", __FUNCTION__, packet.key, index);
+      zxlogf(DEBUG, "%s msg on port key %lu  EINT %u", __FUNCTION__, packet.key, index);
       if (eint_.IsEnabled(index)) {
-        zxlogf(TRACE, "%s zx_interrupt_trigger for %u", __FUNCTION__, index);
+        zxlogf(DEBUG, "%s zx_interrupt_trigger for %u", __FUNCTION__, index);
         status = interrupts_[index].trigger(0, zx::time(packet.interrupt.timestamp));
         if (status != ZX_OK) {
           zxlogf(ERROR, "%s zx_interrupt_trigger failed %d ", __FUNCTION__, status);
@@ -185,7 +185,7 @@ zx_status_t Mt8167GpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flag
   }
   interrupts_[index] = std::move(irq);
   eint_.Enable(index);
-  zxlogf(TRACE, "%s EINT %u enabled", __FUNCTION__, index);
+  zxlogf(DEBUG, "%s EINT %u enabled", __FUNCTION__, index);
   return ZX_OK;
 }
 

@@ -329,7 +329,7 @@ zx_status_t PartitionTable::Bind() {
     return status;
   }
 
-  zxlogf(SPEW, "gpt: found gpt header");
+  zxlogf(TRACE, "gpt: found gpt header");
 
   bool has_partition = false;
   unsigned int partitions;
@@ -360,7 +360,7 @@ zx_status_t PartitionTable::Bind() {
 
     char type_guid[GPT_GUID_STRLEN];
     uint8_to_guid_string(type_guid, entry->type);
-    zxlogf(SPEW,
+    zxlogf(TRACE,
            "gpt: partition=%u type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64 "\n",
            partitions, type_guid, partition_guid, pname, entry->first, entry->last);
 

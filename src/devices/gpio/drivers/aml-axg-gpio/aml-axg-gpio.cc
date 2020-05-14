@@ -343,7 +343,7 @@ zx_status_t AmlAxgGpio::GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::i
       return ZX_ERR_ALREADY_EXISTS;
     }
   }
-  zxlogf(TRACE, "GPIO Interrupt index %d allocated", (int)index);
+  zxlogf(DEBUG, "GPIO Interrupt index %d allocated", (int)index);
   const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(pin, &block, &pinindex)) != ZX_OK) {

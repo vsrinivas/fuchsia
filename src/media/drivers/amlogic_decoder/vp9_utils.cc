@@ -153,7 +153,7 @@ fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_heade
   if (show_existing_frame) {
     // without having seen a keyframe, a show_existing_frame isn't going to find the frame it
     // wants to show.
-    LOG(TRACE, "show_existing_frame");
+    LOG(DEBUG, "show_existing_frame");
     return fit::ok(false);
   }
   ZX_DEBUG_ASSERT(!show_existing_frame);
@@ -163,7 +163,7 @@ fit::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_heade
   if (frame_type != kVp9FrameTypeKeyFrame) {
     // without having seen a keyframe, a non-keyframe isn't going to be able to decode
     // properly, so skip.
-    LOG(TRACE, "frame_type != kVp9FrameTypeKeyFrame");
+    LOG(DEBUG, "frame_type != kVp9FrameTypeKeyFrame");
     return fit::ok(false);
   }
   ZX_DEBUG_ASSERT(frame_type == kVp9FrameTypeKeyFrame);

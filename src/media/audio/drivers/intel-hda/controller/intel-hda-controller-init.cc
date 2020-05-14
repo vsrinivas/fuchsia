@@ -259,7 +259,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   auto irq_handler = [controller = fbl::RefPtr(this)](const dispatcher::Interrupt* irq,
                                                       zx_time_t timestamp) -> zx_status_t {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
-    LOG_EX(SPEW, *controller, "Hard IRQ (ts = %lu)\n", timestamp);
+    LOG_EX(TRACE, *controller, "Hard IRQ (ts = %lu)\n", timestamp);
     return controller->HandleIrq();
   };
 
@@ -488,7 +488,7 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
   // This driver only supports the Audio DSP on Kabylake.
   if ((pci_dev_info_.vendor_id != INTEL_HDA_PCI_VID) ||
       (pci_dev_info_.device_id != INTEL_HDA_PCI_DID_KABYLAKE)) {
-    LOG(TRACE, "Audio DSP is not supported for device 0x%04x:0x%04x\n", pci_dev_info_.vendor_id,
+    LOG(DEBUG, "Audio DSP is not supported for device 0x%04x:0x%04x\n", pci_dev_info_.vendor_id,
         pci_dev_info_.device_id);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -497,7 +497,7 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
   // structure means the Audio DSP is supported by the HW.
   uint32_t offset = REG_RD(&regs()->llch);
   if ((offset == 0) || (offset >= mapped_regs_.size())) {
-    LOG(TRACE, "Invalid LLCH offset to capability structures: 0x%08x\n", offset);
+    LOG(DEBUG, "Invalid LLCH offset to capability structures: 0x%08x\n", offset);
     return ZX_ERR_INTERNAL;
   }
 
@@ -519,7 +519,7 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
   } while ((count < MAX_CAPS) && (offset != 0));
 
   if (found_regs == nullptr) {
-    LOG(TRACE, "Pipe processing capability structure not found\n");
+    LOG(DEBUG, "Pipe processing capability structure not found\n");
     return ZX_ERR_INTERNAL;
   }
 
@@ -582,7 +582,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
       default_domain_,
       [controller = fbl::RefPtr(this)](const dispatcher::WakeupEvent* evt) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
-        LOG_EX(SPEW, *controller, "SW IRQ Wakeup\n");
+        LOG_EX(TRACE, *controller, "SW IRQ Wakeup\n");
         return controller->HandleIrq();
       });
   if (res != ZX_OK) {

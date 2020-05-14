@@ -447,7 +447,7 @@ zx_status_t As370Gpio::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
   }
   gpio_interrupts_[interrupt_index] = std::move(irq);
   gpio_mmios_[port].ModifyBit<uint32_t>(true, bit, kGpioPortAIntrEn);
-  zxlogf(TRACE, "%s INT %u enabled", __FUNCTION__, index);
+  zxlogf(DEBUG, "%s INT %u enabled", __FUNCTION__, index);
   return ZX_OK;
 }
 

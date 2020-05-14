@@ -21,7 +21,7 @@
 
 #include "kpci-private.h"
 
-#define KPCIDBG(f, x...) zxlogf(SPEW, "%s: " f, __func__, x)
+#define KPCIDBG(f, x...) zxlogf(TRACE, "%s: " f, __func__, x)
 #define KPCIERR(f, x...) zxlogf(ERROR, "%s: " f, __func__, x)
 
 // Convenience reply methods.
@@ -267,14 +267,14 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     }
   }
 
-  zxlogf(SPEW, "pci[%s]: rpc id %u op %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
+  zxlogf(TRACE, "pci[%s]: rpc id %u op %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
          rpc_op_lbl(op), op, req.data[0], req.data[1], req.data[2], req.data[3]);
   st = rxrpc_cbk_tbl[req.hdr.ordinal](&req, device, ch);
   if (st != ZX_OK) {
     goto err;
   }
 
-  zxlogf(SPEW, "pci[%s]: rpc id %u op %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
+  zxlogf(TRACE, "pci[%s]: rpc id %u op %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
   return st;
 
 err:;
@@ -284,7 +284,7 @@ err:;
   fidl_init_txn_header(&resp.hdr, req.hdr.txid, st);
   zx_handle_close(handle);
 
-  zxlogf(SPEW, "pci[%s]: rpc id %u op %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
+  zxlogf(TRACE, "pci[%s]: rpc id %u op %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
   return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 

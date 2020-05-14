@@ -39,7 +39,7 @@
 
 // Limit maximum number of descriptors to 512 for now
 #define AML_DMA_DESC_MAX_COUNT 512
-#define AML_SD_EMMC_TRACE(fmt, ...) zxlogf(TRACE, "%s: " fmt, __func__, ##__VA_ARGS__)
+#define AML_SD_EMMC_TRACE(fmt, ...) zxlogf(DEBUG, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SD_EMMC_INFO(fmt, ...) zxlogf(INFO, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SD_EMMC_ERROR(fmt, ...) zxlogf(ERROR, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SD_EMMC_COMMAND(c) ((0x80) | (c))
@@ -492,14 +492,14 @@ zx_status_t AmlSdEmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sd_emmc_desc_t* c
         *last_desc = desc;
         break;
       } else {
-        zxlogf(TRACE, "AmlSdEmmc::SetupDataDescsDma: empty descriptor list!");
+        zxlogf(DEBUG, "AmlSdEmmc::SetupDataDescsDma: empty descriptor list!");
         return ZX_ERR_NOT_SUPPORTED;
       }
     } else if (length > PAGE_SIZE) {
-      zxlogf(TRACE, "AmlSdEmmc::SetupDataDescsDma: chunk size > %zu is unsupported", length);
+      zxlogf(DEBUG, "AmlSdEmmc::SetupDataDescsDma: chunk size > %zu is unsupported", length);
       return ZX_ERR_NOT_SUPPORTED;
     } else if ((++count) > AML_DMA_DESC_MAX_COUNT) {
-      zxlogf(TRACE,
+      zxlogf(DEBUG,
              "AmlSdEmmc::SetupDataDescsDma: request with more than %d chunks "
              "is unsupported\n",
              AML_DMA_DESC_MAX_COUNT);

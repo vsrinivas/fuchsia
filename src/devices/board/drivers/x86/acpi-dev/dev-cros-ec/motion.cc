@@ -63,7 +63,7 @@ AcpiCrOsEcMotionDevice::~AcpiCrOsEcMotionDevice() {}
 void AcpiCrOsEcMotionDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   auto dev = reinterpret_cast<AcpiCrOsEcMotionDevice*>(ctx);
 
-  zxlogf(SPEW, "acpi-cros-ec-motion: got event 0x%x", value);
+  zxlogf(TRACE, "acpi-cros-ec-motion: got event 0x%x", value);
   switch (value) {
     case 0x80:
       fbl::AutoLock guard(&dev->hid_lock_);
@@ -119,7 +119,7 @@ void AcpiCrOsEcMotionDevice::QueueHidReportLocked(const uint8_t* data, size_t le
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: hid bus query");
+  zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus query");
 
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
@@ -128,7 +128,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusQuery(uint32_t options, hid_info_t* in
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: hid bus start");
+  zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus start");
 
   fbl::AutoLock guard(&hid_lock_);
   if (client_.is_valid()) {
@@ -172,7 +172,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc
 }
 
 void AcpiCrOsEcMotionDevice::HidbusStop() {
-  zxlogf(TRACE, "acpi-cros-ec-motion: hid bus stop");
+  zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus stop");
 
   fbl::AutoLock guard(&hid_lock_);
 
@@ -203,7 +203,7 @@ void AcpiCrOsEcMotionDevice::HidbusStop() {
 zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
                                                         void* out_data_buffer, size_t data_size,
                                                         size_t* out_data_actual) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: hid bus get descriptor");
+  zxlogf(DEBUG, "acpi-cros-ec-motion: hid bus get descriptor");
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -252,7 +252,7 @@ void AcpiCrOsEcMotionDevice::DdkRelease() {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: QueryNumSensors");
+  zxlogf(DEBUG, "acpi-cros-ec-motion: QueryNumSensors");
   struct ec_params_motion_sense cmd = {};
   cmd.cmd = MOTIONSENSE_CMD_DUMP;
   cmd.dump.max_sensor_count = 0;  // We only care about the number of sensors.
@@ -269,7 +269,7 @@ zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorInfo* info) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: QuerySensorInfo %d", sensor_num);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: QuerySensorInfo %d", sensor_num);
 
   struct ec_params_motion_sense cmd = {};
   cmd.cmd = MOTIONSENSE_CMD_INFO;
@@ -294,7 +294,7 @@ zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorIn
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: FifoInterruptEnable %d", enable);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: FifoInterruptEnable %d", enable);
 
   struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
@@ -311,7 +311,7 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
 
 zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
                                                             uint32_t freq_millihertz) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u", sensor_num,
+  zxlogf(DEBUG, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u", sensor_num,
          freq_millihertz);
 
   struct ec_params_motion_sense cmd = {};
@@ -330,7 +330,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32_t milliseconds) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: SetEcSamplingRate %d %u", sensor_num, milliseconds);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: SetEcSamplingRate %d %u", sensor_num, milliseconds);
 
   struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
@@ -348,7 +348,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* range) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: GetSensorRange %d", sensor_num);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: GetSensorRange %d", sensor_num);
 
   struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
@@ -363,12 +363,12 @@ zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* 
   }
 
   *range = rsp.sensor_range.ret;
-  zxlogf(SPEW, "acpi-cros-ec-motion: sensor range %d: %d", sensor_num, *range);
+  zxlogf(TRACE, "acpi-cros-ec-motion: sensor range %d: %d", sensor_num, *range);
   return ZX_OK;
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::GetKbWakeAngle(int32_t* angle) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: GetKbWakeAngle");
+  zxlogf(DEBUG, "acpi-cros-ec-motion: GetKbWakeAngle");
 
   struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
@@ -381,12 +381,12 @@ zx_status_t AcpiCrOsEcMotionDevice::GetKbWakeAngle(int32_t* angle) {
   }
 
   *angle = rsp.kb_wake_angle.ret;
-  zxlogf(SPEW, "acpi-cros-ec-motion: kb_wake_angle %d", *angle);
+  zxlogf(TRACE, "acpi-cros-ec-motion: kb_wake_angle %d", *angle);
   return ZX_OK;
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: SetKbWakeAngle %d", angle);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: SetKbWakeAngle %d", angle);
 
   if (angle < 0 || angle > 360) {
     return ZX_ERR_INVALID_ARGS;
@@ -402,12 +402,12 @@ zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
     return status;
   }
 
-  zxlogf(SPEW, "acpi-cros-ec-motion: kb_wake_angle %d", rsp.kb_wake_angle.ret);
+  zxlogf(TRACE, "acpi-cros-ec-motion: kb_wake_angle %d", rsp.kb_wake_angle.ret);
   return ZX_OK;
 }
 
 zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_data* data) {
-  zxlogf(SPEW, "acpi-cros-ec-motion: FifoRead");
+  zxlogf(TRACE, "acpi-cros-ec-motion: FifoRead");
 
   struct ec_params_motion_sense cmd = {};
   struct __packed {
@@ -427,14 +427,14 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_da
     return ZX_ERR_IO;
   }
   if (rsp.count != 1) {
-    zxlogf(SPEW, "acpi-cros-ec-motion: FifoRead found no reports");
+    zxlogf(TRACE, "acpi-cros-ec-motion: FifoRead found no reports");
     return ZX_ERR_SHOULD_WAIT;
   }
   if (actual != sizeof(rsp)) {
     return ZX_ERR_IO;
   }
 
-  zxlogf(SPEW, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)", rsp.data.sensor_num,
+  zxlogf(TRACE, "acpi-cros-ec-motion: sensor=%u flags=%#x val=(%d, %d, %d)", rsp.data.sensor_num,
          rsp.data.flags, rsp.data.data[0], rsp.data.data[1], rsp.data.data[2]);
   memcpy(data, &rsp.data, sizeof(*data));
   return ZX_OK;
@@ -503,7 +503,7 @@ zx_status_t AcpiCrOsEcMotionDevice::ProbeSensors() {
     zxlogf(ERROR, "acpi-cros-ec-motion: num sensors query failed: %d", status);
     return status;
   }
-  zxlogf(TRACE, "acpi-cros-ec-motion: found %u sensors", num_sensors);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: found %u sensors", num_sensors);
 
   fbl::AllocChecker ac;
   sensors_.reserve(num_sensors, &ac);
@@ -543,7 +543,7 @@ zx_status_t AcpiCrOsEcMotionDevice::ProbeSensors() {
       continue;
     }
 
-    zxlogf(SPEW, "acpi-cros-ec-motion: sensor %d: type=%u loc=%u freq=[%u,%u] evt_count=%u", i,
+    zxlogf(TRACE, "acpi-cros-ec-motion: sensor %d: type=%u loc=%u freq=[%u,%u] evt_count=%u", i,
            info.type, info.loc, info.min_sampling_freq, info.max_sampling_freq,
            info.fifo_max_event_count);
 

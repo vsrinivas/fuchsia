@@ -192,7 +192,7 @@ static zx_status_t acpi_thermal_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* 
 
 static void acpi_thermal_notify(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   acpi_thermal_device_t* dev = static_cast<acpi_thermal_device_t*>(ctx);
-  zxlogf(TRACE, "acpi-thermal: got event 0x%x", value);
+  zxlogf(DEBUG, "acpi-thermal: got event 0x%x", value);
   switch (value) {
     case INT3403_THERMAL_EVENT:
       zx_object_signal(dev->event, 0, ZX_USER_SIGNAL_0);
@@ -280,7 +280,7 @@ zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDL
     return status;
   }
 
-  zxlogf(TRACE, "acpi-thermal: initialized '%s' %u trip points", name, dev->trip_point_count);
+  zxlogf(DEBUG, "acpi-thermal: initialized '%s' %u trip points", name, dev->trip_point_count);
 
   return ZX_OK;
 }

@@ -7,7 +7,7 @@
 
 #include <ddk/debug.h>
 
-// severity can be ERROR, WARN, INFO, TRACE, SPEW.  See ddk/debug.h.
+// severity can be ERROR, WARN, INFO, DEBUG, TRACE.  See ddk/debug.h.
 //
 // Using ## __VA_ARGS__ instead of __VA_OPT__(,) __VA_ARGS__ for now, since
 // __VA_OPT__ doesn't seem to be available yet.
@@ -18,6 +18,6 @@
 
 #define DRIVER_INFO(fmt, ...) LOG(INFO, fmt, ##__VA_ARGS__)
 
-#define DRIVER_TRACE(fmt, ...) LOG(TRACE, fmt, ##__VA_ARGS__)
+#define DRIVER_DEBUG(fmt, ...) LOG(DEBUG, fmt, ##__VA_ARGS__)
 
 #endif  // SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MACROS_H_

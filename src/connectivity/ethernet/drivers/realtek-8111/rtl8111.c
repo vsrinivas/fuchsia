@@ -66,7 +66,7 @@ typedef struct ethernet_device {
 } ethernet_device_t;
 
 static void rtl8111_init_buffers(ethernet_device_t* edev) {
-  zxlogf(TRACE, "rtl8111: Initializing buffers");
+  zxlogf(DEBUG, "rtl8111: Initializing buffers");
   edev->txd_ring = io_buffer_virt(&edev->buffer);
   edev->txd_phys_addr = io_buffer_phys(&edev->buffer);
   edev->txd_idx = 0;
@@ -95,7 +95,7 @@ static void rtl8111_init_buffers(ethernet_device_t* edev) {
 }
 
 static void rtl8111_init_regs(ethernet_device_t* edev) {
-  zxlogf(TRACE, "rtl8111: Initializing registers");
+  zxlogf(DEBUG, "rtl8111: Initializing registers");
 
   // C+CR needs to be configured first - enable rx VLAN detagging and checksum offload
   WRITE16(RTL_CPLUSCR, READ16(RTL_CPLUSCR) | RTL_CPLUSCR_RXVLAN | RTL_CPLUSCR_RXCHKSUM);
@@ -156,7 +156,7 @@ static int irq_thread(void* arg) {
     zx_status_t r;
     r = zx_interrupt_wait(edev->irqh, NULL);
     if (r != ZX_OK) {
-      zxlogf(TRACE, "rtl8111: irq wait failed: %d", r);
+      zxlogf(DEBUG, "rtl8111: irq wait failed: %d", r);
       break;
     }
 
@@ -257,7 +257,7 @@ static void rtl8111_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* net
     WRITE16(RTL_ISR, RTL_INT_TOK);
 
     while (edev->txd_ring[edev->txd_idx].status1 & TX_DESC_OWN) {
-      zxlogf(TRACE, "rtl8111: Waiting for buffer");
+      zxlogf(DEBUG, "rtl8111: Waiting for buffer");
       cnd_wait(&edev->tx_cond, &edev->lock);
     }
 
@@ -339,7 +339,7 @@ static zx_protocol_device_t device_ops = {
 };
 
 static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
-  zxlogf(TRACE, "rtl8111: binding device");
+  zxlogf(DEBUG, "rtl8111: binding device");
 
   zx_status_t r;
   ethernet_device_t* edev;
@@ -358,10 +358,10 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   uint32_t irq_cnt = 0;
   if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
       (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
-    zxlogf(TRACE, "rtl8111: using MSI mode");
+    zxlogf(DEBUG, "rtl8111: using MSI mode");
   } else if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
              (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
-    zxlogf(TRACE, "rtl8111: using legacy irq mode");
+    zxlogf(DEBUG, "rtl8111: using legacy irq mode");
   } else {
     zxlogf(ERROR, "rtl8111: failed to configure irqs");
     r = ZX_ERR_INTERNAL;
@@ -391,7 +391,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   }
 
   uint32_t mac_version = READ32(RTL_TCR) & 0x7cf00000;
-  zxlogf(TRACE, "rtl8111: version 0x%08x", mac_version);
+  zxlogf(DEBUG, "rtl8111: version 0x%08x", mac_version);
 
   // TODO(stevensd): Don't require a contiguous buffer
   uint32_t alloc_size = ((ETH_BUF_SIZE + ETH_DESC_ELT_SIZE) * ETH_BUF_COUNT) * 2;
@@ -425,7 +425,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;  // The cleanup will be done in release
   }
 
-  zxlogf(TRACE, "rtl8111: bind successful");
+  zxlogf(DEBUG, "rtl8111: bind successful");
 
   return ZX_OK;
 

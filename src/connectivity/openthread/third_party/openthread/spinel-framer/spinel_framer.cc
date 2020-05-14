@@ -62,7 +62,7 @@ void SpinelFramer::LogDebugBuffer(const char *desc, const uint8_t *buffer_ptr,
       snprintf(dump_string + j * 3, kDebugBytesPerLine * 3 + 1, "%02X ", buffer_ptr[i]);
     }
 
-    zxlogf(TRACE, "%s: %s", desc, dump_string);
+    zxlogf(DEBUG, "%s: %s", desc, dump_string);
   }
 }
 
@@ -124,12 +124,12 @@ zx_status_t SpinelFramer::DoSpiXfer(uint16_t len) {
 void SpinelFramer::DebugSpiHeader(const char *hint) {
   const uint8_t *spiRxFrameBuffer = GetRealRxFrameStart();
 
-  zxlogf(TRACE, "%s-TX: H:%02X ACCEPT:%d DATA:%0d", hint,
+  zxlogf(DEBUG, "%s-TX: H:%02X ACCEPT:%d DATA:%0d", hint,
          spi_header_get_flag_byte(spi_tx_frame_buffer_),
          spi_header_get_accept_len(spi_tx_frame_buffer_),
          spi_header_get_data_len(spi_tx_frame_buffer_));
 
-  zxlogf(TRACE, "%s-RX: H:%02X ACCEPT:%d DATA:%0d", hint,
+  zxlogf(DEBUG, "%s-RX: H:%02X ACCEPT:%d DATA:%0d", hint,
          spi_header_get_flag_byte(spiRxFrameBuffer), spi_header_get_accept_len(spiRxFrameBuffer),
          spi_header_get_data_len(spiRxFrameBuffer));
 }
@@ -221,7 +221,7 @@ zx_status_t SpinelFramer::PushPullSpi(void) {
       spi_unresponsive_frame_count_++;
     } else {
       // Header is full of garbage
-      zxlogf(TRACE, "1.Garbage in header : %02X %02X %02X %02X %02X", spiRxFrameBuffer[0],
+      zxlogf(DEBUG, "1.Garbage in header : %02X %02X %02X %02X %02X", spiRxFrameBuffer[0],
              spiRxFrameBuffer[1], spiRxFrameBuffer[2], spiRxFrameBuffer[3], spiRxFrameBuffer[4]);
       spi_garbage_frame_count_++;
       LogDebugBuffer("SPI-TX", spi_tx_frame_buffer_,
@@ -241,7 +241,7 @@ zx_status_t SpinelFramer::PushPullSpi(void) {
     spi_garbage_frame_count_++;
     spi_tx_refused_count_++;
     slave_data_len = 0;
-    zxlogf(TRACE, "2.Garbage in header : %02X %02X %02X %02X %02X", spiRxFrameBuffer[0],
+    zxlogf(DEBUG, "2.Garbage in header : %02X %02X %02X %02X %02X", spiRxFrameBuffer[0],
            spiRxFrameBuffer[1], spiRxFrameBuffer[2], spiRxFrameBuffer[3], spiRxFrameBuffer[4]);
     LogDebugBuffer("SPI-TX", spi_tx_frame_buffer_,
                    spi_xfer_bytes + kHeaderLen + spi_rx_align_allowance_);
@@ -429,20 +429,20 @@ void SpinelFramer::TrySpiTransaction() {
 
   if (dump_stats_) {
     dump_stats_ = false;
-    zxlogf(TRACE, "STATS: slave_reset_count_=%llu", (unsigned long long)slave_reset_count_);
-    zxlogf(TRACE, "STATS: spi_frame_count_=%llu", (unsigned long long)spi_frame_count_);
-    zxlogf(TRACE, "STATS: spi_valid_frame_count_=%llu",
+    zxlogf(DEBUG, "STATS: slave_reset_count_=%llu", (unsigned long long)slave_reset_count_);
+    zxlogf(DEBUG, "STATS: spi_frame_count_=%llu", (unsigned long long)spi_frame_count_);
+    zxlogf(DEBUG, "STATS: spi_valid_frame_count_=%llu",
            (unsigned long long)spi_valid_frame_count_);
-    zxlogf(TRACE, "STATS: spi_duplex_frame_count_=%llu",
+    zxlogf(DEBUG, "STATS: spi_duplex_frame_count_=%llu",
            (unsigned long long)spi_duplex_frame_count_);
-    zxlogf(TRACE, "STATS: spi_unresponsive_frame_count_=%llu",
+    zxlogf(DEBUG, "STATS: spi_unresponsive_frame_count_=%llu",
            (unsigned long long)spi_unresponsive_frame_count_);
-    zxlogf(TRACE, "STATS: spi_garbage_frame_count_=%llu",
+    zxlogf(DEBUG, "STATS: spi_garbage_frame_count_=%llu",
            (unsigned long long)spi_garbage_frame_count_);
-    zxlogf(TRACE, "STATS: tx_frame_count_=%llu", (unsigned long long)tx_frame_count_);
-    zxlogf(TRACE, "STATS: tx_frame_byte_count_=%llu", (unsigned long long)tx_frame_byte_count_);
-    zxlogf(TRACE, "STATS: rx_frame_count_=%llu", (unsigned long long)rx_frame_count_);
-    zxlogf(TRACE, "STATS: rx_frame_byte_count_=%llu", (unsigned long long)rx_frame_byte_count_);
+    zxlogf(DEBUG, "STATS: tx_frame_count_=%llu", (unsigned long long)tx_frame_count_);
+    zxlogf(DEBUG, "STATS: tx_frame_byte_count_=%llu", (unsigned long long)tx_frame_byte_count_);
+    zxlogf(DEBUG, "STATS: rx_frame_count_=%llu", (unsigned long long)rx_frame_count_);
+    zxlogf(DEBUG, "STATS: rx_frame_byte_count_=%llu", (unsigned long long)rx_frame_byte_count_);
   }
 }
 

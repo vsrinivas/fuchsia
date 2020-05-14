@@ -36,7 +36,7 @@ static void complete_txn(txn_info_t* txn, zx_status_t status) {
 static void usb_write_complete(void* cookie, usb_request_t* request);
 
 static void ecm_unbind(void* cookie) {
-  zxlogf(TRACE, "%s: unbinding", module_name);
+  zxlogf(DEBUG, "%s: unbinding", module_name);
   ecm_ctx_t* ctx = cookie;
 
   mtx_lock(&ctx->tx_mutex);
@@ -51,7 +51,7 @@ static void ecm_unbind(void* cookie) {
 }
 
 static void ecm_free(ecm_ctx_t* ctx) {
-  zxlogf(TRACE, "%s: deallocating memory", module_name);
+  zxlogf(DEBUG, "%s: deallocating memory", module_name);
   if (ctx->int_thread) {
     thrd_join(ctx->int_thread, NULL);
   }
@@ -107,7 +107,7 @@ done:
 static zx_status_t ecm_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
   ecm_ctx_t* eth = ctx;
 
-  zxlogf(TRACE, "%s: %s called", module_name, __FUNCTION__);
+  zxlogf(DEBUG, "%s: %s called", module_name, __FUNCTION__);
 
   // No options are supported
   if (options) {
@@ -125,7 +125,7 @@ static zx_status_t ecm_ethernet_impl_query(void* ctx, uint32_t options, ethernet
 }
 
 static void ecm_ethernet_impl_stop(void* cookie) {
-  zxlogf(TRACE, "%s: %s called", module_name, __FUNCTION__);
+  zxlogf(DEBUG, "%s: %s called", module_name, __FUNCTION__);
   ecm_ctx_t* ctx = cookie;
   mtx_lock(&ctx->tx_mutex);
   mtx_lock(&ctx->ethernet_mutex);
@@ -135,7 +135,7 @@ static void ecm_ethernet_impl_stop(void* cookie) {
 }
 
 static zx_status_t ecm_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "%s: %s called", module_name, __FUNCTION__);
+  zxlogf(DEBUG, "%s: %s called", module_name, __FUNCTION__);
   ecm_ctx_t* ctx = ctx_cookie;
   zx_status_t status = ZX_OK;
 
@@ -215,7 +215,7 @@ static void usb_write_complete(void* cookie,
     zx_status_t status = usb_req_list_add_tail(&ctx->tx_txn_bufs, request, ctx->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     if (request->response.status == ZX_ERR_IO_REFUSED) {
-      zxlogf(TRACE, "%s: resetting transmit endpoint", module_name);
+      zxlogf(DEBUG, "%s: resetting transmit endpoint", module_name);
       request->reset = true;
       request->reset_address = ctx->tx_endpoint.addr;
       usb_request_complete_t complete = {
@@ -227,7 +227,7 @@ static void usb_write_complete(void* cookie,
     }
 
     if (request->response.status == ZX_ERR_IO_INVALID) {
-      zxlogf(TRACE,
+      zxlogf(DEBUG,
              "%s: slowing down the requests by %d usec."
              "Resetting the transmit endpoint\n",
              module_name, ETHERNET_TRANSMIT_DELAY);
@@ -291,7 +291,7 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
 static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ecm_ctx_t* ctx = cookie;
   if (request->response.status != ZX_OK) {
-    zxlogf(TRACE, "%s: usb_read_complete called with status %d", module_name,
+    zxlogf(DEBUG, "%s: usb_read_complete called with status %d", module_name,
            (int)request->response.status);
   }
 
@@ -301,7 +301,7 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
   }
 
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "%s: resetting receive endpoint", module_name);
+    zxlogf(DEBUG, "%s: resetting receive endpoint", module_name);
     request->reset = true;
     request->reset_address = ctx->rx_endpoint.addr;
     usb_request_complete_t complete = {
@@ -314,7 +314,7 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
     if (ctx->rx_endpoint_delay < ETHERNET_MAX_RECV_DELAY) {
       ctx->rx_endpoint_delay += ETHERNET_RECV_DELAY;
     }
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "%s: slowing down the requests by %d usec."
            "Resetting the recv endpoint\n",
            module_name, ETHERNET_RECV_DELAY);
@@ -356,7 +356,7 @@ static void ecm_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet
     return;
   }
 
-  zxlogf(SPEW, "%s: sending %zu bytes to endpoint 0x%" PRIx8 "", module_name, length,
+  zxlogf(TRACE, "%s: sending %zu bytes to endpoint 0x%" PRIx8 "", module_name, length,
          ctx->tx_endpoint.addr);
 
   mtx_lock(&ctx->tx_mutex);
@@ -488,11 +488,11 @@ static int ecm_int_handler_thread(void* cookie) {
       ecm_handle_interrupt(ctx, txn);
     } else if (txn->response.status == ZX_ERR_PEER_CLOSED ||
                txn->response.status == ZX_ERR_IO_NOT_PRESENT) {
-      zxlogf(TRACE, "%s: terminating interrupt handling thread", module_name);
+      zxlogf(DEBUG, "%s: terminating interrupt handling thread", module_name);
       return txn->response.status;
     } else if (txn->response.status == ZX_ERR_IO_REFUSED ||
                txn->response.status == ZX_ERR_IO_INVALID) {
-      zxlogf(TRACE, "%s: resetting interrupt endpoint", module_name);
+      zxlogf(DEBUG, "%s: resetting interrupt endpoint", module_name);
       usb_reset_endpoint(&ctx->usb, ctx->int_endpoint.addr);
     } else {
       zxlogf(ERROR, "%s: error (%ld) waiting for interrupt - ignoring", module_name,
@@ -511,7 +511,7 @@ static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
 }
 
 static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "%s: starting %s", module_name, __FUNCTION__);
+  zxlogf(DEBUG, "%s: starting %s", module_name, __FUNCTION__);
 
   usb_protocol_t usb;
   zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);

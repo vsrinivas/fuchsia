@@ -97,21 +97,21 @@ zx_status_t AcpiDevice::ReportCurrentResources() {
     return acpi_to_zx_status(acpi_status);
   }
 
-  zxlogf(TRACE, "acpi-bus[%s]: found %zd port resources %zd memory resources %zx irqs",
+  zxlogf(DEBUG, "acpi-bus[%s]: found %zd port resources %zd memory resources %zx irqs",
          device_get_name(zxdev_), pio_resources_.size(), mmio_resources_.size(), irqs_.size());
-  if (zxlog_level_enabled(SPEW)) {
-    zxlogf(SPEW, "port resources:");
+  if (zxlog_level_enabled(TRACE)) {
+    zxlogf(TRACE, "port resources:");
     for (size_t i = 0; i < pio_resources_.size(); i++) {
-      zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x", i, pio_resources_[i].base_address,
+      zxlogf(TRACE, "  %02zd: addr=0x%x length=0x%x align=0x%x", i, pio_resources_[i].base_address,
              pio_resources_[i].address_length, pio_resources_[i].alignment);
     }
-    zxlogf(SPEW, "memory resources:");
+    zxlogf(TRACE, "memory resources:");
     for (size_t i = 0; i < mmio_resources_.size(); i++) {
-      zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d", i,
+      zxlogf(TRACE, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d", i,
              mmio_resources_[i].base_address, mmio_resources_[i].address_length,
              mmio_resources_[i].alignment, mmio_resources_[i].writeable);
     }
-    zxlogf(SPEW, "irqs:");
+    zxlogf(TRACE, "irqs:");
     for (size_t i = 0; i < irqs_.size(); i++) {
       const char* trigger;
       switch (irqs_[i].trigger) {
@@ -140,7 +140,7 @@ zx_status_t AcpiDevice::ReportCurrentResources() {
           polarity = "bad_polarity";
           break;
       }
-      zxlogf(SPEW, "  %02zd: pin=%u %s %s %s %s", i, irqs_[i].pin, trigger, polarity,
+      zxlogf(TRACE, "  %02zd: pin=%u %s %s %s %s", i, irqs_[i].pin, trigger, polarity,
              (irqs_[i].sharable == ACPI_IRQ_SHARED) ? "shared" : "exclusive",
              irqs_[i].wake_capable ? "wake" : "nowake");
     }
@@ -341,30 +341,30 @@ device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
     props[propcount++].value = htobe32(value);
   }
 
-  if (zxlog_level_enabled(SPEW)) {
+  if (zxlog_level_enabled(TRACE)) {
     // ACPI names are always 4 characters in a uint32
-    zxlogf(SPEW, "acpi: got device %s", acpi_name);
+    zxlogf(TRACE, "acpi: got device %s", acpi_name);
     if (info->Valid & ACPI_VALID_HID) {
-      zxlogf(SPEW, "     HID=%s", info->HardwareId.String);
+      zxlogf(TRACE, "     HID=%s", info->HardwareId.String);
     } else {
-      zxlogf(SPEW, "     HID=invalid");
+      zxlogf(TRACE, "     HID=invalid");
     }
     if (info->Valid & ACPI_VALID_ADR) {
-      zxlogf(SPEW, "     ADR=0x%" PRIx64 "", (uint64_t)info->Address);
+      zxlogf(TRACE, "     ADR=0x%" PRIx64 "", (uint64_t)info->Address);
     } else {
-      zxlogf(SPEW, "     ADR=invalid");
+      zxlogf(TRACE, "     ADR=invalid");
     }
     if (info->Valid & ACPI_VALID_CID) {
-      zxlogf(SPEW, "    CIDS=%d", info->CompatibleIdList.Count);
+      zxlogf(TRACE, "    CIDS=%d", info->CompatibleIdList.Count);
       for (uint i = 0; i < info->CompatibleIdList.Count; i++) {
-        zxlogf(SPEW, "     [%u] %s", i, info->CompatibleIdList.Ids[i].String);
+        zxlogf(TRACE, "     [%u] %s", i, info->CompatibleIdList.Ids[i].String);
       }
     } else {
-      zxlogf(SPEW, "     CID=invalid");
+      zxlogf(TRACE, "     CID=invalid");
     }
-    zxlogf(SPEW, "    devprops:");
+    zxlogf(TRACE, "    devprops:");
     for (int i = 0; i < propcount; i++) {
-      zxlogf(SPEW, "     [%d] id=0x%08x value=0x%08x", i, props[i].id, props[i].value);
+      zxlogf(TRACE, "     [%d] id=0x%08x value=0x%08x", i, props[i].id, props[i].value);
     }
   }
 
@@ -404,9 +404,9 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
       for (unsigned i = 0; i < pkg->Package.Count; i++) {
         ACPI_OBJECT* ref = &pkg->Package.Elements[i];
         if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
-          zxlogf(TRACE, "acpi: Ignoring wrong type 0x%x", ref->Type);
+          zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
         } else {
-          zxlogf(TRACE, "acpi: Enabling HID controller at I2C0.H00A._PR0[%u]", i);
+          zxlogf(DEBUG, "acpi: Enabling HID controller at I2C0.H00A._PR0[%u]", i);
           acpi_status = AcpiEvaluateObject(ref->Reference.Handle, (char*)"_ON", nullptr, nullptr);
           if (acpi_status != AE_OK) {
             zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON", acpi_status);
@@ -418,7 +418,7 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   }
   // Acer workaround: Turn on the HID controller.
   else if (!memcmp(&info->Name, "I2C1", 4)) {
-    zxlogf(TRACE, "acpi: Enabling HID controller at I2C1");
+    zxlogf(DEBUG, "acpi: Enabling HID controller at I2C1");
     acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", nullptr, nullptr);
     if (acpi_status != AE_OK) {
       zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x", acpi_status);

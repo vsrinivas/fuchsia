@@ -227,7 +227,7 @@ void UsbAudioDevice::Probe() {
             LOG(WARN, "Failed to create audio stream interface (id %u) @ offset %zu/%zu\n", iid,
                 iter.offset(), iter.desc_list()->size());
           } else {
-            LOG(TRACE, "Discovered new audio streaming interface (id %u)\n", iid);
+            LOG(DEBUG, "Discovered new audio streaming interface (id %u)\n", iid);
             aud_stream_ifcs.push_back(std::move(ifc));
           }
         }
@@ -257,14 +257,14 @@ void UsbAudioDevice::Probe() {
         ParseMidiStreamingIfc(&iter, &info);
 
         if (info.out_ep != nullptr) {
-          LOG(TRACE, "Adding MIDI sink (iid %u, ep 0x%02x)\n", info.ifc->bInterfaceNumber,
+          LOG(DEBUG, "Adding MIDI sink (iid %u, ep 0x%02x)\n", info.ifc->bInterfaceNumber,
               info.out_ep->bEndpointAddress);
           UsbMidiSink::Create(zxdev(), &usb_proto_, midi_sink_index_++, info.ifc, info.out_ep,
                               parent_req_size_);
         }
 
         if (info.in_ep != nullptr) {
-          LOG(TRACE, "Adding MIDI source (iid %u, ep 0x%02x)\n", info.ifc->bInterfaceNumber,
+          LOG(DEBUG, "Adding MIDI source (iid %u, ep 0x%02x)\n", info.ifc->bInterfaceNumber,
               info.in_ep->bEndpointAddress);
           UsbMidiSource::Create(zxdev(), &usb_proto_, midi_source_index_++, info.ifc, info.in_ep,
                                 parent_req_size_);
@@ -307,7 +307,7 @@ void UsbAudioDevice::Probe() {
     }
 
     // Link the path to the stream interface.
-    LOG(TRACE, "Linking streaming interface id %u to audio path terminal %u\n", stream_ifc->iid(),
+    LOG(DEBUG, "Linking streaming interface id %u to audio path terminal %u\n", stream_ifc->iid(),
         path->stream_terminal().id());
     stream_ifc->LinkPath(std::move(path));
 
@@ -407,7 +407,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
             (aud_hdr->bDescriptorSubtype == USB_MIDI_IN_JACK) ||
             (aud_hdr->bDescriptorSubtype == USB_MIDI_OUT_JACK) ||
             (aud_hdr->bDescriptorSubtype == USB_MIDI_ELEMENT)) {
-          LOG(SPEW, "Skipping class specific MIDI interface subtype = %u\n",
+          LOG(TRACE, "Skipping class specific MIDI interface subtype = %u\n",
               aud_hdr->bDescriptorSubtype);
           continue;
         }
@@ -451,7 +451,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         // Stash this endpoint as the found endpoint and keep parsing to
         // consume the rest of the descriptors associated with this
         // interface that we plan to ignore.
-        LOG(SPEW, "Found %s MIDI endpoint descriptor (addr 0x%02x, attr 0x%02x)\n", log_tag,
+        LOG(TRACE, "Found %s MIDI endpoint descriptor (addr 0x%02x, attr 0x%02x)\n", log_tag,
             ep_desc->bEndpointAddress, ep_desc->bmAttributes);
         ep_tgt = ep_desc;
       } break;
@@ -463,7 +463,7 @@ void UsbAudioDevice::ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
         }
 
         if (ep_desc->bDescriptorSubtype == USB_MIDI_MS_GENERAL) {
-          LOG(SPEW, "Skipping class specific MIDI endpoint\n");
+          LOG(TRACE, "Skipping class specific MIDI endpoint\n");
           continue;
         }
 

@@ -70,8 +70,8 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count, const uint16
 
   fbl::AllocChecker ac;
   size_t event_map_size = largest_event_id + 1;
-  zxlogf(TRACE, "PMU: %zu arch events", count);
-  zxlogf(TRACE, "PMU: arch event id range: 1-%zu", event_map_size);
+  zxlogf(DEBUG, "PMU: %zu arch events", count);
+  zxlogf(DEBUG, "PMU: arch event id range: 1-%zu", event_map_size);
   auto event_map = std::unique_ptr<uint16_t[]>(new (&ac) uint16_t[event_map_size]{});
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -140,7 +140,7 @@ void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
 }
 
 void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   props->api_version = fidl_perfmon::API_VERSION;
   props->pm_version = pmu_hw_properties_.common.pm_version;
@@ -167,7 +167,7 @@ void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
 }
 
 zx_status_t PerfmonDevice::PmuInitialize(const FidlPerfmonAllocation* allocation) {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   if (per_trace_state_) {
     return ZX_ERR_BAD_STATE;
@@ -213,7 +213,7 @@ zx_status_t PerfmonDevice::PmuInitialize(const FidlPerfmonAllocation* allocation
 }
 
 void PerfmonDevice::PmuTerminate() {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   if (active_) {
     PmuStop();
@@ -227,7 +227,7 @@ void PerfmonDevice::PmuTerminate() {
 }
 
 zx_status_t PerfmonDevice::PmuGetAllocation(FidlPerfmonAllocation* allocation) {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   const PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -240,7 +240,7 @@ zx_status_t PerfmonDevice::PmuGetAllocation(FidlPerfmonAllocation* allocation) {
 }
 
 zx_status_t PerfmonDevice::PmuGetBufferHandle(uint32_t descriptor, zx_handle_t* out_handle) {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   const PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -325,7 +325,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
 }
 
 zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   if (active_) {
     return ZX_ERR_BAD_STATE;
@@ -359,7 +359,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
   unsigned ii;  // ii: input index
   for (ii = 0; ii < icfg->events.size(); ++ii) {
     EventId id = icfg->events[ii].event;
-    zxlogf(TRACE, "%s: processing [%u] = %u", __func__, ii, id);
+    zxlogf(DEBUG, "%s: processing [%u] = %u", __func__, ii, id);
     if (id == kEventIdNone) {
       break;
     }
@@ -399,7 +399,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) 
 }
 
 zx_status_t PerfmonDevice::PmuGetConfig(FidlPerfmonConfig* config) {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   const PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {
@@ -415,7 +415,7 @@ zx_status_t PerfmonDevice::PmuGetConfig(FidlPerfmonConfig* config) {
 }
 
 zx_status_t PerfmonDevice::PmuStart() {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   if (active_) {
     return ZX_ERR_BAD_STATE;
@@ -432,7 +432,7 @@ zx_status_t PerfmonDevice::PmuStart() {
   // Step 1: Get the configuration data into the kernel for use by START.
 
 #ifdef __x86_64__
-  zxlogf(TRACE, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx", __func__,
+  zxlogf(DEBUG, "%s: global ctrl 0x%lx, fixed ctrl 0x%lx", __func__,
          per_trace->config.global_ctrl, per_trace->config.fixed_ctrl);
 
   // Note: If only misc counters are enabled then |global_ctrl| will be zero.
@@ -484,7 +484,7 @@ fail : {
 }
 
 void PerfmonDevice::PmuStop() {
-  zxlogf(TRACE, "%s called", __func__);
+  zxlogf(DEBUG, "%s called", __func__);
 
   PmuPerTraceState* per_trace = per_trace_state_.get();
   if (!per_trace) {

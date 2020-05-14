@@ -56,42 +56,42 @@ void OtRadioDeviceBootloader::BlPrepareCmd(NlSpiBlBasicCmd *cmdp, uint16_t lengt
 }
 
 void OtRadioDeviceBootloader::PrintSpiCommand(int cmd, void *cmd_ptr, size_t cmd_size) {
-  zxlogf(TRACE, "ot-radio: spi command ");
+  zxlogf(DEBUG, "ot-radio: spi command ");
 
   switch (cmd) {
     case BL_SPI_CMD_INVALID:
-      zxlogf(TRACE, "BL_SPI_CMD_INVALID: ");
+      zxlogf(DEBUG, "BL_SPI_CMD_INVALID: ");
       break;
     case BL_SPI_CMD_GET_VERSION:
-      zxlogf(TRACE, "BL_SPI_CMD_GET_VERSION: ");
+      zxlogf(DEBUG, "BL_SPI_CMD_GET_VERSION: ");
       break;
     case BL_SPI_CMD_UNUSED:
-      zxlogf(TRACE, "BL_SPI_CMD_UNUSED: ");
+      zxlogf(DEBUG, "BL_SPI_CMD_UNUSED: ");
       break;
     case BL_SPI_CMD_FLASH_ERASE:
-      zxlogf(TRACE, "BL_SPI_CMD_FLASH_ERASE: ");
+      zxlogf(DEBUG, "BL_SPI_CMD_FLASH_ERASE: ");
       break;
     case BL_SPI_CMD_FLASH_WRITE:
-      zxlogf(TRACE, "BL_SPI_CMD_FLASH_WRITE: ");
+      zxlogf(DEBUG, "BL_SPI_CMD_FLASH_WRITE: ");
       break;
     case BL_SPI_CMD_FLASH_VERIFY:
-      zxlogf(TRACE, "BL_SPI_CMD_FLASH_VERIFY: ");
+      zxlogf(DEBUG, "BL_SPI_CMD_FLASH_VERIFY: ");
       break;
     default:
-      zxlogf(TRACE, "UNKNOWN CMD: ");
+      zxlogf(DEBUG, "UNKNOWN CMD: ");
   }
 
   unsigned long i;
   uint8_t *cmd_buf = reinterpret_cast<uint8_t *>(cmd_ptr);
   for (i = 0; i < cmd_size; i++) {
-    zxlogf(TRACE, "0x%x ", cmd_buf[i]);
+    zxlogf(DEBUG, "0x%x ", cmd_buf[i]);
   }
-  zxlogf(TRACE, "");
+  zxlogf(DEBUG, "");
 }
 
 OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, size_t cmd_size,
                                                                   size_t exp_resp_size) {
-  zxlogf(TRACE, "ot-radio: Sending command:");
+  zxlogf(DEBUG, "ot-radio: Sending command:");
   PrintSpiCommand(reinterpret_cast<NlSpiBlBasicCmd *>(cmd)->cmd, cmd, cmd_size);
 
   zx_status_t status = dev_handle_->spi_.Transmit(cmd, cmd_size);
@@ -123,7 +123,7 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       return BL_ERR_PORT_KEY_EXIT_THREAD;
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       dev_handle_->interrupt_.ack();
-      zxlogf(TRACE, "ot-radio: interrupt");
+      zxlogf(DEBUG, "ot-radio: interrupt");
 
       // Read packet
       uint8_t i;
@@ -131,9 +131,9 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       size_t read_length = exp_resp_size;
       dev_handle_->spi_.Receive(read_length, &dev_handle_->spi_rx_buffer_[0], read_length,
                                 &rx_actual);
-      zxlogf(TRACE, "ot-radio: rx_actual %lu expected : %lu", rx_actual, read_length);
+      zxlogf(DEBUG, "ot-radio: rx_actual %lu expected : %lu", rx_actual, read_length);
       for (i = 0; i < read_length; i++) {
-        zxlogf(TRACE, "ot-radio: RX %2X %c", dev_handle_->spi_rx_buffer_[i],
+        zxlogf(DEBUG, "ot-radio: RX %2X %c", dev_handle_->spi_rx_buffer_[i],
                isalnum(dev_handle_->spi_rx_buffer_[i]) ? dev_handle_->spi_rx_buffer_[i] : '#');
       }
 
@@ -149,7 +149,7 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       // Special case to ignore -- in some cases it is found a spurious response
       // of all 0xff's is received. Ignore such responses for now
       if (response->cmd == 0xff) {
-        zxlogf(TRACE, "ot-radio: response received has cmd = 0xff, continuing");
+        zxlogf(DEBUG, "ot-radio: response received has cmd = 0xff, continuing");
         continue;
       }
 
@@ -191,7 +191,7 @@ bool OtRadioDeviceBootloader::FirmwareAlreadyUpToDateCRC(const std::vector<uint8
 zx_status_t OtRadioDeviceBootloader::PutRcpInBootloader() {
   zx_status_t status = ZX_OK;
 
-  zxlogf(TRACE, "ot-radio : putting rcp in bootloader");
+  zxlogf(DEBUG, "ot-radio : putting rcp in bootloader");
 
   status = dev_handle_->gpio_[OT_RADIO_BOOTLOADER_PIN].Write(0);
   if (status != ZX_OK) {
@@ -227,7 +227,7 @@ zx_status_t OtRadioDeviceBootloader::PutRcpInBootloader() {
     return status;
   }
 
-  zxlogf(TRACE, "ot-radio : device has been put in bootloader mode");
+  zxlogf(DEBUG, "ot-radio : device has been put in bootloader mode");
 
   return status;
 }
@@ -268,7 +268,7 @@ zx_status_t OtRadioDeviceBootloader::GetFirmwareBytes(std::vector<uint8_t> *fw_b
       load_firmware(dev_handle_->parent(), "ot-ncp-app-release.bin", &vmo, &size);
 
   if (load_fw_status == ZX_OK) {
-    zxlogf(TRACE, "ot-radio: load_firmware succeeded");
+    zxlogf(DEBUG, "ot-radio: load_firmware succeeded");
     fw_bytes->resize(size);
     zx_status_t vmo_read_status = zx_vmo_read(vmo, &(fw_bytes->front()), 0, size);
 
@@ -323,7 +323,7 @@ OtRadioBlResult OtRadioDeviceBootloader::UploadFirmware(const std::vector<uint8_
     // Now prepare the cmd since rest of the fields are updated. As crc can be
     // calculated now
     BlPrepareCmd(&write_cmd.cmd, spi_cmd_size, BL_SPI_CMD_FLASH_WRITE);
-    zxlogf(TRACE, "ot-radio: writing flash @ 0x%08x", address);
+    zxlogf(DEBUG, "ot-radio: writing flash @ 0x%08x", address);
 
     OtRadioBlResult result;
     result = SendSpiCmdAndGetResponse(reinterpret_cast<uint8_t *>(&write_cmd), spi_cmd_size,
@@ -368,7 +368,7 @@ OtRadioBlResult OtRadioDeviceBootloader::VerifyUpload(const std::vector<uint8_t>
   verify_cmd.length = fw_bytes.size();
   verify_cmd.crc32_check = BlModeCrc32(kSpiPacketCrc32InitValue, &fw_bytes[0], fw_bytes.size());
   BlPrepareCmd(&verify_cmd.cmd, sizeof(verify_cmd), BL_SPI_CMD_FLASH_VERIFY);
-  zxlogf(TRACE, "ot-radio: Verifying crc32 of flashed image");
+  zxlogf(DEBUG, "ot-radio: Verifying crc32 of flashed image");
 
   OtRadioBlResult result;
   result = SendSpiCmdAndGetResponse(reinterpret_cast<uint8_t *>(&verify_cmd), sizeof(verify_cmd),

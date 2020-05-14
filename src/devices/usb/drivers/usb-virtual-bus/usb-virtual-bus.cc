@@ -168,7 +168,7 @@ void UsbVirtualBus::HandleControl(Request request) {
   size_t length = le16toh(setup->wLength);
   size_t actual = 0;
 
-  zxlogf(TRACE, "%s type: 0x%02X req: %d value: %d index: %d length: %zu", __func__,
+  zxlogf(DEBUG, "%s type: 0x%02X req: %d value: %d index: %d length: %zu", __func__,
          setup->bmRequestType, setup->bRequest, le16toh(setup->wValue), le16toh(setup->wIndex),
          length);
 

@@ -73,16 +73,16 @@ zx_status_t AcpiLidDevice::UpdateLidStateLocked() TA_REQ(lock_) {
     zxlogf(ERROR, "acpi-lid: _LID failed: %d (%s)", acpi_status, zx_status_get_string(status));
     return status;
   }
-  zxlogf(TRACE, "acpi-lid: _LID returned 0x%llx", obj.Integer.Value);
+  zxlogf(DEBUG, "acpi-lid: _LID returned 0x%llx", obj.Integer.Value);
 
   lid_state_ = LidStateFromAcpiValue(obj.Integer.Value);
-  zxlogf(TRACE, "acpi-lid: Lid is %s", (lid_state_ == LidState::OPEN ? "open" : "closed"));
+  zxlogf(DEBUG, "acpi-lid: Lid is %s", (lid_state_ == LidState::OPEN ? "open" : "closed"));
   return ZX_OK;
 }
 
 void AcpiLidDevice::QueueHidReportLocked() TA_REQ(lock_) {
   if (client_.is_valid()) {
-    zxlogf(TRACE, "acpi-lid: queueing report");
+    zxlogf(DEBUG, "acpi-lid: queueing report");
     uint8_t report = LidStateToHidReport(lid_state_);
     client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
   }
@@ -98,7 +98,7 @@ void AcpiLidDevice::PublishLidStateIfChanged() {
 
 void AcpiLidDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   auto dev = reinterpret_cast<AcpiLidDevice*>(ctx);
-  zxlogf(TRACE, "acpi-lid: got event 0x%x", value);
+  zxlogf(DEBUG, "acpi-lid: got event 0x%x", value);
   if (value == 0x80) {
     // Lid state has changed
     dev->PublishLidStateIfChanged();
@@ -106,7 +106,7 @@ void AcpiLidDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
 }
 
 zx_status_t AcpiLidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
-  zxlogf(TRACE, "acpi-lid: hid bus query");
+  zxlogf(DEBUG, "acpi-lid: hid bus query");
 
   info->dev_num = 0;
   info->device_class = HID_DEVICE_CLASS_OTHER;
@@ -115,7 +115,7 @@ zx_status_t AcpiLidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 }
 
 zx_status_t AcpiLidDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "acpi-lid: hid bus start");
+  zxlogf(DEBUG, "acpi-lid: hid bus start");
 
   fbl::AutoLock guard(&lock_);
   if (client_.is_valid()) {
@@ -133,7 +133,7 @@ zx_status_t AcpiLidDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
 }
 
 void AcpiLidDevice::HidbusStop() {
-  zxlogf(TRACE, "acpi-lid: hid bus stop");
+  zxlogf(DEBUG, "acpi-lid: hid bus stop");
 
   fbl::AutoLock guard(&lock_);
   ACPI_STATUS acpi_status;
@@ -148,7 +148,7 @@ void AcpiLidDevice::HidbusStop() {
 zx_status_t AcpiLidDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
                                                void* out_data_buffer, size_t data_size,
                                                size_t* out_data_actual) {
-  zxlogf(TRACE, "acpi-lid: hid bus get descriptor");
+  zxlogf(DEBUG, "acpi-lid: hid bus get descriptor");
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -235,7 +235,7 @@ zx_status_t AcpiLidDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
 }  // namespace acpi_lid
 
 zx_status_t lid_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  zxlogf(TRACE, "acpi-lid: init");
+  zxlogf(DEBUG, "acpi-lid: init");
 
   std::unique_ptr<acpi_lid::AcpiLidDevice> dev;
   zx_status_t status = acpi_lid::AcpiLidDevice::Create(parent, acpi_handle, &dev);

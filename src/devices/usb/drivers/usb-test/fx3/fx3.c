@@ -62,7 +62,7 @@ static zx_status_t fx3_validate_image_header(fx3_t* fx3, zx_handle_t fw_vmo) {
   if (header[0] != 'C' || header[1] != 'Y') {
     return ZX_ERR_BAD_STATE;
   }
-  zxlogf(TRACE, "image header: ctl 0x%02x type 0x%02x", header[2], header[3]);
+  zxlogf(DEBUG, "image header: ctl 0x%02x type 0x%02x", header[2], header[3]);
   return ZX_OK;
 }
 
@@ -131,7 +131,7 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
       return status;
     }
     offset += sizeof(ram_addr);
-    zxlogf(TRACE, "section len %u B ram addr 0x%x", len_dwords * 4, ram_addr);
+    zxlogf(DEBUG, "section len %u B ram addr 0x%x", len_dwords * 4, ram_addr);
 
     if (len_dwords == 0) {
       // Reached termination of image.
@@ -164,7 +164,7 @@ static zx_status_t fx3_load_firmware(fx3_t* fx3, zx_handle_t fw_vmo, size_t fw_s
   } else if (status == ZX_ERR_IO_REFUSED) {
     // When using the second stage bootloader, the control request may send an error code
     // back after we jump to the program entry.
-    zxlogf(TRACE, "fx3_program_entry got expected err: %d", status);
+    zxlogf(DEBUG, "fx3_program_entry got expected err: %d", status);
     return ZX_OK;
   } else {
     zxlogf(ERROR, "fx3_program_entry got unexpected err: %d", status);
@@ -245,7 +245,7 @@ static zx_protocol_device_t fx3_device_protocol = {
 };
 
 static zx_status_t fx3_bind(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "fx3_bind");
+  zxlogf(DEBUG, "fx3_bind");
 
   fx3_t* fx3 = calloc(1, sizeof(fx3_t));
   if (!fx3) {

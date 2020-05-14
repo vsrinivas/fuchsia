@@ -88,7 +88,7 @@ struct device;
   } while (0)
 
 #define __iwl_dbg(dev, level, limit, function, fmt, args...) \
-  zxlogf(SPEW, "iwlwifi (%s): " fmt, function, ##args)
+  zxlogf(TRACE, "iwlwifi (%s): " fmt, function, ##args)
 
 #define iwl_print_hex_error(m, p, len)                                            \
   do {                                                                            \

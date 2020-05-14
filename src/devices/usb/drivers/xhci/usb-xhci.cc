@@ -39,7 +39,7 @@ namespace usb_xhci {
 #define PDEV_IRQ_INDEX 0
 
 zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
-  zxlogf(TRACE, "xhci_add_new_device");
+  zxlogf(DEBUG, "xhci_add_new_device");
 
   if (!xhci->bus.ops) {
     zxlogf(ERROR, "no bus device in xhci_add_device");
@@ -50,7 +50,7 @@ zx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int spee
 }
 
 void xhci_remove_device(xhci_t* xhci, int slot_id) {
-  zxlogf(TRACE, "xhci_remove_device %d", slot_id);
+  zxlogf(DEBUG, "xhci_remove_device %d", slot_id);
 
   if (!xhci->bus.ops) {
     zxlogf(ERROR, "no bus device in xhci_remove_device");
@@ -120,7 +120,7 @@ zx_status_t UsbXhci::UsbHciResetDevice(uint32_t hub_address, uint32_t device_id)
     // Convert real port number to virtual root hub number.
     port = xhci->rh_port_map[port - 1] + 1;
   }
-  zxlogf(TRACE, "xhci_reset_device slot_id: %u port: %u hub_address: %u", device_id, port,
+  zxlogf(DEBUG, "xhci_reset_device slot_id: %u port: %u hub_address: %u", device_id, port,
          hub_address);
 
   return usb_bus_interface_reset_port(&xhci->bus, hub_address, port, false);
@@ -234,12 +234,12 @@ int UsbXhci::CompleterThread(void* arg) {
     }
     xhci_handle_interrupt(xhci, interrupter);
   }
-  zxlogf(TRACE, "xhci completer %u thread done", interrupter);
+  zxlogf(DEBUG, "xhci completer %u thread done", interrupter);
   return 0;
 }
 
 int UsbXhci::StartThread() {
-  zxlogf(TRACE, "%s start", __func__);
+  zxlogf(DEBUG, "%s start", __func__);
 
   auto cleanup = fbl::MakeAutoCall([this]() { DdkRemoveDeprecated(); });
 
@@ -283,7 +283,7 @@ int UsbXhci::StartThread() {
                           "xhci_completer_thread");
   }
 
-  zxlogf(TRACE, "%s done", __func__);
+  zxlogf(DEBUG, "%s done", __func__);
   cleanup.cancel();
   return 0;
 }

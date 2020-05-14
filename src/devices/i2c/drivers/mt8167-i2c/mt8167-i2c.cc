@@ -73,7 +73,7 @@ int Mt8167I2c::IrqThread() {
   zx_port_packet_t packet;
   while (1) {
     auto status = irq_port_.wait(zx::time::infinite(), &packet);
-    zxlogf(TRACE, "Port key %lu triggered", packet.key);
+    zxlogf(DEBUG, "Port key %lu triggered", packet.key);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: irq_port_.wait failed %d ", __func__, status);
       return status;

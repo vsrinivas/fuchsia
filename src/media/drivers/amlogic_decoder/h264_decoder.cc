@@ -543,7 +543,7 @@ void H264Decoder::TryReturnFrames() {
 }
 
 zx_status_t H264Decoder::InitializeStream() {
-  LOG(TRACE, "H264Decoder::InitializeStream()");
+  LOG(DEBUG, "H264Decoder::InitializeStream()");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
@@ -712,7 +712,7 @@ zx_status_t H264Decoder::InitializeStream() {
   // The "max" means the max the stream might require, so that's actually the min # of buffers we
   // need.  The +1 accounts for the decode-into buffer (AFAICT).  Reduce this number at your own
   // risk - YMMV.
-  LOG(TRACE, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u", max_reference_size,
+  LOG(DEBUG, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u", max_reference_size,
       max_dpb_size, min_buffer_count);
   uint32_t min_frame_count = min_buffer_count;
   // Also constrained by the maximum number of buffers this driver knows how to track for now, which
@@ -816,7 +816,7 @@ void H264Decoder::HandleInterrupt() {
       zx_status_t status = InitializeStream();
       if (status != ZX_OK) {
         if (status == ZX_ERR_STOP) {
-          LOG(TRACE, "InitializeStream() detected EOS on output");
+          LOG(DEBUG, "InitializeStream() detected EOS on output");
           break;
         }
         ZX_DEBUG_ASSERT(status != ZX_ERR_STOP);

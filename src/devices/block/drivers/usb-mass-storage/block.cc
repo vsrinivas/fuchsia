@@ -45,12 +45,12 @@ void UmsBlockDevice::BlockImplQueue(block_op_t* op, block_impl_queue_callback co
   switch (op->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE:
-      zxlogf(TRACE, "UMS QUEUE %s %u @%zu (%p)",
+      zxlogf(DEBUG, "UMS QUEUE %s %u @%zu (%p)",
              (op->command & BLOCK_OP_MASK) == BLOCK_OP_READ ? "RD" : "WR", op->rw.length,
              op->rw.offset_dev, op);
       break;
     case BLOCK_OP_FLUSH:
-      zxlogf(TRACE, "UMS QUEUE FLUSH (%p)", op);
+      zxlogf(DEBUG, "UMS QUEUE FLUSH (%p)", op);
       break;
     default:
       zxlogf(ERROR, "ums_block_queue: unsupported command %u", op->command);

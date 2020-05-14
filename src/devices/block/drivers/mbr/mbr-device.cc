@@ -85,7 +85,7 @@ zx_status_t MbrReadHeader(const ddk::BlockProtocolClient& parent_proto, mbr::Mbr
   bop->rw.offset_dev = 0;
   bop->rw.offset_vmo = 0;
 
-  zxlogf(SPEW, "mbr: Reading header from parent block device");
+  zxlogf(TRACE, "mbr: Reading header from parent block device");
 
   parent_proto.Queue(
       bop,

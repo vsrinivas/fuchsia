@@ -290,23 +290,23 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
   ZX_DEBUG_ASSERT(channel != nullptr);
   res = channel->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to read client request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read client request (res %d)\n", res);
     return res;
   }
 
   // Sanity checks
   if (req_size < sizeof(req.hdr)) {
-    LOG(TRACE, "Client request too small to contain header (%u < %zu)\n", req_size,
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
         sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Dispatch
-  LOG(SPEW, "Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
+  LOG(TRACE, "Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
   switch (req.hdr.cmd) {
     case IHDA_CMD_GET_IDS: {
       if (req_size != sizeof(req.get_ids)) {
-        LOG(TRACE, "Bad GET_IDS request length (%u != %zu)\n", req_size, sizeof(req.get_ids));
+        LOG(DEBUG, "Bad GET_IDS request length (%u != %zu)\n", req_size, sizeof(req.get_ids));
         return ZX_ERR_INVALID_ARGS;
       }
 
@@ -327,7 +327,7 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
 
     case IHDA_CONTROLLER_CMD_SNAPSHOT_REGS:
       if (req_size != sizeof(req.snapshot_regs)) {
-        LOG(TRACE, "Bad SNAPSHOT_REGS request length (%u != %zu)\n", req_size,
+        LOG(DEBUG, "Bad SNAPSHOT_REGS request length (%u != %zu)\n", req_size,
             sizeof(req.snapshot_regs));
         return ZX_ERR_INVALID_ARGS;
       }

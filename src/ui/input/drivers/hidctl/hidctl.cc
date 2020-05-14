@@ -100,20 +100,20 @@ HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlCo
 }
 
 void HidDevice::DdkRelease() {
-  zxlogf(TRACE, "hidctl: DdkRelease");
+  zxlogf(DEBUG, "hidctl: DdkRelease");
   // Only the thread will call DdkRemoveDeprecated() when the loop exits. This detachs the thread
   // before it exits, so no need to join.
   delete this;
 }
 
 void HidDevice::DdkUnbindDeprecated() {
-  zxlogf(TRACE, "hidctl: DdkUnbind");
+  zxlogf(DEBUG, "hidctl: DdkUnbind");
   Shutdown();
   // The thread will call DdkRemove when it exits the loop.
 }
 
 zx_status_t HidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
-  zxlogf(TRACE, "hidctl: query");
+  zxlogf(DEBUG, "hidctl: query");
 
   info->dev_num = 0;
   info->device_class = dev_class_;
@@ -122,7 +122,7 @@ zx_status_t HidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
 }
 
 zx_status_t HidDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  zxlogf(TRACE, "hidctl: start");
+  zxlogf(DEBUG, "hidctl: start");
 
   fbl::AutoLock lock(&lock_);
   if (client_.is_valid()) {
@@ -133,7 +133,7 @@ zx_status_t HidDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
 }
 
 void HidDevice::HidbusStop() {
-  zxlogf(TRACE, "hidctl: stop");
+  zxlogf(DEBUG, "hidctl: stop");
 
   fbl::AutoLock lock(&lock_);
   client_.clear();
@@ -141,7 +141,7 @@ void HidDevice::HidbusStop() {
 
 zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
                                            size_t data_size, size_t* out_data_actual) {
-  zxlogf(TRACE, "hidctl: get descriptor %u", desc_type);
+  zxlogf(DEBUG, "hidctl: get descriptor %u", desc_type);
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -161,7 +161,7 @@ zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, voi
 
 zx_status_t HidDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                                        size_t* out_len) {
-  zxlogf(TRACE, "hidctl: get report type=%u id=%u", rpt_type, rpt_id);
+  zxlogf(DEBUG, "hidctl: get report type=%u id=%u", rpt_type, rpt_id);
 
   if (out_len == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -173,42 +173,42 @@ zx_status_t HidDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
 
 zx_status_t HidDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                        size_t len) {
-  zxlogf(TRACE, "hidctl: set report type=%u id=%u", rpt_type, rpt_id);
+  zxlogf(DEBUG, "hidctl: set report type=%u id=%u", rpt_type, rpt_id);
 
   // TODO: send set report message over socket
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t HidDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
-  zxlogf(TRACE, "hidctl: get idle");
+  zxlogf(DEBUG, "hidctl: get idle");
 
   // TODO: send get idle message over socket
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t HidDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
-  zxlogf(TRACE, "hidctl: set idle");
+  zxlogf(DEBUG, "hidctl: set idle");
 
   // TODO: send set idle message over socket
   return ZX_OK;
 }
 
 zx_status_t HidDevice::HidbusGetProtocol(uint8_t* protocol) {
-  zxlogf(TRACE, "hidctl: get protocol");
+  zxlogf(DEBUG, "hidctl: get protocol");
 
   // TODO: send get protocol message over socket
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t HidDevice::HidbusSetProtocol(uint8_t protocol) {
-  zxlogf(TRACE, "hidctl: set protocol");
+  zxlogf(DEBUG, "hidctl: set protocol");
 
   // TODO: send set protocol message over socket
   return ZX_OK;
 }
 
 int HidDevice::Thread() {
-  zxlogf(TRACE, "hidctl: starting main thread");
+  zxlogf(DEBUG, "hidctl: starting main thread");
   zx_signals_t pending;
   std::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
@@ -228,11 +228,11 @@ int HidDevice::Thread() {
       }
     }
     if (pending & ZX_SOCKET_PEER_CLOSED) {
-      zxlogf(TRACE, "hidctl: socket closed (peer)");
+      zxlogf(DEBUG, "hidctl: socket closed (peer)");
       break;
     }
     if (pending & HID_SHUTDOWN) {
-      zxlogf(TRACE, "hidctl: socket closed (self)");
+      zxlogf(DEBUG, "hidctl: socket closed (self)");
       break;
     }
   }
@@ -275,8 +275,8 @@ zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     }
 
     fbl::AutoLock lock(&lock_);
-    if (unlikely(zxlog_level_enabled(TRACE))) {
-      zxlogf(TRACE, "hidctl: received %zu bytes", actual);
+    if (unlikely(zxlog_level_enabled(DEBUG))) {
+      zxlogf(DEBUG, "hidctl: received %zu bytes", actual);
       hexdump8_ex(buffer, actual, 0);
     }
     if (client_.is_valid()) {

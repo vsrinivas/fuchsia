@@ -8,10 +8,10 @@
 namespace qcom {
 
 zx_status_t SmcCall(zx_handle_t h, zx_smc_parameters_t* params, zx_smc_result_t* result) {
-  zxlogf(TRACE, "SMC params 0x%X 0x%lX 0x%lX 0x%lX 0x%lX 0x%lX", params->func_id, params->arg1,
+  zxlogf(DEBUG, "SMC params 0x%X 0x%lX 0x%lX 0x%lX 0x%lX 0x%lX", params->func_id, params->arg1,
          params->arg2, params->arg3, params->arg4, params->arg5);
   auto status = zx_smc_call(h, params, result);
-  zxlogf(TRACE, "SMC results %ld 0x%lX 0x%lX 0x%lX", result->arg0, result->arg1, result->arg2,
+  zxlogf(DEBUG, "SMC results %ld 0x%lX 0x%lX 0x%lX", result->arg0, result->arg1, result->arg2,
          result->arg3);
 
   constexpr int total_retry_msecs = 2000;
@@ -25,10 +25,10 @@ zx_status_t SmcCall(zx_handle_t h, zx_smc_parameters_t* params, zx_smc_result_t*
     }
     params->arg6 = result->arg6;  // Pass optional session_id received via x6 back in retry.
 
-    zxlogf(TRACE, "SMC params 0x%X 0x%lX 0x%lX 0x%lX 0x%lX 0x%lX", params->func_id, params->arg1,
+    zxlogf(DEBUG, "SMC params 0x%X 0x%lX 0x%lX 0x%lX 0x%lX 0x%lX", params->func_id, params->arg1,
            params->arg2, params->arg3, params->arg4, params->arg5);
     status = zx_smc_call(h, params, result);
-    zxlogf(TRACE, "SMC busy_retry %d results %ld 0x%lX 0x%lX 0x%lX", busy_retries - busy_retry,
+    zxlogf(DEBUG, "SMC busy_retry %d results %ld 0x%lX 0x%lX 0x%lX", busy_retries - busy_retry,
            result->arg0, result->arg1, result->arg2, result->arg3);
   }
   if (result->arg0 != 0) {

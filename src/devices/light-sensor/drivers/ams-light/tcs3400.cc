@@ -91,7 +91,7 @@ zx_status_t Tcs3400Device::FillInputRpt() {
     // misaligned pointer is UB. This ends up getting lowered to a 16-bit store.
     memcpy(i.out, &out, sizeof(out));
 
-    zxlogf(TRACE, "raw: 0x%04X  again: %u  atime: %u", out, again_, atime_);
+    zxlogf(DEBUG, "raw: 0x%04X  again: %u  atime: %u", out, again_, atime_);
   }
   input_rpt_.state = HID_USAGE_SENSOR_STATE_READY_VAL;
 
@@ -376,7 +376,7 @@ zx_status_t Tcs3400Device::InitGain(uint8_t gain) {
   }
 
   again_ = gain;
-  zxlogf(TRACE, "again (%u)", again_);
+  zxlogf(DEBUG, "again (%u)", again_);
 
   uint8_t reg;
   // clang-format off
@@ -416,7 +416,7 @@ zx_status_t Tcs3400Device::InitMetadata() {
            parameters.integration_time_ms, atime_);
   }
 
-  zxlogf(TRACE, "atime (%u)", atime_);
+  zxlogf(DEBUG, "atime (%u)", atime_);
   {
     fbl::AutoLock lock(&i2c_lock_);
     const uint8_t command[2] = {TCS_I2C_ATIME, atime_};

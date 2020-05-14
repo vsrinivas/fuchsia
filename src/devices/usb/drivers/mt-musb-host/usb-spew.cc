@@ -37,21 +37,21 @@ void SpewUsbDeviceDescriptor(const usb_device_descriptor_t& d) {
     default:                             snprintf(buf, 100, "???"); break;
     }
 
-    zxlogf(SPEW, "            ===  usb_device_descriptor_t ===");
-    zxlogf(SPEW, "               .bLength = %d", d.bLength);
-    zxlogf(SPEW, "               .bDescriptorType = <DEVICE_DESCRIPTOR>");
-    zxlogf(SPEW, "               .bcdUSB = 0x%04x", d.bcdUSB);
-    zxlogf(SPEW, "               .bDeviceClass = 0x%02x <%s>", d.bDeviceClass, buf);
-    zxlogf(SPEW, "               .bDeviceSubClass = 0x%02x", d.bDeviceSubClass);
-    zxlogf(SPEW, "               .bDeviceProtocol = 0x%02x", d.bDeviceProtocol);
-    zxlogf(SPEW, "               .bMaxPacketSize0 = %d", d.bMaxPacketSize0);
-    zxlogf(SPEW, "               .idVendor = 0x%04x", d.idVendor);
-    zxlogf(SPEW, "               .idProduct = 0x%04x", d.idProduct);
-    zxlogf(SPEW, "               .bcdDevice = 0x%04x", d.bcdDevice);
-    zxlogf(SPEW, "               .iManufacturer = 0x%02x", d.iManufacturer);
-    zxlogf(SPEW, "               .iProduct = 0x%02x", d.iProduct);
-    zxlogf(SPEW, "               .iSerialNumber = 0x%02x", d.iSerialNumber);
-    zxlogf(SPEW, "               .bNumConfigurations = %d", d.bNumConfigurations);
+    zxlogf(TRACE, "            ===  usb_device_descriptor_t ===");
+    zxlogf(TRACE, "               .bLength = %d", d.bLength);
+    zxlogf(TRACE, "               .bDescriptorType = <DEVICE_DESCRIPTOR>");
+    zxlogf(TRACE, "               .bcdUSB = 0x%04x", d.bcdUSB);
+    zxlogf(TRACE, "               .bDeviceClass = 0x%02x <%s>", d.bDeviceClass, buf);
+    zxlogf(TRACE, "               .bDeviceSubClass = 0x%02x", d.bDeviceSubClass);
+    zxlogf(TRACE, "               .bDeviceProtocol = 0x%02x", d.bDeviceProtocol);
+    zxlogf(TRACE, "               .bMaxPacketSize0 = %d", d.bMaxPacketSize0);
+    zxlogf(TRACE, "               .idVendor = 0x%04x", d.idVendor);
+    zxlogf(TRACE, "               .idProduct = 0x%04x", d.idProduct);
+    zxlogf(TRACE, "               .bcdDevice = 0x%04x", d.bcdDevice);
+    zxlogf(TRACE, "               .iManufacturer = 0x%02x", d.iManufacturer);
+    zxlogf(TRACE, "               .iProduct = 0x%02x", d.iProduct);
+    zxlogf(TRACE, "               .iSerialNumber = 0x%02x", d.iSerialNumber);
+    zxlogf(TRACE, "               .bNumConfigurations = %d", d.bNumConfigurations);
   // clang-format on
 }
 
@@ -74,13 +74,13 @@ void SpewUsbEndpointDescriptor(const usb_endpoint_descriptor_t& d) {
     default:                       snprintf(attr_buf, 100, "???"); break;
     }
 
-    zxlogf(SPEW, "            ===  usb_endpoint_descriptor_t ===");
-    zxlogf(SPEW, "               .bLength = %d", d.bLength);
-    zxlogf(SPEW, "               .bDescriptorType = <ENDPOINT_DESCRIPTOR>");
-    zxlogf(SPEW, "               .bEndpointAddress = 0x%02x <%s>", d.bEndpointAddress, addr_buf);
-    zxlogf(SPEW, "               .bmAttributes = 0x%02x <%s>", d.bmAttributes, attr_buf);
-    zxlogf(SPEW, "               .wMaxPacketSize = 0x%04x", d.wMaxPacketSize);
-    zxlogf(SPEW, "               .bInterval = %d", d.bInterval);
+    zxlogf(TRACE, "            ===  usb_endpoint_descriptor_t ===");
+    zxlogf(TRACE, "               .bLength = %d", d.bLength);
+    zxlogf(TRACE, "               .bDescriptorType = <ENDPOINT_DESCRIPTOR>");
+    zxlogf(TRACE, "               .bEndpointAddress = 0x%02x <%s>", d.bEndpointAddress, addr_buf);
+    zxlogf(TRACE, "               .bmAttributes = 0x%02x <%s>", d.bmAttributes, attr_buf);
+    zxlogf(TRACE, "               .wMaxPacketSize = 0x%04x", d.wMaxPacketSize);
+    zxlogf(TRACE, "               .bInterval = %d", d.bInterval);
   // clang-format on
 }
 
@@ -103,18 +103,18 @@ void SpewUsbRequest(const usb_request_t& req) {
     default:                        snprintf(buf, 100, "???"); break;
     }
 
-    zxlogf(SPEW, "            ===  usb_header_t ===");
-    zxlogf(SPEW, "               .frame = %ld", req.header.frame);
-    zxlogf(SPEW, "               .device_id = %d", req.header.device_id);
-    zxlogf(SPEW, "               .ep_address = %d", req.header.ep_address);
-    zxlogf(SPEW, "               .length = %ld", req.header.length);
-    zxlogf(SPEW, "               .send_zlp = %d", req.header.send_zlp);
-    zxlogf(SPEW, "            ===  usb_setup_t ===");
-    zxlogf(SPEW, "               .bmRequestType = 0x%02x", req.setup.bmRequestType);
-    zxlogf(SPEW, "               .bRequest = %d <%s>", req.setup.bRequest, buf);
-    zxlogf(SPEW, "               .wValue = 0x%04x", req.setup.wValue);
-    zxlogf(SPEW, "               .wIndex = 0x%04x", req.setup.wIndex);
-    zxlogf(SPEW, "               .wLength = %d", req.setup.wLength);
+    zxlogf(TRACE, "            ===  usb_header_t ===");
+    zxlogf(TRACE, "               .frame = %ld", req.header.frame);
+    zxlogf(TRACE, "               .device_id = %d", req.header.device_id);
+    zxlogf(TRACE, "               .ep_address = %d", req.header.ep_address);
+    zxlogf(TRACE, "               .length = %ld", req.header.length);
+    zxlogf(TRACE, "               .send_zlp = %d", req.header.send_zlp);
+    zxlogf(TRACE, "            ===  usb_setup_t ===");
+    zxlogf(TRACE, "               .bmRequestType = 0x%02x", req.setup.bmRequestType);
+    zxlogf(TRACE, "               .bRequest = %d <%s>", req.setup.bRequest, buf);
+    zxlogf(TRACE, "               .wValue = 0x%04x", req.setup.wValue);
+    zxlogf(TRACE, "               .wIndex = 0x%04x", req.setup.wIndex);
+    zxlogf(TRACE, "               .wLength = %d", req.setup.wLength);
   // clang-format on
 }
 

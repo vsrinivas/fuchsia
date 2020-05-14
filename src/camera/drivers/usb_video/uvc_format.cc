@@ -115,7 +115,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
     case USB_VIDEO_VS_FORMAT_UNCOMPRESSED: {
       usb_video_vs_uncompressed_format_desc* uncompressed_desc =
           (usb_video_vs_uncompressed_format_desc*)format_desc;
-      zxlogf(TRACE,
+      zxlogf(DEBUG,
              "USB_VIDEO_VS_FORMAT_UNCOMPRESSED bNumFrameDescriptors %u "
              "bBitsPerPixel %u\n",
              uncompressed_desc->bNumFrameDescriptors, uncompressed_desc->bBitsPerPixel);
@@ -130,7 +130,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
     }
     case USB_VIDEO_VS_FORMAT_MJPEG: {
       usb_video_vs_mjpeg_format_desc* mjpeg_desc = (usb_video_vs_mjpeg_format_desc*)format_desc;
-      zxlogf(TRACE, "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d",
+      zxlogf(DEBUG, "USB_VIDEO_VS_FORMAT_MJPEG bNumFrameDescriptors %u bmFlags %d",
              mjpeg_desc->bNumFrameDescriptors, mjpeg_desc->bmFlags);
 
       want_frame_type = USB_VIDEO_VS_FRAME_MJPEG;
@@ -177,7 +177,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
         }
         // Intervals are specified in 100 ns units.
         double framesPerSec = 1 / (desc->dwDefaultFrameInterval * 100 / 1e9);
-        zxlogf(TRACE, "%s (%u x %u) %.2f frames / sec",
+        zxlogf(DEBUG, "%s (%u x %u) %.2f frames / sec",
                format_desc->bDescriptorSubtype == USB_VIDEO_VS_FRAME_UNCOMPRESSED
                    ? "USB_VIDEO_VS_FRAME_UNCOMPRESSED"
                    : "USB_VIDEO_VS_FRAME_MJPEG",

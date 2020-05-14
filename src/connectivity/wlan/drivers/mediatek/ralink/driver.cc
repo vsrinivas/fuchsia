@@ -17,7 +17,7 @@
 #include "device.h"
 
 zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
-  zxlogf(TRACE, "%s", __func__);
+  zxlogf(DEBUG, "%s", __func__);
 
   usb_protocol_t usb;
   zx_status_t result = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);

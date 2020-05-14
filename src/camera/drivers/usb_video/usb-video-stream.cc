@@ -163,7 +163,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
     usb_request_release(usb_req_list_remove_head(&free_reqs_, parent_req_size_));
   }
 
-  zxlogf(TRACE, "allocating %d usb requests of size %lu", MAX_OUTSTANDING_REQS, size);
+  zxlogf(DEBUG, "allocating %d usb requests of size %lu", MAX_OUTSTANDING_REQS, size);
 
   uint64_t req_size = parent_req_size_ + sizeof(usb_req_internal_t);
   zx_status_t status;
@@ -186,7 +186,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
 
 zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_index,
                                             uint32_t default_frame_interval) {
-  zxlogf(TRACE, "trying format %u, frame desc %u", format_index, frame_index);
+  zxlogf(DEBUG, "trying format %u, frame desc %u", format_index, frame_index);
 
   usb_video_vc_probe_and_commit_controls proposal;
   memset(&proposal, 0, sizeof(usb_video_vc_probe_and_commit_controls));
@@ -261,8 +261,8 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_
       return ZX_ERR_BAD_STATE;
   }
 
-  zxlogf(TRACE, "configured video: format index %u frame index %u", format_index, frame_index);
-  zxlogf(TRACE, "alternate setting %d, packet size %u transactions per mf %u",
+  zxlogf(DEBUG, "configured video: format index %u frame index %u", format_index, frame_index);
+  zxlogf(DEBUG, "alternate setting %d, packet size %u transactions per mf %u",
          cur_streaming_setting_->alt_setting, cur_streaming_setting_->max_packet_size,
          cur_streaming_setting_->transactions_per_microframe);
 
@@ -415,7 +415,7 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     num_free_reqs_++;
     if (num_free_reqs_ == num_allocated_reqs_) {
-      zxlogf(TRACE, "setting video buffer as stopped, got %u frames", num_frames_);
+      zxlogf(DEBUG, "setting video buffer as stopped, got %u frames", num_frames_);
       streaming_state_ = StreamingState::STOPPED;
     }
     return;
@@ -522,7 +522,7 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
 
 zx_status_t UsbVideoStream::FrameNotifyLocked() {
   if (clock_frequency_hz_ != 0) {
-    zxlogf(TRACE, "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu", num_frames_,
+    zxlogf(DEBUG, "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu", num_frames_,
            cur_frame_state_.capture_time,
            cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
            cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_),
@@ -675,7 +675,7 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
   }
 
   if (cur_frame_state_.error) {
-    zxlogf(TRACE, "skipping payload of invalid frame #%u", num_frames_);
+    zxlogf(DEBUG, "skipping payload of invalid frame #%u", num_frames_);
     return;
   }
   if (!current_buffer_.valid()) {

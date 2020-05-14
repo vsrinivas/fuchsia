@@ -178,7 +178,7 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
 }
 
 void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
-  zxlogf(TRACE, "FTL: Query");
+  zxlogf(DEBUG, "FTL: Query");
   memset(info_out, 0, sizeof(*info_out));
   info_out->block_count = params_.num_pages;
   info_out->block_size = params_.page_size;
@@ -189,7 +189,7 @@ void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_o
 
 void BlockDevice::BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
                                  void* cookie) {
-  zxlogf(TRACE, "FTL: Queue");
+  zxlogf(DEBUG, "FTL: Queue");
   uint32_t max_pages = params_.num_pages;
   switch (operation->command) {
     case BLOCK_OP_WRITE:
@@ -400,7 +400,7 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
   }
 
   if (operation->command == BLOCK_OP_WRITE) {
-    zxlogf(SPEW, "FTL: BLK To write %d blocks at %d :", operation->rw.length, offset);
+    zxlogf(TRACE, "FTL: BLK To write %d blocks at %d :", operation->rw.length, offset);
     status = volume_->Write(offset, operation->rw.length, mapper.start());
     if (status != ZX_OK) {
       zxlogf(ERROR, "FTL: Failed to write to ftl");
@@ -409,7 +409,7 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
   }
 
   if (operation->command == BLOCK_OP_READ) {
-    zxlogf(SPEW, "FTL: BLK To read %d blocks at %d :", operation->rw.length, offset);
+    zxlogf(TRACE, "FTL: BLK To read %d blocks at %d :", operation->rw.length, offset);
     status = volume_->Read(offset, operation->rw.length, mapper.start());
     if (status != ZX_OK) {
       zxlogf(ERROR, "FTL: Failed to read from ftl");
@@ -427,7 +427,7 @@ zx_status_t BlockDevice::TrimData(block_op_t* operation) {
   }
 
   ZX_DEBUG_ASSERT(operation->command == BLOCK_OP_TRIM);
-  zxlogf(SPEW, "FTL: BLK To trim %d blocks at %d :", operation->trim.length, offset);
+  zxlogf(TRACE, "FTL: BLK To trim %d blocks at %d :", operation->trim.length, offset);
   zx_status_t status = volume_->Trim(offset, operation->trim.length);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FTL: Failed to trim");
@@ -444,7 +444,7 @@ zx_status_t BlockDevice::Flush() {
     return status;
   }
 
-  zxlogf(SPEW, "FTL: Finished flush");
+  zxlogf(TRACE, "FTL: Finished flush");
   return status;
 }
 

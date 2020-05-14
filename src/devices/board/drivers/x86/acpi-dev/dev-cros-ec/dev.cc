@@ -103,7 +103,7 @@ zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t*
   // Get EC version.
   ec_response_get_version version;
   if (zx_status_t status = GetECVersion(controller.get(), &version); status != ZX_OK) {
-    zxlogf(TRACE, "acpi-cros-ec-core: failed to get EC version details.");
+    zxlogf(DEBUG, "acpi-cros-ec-core: failed to get EC version details.");
     return status;
   }
   zxlogf(INFO, "acpi-cros-ec-core: Detected EC firmware version %s (RO), %s (RW).",
@@ -111,7 +111,7 @@ zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t*
 
   // Initialize MotionSense driver.
   if (controller->SupportsFeature(EC_FEATURE_MOTION_SENSE)) {
-    zxlogf(TRACE, "acpi-cros-ec-motion: init");
+    zxlogf(DEBUG, "acpi-cros-ec-motion: init");
     zx_status_t status =
         AcpiCrOsEcMotionDevice::Bind(parent, controller, CreateAcpiHandle(acpi_handle), nullptr);
     if (status != ZX_OK) {
@@ -128,7 +128,7 @@ zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t*
 }  // namespace cros_ec
 
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  zxlogf(TRACE, "acpi-cros-ec-core: init");
+  zxlogf(DEBUG, "acpi-cros-ec-core: init");
 
   fbl::RefPtr<cros_ec::EmbeddedController> ec;
   zx_status_t status = cros_ec::RealEmbeddedController::Create(&ec);

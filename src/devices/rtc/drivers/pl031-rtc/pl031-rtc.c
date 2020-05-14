@@ -92,7 +92,7 @@ static zx_protocol_device_t pl031_rtc_device_proto = {.version = DEVICE_OPS_VERS
                                                       .message = pl031_rtc_message};
 
 static zx_status_t pl031_rtc_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(TRACE, "pl031_rtc: bind parent = %p", parent);
+  zxlogf(DEBUG, "pl031_rtc: bind parent = %p", parent);
 
   pdev_protocol_t proto;
   zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &proto);

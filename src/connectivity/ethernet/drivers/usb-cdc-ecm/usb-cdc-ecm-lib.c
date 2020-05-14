@@ -4,7 +4,7 @@ const char* module_name = "usb-cdc-ecm";
 
 static bool parse_cdc_header(usb_cs_header_interface_descriptor_t* header_desc) {
   // Check for supported CDC version
-  zxlogf(TRACE, "%s: device reports CDC version as 0x%x", module_name, header_desc->bcdCDC);
+  zxlogf(DEBUG, "%s: device reports CDC version as 0x%x", module_name, header_desc->bcdCDC);
   return header_desc->bcdCDC >= CDC_SUPPORTED_VERSION;
 }
 

@@ -185,7 +185,7 @@ void Port::Reset() {
       reg_base_ + kPortTaskFileData, AHCI_PORT_TFD_BUSY | AHCI_PORT_TFD_DATA_REQUEST, zx::sec(1));
   if (status != ZX_OK) {
     // if busy is not cleared, do a full comreset
-    zxlogf(SPEW, "ahci.%u: timed out waiting for port idle, resetting", num_);
+    zxlogf(TRACE, "ahci.%u: timed out waiting for port idle, resetting", num_);
     // v1.3.1, 10.4.2 port reset
     uint32_t sctl =
         AHCI_PORT_SCTL_IPM_ACTIVE | AHCI_PORT_SCTL_IPM_PARTIAL | AHCI_PORT_SCTL_DET_INIT;
@@ -202,7 +202,7 @@ void Port::Reset() {
   // wait for device detect
   status = bus_->WaitForSet(reg_base_ + kPortSataStatus, AHCI_PORT_SSTS_DET_PRESENT, zx::sec(1));
   if (status < 0) {
-    zxlogf(SPEW, "ahci.%u: no device detected", num_);
+    zxlogf(TRACE, "ahci.%u: no device detected", num_);
   }
 
   // clear error
@@ -284,7 +284,7 @@ bool Port::Complete() {
     if (txn->timeout == zx::time::infinite_past()) {
       block_complete(txn, ZX_ERR_TIMED_OUT);
     } else {
-      zxlogf(SPEW, "ahci.%u: complete txn %p", num_, txn);
+      zxlogf(TRACE, "ahci.%u: complete txn %p", num_, txn);
       block_complete(txn, ZX_OK);
     }
   }
@@ -377,7 +377,7 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
   size_t pagecount = ((offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) / PAGE_SIZE;
   zx_paddr_t pages[AHCI_MAX_PAGES];
   if (pagecount > AHCI_MAX_PAGES) {
-    zxlogf(SPEW, "ahci.%u: txn %p too many pages (%zu)", num_, txn, pagecount);
+    zxlogf(TRACE, "ahci.%u: txn %p too many pages (%zu)", num_, txn, pagecount);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -388,7 +388,7 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
   zx_status_t st = bus_->BtiPin(options, vmo, offset_vmo & ~PAGE_MASK, pagecount * PAGE_SIZE, pages,
                                 pagecount, &pmt);
   if (st != ZX_OK) {
-    zxlogf(SPEW, "ahci.%u: failed to pin pages, err = %d", num_, st);
+    zxlogf(TRACE, "ahci.%u: failed to pin pages, err = %d", num_, st);
     return st;
   }
   txn->pmt = pmt.release();
@@ -479,13 +479,13 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
   running_ |= (1u << slot);
   commands_[slot] = txn;
 
-  zxlogf(SPEW,
+  zxlogf(TRACE,
          "ahci.%u: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64 " slot %d prdtl %u\n",
          num_, txn, cl->w ? 'w' : 'r', lba, count, slot, cl->prdtl);
-  if (zxlog_level_enabled(SPEW)) {
+  if (zxlog_level_enabled(TRACE)) {
     for (uint32_t i = 0; i < cl->prdtl; i++) {
       ahci_prd_t* prd = &mem_->tab[slot].prd[i];
-      zxlogf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x", i, prd->dbau, prd->dba, prd->dbc);
+      zxlogf(TRACE, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x", i, prd->dbau, prd->dba, prd->dbc);
     }
   }
 

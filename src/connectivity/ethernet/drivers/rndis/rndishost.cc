@@ -37,15 +37,15 @@
 static bool command_succeeded(const void* buf, uint32_t type, size_t length) {
   const auto* header = static_cast<const rndis_header_complete*>(buf);
   if (header->msg_type != type) {
-    zxlogf(SPEW, "Bad type: Actual: %x, Expected: %x.", header->msg_type, type);
+    zxlogf(TRACE, "Bad type: Actual: %x, Expected: %x.", header->msg_type, type);
     return false;
   }
   if (header->msg_length != length) {
-    zxlogf(SPEW, "Bad length: Actual: %u, Expected: %zu.", header->msg_length, length);
+    zxlogf(TRACE, "Bad length: Actual: %u, Expected: %zu.", header->msg_length, length);
     return false;
   }
   if (header->status != RNDIS_STATUS_SUCCESS) {
-    zxlogf(SPEW, "Bad status: %x.", header->status);
+    zxlogf(TRACE, "Bad status: %x.", header->status);
     return false;
   }
   return true;
@@ -163,10 +163,10 @@ void RndisHost::ReadComplete(usb_request_t* request) {
 
   fbl::AutoLock lock(&mutex_);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "rndis_read_complete usb_reset_endpoint");
+    zxlogf(DEBUG, "rndis_read_complete usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_in_addr_);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "rndis_read_complete Slowing down the requests by %d usec"
            " and resetting the recv endpoint\n",
            ETHERNET_RECV_DELAY);
@@ -178,7 +178,7 @@ void RndisHost::ReadComplete(usb_request_t* request) {
   if (request->response.status == ZX_OK && ifc_.ops) {
     Recv(request);
   } else {
-    zxlogf(SPEW, "rndis read complete: bad status = %d", request->response.status);
+    zxlogf(TRACE, "rndis read complete: bad status = %d", request->response.status);
   }
 
   // TODO: Only usb_request_queue if the device is online.
@@ -201,10 +201,10 @@ void RndisHost::WriteComplete(usb_request_t* request) {
 
   fbl::AutoLock lock(&mutex_);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "rndishost usb_reset_endpoint");
+    zxlogf(DEBUG, "rndishost usb_reset_endpoint");
     usb_.ResetEndpoint(bulk_out_addr_);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "rndis_write_complete Slowing down the requests by %d usec"
            " and resetting the transmit endpoint\n",
            ETHERNET_TRANSMIT_DELAY);
@@ -277,7 +277,7 @@ void RndisHost::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
 
   usb_request_t* req = usb_req_list_remove_head(&free_write_reqs_, parent_req_size_);
   if (req == nullptr) {
-    zxlogf(TRACE, "rndishost dropped a packet");
+    zxlogf(DEBUG, "rndishost dropped a packet");
     status = ZX_ERR_NO_RESOURCES;
     goto done;
   }

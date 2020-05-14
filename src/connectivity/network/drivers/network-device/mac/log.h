@@ -21,12 +21,12 @@
 #define LOG_ERROR(msg) zxlogf(ERROR, msg "")
 #define LOG_WARN(msg) zxlogf(WARN, msg "")
 #define LOG_INFO(msg) zxlogf(INFO, msg "")
-#define LOG_TRACE(msg) zxlogf(TRACE, msg "")
+#define LOG_TRACE(msg) zxlogf(DEBUG, msg "")
 
 #define LOGF_ERROR(fmt, ...) zxlogf(ERROR, fmt "", ##__VA_ARGS__)
 #define LOGF_WARN(fmt, ...) zxlogf(WARN, fmt "", ##__VA_ARGS__)
 #define LOGF_INFO(fmt, ...) zxlogf(INFO, fmt "", ##__VA_ARGS__)
-#define LOGF_TRACE(fmt, ...) zxlogf(TRACE, fmt "", ##__VA_ARGS__)
+#define LOGF_TRACE(fmt, ...) zxlogf(DEBUG, fmt "", ##__VA_ARGS__)
 #endif
 
 #endif  // SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_MAC_LOG_H_

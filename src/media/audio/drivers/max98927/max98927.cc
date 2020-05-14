@@ -32,7 +32,7 @@ uint8_t Max98927Device::ReadReg(uint16_t addr) {
     return -1;
   }
 
-  zxlogf(SPEW, "max98927: register 0x%04x read 0x%02x", addr, val);
+  zxlogf(TRACE, "max98927: register 0x%04x read 0x%02x", addr, val);
   return val;
 }
 
@@ -46,7 +46,7 @@ void Max98927Device::WriteReg(uint16_t addr, uint8_t val) {
     zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%04x/0x%02x  status: %d", addr, val,
            status);
   }
-  zxlogf(SPEW, "max98927: register 0x%04x write 0x%02x", addr, val);
+  zxlogf(TRACE, "max98927: register 0x%04x write 0x%02x", addr, val);
 }
 
 void Max98927Device::DumpRegs() {

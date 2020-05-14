@@ -32,7 +32,7 @@ static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t /* nesti
   ACPI_DEVICE_INFO* info;
   ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
   if (acpi_status != AE_OK) {
-    zxlogf(TRACE, "bus-acpi: AcpiGetObjectInfo failed %d", acpi_status);
+    zxlogf(DEBUG, "bus-acpi: AcpiGetObjectInfo failed %d", acpi_status);
     return acpi_status;
   }
   ACPI_FREE(info);
@@ -135,7 +135,7 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void*
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zxlogf(SPEW, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x", type.data(), bus_id, dev_id,
+  zxlogf(TRACE, "bus-acpi: get_auxdata type '%s' device %02x:%02x:%02x", type.data(), bus_id, dev_id,
          func_id);
 
   if (strcmp(type.data(), "i2c-child") != 0) {
@@ -177,7 +177,7 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void*
 
   *actual = ctx.i * sizeof(auxdata_i2c_device_t);
 
-  zxlogf(SPEW, "bus-acpi: get_auxdata '%s' %u devs actual %zu", args, ctx.i, *actual);
+  zxlogf(TRACE, "bus-acpi: get_auxdata '%s' %u devs actual %zu", args, ctx.i, *actual);
 
   return ZX_OK;
 }
@@ -308,7 +308,7 @@ zx_status_t Pciroot<pciroot_ctx>::PcirootGetAddressSpace(size_t size, zx_paddr_t
                                                          pci_address_space_t type, bool low,
                                                          zx_paddr_t* out_base,
                                                          zx::resource* out_resource) {
-  zxlogf(TRACE, "%s(size = %zu, request_addr = %#lx, type = %u, low = %u)\n", __func__, size,
+  zxlogf(DEBUG, "%s(size = %zu, request_addr = %#lx, type = %u, low = %u)\n", __func__, size,
          in_base, type, low);
   RegionAllocator* alloc = nullptr;
   uint32_t rsrc_kind = ZX_RSRC_KIND_MMIO;
@@ -351,10 +351,10 @@ zx_status_t Pciroot<pciroot_ctx>::PcirootGetAddressSpace(size_t size, zx_paddr_t
   }
 
   if (status != ZX_OK) {
-    zxlogf(TRACE, "pciroot: failed to get region { %#lx-%#lx, type = %s, low = %d }: %d.", in_base,
+    zxlogf(DEBUG, "pciroot: failed to get region { %#lx-%#lx, type = %s, low = %d }: %d.", in_base,
            in_base + size, (type == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", low, status);
     alloc->WalkAvailableRegions([](const ralloc_region_t* r) -> bool {
-      zxlogf(TRACE, "region avail: [%#lx - %#lx]\n", r->base, r->base + r->size);
+      zxlogf(DEBUG, "region avail: [%#lx - %#lx]\n", r->base, r->base + r->size);
       return true;
     });
     return status;
@@ -379,7 +379,7 @@ zx_status_t Pciroot<pciroot_ctx>::PcirootGetAddressSpace(size_t size, zx_paddr_t
   // Discard the lifecycle aspect of the returned pointer, we'll be tracking it on the bus
   // side of things.
   region_uptr.release();
-  zxlogf(TRACE, "pciroot: assigned [ %#lx-%#lx, type = %s, size = %#lx ] to bus driver.", *out_base,
+  zxlogf(DEBUG, "pciroot: assigned [ %#lx-%#lx, type = %s, size = %#lx ] to bus driver.", *out_base,
          *out_base + size, (type == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", size);
   return ZX_OK;
 }

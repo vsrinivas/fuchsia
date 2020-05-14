@@ -70,7 +70,7 @@ zx_status_t suspend_to_ram(void) {
     zxlogf(ERROR, "acpi: Failed to enter sleep state: %x", acpi_status);
     // Continue executing to try to get the system back to where it was
   }
-  zxlogf(TRACE, "acpi: Woke up from sleep");
+  zxlogf(DEBUG, "acpi: Woke up from sleep");
 
   acpi_status = AcpiLeaveSleepStatePrep(3);
   if (acpi_status != AE_OK) {

@@ -113,7 +113,7 @@ zx_status_t As370Clk::CpuSetRate(uint64_t rate) {
         .set_PDDP(0)
         .set_SLOPE(0)
         .WriteTo(&cpu_mmio_);
-    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u", __FILE__, rate, dn, 1, 1);
+    zxlogf(DEBUG, "%s %luHz dn %u  dm %u  dp %u", __FILE__, rate, dn, 1, 1);
   } else {
     auto dn = static_cast<uint32_t>(rate) / 1'000 * 48 / 400'000;
     CPU_WRP_PLL_REG_ctrl::Get()
@@ -133,7 +133,7 @@ zx_status_t As370Clk::CpuSetRate(uint64_t rate) {
         .set_PDDP(0)
         .set_SLOPE(0)
         .WriteTo(&cpu_mmio_);
-    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u", __FILE__, rate, dn, 1, 3);
+    zxlogf(DEBUG, "%s %luHz dn %u  dm %u  dp %u", __FILE__, rate, dn, 1, 3);
   }
   return ZX_OK;
 }
@@ -175,8 +175,8 @@ zx_status_t As370Clk::AvpllSetRate(bool avpll0, uint64_t rate) {
     return ZX_ERR_INTERNAL;  // Should not happen.
   }
 
-  zxlogf(TRACE, "%s frac %u  dn %u  dm %u  dp %u", __FILE__, frac, dn, dm, dp);
-  zxlogf(TRACE, "%s requested: %fMHz  expected: %fMHz", __FILE__,
+  zxlogf(DEBUG, "%s frac %u  dn %u  dm %u  dp %u", __FILE__, frac, dn, dm, dp);
+  zxlogf(DEBUG, "%s requested: %fMHz  expected: %fMHz", __FILE__,
          static_cast<double>(rate) / 1'000'000.,
          ((static_cast<double>(frac) / (max_frac + 1)) + dn) * 25. / dp / dm);
 

@@ -70,7 +70,7 @@ enum ath10k_dbg_aggr_mode {
 
 extern unsigned int ath10k_debug_mask;
 
-#define ath10k_trace(fmt, ...) zxlogf(TRACE, "ath10k: " fmt, ##__VA_ARGS__)
+#define ath10k_trace(fmt, ...) zxlogf(DEBUG, "ath10k: " fmt, ##__VA_ARGS__)
 #define ath10k_info(fmt, ...) zxlogf(INFO, "ath10k: " fmt, ##__VA_ARGS__)
 #define ath10k_warn(fmt, ...) zxlogf(WARN, "ath10k: " fmt, ##__VA_ARGS__)
 #define ath10k_err(fmt, ...) zxlogf(ERROR, "ath10k: " fmt, ##__VA_ARGS__)

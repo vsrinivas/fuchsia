@@ -124,7 +124,7 @@ void CodecConnection::SendCORBResponse(const fbl::RefPtr<dispatcher::Channel>& c
 
   zx_status_t res = channel->Write(&payload, sizeof(payload));
   if (res != ZX_OK) {
-    LOG(TRACE, "Error writing CORB response (%08x, %08x) res = %d\n", resp.data, resp.data_ex, res);
+    LOG(DEBUG, "Error writing CORB response (%08x, %08x) res = %d\n", resp.data, resp.data_ex, res);
   }
 }
 
@@ -148,7 +148,7 @@ void CodecConnection::ProcessSolicitedResponse(const CodecResponse& resp,
       state_ = State::FATAL_ERROR;
     }
   } else if (job->response_channel() != nullptr) {
-    LOG(SPEW, "Sending solicited response [%08x, %08x] to channel %p\n", resp.data, resp.data_ex,
+    LOG(TRACE, "Sending solicited response [%08x, %08x] to channel %p\n", resp.data, resp.data_ex,
         job->response_channel().get());
 
     // Does this job have a response channel?  If so, attempt to send the
@@ -274,12 +274,12 @@ zx_status_t CodecConnection::GetChannel(fidl_txn_t* txn) {
 #define PROCESS_CMD(_req_ack, _ioctl, _payload, _handler)                    \
   case _ioctl:                                                               \
     if (req_size != sizeof(req._payload)) {                                  \
-      LOG(TRACE, "Bad " #_payload " request length (%u != %zu)\n", req_size, \
+      LOG(DEBUG, "Bad " #_payload " request length (%u != %zu)\n", req_size, \
           sizeof(req._payload));                                             \
       return ZX_ERR_INVALID_ARGS;                                            \
     }                                                                        \
     if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                     \
-      LOG(TRACE, "Cmd " #_payload                                            \
+      LOG(DEBUG, "Cmd " #_payload                                            \
                  " requires acknowledgement, but the "                       \
                  "NOACK flag was set!\n");                                   \
       return ZX_ERR_INVALID_ARGS;                                            \
@@ -303,25 +303,25 @@ zx_status_t CodecConnection::ProcessCodecRequest(dispatcher::Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   res = channel->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to read user request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read user request (res %d)\n", res);
     return res;
   }
 
   // Sanity checks.
   if (req_size < sizeof(req.hdr)) {
-    LOG(TRACE, "Client request too small to contain header (%u < %zu)\n", req_size,
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
         sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
   if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
-    LOG(TRACE, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
+    LOG(DEBUG, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Dispatch
-  LOG(SPEW, "Codec Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+  LOG(TRACE, "Codec Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
       req_size);
 
   switch (cmd_id) {
@@ -330,7 +330,7 @@ zx_status_t CodecConnection::ProcessCodecRequest(dispatcher::Channel* channel) {
     PROCESS_CMD(false, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
     PROCESS_CMD(false, IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
     default:
-      LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -350,30 +350,30 @@ zx_status_t CodecConnection::ProcessUserRequest(dispatcher::Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   res = channel->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to read client request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read client request (res %d)\n", res);
     return res;
   }
 
   // Sanity checks.
   if (req_size < sizeof(req.hdr)) {
-    LOG(TRACE, "Client request too small to contain header (%u < %zu)\n", req_size,
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
         sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
   if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
-    LOG(TRACE, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
+    LOG(DEBUG, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Dispatch
-  LOG(SPEW, "User Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+  LOG(TRACE, "User Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
       req_size);
 
   // We only allow CORB "get" requests.
   if (cmd_id == IHDA_CODEC_SEND_CORB_CMD && CodecVerb(req.corb_cmd.verb).is_set()) {
-    LOG(TRACE, "User attempted to perform privileged command.\n");
+    LOG(DEBUG, "User attempted to perform privileged command.\n");
     return ZX_ERR_ACCESS_DENIED;
   }
 
@@ -381,7 +381,7 @@ zx_status_t CodecConnection::ProcessUserRequest(dispatcher::Channel* channel) {
     PROCESS_CMD(true, IHDA_CMD_GET_IDS, get_ids, ProcessGetIDs);
     PROCESS_CMD(false, IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
     default:
-      LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -438,7 +438,7 @@ zx_status_t CodecConnection::ProcessSendCORBCmd(dispatcher::Channel* channel,
 
   // Make sure that the command is well formed.
   if (!CodecCommand::SanityCheck(id(), req.nid, verb)) {
-    LOG(TRACE, "Bad SEND_CORB_CMD request values [%u, %hu, 0x%05x]\n", id(), req.nid, verb.val);
+    LOG(DEBUG, "Bad SEND_CORB_CMD request values [%u, %hu, 0x%05x]\n", id(), req.nid, verb.val);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -453,7 +453,7 @@ zx_status_t CodecConnection::ProcessSendCORBCmd(dispatcher::Channel* channel,
 
   zx_status_t res = controller_.QueueCodecCmd(std::move(job));
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to queue CORB command [%u, %hu, 0x%05x] (res %d)\n", id(), req.nid, verb.val,
+    LOG(DEBUG, "Failed to queue CORB command [%u, %hu, 0x%05x] (res %d)\n", id(), req.nid, verb.val,
         res);
   }
 
@@ -525,7 +525,7 @@ zx_status_t CodecConnection::ProcessSetStreamFmt(dispatcher::Channel* channel,
 
   // Sanity check the requested format.
   if (!StreamFormat(req.format).SanityCheck()) {
-    LOG(TRACE, "Invalid encoded stream format 0x%04hx!\n", req.format);
+    LOG(DEBUG, "Invalid encoded stream format 0x%04hx!\n", req.format);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -549,7 +549,7 @@ zx_status_t CodecConnection::ProcessSetStreamFmt(dispatcher::Channel* channel,
   zx::channel client_channel;
   zx_status_t res = stream->SetStreamFormat(default_domain_, req.format, &client_channel);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
+    LOG(DEBUG, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n", req.format,
         req.stream_id, res);
     return res;
   }
@@ -561,7 +561,7 @@ zx_status_t CodecConnection::ProcessSetStreamFmt(dispatcher::Channel* channel,
   res = channel->Write(&resp, sizeof(resp), std::move(client_channel));
 
   if (res != ZX_OK)
-    LOG(TRACE, "Failed to send stream channel back to codec driver (res %d)\n", res);
+    LOG(DEBUG, "Failed to send stream channel back to codec driver (res %d)\n", res);
 
   return res;
 }

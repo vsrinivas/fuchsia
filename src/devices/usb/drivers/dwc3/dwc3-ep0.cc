@@ -62,12 +62,12 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
     // handle some special setup requests in this driver
     switch (setup->bRequest) {
       case USB_REQ_SET_ADDRESS:
-        zxlogf(TRACE, "SET_ADDRESS %d", setup->wValue);
+        zxlogf(DEBUG, "SET_ADDRESS %d", setup->wValue);
         dwc3_set_address(dwc, setup->wValue);
         *out_actual = 0;
         return ZX_OK;
       case USB_REQ_SET_CONFIGURATION: {
-        zxlogf(TRACE, "SET_CONFIGURATION %d", setup->wValue);
+        zxlogf(DEBUG, "SET_CONFIGURATION %d", setup->wValue);
         dwc3_reset_configuration(dwc);
         dwc->configured = false;
         zx_status_t status =
@@ -84,7 +84,7 @@ static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buff
     }
   } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) &&
              setup->bRequest == USB_REQ_SET_INTERFACE) {
-    zxlogf(TRACE, "SET_INTERFACE %d", setup->wValue);
+    zxlogf(DEBUG, "SET_INTERFACE %d", setup->wValue);
     dwc3_reset_configuration(dwc);
     dwc->configured = false;
     zx_status_t status =
@@ -168,7 +168,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
       zx_paddr_t paddr = io_buffer_phys(&dwc->ep0_buffer);
       memcpy(setup, vaddr, sizeof(*setup));
 
-      zxlogf(TRACE, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d",
+      zxlogf(DEBUG, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d",
              setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex, setup->wLength);
 
       bool is_out = ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT);
@@ -181,7 +181,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
       } else {
         size_t actual;
         zx_status_t status = dwc3_handle_setup(dwc, setup, vaddr, dwc->ep0_buffer.size, &actual);
-        zxlogf(TRACE, "dwc3_handle_setup returned %d actual %zu", status, actual);
+        zxlogf(DEBUG, "dwc3_handle_setup returned %d actual %zu", status, actual);
         if (status != ZX_OK) {
           dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
           dwc3_queue_setup_locked(dwc);

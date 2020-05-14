@@ -127,7 +127,7 @@ class PciRootHost {
     WindowAllocation(zx::eventpair host_peer, RegionAllocator::Region::UPtr allocated_region)
         : host_peer_(std::move(host_peer)), allocated_region_(std::move(allocated_region)) {}
     ~WindowAllocation() {
-      zxlogf(TRACE, "%s: releasing [%#lx - %#lx]\n", __func__, allocated_region_->base,
+      zxlogf(DEBUG, "%s: releasing [%#lx - %#lx]\n", __func__, allocated_region_->base,
              allocated_region_->base + allocated_region_->size);
     }
     zx::eventpair host_peer_;

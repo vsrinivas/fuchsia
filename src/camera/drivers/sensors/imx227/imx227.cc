@@ -295,7 +295,7 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
 //               initialized into the requested mode.
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   std::lock_guard guard(lock_);
-  zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d", __func__, mode);
+  zxlogf(DEBUG, "%s IMX227 Camera Sensor Mode Set request to %d", __func__, mode);
 
   HwInit();
 
@@ -385,7 +385,7 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
   if (!IsSensorInitialized() || ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
-  zxlogf(TRACE, "%s Camera Sensor Start Streaming", __func__);
+  zxlogf(DEBUG, "%s Camera Sensor Start Streaming", __func__);
   ctx_.streaming_flag = 1;
   Write8(kModeSelectReg, 0x01);
   return ZX_OK;

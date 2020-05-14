@@ -242,13 +242,13 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
     leftover_input_items = std::move(input_queue_);
   }
 
-  LOG(TRACE, "RemoveDecoder()...");
+  LOG(DEBUG, "RemoveDecoder()...");
   {
     std::lock_guard<std::mutex> decoder_lock(*video_->video_decoder_lock());
     video_->RemoveDecoderLocked(decoder_);
     decoder_ = nullptr;
   }
-  LOG(TRACE, "RemoveDecoder() done.");
+  LOG(DEBUG, "RemoveDecoder() done.");
   return leftover_input_items;
 }
 
@@ -578,7 +578,7 @@ void CodecAdapterH264Multi::CoreCodecSetBufferCollectionInfo(
   ZX_DEBUG_ASSERT(IsPortSecure(port) || !IsPortSecureRequired(port));
   ZX_DEBUG_ASSERT(!IsPortSecure(port) || IsPortSecurePermitted(port));
   // TODO(dustingreen): Remove after secure video decode works e2e.
-  LOG(TRACE,
+  LOG(DEBUG,
       "CodecAdapterH264Multi::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
       IsPortSecure(port), port);
 }
@@ -1112,7 +1112,7 @@ void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
   // This fences and quiesces the input processing thread, and the current StreamControl thread is
   // the only other thread that modifies is_input_end_of_stream_queued_to_core_, so we know
   // is_input_end_of_stream_queued_to_core_ won't be changing.
-  LOG(TRACE, "before CoreCodecStopStreamInternal()");
+  LOG(DEBUG, "before CoreCodecStopStreamInternal()");
   std::list<CodecInputItem> input_items = CoreCodecStopStreamInternal();
   auto return_any_input_items = fit::defer([this, &input_items] {
     for (auto& input_item : input_items) {
@@ -1128,16 +1128,16 @@ void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
     return;
   }
 
-  LOG(TRACE, "after stop; before CoreCodecStartStream()");
+  LOG(DEBUG, "after stop; before CoreCodecStartStream()");
 
   CoreCodecStartStream();
 
-  LOG(TRACE, "re-queueing items...");
+  LOG(DEBUG, "re-queueing items...");
   while (!input_items.empty()) {
     QueueInputItem(std::move(input_items.front()));
     input_items.pop_front();
   }
-  LOG(TRACE, "done re-queueing items.");
+  LOG(DEBUG, "done re-queueing items.");
 }
 
 void CodecAdapterH264Multi::OnCoreCodecFailStream(fuchsia::media::StreamError error) {

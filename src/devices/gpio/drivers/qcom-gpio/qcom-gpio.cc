@@ -29,7 +29,7 @@ int QcomGpioDevice::Thread() {
       zxlogf(ERROR, "%s port wait failed: %d", __func__, status);
       return thrd_error;
     }
-    zxlogf(TRACE, "%s msg on port key %lu", __func__, packet.key);
+    zxlogf(DEBUG, "%s msg on port key %lu", __func__, packet.key);
     if (packet.key == kPortKeyTerminate) {
       zxlogf(INFO, "QCOM GPIO thread terminating");
       return 0;
@@ -40,7 +40,7 @@ int QcomGpioDevice::Thread() {
       zxlogf(ERROR, "%s no interrupt found in cache %d", __func__, status);
     }
     while (status == ZX_OK) {
-      zxlogf(TRACE, "%s msg on port INT %lu", __func__, index);
+      zxlogf(DEBUG, "%s msg on port INT %lu", __func__, index);
       if (status_int_.Status(index)) {
         status = interrupts_[index].trigger(0, zx::time(packet.interrupt.timestamp));
         if (status != ZX_OK) {
@@ -162,7 +162,7 @@ zx_status_t QcomGpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
   status_int_.Clear(index);
   int_cfg_.EnableCombined(index, true);
   enabled_ints_cache_.SetOne(index);
-  zxlogf(TRACE, "%s INT %u enabled", __func__, index);
+  zxlogf(DEBUG, "%s INT %u enabled", __func__, index);
   return ZX_OK;
 }
 
@@ -174,7 +174,7 @@ zx_status_t QcomGpioDevice::GpioImplReleaseInterrupt(uint32_t index) {
   interrupts_[index].reset();
   int_cfg_.EnableCombined(index, false);
   enabled_ints_cache_.ClearOne(index);
-  zxlogf(TRACE, "%s INT %u disabled", __func__, index);
+  zxlogf(DEBUG, "%s INT %u disabled", __func__, index);
   return ZX_OK;
 }
 

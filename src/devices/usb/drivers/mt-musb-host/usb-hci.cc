@@ -304,7 +304,7 @@ int UsbHci::IrqThread() {
   for (;;) {
     status = irq_.wait(nullptr);
     if (status == ZX_ERR_CANCELED) {
-      zxlogf(TRACE, "irq thread break");
+      zxlogf(DEBUG, "irq thread break");
       break;
     } else if (status != ZX_OK) {
       zxlogf(ERROR, "irq wait error: %s", zx_status_get_string(status));

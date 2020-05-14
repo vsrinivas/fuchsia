@@ -48,7 +48,7 @@ zx_status_t RngDevice::Init() {
     return rc;
   }
 
-  zxlogf(SPEW, "%s: allocated entropy buffer at %p, physical address %#" PRIxPTR "", tag(),
+  zxlogf(TRACE, "%s: allocated entropy buffer at %p, physical address %#" PRIxPTR "", tag(),
          io_buffer_virt(&buf_), io_buffer_phys(&buf_));
 
   // start the interrupt thread
@@ -76,7 +76,7 @@ zx_status_t RngDevice::Init() {
 }
 
 void RngDevice::IrqRingUpdate() {
-  zxlogf(TRACE, "%s: Got irq ring update", tag());
+  zxlogf(DEBUG, "%s: Got irq ring update", tag());
 
   // parse our descriptor chain, add back to the free queue
   auto free_chain = [this](vring_used_elem* used_elem) {
@@ -86,7 +86,7 @@ void RngDevice::IrqRingUpdate() {
     if (desc->addr != io_buffer_phys(&buf_) || desc->len != kBufferSize) {
       zxlogf(ERROR, "%s: entropy response with unexpected buffer", tag());
     } else {
-      zxlogf(SPEW, "%s: received entropy; adding to kernel pool", tag());
+      zxlogf(TRACE, "%s: received entropy; adding to kernel pool", tag());
       zx_status_t rc = zx_cprng_add_entropy(io_buffer_virt(&buf_), kBufferSize);
       if (rc != ZX_OK) {
         zxlogf(ERROR, "%s: add_entropy failed (%d)", tag(), rc);
@@ -100,19 +100,19 @@ void RngDevice::IrqRingUpdate() {
   vring_.IrqRingUpdate(free_chain);
 }
 
-void RngDevice::IrqConfigChange() { zxlogf(TRACE, "%s: Got irq config change (ignoring)", tag()); }
+void RngDevice::IrqConfigChange() { zxlogf(DEBUG, "%s: Got irq config change (ignoring)", tag()); }
 
 int RngDevice::SeedThreadEntry(void* arg) {
   RngDevice* d = static_cast<RngDevice*>(arg);
   for (;;) {
     zx_status_t rc = d->Request();
-    zxlogf(SPEW, "virtio-rng-seed-thread: RngDevice::Request() returned %d", rc);
+    zxlogf(TRACE, "virtio-rng-seed-thread: RngDevice::Request() returned %d", rc);
     zx_nanosleep(zx_deadline_after(ZX_SEC(300)));
   }
 }
 
 zx_status_t RngDevice::Request() {
-  zxlogf(TRACE, "%s: sending entropy request", tag());
+  zxlogf(DEBUG, "%s: sending entropy request", tag());
   fbl::AutoLock lock(&lock_);
   uint16_t i;
   vring_desc* desc = vring_.AllocDescChain(1, &i);
@@ -124,13 +124,13 @@ zx_status_t RngDevice::Request() {
   desc->addr = io_buffer_phys(&buf_);
   desc->len = kBufferSize;
   desc->flags = VRING_DESC_F_WRITE;
-  zxlogf(SPEW, "%s: allocated descriptor chain desc %p, i %u", tag(), desc, i);
+  zxlogf(TRACE, "%s: allocated descriptor chain desc %p, i %u", tag(), desc, i);
   LTRACE_DO(virtio_dump_desc(desc));
 
   vring_.SubmitChain(i);
   vring_.Kick();
 
-  zxlogf(SPEW, "%s: kicked off entropy request", tag());
+  zxlogf(TRACE, "%s: kicked off entropy request", tag());
 
   return ZX_OK;
 }

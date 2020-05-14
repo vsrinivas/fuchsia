@@ -13,8 +13,8 @@
 #if 1
 #define pci_infof(...) zxlogf(INFO, "pci: " __VA_ARGS__)
 #define pci_errorf(...) zxlogf(ERROR, "pci: " __VA_ARGS__)
-#define pci_tracef(...) zxlogf(TRACE, "pci: " __VA_ARGS__)
-#define pci_spewf(...) zxlogf(SPEW, "pci: " __VA_ARGS__)
+#define pci_tracef(...) zxlogf(DEBUG, "pci: " __VA_ARGS__)
+#define pci_spewf(...) zxlogf(TRACE, "pci: " __VA_ARGS__)
 #else
 #define pci_infof(...) printf("pci: " __VA_ARGS__)
 #define pci_errorf(...) printf("pci: " __VA_ARGS__)

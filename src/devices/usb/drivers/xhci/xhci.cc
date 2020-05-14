@@ -71,7 +71,7 @@ static void xhci_read_extended_caps(xhci_t* xhci) {
           XHCI_GET_BITS32(cap_ptr, EXT_CAP_SP_REV_MAJOR_START, EXT_CAP_SP_REV_MAJOR_BITS);
       uint32_t rev_minor =
           XHCI_GET_BITS32(cap_ptr, EXT_CAP_SP_REV_MINOR_START, EXT_CAP_SP_REV_MINOR_BITS);
-      zxlogf(TRACE, "EXT_CAP_SUPPORTED_PROTOCOL %d.%d", rev_major, rev_minor);
+      zxlogf(DEBUG, "EXT_CAP_SUPPORTED_PROTOCOL %d.%d", rev_major, rev_minor);
 
       uint32_t psic = XHCI_GET_BITS32(&cap_ptr[2], EXT_CAP_SP_PSIC_START, EXT_CAP_SP_PSIC_BITS);
       // psic = count of PSI registers
@@ -80,7 +80,7 @@ static void xhci_read_extended_caps(xhci_t* xhci) {
       uint32_t compat_port_count = XHCI_GET_BITS32(&cap_ptr[2], EXT_CAP_SP_COMPAT_PORT_COUNT_START,
                                                    EXT_CAP_SP_COMPAT_PORT_COUNT_BITS);
 
-      zxlogf(TRACE, "compat_port_offset: %d compat_port_count: %d psic: %d", compat_port_offset,
+      zxlogf(DEBUG, "compat_port_offset: %d compat_port_count: %d psic: %d", compat_port_offset,
              compat_port_count, psic);
 
       uint8_t rh_index;
@@ -107,7 +107,7 @@ static void xhci_read_extended_caps(xhci_t* xhci) {
         uint32_t psie = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIE_START, EXT_CAP_SP_PSIE_BITS);
         uint32_t plt = XHCI_GET_BITS32(psi, EXT_CAP_SP_PLT_START, EXT_CAP_SP_PLT_BITS);
         uint32_t psim = XHCI_GET_BITS32(psi, EXT_CAP_SP_PSIM_START, EXT_CAP_SP_PSIM_BITS);
-        zxlogf(TRACE, "PSI[%d] psiv: %d psie: %d plt: %d psim: %d", i, psiv, psie, plt, psim);
+        zxlogf(DEBUG, "PSI[%d] psiv: %d psie: %d plt: %d psim: %d", i, psiv, psie, plt, psim);
       }
     } else if (cap_id == EXT_CAP_USB_LEGACY_SUPPORT) {
       xhci->usb_legacy_support_cap = (xhci_usb_legacy_support_cap_t*)cap_ptr;
@@ -511,7 +511,7 @@ zx_status_t xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
   xhci_transfer_ring_t* cr = &xhci->command_ring;
   size_t free_count = xhci_transfer_ring_free_trbs(cr);
 
-  zxlogf(TRACE, "xhci_post_command: free_count: %zu command: %u ptr: %lx control_bits %x",
+  zxlogf(DEBUG, "xhci_post_command: free_count: %zu command: %u ptr: %lx control_bits %x",
          free_count, command, ptr, control_bits);
 
   if (free_count == 0) {
@@ -539,7 +539,7 @@ zx_status_t xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
 static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_trb) {
   xhci_trb_t* command_trb = xhci_read_trb_ptr(&xhci->command_ring, event_trb);
   uint32_t cc = XHCI_GET_BITS32(&event_trb->status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
-  zxlogf(TRACE, "xhci_handle_command_complete_event slot_id: %d command: %d cc: %d",
+  zxlogf(DEBUG, "xhci_handle_command_complete_event slot_id: %d command: %d cc: %d",
          (event_trb->control >> TRB_SLOT_ID_START), trb_get_type(command_trb), cc);
 
   size_t index = command_trb - xhci->command_ring.start;
@@ -575,7 +575,7 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
   // try to detect race condition where mfindex has wrapped but we haven't processed wrap event yet
   if (mfindex < 500) {
     if (zx_clock_get_monotonic() - xhci->last_mfindex_wrap > ZX_MSEC(1000)) {
-      zxlogf(TRACE, "woah, mfindex wrapped before we got the event!");
+      zxlogf(DEBUG, "woah, mfindex wrapped before we got the event!");
       wrap_count++;
     }
   }

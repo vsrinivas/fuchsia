@@ -253,7 +253,7 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     if (trb_get_type(trb) == TRB_TRANSFER_NOOP) {
       // If it's the NO-OP TRB we queued when dealing with the halt condition,
       // there won't be a corresponding usb request.
-      zxlogf(TRACE, "xdc_handle_transfer_event: got a NO-OP TRB");
+      zxlogf(DEBUG, "xdc_handle_transfer_event: got a NO-OP TRB");
       xhci_set_dequeue_ptr(ring, xhci_get_next_trb(ring, trb));
       xdc_process_transactions_locked(xdc, ep);
       return;

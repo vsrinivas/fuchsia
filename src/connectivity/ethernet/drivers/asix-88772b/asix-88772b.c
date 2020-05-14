@@ -248,10 +248,10 @@ static void ax88772b_read_complete(void* ctx, usb_request_t* request) {
 
   mtx_lock(&eth->mutex);
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "ax88772b_read_complete usb_reset_endpoint");
+    zxlogf(DEBUG, "ax88772b_read_complete usb_reset_endpoint");
     usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "ax88772b_read_complete Slowing down the requests by %d usec"
            " and resetting the recv endpoint\n",
            ETHERNET_RECV_DELAY);
@@ -298,10 +298,10 @@ static void ax88772b_write_complete(void* ctx, usb_request_t* request) {
   }
 
   if (request->response.status == ZX_ERR_IO_REFUSED) {
-    zxlogf(TRACE, "ax88772b_write_complete usb_reset_endpoint");
+    zxlogf(DEBUG, "ax88772b_write_complete usb_reset_endpoint");
     usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
   } else if (request->response.status == ZX_ERR_IO_INVALID) {
-    zxlogf(TRACE,
+    zxlogf(DEBUG,
            "ax88772b_write_complete Slowing down the requests by %d usec"
            " and resetting the transmit endpoint\n",
            ETHERNET_TRANSMIT_DELAY);
@@ -329,7 +329,7 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
     usb_request_copy_from(request, status, sizeof(status), 0);
     if (memcmp(eth->status, status, sizeof(eth->status))) {
       const uint8_t* b = status;
-      zxlogf(TRACE, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X", b[0],
+      zxlogf(DEBUG, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X", b[0],
              b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
       memcpy(eth->status, status, sizeof(eth->status));
       uint8_t bb = eth->status[2];

@@ -318,7 +318,7 @@ zx_status_t Parser::WaitForParsingCompleted(zx_duration_t deadline) {
     //
     // The caller must still call CancelParsing(), as with any error returned
     // from this method.
-    LOG(TRACE, "observed & ZX_USER_SIGNAL_1");
+    LOG(DEBUG, "observed & ZX_USER_SIGNAL_1");
     return ZX_ERR_CANCELED;
   }
 
@@ -342,7 +342,7 @@ void Parser::CancelParsing() {
   }
   assert(!owner_->is_parser_gated());
 
-  LOG(TRACE, "Parser cancelled");
+  LOG(DEBUG, "Parser cancelled");
   parser_running_ = false;
 
   ParserFetchCmd::Get().FromValue(0).WriteTo(owner_->mmio()->parser);

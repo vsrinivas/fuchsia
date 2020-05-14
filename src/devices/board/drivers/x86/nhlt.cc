@@ -135,7 +135,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
     zxlogf(ERROR, "acpi: failed to publish NHLT metadata (res %d)", status);
   }
 
-  zxlogf(TRACE, "acpi: published NHLT metadata for device at %s", path);
+  zxlogf(DEBUG, "acpi: published NHLT metadata for device at %s", path);
 
   zx_vmar_unmap(zx_vmar_root_self(), vaddr, ZX_ROUNDUP(size, PAGE_SIZE));
 

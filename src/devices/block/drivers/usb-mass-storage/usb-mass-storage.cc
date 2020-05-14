@@ -817,7 +817,7 @@ int UsbMassStorageDevice::WorkerThread() {
       }
       current_txn = txn;
     }
-    zxlogf(TRACE, "UMS PROCESS (%p)", &txn->op);
+    zxlogf(DEBUG, "UMS PROCESS (%p)", &txn->op);
 
     UmsBlockDevice* dev = txn->dev;
     const auto& params = dev->GetBlockDeviceParameters();

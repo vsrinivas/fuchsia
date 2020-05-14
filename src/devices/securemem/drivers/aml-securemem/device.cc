@@ -116,7 +116,7 @@ zx_status_t AmlogicSecureMemDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn)
 // Iff so, we could avoid some complexity here by not loading aml-securemem in zedboot, and not
 // handling suspend(mexec) here, and not having UnregisterSecureMem().
 void AmlogicSecureMemDevice::DdkSuspend(ddk::SuspendTxn txn) {
-  LOG(TRACE, "aml-securemem: begin DdkSuspend() - Suspend Reason: %d", txn.suspend_reason());
+  LOG(DEBUG, "aml-securemem: begin DdkSuspend() - Suspend Reason: %d", txn.suspend_reason());
 
   if ((txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON) != DEVICE_SUSPEND_REASON_MEXEC) {
     // When a driver doesn't set a suspend function, the default impl returns
@@ -148,7 +148,7 @@ void AmlogicSecureMemDevice::DdkSuspend(ddk::SuspendTxn txn) {
     }
   }
 
-  LOG(TRACE, "aml-securemem: end DdkSuspend()");
+  LOG(DEBUG, "aml-securemem: end DdkSuspend()");
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
@@ -248,9 +248,9 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
             // sysmem_secure_mem_server_.reset() below causes the channel to close (which sysmem
             // would otherwise intentionally interpret as justifying a hard reboot).
             ZX_DEBUG_ASSERT(is_suspend_mexec_);
-            LOG(TRACE, "calling sysmem_proto_client_.UnregisterSecureMem()...");
+            LOG(DEBUG, "calling sysmem_proto_client_.UnregisterSecureMem()...");
             zx_status_t status = sysmem_proto_client_.UnregisterSecureMem();
-            LOG(TRACE, "sysmem_proto_client_.UnregisterSecureMem() returned");
+            LOG(DEBUG, "sysmem_proto_client_.UnregisterSecureMem() returned");
             if (status != ZX_OK) {
               // Ignore this failure here, but sysmem may panic if sysmem sees
               // sysmem_secure_mem_server_ channel close without seeing UnregisterSecureMem() first.
@@ -266,7 +266,7 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
           //
           // If DdkSuspend() is presently running, this lets it continue.
           sysmem_secure_mem_server_.reset();
-          LOG(TRACE, "Done serving fuchsia::sysmem::Tee");
+          LOG(DEBUG, "Done serving fuchsia::sysmem::Tee");
           // TODO(dustingreen): If DdkSuspend() were async, we could potentially finish the suspend
           // here instead of pumping ddk_loop_closure_queue_ until !sysmem_secure_mem_server_.
           // Similar for an async DdkUnbind() (assuming that ever needs to be handled in this
@@ -282,7 +282,7 @@ zx_status_t AmlogicSecureMemDevice::CreateAndServeSysmemTee() {
 
   // Tell sysmem about the fidl::sysmem::Tee channel that sysmem will use (async) to configure
   // secure memory ranges.  Sysmem won't fidl call back during this banjo call.
-  LOG(TRACE, "calling sysmem_proto_client_.RegisterSecureMem()...");
+  LOG(DEBUG, "calling sysmem_proto_client_.RegisterSecureMem()...");
   status = sysmem_proto_client_.RegisterSecureMem(std::move(sysmem_secure_mem_client));
   if (status != ZX_OK) {
     // In this case sysmem_secure_mem_server_ will get cleaned up when the channel close is noticed

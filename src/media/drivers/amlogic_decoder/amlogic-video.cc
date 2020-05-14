@@ -170,11 +170,11 @@ void AmlogicVideo::ClearDecoderInstance() {
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
   assert(current_instance_);
   assert(swapped_out_instances_.size() == 0);
-  LOG(TRACE, "current_instance_.reset()...");
+  LOG(DEBUG, "current_instance_.reset()...");
   current_instance_.reset();
-  LOG(TRACE, "PowerOff()...");
+  LOG(DEBUG, "PowerOff()...");
   core_->PowerOff();
-  LOG(TRACE, "PowerOff() done.");
+  LOG(DEBUG, "PowerOff() done.");
   core_ = nullptr;
   video_decoder_ = nullptr;
   stream_buffer_ = nullptr;

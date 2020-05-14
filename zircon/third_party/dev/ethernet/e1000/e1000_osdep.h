@@ -70,11 +70,11 @@
 
 /* Enable/disable debugging statements in shared code */
 #define DEBUGOUT(format, ...) \
-    zxlogf(TRACE, "%s %d: " format, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+    zxlogf(DEBUG, "%s %d: " format, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define DEBUGOUT1(...) DEBUGOUT(__VA_ARGS__)
 #define DEBUGOUT2(...) DEBUGOUT(__VA_ARGS__)
 #define DEBUGOUT3(...) DEBUGOUT(__VA_ARGS__)
-#define DEBUGFUNC(F) zxlogf(TRACE, F "")
+#define DEBUGFUNC(F) zxlogf(DEBUG, F "")
 
 #define STATIC static
 #define FALSE 0

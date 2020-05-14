@@ -81,7 +81,7 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
 
   uint32_t ocr;
   if ((st = sdmmc_.SdioSendOpCond(0, &ocr)) != ZX_OK) {
-    zxlogf(TRACE, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d", st);
+    zxlogf(DEBUG, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d", st);
     return st;
   }
   // Select voltage 3.3 V. Also request for 1.8V. Section 3.2 SDIO spec
@@ -275,7 +275,7 @@ zx_status_t SdioControllerDevice::SdioEnableFnLocked(uint8_t fn_idx) {
   }
 
   func.enabled = true;
-  zxlogf(TRACE, "sdio_enable_function: Func %d is enabled", fn_idx);
+  zxlogf(DEBUG, "sdio_enable_function: Func %d is enabled", fn_idx);
   return st;
 }
 
@@ -310,7 +310,7 @@ zx_status_t SdioControllerDevice::SdioDisableFn(uint8_t fn_idx) {
   }
 
   func->enabled = false;
-  zxlogf(TRACE, "sdio_disable_function: Function %d is disabled", fn_idx);
+  zxlogf(DEBUG, "sdio_disable_function: Function %d is disabled", fn_idx);
   return st;
 }
 
@@ -349,7 +349,7 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
   }
 
   func->intr_enabled = true;
-  zxlogf(TRACE, "sdio_enable_interrupt: Interrupt enabled for fn %d", fn_idx);
+  zxlogf(DEBUG, "sdio_enable_interrupt: Interrupt enabled for fn %d", fn_idx);
   return ZX_OK;
 }
 
@@ -390,7 +390,7 @@ zx_status_t SdioControllerDevice::SdioDisableFnIntr(uint8_t fn_idx) {
   }
 
   func->intr_enabled = false;
-  zxlogf(TRACE, "sdio_enable_interrupt: Interrupt disabled for fn %d", fn_idx);
+  zxlogf(DEBUG, "sdio_enable_interrupt: Interrupt disabled for fn %d", fn_idx);
   return ZX_OK;
 }
 
@@ -490,7 +490,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
     st = mapper.Map(*zx::unowned_vmo(txn->dma_vmo), txn->buf_offset, data_size,
                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (st != ZX_OK) {
-      zxlogf(TRACE, "sdio_rw_data: vmo map error %d", st);
+      zxlogf(DEBUG, "sdio_rw_data: vmo map error %d", st);
       return ZX_ERR_IO;
     }
     buf = reinterpret_cast<uint8_t*>(mapper.start());

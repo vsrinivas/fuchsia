@@ -243,7 +243,7 @@ zx_status_t UsbCdcAcmDevice::ConfigureDevice(uint32_t baud_rate, uint32_t flags)
                                    kUsbCdcAcmGetLineCoding, 0, 0, ZX_TIME_INFINITE, &coding,
                                    sizeof(coding), &coding_length);
     if (coding_length != sizeof(coding)) {
-      zxlogf(SPEW, "usb-cdc-acm: failed to fetch line coding");
+      zxlogf(TRACE, "usb-cdc-acm: failed to fetch line coding");
     }
     if (status != ZX_OK) {
       return status;

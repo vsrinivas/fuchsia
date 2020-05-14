@@ -214,7 +214,7 @@ zx_status_t Device::Bind() {
 zx_status_t Device::Init() {
   zx_status_t status = iface_->Validate();
   if (status != ZX_OK) {
-    zxlogf(TRACE, "tpm: did not pass driver validation");
+    zxlogf(DEBUG, "tpm: did not pass driver validation");
     return status;
   }
 

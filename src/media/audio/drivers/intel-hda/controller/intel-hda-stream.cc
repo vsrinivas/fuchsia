@@ -193,7 +193,7 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
   res = CreateAndActivateChannel(domain, std::move(phandler), std::move(chandler), &local_endpoint,
                                  client_endpoint_out);
   if (res != ZX_OK) {
-    LOG(TRACE,
+    LOG(DEBUG,
         "Failed to create and activate ring buffer channel during SetStreamFormat "
         "(res %d)\n",
         res);
@@ -207,7 +207,7 @@ zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::Execut
   hw_mb();
   fifo_depth_ = REG_RD(&regs_->fifod);
 
-  LOG(TRACE, "Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt_, fifo_depth_);
+  LOG(DEBUG, "Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt_, fifo_depth_);
 
   // Record our new client channel
   fbl::AutoLock channel_lock(&channel_lock_);
@@ -225,11 +225,11 @@ void IntelHDAStream::Deactivate() {
 #define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)                                       \
   case _ioctl:                                                                                     \
     if (req_size != sizeof(req._payload)) {                                                        \
-      LOG(TRACE, "Bad " #_ioctl " response length (%u != %zu)\n", req_size, sizeof(req._payload)); \
+      LOG(DEBUG, "Bad " #_ioctl " response length (%u != %zu)\n", req_size, sizeof(req._payload)); \
       return ZX_ERR_INVALID_ARGS;                                                                  \
     }                                                                                              \
     if (!(_allow_noack) && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                    \
-      LOG(TRACE, "NO_ACK flag not allowed for " #_ioctl "\n");                                     \
+      LOG(DEBUG, "NO_ACK flag not allowed for " #_ioctl "\n");                                     \
       return ZX_ERR_INVALID_ARGS;                                                                  \
     }                                                                                              \
     return _handler(req._payload);
@@ -259,18 +259,18 @@ zx_status_t IntelHDAStream::ProcessClientRequest(dispatcher::Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   res = channel->Read(&req, sizeof(req), &req_size);
   if (res != ZX_OK) {
-    LOG(TRACE, "Failed to read client request (res %d)\n", res);
+    LOG(DEBUG, "Failed to read client request (res %d)\n", res);
     return res;
   }
 
   // Sanity check the request, then dispatch it to the appropriate handler.
   if (req_size < sizeof(req.hdr)) {
-    LOG(TRACE, "Client request too small to contain header (%u < %zu)\n", req_size,
+    LOG(DEBUG, "Client request too small to contain header (%u < %zu)\n", req_size,
         sizeof(req.hdr));
     return ZX_ERR_INVALID_ARGS;
   }
 
-  LOG(SPEW, "Client Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
+  LOG(TRACE, "Client Request (cmd 0x%04x tid %u) len %u\n", req.hdr.cmd, req.hdr.transaction_id,
       req_size);
 
   if (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)
@@ -284,7 +284,7 @@ zx_status_t IntelHDAStream::ProcessClientRequest(dispatcher::Channel* channel) {
     HANDLE_REQ(AUDIO_RB_CMD_START, start, ProcessStartLocked, false);
     HANDLE_REQ(AUDIO_RB_CMD_STOP, stop, ProcessStopLocked, false);
     default:
-      LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+      LOG(DEBUG, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_INVALID_ARGS;
   }
 }
@@ -296,7 +296,7 @@ void IntelHDAStream::ProcessClientDeactivate(const dispatcher::Channel* channel)
   // request.
   fbl::AutoLock channel_lock(&channel_lock_);
   if (channel == channel_.get()) {
-    LOG(TRACE, "Client closed channel to stream\n");
+    LOG(DEBUG, "Client closed channel to stream\n");
     DeactivateLocked();
   }
 }
@@ -360,7 +360,7 @@ void IntelHDAStream::DeactivateLocked() {
   // Release any assigned ring buffer.
   ReleaseRingBufferLocked();
 
-  LOG(TRACE, "Stream deactivated\n");
+  LOG(DEBUG, "Stream deactivated\n");
 }
 
 zx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
@@ -373,7 +373,7 @@ zx_status_t IntelHDAStream::ProcessGetFifoDepthLocked(
   // We don't know what our FIFO depth is going to be if our format has not
   // been set yet.
   if (bytes_per_frame_ == 0) {
-    LOG(TRACE, "Bad state (not configured) while getting fifo depth.\n");
+    LOG(DEBUG, "Bad state (not configured) while getting fifo depth.\n");
     resp.result = ZX_ERR_BAD_STATE;
     resp.fifo_depth = 0;
   } else {
@@ -399,7 +399,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
   // We cannot change buffers while we are running, and we cannot create a
   // buffer if our format has not been set yet.
   if (running_ || (bytes_per_frame_ == 0)) {
-    LOG(TRACE, "Bad state %s%s while setting buffer.", running_ ? "(running)" : "",
+    LOG(DEBUG, "Bad state %s%s while setting buffer.", running_ ? "(running)" : "",
         bytes_per_frame_ == 0 ? "(not configured)" : "");
     resp.result = ZX_ERR_BAD_STATE;
     goto finished;
@@ -413,7 +413,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
   tmp = static_cast<uint64_t>(req.min_ring_buffer_frames) * bytes_per_frame_;
   if ((req.min_ring_buffer_frames == 0) || (tmp > std::numeric_limits<uint32_t>::max()) ||
       (req.notifications_per_ring > MAX_BDL_LENGTH)) {
-    LOG(TRACE,
+    LOG(DEBUG,
         "Invalid client args while setting buffer "
         "(min frames %u, notif/ring %u)\n",
         req.min_ring_buffer_frames, req.notifications_per_ring);
@@ -428,7 +428,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
   // Attempt to allocate a VMO for the ring buffer.
   resp.result = zx::vmo::create(rb_size, 0, &ring_buffer_vmo);
   if (resp.result != ZX_OK) {
-    LOG(TRACE, "Failed to create %u byte VMO for ring buffer (res %d)\n", rb_size, resp.result);
+    LOG(DEBUG, "Failed to create %u byte VMO for ring buffer (res %d)\n", rb_size, resp.result);
     goto finished;
   }
 
@@ -439,7 +439,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
 
   resp.result = pinned_ring_buffer_.Pin(ring_buffer_vmo, pci_bti_->initiator(), hda_rights);
   if (resp.result != ZX_OK) {
-    LOG(TRACE, "Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)\n", rb_size,
+    LOG(DEBUG, "Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)\n", rb_size,
         resp.result);
     goto finished;
   }
@@ -467,7 +467,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
                                 &client_rb_handle);
 
   if (resp.result != ZX_OK) {
-    LOG(TRACE, "Failed duplicate ring buffer VMO handle! (res %d)\n", resp.result);
+    LOG(DEBUG, "Failed duplicate ring buffer VMO handle! (res %d)\n", resp.result);
     goto finished;
   }
 
@@ -494,7 +494,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     const auto& r = pinned_ring_buffer_.region(region_num);
 
     if (r.size > std::numeric_limits<uint32_t>::max()) {
-      LOG(TRACE, "VMO region too large! (%" PRIu64 " bytes)", r.size);
+      LOG(DEBUG, "VMO region too large! (%" PRIu64 " bytes)", r.size);
       resp.result = ZX_ERR_INTERNAL;
       goto finished;
     }
@@ -545,18 +545,18 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     bdl()[entry - 1].flags = IntelHDABDLEntry::IOC_FLAG;
   }
 
-  if (zxlog_level_enabled(TRACE)) {
-    LOG(TRACE, "DMA Scatter/Gather used %u entries for %u/%u bytes of ring buffer\n", entry,
+  if (zxlog_level_enabled(DEBUG)) {
+    LOG(DEBUG, "DMA Scatter/Gather used %u entries for %u/%u bytes of ring buffer\n", entry,
         amt_done, rb_size);
     for (uint32_t i = 0; i < entry; ++i) {
-      LOG(TRACE, "[%2u] : %016" PRIx64 " - 0x%04x %sIRQ\n", i, bdl()[i].address, bdl()[i].length,
+      LOG(DEBUG, "[%2u] : %016" PRIx64 " - 0x%04x %sIRQ\n", i, bdl()[i].address, bdl()[i].length,
           bdl()[i].flags ? "" : "NO ");
     }
   }
 
   if (amt_done < rb_size) {
     ZX_DEBUG_ASSERT(entry == MAX_BDL_LENGTH);
-    LOG(TRACE, "Ran out of BDL entires after %u/%u bytes of ring buffer\n", amt_done, rb_size);
+    LOG(DEBUG, "Ran out of BDL entires after %u/%u bytes of ring buffer\n", amt_done, rb_size);
     resp.result = ZX_ERR_INTERNAL;
     goto finished;
   }
@@ -593,7 +593,7 @@ zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartRe
   // We cannot start unless we have configured the ring buffer and are not already started.
   bool ring_buffer_valid = pinned_ring_buffer_.region_count() >= 1;
   if (!ring_buffer_valid || running_) {
-    LOG(TRACE, "Bad state during start request %s%s.\n",
+    LOG(DEBUG, "Bad state during start request %s%s.\n",
         !ring_buffer_valid ? "(ring buffer not configured)" : "",
         running_ ? "(already running)" : "");
     resp.result = ZX_ERR_BAD_STATE;

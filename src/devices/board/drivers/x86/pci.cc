@@ -135,7 +135,7 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
     alloc = &RootHost.Io();
   }
 
-  zxlogf(TRACE, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
+  zxlogf(DEBUG, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
          is_mmio ? "MMIO" : "PIO", base, len);
   if (add_range) {
     status = alloc->AddRegion({.base = base, .size = len}, true);
@@ -221,7 +221,7 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   ACPI_TABLE_HEADER* raw_table = nullptr;
   ACPI_STATUS status = AcpiGetTable(const_cast<char*>(ACPI_SIG_MCFG), 1, &raw_table);
   if (status != AE_OK) {
-    zxlogf(TRACE, "%s no MCFG table found.", kLogTag);
+    zxlogf(DEBUG, "%s no MCFG table found.", kLogTag);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -244,7 +244,7 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   // later.
   for (unsigned i = 0; i < table_bytes / sizeof(acpi_mcfg_allocation); i++) {
     auto entry = &(reinterpret_cast<acpi_mcfg_allocation*>(table_start))[i];
-    zxlogf(TRACE, "%s MCFG allocation %u (Addr = %#llx, Segment = %u, Start = %u, End = %u)",
+    zxlogf(DEBUG, "%s MCFG allocation %u (Addr = %#llx, Segment = %u, Start = %u, End = %u)",
            kLogTag, i, entry->Address, entry->PciSegment, entry->StartBusNumber,
            entry->EndBusNumber);
     mcfg_table->push_back(
@@ -295,7 +295,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
 
   zx_status_t status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(TRACE, "%s Unable to read _BBN for '%s' (%d), assuming base bus of 0", kLogTag,
+    zxlogf(DEBUG, "%s Unable to read _BBN for '%s' (%d), assuming base bus of 0", kLogTag,
            dev_ctx->name, status);
 
     // Until we find an ecam we assume this potential legacy pci bus spans
@@ -307,7 +307,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   status = acpi_seg_call(object, &dev_ctx->info.segment_group);
   if (status != ZX_OK) {
     dev_ctx->info.segment_group = 0;
-    zxlogf(TRACE, "%s Unable to read _SEG for '%s' (%d), assuming segment group 0.", kLogTag,
+    zxlogf(DEBUG, "%s Unable to read _SEG for '%s' (%d), assuming segment group 0.", kLogTag,
            dev_ctx->name, status);
   }
 
@@ -348,7 +348,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     }
   }
 
-  if (zxlog_level_enabled(TRACE)) {
+  if (zxlog_level_enabled(DEBUG)) {
     printf("%s %s { acpi_obj(%p), bus range: %u:%u, segment: %u }\n", kLogTag, dev_ctx->name,
            dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num, pinfo.segment_group);
     if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
