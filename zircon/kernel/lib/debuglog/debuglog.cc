@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <dev/udisplay.h>
+#include <kernel/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
@@ -39,10 +40,10 @@ static uint8_t DLOG_DATA[DLOG_SIZE];
 struct dlog {
   constexpr dlog(uint8_t* data_ptr) : data(data_ptr) {}
 
-  spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
+  SpinLock lock;
 
-  size_t head = 0;
-  size_t tail = 0;
+  size_t head TA_GUARDED(lock) = 0;
+  size_t tail TA_GUARDED(lock) = 0;
 
   uint8_t* const data;
 
@@ -145,52 +146,52 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     hdr.tid = 0;
   }
 
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&log->lock, state);
+  bool holding_thread_lock;
+  {
+    AutoSpinLock lock{&log->lock};
 
-  // Discard records at tail until there is enough
-  // space for the new record.
-  while ((log->head - log->tail) > (DLOG_SIZE - wiresize)) {
-    uint32_t header = *reinterpret_cast<uint32_t*>(log->data + (log->tail & DLOG_MASK));
-    log->tail += DLOG_HDR_GET_FIFOLEN(header);
+    // Discard records at tail until there is enough
+    // space for the new record.
+    while ((log->head - log->tail) > (DLOG_SIZE - wiresize)) {
+      uint32_t header = *reinterpret_cast<uint32_t*>(log->data + (log->tail & DLOG_MASK));
+      log->tail += DLOG_HDR_GET_FIFOLEN(header);
+    }
+
+    size_t offset = (log->head & DLOG_MASK);
+
+    size_t fifospace = DLOG_SIZE - offset;
+
+    if (fifospace >= wiresize) {
+      // everything fits in one write, simple case!
+      memcpy(log->data + offset, &hdr, sizeof(hdr));
+      memcpy(log->data + offset + sizeof(hdr), ptr, len);
+    } else if (fifospace < sizeof(hdr)) {
+      // the wrap happens in the header
+      memcpy(log->data + offset, &hdr, fifospace);
+      memcpy(log->data, reinterpret_cast<uint8_t*>(&hdr) + fifospace, sizeof(hdr) - fifospace);
+      memcpy(log->data + (sizeof(hdr) - fifospace), ptr, len);
+    } else {
+      // the wrap happens in the data
+      memcpy(log->data + offset, &hdr, sizeof(hdr));
+      offset += sizeof(hdr);
+      fifospace -= sizeof(hdr);
+      memcpy(log->data + offset, ptr, fifospace);
+      memcpy(log->data, ptr + fifospace, len - fifospace);
+    }
+    log->head += wiresize;
+
+    // Need to check this before re-releasing the log lock, since we may
+    // re-enable interrupts while doing that.  If interrupts are enabled when we
+    // make this check, we could see the following sequence of events between
+    // two CPUs and incorrectly conclude we are holding the thread lock:
+    // C2: Acquire thread_lock
+    // C1: Running this thread, evaluate spin_lock_holder_cpu(&thread_lock) -> C2
+    // C1: Context switch away
+    // C2: Release thread_lock
+    // C2: Context switch to this thread
+    // C2: Running this thread, evaluate arch_curr_cpu_num() -> C2
+    holding_thread_lock = spin_lock_holder_cpu(&thread_lock) == arch_curr_cpu_num();
   }
-
-  size_t offset = (log->head & DLOG_MASK);
-
-  size_t fifospace = DLOG_SIZE - offset;
-
-  if (fifospace >= wiresize) {
-    // everything fits in one write, simple case!
-    memcpy(log->data + offset, &hdr, sizeof(hdr));
-    memcpy(log->data + offset + sizeof(hdr), ptr, len);
-  } else if (fifospace < sizeof(hdr)) {
-    // the wrap happens in the header
-    memcpy(log->data + offset, &hdr, fifospace);
-    memcpy(log->data, reinterpret_cast<uint8_t*>(&hdr) + fifospace, sizeof(hdr) - fifospace);
-    memcpy(log->data + (sizeof(hdr) - fifospace), ptr, len);
-  } else {
-    // the wrap happens in the data
-    memcpy(log->data + offset, &hdr, sizeof(hdr));
-    offset += sizeof(hdr);
-    fifospace -= sizeof(hdr);
-    memcpy(log->data + offset, ptr, fifospace);
-    memcpy(log->data, ptr + fifospace, len - fifospace);
-  }
-  log->head += wiresize;
-
-  // Need to check this before re-releasing the log lock, since we may
-  // re-enable interrupts while doing that.  If interrupts are enabled when we
-  // make this check, we could see the following sequence of events between
-  // two CPUs and incorrectly conclude we are holding the thread lock:
-  // C2: Acquire thread_lock
-  // C1: Running this thread, evaluate spin_lock_holder_cpu(&thread_lock) -> C2
-  // C1: Context switch away
-  // C2: Release thread_lock
-  // C2: Context switch to this thread
-  // C2: Running this thread, evaluate arch_curr_cpu_num() -> C2
-  bool holding_thread_lock = spin_lock_holder_cpu(&thread_lock) == arch_curr_cpu_num();
-
-  spin_unlock_irqrestore(&log->lock, state);
 
   [log, holding_thread_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
     // if we happen to be called from within the global thread lock, use a
@@ -218,42 +219,41 @@ zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* data_ptr, size_t
   dlog_t* log = rdr->log;
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&log->lock, state);
+  {
+    AutoSpinLock lock{&log->lock};
 
-  size_t rtail = rdr->tail;
+    size_t rtail = rdr->tail;
 
-  // If the read-tail is not within the range of log-tail..log-head
-  // this reader has been lapped by a writer and we reset our read-tail
-  // to the current log-tail.
-  //
-  if ((log->head - log->tail) < (log->head - rtail)) {
-    rtail = log->tail;
-  }
-
-  if (rtail != log->head) {
-    size_t offset = (rtail & DLOG_MASK);
-    uint32_t header = *reinterpret_cast<uint32_t*>(log->data + offset);
-
-    size_t actual = DLOG_HDR_GET_READLEN(header);
-    size_t fifospace = DLOG_SIZE - offset;
-
-    if (fifospace >= actual) {
-      memcpy(ptr, log->data + offset, actual);
-    } else {
-      memcpy(ptr, log->data + offset, fifospace);
-      memcpy(ptr + fifospace, log->data, actual - fifospace);
+    // If the read-tail is not within the range of log-tail..log-head
+    // this reader has been lapped by a writer and we reset our read-tail
+    // to the current log-tail.
+    //
+    if ((log->head - log->tail) < (log->head - rtail)) {
+      rtail = log->tail;
     }
 
-    *_actual = actual;
-    status = ZX_OK;
+    if (rtail != log->head) {
+      size_t offset = (rtail & DLOG_MASK);
+      uint32_t header = *reinterpret_cast<uint32_t*>(log->data + offset);
 
-    rtail += DLOG_HDR_GET_FIFOLEN(header);
+      size_t actual = DLOG_HDR_GET_READLEN(header);
+      size_t fifospace = DLOG_SIZE - offset;
+
+      if (fifospace >= actual) {
+        memcpy(ptr, log->data + offset, actual);
+      } else {
+        memcpy(ptr, log->data + offset, fifospace);
+        memcpy(ptr + fifospace, log->data, actual - fifospace);
+      }
+
+      *_actual = actual;
+      status = ZX_OK;
+
+      rtail += DLOG_HDR_GET_FIFOLEN(header);
+    }
+
+    rdr->tail = rtail;
   }
-
-  rdr->tail = rtail;
-
-  spin_unlock_irqrestore(&log->lock, state);
 
   return status;
 }
@@ -270,11 +270,11 @@ void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
 
   bool do_notify = false;
 
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&log->lock, state);
-  rdr->tail = log->tail;
-  do_notify = (log->tail != log->head);
-  spin_unlock_irqrestore(&log->lock, state);
+  {
+    AutoSpinLock lock{&log->lock};
+    rdr->tail = log->tail;
+    do_notify = (log->tail != log->head);
+  }
 
   // simulate notify callback for events that arrived
   // before we were initialized
