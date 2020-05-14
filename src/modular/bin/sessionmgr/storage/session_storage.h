@@ -8,8 +8,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 
-#include <optional>
 #include <map>
+#include <optional>
 
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/lib/async/cpp/future.h"
@@ -55,8 +55,8 @@ class SessionStorage {
   // is unclear if internal story IDs should be an implementation detail of
   // SessionStorage, or if they should be exposed to the story runtime
   // architecture.
-  std::string CreateStory(
-      fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
+  std::string CreateStory(fidl::StringPtr story_name,
+                          std::vector<fuchsia::modular::Annotation> annotations);
 
   // Same as above, but defaults |story_name| to nullptr.
   std::string CreateStory(std::vector<fuchsia::modular::Annotation> annotations);
@@ -80,8 +80,8 @@ class SessionStorage {
 
   // DEPRECATED: Use MergeStoryAnnotations.
   // Sets the annotations for |story_id| to |annotations|. This overwrites all existing annotations.
-  FuturePtr<> UpdateStoryAnnotations(fidl::StringPtr story_name,
-                                     std::vector<fuchsia::modular::Annotation> annotations);
+  void UpdateStoryAnnotations(fidl::StringPtr story_name,
+                              std::vector<fuchsia::modular::Annotation> annotations);
 
   // Adds the given annotations for |story_id| to |annotations|. Existing annotations are not
   // removed, but existing annotations with the same key as a given annotation will be updated
@@ -93,7 +93,7 @@ class SessionStorage {
   //    annotations
   //  * AnnotationError::NOT_FOUND - the story was deleted, or could not be found or updated for
   //    some other reason
-  FuturePtr<std::optional<fuchsia::modular::AnnotationError>> MergeStoryAnnotations(
+  std::optional<fuchsia::modular::AnnotationError> MergeStoryAnnotations(
       fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations);
 
   // Gets the StoryStorage for the story with the given |story_id| to perform

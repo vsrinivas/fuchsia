@@ -121,12 +121,10 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
       return;
     }
 
-    session_storage_->UpdateStoryAnnotations(story_name_, std::move(new_annotations))
-        ->WeakThen(GetWeakPtr(), [this]() {
-          fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
-          result.set_response({});
-          Done(std::move(result));
-        });
+    session_storage_->UpdateStoryAnnotations(story_name_, std::move(new_annotations));
+    fuchsia::modular::StoryPuppetMaster_Annotate_Result result{};
+    result.set_response({});
+    Done(std::move(result));
   }
 
   SessionStorage* const session_storage_;

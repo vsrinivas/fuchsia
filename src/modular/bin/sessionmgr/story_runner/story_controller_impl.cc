@@ -1205,17 +1205,15 @@ void StoryControllerImpl::Annotate(std::vector<fuchsia::modular::Annotation> ann
         return;
       }
     }
-    weak_this->session_storage_->MergeStoryAnnotations(weak_this->story_id_, std::move(annotations))
-        ->WeakThen(weak_this, [callback = std::move(callback)](
-                                  std::optional<fuchsia::modular::AnnotationError> error) {
-          fuchsia::modular::StoryController_Annotate_Result result{};
-          if (error.has_value()) {
-            result.set_err(error.value());
-          } else {
-            result.set_response({});
-          }
-          callback(std::move(result));
-        });
+    auto error = weak_this->session_storage_->MergeStoryAnnotations(weak_this->story_id_,
+                                                                    std::move(annotations));
+    fuchsia::modular::StoryController_Annotate_Result result{};
+    if (error.has_value()) {
+      result.set_err(error.value());
+    } else {
+      result.set_response({});
+    }
+    callback(std::move(result));
   }));
 }
 

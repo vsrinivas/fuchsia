@@ -19,8 +19,8 @@ namespace modular {
 
 SessionStorage::SessionStorage() {}
 
-std::string SessionStorage::CreateStory(
-    fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
+std::string SessionStorage::CreateStory(fidl::StringPtr story_name,
+                                        std::vector<fuchsia::modular::Annotation> annotations) {
   if (!story_name || story_name->empty()) {
     story_name = uuid::Generate();
   }
@@ -48,8 +48,7 @@ std::string SessionStorage::CreateStory(
   return story_name.value();
 }
 
-std::string SessionStorage::CreateStory(
-    std::vector<fuchsia::modular::Annotation> annotations) {
+std::string SessionStorage::CreateStory(std::vector<fuchsia::modular::Annotation> annotations) {
   return CreateStory(/*story_name=*/nullptr, std::move(annotations));
 }
 
@@ -114,8 +113,8 @@ FuturePtr<std::vector<fuchsia::modular::internal::StoryData>> SessionStorage::Ge
   return ret;
 }
 
-FuturePtr<> SessionStorage::UpdateStoryAnnotations(
-    fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
+void SessionStorage::UpdateStoryAnnotations(fidl::StringPtr story_name,
+                                            std::vector<fuchsia::modular::Annotation> annotations) {
   auto it = story_data_backing_store_.find(story_name);
   if (it != story_data_backing_store_.end()) {
     fuchsia::modular::internal::StoryData& val = it->second;
@@ -127,12 +126,9 @@ FuturePtr<> SessionStorage::UpdateStoryAnnotations(
       on_story_updated_(std::move(story_name), std::move(val_copy));
     }
   }
-
-  auto ret = Future<>::CreateCompleted("SessionStorage.UpdateStoryAnnotations.ret");
-  return ret;
 }
 
-FuturePtr<std::optional<fuchsia::modular::AnnotationError>> SessionStorage::MergeStoryAnnotations(
+std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnotations(
     fidl::StringPtr story_name, std::vector<fuchsia::modular::Annotation> annotations) {
   // On success, this optional AnnotationError response will have no value (!has_value()).
   // Otherwise, the error will be set explicitly, or it is assumed the story is no longer viable
@@ -165,9 +161,7 @@ FuturePtr<std::optional<fuchsia::modular::AnnotationError>> SessionStorage::Merg
     // No need to write story data back to map because we modified it in place.
   }
 
-  auto ret = Future<std::optional<fuchsia::modular::AnnotationError>>::CreateCompleted(
-      "SessionStorage.MergeStoryAnnotations.ret", std::move(error));
-  return ret;
+  return error;
 }
 
 FuturePtr<std::shared_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
