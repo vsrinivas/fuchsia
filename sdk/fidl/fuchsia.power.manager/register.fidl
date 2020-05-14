@@ -1,0 +1,48 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.power.manager;
+
+using fuchsia.device.manager;
+using fuchsia.io;
+
+/// Error codes for the DeviceManagerRegistration protocol.
+enum RegistrationError {
+    /// The component encountered an unspecified error while performing the operation.
+    INTERNAL = 0;
+
+    /// At least one handle provided was invalid.
+    INVALID_HANDLE = 1;
+};
+
+/// Protocol for the Driver Manager to register the required protocol instances with the
+/// Power Manager.
+[Discoverable]
+protocol DeviceManagerRegistration {
+    /// Registers a [fuchsia.device.manager/SystemStateTransition] and [fuchsia.io.Directory] with
+    /// the Power Manager. The Power Manager expects to receive this call exactly once and it will
+    /// be inoperable until the call is made successfully. If the call succeeds, the
+    /// DeviceManagerRegistration channel will no longer serve any purpose and may be closed. If
+    /// the call fails, the Power Manager will leave the channel open and await a retry.
+    ///
+    /// + request `system_state_transition` a [fuchsia.device.manager/SystemStateTransition] that
+    ///     allows the Power Manager to set the Driver Manager termination behavior. This is an
+    ///     essential piece involved in coordinating orderly system shutdown.
+    /// + request `dir` a [fuchsia.io.Directory] that represents the devfs (/dev) served by the
+    ///     Driver Manager.
+    /// * error a [fuchsia.power.manager.Error] value indicating the reason (if any) that Register
+    ///     failed.
+    //
+    // TODO(pshickel): Replace the following comment with a link to a markdown file explaining the
+    // orderly shutdown process, especially the dependencies between the Driver and Power Managers.
+    // These protocol instances are passed from Driver Manager to Power Manager in this way (as
+    // opposed to the Power Manager discovering the protocols in the usual way) in order to
+    // satisfy the requirement that Driver Manager has a dependency on Power Manager (and not the
+    // reverse) according to the Component Manager capability routes. This requirement ensures
+    // that during shutdown, the Driver Manager will be stopped before the Power Manager, allowing
+    // the Power Manager to observe and react to any potential failures during the shutdown
+    // process.
+    Register(fuchsia.device.manager.SystemStateTransition system_state_transition,
+             fuchsia.io.Directory dir) -> () error RegistrationError;
+};
