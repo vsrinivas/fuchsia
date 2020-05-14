@@ -65,8 +65,11 @@ extern const int INSTR_PROF_PROFILE_RUNTIME_VAR = 0;
 // bounds of the compiler-emitted data at link time.  The all-zero
 // dummy records don't matter to `llvm-profdata`.
 
-[[gnu::section(".lprfd$A"), gnu::used]] const __llvm_profile_data DataStart{};
-[[gnu::section(".lprfd$Z"), gnu::used]] const __llvm_profile_data DataEnd{};
+// This data is morally `const`, i.e. it's a RELRO case in the ELF world.
+// But the compiler complains about a mismatch with the #pragma section
+// above if these are declared `const` in the PE-COFF case.
+[[gnu::section(".lprfd$A"), gnu::used]] __llvm_profile_data DataStart{};
+[[gnu::section(".lprfd$Z"), gnu::used]] __llvm_profile_data DataEnd{};
 
 [[gnu::section(".lprfn$A"), gnu::used]] const char NamesStart{};
 [[gnu::section(".lprfn$Z"), gnu::used]] const char NamesEnd{};
