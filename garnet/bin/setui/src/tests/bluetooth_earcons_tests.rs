@@ -91,7 +91,7 @@ async fn test_sounds() {
     fake_services.sound_player.lock().await.add_sound_played_listener(sound_played_sender).await;
 
     // Add first connection.
-    fake_services.bluetooth.lock().await.connect(PEER_ID_1).await.ok();
+    fake_services.bluetooth.lock().await.connect(PEER_ID_1, false).await.ok();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID));
     assert_eq!(
@@ -100,7 +100,7 @@ async fn test_sounds() {
     );
 
     // Add second connection.
-    fake_services.bluetooth.lock().await.connect(PEER_ID_2).await.unwrap();
+    fake_services.bluetooth.lock().await.connect(PEER_ID_2, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
@@ -108,7 +108,7 @@ async fn test_sounds() {
     );
 
     // Disconnect the first connection.
-    fake_services.bluetooth.lock().await.disconnect(PEER_ID_1).await.unwrap();
+    fake_services.bluetooth.lock().await.disconnect(PEER_ID_1, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID));
     assert_eq!(
@@ -117,11 +117,59 @@ async fn test_sounds() {
     );
 
     // Disconnect the second connection.
-    fake_services.bluetooth.lock().await.disconnect(PEER_ID_2).await.unwrap();
+    fake_services.bluetooth.lock().await.disconnect(PEER_ID_2, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
         Some(2)
+    );
+}
+
+// Test that the bluetooth earcons aren't played for oobe connections.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_oobe_connection() {
+    const PEER_ID_1: PeerId = PeerId { value: 1 };
+    const PEER_ID_2: PeerId = PeerId { value: 2 };
+
+    let (service_registry, fake_services) = create_services().await;
+    let _env = create_environment(service_registry).await;
+
+    // Create channel to receive notifications for when sounds are played. Used to know when to
+    // check the sound player fake that the sound has been played.
+    let (sound_played_sender, mut sound_played_receiver) =
+        futures::channel::mpsc::unbounded::<Result<(), Error>>();
+    fake_services.sound_player.lock().await.add_sound_played_listener(sound_played_sender).await;
+
+    // Add oobe bluetooth connection.
+    fake_services.bluetooth.lock().await.connect(PEER_ID_1, true).await.ok();
+    assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID));
+    assert_eq!(
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
+        None
+    );
+
+    // Disconnect the oobe blueooth connection.
+    fake_services.bluetooth.lock().await.disconnect(PEER_ID_1, true).await.unwrap();
+    assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID));
+    assert_eq!(
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
+        None
+    );
+
+    // Add regular bluetooth connection.
+    fake_services.bluetooth.lock().await.connect(PEER_ID_2, false).await.unwrap();
+    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    assert_eq!(
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
+        Some(1)
+    );
+
+    // Disconnect the regular bluetooth connection.
+    fake_services.bluetooth.lock().await.disconnect(PEER_ID_2, false).await.unwrap();
+    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    assert_eq!(
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
+        Some(1)
     );
 }
 

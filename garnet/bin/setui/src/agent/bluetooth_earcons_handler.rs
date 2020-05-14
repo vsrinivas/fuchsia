@@ -7,9 +7,8 @@ use crate::agent::earcons_sound_ids::{
     BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
 };
 use crate::agent::earcons_utils::play_sound;
-use crate::fidl_clone::FIDLClone;
 use anyhow::Context;
-use fidl_fuchsia_bluetooth_sys::{AccessMarker, Peer};
+use fidl_fuchsia_bluetooth_sys::{AccessMarker, Peer, TechnologyType};
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -105,27 +104,33 @@ pub fn watch_bluetooth_connections(
         };
         while connection_active.load(Ordering::SeqCst) {
             match access_proxy.watch_peers().await {
-                Ok((updated, _removed)) => {
+                Ok((updated, removed)) => {
                     let mut bluetooth_earcons_handler = handler.lock().await;
                     if updated.len() > 0 {
                         // TODO(fxb/50246): Add logging for updating bluetooth connections.
                         // Figure out which peers are connected.
-                        let mut new_connected_peers: Vec<Peer> = Vec::new();
-                        for peer in updated.iter() {
-                            // Check that the connected property exists and is true.
-                            if peer.connected.is_some() && peer.connected.unwrap() {
-                                new_connected_peers.push((*peer).clone());
-                            }
-                        }
+                        let new_connected_peers: Vec<Peer> = updated
+                            .into_iter()
+                            .filter(|peer| peer.connected.unwrap_or(false))
+                            .collect();
+
+                        let bt_type_filter = |peer: &&Peer| {
+                            peer.technology == Some(TechnologyType::Classic)
+                                || peer.technology == Some(TechnologyType::DualMode)
+                        };
 
                         // Create sets of the old and new connected peers.
                         let new_connected_peer_ids: HashSet<u64> = HashSet::from_iter(
-                            new_connected_peers.iter().map(|x| x.id.unwrap().value),
+                            new_connected_peers
+                                .iter()
+                                .filter(bt_type_filter)
+                                .map(|x| x.id.unwrap().value),
                         );
                         let old_connected_peer_ids: HashSet<u64> = HashSet::from_iter(
                             bluetooth_earcons_handler
                                 .connected_peers
                                 .iter()
+                                .filter(bt_type_filter)
                                 .map(|x| x.id.unwrap().value),
                         );
 
@@ -153,7 +158,7 @@ pub fn watch_bluetooth_connections(
                                 .await;
                             });
                         }
-                        if removed_peer_ids.len() > 0 {
+                        if removed_peer_ids.len() > 0 || removed.len() > 0 {
                             // TODO(fxb/50246): Add logging for disconnecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_earcons_handler.common_earcons_params.clone();

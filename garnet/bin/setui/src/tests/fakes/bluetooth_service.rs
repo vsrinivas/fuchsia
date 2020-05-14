@@ -63,9 +63,12 @@ impl BluetoothService {
     }
 
     /// Simulate connecting a single peer.
-    pub async fn connect(&self, peer_id: PeerId) -> Result<(), Error> {
+    pub async fn connect(&self, peer_id: PeerId, is_oobe_connection: bool) -> Result<(), Error> {
         // Create peer to send as a newly connected peer.
         let mut peer = PEER_TEMPLATE.clone();
+        if is_oobe_connection {
+            peer.technology = Some(TechnologyType::LowEnergy);
+        }
         peer.id = Some(peer_id);
         let mut added_peers = Vec::new();
         added_peers.push(peer);
@@ -78,8 +81,11 @@ impl BluetoothService {
     }
 
     /// Simulate disconnecting a single peer.
-    pub async fn disconnect(&self, peer_id: PeerId) -> Result<(), Error> {
+    pub async fn disconnect(&self, peer_id: PeerId, is_oobe_connection: bool) -> Result<(), Error> {
         let mut peer = PEER_TEMPLATE.clone();
+        if is_oobe_connection {
+            peer.technology = Some(TechnologyType::LowEnergy);
+        }
         peer.id = Some(peer_id);
         peer.connected = Some(false);
         let mut removed_peers = Vec::new();
