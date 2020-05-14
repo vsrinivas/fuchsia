@@ -284,18 +284,17 @@ int Session::Thread() {
       if (fifo_readable && !paused_.load()) {
         auto fetch_result = FetchTx();
         switch (fetch_result) {
-          case FetchResult::OK:
-          case FetchResult::SHOULD_WAIT:
+          case ZX_OK:
+          case ZX_ERR_SHOULD_WAIT:
             watch_tx = true;
             break;
-          case FetchResult::OVERRUN:
+          case ZX_ERR_IO_OVERRUN:
             // Don't set watch_tx to true, we need to wait for a new TxResume signal before waiting
             // on FIFO again, the device's Tx buffers are full.
             break;
-          case FetchResult::FAILED:
-            LOGF_ERROR("network-device(%s): Fatal error fetching tx descriptors", name());
+          default:
             // Stop operating the tx FIFO and kill the session.
-            return ZX_ERR_INTERNAL;
+            return fetch_result;
         }
       }
 
@@ -313,19 +312,22 @@ int Session::Thread() {
 
   // Only kill the session if it wasn't a clean break from the loop.
   if (result != ZX_OK) {
-    LOGF_ERROR("network-device(%s): TxThread finished with error %s", name(),
-               zx_status_get_string(result));
+    // Peer closed is an expected error, don't log it.
+    if (result != ZX_ERR_PEER_CLOSED) {
+      LOGF_ERROR("network-device(%s): TxThread finished with error %s", name(),
+                 zx_status_get_string(result));
+    }
     Kill();
   }
 
   return 0;
 }
 
-Session::FetchResult Session::FetchTx() {
+zx_status_t Session::FetchTx() {
   TxQueue::SessionTransaction transaction(&parent_->tx_queue(), this);
 
   if (transaction.overrun()) {
-    return FetchResult::OVERRUN;
+    return ZX_ERR_IO_OVERRUN;
   }
   ZX_ASSERT(transaction.available() <= kMaxFifoDepth);
   uint16_t fetch_buffer[kMaxFifoDepth];
@@ -333,13 +335,11 @@ Session::FetchResult Session::FetchTx() {
   zx_status_t status =
       fifo_tx_.read(sizeof(uint16_t), fetch_buffer, transaction.available(), &read);
   if (status != ZX_OK) {
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      return FetchResult::SHOULD_WAIT;
-    } else {
-      LOGF_ERROR("network-device(%s): tx fifo read failed %s", name(),
+    if (status != ZX_ERR_SHOULD_WAIT) {
+      LOGF_TRACE("network-device(%s): tx fifo read failed %s", name(),
                  zx_status_get_string(status));
-      return FetchResult::FAILED;
     }
+    return status;
   }
 
   uint16_t* desc_idx = fetch_buffer;
@@ -352,14 +352,14 @@ Session::FetchResult Session::FetchTx() {
     auto* desc = descriptor(*desc_idx);
     if (!desc) {
       LOGF_ERROR("network-device(%s): received out of bounds descriptor: %d", name(), *desc_idx);
-      return FetchResult::FAILED;
+      return ZX_ERR_IO_INVALID;
     }
 
     // Reject invalid tx types
     if (!parent_->IsValidTxFrameType(desc->frame_type)) {
       LOGF_ERROR("network-device(%s): received invalid tx frame type: %d", name(),
                  desc->frame_type);
-      return FetchResult::FAILED;
+      return ZX_ERR_IO_INVALID;
     }
 
     auto* buffer = transaction.GetBuffer();
@@ -378,7 +378,7 @@ Session::FetchResult Session::FetchTx() {
     if (desc->head_length < req_header_length) {
       LOGF_ERROR("network-device(%s): received buffer with insufficient head length: %d", name(),
                  desc->head_length);
-      return FetchResult::FAILED;
+      return ZX_ERR_IO_INVALID;
     }
     buffer->head_length = req_header_length;
     auto skip_front = desc->head_length - req_header_length;
@@ -387,7 +387,7 @@ Session::FetchResult Session::FetchTx() {
     if (desc->tail_length < req_tail_length) {
       LOGF_ERROR("network-device(%s): received buffer with insufficient tail length: %d", name(),
                  desc->tail_length);
-      return FetchResult::FAILED;
+      return ZX_ERR_IO_INVALID;
     }
     buffer->tail_length = req_tail_length;
 
@@ -396,7 +396,7 @@ Session::FetchResult Session::FetchTx() {
     if (desc->chain_length >= netdev::MAX_DESCRIPTOR_CHAIN) {
       LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(),
                  desc->chain_length);
-      return FetchResult::FAILED;
+      return ZX_ERR_IO_INVALID;
     }
     auto expect_chain = desc->chain_length;
 
@@ -424,11 +424,11 @@ Session::FetchResult Session::FetchTx() {
         desc = descriptor(didx);
         if (desc == nullptr) {
           LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
-          return FetchResult::FAILED;
+          return ZX_ERR_IO_INVALID;
         } else if (desc->chain_length != expect_chain - 1) {
           LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
                      desc->chain_length, didx);
-          return FetchResult::FAILED;
+          return ZX_ERR_IO_INVALID;
         }
         expect_chain--;
       }
@@ -444,7 +444,7 @@ Session::FetchResult Session::FetchTx() {
     parent_->CommitAllSessions();
   }
 
-  return transaction.overrun() ? FetchResult::OVERRUN : FetchResult::OK;
+  return transaction.overrun() ? ZX_ERR_IO_OVERRUN : ZX_OK;
 }
 
 buffer_descriptor_t* Session::descriptor(uint16_t index) {

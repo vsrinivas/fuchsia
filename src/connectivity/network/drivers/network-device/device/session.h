@@ -115,7 +115,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   const char* name() const { return name_.data(); }
 
  private:
-  enum class FetchResult { OK, OVERRUN, SHOULD_WAIT, FAILED };
   Session(async_dispatcher_t* dispatcher, netdev::SessionInfo* info, fidl::StringView name,
           DeviceInterface* parent);
   zx_status_t Init(netdev::Fifos* out);
@@ -124,7 +123,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   void OnUnbind(fidl::UnboundReason reason, zx::channel channel);
   int Thread();
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
-  FetchResult FetchTx();
+  zx_status_t FetchTx();
   buffer_descriptor_t* descriptor(uint16_t index);
 
   const buffer_descriptor_t* descriptor(uint16_t index) const;

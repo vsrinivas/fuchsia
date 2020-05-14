@@ -400,7 +400,9 @@ void DeviceInterface::SessionStopped(Session* session) {
           primary_session_ = sessions_.erase(*session);
           ZX_ASSERT(primary_session_);
         }
-        rx_queue_->TriggerSessionChanged();
+        if (teardown_state_ == TeardownState::RUNNING) {
+          rx_queue_->TriggerSessionChanged();
+        }
       }
 
       active_primary_sessions_--;
