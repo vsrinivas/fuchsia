@@ -1,3 +1,3 @@
 # System Monitor
 
-See: /docs/development/system_monitor/README.md
+See: //docs/development/monitor/fuchsia_devtools/README.md
