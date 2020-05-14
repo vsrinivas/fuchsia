@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Extensions for types in the `fidl_fuchsia_net` crate.
+
 mod macros;
 
 pub use macros::*;
@@ -10,6 +12,53 @@ use anyhow;
 use fidl_fuchsia_net as fidl;
 
 use std::convert::TryInto;
+
+/// A manual implementation of `From`.
+pub trait FromExt<T> {
+    /// Performs the conversion.
+    fn from_ext(f: T) -> Self;
+}
+
+/// A manual implementation of `Into`.
+///
+/// A blanket implementation is provided for implementers of `FromExt<T>`.
+pub trait IntoExt<T> {
+    /// Performs the conversion.
+    fn into_ext(self) -> T;
+}
+
+impl<T, U> IntoExt<U> for T
+where
+    U: FromExt<T>,
+{
+    fn into_ext(self) -> U {
+        U::from_ext(self)
+    }
+}
+
+impl FromExt<fidl_fuchsia_net::Ipv4Address> for fidl_fuchsia_net::IpAddress {
+    fn from_ext(f: fidl_fuchsia_net::Ipv4Address) -> fidl_fuchsia_net::IpAddress {
+        fidl_fuchsia_net::IpAddress::Ipv4(f)
+    }
+}
+
+impl FromExt<fidl_fuchsia_net::Ipv6Address> for fidl_fuchsia_net::IpAddress {
+    fn from_ext(f: fidl_fuchsia_net::Ipv6Address) -> fidl_fuchsia_net::IpAddress {
+        fidl_fuchsia_net::IpAddress::Ipv6(f)
+    }
+}
+
+impl FromExt<fidl_fuchsia_net::Ipv4SocketAddress> for fidl_fuchsia_net::SocketAddress {
+    fn from_ext(f: fidl_fuchsia_net::Ipv4SocketAddress) -> fidl_fuchsia_net::SocketAddress {
+        fidl_fuchsia_net::SocketAddress::Ipv4(f)
+    }
+}
+
+impl FromExt<fidl_fuchsia_net::Ipv6SocketAddress> for fidl_fuchsia_net::SocketAddress {
+    fn from_ext(f: fidl_fuchsia_net::Ipv6SocketAddress) -> fidl_fuchsia_net::SocketAddress {
+        fidl_fuchsia_net::SocketAddress::Ipv6(f)
+    }
+}
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct IpAddress(pub std::net::IpAddr);
@@ -242,6 +291,28 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::str::FromStr;
+
+    #[test]
+    fn test_from_into_ext() {
+        let a = fidl_fuchsia_net::Ipv4Address { addr: [0; 4] };
+        assert_eq!(fidl_fuchsia_net::IpAddress::Ipv4(a), a.into_ext());
+
+        let a = fidl_fuchsia_net::Ipv6Address { addr: [0; 16] };
+        assert_eq!(fidl_fuchsia_net::IpAddress::Ipv6(a), a.into_ext());
+
+        let a = fidl_fuchsia_net::Ipv4SocketAddress {
+            address: fidl_fuchsia_net::Ipv4Address { addr: [0; 4] },
+            port: 1,
+        };
+        assert_eq!(fidl_fuchsia_net::SocketAddress::Ipv4(a), a.into_ext());
+
+        let a = fidl_fuchsia_net::Ipv6SocketAddress {
+            address: fidl_fuchsia_net::Ipv6Address { addr: [0; 16] },
+            port: 1,
+            zone_index: 2,
+        };
+        assert_eq!(fidl_fuchsia_net::SocketAddress::Ipv6(a), a.into_ext());
+    }
 
     #[test]
     fn test_ipaddr() {
