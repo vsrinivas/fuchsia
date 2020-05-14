@@ -77,9 +77,6 @@ class Namespace : public fuchsia::sys::Environment,
   // Adds the service to the service directory if it's whitelisted.
   void MaybeAddComponentEventProvider();
 
-  // Adds the service to the service directory if it's whitelisted.
-  void MaybeAddEventSource();
-
   // Notifies a realms ComponentEventListener with the out/diagnostics directory for a component.
   void NotifyComponentDiagnosticsDirReady(const std::string& component_url,
                                           const std::string& component_name,

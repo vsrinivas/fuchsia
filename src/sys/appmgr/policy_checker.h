@@ -20,7 +20,6 @@ namespace component {
 struct SecurityPolicy {
   bool enable_ambient_executable = false;
   bool enable_component_event_provider = false;
-  bool enable_event_source = false;
 };
 
 // The job of the `PolicyChecker` is to enforce that security policies placed

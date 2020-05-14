@@ -177,16 +177,4 @@ void Namespace::MaybeAddComponentEventProvider() {
   }
 }
 
-void Namespace::MaybeAddEventSource() {
-  if (services_->IsServiceWhitelisted(fuchsia::sys2::EventSource::Name_)) {
-    services_->AddService(
-        fuchsia::sys2::EventSource::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-          realm_->environment_services()->Connect(
-              fidl::InterfaceRequest<fuchsia::sys2::EventSource>(std::move(channel)));
-          return ZX_OK;
-        })));
-  }
-}
-
 }  // namespace component

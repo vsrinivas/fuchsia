@@ -36,14 +36,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
     }
     policy.enable_component_event_provider = true;
   }
-  if (sandbox.HasService("fuchsia.sys2.EventSource")) {
-    if (!CheckEventSource(pkg_url)) {
-      FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                     << "fuchsia.sys2.EventSource";
-      return std::nullopt;
-    }
-    policy.enable_event_source = true;
-  }
   if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
     if (!CheckDeprecatedAmbientReplaceAsExecutable(pkg_url)) {
       FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
@@ -60,6 +52,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "hub. go/no-hub";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.sys2.EventSource") && !CheckEventSource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.sys2.EventSource";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
