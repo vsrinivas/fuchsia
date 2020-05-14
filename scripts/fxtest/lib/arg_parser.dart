@@ -93,6 +93,9 @@ Note: The -s flag used to be an abbreviation for --simple.''')
       defaultsTo: null,
       help: '''If passed, runs the tests in a named realm instead of a
 randomized\none.''')
+  ..addOption('min-severity-logs',
+      help: 'Filters log output to only messages with this for device tests.'
+          'Valid severities: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.')
   ..addFlag('exact',
       defaultsTo: false,
       help: 'If true, does not perform any fuzzy-matching on tests')

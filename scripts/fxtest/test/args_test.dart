@@ -252,6 +252,13 @@ void main() {
             '--realm-label=bar',
           ]));
     });
+
+    test('with --min-severity-logs', () {
+      var testsConfig =
+          TestsConfig.fromRawArgs(rawArgs: ['--min-severity-logs=WARN']);
+      expect(testsConfig.flags.minSeverityLogs, 'WARN');
+      expect(testsConfig.runnerTokens, contains('--min-severity-logs=WARN'));
+    });
   });
 
   group('test names are collected correctly', () {

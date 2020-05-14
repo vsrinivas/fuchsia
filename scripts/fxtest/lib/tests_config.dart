@@ -21,6 +21,7 @@ class Flags {
 
   /// The realm name to run the test inside of. If null, a random name is used.
   final String realm;
+  final String minSeverityLogs;
   final bool allOutput;
   final bool shouldRebuild;
 
@@ -42,6 +43,7 @@ class Flags {
     this.isVerbose = false,
     this.limit = 0,
     this.realm,
+    this.minSeverityLogs,
     this.allOutput = false,
     this.infoOnly = false,
     this.matchLength = MatchLength.partial,
@@ -67,6 +69,7 @@ class Flags {
       limit: int.parse(argResults['limit'] ?? '0'),
       matchLength: argResults['exact'] ? MatchLength.full : MatchLength.partial,
       realm: argResults['realm'],
+      minSeverityLogs: argResults['min-severity-logs'],
       simpleOutput: argResults['simple'],
       shouldFailFast: argResults['fail'],
       shouldOnlyRunDeviceTests: argResults['device'],
@@ -157,9 +160,15 @@ class TestsConfig {
     Flags flags = Flags.fromArgResults(_testArguments.parsedArgs);
 
     var runnerTokens = <String>[];
-    if (flags.realm != null) runnerTokens.add('--realm-label=${flags.realm}');
-    if (flags.shouldRestrictLogs) runnerTokens.add('--restrict-logs');
-
+    if (flags.realm != null) {
+      runnerTokens.add('--realm-label=${flags.realm}');
+    }
+    if (flags.shouldRestrictLogs) {
+      runnerTokens.add('--restrict-logs');
+    }
+    if (flags.minSeverityLogs != null) {
+      runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
+    }
     return TestsConfig(
       flags: flags,
       fuchsiaLocator: fuchsiaLocator ?? FuchsiaLocator.shared,
