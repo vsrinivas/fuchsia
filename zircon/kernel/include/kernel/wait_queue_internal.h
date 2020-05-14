@@ -25,20 +25,6 @@ void wait_queue_timeout_handler(Timer* timer, zx_time_t now, void* arg);
 // site.
 bool wait_queue_waiters_priority_changed(WaitQueue* wq, int old_prio) TA_REQ(thread_lock);
 
-// Remove a thread from a wait queue, maintain the wait queue's internal count,
-// and update the wait_queue specific bookkeeping in the thread in the process.
-inline void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t,
-                                               zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-  DEBUG_ASSERT(t != nullptr);
-  DEBUG_ASSERT(t->wait_queue_state_.InWaitQueue());
-  DEBUG_ASSERT(t->state_ == THREAD_BLOCKED || t->state_ == THREAD_BLOCKED_READ_LOCK);
-  DEBUG_ASSERT(t->blocking_wait_queue_ == wait);
-
-  wait->collection_.Remove(t);
-  t->blocked_status_ = wait_queue_error;
-  t->blocking_wait_queue_ = NULL;
-}
-
 // Notes for wait_queue_block_etc_(pre|post).
 //
 // Currently, there are two variants of wait_queues in Zircon.  The standard
