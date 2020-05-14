@@ -41,7 +41,9 @@ void TileView::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token
 void TileView::PresentOrReplaceView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  FX_CHECK(false) << "tile_view: clobbering presentation not supported.";
+  FX_LOGS(WARNING)
+      << "PresentOrReplaceView not fully supported by TileView. Using PresentView instead.";
+  PresentView(std::move(view_holder_token), std::move(presentation_request));
 }
 
 void TileView::ConnectViews() {
