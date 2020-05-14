@@ -11,11 +11,11 @@ namespace fbl {
 namespace tests {
 namespace intrusive_containers {
 
-#define MAKE_TEST_THUNK(_test_name)           \
-  static void _test_name() {                  \
-    TestEnvironmentClass env;                 \
-    ASSERT_NO_FAILURES(env._test_name(), ""); \
-    ASSERT_NO_FAILURES(env.Reset(), "");      \
+#define MAKE_TEST_THUNK(_test_name) \
+  static void _test_name() {        \
+    TestEnvironmentClass env;       \
+    env._test_name();               \
+    env.Reset();                    \
   }
 
 // A utility class used to generate static test thunks for the various

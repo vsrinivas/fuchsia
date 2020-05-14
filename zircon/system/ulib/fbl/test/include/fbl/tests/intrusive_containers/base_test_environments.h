@@ -212,7 +212,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
   void Reset() {
     ContainerChecker::SanityCheck(container());
     container().clear();
-    ASSERT_NO_FATAL_FAILURES(ContainerChecker::SanityCheck(container()));
+    ContainerChecker::SanityCheck(container());
 
     for (size_t i = 0; i < OBJ_COUNT; ++i)
       ReleaseObject(i);
