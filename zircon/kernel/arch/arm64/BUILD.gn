@@ -145,9 +145,6 @@ if (current_toolchain == default_toolchain) {
 
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.
-    configs += [
-      "$zx/public/gn/config:no_safestack",
-      "$zx/public/gn/config:no-shadow-call-stack",
-    ]
+    configs += [ "$zx/public/gn/config:no_sanitizers" ]
   }
 }
