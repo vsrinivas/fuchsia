@@ -87,6 +87,13 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       return err;
     }
 
+    SecurityMgr.OnSessionEstablished = GenericPlatformManagerImpl<ImplClass>::HandleSessionEstablished;
+    err = InitCASEAuthDelegate();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "PlatformCASEAuthDelegate init failed: " << ErrorStr(err);
+      return err;
+    }
+
     // Perform dynamic configuration of the core Weave objects based on stored settings.
     //
     // NB: In general, initialization of Device Layer objects should happen *after* this call
