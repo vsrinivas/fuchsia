@@ -123,12 +123,6 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_
     return status;
   }
 
-  status = data_mapper.vmo().set_property(ZX_PROP_VMO_CONTENT_SIZE, &inode->blob_size,
-                                          sizeof(inode->blob_size));
-  if (status != ZX_OK) {
-    return status;
-  }
-
   *data_out = std::move(data_mapper);
   if (merkle_mapper.vmo().is_valid()) {
     *merkle_out = std::move(merkle_mapper);
@@ -197,12 +191,6 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   if ((status = data_mapper.Map(std::move(data_vmo))) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create mapping for data vmo: %s\n",
                    zx_status_get_string(status));
-    return status;
-  }
-
-  status = data_mapper.vmo().set_property(ZX_PROP_VMO_CONTENT_SIZE, &inode->blob_size,
-                                          sizeof(inode->blob_size));
-  if (status != ZX_OK) {
     return status;
   }
 
