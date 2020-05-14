@@ -11,9 +11,9 @@ import("//build/testing/environments.gni")
 go_library("go") {
   name = "fuchsia.googlesource.com/syslog"
   deps = [
+    "//sdk/fidl/fuchsia.logger($go_toolchain)",
     "//src/lib/component/go($go_toolchain)",
     "//third_party/golibs:github.com/pkg/errors",
-    "//zircon/system/fidl/fuchsia-logger($go_toolchain)",
   ]
 }
 

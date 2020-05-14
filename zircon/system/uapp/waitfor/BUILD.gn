@@ -23,7 +23,6 @@ executable("waitfor") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
     "//zircon/system/ulib/gpt",
   ]
 }

@@ -255,9 +255,9 @@ source_set("logger") {
 
   deps = [
     ":handle",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "$zircon_build_root/public/lib/syslog-static",
     "$zircon_build_root/public/lib/zx",
-    "$zircon_build_root/system/fidl/fuchsia-logger:llcpp",
   ]
 }
 
