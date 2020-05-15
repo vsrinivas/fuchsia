@@ -24,7 +24,8 @@ escher::GpuMemPtr CreateGPUMem(const vk::Device& device, vk::MemoryAllocateInfo*
 
 namespace flatland {
 
-vk::ImageCreateInfo GpuImageInfo::NewVkImageCreateInfo(uint32_t width, uint32_t height) const {
+vk::ImageCreateInfo GpuImageInfo::NewVkImageCreateInfo(uint32_t width, uint32_t height,
+                                                       vk::ImageUsageFlags usage) const {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.extent = vk::Extent3D{width, height, 1};
@@ -37,7 +38,7 @@ vk::ImageCreateInfo GpuImageInfo::NewVkImageCreateInfo(uint32_t width, uint32_t 
   create_info.arrayLayers = 1;
   create_info.samples = vk::SampleCountFlagBits::e1;
   create_info.tiling = vk::ImageTiling::eOptimal;
-  create_info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+  create_info.usage = usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
 

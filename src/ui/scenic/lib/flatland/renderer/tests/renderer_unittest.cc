@@ -11,10 +11,37 @@
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
+#include <glm/gtc/constants.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+
 namespace flatland {
 
 using NullRendererTest = RendererTest;
 using VulkanRendererTest = RendererTest;
+
+namespace {
+static constexpr float kDegreesToRadians = glm::pi<float>() / 180.f;
+
+void GetVmoHostPtr(uint8_t** vmo_host,
+                   const fuchsia::sysmem::BufferCollectionInfo_2& collection_info, uint32_t idx) {
+  const zx::vmo& image_vmo = collection_info.buffers[idx].vmo;
+  auto image_vmo_bytes = collection_info.settings.buffer_settings.size_bytes;
+  ASSERT_TRUE(image_vmo_bytes > 0);
+  auto status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
+                                           ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                           reinterpret_cast<uintptr_t*>(vmo_host));
+  EXPECT_EQ(status, ZX_OK);
+}
+
+glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
+  uint32_t r = vmo_host[y * width * 4 + x * 4];
+  uint32_t g = vmo_host[y * width * 4 + x * 4 + 1];
+  uint32_t b = vmo_host[y * width * 4 + x * 4 + 2];
+  uint32_t a = vmo_host[y * width * 4 + x * 4 + 3];
+  return glm::ivec4(r, g, b, a);
+};
+
+}  // anonymous namespace
 
 // Make sure a valid token can be used to register a buffer collection. Make
 // sure also that multiple calls to register buffer collection return
@@ -24,11 +51,12 @@ void RegisterCollectionTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync*
   auto tokens2 = CreateSysmemTokens(sysmem_allocator);
 
   // First id should be valid.
-  auto bcid = renderer->RegisterBufferCollection(sysmem_allocator, std::move(tokens.local_token));
+  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.local_token));
   EXPECT_NE(bcid, Renderer::kInvalidId);
 
   // Second id should be valid.
-  auto bcid2 = renderer->RegisterBufferCollection(sysmem_allocator, std::move(tokens2.local_token));
+  auto bcid2 =
+      renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens2.local_token));
   EXPECT_NE(bcid2, Renderer::kInvalidId);
 
   // Ids should not equal eachother.
@@ -52,11 +80,11 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_EQ(status, ZX_OK);
 
   // First id should be valid.
-  auto bcid = renderer->RegisterBufferCollection(sysmem_allocator, std::move(tokens.local_token));
+  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.local_token));
   EXPECT_NE(bcid, Renderer::kInvalidId);
 
   // Second id should be valid.
-  auto bcid2 = renderer->RegisterBufferCollection(sysmem_allocator, std::move(tokens.dup_token));
+  auto bcid2 = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.dup_token));
   EXPECT_NE(bcid2, Renderer::kInvalidId);
 
   // Ids should not equal eachother.
@@ -82,7 +110,7 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 // valid buffer collection token.
 void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   // Null token should fail.
-  auto bcid = renderer->RegisterBufferCollection(sysmem_allocator, nullptr);
+  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, nullptr);
   EXPECT_EQ(bcid, Renderer::kInvalidId);
 
   // A valid channel that isn't a buffer collection should also fail.
@@ -91,7 +119,7 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
   zx::channel::create(0, &local_endpoint, &remote_endpoint);
   flatland::BufferCollectionHandle handle{std::move(remote_endpoint)};
   ASSERT_TRUE(handle.is_valid());
-  bcid = renderer->RegisterBufferCollection(sysmem_allocator, std::move(handle));
+  bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(handle));
   EXPECT_EQ(bcid, Renderer::kInvalidId);
 }
 
@@ -101,7 +129,7 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
 void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = CreateSysmemTokens(sysmem_allocator);
 
-  auto bcid = renderer->RegisterBufferCollection(sysmem_allocator, std::move(tokens.dup_token));
+  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.dup_token));
   EXPECT_NE(bcid, Renderer::kInvalidId);
 
   // The buffer collection should not be valid here.
@@ -117,12 +145,13 @@ void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_
   EXPECT_EQ(result->vmo_count, 1U);
 }
 
-// Test to make sure we can call RegisterBufferCollection() and Validate()
-// simultaneously from multiple threads and have it work.
+// Test to make sure we can call the functions RegisterTextureCollection(),
+// RegisterRenderTargetCollection() and Validate() simultaneously from
+// multiple threads and have it work.
 void MultithreadingTest(Renderer* renderer) {
-  const uint32_t kNumThreads = 50;
+  const uint32_t kNumThreads = 100;
 
-  auto register_and_validate_function = [&renderer]() {
+  auto register_and_validate_function = [&renderer](bool register_texture) {
     // Make a test loop.
     async::TestLoop loop;
 
@@ -132,8 +161,15 @@ void MultithreadingTest(Renderer* renderer) {
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
 
     auto tokens = CreateSysmemTokens(sysmem_allocator.get());
-    auto bcid =
-        renderer->RegisterBufferCollection(sysmem_allocator.get(), std::move(tokens.local_token));
+    GlobalBufferCollectionId bcid = Renderer::kInvalidId;
+    if (register_texture) {
+      bcid = renderer->RegisterTextureCollection(sysmem_allocator.get(),
+                                                 std::move(tokens.local_token));
+    } else {
+      bcid = renderer->RegisterRenderTargetCollection(sysmem_allocator.get(),
+                                                      std::move(tokens.local_token));
+    }
+
     EXPECT_NE(bcid, Renderer::kInvalidId);
 
     SetClientConstraintsAndWaitForAllocated(sysmem_allocator.get(), std::move(tokens.dup_token));
@@ -148,9 +184,11 @@ void MultithreadingTest(Renderer* renderer) {
     loop.RunUntilIdle();
   };
 
+  // Run a bunch of threads, alternating between threads that register texture collections
+  // and threads that register render target collections.
   std::vector<std::thread> threads;
   for (uint32_t i = 0; i < kNumThreads; i++) {
-    threads.push_back(std::thread(register_and_validate_function));
+    threads.push_back(std::thread(register_and_validate_function, static_cast<bool>(i % 2)));
   }
 
   for (auto&& thread : threads) {
@@ -200,28 +238,358 @@ TEST_F(NullRendererTest, MultithreadingTest) {
 }
 
 VK_TEST_F(VulkanRendererTest, RegisterCollectionTest) {
-  VkRenderer renderer(escher::test::GetEscher()->GetWeakPtr());
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
   RegisterCollectionTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, SameTokenTwiceTest) {
-  VkRenderer renderer(escher::test::GetEscher()->GetWeakPtr());
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
   SameTokenTwiceTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, BadTokenTest) {
-  VkRenderer renderer(escher::test::GetEscher()->GetWeakPtr());
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
   BadTokenTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, ValidationTest) {
-  VkRenderer renderer(escher::test::GetEscher()->GetWeakPtr());
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
   ValidationTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, MulithtreadingTest) {
-  VkRenderer renderer(escher::test::GetEscher()->GetWeakPtr());
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
   MultithreadingTest(&renderer);
+}
+
+// This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
+// with a half-red, half-green texture, translate and scale it. The render target is 16x8
+// and the rectangle is 4x2. So in the end the result should look like this:
+//
+// ----------------
+// ----------------
+// ----------------
+// ------RRGG------
+// ------RRGG------
+// ----------------
+// ----------------
+// ----------------
+VK_TEST_F(VulkanRendererTest, RenderTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
+
+  // First create the pair of sysmem tokens, one for the client, one for the renderer.
+  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  auto target_tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  // Register and validate the collection with the renderer.
+  auto collection_id =
+      renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto client_collection =
+      CreateClientPointerWithConstraints(sysmem_allocator_.get(), std::move(tokens.local_token),
+                                         /*image_count*/ 1,
+                                         /*width*/ 60,
+                                         /*height*/ 40);
+
+  auto target_id = renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(),
+                                                           std::move(target_tokens.dup_token));
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto client_target = CreateClientPointerWithConstraints(sysmem_allocator_.get(),
+                                                          std::move(target_tokens.local_token),
+                                                          /*image_count*/ 1,
+                                                          /*width*/ 60,
+                                                          /*height*/ 40);
+
+  // Have the client wait for buffers allocated so it can populate its information
+  // struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status =
+        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  // Have the client wait for buffers allocated so it can populate its information
+  // struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  // Now that the renderer and client have set their contraints, we validate.
+  auto buffer_metadata = renderer.Validate(collection_id);
+  EXPECT_TRUE(buffer_metadata.has_value());
+
+  auto target_metadata = renderer.Validate(target_id);
+  EXPECT_TRUE(buffer_metadata.has_value());
+
+  const uint32_t kTargetWidth = 16;
+  const uint32_t kTargetHeight = 8;
+
+  // Create the render_target image meta_data.
+  ImageMetadata render_target = {
+      .collection_id = target_id,
+      .vmo_idx = 0,
+      .width = kTargetWidth,
+      .height = kTargetHeight,
+  };
+
+  // Create the image meta data for the renderable.
+  ImageMetadata renderable_texture = {
+      .collection_id = collection_id, .vmo_idx = 0, .width = 2, .height = 1};
+
+  // Create the transformation matrix for the renderable. The upper-left hand corner
+  // should be at position (6,3), with a width/height of (4,2) and rotated 90 degrees.
+  // After rotation, the width/height should be swapped.
+  const uint32_t kRenderableWidth = 4;
+  const uint32_t kRenderableHeight = 2;
+  glm::mat3 matrix = glm::translate(glm::mat3(), glm::vec2(6, 3));
+  matrix = glm::scale(matrix, glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Create the renderable to be renderered.
+  RenderableMetadata renderable = {
+      .image = renderable_texture,
+      .uv_coords = {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      .matrix = matrix,
+      .multiply_color = glm::vec4(1.),
+      .is_transparent = false,
+  };
+
+  // Have the client write pixel values to the renderable's texture.
+  uint8_t* vmo_host;
+  {
+    GetVmoHostPtr(&vmo_host, client_collection_info, renderable_texture.vmo_idx);
+    // The texture only has 2 pixels, so it needs 8 write values for 4 channels. We
+    // set the first pixel to red and the second pixel to green.
+    const uint8_t kNumWrites = 8;
+    const uint8_t kWriteValues[] = {/*red*/ 255U, 0, 0, 255U, /*green*/ 0, 255U, 0, 255U};
+    memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+  }
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable});
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  GetVmoHostPtr(&vmo_host, client_target_info, render_target.vmo_idx);
+
+  // Make sure the pixels are in the right order give that we rotated
+  // the rectangle.
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), glm::ivec4(255, 0, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), glm::ivec4(255, 0, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), glm::ivec4(0, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), glm::ivec4(0, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), glm::ivec4(255, 0, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), glm::ivec4(255, 0, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), glm::ivec4(0, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(0, 255, 0, 255));
+
+  // Make sure the remaining pixels are black.
+  uint32_t black_pixels = 0;
+  for (uint32_t y = 0; y < kTargetHeight; y++) {
+    for (uint32_t x = 0; x < kTargetWidth; x++) {
+      auto col = GetPixel(vmo_host, kTargetWidth, x, y);
+      if (col == glm::ivec4(0, 0, 0, 0))
+        black_pixels++;
+    }
+  }
+  EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - kRenderableWidth * kRenderableHeight);
+}
+
+// Tests transparency. Render two overlapping rectangles, a red opaque one covered slightly by
+// a green transparent one with an alpha of 0.5. The result should look like this:
+//
+// ----------------
+// ----------------
+// ----------------
+// ------RYYYG----
+// ------RYYYG----
+// ----------------
+// ----------------
+// ----------------
+VK_TEST_F(VulkanRendererTest, TransparencyTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
+
+  // First create the pair of sysmem tokens, one for the client, one for the renderer.
+  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  auto target_tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  // Register and validate the collection with the renderer.
+  auto collection_id =
+      renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto client_collection =
+      CreateClientPointerWithConstraints(sysmem_allocator_.get(), std::move(tokens.local_token),
+                                         /*image_count*/ 2,
+                                         /*width*/ 60,
+                                         /*height*/ 40);
+
+  auto target_id = renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(),
+                                                           std::move(target_tokens.dup_token));
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto client_target = CreateClientPointerWithConstraints(sysmem_allocator_.get(),
+                                                          std::move(target_tokens.local_token),
+                                                          /*image_count*/ 1,
+                                                          /*width*/ 60,
+                                                          /*height*/ 40);
+
+  // Have the client wait for buffers allocated so it can populate its information
+  // struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status =
+        client_collection->WaitForBuffersAllocated(&allocation_status, &client_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = client_target->WaitForBuffersAllocated(&allocation_status, &client_target_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  // Now that the renderer and client have set their contraints, we validate.
+  auto buffer_metadata = renderer.Validate(collection_id);
+  EXPECT_TRUE(buffer_metadata.has_value());
+
+  auto target_metadata = renderer.Validate(target_id);
+  EXPECT_TRUE(buffer_metadata.has_value());
+
+  const uint32_t kTargetWidth = 16;
+  const uint32_t kTargetHeight = 8;
+
+  // Create the render_target image meta_data.
+  ImageMetadata render_target = {
+      .collection_id = target_id,
+      .vmo_idx = 0,
+      .width = kTargetWidth,
+      .height = kTargetHeight,
+  };
+
+  // Create the image meta data for the renderable.
+  ImageMetadata renderable_texture = {
+      .collection_id = collection_id, .vmo_idx = 0, .width = 1, .height = 1};
+
+  // Create the texture that will go on the transparent renderable.
+  ImageMetadata transparent_texture = {
+      .collection_id = collection_id, .vmo_idx = 1, .width = 1, .height = 1};
+
+  // Create the transformation matrix for the renderable. The upper-left hand corner
+  // should be at position (6,3), with a width/height of (4,2) and rotated 90 degrees.
+  // After rotation, the width/height should be swapped.
+  const uint32_t kRenderableWidth = 4;
+  const uint32_t kRenderableHeight = 2;
+  glm::mat3 matrix = glm::translate(glm::mat3(), glm::vec2(6, 3));
+  matrix = glm::scale(matrix, glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  glm::mat3 transparent_matrix = glm::translate(glm::mat3(), glm::vec2(7, 3));
+  transparent_matrix =
+      glm::scale(transparent_matrix, glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Create the opaque renderable.
+  RenderableMetadata renderable = {
+      .image = renderable_texture,
+      .uv_coords = {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      .matrix = matrix,
+      .multiply_color = glm::vec4(1.),
+      .is_transparent = false,
+  };
+
+  // Create the transparent renderable.
+  RenderableMetadata transparent_renderable = {
+      .image = transparent_texture,
+      .uv_coords = {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      .matrix = transparent_matrix,
+      .multiply_color = glm::vec4(1.),
+      .is_transparent = true,
+  };
+
+  // Have the client write pixel values to the renderable's texture.
+  uint8_t* vmo_host;
+  {
+    GetVmoHostPtr(&vmo_host, client_collection_info, renderable_texture.vmo_idx);
+    // Create a red opaque pixel.
+    const uint8_t kNumWrites = 4;
+    const uint8_t kWriteValues[] = {/*red*/ 255U, 0, 0, 255U};
+    memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+  }
+
+  {
+    GetVmoHostPtr(&vmo_host, client_collection_info, transparent_texture.vmo_idx);
+    // Create a green pixel with an alpha of 0.5.
+    const uint8_t kNumWrites = 4;
+    const uint8_t kWriteValues[] = {/*red*/ 0, 255, 0, 128U};
+    memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+  }
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable, transparent_renderable});
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  GetVmoHostPtr(&vmo_host, client_target_info, render_target.vmo_idx);
+
+  // Make sure the pixels are in the right order give that we rotated
+  // the rectangle.
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), glm::ivec4(255, 0, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), glm::ivec4(255, 0, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), glm::ivec4(127, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), glm::ivec4(127, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), glm::ivec4(127, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), glm::ivec4(127, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), glm::ivec4(127, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(127, 255, 0, 255));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 3), glm::ivec4(0, 255, 0, 128));
+  EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 10, 4), glm::ivec4(0, 255, 0, 128));
+
+  // Make sure the remaining pixels are black.
+  uint32_t black_pixels = 0;
+  for (uint32_t y = 0; y < kTargetHeight; y++) {
+    for (uint32_t x = 0; x < kTargetWidth; x++) {
+      auto col = GetPixel(vmo_host, kTargetWidth, x, y);
+      if (col == glm::ivec4(0, 0, 0, 0))
+        black_pixels++;
+    }
+  }
+  EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
 }
 
 }  // namespace flatland

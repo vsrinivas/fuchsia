@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -17,11 +18,16 @@ namespace flatland {
 // by extension the Vulkan API.
 class VkRenderer final : public Renderer {
  public:
-  VkRenderer(escher::EscherWeakPtr escher);
+  VkRenderer(std::unique_ptr<escher::Escher> escher);
   ~VkRenderer() override;
 
   // |Renderer|.
-  GlobalBufferCollectionId RegisterBufferCollection(
+  GlobalBufferCollectionId RegisterTextureCollection(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+
+  // |Renderer|.
+  GlobalBufferCollectionId RegisterRenderTargetCollection(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
@@ -33,9 +39,25 @@ class VkRenderer final : public Renderer {
               const std::vector<RenderableMetadata>& renderables) override;
 
  private:
+  GlobalBufferCollectionId RegisterCollection(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      vk::ImageUsageFlags usage);
+
+  // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
+  // ExtractRenderTarget() and ExtractTexture() are wrapper functions to ExtractImage()
+  // that provide specific usage flags for color attachments and shader textures
+  // respectively. All three functions are thread safe. Additionally, they only get
+  // called from Render() and by extension the render thread.
+  escher::TexturePtr ExtractTexture(escher::CommandBuffer* command_buffer, ImageMetadata metadata);
+  escher::ImagePtr ExtractRenderTarget(escher::CommandBuffer* command_buffer,
+                                       ImageMetadata metadata);
+  escher::ImagePtr ExtractImage(escher::CommandBuffer* command_buffer, ImageMetadata metadata,
+                                vk::ImageUsageFlags usage, vk::ImageLayout layout);
+
   // Vulkan rendering components.
-  escher::EscherWeakPtr escher_;
-  std::unique_ptr<escher::RectangleCompositor> compositor_;
+  std::unique_ptr<escher::Escher> escher_;
+  escher::RectangleCompositor compositor_;
 
   // This mutex is used to protect access to |collection_map_|, |collection_metadata_map_|,
   // and |vk_collection_map_|.
@@ -46,6 +68,8 @@ class VkRenderer final : public Renderer {
 
   // Thread-safe identifier generator. Starts at 1 as 0 is an invalid ID.
   std::atomic<GlobalBufferCollectionId> id_generator_ = 1;
+
+  uint32_t frame_number_ = 0;
 };
 
 }  // namespace flatland

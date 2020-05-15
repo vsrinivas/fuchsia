@@ -14,7 +14,11 @@ namespace flatland {
 // Mock class of Renderer for Flatland API testing.
 class MockRenderer : public Renderer {
  public:
-  MOCK_METHOD2(RegisterBufferCollection,
+  MOCK_METHOD2(RegisterTextureCollection,
+               GlobalBufferCollectionId(
+                   fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
+  MOCK_METHOD2(RegisterRenderTargetCollection,
                GlobalBufferCollectionId(
                    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));

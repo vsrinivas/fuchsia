@@ -6,7 +6,20 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 namespace escher {
+
+namespace {
+static const float kRadiansToDegrees = 180.0 / glm::pi<float>();
+
+// Helper function for ensuring that two vectors are equal while taking into
+// account floating point discrepancies via an epsilon term.
+bool Equal(const glm::vec2 a, const glm::vec2 b) {
+  return glm::all(glm::lessThanEqual(glm::abs(a - b), glm::vec2(0.001f)));
+}
+}  // namespace
 
 bool RectangleRenderable::IsValid(const RectangleRenderable& renderable,
                                   bool ignore_texture_for_testing) {
@@ -46,56 +59,56 @@ bool RectangleRenderable::IsValid(const RectangleRenderable& renderable,
   return true;
 }
 
-void RectangleRenderable::Rotate(RectangleRenderable* renderable, uint32_t degrees) {
-  FX_DCHECK(renderable);
-  FX_DCHECK(degrees % 90 == 0);
+const RectangleRenderable RectangleRenderable::Create(const glm::mat3& matrix,
+                                                      const ClockwiseUVs& uvs, Texture* texture,
+                                                      const glm::vec4& color, bool is_transparent) {
+  // The local-space of the renderable has its top-left origin point at (0,0) and grows
+  // downward and to the right, so that the bottom-right point is at (1,-1). We apply
+  // the matrix to the four points that represent this unit square to get the points
+  // in the global coordinate space.
+  const glm::vec2 verts[4] = {
+      matrix * glm::vec3(0, 0, 1),
+      matrix * glm::vec3(1, 0, 1),
+      matrix * glm::vec3(1, -1, 1),
+      matrix * glm::vec3(0, -1, 1),
+  };
 
-  // Make sure degrees are in the range [0, 360].
-  degrees = degrees % 360;
+  float min_x = FLT_MAX, min_y = FLT_MAX;
+  float max_x = -FLT_MAX, max_y = -FLT_MAX;
+  for (uint32_t i = 0; i < 4; i++) {
+    min_x = std::min(min_x, verts[i].x);
+    min_y = std::min(min_y, verts[i].y);
+    max_x = std::max(max_x, verts[i].x);
+    max_y = std::max(max_y, verts[i].y);
+  }
 
-  switch (degrees) {
-    // Do nothing.
-    case 0:
-      break;
-    case 90: {
-      auto uvs = renderable->source.uv_coordinates_clockwise;
-      renderable->source.uv_top_left = uvs[3];
-      renderable->source.uv_top_right = uvs[0];
-      renderable->source.uv_bottom_right = uvs[1];
-      renderable->source.uv_bottom_left = uvs[2];
-      std::swap(renderable->dest.extent.x, renderable->dest.extent.y);
-      break;
-    }
-    case 180: {
-      auto uvs = renderable->source.uv_coordinates_clockwise;
-      renderable->source.uv_top_left = uvs[2];
-      renderable->source.uv_top_right = uvs[3];
-      renderable->source.uv_bottom_right = uvs[0];
-      renderable->source.uv_bottom_left = uvs[1];
-      break;
-    }
-    case 270: {
-      auto uvs = renderable->source.uv_coordinates_clockwise;
-      renderable->source.uv_top_left = uvs[1];
-      renderable->source.uv_top_right = uvs[2];
-      renderable->source.uv_bottom_right = uvs[3];
-      renderable->source.uv_bottom_left = uvs[0];
-      std::swap(renderable->dest.extent.x, renderable->dest.extent.y);
-      break;
+  glm::vec2 reordered_verts[4] = {
+      glm::vec2(min_x, max_y),  // top_left
+      glm::vec2(max_x, max_y),  // top_right
+      glm::vec2(max_x, min_y),  // bottom_right
+      glm::vec2(min_x, min_y),  // bottom_left
+  };
+
+  ClockwiseUVs reordered_uvs;
+  for (uint32_t i = 0; i < 4; i++) {
+    for (uint32_t j = 0; j < 4; j++) {
+      if (Equal(reordered_verts[i], verts[j])) {
+        reordered_uvs[i] = uvs[j];
+        break;
+      }
     }
   }
-}
 
-void RectangleRenderable::FlipHorizontally(RectangleRenderable* renderable) {
-  FX_DCHECK(renderable);
-  std::swap(renderable->source.uv_top_left, renderable->source.uv_top_right);
-  std::swap(renderable->source.uv_bottom_left, renderable->source.uv_bottom_right);
-}
-
-void RectangleRenderable::FlipVertically(RectangleRenderable* renderable) {
-  FX_DCHECK(renderable);
-  std::swap(renderable->source.uv_top_left, renderable->source.uv_bottom_left);
-  std::swap(renderable->source.uv_top_right, renderable->source.uv_bottom_right);
+  RectangleRenderable renderable = {
+      .source.uv_coordinates_clockwise = reordered_uvs,
+      .dest.origin = reordered_verts[0],
+      .dest.extent = reordered_verts[1] - reordered_verts[3],
+      .texture = texture,
+      .color = color,
+      .is_transparent = is_transparent,
+  };
+  FX_DCHECK(RectangleRenderable::IsValid(renderable, /*ignore texture*/ true));
+  return renderable;
 }
 
 }  // namespace escher

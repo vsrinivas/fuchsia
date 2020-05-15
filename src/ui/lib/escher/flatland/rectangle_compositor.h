@@ -16,11 +16,10 @@ namespace escher {
 // "Flatland" API.
 class RectangleCompositor {
  public:
-  static std::unique_ptr<RectangleCompositor> New(EscherWeakPtr escher) {
-    return std::make_unique<RectangleCompositor>(std::move(escher));
-  }
+  static const vk::ImageUsageFlags kRenderTargetUsageFlags;
+  static const vk::ImageUsageFlags kTextureUsageFlags;
 
-  explicit RectangleCompositor(EscherWeakPtr escher);
+  explicit RectangleCompositor(Escher* escher);
   ~RectangleCompositor() = default;
 
   // Draws a single batch of renderables into the provided output image.
@@ -36,7 +35,8 @@ class RectangleCompositor {
                  const ImagePtr& output_image, const TexturePtr& depth_buffer);
 
   // Minimal image constraints to be set on textures passed into DrawBatch.
-  static vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format);
+  static vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format,
+                                                        vk::ImageUsageFlags usage);
 
  private:
   RectangleCompositor(const RectangleCompositor&) = delete;

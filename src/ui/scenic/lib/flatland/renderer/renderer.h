@@ -52,6 +52,11 @@ struct ImageMetadata {
 
   // The dimensions of the image in pixels.
   uint32_t width, height;
+
+  bool operator==(const ImageMetadata& meta) const {
+    return collection_id == meta.collection_id && vmo_idx == meta.vmo_idx && width == meta.width &&
+           height == meta.height;
+  }
 };
 
 // Struct representing a full flatland renderable struct. These are the primitives
@@ -96,7 +101,18 @@ class Renderer {
   // channel but not a valid buffer collection.
   //
   // TODO(50251): The renderer also needs to be able to unregister buffer collections.
-  virtual GlobalBufferCollectionId RegisterBufferCollection(
+  virtual GlobalBufferCollectionId RegisterTextureCollection(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
+
+  // This function operates exactly like the function |RegisterTextureCollection|, but is
+  // specifically for registering collections that contain render targets. In order for an image
+  // to be used as a render target in the Render() function below, the buffer collection it
+  // is associated with must have been registered with this function.
+  //
+  // This function is likewise threadsafe, although it is only meant to be called from the render
+  // loop, and not by any flatland instance directly.
+  virtual GlobalBufferCollectionId RegisterRenderTargetCollection(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
 

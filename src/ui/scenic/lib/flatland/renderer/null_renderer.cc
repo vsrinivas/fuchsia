@@ -8,7 +8,19 @@
 
 namespace flatland {
 
-GlobalBufferCollectionId NullRenderer::RegisterBufferCollection(
+GlobalBufferCollectionId NullRenderer::RegisterTextureCollection(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  return RegisterCollection(sysmem_allocator, std::move(token));
+}
+
+GlobalBufferCollectionId NullRenderer::RegisterRenderTargetCollection(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  return RegisterCollection(sysmem_allocator, std::move(token));
+}
+
+GlobalBufferCollectionId NullRenderer::RegisterCollection(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));

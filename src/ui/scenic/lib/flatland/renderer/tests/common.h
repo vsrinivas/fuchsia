@@ -33,11 +33,9 @@ inline SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_a
 }
 
 inline void SetClientConstraintsAndWaitForAllocated(
-                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                          fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
-                          uint32_t image_count = 1,
-                          uint32_t width = 64,
-                          uint32_t height = 32) {
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
+    uint32_t width = 64, uint32_t height = 32) {
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   zx_status_t status =
       sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
@@ -78,6 +76,44 @@ inline void SetClientConstraintsAndWaitForAllocated(
 
   status = buffer_collection->Close();
   EXPECT_EQ(status, ZX_OK);
+}
+
+inline fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
+    uint32_t width = 64, uint32_t height = 32) {
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  zx_status_t status =
+      sysmem_allocator->BindSharedCollection(std::move(token), buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+  constraints.min_buffer_count = image_count;
+
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+
+  image_constraints.required_min_coded_width = width;
+  image_constraints.required_min_coded_height = height;
+  image_constraints.required_max_coded_width = width;
+  image_constraints.required_max_coded_height = height;
+  image_constraints.max_coded_width = width * 4;
+  image_constraints.max_coded_height = height;
+  image_constraints.max_bytes_per_row = 0xffffffff;
+
+  status = buffer_collection->SetConstraints(true, constraints);
+  EXPECT_EQ(status, ZX_OK);
+
+  return buffer_collection;
 }
 
 // Common testing base class to be used across different unittests that

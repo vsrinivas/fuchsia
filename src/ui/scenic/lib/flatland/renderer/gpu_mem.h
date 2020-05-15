@@ -47,7 +47,8 @@ class GpuImageInfo {
   // This class (GpuImageInfo) must be kept alive as long as images created from it are
   // in use, since this class holds the vk memory that is being used to back the images.
   // So it must stay alive so that we do not run into use-after-free errors.
-  vk::ImageCreateInfo NewVkImageCreateInfo(uint32_t width, uint32_t height) const;
+  vk::ImageCreateInfo NewVkImageCreateInfo(uint32_t width, uint32_t height,
+                                           vk::ImageUsageFlags usage) const;
 
  private:
   GpuImageInfo(escher::GpuMemPtr mem, vk::BufferCollectionFUCHSIA vk_buffer_collection,

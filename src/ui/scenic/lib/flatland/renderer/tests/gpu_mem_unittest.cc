@@ -42,8 +42,9 @@ VK_TEST_F(MemoryTest, SimpleTest) {
   auto escher = GetEscher();
   auto vk_device = escher->vk_device();
   auto vk_loader = escher->device()->dispatch_loader();
+  vk::ImageUsageFlags usage = RectangleCompositor::kTextureUsageFlags;
   auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
+      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined, usage);
 
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
@@ -63,9 +64,8 @@ VK_TEST_F(MemoryTest, SimpleTest) {
       vk::Result::eSuccess);
 
   // Set client constraints and wait for allocation.
-  flatland::SetClientConstraintsAndWaitForAllocated(sysmem_allocator_.get(),
-                                                    std::move(tokens.local_token),
-                                                    kImageCount, kWidth, kHeight);
+  flatland::SetClientConstraintsAndWaitForAllocated(
+      sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth, kHeight);
 
   // Server collection should be allocated now.
   EXPECT_TRUE(collection.BuffersAreAllocated());
@@ -75,7 +75,7 @@ VK_TEST_F(MemoryTest, SimpleTest) {
                                                 vk_collection, i);
     EXPECT_TRUE(gpu_info.GetGpuMem());
     EXPECT_TRUE(gpu_info.p_extension());
-    auto vk_image_create_info = gpu_info.NewVkImageCreateInfo(kWidth, kHeight);
+    auto vk_image_create_info = gpu_info.NewVkImageCreateInfo(kWidth, kHeight, usage);
     EXPECT_EQ(vk_image_create_info.extent, vk::Extent3D(kWidth, kHeight, 1));
     EXPECT_TRUE(vk_image_create_info.pNext);
   }
@@ -92,8 +92,10 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
   auto escher = GetEscher();
   auto vk_device = escher->vk_device();
   auto vk_loader = escher->device()->dispatch_loader();
+
+  vk::ImageUsageFlags usage = RectangleCompositor::kTextureUsageFlags;
   auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
+      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined, usage);
 
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
@@ -111,8 +113,8 @@ VK_TEST_F(MemoryTest, OutOfBoundsTest) {
       vk_device.setBufferCollectionConstraintsFUCHSIA(vk_collection, image_create_info, vk_loader),
       vk::Result::eSuccess);
 
-  flatland::SetClientConstraintsAndWaitForAllocated(sysmem_allocator_.get(), std::move(tokens.local_token),
-                                                    kImageCount, kWidth, kHeight);
+  flatland::SetClientConstraintsAndWaitForAllocated(
+      sysmem_allocator_.get(), std::move(tokens.local_token), kImageCount, kWidth, kHeight);
 
   EXPECT_TRUE(collection.BuffersAreAllocated());
 
@@ -138,8 +140,9 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   auto vk_device = escher->vk_device();
   auto vk_loader = escher->device()->dispatch_loader();
   auto resource_recycler = escher->resource_recycler();
+  vk::ImageUsageFlags usage = RectangleCompositor::kTextureUsageFlags;
   auto image_create_info =
-      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined);
+      escher::RectangleCompositor::GetDefaultImageConstraints(vk::Format::eUndefined, usage);
 
   // First create the pair of sysmem tokens, one for the client, one for the server.
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
@@ -232,8 +235,9 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
   EXPECT_TRUE(gpu_info.GetGpuMem());
 
   // Create an image from the server side collection.
-  auto image = image_utils::NewImage(vk_device, gpu_info.NewVkImageCreateInfo(kWidth, kHeight),
-                                     gpu_info.GetGpuMem(), resource_recycler);
+  auto image =
+      image_utils::NewImage(vk_device, gpu_info.NewVkImageCreateInfo(kWidth, kHeight, usage),
+                            gpu_info.GetGpuMem(), resource_recycler);
 
   // The returned image should not be null and should have the
   // width and height specified above.

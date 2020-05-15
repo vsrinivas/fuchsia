@@ -20,7 +20,12 @@ class NullRenderer : public Renderer {
   ~NullRenderer() override = default;
 
   // |Renderer|.
-  GlobalBufferCollectionId RegisterBufferCollection(
+  GlobalBufferCollectionId RegisterTextureCollection(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+
+  // |Renderer|.
+  GlobalBufferCollectionId RegisterRenderTargetCollection(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
@@ -32,6 +37,10 @@ class NullRenderer : public Renderer {
               const std::vector<RenderableMetadata>& renderables) override;
 
  private:
+  GlobalBufferCollectionId RegisterCollection(
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
+
   // This mutex is used to protect access to |collection_map_| and |collection_metadata_map_|.
   std::mutex lock_;
   std::unordered_map<GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;

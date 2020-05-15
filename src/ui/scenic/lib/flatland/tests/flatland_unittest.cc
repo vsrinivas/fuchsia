@@ -208,7 +208,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
                                  ImageProperties properties) {
     BufferCollectionId renderer_collection_id = next_collection_id_++;
 
-    EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _))
+    EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
         .WillOnce(Return(renderer_collection_id));
 
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
@@ -2068,7 +2068,7 @@ TEST_F(FlatlandTest, RegisterBufferCollectionErrorCases) {
   // The Renderer registration call can fail.
   {
     // Mock the Renderer call to fail.
-    EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _))
+    EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
         .WillOnce(Return(Renderer::kInvalidId));
 
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
@@ -2080,7 +2080,7 @@ TEST_F(FlatlandTest, RegisterBufferCollectionErrorCases) {
   {
     const BufferCollectionId kId = 1;
 
-    EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _)).WillOnce(Return(1));
+    EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _)).WillOnce(Return(1));
 
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
     flatland.RegisterBufferCollection(kId, std::move(token));
@@ -2104,7 +2104,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
   const BufferCollectionId kBufferCollectionId = 1;
   const GlobalBufferCollectionId kGlobalBufferCollectionId = 2;
 
-  EXPECT_CALL(*mock_renderer_, RegisterBufferCollection(_, _))
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
       .WillOnce(Return(kGlobalBufferCollectionId));
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;

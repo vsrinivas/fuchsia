@@ -437,7 +437,7 @@ void Flatland::RegisterBufferCollection(
     }
 
     auto renderer_collection_id =
-        renderer_->RegisterBufferCollection(sysmem_allocator_.get(), std::move(token));
+        renderer_->RegisterTextureCollection(sysmem_allocator_.get(), std::move(token));
     if (renderer_collection_id == Renderer::kInvalidId) {
       FX_LOGS(ERROR)
           << "RegisterBufferCollection failed to register the sysmem token with the renderer.";

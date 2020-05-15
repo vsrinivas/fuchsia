@@ -13,6 +13,11 @@
 #include "src/ui/lib/escher/vk/texture.h"
 
 namespace escher {
+const vk::ImageUsageFlags RectangleCompositor::kRenderTargetUsageFlags =
+    vk::ImageUsageFlagBits::eColorAttachment;
+const vk::ImageUsageFlags RectangleCompositor::kTextureUsageFlags =
+    vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+
 namespace {
 
 vec4 GetPremultipliedRgba(vec4 rgba) { return vec4(vec3(rgba) * rgba.a, rgba.a); }
@@ -107,8 +112,8 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
 
 // RectangleCompositor constructor. Initializes the shader program and allocates
 // GPU buffers to store mesh data.
-RectangleCompositor::RectangleCompositor(EscherWeakPtr weak_escher)
-    : standard_program_(weak_escher->GetProgram(kFlatlandStandardProgram)) {}
+RectangleCompositor::RectangleCompositor(Escher* escher)
+    : standard_program_(escher->GetProgram(kFlatlandStandardProgram)) {}
 
 // DrawBatch generates the Vulkan data needed to render the batch (e.g. renderpass,
 // bounds, etc) and calls |TraverseBatch| which iterates over the renderables and
@@ -144,7 +149,8 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   cmd_buf->EndRenderPass();
 }
 
-vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Format& vk_format) {
+vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Format& vk_format,
+                                                                    vk::ImageUsageFlags usage) {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.extent = vk::Extent3D{1, 1, 1};
@@ -159,7 +165,7 @@ vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Fo
   create_info.arrayLayers = 1;
   create_info.samples = vk::SampleCountFlagBits::e1;
   create_info.tiling = vk::ImageTiling::eOptimal;
-  create_info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+  create_info.usage = usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
   return create_info;
