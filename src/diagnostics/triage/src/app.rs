@@ -51,6 +51,11 @@ impl RunResult {
         RunResult { output_format, action_results }
     }
 
+    /// Returns true if at least one ActionResults has a warning.
+    pub fn has_warnings(&self) -> bool {
+        !self.action_results.iter().all(|results| results.get_warnings().is_empty())
+    }
+
     /// Writes the contents of the run to the provided writer.
     ///
     /// This method can be used to output the results to a file or stdout.

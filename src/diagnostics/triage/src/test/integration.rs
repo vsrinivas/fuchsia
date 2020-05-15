@@ -207,7 +207,7 @@ fn report_missing_inspect() -> Result<(), Error> {
     )?;
     verify_output(
         output,
-        0,
+        1,
         StringMatch::Contains("Couldn't read file 'not_found_dir/inspect.json'"),
     );
     Ok(())
@@ -219,7 +219,7 @@ fn report_missing_config_file() -> Result<(), Error> {
     // file conversion logic
     let output =
         run_command(Input::Bugreport(bugreport_path()?), vec!["cfg".to_string()], vec![], vec![])?;
-    verify_output(output, 0, StringMatch::Contains("Couldn't read config file"));
+    verify_output(output, 1, StringMatch::Contains("Couldn't read config file"));
     Ok(())
 }
 
@@ -233,7 +233,7 @@ fn reads_inspect_file_directly() -> Result<(), Error> {
         vec![],
         vec![],
     )?;
-    verify_output(output, 0, StringMatch::DoesNotContain("Couldn't"));
+    verify_output(output, 1, StringMatch::DoesNotContain("Couldn't"));
     Ok(())
 }
 
@@ -242,7 +242,7 @@ integration_test!(
     vec!["other.triage", "sample.triage"],
     vec![],
     vec![],
-    0,
+    1,
     not "Couldn't"
 );
 
@@ -251,7 +251,7 @@ integration_test!(
     vec!["other.triage", "sample.triage"],
     vec![],
     vec![],
-    0,
+    1,
     "Warning: 'act1' in 'other' detected 'yes on A!': 'sample::c1' was true"
 );
 
@@ -260,7 +260,7 @@ integration_test!(
     vec!["other.triage", "sample.triage"],
     vec![],
     vec![],
-    0,
+    1,
     "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
 );
 
@@ -269,7 +269,7 @@ integration_test!(
     vec!["sample.triage"],
     vec![],
     vec![],
-    0,
+    1,
     "Bad namespace"
 );
 
@@ -278,7 +278,7 @@ integration_test!(
     vec!["sample_tags.triage"],
     vec!["foo"],
     vec![],
-    0,
+    1,
     "Warning: 'act1' in 'sample_tags' detected 'trigger foo tag': 'c' was true"
 );
 
@@ -296,7 +296,7 @@ integration_test!(
     vec!["sample_tags.triage"],
     vec!["foo"],
     vec!["foo"],
-    0,
+    1,
     "Warning: 'act1' in 'sample_tags' detected 'trigger foo tag': 'c' was true"
 );
 
@@ -314,6 +314,6 @@ integration_test!(
     vec!["error_rate.triage"],
     vec![],
     vec![],
-    0,
+    1,
     "Warning: 'error_rate_too_high' in 'error_rate' detected 'Error rate for app.cmx is too high': 'error_rate > 0.9' was true"
 );

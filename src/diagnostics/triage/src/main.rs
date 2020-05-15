@@ -10,15 +10,27 @@ use {
 };
 
 /// Reports an [Error] to stdout and logs at "error" level.
-pub fn report_failure(e: Error) {
+fn report_failure(e: Error) {
     error!("Triage failed: {:?}", e);
     println!("Triage failed: {:?}", e);
 }
 
-fn main() {
+fn run_app() -> Result<i32, Error> {
     let app = App::new(Options::from_args());
-    match app.run() {
-        Ok(results) => results.write_report(&mut std::io::stdout()).unwrap(),
-        Err(e) => report_failure(e),
-    };
+    let results = app.run()?;
+    results.write_report(&mut std::io::stdout())?;
+    Ok(match results.has_warnings() {
+        true => 1,
+        false => 0,
+    })
+}
+
+fn main() {
+    std::process::exit(match run_app() {
+        Ok(code) => code,
+        Err(err) => {
+            report_failure(err);
+            1
+        }
+    })
 }
