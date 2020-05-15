@@ -281,7 +281,7 @@ TEST_F(IntegrationTest, AcknowledgeVsync) {
       zx::sec(1)));
 }
 
-TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncAfterQueueFull) {
+TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -325,7 +325,7 @@ TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncAfterQueueFull) {
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync_count());
 }
 
-TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncAfterLongTime) {
+TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -370,7 +370,7 @@ TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncAfterLongTime) {
             primary_client->vsync_count());
 }
 
-TEST_F(IntegrationTest, DISABLED_InvalidVSyncCookie) {
+TEST_F(IntegrationTest, InvalidVSyncCookie) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -413,7 +413,7 @@ TEST_F(IntegrationTest, DISABLED_InvalidVSyncCookie) {
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 }
 
-TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncWithOldCookie) {
+TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -517,7 +517,7 @@ TEST_F(IntegrationTest, DISABLED_AcknowledgeVsyncWithOldCookie) {
             primary_client->vsync_count());
 }
 
-TEST_F(IntegrationTest, DISABLED_InvalidImageHandleAfterSave) {
+TEST_F(IntegrationTest, InvalidImageHandleAfterSave) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));

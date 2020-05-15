@@ -301,13 +301,8 @@ class ClientProxy : public ClientParent {
   // Half of this limit is provided to clients as part of display info. Assuming a
   // frame rate of 60hz, clients will be required to acknowledge at least once a second
   // and driver will stop sending messages after 2 seconds of no acknowledgement
-
-  // TODO(bug 50889): Set kMaxVsyncMessages to 120 to enforce cookie acknowledgement
-  // static constexpr uint32_t kMaxVsyncMessages = 120;
-  static constexpr uint32_t kMaxVsyncMessages = static_cast<uint32_t>(-1);
-  // TODO(bug 50889): Set kVsyncMessagesWatermark to (kMaxVsyncMessages / 2)
-  // static constexpr uint32_t kVsyncMessagesWatermark = (kMaxVsyncMessages / 2);
-  static constexpr uint32_t kVsyncMessagesWatermark = 60;
+  static constexpr uint32_t kMaxVsyncMessages = 120;
+  static constexpr uint32_t kVsyncMessagesWatermark = (kMaxVsyncMessages / 2);
   // At the moment, maximum image handles returned by any driver is 4 which is
   // equal to number of hardware layers. 8 should be more than enough to allow for
   // a simple statically allocated array of image_ids for vsync events that are being
