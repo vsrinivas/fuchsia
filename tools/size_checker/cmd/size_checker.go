@@ -17,10 +17,12 @@ import (
 )
 
 type Input struct {
-	AssetLimit json.Number `json:"asset_limit"`
-	CoreLimit  json.Number `json:"core_limit"`
-	AssetExt   []string    `json:"asset_ext"`
-	Components []Component `json:"components"`
+	AssetLimit             json.Number `json:"asset_limit"`
+	CoreLimit              json.Number `json:"core_limit"`
+	AssetExt               []string    `json:"asset_ext"`
+	DistributedShlibs      []string    `json:"distributed_shlibs"`
+	DistributedShlibsLimit json.Number `json:"distributed_shlibs_limit"`
+	Components             []Component `json:"components"`
 }
 
 type Node struct {
@@ -240,15 +242,21 @@ func processSizes(r io.Reader) (map[string]int64, error) {
 	return m, nil
 }
 
+type processingState struct {
+	blobMap               map[string]*Blob
+	assetMap              map[string]bool
+	assetSize             int64
+	distributedShlibs     map[string]bool
+	distributedShlibsSize int64
+	root                  *Node
+}
+
 // Process the packages extracted from blob.manifest.list and process the blobs.json file to build a
 // tree of packages.
 func processPackages(
 	buildDir string,
-	blobMap map[string]*Blob,
-	assetMap map[string]bool,
-	assetSize *int64,
 	packages []string,
-	root *Node) error {
+	state *processingState) error {
 	for _, metaFar := range packages {
 		// From the meta.far file, we can get the path to the blobs.json for that package.
 		dir := filepath.Dir(metaFar)
@@ -263,30 +271,32 @@ func processPackages(
 			return fmt.Errorf(unmarshalError(blobJSON, err))
 		}
 		// Finally, we add the blob and the package to the tree.
-		processBlobsJSON(blobMap, assetMap, assetSize, blobs, root, dir)
+		processBlobsJSON(state, blobs, dir)
 	}
 	return nil
 }
 
 // Similar to processPackages except it doesn't throw an I/O error.
 func processBlobsJSON(
-	blobMap map[string]*Blob,
-	assetMap map[string]bool,
-	assetSize *int64,
+	state *processingState,
 	blobs []BlobFromJSON,
-	root *Node,
 	pkgPath string) {
 	for _, blob := range blobs {
 		// If the blob is an asset, we don't add it to the tree.
 		// We check the path instead of the source path because prebuilt packages have hashes as the
 		// source path for their blobs
-		if assetMap[filepath.Ext(blob.Path)] {
+		if state.assetMap[filepath.Ext(blob.Path)] {
 			// The size of each blob is the total space occupied by the blob in blobfs (each blob may be
 			// referenced several times by different packages). Therefore, once we have already add the
 			// size, we should remove it from the map
-			if blobMap[blob.Merkle] != nil {
-				*assetSize += blobMap[blob.Merkle].size
-				delete(blobMap, blob.Merkle)
+			if state.blobMap[blob.Merkle] != nil {
+				state.assetSize += state.blobMap[blob.Merkle].size
+				delete(state.blobMap, blob.Merkle)
+			}
+		} else if state.distributedShlibs[blob.Path] {
+			if state.blobMap[blob.Merkle] != nil {
+				state.distributedShlibsSize += state.blobMap[blob.Merkle].size
+				delete(state.blobMap, blob.Merkle)
 			}
 		} else {
 			var configPkgPath string
@@ -296,7 +306,7 @@ func processBlobsJSON(
 				// By contract defined in config.gni, the path has the format 'data/$for_pkg/$outputs'
 				configPkgPath = strings.TrimPrefix(blob.Path, DataPrefix)
 			}
-			root.add(filepath.Join(pkgPath, configPkgPath), blobMap[blob.Merkle])
+			state.root.add(filepath.Join(pkgPath, configPkgPath), state.blobMap[blob.Merkle])
 		}
 	}
 }
@@ -315,18 +325,29 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	for _, ext := range input.AssetExt {
 		assetMap[ext] = true
 	}
-	// The dummy node will have the root node as its only child.
-	dummy := newDummyNode()
-	var assetSize int64
+	// We also create a map of paths that should be considered distributed shlibs.
+	distributedShlibs := make(map[string]bool)
+	for _, path := range input.DistributedShlibs {
+		distributedShlibs[path] = true
+	}
+	st := processingState{
+		blobMap,
+		assetMap,
+		0,
+		distributedShlibs,
+		0,
+		// The dummy node will have the root node as its only child.
+		newDummyNode(),
+	}
 	// We process the meta.far files that were found in the blobs.manifest here.
-	if err := processPackages(buildDir, blobMap, assetMap, &assetSize, packages, dummy); err != nil {
+	if err := processPackages(buildDir, packages, &st); err != nil {
 		return outputSizes, fmt.Errorf("error processing packages: %s", err)
 	}
 
 	var total int64
 	var noSpace = false
 	var report strings.Builder
-	root, err := dummy.getOnlyChild()
+	root, err := st.root.getOnlyChild()
 	if err != nil {
 		return outputSizes, err
 	}
@@ -347,8 +368,8 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	}
 
 	const assetsName = "Assets (Fonts / Strings / Images)"
-	outputSizes[assetsName] = assetSize
-	if s := checkLimit(assetsName, assetSize, input.AssetLimit); s != "" {
+	outputSizes[assetsName] = st.assetSize
+	if s := checkLimit(assetsName, st.assetSize, input.AssetLimit); s != "" {
 		noSpace = true
 		report.WriteString(s + "\n")
 	}
@@ -358,6 +379,15 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	if s := checkLimit(coreName, root.size-total, input.CoreLimit); s != "" {
 		noSpace = true
 		report.WriteString(s + "\n")
+	}
+
+	if input.DistributedShlibsLimit.String() != "" {
+		const distributedShlibsName = "Distributed shared libraries"
+		outputSizes[distributedShlibsName] = st.distributedShlibsSize
+		if s := checkLimit(distributedShlibsName, st.distributedShlibsSize, input.DistributedShlibsLimit); s != "" {
+			noSpace = true
+			report.WriteString(s + "\n")
+		}
 	}
 
 	if noSpace {

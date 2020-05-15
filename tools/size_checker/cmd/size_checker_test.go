@@ -128,18 +128,22 @@ func Test_processManifest(t *testing.T) {
 }
 func Test_processBlobsJSON(t *testing.T) {
 	tests := []struct {
-		name            string
-		blobMap         map[string]*Blob
-		assetMap        map[string]bool
-		assetSize       int64
-		blobs           []BlobFromJSON
-		expectedBlobMap map[string]*Blob
-		expectedSize    int64
+		name                  string
+		blobMap               map[string]*Blob
+		assetMap              map[string]bool
+		assetSize             int64
+		distributedShlibsMap  map[string]bool
+		distributedShlibsSize int64
+		blobs                 []BlobFromJSON
+		expectedBlobMap       map[string]*Blob
+		expectedSize          int64
 	}{
 		{
 			"Adding Asset Blob",
 			map[string]*Blob{"hash": {size: 1}},
 			map[string]bool{".asset": true},
+			0,
+			map[string]bool{"lib/ld.so.1": true},
 			0,
 			[]BlobFromJSON{{Path: "test.asset", Merkle: "hash"}},
 			map[string]*Blob{},
@@ -150,6 +154,8 @@ func Test_processBlobsJSON(t *testing.T) {
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
 			map[string]bool{".asset": true},
 			0,
+			map[string]bool{"lib/ld.so.1": true},
+			0,
 			[]BlobFromJSON{{Path: "test.notasset", Merkle: "hash"}},
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
 			0,
@@ -158,13 +164,21 @@ func Test_processBlobsJSON(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			processBlobsJSON(test.blobMap, test.assetMap, &test.assetSize, test.blobs, newDummyNode(), "")
+			st := processingState{
+				test.blobMap,
+				test.assetMap,
+				test.assetSize,
+				test.distributedShlibsMap,
+				test.distributedShlibsSize,
+				newDummyNode(),
+			}
+			processBlobsJSON(&st, test.blobs, "")
 
-			if !reflect.DeepEqual(test.blobMap, test.expectedBlobMap) {
+			if !reflect.DeepEqual(st.blobMap, test.expectedBlobMap) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
 			}
 
-			if test.assetSize != test.expectedSize {
+			if st.assetSize != test.expectedSize {
 				t.Fatalf("asset size: %d; expect %d", test.assetSize, test.expectedSize)
 			}
 		})
@@ -202,13 +216,21 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 		},
 	}
 
-	var dummyAssetMap map[string]bool
-	var dummyAssetSize int64
+	var dummyMap map[string]bool
+	var dummySize int64
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			root := newDummyNode()
-			processBlobsJSON(test.blobMap, dummyAssetMap, &dummyAssetSize, []BlobFromJSON{test.blob}, root, test.pkgPath)
+			st := processingState{
+				test.blobMap,
+				dummyMap,
+				dummySize,
+				dummyMap,
+				dummySize,
+				root,
+			}
+			processBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath)
 
 			expectedNode := root.find(test.expectedPathInTree)
 			if expectedNode == nil {
