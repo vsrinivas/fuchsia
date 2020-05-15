@@ -137,6 +137,26 @@ void main() {
         fuchsiaperfFile, Platform.environment);
   }
 
+  Future<void> startIperfServer(PerfTestHelper helper) async {
+    // Start iperf server on the target device.
+    await helper.sl4fDriver.ssh.start(
+        '/bin/run $componentUrl --server --port $port --json',
+        mode: ProcessStartMode.detached);
+
+    // Poll for the server to have started listening for client
+    // connection on the expected port.
+    for (var i = 0; i < 5; i++) {
+      await Future.delayed(Duration(seconds: 1));
+      final result = await helper.sl4fDriver.ssh.run(
+          'iquery --recursive /hub/c/netstack.cmx/*/out/diagnostics/sockets');
+      if (result.exitCode == 0 &&
+          result.stdout.contains('LocalAddress = :$port')) {
+        return;
+      }
+    }
+    throw Sl4fException('Failed to start Iperf server.');
+  }
+
   Future<void> runIperfClientTests(PerfTestHelper helper, Protocol proto,
       {bool send = true, bool recv = true, bool deviceLocal = true}) async {
     String protocolOption = '';
@@ -176,63 +196,48 @@ void main() {
 
     var msgSizes = {64, 1024, 1400};
     for (var size in msgSizes) {
-      var cmdArgs = [
-        '--client',
-        serverIp,
-        '--port',
-        '$port',
-        '--length',
-        '$size',
-        '--json',
-        protocolOption,
-        '--bitrate',
-        '$bwValue',
-        dirOption,
-        '--get-server-output'
-      ];
-      String resultsFile;
-      if (deviceLocal) {
-        resultsFile = '/tmp/iperf_results.json';
-        var args = cmdArgs.join(' ');
-        final result = await helper.sl4fDriver.ssh
-            .run('/bin/run $componentUrl $args > $resultsFile');
-        expect(result.exitCode, equals(0));
-      } else {
-        // Run iperf3 client from the host-tools.
-        final hostPath =
-            Platform.script.resolve('runtime_deps/iperf3').toFilePath();
-        final result = await Process.run(hostPath, cmdArgs, runInShell: true);
-        var iperfFile =
-            await Dump().writeAsString('iperf', 'json', result.stdout);
-        resultsFile = iperfFile.path;
-      }
-      await processIperfResults(
-          helper: helper,
-          resultsFile: resultsFile,
-          send: send,
-          recv: recv,
-          deviceLocal: deviceLocal);
-    }
-  }
-
-  Future<void> startIperfServer(PerfTestHelper helper) async {
-    // Start iperf server on the target device.
-    await helper.sl4fDriver.ssh.start(
-        '/bin/run $componentUrl --server --port $port --json',
-        mode: ProcessStartMode.detached);
-    // Poll until the server is accepting connections.
-    for (var i = 0; i < 5; i++) {
-      await Future.delayed(Duration(seconds: 1));
-      // Check whether the iperf server is accepting connections by running
-      // the iperf client on localhost and telling it to transfer only a
-      // minimal amount of data (by passing '--bytes 1').
-      final result = await helper.sl4fDriver.ssh.run(
-          '/bin/run $componentUrl --client 127.0.0.1 --port $port --bytes 1');
-      if (result.exitCode == 0) {
-        return;
+      try {
+        var cmdArgs = [
+          '--client',
+          serverIp,
+          '--port',
+          '$port',
+          '--length',
+          '$size',
+          '--json',
+          protocolOption,
+          '--bitrate',
+          '$bwValue',
+          dirOption,
+          '--get-server-output'
+        ];
+        await startIperfServer(helper);
+        String resultsFile;
+        if (deviceLocal) {
+          resultsFile = '/tmp/iperf_results.json';
+          var args = cmdArgs.join(' ');
+          final result = await helper.sl4fDriver.ssh
+              .run('/bin/run $componentUrl $args > $resultsFile');
+          expect(result.exitCode, equals(0));
+        } else {
+          // Run iperf3 client from the host-tools.
+          final hostPath =
+              Platform.script.resolve('runtime_deps/iperf3').toFilePath();
+          final result = await Process.run(hostPath, cmdArgs, runInShell: true);
+          var iperfFile =
+              await Dump().writeAsString('iperf', 'json', result.stdout);
+          resultsFile = iperfFile.path;
+        }
+        await processIperfResults(
+            helper: helper,
+            resultsFile: resultsFile,
+            send: send,
+            recv: recv,
+            deviceLocal: deviceLocal);
+      } finally {
+        await helper.sl4fDriver.ssh.run('killall iperf3.cmx');
       }
     }
-    throw Sl4fException('Failed to start Iperf server.');
   }
 
   void addIperfTest(String label, Protocol proto,
@@ -240,7 +245,6 @@ void main() {
     test(label, () async {
       final helper = await PerfTestHelper.make();
       try {
-        await startIperfServer(helper);
         await runIperfClientTests(helper, proto,
             send: send, recv: recv, deviceLocal: deviceLocal);
       } finally {
