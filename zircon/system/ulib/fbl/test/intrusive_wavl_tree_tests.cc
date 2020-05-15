@@ -72,6 +72,7 @@ class WAVLTraits {
     using OtherContainerType      = WAVLTree<KeyType,
                                              PtrType,
                                              OtherContainerTraits,
+                                             DefaultObjectTag,
                                              OtherContainerTraits>;
 
     struct Tag1 {};
@@ -344,7 +345,8 @@ using BalanceTestObjPtr = std::unique_ptr<BalanceTestObj>;
 using BalanceTestTree =
     WAVLTree<BalanceTestKeyType, BalanceTestObjPtr,
              DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>,
-             DefaultWAVLTreeTraits<BalanceTestObjPtr>, DefaultObjectTag, WAVLBalanceTestObserver>;
+             DefaultObjectTag,
+             DefaultWAVLTreeTraits<BalanceTestObjPtr, DefaultObjectTag>, WAVLBalanceTestObserver>;
 
 class BalanceTestObj {
  public:
@@ -367,7 +369,7 @@ class BalanceTestObj {
   bool InContainer() const { return wavl_node_state_.InContainer(); }
 
  private:
-  friend DefaultWAVLTreeTraits<BalanceTestObjPtr>;
+  friend DefaultWAVLTreeTraits<BalanceTestObjPtr, DefaultObjectTag>;
   friend WAVLBalanceTestObserver;
 
   static void operator delete(void* ptr) {

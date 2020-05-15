@@ -72,15 +72,15 @@ class WAVLBalanceTestObserver;
 }  // namespace intrusive_containers
 }  // namespace tests
 
-template <typename T, NodeOptions Options, typename RankType>
+template <typename PtrType_, NodeOptions Options, typename RankType>
 struct WAVLTreeNodeStateBase
-    : public internal::CommonNodeStateBase<WAVLTreeNodeStateBase<T, Options, RankType>> {
+    : public internal::CommonNodeStateBase<WAVLTreeNodeStateBase<PtrType_, Options, RankType>> {
  private:
-  using Base = internal::CommonNodeStateBase<WAVLTreeNodeStateBase<T, Options, RankType>>;
+  using Base = internal::CommonNodeStateBase<WAVLTreeNodeStateBase<PtrType_, Options, RankType>>;
 
  public:
-  using PtrType = T;  // TODO(50594) : Remove this when we can.
-  using PtrTraits = internal::ContainerPtrTraits<T>;
+  using PtrType = PtrType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType_>;
   static constexpr NodeOptions kNodeOptions = Options;
 
   WAVLTreeNodeStateBase() = default;
@@ -114,9 +114,9 @@ struct WAVLTreeNodeStateBase
   RankType rank_{};
 };
 
-template <typename T, NodeOptions Options>
-struct WAVLTreeNodeState<T, Options, DefaultWAVLTreeRankType>
-    : public WAVLTreeNodeStateBase<T, Options, DefaultWAVLTreeRankType> {
+template <typename PtrType_, NodeOptions Options>
+struct WAVLTreeNodeState<PtrType_, Options, DefaultWAVLTreeRankType>
+    : public WAVLTreeNodeStateBase<PtrType_, Options, DefaultWAVLTreeRankType> {
   WAVLTreeNodeState() = default;
 
   // Defer to WAVLTreeNodeStateBase for enforcement of the various copy/move rules.
@@ -135,15 +135,16 @@ struct WAVLTreeNodeState<T, Options, DefaultWAVLTreeRankType>
 template <typename PtrType, NodeOptions Options, typename TagType>
 struct WAVLTreeContainable;
 
-template <typename PtrType>
+template <typename PtrType_, typename TagType_>
 struct DefaultWAVLTreeTraits {
  private:
-  using ValueType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
+  using ValueType = typename internal::ContainerPtrTraits<PtrType_>::ValueType;
 
  public:
-  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+  using PtrType = PtrType_;
+  using TagType = TagType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType_>;
 
-  template <typename TagType = DefaultObjectTag>
   static auto& node_state(typename PtrTraits::RefType obj) {
     if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
       return obj.ValueType::wavl_node_state_;
@@ -151,28 +152,33 @@ struct DefaultWAVLTreeTraits {
       return obj.template GetContainableByTag<TagType>().wavl_node_state_;
     }
   }
+
+  using NodeState =
+      std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
 };
 
-template <typename PtrType, NodeOptions Options = NodeOptions::None,
+template <typename PtrType_, NodeOptions Options = NodeOptions::None,
           typename TagType_ = DefaultObjectTag>
 struct WAVLTreeContainable {
  public:
+  using PtrType = PtrType_;
   using TagType = TagType_;
+
   bool InContainer() const {
     using Node = WAVLTreeContainable<PtrType, Options, TagType>;
     return Node::wavl_node_state_.InContainer();
   }
 
  private:
-  friend DefaultWAVLTreeTraits<PtrType>;
+  friend DefaultWAVLTreeTraits<PtrType, TagType>;
   WAVLTreeNodeState<PtrType, Options, DefaultWAVLTreeRankType> wavl_node_state_;
 };
 
 template <typename KeyType_, typename PtrType_,
           typename KeyTraits_ = DefaultKeyedObjectTraits<
               KeyType_, typename internal::ContainerPtrTraits<PtrType_>::ValueType>,
-          typename NodeTraits_ = DefaultWAVLTreeTraits<PtrType_>,
           typename TagType_ = DefaultObjectTag,
+          typename NodeTraits_ = DefaultWAVLTreeTraits<PtrType_, TagType_>,
           typename Observer_ = tests::intrusive_containers::DefaultWAVLTreeObserver>
 class __POINTER(KeyType_) WAVLTree {
  private:
@@ -182,21 +188,20 @@ class __POINTER(KeyType_) WAVLTree {
   struct iterator_traits;
   struct const_iterator_traits;
 
-  template <typename NodeTraits, typename = void>
-  struct AddGenericNodeState;
-
  public:
   // Aliases used to reduce verbosity and expose types/traits to tests
   using KeyType = KeyType_;
   using PtrType = PtrType_;
   using KeyTraits = KeyTraits_;
-  using NodeTraits = AddGenericNodeState<NodeTraits_>;
   using TagType = TagType_;
+  using NodeTraits = NodeTraits_;
   using Observer = Observer_;
+
   using PtrTraits = internal::ContainerPtrTraits<PtrType>;
   using RawPtrType = typename PtrTraits::RawPtrType;
   using ValueType = typename PtrTraits::ValueType;
-  using ContainerType = WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits_, TagType, Observer>;
+  using RefType = typename PtrTraits::RefType;
+  using ContainerType = WAVLTree<KeyType_, PtrType_, KeyTraits_, TagType_, NodeTraits_, Observer_>;
   using CheckerType = ::fbl::tests::intrusive_containers::WAVLTreeChecker;
 
   // Declarations of the standard iterator types.
@@ -215,12 +220,17 @@ class __POINTER(KeyType_) WAVLTree {
   static constexpr bool IsSequenced = false;
 
   // Default construction gives an empty tree.
-  constexpr WAVLTree() {}
+  constexpr WAVLTree() noexcept {
+    // Make certain that the type of pointer we are expected to manage matches
+    // the type of pointer that our Node type expects to manage.
+    static_assert(std::is_same_v<PtrType, internal::node_ptr_t<NodeTraits, RefType>>,
+                  "WAVLTree's pointer type must match its Node's pointerType");
+  }
 
   // Rvalue construction is permitted, but will result in the move of the tree
   // contents from one instance of the list to the other (even for unmanaged
   // pointers)
-  WAVLTree(WAVLTree&& other_tree) { swap(other_tree); }
+  WAVLTree(WAVLTree&& other_tree) noexcept : WAVLTree() { swap(other_tree); }
 
   // Rvalue assignment is permitted for managed trees, and when the target is
   // an empty tree of unmanaged pointers.  Like Rvalue construction, it will
@@ -235,17 +245,6 @@ class __POINTER(KeyType_) WAVLTree {
   }
 
   ~WAVLTree() {
-    // TODO(50594) : Remove this when we can.
-    //
-    // For now, put this static assert into a function which we know must be
-    // expanded at some point in time.  In a perfect world, we would put this in
-    // the body of the class itself, but right now the compiler seems unable to
-    // deduce the type of NodeTraits::NodeState until the class has been
-    // completely declared because of some complexity that AddGenericNodeState
-    // introduces.
-    static_assert(std::is_same_v<PtrType, typename NodeTraits::NodeState::PtrType>,
-                  "WAVLTree's pointer type must match its Node's pointerType");
-
     // It is considered an error to allow a tree of unmanaged pointers to
     // destruct of there are still elements in it.  Managed pointer trees
     // will automatically release their references to their elements.
@@ -788,26 +787,6 @@ class __POINTER(KeyType_) WAVLTree {
 
     typename PtrTraits::RawPtrType node_ = nullptr;
   };  // class iterator_impl
-
-  template <typename BaseNodeTraits>
-  struct AddGenericNodeState<BaseNodeTraits,
-                             std::enable_if_t<internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {
-    using NodeState = std::decay_t<
-        std::invoke_result_t<decltype(BaseNodeTraits::node_state), typename PtrTraits::RefType>>;
-  };
-
-  template <typename BaseNodeTraits>
-  struct AddGenericNodeState<BaseNodeTraits,
-                             std::enable_if_t<!internal::has_node_state_v<BaseNodeTraits>>>
-      : public BaseNodeTraits {
-   public:
-    static auto& node_state(typename PtrTraits::RefType obj) {
-      return DefaultWAVLTreeTraits<PtrType>::template node_state<TagType>(obj);
-    }
-    using NodeState =
-        std::decay_t<std::invoke_result_t<decltype(node_state), typename PtrTraits::RefType>>;
-  };
 
   // The test framework's 'checker' class is our friend.
   friend CheckerType;
@@ -1939,27 +1918,12 @@ class __POINTER(KeyType_) WAVLTree {
 template <typename KeyType, typename PtrType, typename TagType,
           typename KeyTraits = DefaultKeyedObjectTraits<
               KeyType, typename internal::ContainerPtrTraits<PtrType>::ValueType>,
-          typename NodeTraits = DefaultWAVLTreeTraits<PtrType>,
           typename Observer = tests::intrusive_containers::DefaultWAVLTreeObserver>
-using TaggedWAVLTree = WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Observer>;
+using TaggedWAVLTree = WAVLTree<KeyType, PtrType, KeyTraits, TagType,
+                                DefaultWAVLTreeTraits<PtrType, TagType>, Observer>;
 
 template <typename PtrType, typename TagType, NodeOptions Options = NodeOptions::None>
 using TaggedWAVLTreeContainable = WAVLTreeContainable<PtrType, Options, TagType>;
-
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits,
-          typename TagType, typename Obs>
-constexpr bool
-    WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Obs>::SupportsConstantOrderErase;
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits,
-          typename TagType, typename Obs>
-constexpr bool
-    WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Obs>::SupportsConstantOrderSize;
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits,
-          typename TagType, typename Obs>
-constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Obs>::IsAssociative;
-template <typename KeyType, typename PtrType, typename KeyTraits, typename NodeTraits,
-          typename TagType, typename Obs>
-constexpr bool WAVLTree<KeyType, PtrType, KeyTraits, NodeTraits, TagType, Obs>::IsSequenced;
 
 }  // namespace fbl
 

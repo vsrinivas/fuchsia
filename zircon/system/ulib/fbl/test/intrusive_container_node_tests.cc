@@ -61,7 +61,7 @@ const auto& FindDLLNode(T& obj) {
 
 template <typename TypeTag = fbl::DefaultObjectTag, typename T>
 const auto& FindWAVLNode(T& obj) {
-  return fbl::DefaultWAVLTreeTraits<T*>::template node_state<TypeTag>(obj);
+  return fbl::DefaultWAVLTreeTraits<T*, TypeTag>::node_state(obj);
 }
 
 // Define a macro which will give us the base return type of an expression,
