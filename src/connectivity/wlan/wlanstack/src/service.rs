@@ -78,13 +78,19 @@ pub async fn serve_device_requests(
                     Ok(new_iface) => {
                         info!("iface #{} started ({:?})", new_iface.id, new_iface.phy_ownership);
                         let iface_id = new_iface.id;
-                        let resp = fidl_svc::CreateIfaceResponse { iface_id };
-                        responder.send(zx::sys::ZX_OK, Some(resp).as_mut())?;
 
                         let inspect_tree = inspect_tree.clone();
                         let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
 
-                        let serve_sme_fut = device::query_and_serve_iface(
+                        let device_info = match new_iface.mlme_channel.query_device_info().await {
+                            Ok(device_info) => device_info,
+                            Err(e) => {
+                                responder.send(zx::sys::ZX_ERR_PEER_CLOSED, None.as_mut())?;
+                                return Err(e.into());
+                            }
+                        };
+
+                        let serve_sme_fut = device::create_and_serve_sme(
                             cfg.clone(),
                             iface_id,
                             new_iface.phy_ownership,
@@ -93,8 +99,13 @@ pub async fn serve_device_requests(
                             inspect_tree.clone(),
                             iface_tree_holder,
                             cobalt_sender.clone(),
-                        )
-                        .map(move |result| {
+                            device_info,
+                        )?;
+
+                        let resp = fidl_svc::CreateIfaceResponse { iface_id };
+                        responder.send(zx::sys::ZX_OK, Some(resp).as_mut())?;
+
+                        let serve_sme_fut = serve_sme_fut.map(move |result| {
                             if let Err(e) = result {
                                 let msg = format!("error serving iface {}: {}", iface_id, e);
                                 error!("{}", msg);
@@ -441,16 +452,20 @@ async fn get_minstrel_stats(
 mod tests {
     use super::*;
 
+    use fidl::endpoints::ServerEnd;
     use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_device::{self as fidl_dev, PhyRequest, PhyRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_async as fasync;
+    use fuchsia_inspect::Inspector;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc;
+    use futures::future::BoxFuture;
     use futures::task::Poll;
     use pin_utils::pin_mut;
+    use structopt::StructOpt;
     use wlan_common::{
         assert_variant,
         channel::{Cbw, Phy},
@@ -460,6 +475,7 @@ mod tests {
     use crate::{
         mlme_query_proxy::MlmeQueryProxy,
         stats_scheduler::{self, StatsRequest},
+        watcher_service,
     };
 
     #[test]
@@ -1117,6 +1133,144 @@ mod tests {
         let resp = zx::Status::NOT_SUPPORTED.into_raw();
         responder.send(resp).expect("failed to send the response to ClearCountry");
         assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
+    }
+
+    fn setup_create_iface_test() -> (
+        fasync::Executor,
+        BoxFuture<'static, Result<(), anyhow::Error>>,
+        BoxFuture<'static, Result<(i32, Option<Box<fidl_svc::CreateIfaceResponse>>), fidl::Error>>,
+        impl Future<Output = Result<void::Void, anyhow::Error>>,
+        fidl_wlan_dev::CreateIfaceRequest,
+    ) {
+        let fake_phy_id = 10;
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phys, phy_events) = device::PhyMap::new();
+        let (ifaces, iface_events) = device::IfaceMap::new();
+
+        let iface_counter = Arc::new(IfaceCounter::new());
+        let cfg = ServiceCfg::from_args();
+        let phys = Arc::new(phys);
+        let ifaces = Arc::new(ifaces);
+        let (watcher_service, watcher_fut) =
+            watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
+
+        // Insert a fake PHY
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        phys.insert(fake_phy_id, phy);
+
+        // Create a CobaltSender with a dangling receiver end.
+        let (cobalt_sender, _cobalt_receiver) = mpsc::channel(1);
+        let cobalt_sender = CobaltSender::new(cobalt_sender);
+
+        // Create an inspector, but don't serve.
+        let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
+
+        let (proxy, marker) =
+            create_proxy::<fidl_svc::DeviceServiceMarker>().expect("failed to create proxy");
+        let req_stream = marker.into_stream().expect("could not create request stream");
+
+        let fut = serve_device_requests(
+            iface_counter,
+            cfg,
+            phys,
+            ifaces,
+            watcher_service,
+            req_stream,
+            inspect_tree,
+            cobalt_sender,
+        );
+
+        let mut fut = Box::pin(fut);
+
+        // Make the CreateIface request
+        let mut create_iface_request = fidl_svc::CreateIfaceRequest {
+            phy_id: fake_phy_id,
+            role: fidl_wlan_dev::MacRole::Ap,
+            mac_addr: None,
+        };
+        let create_iface_fut = proxy.create_iface(&mut create_iface_request);
+        let mut create_iface_fut = Box::pin(create_iface_fut);
+
+        assert_variant!(exec.run_until_stalled(&mut create_iface_fut), Poll::Pending);
+
+        // Advance the server so that it gets the CreateIfaceRequest
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // There should be a pending PHY query event
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder
+        );
+        responder
+            .send(&mut fidl_wlan_dev::QueryResponse {
+                status: zx::sys::ZX_OK,
+                info: fidl_wlan_dev::PhyInfo {
+                    driver_features: vec![DriverFeature::TempDirectSmeChannel],
+                    ..fake_phy_info()
+                },
+            })
+            .expect("failed to send QueryResponse");
+
+        // There should be a pending CreateIfaceRequest. Send it a response and capture its request
+        // so that the MLME channel associated with the request can be used to inject a successful
+        // MLME response when the PHY's information is queried.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        let (phy_create_iface_req, responder) = assert_variant!(
+            exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder)
+        );
+        responder
+            .send(&mut fidl_wlan_dev::CreateIfaceResponse { status: zx::sys::ZX_OK, iface_id: 0 })
+            .expect("failed to send CreateIfaceResponse");
+
+        (exec, fut, create_iface_fut, watcher_fut, phy_create_iface_req)
+    }
+
+    #[test]
+    fn test_query_device_info_succeeds() {
+        let (mut exec, mut fut, mut create_iface_fut, _watcher_fut, phy_create_iface_req) =
+            setup_create_iface_test();
+
+        // Use the channel that is included in the CreateIfaceRequest to create an MLME request
+        // stream.
+        let mlme_channel =
+            phy_create_iface_req.sme_channel.expect("no mlme stream found in iface request");
+        let mut mlme_stream = ServerEnd::<fidl_mlme::MlmeMarker>::new(mlme_channel)
+            .into_stream()
+            .expect("could not create MLME event stream");
+
+        // Run the server's future so that it can query device information.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut mlme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryDeviceInfo{ responder } ))) => {
+                assert!(responder.send(&mut fake_device_info()).is_ok());
+            }
+        );
+
+        // Run the query future to completion and expect an Ok result.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut create_iface_fut),
+            Poll::Ready(Ok((status, Some(response)))) => {
+                assert_eq!(status, zx::sys::ZX_OK);
+                assert_eq!(*response, fidl_svc::CreateIfaceResponse { iface_id: 0 });
+            }
+        );
+    }
+
+    #[test]
+    fn test_query_device_info_fails() {
+        // Drop the CreateIfaceRequest to terminate the serving end of the MLME transaction.
+        let (mut exec, mut fut, mut create_iface_fut, _watcher_fut, create_iface_req) =
+            setup_create_iface_test();
+        drop(create_iface_req);
+
+        // Run the server's future so that it can fail to query the device information.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+        assert_variant!(
+            exec.run_until_stalled(&mut create_iface_fut),
+            Poll::Ready(Ok((zx::sys::ZX_ERR_PEER_CLOSED, None)))
+        );
     }
 
     fn fake_destroy_iface_env(phy_map: &mut PhyMap, iface_map: &mut IfaceMap) -> PhyRequestStream {

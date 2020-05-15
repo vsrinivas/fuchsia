@@ -128,7 +128,7 @@ async fn serve_phy(
     inspect_log!(inspect_tree.device_events.lock(), msg: format!("phy removed: #{}", id));
 }
 
-pub async fn query_and_serve_iface(
+pub fn create_and_serve_sme(
     cfg: ServiceCfg,
     id: u16,
     phy_ownership: PhyOwnership,
@@ -137,14 +137,10 @@ pub async fn query_and_serve_iface(
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
-) -> Result<(), anyhow::Error> {
+    device_info: DeviceInfo,
+) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
-
-    let device_info = mlme_proxy
-        .query_device_info()
-        .await
-        .map_err(|e| format_err!("failed querying iface: {}", e))?;
     let (sme, sme_fut) = create_sme(
         cfg,
         mlme_proxy.clone(),
@@ -154,8 +150,7 @@ pub async fn query_and_serve_iface(
         cobalt_sender,
         iface_tree_holder,
         inspect_tree.hash_key.clone(),
-    )
-    .map_err(|e| format_err!("failed to creating SME: {}", e))?;
+    );
 
     info!("new iface #{} with role '{:?}'", id, device_info.role);
     inspect_log!(inspect_tree.device_events.lock(), {
@@ -175,12 +170,14 @@ pub async fn query_and_serve_iface(
         IfaceDevice { phy_ownership, sme_server: sme, stats_sched, mlme_query, device_info },
     );
 
-    let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
-    info!("iface removed: #{}", id);
-    inspect_log!(inspect_tree.device_events.lock(), msg: format!("iface removed: #{}", id));
-    inspect_tree.unmark_active_client_iface(id);
-    ifaces.remove(&id);
-    result
+    Ok(async move {
+        let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
+        info!("iface removed: #{}", id);
+        inspect_log!(inspect_tree.device_events.lock(), msg: format!("iface removed: #{}", id));
+        inspect_tree.unmark_active_client_iface(id);
+        ifaces.remove(&id);
+        result
+    })
 }
 
 fn create_sme<S>(
@@ -192,7 +189,7 @@ fn create_sme<S>(
     cobalt_sender: CobaltSender,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     inspect_hash_key: [u8; 8],
-) -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
+) -> (SmeServer, impl Future<Output = Result<(), Error>>)
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
 {
@@ -211,19 +208,19 @@ where
                 iface_tree_holder,
                 inspect_hash_key,
             );
-            Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
+            (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
         }
         fidl_mlme::MacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
             let fut =
                 station::ap::serve(proxy, device_info, event_stream, receiver, stats_requests);
-            Ok((SmeServer::Ap(sender), FutureObj::new(Box::new(fut))))
+            (SmeServer::Ap(sender), FutureObj::new(Box::new(fut)))
         }
         fidl_mlme::MacRole::Mesh => {
             let (sender, receiver) = mpsc::unbounded();
             let fut =
                 station::mesh::serve(proxy, device_info, event_stream, receiver, stats_requests);
-            Ok((SmeServer::Mesh(sender), FutureObj::new(Box::new(fut))))
+            (SmeServer::Mesh(sender), FutureObj::new(Box::new(fut)))
         }
     }
 }
@@ -256,9 +253,8 @@ mod tests {
     #[test]
     fn query_serve_with_sme_channel() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mlme_proxy, mlme_server) =
+        let (mlme_proxy, _mlme_server) =
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
-        let mut mlme_stream = mlme_server.into_stream().expect("failed to create stream");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
         let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
@@ -266,7 +262,10 @@ mod tests {
         let (sender, _receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
 
-        let serve_fut = query_and_serve_iface(
+        // Assert that the IfaceMap is initially empty.
+        assert!(iface_map.get(&5).is_none());
+
+        let serve_fut = create_and_serve_sme(
             ServiceCfg::default(),
             5,
             PhyOwnership { phy_id: 1, phy_assigned_id: 2 },
@@ -275,24 +274,17 @@ mod tests {
             inspect_tree.clone(),
             iface_tree_holder,
             cobalt_sender,
-        );
-        pin_mut!(serve_fut);
-        // Progress to cause query request.
-        let fut_result = exec.run_until_stalled(&mut serve_fut);
-        assert_variant!(fut_result, Poll::Pending, "expected pending iface creation");
+            fake_device_info(),
+        )
+        .expect("failed to create SME");
 
-        // The call above should trigger a Query message to the iface.
-        assert_variant!(exec.run_until_stalled(&mut mlme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QueryDeviceInfo { responder }))) => {
-                // Respond with query message.
-                responder.send(&mut fake_device_info()).expect("failed to send QueryResponse");
-            }
-        );
+        // Assert that the IfaceMap now has an entry for the new iface.
+        assert!(iface_map.get(&5).is_some());
+
+        pin_mut!(serve_fut);
 
         // Progress to cause SME creation and serving.
-        assert!(iface_map.get(&5).is_none());
-        let fut_result = exec.run_until_stalled(&mut serve_fut);
-        assert_variant!(fut_result, Poll::Pending, "expected pending SME serving");
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Retrieve SME instance and close SME (iface must be acquired).
         let mut iface = iface_map.get(&5).expect("expected iface");
