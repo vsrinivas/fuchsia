@@ -60,14 +60,12 @@ typedef struct zx_packet_signal {
 } zx_packet_signal_t;
 ```
 
-*trigger* is the signals used in the call to `zx_object_wait_async()`, *observed* is the
-signals actually observed, *count* is a per object defined count of pending operations
-and *timestamp* is clock-monotonic time when the object state transitioned to meet the
-trigger condition. If options does not include ZX_WAIT_ASYNC_TIMESTAMP the timestamp is
-reported as 0.
+*trigger* is the signals used in the call to `zx_object_wait_async()`,
+*observed* is the signals actually observed, and *timestamp* is clock-monotonic
+time when the object state transitioned to meet the trigger condition. If
+options does not include ZX_WAIT_ASYNC_TIMESTAMP the timestamp is reported as 0.
 
-Use the `zx_port_packet_t`'s *key* member to track what object this packet corresponds to and
-therefore match *count* with the operation.
+Use the `zx_port_packet_t`'s *key* member to track what object this packet corresponds.
 
 ## RIGHTS
 
