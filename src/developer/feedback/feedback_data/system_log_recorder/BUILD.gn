@@ -47,6 +47,6 @@ source_set("src") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 }

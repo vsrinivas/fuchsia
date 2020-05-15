@@ -51,7 +51,7 @@ source_set("ffmpeg") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   defines = [

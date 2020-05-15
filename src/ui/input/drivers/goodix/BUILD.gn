@@ -29,10 +29,10 @@ driver_module("goodix") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 
@@ -63,11 +63,11 @@ test("gt92xx-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 

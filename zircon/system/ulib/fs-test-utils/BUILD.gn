@@ -45,7 +45,6 @@ zx_library("fs-test-utils") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
@@ -62,5 +61,6 @@ zx_library("fs-test-utils") {
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/perftest",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/trace",
   ]
 }

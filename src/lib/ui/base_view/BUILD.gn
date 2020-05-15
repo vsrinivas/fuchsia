@@ -32,7 +32,7 @@ source_set("base_view") {
     "//zircon/system/ulib/fs",
   ]
 
-  deps = [ "//zircon/public/lib/trace" ]
+  deps = [ "//zircon/system/ulib/trace" ]
 }
 
 executable("base_view_unittest") {

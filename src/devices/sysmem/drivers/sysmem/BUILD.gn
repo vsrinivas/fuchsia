@@ -36,13 +36,13 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 
   deps = [

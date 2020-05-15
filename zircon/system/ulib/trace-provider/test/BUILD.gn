@@ -52,9 +52,9 @@ test("provider-test") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
 }

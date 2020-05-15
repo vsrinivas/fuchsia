@@ -31,10 +31,10 @@ source_set("sdio") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/lib/broadcom",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/public",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.gpio",

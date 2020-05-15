@@ -62,8 +62,8 @@ pick up tracing support:
 driver_module("my_driver") {
   deps = [
     ...
-    "//zircon/public/lib/trace"
-    "//zircon/public/lib/trace-driver",
+    "//zircon/system/ulib/trace"
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 ```

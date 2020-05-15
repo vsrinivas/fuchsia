@@ -27,6 +27,6 @@ trace_provider_t* trace_provider_create_with_name(
 You will need to add these dependencies to your BUILD.gn file:
 
 ```
-    "//zircon/public/lib/trace-with-static-engine",
+    "//zircon/system/ulib/trace:trace-with-static-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
 ```

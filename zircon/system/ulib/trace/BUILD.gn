@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 template("trace_library") {
   zx_library(target_name) {
     forward_variables_from(invoker, "*")
@@ -21,13 +33,12 @@ template("trace_library") {
     # <trace/internal/event_internal.h> has #include <trace-engine/instrumentation.h>.
     public_deps += [
       # <trace/internal/event_internal.h> has #include <zircon/syscalls.h>.
-      "$zx/system/ulib/zircon:headers",
 
       # <trace/observer.h> has #include <trace-engine/instrumentation.h> (already
       # covered, <lib/async/cpp/wait.h>, <fit/function.h>, and <lib/zx/event.h>.
-      "$zx/system/ulib/async:async-cpp.headers",
-      "$zx/system/ulib/fit:headers",
-      "$zx/system/ulib/zx:headers",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
     ]
 
     sources = [
@@ -37,11 +48,10 @@ template("trace_library") {
 
     # Source dependencies, not including the trace engine.
     deps += [
-      "$zx/system/ulib/async",
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/fit",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
     ]
   }
 }
@@ -53,8 +63,8 @@ template("trace_library") {
 trace_library("trace") {
   sdk_publishable = true
   sdk = "source"
-  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
-  deps = [ "$zx/system/ulib/trace-engine" ]
+  public_deps = [ "//zircon/public/lib/trace-engine" ]
+  deps = [ "//zircon/public/lib/trace-engine" ]
 }
 
 # A special version for programs and shared libraries that can't use
@@ -63,8 +73,8 @@ trace_library("trace") {
 # Generally you DON'T want to use this.
 trace_library("trace-with-static-engine") {
   sdk = "static"
-  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-static.headers" ]
-  deps = [ "$zx/system/ulib/trace-engine:trace-engine-static" ]
+  public_deps = [ "//zircon/public/lib/trace-engine-static" ]
+  deps = [ "//zircon/public/lib/trace-engine-static" ]
 }
 
 # And again, but this time for drivers.
@@ -72,6 +82,6 @@ trace_library("trace-with-static-engine") {
 # TODO(PT-196): Move to ddk.
 trace_library("trace-driver") {
   sdk = "static"
-  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver.headers" ]
-  deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver" ]
+  public_deps = [ "//zircon/public/lib/trace-engine-driver" ]
+  deps = [ "//zircon/public/lib/trace-engine-driver" ]
 }

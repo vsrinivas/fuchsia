@@ -42,7 +42,7 @@ source_set("mixer") {
     "//src/media/audio/lib/logging",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/ffl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   deps = [

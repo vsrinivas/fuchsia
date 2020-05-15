@@ -52,7 +52,6 @@ source_set("common") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxio",
@@ -61,6 +60,7 @@ source_set("common") {
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 

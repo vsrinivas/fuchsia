@@ -61,13 +61,13 @@ test("fs-vnode") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/trace",
   ]
 }
 

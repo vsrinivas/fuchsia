@@ -36,7 +36,7 @@ source_set("display") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/trace",
   ]
 }

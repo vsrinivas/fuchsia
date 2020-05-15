@@ -21,11 +21,11 @@ driver_module("address_space_driver") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

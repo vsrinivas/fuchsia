@@ -60,8 +60,8 @@ executable("agent_runner_unittest") {
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/pseudo_dir",
     "//src/modular/tests:fuchsia.testing.modular",
-    "//zircon/public/lib/trace",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/trace",
   ]
 }
 

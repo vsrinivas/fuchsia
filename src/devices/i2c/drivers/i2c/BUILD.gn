@@ -28,8 +28,8 @@ driver_module("i2c") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 
@@ -50,9 +50,9 @@ test("i2c-test") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 

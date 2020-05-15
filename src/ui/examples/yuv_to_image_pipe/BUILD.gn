@@ -31,7 +31,7 @@ executable("yuv_to_image_pipe") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

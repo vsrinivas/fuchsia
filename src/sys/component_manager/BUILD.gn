@@ -79,7 +79,7 @@ rustc_library("lib") {
   ]
 
   non_rust_deps = [
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 

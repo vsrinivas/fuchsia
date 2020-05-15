@@ -89,7 +89,7 @@ executable("app") {
     ":lib",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sysinfo",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

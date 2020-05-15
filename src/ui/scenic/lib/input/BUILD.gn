@@ -28,8 +28,8 @@ source_set("input") {
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scheduling:id",
     "//src/ui/scenic/lib/utils",
-    "//zircon/public/lib/trace",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.ui.pointerflow" ]

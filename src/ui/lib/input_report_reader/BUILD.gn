@@ -16,7 +16,7 @@ source_set("input_report_reader") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [
@@ -41,7 +41,7 @@ source_set("fdio") {
   deps = [
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [

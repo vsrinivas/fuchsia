@@ -66,7 +66,7 @@ zx_library("ddk") {
     # build.  Instead, users of the ddk library that actually use this header
     # have to also express a dependency on the trace library.
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
-    #"//zircon/public/lib/trace",
+    #"//zircon/system/ulib/trace",
   ]
   deps = [
     "//zircon/public/lib/sync",

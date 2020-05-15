@@ -251,7 +251,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/scheduling:timings",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 }
 

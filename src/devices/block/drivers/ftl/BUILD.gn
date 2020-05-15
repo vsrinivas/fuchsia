@@ -46,11 +46,11 @@ source_set("common") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/ftl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 

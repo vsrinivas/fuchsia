@@ -100,7 +100,7 @@ executable("vkcube_on_scenic") {
   deps = [
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/async-loop-default",
-    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/system/ulib/trace",
     "$zircon_build_root/system/ulib/trace-provider:trace-provider-with-fdio",
     "//src/lib/vulkan",
     "//src/lib/vulkan/imagepipe_view",
@@ -121,7 +121,7 @@ executable("vkcube_on_fb") {
   deps = [
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/async-loop-default",
-    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/system/ulib/trace",
     "$zircon_build_root/system/ulib/trace-provider:trace-provider-with-fdio",
     "//src/lib/vulkan",
     "//zircon/system/ulib/syslog",
@@ -145,7 +145,7 @@ executable("vkcube_skip_present") {
   deps = [
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/async-loop-default",
-    "$zircon_build_root/public/lib/trace",
+    "$zircon_build_root/system/ulib/trace",
     "$zircon_build_root/system/ulib/trace-provider",
     "//src/lib/vulkan",
     "//zircon/system/ulib/syslog",

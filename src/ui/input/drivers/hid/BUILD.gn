@@ -30,9 +30,9 @@ driver_module("hid") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/trace-driver",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 
@@ -56,10 +56,10 @@ test("hid-test") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 
   # TODO(47416): Fix the leaks and remove this.

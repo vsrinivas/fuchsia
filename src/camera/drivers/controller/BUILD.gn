@@ -86,14 +86,14 @@ source_set("source") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

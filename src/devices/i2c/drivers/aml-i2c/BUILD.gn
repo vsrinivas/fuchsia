@@ -23,7 +23,7 @@ driver_module("aml-i2c") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
   public_configs = [ ":internal" ]
 }

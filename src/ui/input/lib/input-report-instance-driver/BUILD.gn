@@ -12,7 +12,7 @@ static_library("input-report-instance-driver") {
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }

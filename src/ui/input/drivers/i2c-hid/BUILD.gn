@@ -23,8 +23,8 @@ driver_module("i2c-hid") {
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 
@@ -45,9 +45,9 @@ test("i2c-hid-test") {
     "//src/ui/input/testing/fake-hidbus-ifc",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 

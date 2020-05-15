@@ -25,7 +25,7 @@ source_set("effects_loader") {
 
   deps = [
     "//sdk/lib/media/cpp:no_converters",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 }
 

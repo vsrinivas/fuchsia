@@ -44,6 +44,6 @@ source_set("flatland") {
     "//sdk/lib/sys/cpp",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/gfx:object_linker",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 }

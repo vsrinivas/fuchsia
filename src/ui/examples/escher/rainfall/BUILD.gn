@@ -18,7 +18,7 @@ executable("rainfall") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/trace" ]
+    deps += [ "//zircon/system/ulib/trace" ]
   }
 }
 

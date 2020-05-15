@@ -45,12 +45,12 @@ source_set("shared") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 

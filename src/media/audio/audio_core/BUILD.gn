@@ -176,7 +176,8 @@ source_set("audio_core_lib") {
     "//third_party/rapidjson",
     "//zircon/public/lib/ffl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/fidl/fuchsia-cobalt",
+    "//zircon/system/ulib/trace",
   ]
 
   deps = [

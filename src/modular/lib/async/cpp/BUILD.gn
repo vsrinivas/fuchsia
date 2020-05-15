@@ -38,7 +38,7 @@ source_set("operation") {
     "//zircon/public/lib/async-cpp",
   ]
 
-  deps = [ "//zircon/public/lib/trace" ]
+  deps = [ "//zircon/system/ulib/trace" ]
 }
 
 group("unittests") {

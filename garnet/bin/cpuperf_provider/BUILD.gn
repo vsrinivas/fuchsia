@@ -40,8 +40,8 @@ source_set("categories") {
 
   public_deps = [
     "//garnet/lib/perfmon",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/trace",
   ]
 }
 
@@ -63,8 +63,8 @@ executable("bin") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

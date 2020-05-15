@@ -42,7 +42,7 @@ executable("bin") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }
@@ -80,7 +80,7 @@ source_set("lib") {
     "//src/ui/bin/root_presenter:factory_reset_manager",
     "//src/ui/bin/root_presenter:media_buttons_handler",
     "//src/ui/lib/input_report_reader",
-    "//zircon/public/lib/trace",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/trace",
   ]
 }

@@ -54,6 +54,6 @@ source_set("codec_adapter_sw") {
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 }

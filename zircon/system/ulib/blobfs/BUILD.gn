@@ -173,13 +173,13 @@ zx_library("blobfs") {
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/metrics",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/trace",
       "//zircon/public/lib/trace-engine",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/id_allocator",
+      "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     ]
   } else {

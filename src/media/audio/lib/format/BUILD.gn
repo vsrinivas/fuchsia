@@ -20,7 +20,7 @@ source_set("format") {
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/ffl",
-    "//zircon/public/lib/trace",
+    "//zircon/system/ulib/trace",
   ]
 
   deps = [ "//zircon/system/ulib/audio-proto-utils" ]

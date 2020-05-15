@@ -162,9 +162,9 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/trace-driver",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/tee-client-api",
+      "//zircon/system/ulib/trace:trace-driver",
     ]
     deps = [
       ":test_support",
