@@ -156,9 +156,6 @@ bool DynamicExtentTest() {
   ktl::span<int> ints = array_of_ints;
   EXPECT_EQ(ints.size(), 3u);
 
-  ktl::span<int, 3> fixed_ints = ints;
-  EXPECT_EQ(fixed_ints.size(), 3u);
-
   ktl::span<int> some_ints = { &array_of_ints[0], 2 };
   EXPECT_EQ(some_ints.size(), 2u);
 
