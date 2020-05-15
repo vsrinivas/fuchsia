@@ -64,3 +64,19 @@ pub struct ClientStateSummary {
     /// Active connections, connection attempts or failed connections.
     pub networks: Option<Vec<NetworkState>>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MacRole {
+    Client = 1,
+    Ap = 2,
+    Mesh = 3,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct QueryIfaceResponse {
+    pub role: MacRole,
+    pub id: u16,
+    pub phy_id: u16,
+    pub phy_assigned_id: u16,
+    pub mac_addr: [u8; 6],
+}

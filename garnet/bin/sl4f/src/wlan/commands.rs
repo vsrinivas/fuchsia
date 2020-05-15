@@ -75,6 +75,19 @@ impl Facade for WlanFacade {
                 self.disconnect().await?;
                 to_value(true).map_err(|e| format_err!("error handling disconnect: {}", e))
             }
+            "query_iface" => {
+                let iface_id = match args.get("iface_id") {
+                    Some(iface_id) => match iface_id.as_u64() {
+                        Some(iface_id) => iface_id as u16,
+                        None => return Err(format_err!("Could not parse iface id")),
+                    },
+                    None => return Err(format_err!("Please provide target iface id")),
+                };
+
+                fx_log_info!(tag: "WlanFacade", "performing wlan query iface");
+                let result = self.query_iface(iface_id).await?;
+                to_value(result).map_err(|e| format_err!("error handling query iface: {}", e))
+            }
             "status" => {
                 fx_log_info!(tag: "WlanFacade", "fetching connection status");
                 let result = self.status().await?;

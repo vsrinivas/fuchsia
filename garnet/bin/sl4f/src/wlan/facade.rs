@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use crate::wlan::types::{
-    ClientStateSummary, ConnectionState, DisconnectStatus, NetworkIdentifier, NetworkState,
-    SecurityType, WlanClientState,
+    ClientStateSummary, ConnectionState, DisconnectStatus, MacRole, NetworkIdentifier,
+    NetworkState, QueryIfaceResponse, SecurityType, WlanClientState,
 };
 use anyhow::{Context as _, Error};
 use connectivity_testing::wlan_service_util;
+use fidl_fuchsia_wlan_device;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
 use parking_lot::RwLock;
 
 // WlanFacade: proxies commands from sl4f test to proper fidl APIs
@@ -132,5 +134,33 @@ impl WlanFacade {
         };
 
         Ok(client_state_summary)
+    }
+
+    pub async fn query_iface(&self, iface_id: u16) -> Result<QueryIfaceResponse, Error> {
+        let (status, iface_info) = self
+            .wlan_svc
+            .query_iface(iface_id)
+            .await
+            .context("Failed to query iface information")?;
+
+        zx::ok(status)?;
+
+        let iface_info = match iface_info {
+            Some(iface_info) => iface_info,
+            None => return Err(format_err!("no iface information for ID: {}", iface_id)),
+        };
+        let mac_role = match iface_info.role {
+            fidl_fuchsia_wlan_device::MacRole::Client => MacRole::Client,
+            fidl_fuchsia_wlan_device::MacRole::Ap => MacRole::Ap,
+            fidl_fuchsia_wlan_device::MacRole::Mesh => MacRole::Mesh,
+        };
+
+        Ok(QueryIfaceResponse {
+            role: mac_role,
+            id: iface_info.id,
+            phy_id: iface_info.phy_id,
+            phy_assigned_id: iface_info.phy_assigned_id,
+            mac_addr: iface_info.mac_addr,
+        })
     }
 }
