@@ -93,20 +93,25 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
   }
 }
 
+void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
+             HitAccumulator<ViewHit>* accumulator) {
+  MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
+      accumulator, [](const NodeHit& hit) { return CreateViewHit(hit); });
+
+  HitTest(starting_node, world_space_ray, &transforming_accumulator);
+}
+
 void PerformGlobalHitTest(const LayerStackPtr& layer_stack, const glm::vec2& screen_space_coords,
                           HitAccumulator<ViewHit>* accumulator) {
   const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_coords);
   FX_VLOGS(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
 
   for (auto& layer : layer_stack->layers()) {
-    MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
-        accumulator, [](const NodeHit& hit) { return CreateViewHit(hit); });
-
     const glm::mat4 screen_to_world_transform = layer->GetScreenToWorldSpaceTransform();
     const escher::ray4 camera_ray = screen_to_world_transform * ray;
     fxl::WeakPtr<Scene> scene = layer->scene();
     if (scene)
-      HitTest(scene.get(), camera_ray, &transforming_accumulator);
+      HitTest(scene.get(), camera_ray, accumulator);
 
     if (!accumulator->EndLayer()) {
       break;

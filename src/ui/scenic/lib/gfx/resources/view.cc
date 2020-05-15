@@ -10,6 +10,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
@@ -87,6 +88,14 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
                  : std::nullopt;
     };
 
+    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+        hit_test = [weak_ptr = GetWeakPtr()](const escher::ray4& world_space_ray,
+                                             HitAccumulator<ViewHit>* accumulator) {
+          if (weak_ptr) {
+            HitTest(weak_ptr->GetViewNode(), world_space_ray, accumulator);
+          }
+        };
+
     fit::function<void(ViewHolderPtr)> create_callback =
         [weak_ptr = GetWeakPtr()](ViewHolderPtr annotation_view_holder) {
           FX_CHECK(weak_ptr);
@@ -115,6 +124,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
                              .may_receive_focus = std::move(may_receive_focus),
                              .is_input_suppressed = std::move(is_input_suppressed),
                              .global_transform = std::move(global_transform),
+                             .hit_test = std::move(hit_test),
                              .add_annotation_view_holder = std::move(create_callback),
                              .session_id = session->id()});
     }

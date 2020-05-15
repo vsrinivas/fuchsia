@@ -16,13 +16,15 @@ namespace test {
 
 using SceneGraphTest = SessionTest;
 
-fit::function<std::optional<glm::mat4>()> NoGlobalTransform() {
-  return [] { return std::nullopt; };
-}
-
-fit::function<void(ViewHolderPtr)> DummyAddAnnotation() {
-  // Annotation is not used by these tests.
-  return [](auto) {};
+ViewTreeNewRefNode ViewTreeNewRefNodeTemplate() {
+  return {
+      .may_receive_focus = [] { return true; },
+      .is_input_suppressed = [] { return false; },
+      .global_transform = [] { return std::nullopt; },
+      .hit_test = [](auto...) {},
+      .add_annotation_view_holder = [](auto) {},
+      .session_id = 1u,
+  };
 }
 
 bool ContainsCompositor(const std::vector<CompositorWeakPtr>& compositors, Compositor* compositor) {
@@ -95,19 +97,19 @@ TEST_F(SceneGraphTest, RequestFocusChange) {
   const zx_koid_t child_koid = utils::ExtractKoid(child_view_pair.view_ref);
   {
     ViewTreeUpdates updates;
-    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
-                                         .may_receive_focus = [] { return true; },
-                                         .is_input_suppressed = [] { return false; },
-                                         .global_transform = NoGlobalTransform(),
-                                         .add_annotation_view_holder = DummyAddAnnotation(),
-                                         .session_id = 1u});
+    {
+      ViewTreeNewRefNode ref_node = ViewTreeNewRefNodeTemplate();
+      ref_node.view_ref = std::move(parent_view_pair.view_ref);
+      ref_node.session_id = 1u;
+      updates.push_back(std::move(ref_node));
+    }
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
-    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
-                                         .may_receive_focus = [] { return true; },
-                                         .is_input_suppressed = [] { return false; },
-                                         .global_transform = NoGlobalTransform(),
-                                         .add_annotation_view_holder = DummyAddAnnotation(),
-                                         .session_id = 2u});
+    {
+      ViewTreeNewRefNode ref_node = ViewTreeNewRefNodeTemplate();
+      ref_node.view_ref = std::move(child_view_pair.view_ref);
+      ref_node.session_id = 2u;
+      updates.push_back(std::move(ref_node));
+    }
     updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
@@ -137,19 +139,20 @@ TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
   const zx_koid_t child_koid = utils::ExtractKoid(child_view_pair.view_ref);
   {
     ViewTreeUpdates updates;
-    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
-                                         .may_receive_focus = [] { return true; },
-                                         .is_input_suppressed = [] { return false; },
-                                         .global_transform = NoGlobalTransform(),
-                                         .add_annotation_view_holder = DummyAddAnnotation(),
-                                         .session_id = 1u});
+    {
+      ViewTreeNewRefNode ref_node = ViewTreeNewRefNodeTemplate();
+      ref_node.view_ref = std::move(parent_view_pair.view_ref);
+      ref_node.session_id = 1u;
+      updates.push_back(std::move(ref_node));
+    }
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
-    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
-                                         .may_receive_focus = [] { return false; },  // Different!
-                                         .is_input_suppressed = [] { return false; },
-                                         .global_transform = NoGlobalTransform(),
-                                         .add_annotation_view_holder = DummyAddAnnotation(),
-                                         .session_id = 2u});
+    {
+      ViewTreeNewRefNode ref_node = ViewTreeNewRefNodeTemplate();
+      ref_node.may_receive_focus = [] { return false; };  // Different!
+      ref_node.view_ref = std::move(child_view_pair.view_ref);
+      ref_node.session_id = 2u;
+      updates.push_back(std::move(ref_node));
+    }
     updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});

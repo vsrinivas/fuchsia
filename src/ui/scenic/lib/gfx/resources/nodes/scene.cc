@@ -8,6 +8,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
@@ -57,6 +58,13 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     fit::function<void(ViewHolderPtr)> add_annotation_view_holder = [](auto) {
       FX_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";
     };
+    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+        hit_test = [weak_ptr = GetWeakPtr()](const escher::ray4& world_space_ray,
+                                             HitAccumulator<ViewHit>* accumulator) {
+          if (weak_ptr) {
+            HitTest(weak_ptr.get(), world_space_ray, accumulator);
+          }
+        };
 
     FX_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
@@ -66,6 +74,7 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
                              .may_receive_focus = std::move(may_receive_focus),
                              .is_input_suppressed = std::move(is_input_suppressed),
                              .global_transform = std::move(global_transform),
+                             .hit_test = std::move(hit_test),
                              .add_annotation_view_holder = std::move(add_annotation_view_holder),
                              .session_id = session_id});
     }

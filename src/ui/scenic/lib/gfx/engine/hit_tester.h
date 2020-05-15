@@ -18,6 +18,10 @@ namespace gfx {
 void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
              HitAccumulator<NodeHit>* accumulator);
 
+// Convenience function that takes a ViewHit accumulator instead of a NodeHit accumulator.
+void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
+             HitAccumulator<ViewHit>* accumulator);
+
 // Takes a screen space point and a layer stack, and performs a hit test in the Z-direction on all
 // layers in |layer_stack|.
 void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack,

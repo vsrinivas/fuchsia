@@ -17,6 +17,8 @@
 #include <vector>
 
 #include "src/ui/lib/escher/geometry/transform.h"
+#include "src/ui/scenic/lib/gfx/engine/hit.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
@@ -90,6 +92,10 @@ class ViewTree {
     // Park a callback that returns the current global transform of the node.
     fit::function<std::optional<glm::mat4>()> global_transform;
 
+    // Park a callback that performs a hit test starting at this node.
+    fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+        hit_test;
+
     // Park a function that creates an annotation ViewHolder using given ViewHolderToken.
     fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
 
@@ -133,6 +139,16 @@ class ViewTree {
   // Return the global transform of the node attached to a tracked |koid|.
   // Returns std::nullopt if no node was found or the node had no valid global transform.
   std::optional<glm::mat4> GlobalTransformOf(zx_koid_t koid) const;
+
+  // Performs a hit test starting from the node corresponding to |starting_view_koid|. The hit test
+  // gathers all hits owned by the sub-tree rooted at |starting_view_koid|, in the clip volume
+  // defined for |starting_view_koid|.
+  // Hit tests act as if the node corresponding to |starting_ref_koid| is the root of the tree. This
+  // means no clip bounds or other conditions are checked for ancestors of |starting_ref_koid|, but
+  // all conditions are checked for the subtree, including |starting_ref_koid|.
+  // If koid was found invalid the test returns with no hits.
+  void HitTestFrom(zx_koid_t starting_view_koid, const escher::ray4& world_space_ray,
+                   HitAccumulator<ViewHit>* accumulator) const;
 
   // A session may have registered one or more RefNodes (typically just one).
   // Return the *connected* RefNode KOID associated with a particular SessionId.
@@ -275,6 +291,8 @@ struct ViewTreeNewRefNode {
   fit::function<bool()> may_receive_focus;
   fit::function<bool()> is_input_suppressed;
   fit::function<std::optional<glm::mat4>()> global_transform;
+  fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator)>
+      hit_test;
   fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
   scheduling::SessionId session_id = 0u;
 };

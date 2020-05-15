@@ -148,6 +148,16 @@ std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
   return std::get_if<RefNode>(&nodes_.at(koid))->global_transform();
 }
 
+void ViewTree::HitTestFrom(zx_koid_t starting_view_koid, const escher::ray4& world_space_ray,
+                           HitAccumulator<ViewHit>* accumulator) const {
+  if (!IsTracked(starting_view_koid) || !IsRefNode(starting_view_koid)) {
+    FX_LOGS(WARNING) << "Tried to hit test starting from invalid view.";
+    return;
+  }
+
+  std::get_if<RefNode>(&nodes_.at(starting_view_koid))->hit_test(world_space_ray, accumulator);
+}
+
 zx_status_t ViewTree::AddAnnotationViewHolder(zx_koid_t koid, ViewHolderPtr annotation) const {
   if (!IsValid(koid)) {
     return ZX_ERR_INVALID_ARGS;
@@ -416,6 +426,7 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
   FX_DCHECK(new_node.may_receive_focus) << "precondition";           // Callback exists.
   FX_DCHECK(new_node.is_input_suppressed) << "precondition";         // Callback exists.
   FX_DCHECK(new_node.global_transform) << "precondition";            // Callback exists.
+  FX_DCHECK(new_node.hit_test) << "precondition";                    // Callback exists.
   FX_DCHECK(new_node.add_annotation_view_holder) << "precondition";  // Callback exists.
   FX_DCHECK(new_node.session_id != scheduling::kInvalidSessionId) << "precondition";
 
@@ -428,6 +439,7 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
               .may_receive_focus = std::move(new_node.may_receive_focus),
               .is_input_suppressed = std::move(new_node.is_input_suppressed),
               .global_transform = std::move(new_node.global_transform),
+              .hit_test = std::move(new_node.hit_test),
               .add_annotation_view_holder = std::move(new_node.add_annotation_view_holder),
               .session_id = new_node.session_id};
 
