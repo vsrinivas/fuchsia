@@ -66,29 +66,6 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
   sys::testing::ComponentInterceptor interceptor_;
 };
 
-// Sets up interception of a base shell and passes if the specified base shell is launched
-// through the base_shell basemgr_launcher arg.
-TEST_F(BasemgrLauncherTest, BaseShellArg) {
-  constexpr char kInterceptUrl[] =
-      "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
-
-  // Setup intercepting base shell
-  bool intercepted = false;
-  ASSERT_TRUE(interceptor_.InterceptURL(
-      kInterceptUrl, "",
-      [&intercepted](fuchsia::sys::StartupInfo startup_info,
-                     std::unique_ptr<sys::testing::InterceptedComponent> component) {
-        intercepted = true;
-      }));
-
-  // Create args for basemgr_launcher
-  std::vector<std::string> args({std::string("--base_shell=") + std::string(kInterceptUrl)});
-  auto controller = RunBasemgrLauncher(std::move(args));
-
-  // Intercepting the component means the right base shell was launched
-  RunLoopUntil([&] { return intercepted; });
-}
-
 TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
   // Launch basemgr.
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
@@ -114,23 +91,8 @@ TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
 
 // Ensures basemgr isn't launched when bad arguments are provided to basemgr_launcher.
 TEST_F(BasemgrLauncherTest, BadArgs) {
-  constexpr char kInterceptUrl[] =
-      "fuchsia-pkg://fuchsia.com/not_base_shell#meta/not_base_shell.cmx";
-
-  // Setup intercepting a component. This component should never be launched because the argument
-  // is not supported by basemgr_launcher.
-  bool intercepted = false;
-  ASSERT_TRUE(interceptor_.InterceptURL(
-      kInterceptUrl, "",
-      [&intercepted](fuchsia::sys::StartupInfo startup_info,
-                     std::unique_ptr<sys::testing::InterceptedComponent> component) {
-        intercepted = true;
-      }));
-
   // Run basemgr_launcher with invalid arguments.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            RunBasemgrLauncher({std::string("--not_supported=") + kInterceptUrl}));
-  EXPECT_FALSE(intercepted);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, RunBasemgrLauncher({std::string("not_supported")}));
 }
 
 // When shutdown is issued but there is no running basemgr, expect an OK result.

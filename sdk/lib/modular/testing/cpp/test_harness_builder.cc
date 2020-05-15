@@ -114,12 +114,6 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(InterceptOptions opti
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(LaunchHandler handler,
-                                                           InterceptOptions options) {
-  options.launch_handler = std::move(handler);
-  return InterceptBaseShell(std::move(options));
-}
-
 TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(InterceptOptions options) {
   fuchsia::modular::session::SessionShellMapEntry entry;
   entry.mutable_config()->mutable_app_config()->set_url(options.url);

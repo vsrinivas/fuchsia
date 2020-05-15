@@ -68,34 +68,34 @@ TEST_F(FakeComponentTest, OnCreateOnDestroy) {
 
 TEST_F(FakeComponentTest, Exit) {
   modular_testing::TestHarnessBuilder builder;
-  modular_testing::FakeComponent base_shell(
+  modular_testing::FakeComponent session_shell(
       {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
-  builder.InterceptBaseShell(base_shell.BuildInterceptOptions());
+  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return base_shell.is_running(); });
-  base_shell.Exit(0);
-  RunLoopUntil([&] { return !base_shell.is_running(); });
+  RunLoopUntil([&] { return session_shell.is_running(); });
+  session_shell.Exit(0);
+  RunLoopUntil([&] { return !session_shell.is_running(); });
 }
 
 // Tests that FakeComponent publishes & implements fuchsia.modular.Lifecycle.
 TEST_F(FakeComponentTest, Lifecyle) {
   modular_testing::TestHarnessBuilder builder;
-  modular_testing::FakeComponent base_shell(
+  modular_testing::FakeComponent session_shell(
       {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
-  builder.InterceptBaseShell(base_shell.BuildInterceptOptions());
+  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return base_shell.is_running(); });
+  RunLoopUntil([&] { return session_shell.is_running(); });
 
   // Serve the outgoing() directory from FakeComponent.
   zx::channel svc_request, svc_dir;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_request, &svc_dir));
-  base_shell.component_context()->outgoing()->Serve(std::move(svc_request));
+  session_shell.component_context()->outgoing()->Serve(std::move(svc_request));
   sys::ServiceDirectory svc(std::move(svc_dir));
 
   fuchsia::modular::LifecyclePtr lifecycle;
   ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(), "svc/fuchsia.modular.Lifecycle"));
   lifecycle->Terminate();
-  RunLoopUntil([&] { return !base_shell.is_running(); });
+  RunLoopUntil([&] { return !session_shell.is_running(); });
 }

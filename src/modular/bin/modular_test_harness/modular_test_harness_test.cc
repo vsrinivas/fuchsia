@@ -17,25 +17,26 @@ class ModularTestHarnessTest : public modular_testing::TestHarnessFixture {};
 
 // Ensure that the TestHarnessFixture is able to launch the modular runtime.
 TEST_F(ModularTestHarnessTest, DISABLED_SimpleSuccess) {
-  constexpr char kFakeBaseShellUrl[] =
-      "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";
+  constexpr char kFakeSessionShellUrl[] =
+      "fuchsia-pkg://example.com/FAKE_SESSION_SHELL_PKG/fake_session_shell.cmx";
 
-  // Setup base shell interception.
-  fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
-  shell_intercept_spec.set_component_url(kFakeBaseShellUrl);
-
+  // Setup session shell interception.
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(
-      kFakeBaseShellUrl);
-  spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
+  {
+    fuchsia::modular::session::SessionShellMapEntry entry;
+    entry.mutable_config()->mutable_app_config()->set_url(kFakeSessionShellUrl);
+    spec.mutable_basemgr_config()->mutable_session_shell_map()->push_back(std::move(entry));
+    fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
+    shell_intercept_spec.set_component_url(kFakeSessionShellUrl);
+    spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
+  }
 
-  // Listen for base shell interception.
+  // Listen for session shell interception.
   bool intercepted = false;
-
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        ASSERT_EQ(kFakeBaseShellUrl, startup_info.launch_info.url);
+        ASSERT_EQ(kFakeSessionShellUrl, startup_info.launch_info.url);
         intercepted = true;
       };
 

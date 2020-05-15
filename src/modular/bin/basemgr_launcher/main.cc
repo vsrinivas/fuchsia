@@ -103,25 +103,12 @@ Exmaples (from host machine):
 )";
 }
 
-/// Parses configurations from command line into a string. Uses default values if no configuration
-/// is provided. Processes arguments if they only contain a base shell url, otherwise returns usage.
-fit::result<std::string, std::string> GetConfigFromArgs(fxl::CommandLine command_line) {
+std::string GetDefaultConfig() {
   auto config_reader = modular::ModularConfigReader(/*config=*/"{}");
   fuchsia::modular::session::BasemgrConfig basemgr_config = config_reader.GetBasemgrConfig();
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config =
       config_reader.GetSessionmgrConfig();
-
-  for (auto opt : command_line.options()) {
-    if (opt.name == modular_config::kBaseShell) {
-      basemgr_config.mutable_base_shell()->mutable_app_config()->set_url(opt.value);
-    } else {
-      return fit::error(GetUsage());
-    }
-  }
-
-  std::string config_str =
-      modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
-  return fit::ok(config_str);
+  return modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
 }
 
 int main(int argc, const char** argv) {
@@ -135,13 +122,7 @@ int main(int argc, const char** argv) {
     const auto& cmd = positional_args.empty() ? "" : positional_args[0];
 
     if (cmd.empty()) {
-      auto config = GetConfigFromArgs(std::move(command_line));
-      if (config.is_error()) {
-        std::cerr << config.error().c_str() << std::endl;
-        return ZX_ERR_INVALID_ARGS;
-      } else {
-        config_str = config.value();
-      }
+      config_str = GetDefaultConfig();
     } else if (cmd == kShutdownBasemgrCommandString) {
       return ShutdownBasemgr(&loop);
     } else {

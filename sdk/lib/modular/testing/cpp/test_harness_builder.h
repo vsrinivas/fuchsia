@@ -99,12 +99,10 @@ class TestHarnessBuilder final {
   // |options|.
   TestHarnessBuilder& InterceptComponent(InterceptOptions options);
 
-  // Convenience variant of InterceptComponent() which sets the base shell URL
-  // in the ModularConfig to |options.url|.
-  TestHarnessBuilder& InterceptBaseShell(InterceptOptions options);
-
-  // DEPRECATED.  Please use the variant above.
-  [[deprecated]] TestHarnessBuilder& InterceptBaseShell(LaunchHandler, InterceptOptions options);
+  // DEPRECATED.  The concept of BaseShell will soon be removed and this method
+  // will be modified to always fail (fxb/48782). Please test by intercepting a
+  // session shell instead.
+  [[deprecated]] TestHarnessBuilder& InterceptBaseShell(InterceptOptions options);
 
   // Convenience variant of InterceptComponent() which adds a session shell URL
   // to the ModularConfig for |options.url|.
