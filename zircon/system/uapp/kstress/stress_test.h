@@ -11,13 +11,21 @@
 #include <zircon/syscalls.h>
 
 #include <memory>
+#include <random>
 
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 
 class StressTest {
  public:
-  StressTest() { tests_.push_back(this); }
+  StressTest() {
+    tests_.push_back(this);
+    // Use hardware entropy (hopefully) to seed up our initial random generator that we will use to
+    // produce all other generators.
+    std::random_device rd;
+    std::seed_seq seed{rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd()};
+    rand_gen_.seed(seed);
+  }
 
   virtual ~StressTest() = default;
 
@@ -72,10 +80,17 @@ class StressTest {
     va_end(ap);
   }
 
+  using Rng = std::mt19937_64;
+  Rng RngGen() {
+    // Seed a new random generator from our initially seeded one.
+    return Rng(rand_gen_);
+  }
+
  protected:
   // global list of all the stress tests, registered at app start
   static fbl::Vector<StressTest*> tests_;
 
+  Rng rand_gen_;
   bool verbose_{false};
   zx_info_kmem_stats_t kmem_stats_{};
   uint32_t num_cpus_{};

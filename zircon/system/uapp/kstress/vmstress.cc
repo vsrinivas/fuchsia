@@ -43,6 +43,18 @@
 
 #include "stress_test.h"
 
+// Helper to generate values in the full inclusive range [a,b].
+template <typename IntType = uint64_t>
+static inline IntType uniform_rand_range(IntType a, IntType b, StressTest::Rng& rng) {
+  return std::uniform_int_distribution<IntType>(a, b)(rng);
+}
+
+// Helper to generate the common [0, a) range.
+template <typename IntType = uint64_t>
+static inline IntType uniform_rand(IntType range, StressTest::Rng& rng) {
+  return uniform_rand_range(static_cast<IntType>(0), range - 1, rng);
+}
+
 class VmStressTest;
 
 // VM Stresser
@@ -97,6 +109,8 @@ class TestInstance {
   void PrintfAlways(const char* str, Args... args) const {
     test_->PrintfAlways(str, args...);
   }
+
+  std::mt19937_64 RngGen() { return test_->RngGen(); }
 
   VmStressTest* const test_;
 };
@@ -154,15 +168,17 @@ int SingleVmoTestInstance::vmo_thread() {
   bufs_[idx] = fbl::Array<uint8_t>(new uint8_t[buf_size], buf_size);
   const fbl::Array<uint8_t>& buf = bufs_[idx];
 
+  auto rng = RngGen();
+
   // local helper routines to calculate a random range within a vmo and
   // a range appropriate to read into the local buffer above
-  auto rand_vmo_range = [this](uint64_t* out_offset, uint64_t* out_size) {
-    *out_offset = rand() % vmo_size_;
-    *out_size = fbl::min(rand() % vmo_size_, vmo_size_ - *out_offset);
+  auto rand_vmo_range = [this, &rng](uint64_t* out_offset, uint64_t* out_size) {
+    *out_offset = uniform_rand(vmo_size_, rng);
+    *out_size = fbl::min(uniform_rand(vmo_size_, rng), vmo_size_ - *out_offset);
   };
-  auto rand_buffer_range = [this](uint64_t* out_offset, uint64_t* out_size) {
-    *out_size = rand() % buf_size;
-    *out_offset = rand() % (vmo_size_ - *out_size);
+  auto rand_buffer_range = [this, &rng](uint64_t* out_offset, uint64_t* out_size) {
+    *out_size = uniform_rand(buf_size, rng);
+    *out_offset = uniform_rand(vmo_size_ - *out_size, rng);
   };
 
   ZX_ASSERT(buf_size < vmo_size_);
@@ -170,7 +186,7 @@ int SingleVmoTestInstance::vmo_thread() {
   while (!shutdown_.load()) {
     uint64_t off, len;
 
-    int r = rand() % 100;
+    int r = uniform_rand(100, rng);
     switch (r) {
       case 0 ... 4:  // commit a range of the vmo
         Printf("c");
@@ -274,18 +290,22 @@ int SingleVmoTestInstance::pager_thread() {
     }
   };
 
+  auto rng = RngGen();
+
   while (!shutdown_.load()) {
     zx::vmo tmp_vmo;
     uint64_t off, size;
     zx::time deadline;
 
-    int r = rand() % 100;
+    int r = uniform_rand<int>(100, rng);
     switch (r) {
       case 0 ... 4:  // supply a random range of pages
-        off = rand() % vmo_page_count;
-        size = fbl::min(rand() % vmo_page_count, vmo_page_count - off);
+      {
+        off = uniform_rand(vmo_page_count, rng);
+        size = fbl::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
         supply_pages(off * PAGE_SIZE, size * PAGE_SIZE);
         break;
+      }
       case 5 ... 54:  // read from the port
       {
         fbl::AutoLock lock(&mtx_);
@@ -325,7 +345,7 @@ int SingleVmoTestInstance::pager_thread() {
         if (requests_.is_empty()) {
           break;
         }
-        off = rand() % requests_.size();
+        off = uniform_rand(requests_.size(), rng);
         zx_packet_page_request_t req = requests_.erase(off);
         lock.release();
 
@@ -339,7 +359,7 @@ int SingleVmoTestInstance::pager_thread() {
   // Have the last pager thread tear down the pager. Randomly either detach the vmo (and
   // close the pager after all test threads are done) or immediately close the pager handle.
   if (--pager_thread_count_ == 0) {
-    if (rand() % 2) {
+    if (uniform_rand(2, rng)) {
       pager_.detach_vmo(vmo_);
     } else {
       pager_.reset();
@@ -549,10 +569,10 @@ class CowCloneTestInstance : public TestInstance {
   } test_datas_[kMaxTestVmos];
 
   // Helper function that creates a new test vmo that will be inserted at |idx| in test_datas_.
-  fbl::RefPtr<TestData> CreateTestVmo(uint32_t idx);
+  fbl::RefPtr<TestData> CreateTestVmo(uint32_t idx, StressTest::Rng& rng);
   // Helper function that performs a write operation on |TestData|, which is currently
   // in |idx| in test_datas_.
-  bool TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData>& TestData);
+  bool TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData>& TestData, StressTest::Rng& rng);
 
   thrd_t threads_[kNumThreads] = {};
   std::atomic<bool> shutdown_{false};
@@ -617,15 +637,16 @@ void CowCloneTestInstance::DumpTestVmoAccessInfo(const fbl::RefPtr<TestData>& vm
   PrintfAlways("\n");
 }
 
-fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(uint32_t idx) {
-  uint32_t parent_idx = rand() % kMaxTestVmos;
+fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
+    uint32_t idx, StressTest::Rng& rng) {
+  uint32_t parent_idx = uniform_rand<uint32_t>(kMaxTestVmos, rng);
   auto& parent_vmo = test_datas_[parent_idx];
 
   zx::vmo vmo;
   fbl::RefPtr<struct TestData> parent;
   uint32_t parent_clone_start_op_id;
   uint32_t parent_clone_end_op_id;
-  uint32_t page_count = static_cast<uint32_t>((rand() % kMaxVmoPageCount) + 1);
+  uint32_t page_count = uniform_rand_range<uint32_t>(1, kMaxVmoPageCount, rng);
   uint32_t page_offset = 0;
 
   if (parent_idx != idx) {
@@ -638,7 +659,7 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
     if (parent_vmo.vmo) {
       parent = parent_vmo.vmo;
 
-      page_offset = rand() % parent->page_count;
+      page_offset = uniform_rand(parent->page_count, rng);
 
       parent_clone_start_op_id = parent->next_op_id.load();
       zx_status_t status = parent->vmo.create_child(
@@ -678,8 +699,9 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
   return res;
 }
 
-bool CowCloneTestInstance::TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData>& test_data) {
-  uint32_t page_idx = rand() % test_data->page_count;
+bool CowCloneTestInstance::TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData>& test_data,
+                                        StressTest::Rng& rng) {
+  uint32_t page_idx = uniform_rand(test_data->page_count, rng);
 
   auto p = reinterpret_cast<std::atomic_uint64_t*>(test_data->ptr + page_idx * ZX_PAGE_SIZE);
 
@@ -784,10 +806,12 @@ bool CowCloneTestInstance::TestVmoWrite(uint32_t idx, const fbl::RefPtr<TestData
 }
 
 int CowCloneTestInstance::op_thread() {
+  auto rng = RngGen();
+
   while (!shutdown_.load()) {
-    uint32_t idx = rand() % kMaxTestVmos;
+    uint32_t idx = uniform_rand<uint32_t>(kMaxTestVmos, rng);
     auto& test_data = test_datas_[idx];
-    uint32_t rand_op = rand() % 1000;
+    uint32_t rand_op = uniform_rand(1000, rng);
 
     // 0 -> 14: create vmo
     // 15 -> 19: destroy vmo
@@ -796,7 +820,7 @@ int CowCloneTestInstance::op_thread() {
       test_data.mtx.lock();
 
       if (rand_op < 14 && test_data.vmo == nullptr) {
-        test_data.vmo = CreateTestVmo(idx);
+        test_data.vmo = CreateTestVmo(idx, rng);
       } else if (rand_op >= 15 && test_data.vmo != nullptr) {
         for (unsigned i = 0; i < test_data.vmo->page_count; i++) {
           auto val = reinterpret_cast<std::atomic_uint64_t*>(test_data.vmo->ptr + i * ZX_PAGE_SIZE)
@@ -820,7 +844,7 @@ int CowCloneTestInstance::op_thread() {
       test_data.mtx.lock_shared();
 
       if (test_data.vmo != nullptr) {
-        if (!TestVmoWrite(idx, test_data.vmo)) {
+        if (!TestVmoWrite(idx, test_data.vmo, rng)) {
           test_data.mtx.unlock_shared();
           return -1;
         }
@@ -844,14 +868,16 @@ int VmStressTest::test_thread() {
 
   PrintfAlways("VM stress test: using vmo of size %" PRIu64 "\n", vmo_test_size);
 
+  auto rng = RngGen();
+
   zx::time deadline = zx::clock::get_monotonic();
   while (!shutdown_.load()) {
-    uint64_t r = rand() % kMaxInstances;
+    uint64_t r = uniform_rand(kMaxInstances, rng);
     if (test_instances[r]) {
       test_instances[r]->Stop();
       test_instances[r].reset();
     } else {
-      switch (rand() % 3) {
+      switch (uniform_rand(3, rng)) {
         case 0:
           test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, true, vmo_test_size);
           break;
