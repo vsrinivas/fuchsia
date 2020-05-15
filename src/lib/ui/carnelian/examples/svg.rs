@@ -24,7 +24,7 @@ use {
     std::collections::BTreeMap,
 };
 
-#[path = "fuchsia.rs"]
+#[path = "static/fuchsia.rs"]
 mod fuchsia;
 
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };

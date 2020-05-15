@@ -447,9 +447,9 @@ package("png-rs") {
   foreach(image, images) {
     resources += [
       {
-        path = rebase_path("examples/images/${image}")
+        path = rebase_path("examples/static/${image}")
         file_name = get_path_info(image, "file")
-        dest = "images/${file_name}"
+        dest = "static/${file_name}"
       },
     ]
   }
