@@ -101,8 +101,8 @@ class TestSessionShell : public modular_testing::FakeComponent {
 
 class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
  public:
-  const std::string story_name = "story1";
-  const std::string mod_name = "mod1";
+  static constexpr auto kStoryName = "story1";
+  static constexpr auto kModName = "mod1";
 
   TestSessionShell* test_session_shell() { return test_session_shell_.get(); }
 
@@ -145,7 +145,7 @@ class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
     fuchsia::modular::Intent intent;
     intent.handler = test_module_->url();
     intent.action = "action";
-    modular_testing::AddModToStory(test_harness(), story_name, mod_name, std::move(intent));
+    modular_testing::AddModToStory(test_harness(), kStoryName, kModName, std::move(intent));
 
     // Wait for the story to be created.
     RunLoopUntil([this] { return test_module_->is_running(); });
@@ -157,7 +157,7 @@ class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
     // The story should have been previously created through CreateStory.
     FX_CHECK(test_module_->is_running());
 
-    puppet_master_->DeleteStory(story_name, [] {});
+    puppet_master_->DeleteStory(kStoryName, [] {});
 
     // Wait for the story to be deleted.
     RunLoopUntil([this] { return !test_module_->is_running(); });
@@ -169,7 +169,7 @@ class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
 
     // Get a story controller.
     fuchsia::modular::StoryControllerPtr story_controller;
-    test_session_shell_->story_provider()->GetController(story_name, story_controller.NewRequest());
+    test_session_shell_->story_provider()->GetController(kStoryName, story_controller.NewRequest());
 
     return story_controller;
   }
