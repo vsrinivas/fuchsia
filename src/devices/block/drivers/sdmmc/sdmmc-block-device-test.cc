@@ -54,7 +54,11 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     });
   }
 
-  void TearDown() override { dut_.StopWorkerThread(); }
+  void TearDown() override {
+    dut_.StopWorkerThread();
+    // The client must be unbound prior to the loop being destroyed.
+    rpmb_.Unbind();
+  }
 
   void QueueBlockOps();
   void QueueRpmbRequests();

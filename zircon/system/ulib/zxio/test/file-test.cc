@@ -100,6 +100,8 @@ class TestServerBase : public fio::File::Interface {
 
 class File : public zxtest::Test {
  public:
+  virtual ~File() { binding_->Unbind(); }
+
   template <typename ServerImpl>
   ServerImpl* StartServer() {
     server_ = std::make_unique<ServerImpl>();
@@ -124,6 +126,7 @@ class File : public zxtest::Test {
     if (bind_result.is_error()) {
       return bind_result.take_error_result();
     }
+    binding_ = std::make_unique<fidl::BindingRef>(std::move(bind_result.value()));
     return fit::ok(std::move(client_end));
   }
 
@@ -154,6 +157,7 @@ class File : public zxtest::Test {
  protected:
   zxio_storage_t file_;
   std::unique_ptr<TestServerBase> server_;
+  std::unique_ptr<fidl::BindingRef> binding_;
   std::unique_ptr<async::Loop> loop_;
 };
 

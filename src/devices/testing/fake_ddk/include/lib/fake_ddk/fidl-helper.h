@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl-async/cpp/async_bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -53,6 +54,7 @@ class FidlMessenger {
   using _Outer = FidlMessenger;
   explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   explicit FidlMessenger(const async_loop_config_t* config) : loop_(config) {}
+  virtual ~FidlMessenger() { if (binding_) binding_->Unbind(); }
 
   // Local channel to send FIDL client messages
   zx::channel& local() { return local_; }
@@ -74,6 +76,8 @@ class FidlMessenger {
   void* op_ctx_ = nullptr;
   // Channel to mimic RPC
   zx::channel local_;
+  // Server binding
+  std::unique_ptr<fidl::BindingRef> binding_;
   // Dispatcher for fidl messages
   async::Loop loop_;
 };

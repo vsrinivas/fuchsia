@@ -335,12 +335,10 @@ TEST(ClientBindingTestCase, BindingRefPreventsUnbind) {
                                  };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
-  // Create a strong reference to the binding. Spawn a thread to trigger an Unbind().
+  // Create a strong reference to the binding.
   auto binding = client->GetBinding();
-  std::thread([&client] { client.Unbind(); }).detach();
 
-  // Yield to allow the other thread to run.
-  zx_nanosleep(0);
+  client.Unbind();  // Unbind() should not be blocked by the strong reference.
 
   // unbound should not be signaled until the strong reference is released.
   ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&unbound, 0));

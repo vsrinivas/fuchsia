@@ -49,7 +49,8 @@ TEST(GenClientTestCase, TwoWayAsyncManaged) {
 
   constexpr char data[] = "TwoWay() sync managed";
   auto server = std::make_unique<Server>(data, sizeof(data));
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
   auto result = client->TwoWay(fidl::StringView(data, sizeof(data)),
@@ -60,6 +61,8 @@ TEST(GenClientTestCase, TwoWayAsyncManaged) {
                                });
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  server_binding.value().Unbind();
 }
 
 TEST(GenClientTestCase, TwoWayAsyncCallerAllocated) {
@@ -93,7 +96,8 @@ TEST(GenClientTestCase, TwoWayAsyncCallerAllocated) {
 
   constexpr char data[] = "TwoWay() sync caller-allocated";
   auto server = std::make_unique<Server>(data, sizeof(data));
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
   fidl::Buffer<Example::TwoWayRequest> buffer;
@@ -101,6 +105,8 @@ TEST(GenClientTestCase, TwoWayAsyncCallerAllocated) {
   auto result = client->TwoWay(buffer.view(), fidl::StringView(data, sizeof(data)), &context);
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  server_binding.value().Unbind();
 }
 
 TEST(GenClientTestCase, EventManaged) {
@@ -123,12 +129,15 @@ TEST(GenClientTestCase, EventManaged) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
 
   auto server = std::make_unique<Server>(data, sizeof(data));
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
   ASSERT_OK(server->SendEvent(zx::unowned_channel(remote_handle),
                               fidl::StringView(data, sizeof(data))));
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  server_binding.value().Unbind();
 }
 
 TEST(GenClientTestCase, EventInPlace) {
@@ -152,12 +161,15 @@ TEST(GenClientTestCase, EventInPlace) {
   fidl::Client<Example> client(std::move(local), loop.dispatcher(), std::move(handlers));
 
   auto server = std::make_unique<Server>(data, sizeof(data));
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
   ASSERT_OK(server->SendEvent(zx::unowned_channel(remote_handle),
                               fidl::StringView(data, sizeof(data))));
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  server_binding.value().Unbind();
 }
 
 TEST(GenClientTestCase, EventNotHandled) {
@@ -179,12 +191,15 @@ TEST(GenClientTestCase, EventNotHandled) {
 
   constexpr char data[] = "OnEvent() unhandled";
   auto server = std::make_unique<Server>(data, sizeof(data));
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  auto server_binding = fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get());
+  ASSERT_TRUE(server_binding.is_ok());
 
   // Wait for the event from the server.
   ASSERT_OK(server->SendEvent(zx::unowned_channel(remote_handle),
                               fidl::StringView(data, sizeof(data))));
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
+
+  server_binding.value().Unbind();
 }
 
 // This is test is almost identical to ClientBindingTestCase.Epitaph in llcpp_client_test.cc but

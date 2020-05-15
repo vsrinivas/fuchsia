@@ -54,6 +54,7 @@ class TestServerBase : public llcpp::fuchsia::io::Node::Interface {
 
 class ExtensionNode : public zxtest::Test {
  public:
+  virtual ~ExtensionNode() { binding_->Unbind(); }
   void SetUp() final {
     ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
   }
@@ -73,6 +74,7 @@ class ExtensionNode : public zxtest::Test {
     if (result.is_error()) {
       return nullptr;
     }
+    binding_ = std::make_unique<fidl::BindingRef>(std::move(result.value()));
     return static_cast<ServerImpl*>(server_.get());
   }
 
@@ -80,7 +82,9 @@ class ExtensionNode : public zxtest::Test {
   zx::channel control_client_end_;
   zx::channel control_server_end_;
   std::unique_ptr<TestServerBase> server_;
+  std::unique_ptr<fidl::BindingRef> binding_;
   std::unique_ptr<async::Loop> loop_;
+
 };
 
 TEST_F(ExtensionNode, DefaultBehaviors) {

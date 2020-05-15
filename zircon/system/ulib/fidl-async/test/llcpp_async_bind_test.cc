@@ -57,9 +57,9 @@ TEST(AsyncBindTestCase, SyncReply) {
   sync_completion_t closed;
   fidl::OnUnboundFn<SyncServer> on_unbound = [&closed](SyncServer*, fidl::UnboundReason reason,
                                                        zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(reason, fidl::UnboundReason::kPeerClosed);
-    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(reason, fidl::UnboundReason::kPeerClosed);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    EXPECT_TRUE(channel);
     sync_completion_signal(&closed);
   };
   fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
@@ -67,8 +67,8 @@ TEST(AsyncBindTestCase, SyncReply) {
   // Sync client call.
   auto result =
       ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
-  ASSERT_OK(result.status());
-  ASSERT_EQ(result->reply, kExpectedReply);
+  EXPECT_OK(result.status());
+  EXPECT_EQ(result->reply, kExpectedReply);
 
   local.reset();  // To trigger binding destruction before loop's destruction.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
@@ -98,9 +98,9 @@ TEST(AsyncBindTestCase, AsyncReply) {
   sync_completion_t closed;
   fidl::OnUnboundFn<AsyncServer> on_unbound = [&closed](AsyncServer*, fidl::UnboundReason reason,
                                                         zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(reason, fidl::UnboundReason::kPeerClosed);
-    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(reason, fidl::UnboundReason::kPeerClosed);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    EXPECT_TRUE(channel);
     sync_completion_signal(&closed);
   };
   fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
@@ -108,8 +108,8 @@ TEST(AsyncBindTestCase, AsyncReply) {
   // Sync client call.
   auto result =
       ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
-  ASSERT_OK(result.status());
-  ASSERT_EQ(result->reply, kExpectedReply);
+  EXPECT_OK(result.status());
+  EXPECT_EQ(result->reply, kExpectedReply);
 
   local.reset();  // To trigger binding destruction before main's destruction.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
@@ -150,9 +150,9 @@ TEST(AsyncBindTestCase, MultipleAsyncReplies) {
   fidl::OnUnboundFn<AsyncDelayedServer> on_unbound =
       [&closed](AsyncDelayedServer* server, fidl::UnboundReason reason, zx_status_t status,
                 zx::channel channel) {
-        ASSERT_EQ(reason, fidl::UnboundReason::kPeerClosed);
-        ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
-        ASSERT_TRUE(channel);
+        EXPECT_EQ(reason, fidl::UnboundReason::kPeerClosed);
+        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+        EXPECT_TRUE(channel);
         sync_completion_signal(&closed);
       };
   fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
@@ -222,9 +222,9 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   fidl::OnUnboundFn<AsyncDelayedServer> on_unbound =
       [&closed](AsyncDelayedServer*, fidl::UnboundReason reason, zx_status_t status,
                 zx::channel channel) {
-        ASSERT_EQ(reason, fidl::UnboundReason::kClose);
-        ASSERT_OK(status);
-        ASSERT_TRUE(channel);
+        EXPECT_EQ(reason, fidl::UnboundReason::kClose);
+        EXPECT_OK(status);
+        EXPECT_TRUE(channel);
         sync_completion_signal(&closed);
       };
   fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
@@ -255,48 +255,6 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   EXPECT_EQ(ZX_OK, epitaph.error);
 }
 
-TEST(AsyncBindTestCase, UniquePtrDestroyOnClientClose) {
-  sync_completion_t destroyed;
-  auto server = std::make_unique<Server>(&destroyed);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server));
-  loop.RunUntilIdle();
-  ASSERT_FALSE(sync_completion_signaled(&destroyed));
-
-  local.reset();
-  loop.RunUntilIdle();
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
-}
-
-TEST(AsyncBindTestCase, UniquePtrDestroyOnServerClose) {
-  sync_completion_t destroyed;
-  // Server launches a thread so we can make sync client calls.
-  auto server = std::make_unique<Server>(&destroyed);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server));
-  ASSERT_FALSE(sync_completion_signaled(&destroyed));
-
-  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
-  ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
-  // Make sure the other end closed.
-  ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
-
-  // Verify the epitaph from Close().
-  fidl_epitaph_t epitaph;
-  ASSERT_OK(local.read(0, &epitaph, nullptr, sizeof(fidl_epitaph_t), 0, nullptr, nullptr));
-  EXPECT_EQ(ZX_OK, epitaph.error);
-}
-
 TEST(AsyncBindTestCase, CallbackDestroyOnClientClose) {
   sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
@@ -307,9 +265,9 @@ TEST(AsyncBindTestCase, CallbackDestroyOnClientClose) {
 
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnboundReason reason,
                                             zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(reason, fidl::UnboundReason::kPeerClosed);
-    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(reason, fidl::UnboundReason::kPeerClosed);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    EXPECT_TRUE(channel);
     delete server;
   };
 
@@ -354,9 +312,9 @@ TEST(AsyncBindTestCase, CallbackErrorClientTriggered) {
 
   fidl::OnUnboundFn<ErrorServer> on_unbound = [&error](ErrorServer*, fidl::UnboundReason reason,
                                                        zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(reason, fidl::UnboundReason::kPeerClosed);
-    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(reason, fidl::UnboundReason::kPeerClosed);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    EXPECT_TRUE(channel);
     sync_completion_signal(&error);
   };
 
@@ -427,9 +385,9 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   fidl::OnUnboundFn<WorkingServer> on_unbound =
       [&closed](WorkingServer*, fidl::UnboundReason reason, zx_status_t status,
                 zx::channel channel) {
-        ASSERT_EQ(reason, fidl::UnboundReason::kPeerClosed);
-        ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
-        ASSERT_TRUE(channel);
+        EXPECT_EQ(reason, fidl::UnboundReason::kPeerClosed);
+        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+        EXPECT_TRUE(channel);
         sync_completion_signal(&closed);
       };
 
@@ -502,9 +460,9 @@ TEST(AsyncBindTestCase, CallbackErrorServerTriggered) {
 
   fidl::OnUnboundFn<ErrorServer> on_unbound = [&closed](ErrorServer*, fidl::UnboundReason reason,
                                                         zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(fidl::UnboundReason::kClose, reason);
-    ASSERT_OK(status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(fidl::UnboundReason::kClose, reason);
+    EXPECT_OK(status);
+    EXPECT_TRUE(channel);
     sync_completion_signal(&closed);
   };
 
@@ -560,9 +518,9 @@ TEST(AsyncBindTestCase, CallbackDestroyOnServerClose) {
 
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnboundReason reason,
                                             zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(fidl::UnboundReason::kClose, reason);
-    ASSERT_OK(status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(fidl::UnboundReason::kClose, reason);
+    EXPECT_OK(status);
+    EXPECT_TRUE(channel);
     delete server;
   };
 
@@ -570,7 +528,7 @@ TEST(AsyncBindTestCase, CallbackDestroyOnServerClose) {
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
-  ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+  EXPECT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
 
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
   // Make sure the other end closed
@@ -583,28 +541,30 @@ TEST(AsyncBindTestCase, CallbackDestroyOnServerClose) {
 }
 
 TEST(AsyncBindTestCase, ExplicitUnbind) {
-  // Server launches a thread so we can make sync client calls.
   sync_completion_t destroyed;
-  auto server = std::make_unique<Server>(&destroyed);
+  auto server = new Server(&destroyed);
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
+  main.StartThread();
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   auto remote_handle = remote.get();
 
-  fidl::OnUnboundFn<Server> on_unbound = [remote_handle](Server*, fidl::UnboundReason reason,
-                                                         zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(reason, fidl::UnboundReason::kUnbind);
-    ASSERT_OK(status);
-    ASSERT_EQ(channel.get(), remote_handle);
+  fidl::OnUnboundFn<Server> on_unbound =
+      [remote_handle](Server* server, fidl::UnboundReason reason, zx_status_t status,
+                      zx::channel channel) {
+    EXPECT_EQ(reason, fidl::UnboundReason::kUnbind);
+    EXPECT_OK(status);
+    EXPECT_EQ(channel.get(), remote_handle);
+    delete server;
   };
   auto binding_ref = fidl::BindingRef::CreateAsyncBinding(main.dispatcher(), std::move(remote),
-                                                          server.get(), std::move(on_unbound));
+                                                          server, std::move(on_unbound));
   ASSERT_TRUE(binding_ref.is_ok());
 
-  main.RunUntilIdle();
-  ASSERT_TRUE(binding_ref.is_ok());
+  // Unbind() and wait for the hook.
   binding_ref.value().Unbind();
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
 TEST(AsyncBindTestCase, ExplicitUnbindWithPendingTransaction) {
@@ -638,12 +598,14 @@ TEST(AsyncBindTestCase, ExplicitUnbindWithPendingTransaction) {
   });
   ASSERT_OK(client->StartThread());
 
+  sync_completion_t unbound;
   fidl::OnUnboundFn<WorkingServer> on_unbound =
-      [remote_handle](WorkingServer*, fidl::UnboundReason reason, zx_status_t status,
-                      zx::channel channel) {
-        ASSERT_EQ(reason, fidl::UnboundReason::kUnbind);
-        ASSERT_OK(status);
-        ASSERT_EQ(channel.get(), remote_handle);
+      [remote_handle, &unbound](WorkingServer*, fidl::UnboundReason reason, zx_status_t status,
+                                zx::channel channel) {
+        EXPECT_EQ(reason, fidl::UnboundReason::kUnbind);
+        EXPECT_OK(status);
+        EXPECT_EQ(channel.get(), remote_handle);
+        sync_completion_signal(&unbound);
       };
   auto binding_ref = fidl::BindingRef::CreateAsyncBinding(loop.dispatcher(), std::move(remote),
                                                           server.get(), std::move(on_unbound));
@@ -655,8 +617,11 @@ TEST(AsyncBindTestCase, ExplicitUnbindWithPendingTransaction) {
   // Unbind the server end of the channel.
   binding_ref.value().Unbind();
 
-  // `loop` will not be destroyed until the thread inside Echo() returns.
+  // The unboudn hook will not run until the thread inside Echo() returns.
   sync_completion_signal(&worker_done);
+
+  // Wait for the unbound hook.
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
 TEST(AsyncBindTestCase, ConcurrentSyncReply) {
@@ -698,7 +663,9 @@ TEST(AsyncBindTestCase, ConcurrentSyncReply) {
     ASSERT_OK(server_loop.StartThread());
 
   // Bind the server.
-  fidl::AsyncBind(server_loop.dispatcher(), std::move(remote), std::move(server));
+  auto res = fidl::AsyncBind(server_loop.dispatcher(), std::move(remote), server.get());
+  ASSERT_TRUE(res.is_ok());
+  fidl::BindingRef binding(std::move(res.value()));
 
   // Launch 10 client threads to make two-way Echo() calls.
   std::vector<std::thread> threads;
@@ -706,13 +673,16 @@ TEST(AsyncBindTestCase, ConcurrentSyncReply) {
     threads.emplace_back([&] {
       auto result = ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local},
                                                                     kExpectedReply);
-      ASSERT_EQ(result.status(), ZX_OK);
+      EXPECT_EQ(result.status(), ZX_OK);
     });
   }
 
   // Join the client threads.
   for (auto& thread : threads)
     thread.join();
+
+  // Unbind the server.
+  binding.Unbind();
 }
 
 TEST(AsyncBindTestCase, ConcurrentIdempotentClose) {
@@ -738,14 +708,16 @@ TEST(AsyncBindTestCase, ConcurrentIdempotentClose) {
     ASSERT_OK(server_loop.StartThread());
 
   // Bind the server.
+  sync_completion_t unbound;
   fidl::OnUnboundFn<ConcurrentSyncServer> on_unbound =
-      [](ConcurrentSyncServer*, fidl::UnboundReason reason, zx_status_t status,
+      [&unbound](ConcurrentSyncServer*, fidl::UnboundReason reason, zx_status_t status,
          zx::channel channel) {
         static std::atomic_flag invoked = ATOMIC_FLAG_INIT;
         ASSERT_FALSE(invoked.test_and_set());  // Must only be called once.
-        ASSERT_EQ(fidl::UnboundReason::kClose, reason);
-        ASSERT_OK(status);
-        ASSERT_TRUE(channel);
+        EXPECT_EQ(fidl::UnboundReason::kClose, reason);
+        EXPECT_OK(status);
+        EXPECT_TRUE(channel);
+        sync_completion_signal(&unbound);
       };
   fidl::AsyncBind(server_loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
@@ -754,13 +726,16 @@ TEST(AsyncBindTestCase, ConcurrentIdempotentClose) {
   for (int i = 0; i < kMaxReqs; ++i) {
     threads.emplace_back([&] {
       auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
-      ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+      EXPECT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
     });
   }
 
   // Join the client threads.
   for (auto& thread : threads)
     thread.join();
+
+  // Wait for the unbound handler before letting the loop be destroyed.
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
 TEST(AsyncBindTestCase, BindingRefUnbind) {
@@ -777,9 +752,9 @@ TEST(AsyncBindTestCase, BindingRefUnbind) {
   fidl::OnUnboundFn<Server> on_unbound =
       [remote_handle, &remote](Server* server, fidl::UnboundReason reason, zx_status_t status,
                                zx::channel channel) {
-        ASSERT_EQ(reason, fidl::UnboundReason::kUnbind);
-        ASSERT_OK(status);
-        ASSERT_EQ(channel.get(), remote_handle);
+        EXPECT_EQ(reason, fidl::UnboundReason::kUnbind);
+        EXPECT_OK(status);
+        EXPECT_EQ(channel.get(), remote_handle);
         remote = std::move(channel);
         delete server;
       };
@@ -815,9 +790,9 @@ TEST(AsyncBindTestCase, BindingRefClose) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnboundReason reason,
                                             zx_status_t status, zx::channel channel) {
-    ASSERT_EQ(reason, fidl::UnboundReason::kClose);
-    ASSERT_OK(status);
-    ASSERT_TRUE(channel);
+    EXPECT_EQ(reason, fidl::UnboundReason::kClose);
+    EXPECT_OK(status);
+    EXPECT_TRUE(channel);
     delete server;
   };
   auto binding_ref = fidl::BindingRef::CreateAsyncBinding(loop.dispatcher(), std::move(remote),

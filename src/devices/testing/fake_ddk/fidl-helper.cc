@@ -4,8 +4,6 @@
 
 #include "lib/fake_ddk/fidl-helper.h"
 
-#include <lib/fidl-async/cpp/async_bind.h>
-
 namespace fake_ddk {
 namespace {
 // We are using lowest bit of transaction as a flag. The static assert assures us that this bit will
@@ -93,6 +91,7 @@ zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op) {
     return res.error();
   }
 
+  binding_ = std::make_unique<fidl::BindingRef>(std::move(res.value()));
   return ZX_OK;
 }
 

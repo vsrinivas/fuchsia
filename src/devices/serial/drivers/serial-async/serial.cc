@@ -7,8 +7,6 @@
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-async/cpp/async_bind.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
@@ -74,7 +72,12 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
   // Invoked when the channel is closed or on any binding-related error.
   fidl::OnUnboundFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> unbound_fn(
       [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev, fidl::UnboundReason,
-         zx_status_t, zx::channel) { static_cast<SerialDevice*>(dev)->loop_->Quit(); });
+         zx_status_t, zx::channel) {
+        auto* device = static_cast<SerialDevice*>(dev);
+        device->loop_->Quit();
+        // Unblock DdkRelease() if it was invoked.
+        sync_completion_signal(&device->on_unbind_);
+      });
 
   auto binding_ref =
       fidl::AsyncBind(loop_->dispatcher(), std::move(req),
@@ -84,6 +87,7 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
     loop_.reset();
     return;
   }
+  binding_.emplace(std::move(binding_ref.value()));
 }
 
 void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {
@@ -172,6 +176,10 @@ zx_status_t SerialDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void SerialDevice::DdkRelease() {
   serial_.Enable(false);
+  if (binding_) {
+    binding_->Unbind();
+    sync_completion_wait(&on_unbind_, ZX_TIME_INFINITE);
+  }
   delete this;
 }
 

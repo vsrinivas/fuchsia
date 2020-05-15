@@ -17,9 +17,6 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl, OnUnboundFn<Interface> on_unbound);
-template <typename Interface>
-fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               std::unique_ptr<Interface> impl);
 
 namespace internal {
 
@@ -47,13 +44,6 @@ class BindingRef {
       OnUnboundFn<Interface> on_unbound) {
     return AsyncBind(dispatcher, std::move(channel), impl, std::move(on_unbound));
   }
-  // Same as AsyncBind(async_dispatcher_t*, zx::channel, std::unique_ptr<Interface>) below.
-  template <typename Interface>
-  static fit::result<BindingRef, zx_status_t> CreateAsyncBinding(async_dispatcher_t* dispatcher,
-                                                                 zx::channel channel,
-                                                                 std::unique_ptr<Interface> impl) {
-    return AsyncBind(dispatcher, std::move(channel), std::move(impl));
-  }
 
   // Move only.
   BindingRef(BindingRef&&) = default;
@@ -62,20 +52,18 @@ class BindingRef {
   BindingRef& operator=(const BindingRef&) = delete;
 
   // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
-  // dispatcher thread, passing in the channel and the unbind reason.
+  // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
+  // will no longer have any wait associated with the channel (though handling of any already
+  // in-flight transactions will continue).
   //
   // This may be called from any thread.
   //
-  // NOTE: For a single-threaded dispatcher, if Unbind() is invoked from a dispatcher thread and
-  // outside the scope of the message handler for the same binding, the channel will have been fully
-  // unbound on return, i.e. no other threads will be able to access it. Note that the |on_unbound|
-  // will still be executed asynchronously if specified.
+  // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
+  // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
   void Unbind() {
     if (auto binding = binding_.lock())
       binding->Unbind(std::move(binding));
   }
-
-  // TODO(madhaviyengar): Re-introduce synchronous Unbind() which returns a zx::channel.
 
   // Triggers an asynchronous unbind operation. Eventually, the epitaph will be sent over the
   // channel which will be subsequently closed. If specified, |on_unbound| will be invoked giving
@@ -135,7 +123,9 @@ class BindingRef {
 //   call.
 // - In order to reclaim the |channel|, the user must specify an |on_unbound| hook. This will be
 //   invoked after the |channel| has been unbound from the |dispatcher|. The |channel| will be given
-//   as an argument to the hook, and if unused it will be closed at the end of the hook scope.
+//   as an argument to the hook.
+// - If the user shuts down the |dispatcher| prior to the |on_unbound| hook running, it may be
+//   dropped instead.
 //
 // Close:
 // - |Close| is similar to |Unbind| except that it causes an epitaph message to be sent on the
@@ -169,6 +159,9 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
 // error or an explicit |Close| or |Unbind|.
+//
+// NOTE: It is only safe to invoke |on_unbound| from a |dispatcher| thread. As such, if the user
+// shuts down the |dispatcher| prior to it being invoked, it will be discarded.
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl, OnUnboundFn<Interface> on_unbound) {
@@ -178,16 +171,6 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
                                    zx::channel channel) mutable {
         fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
       });
-}
-
-// As above, but will destroy |impl| whenever the binding is destroyed.
-template <typename Interface>
-fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               std::unique_ptr<Interface> impl) {
-  Interface* impl_raw = impl.get();
-  return internal::AsyncTypeErasedBindServer(
-      dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
-      [intf = std::move(impl)](void*, UnboundReason, zx_status_t, zx::channel) {});
 }
 
 namespace internal {
