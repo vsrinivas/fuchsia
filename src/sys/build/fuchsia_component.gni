@@ -32,6 +32,11 @@ import("//src/sys/cmc/build/cmx.gni")
 #       source = "$root_out_dir/my-program"
 #       destination = "bin/my-program"
 #     }
+#     ...
+#   ]
+#   deps = [
+#     ":my-program",
+#     ...
 #   ]
 #   ...
 # }
