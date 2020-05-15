@@ -64,7 +64,7 @@ unittest_package("sockscripter_unittest") {
   tests = [
     {
       name = "sockscripter_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

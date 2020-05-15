@@ -27,11 +27,11 @@ test_package("netemul-ip-forward-test") {
   tests = [
     {
       name = "ipv4_forward_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "ipv6_forward_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

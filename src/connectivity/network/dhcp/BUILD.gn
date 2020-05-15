@@ -41,7 +41,7 @@ test_package("dhcp-tests") {
   tests = [
     {
       name = "dhcp_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }
@@ -139,7 +139,7 @@ test_package("dhcpd-tests") {
   tests = [
     {
       name = "dhcpd_bin_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

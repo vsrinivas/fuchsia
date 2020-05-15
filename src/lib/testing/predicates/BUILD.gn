@@ -28,7 +28,7 @@ unittest_package("predicates-lib-test") {
   tests = [
     {
       name = "predicates-lib-unittests"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

@@ -30,7 +30,7 @@ test_package("fake_clock_gotests") {
   tests = [
     {
       name = "fake_clock_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

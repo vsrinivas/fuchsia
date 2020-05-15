@@ -30,7 +30,7 @@ import("//build/testing/platforms.gni")
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
 #
-#   environments (optional, default: QEMU for fuchsia; else a VM)
+#   environments (optional, default: Emu for fuchsia; else a VM)
 #     [list of scopes] Device environments in which the test should run.
 #
 #     Each scope in $environments contains:
@@ -54,12 +54,12 @@ template("test_spec") {
   }
   forward_variables_from(invoker, [ "environments" ])
 
-  # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
+  # Set default environments: Emu for a fuchsia test, and VMs for linux and mac
   # tests.
   if (is_fuchsia) {
     envs_specified = defined(environments)
     if (!envs_specified) {
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     }
   } else if (is_linux || is_mac) {
     if (!defined(environments)) {

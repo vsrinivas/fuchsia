@@ -14,7 +14,7 @@ test_package("netdev-client-tests") {
   tests = [
     {
       name = "cpp-test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

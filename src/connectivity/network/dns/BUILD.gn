@@ -30,7 +30,7 @@ test_package("dns-tests") {
   tests = [
     {
       name = "dns_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }
@@ -83,7 +83,7 @@ unittest_package("dns-resolver-tests") {
   tests = [
     {
       name = "dns_resolver_bin_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

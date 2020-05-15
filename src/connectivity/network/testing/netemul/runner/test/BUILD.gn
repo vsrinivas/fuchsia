@@ -133,7 +133,7 @@ test_package("netemul_sandbox_test") {
   tests = [
     {
       name = "sandbox_unittest"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "model_unittest"
@@ -141,31 +141,31 @@ test_package("netemul_sandbox_test") {
     {
       name = "sandbox_service_bin_test"
       dest = "sandbox_service"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "svc_list_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "env_build_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_socks_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "easy_netstack_cfg_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "inheritance_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "dynamic_devices_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "mock_device_settings_bin_test"
@@ -173,11 +173,11 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "netstack_intermediary_multi_interface_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_intermediary_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

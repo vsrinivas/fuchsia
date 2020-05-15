@@ -68,11 +68,11 @@ test_package("tcp-stream-ext-tests") {
   tests = [
     {
       name = "tcp_stream_ext_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "stub_netstack_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

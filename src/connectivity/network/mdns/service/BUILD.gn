@@ -184,7 +184,7 @@ test_package("mdns_tests") {
   tests = [
     {
       name = "mdns_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }
@@ -328,7 +328,7 @@ test_package("mdns-netemul-multi-network-tests") {
   tests = [
     {
       name = "mdns_netemul_multi_network_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

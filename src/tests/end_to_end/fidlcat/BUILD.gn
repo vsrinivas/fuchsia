@@ -28,7 +28,7 @@ dart_test("fidlcat_test") {
   # as we don't currently support Dart on arm64 hosts.
   environments = []
   if (is_host && target_cpu == "x64") {
-    environments = [ qemu_env ]
+    environments = [ emu_env ]
   }
 }
 

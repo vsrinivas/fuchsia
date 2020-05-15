@@ -134,11 +134,11 @@ test_package("netstack_integration_tests_inner") {
   tests = [
     {
       name = "netstack_cobalt_integration_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_integration_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }
@@ -289,35 +289,35 @@ test_package("netstack_c_api_tests_inner") {
   tests = [
     {
       name = "connect_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "name_provider_service_not_present_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "name_provider_no_network_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_bsdsocket_c_api_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_if_nameindex_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_external_network_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_fuchsia_c_api_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_no_network_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

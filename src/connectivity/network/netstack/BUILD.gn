@@ -78,39 +78,39 @@ test_package("netstack_gotests") {
   tests = [
     {
       name = "netstack_bench_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_connectivity_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_fidlconv_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_filter_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_link_eth_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_link_fifo_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_util_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack_ifconfig_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

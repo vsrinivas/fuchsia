@@ -56,7 +56,7 @@ unittest_package("network-device-mac-lib-test") {
   tests = [
     {
       name = "network-device-mac-lib-test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

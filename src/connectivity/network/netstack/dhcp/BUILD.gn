@@ -18,7 +18,7 @@ test_package("netstack_dhcp_gotests") {
   tests = [
     {
       name = "netstack_dhcp_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

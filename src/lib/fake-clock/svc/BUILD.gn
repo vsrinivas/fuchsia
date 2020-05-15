@@ -50,7 +50,7 @@ unittest_package("tests") {
   tests = [
     {
       name = "fake_clock_svc_bin_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

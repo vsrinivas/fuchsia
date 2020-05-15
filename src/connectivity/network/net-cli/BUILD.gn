@@ -58,7 +58,7 @@ test_package("net-cli-tests") {
     {
       name = "net_bin_test"
       dest = "net_bin_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

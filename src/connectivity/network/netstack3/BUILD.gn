@@ -79,15 +79,15 @@ test_package("netstack3_tests") {
   tests = [
     {
       name = "netstack3_bin_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "netstack3_core_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
     {
       name = "specialize_ip_macro_test_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

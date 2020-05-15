@@ -62,7 +62,7 @@ test_package("dhcpd-cli-tests") {
   tests = [
     {
       name = "dhcpd_cli_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

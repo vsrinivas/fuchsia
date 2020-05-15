@@ -90,7 +90,7 @@ unittest_package("network-tun-test") {
   tests = [
     {
       name = "network_tun_unittest"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }
