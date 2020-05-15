@@ -722,6 +722,10 @@ mod stub {
         ) -> BoxFuture<'_, UpdateDecision> {
             future::ready(UpdateDecision::Ok).boxed()
         }
+
+        fn reboot_allowed(&mut self, _check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+            future::ready(true).boxed()
+        }
     }
 }
 

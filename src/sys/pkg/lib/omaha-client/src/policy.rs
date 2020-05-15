@@ -103,9 +103,12 @@ impl Default for UpdateDecision {
 
 /// The policy implementation itself
 pub trait Policy {
+    type UpdatePolicyData;
+    type RebootPolicyData;
+
     /// When should the next update happen?
     fn compute_next_update_time(
-        policy_data: &PolicyData,
+        policy_data: &Self::UpdatePolicyData,
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
@@ -117,7 +120,7 @@ pub trait Policy {
     /// it would perform an update, but instead just tell the device whether or not
     /// an update is available.
     fn update_check_allowed(
-        policy_data: &PolicyData,
+        policy_data: &Self::UpdatePolicyData,
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
@@ -127,9 +130,12 @@ pub trait Policy {
     /// Given the current State, the current PolicyData, can the proposed InstallPlan
     /// be executed at this time.
     fn update_can_start(
-        policy_data: &PolicyData,
+        policy_data: &Self::UpdatePolicyData,
         proposed_install_plan: &impl Plan,
     ) -> UpdateDecision;
+
+    /// Given the current PolicyData, is reboot allowed right now.
+    fn reboot_allowed(policy_data: &Self::RebootPolicyData, check_options: &CheckOptions) -> bool;
 }
 
 pub trait PolicyEngine {
@@ -164,6 +170,9 @@ pub trait PolicyEngine {
         &mut self,
         proposed_install_plan: &impl Plan,
     ) -> BoxFuture<'_, UpdateDecision>;
+
+    /// Is reboot allowed right now.
+    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool>;
 }
 
 #[cfg(test)]

@@ -30,13 +30,18 @@ const PERIODIC_INTERVAL: Duration = Duration::from_secs(1 * 60 * 60);
 const STARTUP_DELAY: Duration = Duration::from_secs(60);
 /// Wait 5 minutes before retrying after failed update checks.
 const RETRY_DELAY: Duration = Duration::from_secs(5 * 60);
+/// If the UI activity is active but is > 48 hours old, we should still allow reboot.
+const UI_ACTIVITY_VALID_DURATION: zx::Duration = zx::Duration::from_seconds(48 * 60);
 
 /// The policy implementation for Fuchsia.
-pub struct FuchsiaPolicy;
+struct FuchsiaPolicy;
 
 impl Policy for FuchsiaPolicy {
+    type UpdatePolicyData = PolicyData;
+    type RebootPolicyData = FuchsiaRebootPolicyData;
+
     fn compute_next_update_time(
-        policy_data: &PolicyData,
+        policy_data: &Self::UpdatePolicyData,
         _apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
@@ -117,7 +122,7 @@ impl Policy for FuchsiaPolicy {
     }
 
     fn update_check_allowed(
-        policy_data: &PolicyData,
+        policy_data: &Self::UpdatePolicyData,
         _apps: &[App],
         scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
@@ -152,10 +157,18 @@ impl Policy for FuchsiaPolicy {
     }
 
     fn update_can_start(
-        _policy_data: &PolicyData,
+        _policy_data: &Self::UpdatePolicyData,
         _proposed_install_plan: &impl Plan,
     ) -> UpdateDecision {
         UpdateDecision::Ok
+    }
+
+    /// Is reboot allowed right now.
+    fn reboot_allowed(policy_data: &Self::RebootPolicyData, check_options: &CheckOptions) -> bool {
+        check_options.source == InstallSource::OnDemand
+            || policy_data.ui_activity.state != State::Active
+            || policy_data.ui_activity.transition_time + UI_ACTIVITY_VALID_DURATION
+                < policy_data.current_monotonic_zx_time
     }
 }
 
@@ -240,6 +253,14 @@ where
         );
         future::ready(decision).boxed()
     }
+
+    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+        let decision = FuchsiaPolicy::reboot_allowed(
+            &FuchsiaRebootPolicyData::new(self.ui_activity.get()),
+            check_options,
+        );
+        future::ready(decision).boxed()
+    }
 }
 
 impl<T> FuchsiaPolicyEngine<T>
@@ -297,6 +318,23 @@ struct UiActivityState {
 impl UiActivityState {
     fn new() -> Self {
         Self { state: State::Unknown, transition_time: zx::Time::get(zx::ClockId::Monotonic) }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct FuchsiaRebootPolicyData {
+    ui_activity: UiActivityState,
+    current_monotonic_zx_time: zx::Time,
+}
+
+impl FuchsiaRebootPolicyData {
+    fn new(ui_activity: UiActivityState) -> Self {
+        Self {
+            ui_activity,
+            // We use zx::Time::get instead of time_source because there's no easy way to
+            // convert Instant to zx::Time.
+            current_monotonic_zx_time: zx::Time::get(zx::ClockId::Monotonic),
+        }
     }
 }
 
@@ -760,5 +798,53 @@ mod tests {
             ui_activity.get(),
             UiActivityState { state: State::Idle, transition_time: zx::Time::from_nanos(456) }
         );
+    }
+
+    #[test]
+    fn test_reboot_allowed_interactive() {
+        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
+            state: State::Active,
+            transition_time: zx::Time::get(zx::ClockId::Monotonic),
+        });
+        assert_eq!(
+            FuchsiaPolicy::reboot_allowed(
+                &policy_data,
+                &CheckOptions { source: InstallSource::OnDemand },
+            ),
+            true
+        );
+    }
+
+    #[test]
+    fn test_reboot_allowed_unknown() {
+        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState::new());
+        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+    }
+
+    #[test]
+    fn test_reboot_allowed_idle() {
+        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
+            state: State::Idle,
+            transition_time: zx::Time::get(zx::ClockId::Monotonic),
+        });
+        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+    }
+
+    #[test]
+    fn test_reboot_allowed_state_too_old() {
+        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
+            state: State::Active,
+            transition_time: zx::Time::get(zx::ClockId::Monotonic) - zx::Duration::from_hours(49),
+        });
+        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+    }
+
+    #[test]
+    fn test_reboot_not_allowed_when_active() {
+        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
+            state: State::Active,
+            transition_time: zx::Time::get(zx::ClockId::Monotonic),
+        });
+        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), false);
     }
 }

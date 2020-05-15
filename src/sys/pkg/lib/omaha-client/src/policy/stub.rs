@@ -16,8 +16,11 @@ use futures::prelude::*;
 pub struct StubPolicy;
 
 impl Policy for StubPolicy {
+    type UpdatePolicyData = PolicyData;
+    type RebootPolicyData = ();
+
     fn compute_next_update_time(
-        policy_data: &PolicyData,
+        policy_data: &Self::UpdatePolicyData,
         _apps: &[App],
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
@@ -26,7 +29,7 @@ impl Policy for StubPolicy {
     }
 
     fn update_check_allowed(
-        _policy_data: &PolicyData,
+        _policy_data: &Self::UpdatePolicyData,
         _apps: &[App],
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
@@ -39,10 +42,17 @@ impl Policy for StubPolicy {
     }
 
     fn update_can_start(
-        _policy_data: &PolicyData,
+        _policy_data: &Self::UpdatePolicyData,
         _proposed_install_plan: &impl Plan,
     ) -> UpdateDecision {
         UpdateDecision::Ok
+    }
+
+    fn reboot_allowed(
+        _policy_data: &Self::RebootPolicyData,
+        _check_options: &CheckOptions,
+    ) -> bool {
+        true
     }
 }
 
@@ -109,6 +119,11 @@ where
             &PolicyData::builder().use_timesource(&self.time_source).build(),
             proposed_install_plan,
         );
+        future::ready(decision).boxed()
+    }
+
+    fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+        let decision = StubPolicy::reboot_allowed(&(), check_options);
         future::ready(decision).boxed()
     }
 }
