@@ -2,12 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":fdio" ]
 }
 
-zx_test("fdio") {
+test("fdio") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+
   # If your test can run on host as well as target, consider adding it to
   # fdio_hosttests in the "host" directory.
   sources = [
@@ -32,20 +60,19 @@ zx_test("fdio") {
     "fdio_watcher.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-posix-socket:llcpp",
-    "$zx/system/fidl/fuchsia-process:c",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/test-utils",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/test-utils",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/fidl/fuchsia-posix-socket:llcpp",
+    "//zircon/system/fidl/fuchsia-process:c",
   ]
 
   data_deps = [
@@ -55,34 +82,78 @@ zx_test("fdio") {
   ]
 
   # TODO(45177): Fix the leaks and remove this.
-  deps +=
-      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-zx_executable("accept-child") {
+executable("accept-child") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   visibility = [ ":*" ]
-  testonly = true
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Revert to true when converting this file to proper GN build idioms.
+  testonly = false
   sources = [ "fdio_atexit_test_accept_child.cc" ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
+  libs = [ "zircon" ]
 }
 
 # Used by tests in fdio_startup.cc.
-zx_executable("hello-world") {
+executable("hello-world") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   visibility = [ ":*" ]
-  testonly = true
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Revert to true when converting this file to proper GN build idioms.
+  testonly = false
   sources = [ "hello.cc" ]
-  deps = [ "$zx/system/ulib/fdio" ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
-zx_executable("null-namespace-child") {
+executable("null-namespace-child") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   visibility = [ ":*" ]
-  testonly = true
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Revert to true when converting this file to proper GN build idioms.
+  testonly = false
   sources = [ "fdio_null_namespace_child.c" ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
+  libs = [ "zircon" ]
+}
+
+migrated_manifest("fdio-manifest") {
+  deps = [ ":fdio" ]
+}
+
+migrated_manifest("accept-child-manifest") {
+  deps = [ ":accept-child" ]
+}
+
+migrated_manifest("hello-world-manifest") {
+  deps = [ ":hello-world" ]
+}
+
+migrated_manifest("null-namespace-child-manifest") {
+  deps = [ ":null-namespace-child" ]
 }

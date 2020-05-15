@@ -70,12 +70,9 @@ aggregate_manifest("legacy-image") {
 # dependencies to it.
 aggregate_manifest("legacy-aux") {
   deps = [
-    ":bin.accept-child",
-    ":bin.null-namespace-child",
     ":hermetic.decompress-lz4f",
     ":hermetic.decompress-zstd",
     ":test.sys.fdio-constructor-test",
-    ":test.sys.fdio-test",
     ":test.sys.hermetic-compute-module-test",
     ":test.sys.libc-test",
     ":test.sys.noop-test",
@@ -164,9 +161,7 @@ aggregate_manifest("legacy-aux") {
 # dependencies to it.
 aggregate_manifest("legacy-tests") {
   deps = [
-    ":bin.null-namespace-child",
     ":test.sys.fdio-constructor-test",
-    ":test.sys.fdio-test",
     ":test.sys.hermetic-compute-module-test",
     ":test.sys.libc-test",
     ":test.sys.noop-test",
@@ -578,7 +573,6 @@ aggregate_manifest("migrated-aux") {
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.
 #------------------
-    #":bin.accept-child",
 #------------------
     "//zircon/system/uapp/blobfs:blobfs-manifest",
 #------------------
@@ -592,7 +586,6 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/msd:msd-manifest",
     "//zircon/system/core/netsvc:netsvc-manifest",
 #------------------
-    #":bin.null-namespace-child",
 #------------------
 #------------------
     #":bin.vdso-variant-helper",
@@ -718,7 +711,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
-    #":test.sys.fdio-test",
+    "//zircon/system/ulib/fdio/test:fdio-manifest",
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
     "//zircon/system/utest/fidl:fidl-manifest",
@@ -846,7 +839,6 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/uapp/minfs:minfs-manifest",
     "//zircon/system/utest/msd:msd-manifest",
 #------------------
-    #":bin.null-namespace-child",
 #------------------
     "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
@@ -969,7 +961,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
-    #":test.sys.fdio-test",
+    "//zircon/system/ulib/fdio/test:fdio-manifest",
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
     "//zircon/system/utest/fidl:fidl-manifest",
