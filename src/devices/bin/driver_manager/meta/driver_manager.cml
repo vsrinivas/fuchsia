@@ -142,6 +142,15 @@
             rights: [ "rw*" ],
         },
 
+        // Diagnostics directory for archivist
+        {
+            directory: "/dev/diagnostics",
+            from: "self",
+            to: "framework",
+            as: "/diagnostics",
+            rights: [ "connect" ],
+        },
+
         // Services proxied by svchost
         {
             protocol: [
