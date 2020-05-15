@@ -49,6 +49,7 @@ group("all") {
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
+    "//garnet/packages/prod:sched",
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:tee_manager",
@@ -181,6 +182,7 @@ group("cmdutils") {
     "//garnet/bin/time",
     "//garnet/bin/uname",
     "//garnet/packages/prod:sbase",
+    "//garnet/packages/prod:sched",
     "//garnet/packages/prod:vim",
   ]
 }
@@ -456,6 +458,11 @@ group("scenic_no_ime") {
     "//src/ui/bin/root_presenter:configs",
     "//src/ui/scenic",
   ]
+}
+
+group("sched") {
+  testonly = true
+  public_deps = [ "//garnet/bin/sched" ]
 }
 
 group("setui_client") {
