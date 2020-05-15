@@ -11,11 +11,11 @@ import("//build/info/info.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
+
 # TODO(fxb/32978): This is temporary until the kernel build is unified or
 # kernel PCI is removed.
 import("//src/devices/bus/drivers/pci/pci.gni")
 import("//zircon/public/gn/build_api_module.gni")
-
 declare_args() {
   # If you add package labels to this variable, the packages will be included in
   # the 'base' package set, which represents the set of packages that are part
@@ -122,6 +122,7 @@ declare_args() {
                      "//tools:all-hosts",
                    ] + zircon_extra_deps
     forward_variables_from(zircon_extra_args, "*")
+
     # TODO(fxb/32978): This is temporary until the kernel build is unified or
     # kernel PCI is removed.
     disable_kernel_pci = platform_enable_user_pci
@@ -221,6 +222,30 @@ build_api_module("api") {
     ":zbi_tests",
     ":zircon",
   ]
+}
+
+# This describes the location of the package repository.
+#
+# Type: list(scope)
+#
+#   path
+#     Required: Path to the package repository, relative to $root_build_dir.
+#     Type: path relative to $root_build_dir
+#
+#   targets
+#     Required: Path to the targets.json file with the contents in this
+#       package repository, relative to $root_build_dir.
+#     Type: path relative to $root_build_dir
+#
+#   blobs
+#     Required: Path to the blobs directory in this package repository,
+#       relative to $root_build_dir.
+#     Type: path relative to $root_build_dir
+#
+build_api_module("package-repositories") {
+  testonly = true
+  data_keys = [ "package_repository" ]
+  deps = [ "//build/images:updates" ]
 }
 
 # This describes all the archives the build can produce.

@@ -210,6 +210,18 @@ template("pm_publish") {
       ":versioned_root_manifest",
     ]
 
+    metadata = {
+      package_repository = [
+        {
+          path = rebase_path("$amber_repository_dir/repository", root_build_dir)
+          targets = rebase_path("$amber_repository_dir/repository/targets.json",
+                                root_build_dir)
+          blobs = rebase_path("$amber_repository_dir/repository/blobs",
+                              root_build_dir)
+        },
+      ]
+    }
+
     depfile = "${target_gen_dir}/${target_name}.d"
 
     assert(inputs == [ inputs[0] ],
