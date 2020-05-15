@@ -39,6 +39,7 @@ dart_library("widgets") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
@@ -49,7 +50,6 @@ dart_library("widgets") {
     "//topaz/public/dart/fidl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
-    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 
