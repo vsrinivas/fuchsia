@@ -113,6 +113,7 @@ use crate::wlan::facade::WlanFacade;
 use crate::wlan_phy::facade::WlanPhyFacade;
 
 // Wlan Policy related includes
+use crate::wlan_policy::ap_facade::WlanApPolicyFacade;
 use crate::wlan_policy::facade::WlanPolicyFacade;
 
 /// Sl4f stores state for all facades and has access to information for all connected clients.
@@ -173,6 +174,7 @@ impl Sl4f {
                 "weave_facade" => WeaveFacade::new(),
                 "webdriver_facade" => WebdriverFacade::new(),
                 "wlan" => WlanFacade::new()?,
+                "wlan_ap_policy" => WlanApPolicyFacade::new()?,
                 "wlan_phy" => WlanPhyFacade::new()?,
                 "wlan_policy" => WlanPolicyFacade::new()?,
             )

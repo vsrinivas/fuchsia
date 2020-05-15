@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{server::Facade, wlan_policy::facade::WlanPolicyFacade},
+    crate::{
+        server::Facade, wlan_policy::ap_facade::WlanApPolicyFacade,
+        wlan_policy::facade::WlanPolicyFacade,
+    },
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_wlan_policy as fidl_policy,
@@ -146,4 +149,74 @@ fn parse_target_pwd(args: &Value) -> Result<fidl_policy::Credential, Error> {
         _ => fidl_policy::Credential::Password(target_pwd),
     };
     Ok(credential)
+}
+
+fn extract_operating_band(args: &Value) -> Result<fidl_fuchsia_wlan_policy::OperatingBand, Error> {
+    match args.get("operating_band") {
+        Some(operating_band) => match operating_band.as_str() {
+            Some(operating_band) => match operating_band.to_lowercase().as_str() {
+                "any" => Ok(fidl_fuchsia_wlan_policy::OperatingBand::Any),
+                "only_2_4_ghz" => Ok(fidl_fuchsia_wlan_policy::OperatingBand::Only24Ghz),
+                "only_5_ghz" => Ok(fidl_fuchsia_wlan_policy::OperatingBand::Only5Ghz),
+                _ => Err(format_err!("invalid operating band: {:?}", operating_band)),
+            },
+            None => Err(format_err!("operating band must be a string")),
+        },
+        None => Err(format_err!("operating band was not specified")),
+    }
+}
+
+fn extract_connectivity_mode(
+    args: &Value,
+) -> Result<fidl_fuchsia_wlan_policy::ConnectivityMode, Error> {
+    match args.get("connectivity_mode") {
+        Some(connectivity_mode) => match connectivity_mode.as_str() {
+            Some(connectivity_mode) => match connectivity_mode.to_lowercase().as_str() {
+                "local_only" => Ok(fidl_fuchsia_wlan_policy::ConnectivityMode::LocalOnly),
+                "unrestricted" => Ok(fidl_fuchsia_wlan_policy::ConnectivityMode::Unrestricted),
+                _ => Err(format_err!("unsupported connectivity mode: {}", connectivity_mode)),
+            },
+            None => Err(format_err!("connectivity mode must be a string")),
+        },
+        None => Err(format_err!("no connectivity mode specified")),
+    }
+}
+
+#[async_trait(?Send)]
+impl Facade for WlanApPolicyFacade {
+    async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
+        match method.as_ref() {
+            "start_access_point" => {
+                let target_ssid = parse_target_ssid(&args)?;
+                let security_type = parse_security_type(&args)?;
+                let target_pwd = parse_target_pwd(&args)?;
+
+                let connectivity_mode = extract_connectivity_mode(&args)?;
+                let operating_band = extract_operating_band(&args)?;
+                self.start_access_point(
+                    target_ssid,
+                    security_type,
+                    target_pwd,
+                    connectivity_mode,
+                    operating_band,
+                )
+                .await?;
+                return Ok(Value::Bool(true));
+            }
+            "stop_access_point" => {
+                let target_ssid = parse_target_ssid(&args)?;
+                let security_type = parse_security_type(&args)?;
+                let target_pwd = parse_target_pwd(&args)?;
+                self.stop_access_point(target_ssid, security_type, target_pwd).await?;
+                return Ok(Value::Bool(true));
+            }
+            "stop_all_access_points" => {
+                self.stop_all_access_points().await?;
+                return Ok(Value::Bool(true));
+            }
+            _ => {
+                return Err(format_err!("Unsupported command"));
+            }
+        }
+    }
 }
