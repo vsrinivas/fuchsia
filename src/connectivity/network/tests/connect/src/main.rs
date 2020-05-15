@@ -219,12 +219,16 @@ async fn main() -> Result<(), anyhow::Error> {
                   keepalive_user = keepalive_usertimeout => {
                     try_print_elapsed!(keepalive_user);
                   },
-                  retransmit = retransmit_timeout => {
-                    try_print_elapsed!(retransmit);
-                  },
-                  retransmit_user = retransmit_usertimeout => {
-                    try_print_elapsed!(retransmit_user);
-                  },
+                  // TODO(fxb/52278): Enable retransmit timeout test,
+                  // after we are able to tune the TCP stack to reduce
+                  // this time. Currently it is too long for the test.
+                  //
+                  // retransmit = retransmit_timeout => {
+                  //   try_print_elapsed!(retransmit);
+                  // },
+                  // retransmit_user = retransmit_usertimeout => {
+                  //   try_print_elapsed!(retransmit_user);
+                  // },
                   complete => break,
                 }
             }
