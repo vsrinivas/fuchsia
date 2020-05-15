@@ -2,20 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("test-utils") {
   testonly = true
   sdk = "static"
   sdk_headers = [ "test-utils/test-utils.h" ]
   sources = [ "test-utils.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-process:llcpp",
-    "$zx/system/ulib/backtrace-request",
-    "$zx/system/ulib/elfload",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/runtime",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/backtrace-request",
+    "//zircon/public/lib/elfload",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/runtime",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-process:llcpp",
   ]
 }

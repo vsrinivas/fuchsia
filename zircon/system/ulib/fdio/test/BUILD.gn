@@ -67,12 +67,12 @@ test("fdio") {
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/test-utils",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-posix-socket:llcpp",
     "//zircon/system/fidl/fuchsia-process:c",
+    "//zircon/system/ulib/test-utils",
   ]
 
   data_deps = [
@@ -96,6 +96,7 @@ executable("accept-child") {
     }
   }
   visibility = [ ":*" ]
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Revert to true when converting this file to proper GN build idioms.
   testonly = false
@@ -116,6 +117,7 @@ executable("hello-world") {
     }
   }
   visibility = [ ":*" ]
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Revert to true when converting this file to proper GN build idioms.
   testonly = false
@@ -134,6 +136,7 @@ executable("null-namespace-child") {
     }
   }
   visibility = [ ":*" ]
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Revert to true when converting this file to proper GN build idioms.
   testonly = false
