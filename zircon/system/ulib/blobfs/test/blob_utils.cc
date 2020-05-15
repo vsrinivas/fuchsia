@@ -7,18 +7,42 @@
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <zircon/syscalls.h>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace blobfs {
+namespace {
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
 using digest::MerkleTreeVerifier;
+
+fbl::Array<uint8_t> LoadTemplateData() {
+  const char* file = "bin/test-binary";
+  const char* root_dir = getenv("TEST_ROOT_DIR");
+  EXPECT_NE("", root_dir);
+  std::string path = std::string(root_dir) + "/" + file;
+
+  fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
+  EXPECT_TRUE(fd.is_valid());
+  struct stat s;
+  EXPECT_EQ(fstat(fd.get(), &s), 0);
+  size_t sz = s.st_size;
+
+  fbl::Array<uint8_t> data(new uint8_t[sz], sz);
+  EXPECT_EQ(StreamAll(read, fd.get(), data.get(), sz), 0);
+  return data;
+}
+
+}  // namespace
 
 void RandomFill(char* data, size_t length) {
   for (size_t i = 0; i < length; i++) {
@@ -36,8 +60,8 @@ void GenerateBlob(BlobSrcFunction data_generator, const std::string& mount_path,
 
   Digest digest;
   std::unique_ptr<uint8_t[]> tree;
-  ASSERT_OK(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
-                                      &info->size_merkle, &digest));
+  ASSERT_OK(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree, &info->size_merkle,
+                                      &digest));
   info->merkle.reset(reinterpret_cast<char*>(tree.release()));
   snprintf(info->path, sizeof(info->path), "%s/%s", mount_path.c_str(), digest.ToString().c_str());
 
@@ -50,6 +74,21 @@ void GenerateBlob(BlobSrcFunction data_generator, const std::string& mount_path,
 void GenerateRandomBlob(const std::string& mount_path, size_t data_size,
                         std::unique_ptr<BlobInfo>* out) {
   GenerateBlob(RandomFill, mount_path, data_size, out);
+}
+
+void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
+                           std::unique_ptr<BlobInfo>* out) {
+  static fbl::Array<uint8_t> template_data = LoadTemplateData();
+  GenerateBlob(
+      [](char* data, size_t length) {
+        while (length > 0) {
+          size_t to_copy = fbl::min(template_data.size(), length);
+          memcpy(data, template_data.get(), to_copy);
+          data += to_copy;
+          length -= to_copy;
+        }
+      },
+      mount_path, data_size, out);
 }
 
 void VerifyContents(int fd, const char* data, size_t data_size) {

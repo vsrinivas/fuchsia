@@ -46,7 +46,14 @@ void GenerateBlob(BlobSrcFunction data_generator, const std::string& mount_path,
                   std::unique_ptr<BlobInfo>* out);
 
 // Generates a blob with random data.
-void GenerateRandomBlob(const std::string& mount_path, size_t data_size, std::unique_ptr<BlobInfo>* out);
+void GenerateRandomBlob(const std::string& mount_path, size_t data_size,
+                        std::unique_ptr<BlobInfo>* out);
+
+// Generates a blob with realistic data (derived from, for example, an ELF binary).
+// This is suitable for test cases which aim to exercise compression, since the blob will compress
+// a realistic amount.
+void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
+                           std::unique_ptr<BlobInfo>* out);
 
 // Verifies that a file contains the data in the provided buffer.
 void VerifyContents(int fd, const char* data, size_t data_size);

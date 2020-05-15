@@ -111,7 +111,7 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
 
     std::unique_ptr<BlobInfo> info;
 
-    GenerateBlob(src_fn, "", blob_size_, &info);
+    GenerateBlob(std::move(src_fn), "", blob_size_, &info);
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;

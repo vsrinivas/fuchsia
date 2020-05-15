@@ -47,6 +47,18 @@ group("large-test") {
   ]
 }
 
+executable("test-binary") {
+  testonly = false
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "test_binary_main.cc" ]
+  visibility = [ ":*" ]
+}
+
 config("test-utils-headers") {
   # blob_utils.h is referred to as test/blob_utils.h.
   include_dirs = [ ".." ]
@@ -59,6 +71,7 @@ source_set("test-utils") {
     "blob_utils.cc",
     "blob_utils.h",
   ]
+  data_deps = [ ":test-binary" ]
   deps = [
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
