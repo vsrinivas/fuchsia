@@ -148,7 +148,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   // right sequence.
   constexpr uint32_t kCyclesToMeasure = (1024 * 1024 * 10u);
   constexpr uint32_t kControlStart = DMC_QOS_ENABLE_CTRL | 0b0111;
-  constexpr uint32_t kControlStop = DMC_QOS_CLEAR_CTRL | 0b0111;
+  constexpr uint32_t kControlStop = DMC_QOS_CLEAR_CTRL | 0b1111;
   constexpr uint32_t kFreq = 0x4 | (0x1 << 10);  // F=24000000 (M=4, N=1, OD=0, OD1=0)
 
   // Note that the cycles are to be interpreted as shifted 4 bits.
@@ -233,38 +233,6 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
     EXPECT_EQ(c.read_cycles, 0u);
     ++ix;
   }
-}
-
-TEST_F(AmlRamDeviceTest, HardwareError) {
-  // Perform a valid request but simulate the hardware never finishing.
-  constexpr uint32_t kControlStart = DMC_QOS_ENABLE_CTRL | 0b0111;
-  constexpr uint32_t kControlStop = DMC_QOS_CLEAR_CTRL | 0b0111;
-  constexpr uint32_t kFreq = 0x4 | (0x1 << 10);  // F=24000000 (M=4, N=1, OD=0, OD1=0)
-  std::atomic<int> step = 0;
-
-  pdev_.reg(MEMBW_PORTS_CTRL)
-      .SetWriteCallback([start = kControlStart, stop = kControlStop, &step](size_t value) {
-        if (step == 0) {
-          EXPECT_EQ(value, start, "0: got write of 0x%lx", value);
-          // By not injecting an IRQ the logic in the driver should time-out.
-          ++step;
-        } else if (step == 1) {
-          // Driver should stop measurement in order to drain stray IRQs.
-          EXPECT_EQ(value, stop, "2: got write of 0x%lx", value);
-          ++step;
-        } else {
-          EXPECT_TRUE(false, "unexpected: 0x%lx", value);
-        }
-      });
-
-  pdev_.reg(MEMBW_PLL_CNTL).SetReadCallback([value = kFreq]() { return value; });
-
-  ram_metrics::BandwidthMeasurementConfig config = {(1024 * 1024 * 10u), {4, 2, 1, 0, 0, 0}};
-  ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
-  auto info = client.MeasureBandwidth(config);
-  ASSERT_TRUE(info.ok());
-  ASSERT_TRUE(info->result.is_err());
-  EXPECT_EQ(info->result.err(), ZX_ERR_TIMED_OUT);
 }
 
 }  // namespace amlogic_ram

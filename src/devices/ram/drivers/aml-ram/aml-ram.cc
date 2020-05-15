@@ -33,6 +33,8 @@ zx_status_t ValidateRequest(const ram_metrics::BandwidthMeasurementConfig& confi
     return ZX_ERR_INVALID_ARGS;
   }
 
+  int enabled_count = 0;
+
   for (size_t ix = 0; ix != ram_metrics::MAX_COUNT_CHANNELS; ++ix) {
     auto& channel = config.channels[ix];
 
@@ -45,6 +47,15 @@ zx_status_t ValidateRequest(const ram_metrics::BandwidthMeasurementConfig& confi
       // We don't support sub-ports (bits above 31) yet.
       return ZX_ERR_NOT_SUPPORTED;
     }
+
+    if (channel != 0) {
+      ++enabled_count;
+    }
+  }
+
+  // At least one channel had at least one port.
+  if (enabled_count == 0) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   return ZX_OK;
@@ -158,67 +169,24 @@ void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
   }
 }
 
-zx_status_t AmlRam::ReadBandwithCounters(const ram_metrics::BandwidthMeasurementConfig& config,
-                                         ram_metrics::BandwidthInfo* bpi) {
+void AmlRam::StartReadBandwithCounters(Job* job) {
   uint32_t channels_enabled = 0u;
   for (size_t ix = 0; ix != MEMBW_MAX_CHANNELS; ++ix) {
-    channels_enabled |= (config.channels[ix] != 0) ? (1u << ix) : 0;
-    mmio_.Write32(static_cast<uint32_t>(config.channels[ix]), MEMBW_RP[ix]);
+    channels_enabled |= (job->config.channels[ix] != 0) ? (1u << ix) : 0;
+    mmio_.Write32(static_cast<uint32_t>(job->config.channels[ix]), MEMBW_RP[ix]);
     mmio_.Write32(0xffff, MEMBW_SP[ix]);
   }
 
-  if (channels_enabled == 0x0) {
-    // Nothing to monitor.
-    return ZX_OK;
-  }
-
-  mmio_.Write32(static_cast<uint32_t>(config.cycles_to_measure), MEMBW_TIMER);
+  job->start_time = zx_clock_get_monotonic();
+  mmio_.Write32(static_cast<uint32_t>(job->config.cycles_to_measure), MEMBW_TIMER);
   mmio_.Write32(channels_enabled | DMC_QOS_ENABLE_CTRL, MEMBW_PORTS_CTRL);
+}
 
-  // Drain stray interrupt packets from port if we exit early.
-  auto auto_drain_port = fbl::MakeAutoCall([this]() {
-    zx_port_packet_t packet;
-    if (port_.wait(zx::time(0), &packet) == ZX_OK) {
-      // Acknowledge IRQ or re-queue packet.
-      if (packet.key == kPortKeyIrqMsg) {
-        ZX_ASSERT(irq_.ack() == ZX_OK);
-      } else {
-        ZX_ASSERT(port_.queue(&packet) == ZX_OK);
-      }
-    }
-  });
+void AmlRam::FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time_t start_time) {
+  ZX_ASSERT(irq_.ack() == ZX_OK);
 
-  // Disable measurement before we exit.
-  // Note: must go out of scope before |auto_drain_port|.
-  auto auto_disable_measurement = fbl::MakeAutoCall([this, channels_enabled]() {
-    mmio_.Write32(channels_enabled | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
-  });
-
-  bpi->timestamp = zx_clock_get_monotonic();
+  bpi->timestamp = start_time;
   bpi->frequency = ReadFrequency();
-
-  zx_port_packet_t packet;
-  zx::time deadline = zx::deadline_after(zx::sec(1));
-  for (;;) {
-    auto status = port_.wait(deadline, &packet);
-    if (status == ZX_ERR_TIMED_OUT) {
-      return ZX_ERR_TIMED_OUT;
-    }
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-ram: error in wait, st =%d\n", status);
-      return status;
-    }
-    if (packet.key == kPortKeyCancelMsg) {
-      // Shutdown. This is handled by the caller.
-      return ZX_ERR_CANCELED;
-    }
-    if (packet.key == kPortKeyIrqMsg) {
-      ZX_ASSERT(irq_.ack() == ZX_OK);
-      break;
-    }
-    // We can ignore kPortKeyWorkPendingMsg here as caller will
-    // check for more pending work before waiting on port again.
-  }
 
   uint32_t value = mmio_.Read32(MEMBW_PORTS_CTRL);
   ZX_ASSERT((value & DMC_QOS_ENABLE_CTRL) == 0);
@@ -228,8 +196,14 @@ zx_status_t AmlRam::ReadBandwithCounters(const ram_metrics::BandwidthMeasurement
   bpi->channels[2].readwrite_cycles = mmio_.Read32(MEMBW_C2_GRANT_CNT) * 16ul;
   bpi->channels[3].readwrite_cycles = mmio_.Read32(MEMBW_C3_GRANT_CNT) * 16ul;
 
-  auto_drain_port.cancel();
-  return ZX_OK;
+  mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
+}
+
+void AmlRam::CancelReadBandwithCounters() {
+  mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
+  // Here there might be a pending interrupt packet. The caller
+  // is going to exit so it is immaterial if we drain it or
+  // not.
 }
 
 void AmlRam::ReadLoop() {
@@ -243,40 +217,37 @@ void AmlRam::ReadLoop() {
       return;
     }
 
-    for (;;) {
-      ZX_ASSERT(jobs.empty());
-
-      {
-        fbl::AutoLock lock(&lock_);
-        if (shutdown_) {
-          // Shutdown with no pending work in the local queue.
-          return;
-        }
-        if (requests_.empty()) {
-          // Done with all work. Go back to wait.
-          break;
-        }
-        // Some work available. Move it all to the local queue.
-        jobs = std::move(requests_);
+    switch (packet.key) {
+      case kPortKeyWorkPendingMsg: {
+        AcceptJobs(&jobs);
+        StartReadBandwithCounters(&jobs.front());
+        break;
       }
 
-      while (!jobs.empty()) {
-        Job& job = jobs.front();
+      case kPortKeyIrqMsg: {
+        ZX_ASSERT(!jobs.empty());
         ram_metrics::BandwidthInfo bpi;
-        status = ReadBandwithCounters(job.config, &bpi);
-        if (status == ZX_OK) {
-          job.completer.ReplySuccess(bpi);
-        } else if (status == ZX_ERR_CANCELED) {
-          // Shutdown case with pending work in local queue. Give back the jobs
-          // to the main thread.
-          RevertJobs(&jobs);
-          return;
-        } else {
-          // Unexpected error. Better log it.
-          zxlogf(ERROR, "aml-ram: read error z %d\n", status);
-          job.completer.ReplyError(status);
-        }
+        FinishReadBandwithCounters(&bpi, jobs.front().start_time);
+        Job job = std::move(jobs.front());
         jobs.pop_front();
+        // Start new measurement before we reply the current one.
+        if (!jobs.empty()) {
+          StartReadBandwithCounters(&jobs.front());
+        }
+        job.completer.ReplySuccess(bpi);
+        break;
+      }
+
+      case kPortKeyCancelMsg: {
+        if (!jobs.empty()) {
+          CancelReadBandwithCounters();
+          RevertJobs(&jobs);
+        }
+        return;
+      }
+
+      default: {
+        ZX_ASSERT(false);
       }
     }
   }
@@ -287,10 +258,16 @@ void AmlRam::ReadLoop() {
 // first job in |request_|.
 void AmlRam::RevertJobs(std::deque<AmlRam::Job>* source) {
   fbl::AutoLock lock(&lock_);
-  while (!source->empty()) {
-    requests_.push_front(std::move(source->back()));
-    source->pop_back();
-  }
+  requests_.insert(requests_.begin(), std::make_move_iterator(source->begin()), std::make_move_iterator(source->end()));
+  source->clear();
+}
+
+// Merge requests from |request_| into local jobs while preserving order
+// of arrival.
+void AmlRam::AcceptJobs(std::deque<AmlRam::Job>* dest) {
+  fbl::AutoLock lock(&lock_);
+  dest->insert(dest->end(), std::make_move_iterator(requests_.begin()), std::make_move_iterator(requests_.end()));
+  requests_.clear();
 }
 
 void AmlRam::Shutdown() {

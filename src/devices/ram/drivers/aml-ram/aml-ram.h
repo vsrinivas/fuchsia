@@ -80,6 +80,7 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   struct Job {
     ram_metrics::BandwidthMeasurementConfig config;
     MeasureBandwidthCompleter::Async completer;
+    zx_time_t start_time = 0;
     Job() = delete;
     Job(ram_metrics::BandwidthMeasurementConfig config, MeasureBandwidthCompleter::Async completer)
         : config(std::move(config)), completer(std::move(completer)) {}
@@ -89,12 +90,14 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
                         MeasureBandwidthCompleter::Sync completer) override;
 
-  zx_status_t ReadBandwithCounters(const ram_metrics::BandwidthMeasurementConfig& config,
-                                   ram_metrics::BandwidthInfo* bpi);
+  void StartReadBandwithCounters(Job* job);
+  void FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time_t start_time);
+  void CancelReadBandwithCounters();
 
   zx_status_t Bind();
   void ReadLoop();
   void RevertJobs(std::deque<AmlRam::Job>* source);
+  void AcceptJobs(std::deque<AmlRam::Job>* source);
   void Shutdown();
   uint64_t ReadFrequency() const;
 
