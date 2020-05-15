@@ -18,7 +18,6 @@ use {
     std::io,
     std::path::PathBuf,
     structopt::StructOpt,
-    xml::reader::EventReader,
 };
 
 #[derive(Debug, StructOpt)]
@@ -89,16 +88,18 @@ fn run(args: Args) -> Result<(), Error> {
 
     let file_gaggle = open_files(&args).with_context(|| "while opening files")?;
 
-    let source_reader = EventReader::new(file_gaggle.source_strings_file);
+    let source_reader = parser::Instance::reader(file_gaggle.source_strings_file);
     let mut source_parser = parser::Instance::new(args.verbose);
-    let source_dictionary =
-        source_parser.parse(source_reader).with_context(|| "while parsing source dictionary")?;
+    let source_dictionary = source_parser.parse(source_reader).with_context(|| {
+        format!("while parsing source dictionary: {:?}", &args.source_strings_file)
+    })?;
 
     // Repetitive, but allows us to avoid copying dictionaries, which could be large.
-    let target_reader = EventReader::new(file_gaggle.target_strings_file);
+    let target_reader = parser::Instance::reader(file_gaggle.target_strings_file);
     let mut target_parser = parser::Instance::new(args.verbose);
-    let target_dictionary =
-        target_parser.parse(target_reader).with_context(|| "while parsing target dictionary")?;
+    let target_dictionary = target_parser.parse(target_reader).with_context(|| {
+        format!("while parsing target dictionary: {:?}", &args.target_strings_file)
+    })?;
 
     let model = json::model_from_dictionaries(
         &args.source_locale,
@@ -176,6 +177,87 @@ mod tests {
             r#"{"locale_id":"fr","source_locale_id":"en","num_messages":1,"messages":{"7134240810508078445":"le stringue"}}"#,
             outcome
         );
+        Ok(())
+    }
+
+    #[test]
+    fn early_comment_not_allowed() -> Result<(), Error> {
+        struct TestCase {
+            name: &'static str,
+            en: &'static str,
+            fr: &'static str,
+        }
+        let tests = vec![
+            TestCase {
+                name: "there is a wrong comment in en",
+                en: r#"
+               <!-- comment not allowed here -->
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <!-- comment -->
+                 <string
+                   name="string_name"
+                     >string</string>
+               </resources>
+
+            "#,
+                fr: r#"
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <!-- comment -->
+                 <string
+                   name="string_name"
+                     >le stringue</string>
+               </resources>
+            "#,
+            },
+            TestCase {
+                name: "there is a wrong comment in fr",
+                en: r#"
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <!-- comment -->
+                 <string
+                   name="string_name"
+                     >string</string>
+               </resources>
+
+            "#,
+                fr: r#"
+               <!-- comment not allowed here -->
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <!-- comment -->
+                 <string
+                   name="string_name"
+                     >le stringue</string>
+               </resources>
+            "#,
+            },
+        ];
+
+        for test in tests.iter() {
+            let en = tempfile::NamedTempFile::new()?;
+            write!(en.as_file(), "{}", test.en).with_context(|| "while writing 'en' tempfile")?;
+            let fr = tempfile::NamedTempFile::new()?;
+
+            write!(fr.as_file(), "{}", test.fr).with_context(|| "while writing 'fr' tempfile")?;
+
+            let fr_json = tempfile::NamedTempFile::new()?;
+
+            let args = Args {
+                source_locale: "en".to_string(),
+                target_locale: "fr".to_string(),
+                source_strings_file: en.path().to_path_buf(),
+                target_strings_file: fr.path().to_path_buf(),
+                output: fr_json.path().to_path_buf(),
+                verbose: false,
+            };
+            if let Ok(_) = run(args) {
+                return Err(anyhow::anyhow!("unexpected OK in test: {}", &test.name));
+            }
+        }
+
         Ok(())
     }
 }

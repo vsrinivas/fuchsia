@@ -24,7 +24,6 @@ use {
     std::io,
     std::path::PathBuf,
     structopt::StructOpt,
-    xml::reader::EventReader,
 };
 
 // TODO(fmil): Add usage link here.
@@ -66,7 +65,7 @@ fn run(args: Args) -> Result<()> {
     veprintln!(args.verbose, "args: {:?}", args);
 
     let (input, mut output) = open_files(&args).with_context(|| "while opening files")?;
-    let reader = EventReader::new(input);
+    let reader = parser::Instance::reader(input);
 
     let mut parser = parser::Instance::new(args.verbose);
     let dictionary = parser.parse(reader).with_context(|| "while parsing dictionary")?;
@@ -132,5 +131,39 @@ enum MessageIds : uint64 {
             outcome
         );
         Ok(())
+    }
+
+    #[test]
+    fn reader_config() -> Result<(), Error> {
+        let en = tempfile::NamedTempFile::new()?;
+        write!(
+            en.as_file(),
+            r#"
+               <!-- comment is not allowed before ?xml? -->
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <!-- comment -->
+                 <string
+                   name="string_name"
+                     >string</string>
+               </resources>
+
+            "#
+        )
+        .with_context(|| "while writing 'en' tempfile")?;
+
+        let output = tempfile::NamedTempFile::new()?;
+
+        let args = Args {
+            input: en.path().to_path_buf(),
+            output: output.path().to_path_buf(),
+            verbose: false,
+            library: "some_lib".to_string(),
+        };
+
+        match run(args) {
+            Ok(_) => Err(anyhow::anyhow!("unexpected OK")),
+            Err(_) => Ok(()),
+        }
     }
 }

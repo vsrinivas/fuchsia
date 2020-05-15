@@ -1,15 +1,1 @@
-<!-- comment -->
-<?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-  <!-- comment -->
-  <string
-    name="STRING_NAME"
-      >text_string</string>
-  <string
-    name="STRING_NAME_2"
-      >text_string_2</string>
-  <string
-    name="STRING_NAME_3"
-      >string with
-an intervening newline</string>
-</resources>
+strings.xml

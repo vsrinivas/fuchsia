@@ -11,7 +11,7 @@ use {
     std::collections::BTreeMap,
     std::io,
     xml::attribute,
-    xml::reader::{EventReader, XmlEvent},
+    xml::reader::{EventReader, ParserConfig, XmlEvent},
 };
 
 /// A dictionary obtained from calling [Instance::parse].
@@ -153,9 +153,17 @@ impl Instance {
         Instance { messages: Dictionary::new(), state: State::Init, verbose }
     }
 
+    // Configures the reader correctly for XML parsing.
+    pub fn reader<R: std::io::Read>(source: R) -> EventReader<R> {
+        EventReader::new_with_config(source, ParserConfig::new().ignore_comments(false))
+    }
+
     // State::Init transitions on e.
     fn init(&mut self, e: XmlEvent) -> Result<()> {
         match e {
+            XmlEvent::Comment { .. } => {
+                return Err(anyhow!("comments are not allowed before <?xml ... ?>"));
+            }
             XmlEvent::StartDocument { .. } => {
                 self.state = State::StartDocument;
             }
@@ -177,6 +185,7 @@ impl Instance {
                 }
                 self.state = State::Resources;
             }
+            XmlEvent::Comment { .. } => {}
             _ => return Err(anyhow!("unimplemented state: {:?}, token: {:?}", &self.state, &e)),
         }
         Ok(())
@@ -215,6 +224,7 @@ impl Instance {
                 }
                 self.state = State::Init;
             }
+            XmlEvent::Comment { .. } => {}
             XmlEvent::Whitespace { .. } => { /* ignore whitespace */ }
             _ => return Err(anyhow!("expected StartElement(string), got: {:?}", &e)),
         }
@@ -258,6 +268,7 @@ impl Instance {
                 self.state = State::Resources;
             }
             XmlEvent::Whitespace { .. } => { /* ignore whitespace */ }
+            XmlEvent::Comment { .. } => {}
             _ => return Err(anyhow!("unimplemented state: {:?}, token: {:?}", &self.state, &e)),
         }
         Ok(())
@@ -283,6 +294,7 @@ impl Instance {
                 self.state = State::String { name: token_name, text };
             }
             XmlEvent::Whitespace { .. } => { /* ignore whitespace */ }
+            XmlEvent::Comment { .. } => {}
             _ => return Err(anyhow!("unimplemented state: {:?}, token: {:?}", &self.state, &e)),
         }
         Ok(())
@@ -349,7 +361,6 @@ mod tests {
     use {
         super::{Dictionary, Instance},
         anyhow::{anyhow, Context, Error, Result},
-        xml::reader::EventReader,
     };
 
     #[test]
@@ -374,8 +385,8 @@ mod tests {
             TestCase {
                 name: "basic",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
+               <!-- comment -->
                <resources>
                  <!-- comment -->
                  <string
@@ -388,10 +399,8 @@ mod tests {
             TestCase {
                 name: "two_entries",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
                <resources>
-                 <!-- comment -->
                  <string
                    name="string_name"
                      >text_string</string>
@@ -411,7 +420,6 @@ with intervening newlines
             TestCase {
                 name: "parse xliff:g",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
                <resources
                  xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
@@ -424,7 +432,6 @@ with intervening newlines
             TestCase {
                 name: "parse xliff:g whitespace",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
                <resources
                  xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
@@ -435,9 +442,26 @@ with intervening newlines
             "#,
                 expected: Dictionary::from_init(&vec![("countdown", "{time} until holiday\n")]),
             },
+            TestCase {
+                name: "comments everywhere",
+                content: r#"
+               <?xml version="1.0" encoding="utf-8"?>
+               <!-- comment -->
+               <resources
+                 xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+                 <!-- comment -->
+                 <string name="countdown">
+                   <!-- comment -->
+                   <xliff:g id="time" example="5 days"
+                     ><!-- comment -->{time}</xliff:g> until holiday
+</string>
+               </resources>
+            "#,
+                expected: Dictionary::from_init(&vec![("countdown", "{time} until holiday\n")]),
+            },
         ];
         for test in tests {
-            let input = EventReader::from_str(&test.content);
+            let input = Instance::reader(test.content.as_bytes());
             let mut parser = Instance::new(true /* verbose */);
             let actual =
                 parser.parse(input).with_context(|| format!("for test item: {}", test.name))?;
@@ -456,10 +480,8 @@ with intervening newlines
             TestCase {
                 name: "duplicate_elements",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
                <resources>
-                 <!-- comment -->
                  <string
                    name="string_name"
                      >text_string</string>
@@ -472,10 +494,8 @@ with intervening newlines
             TestCase {
                 name: "duplicate resources section",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
                <resources>
-                 <!-- comment -->
                  <string
                    name="string_name"
                      >text_string</string>
@@ -490,19 +510,29 @@ with intervening newlines
             TestCase {
                 name: "string_name has unexpected comma",
                 content: r#"
-               <!-- comment -->
                <?xml version="1.0" encoding="utf-8"?>
                <resources>
-                 <!-- comment -->
                  <string
                    name="string_name,"
                      >text_string</string>
                </resources>
             "#,
             },
+            TestCase {
+                name: "comment before ?xml is not allowed",
+                content: r#"
+               <!-- comment -->
+               <?xml version="1.0" encoding="utf-8"?>
+               <resources>
+                 <string
+                   name="string_name"
+                     >text_string</string>
+               </resources>
+            "#,
+            },
         ];
         for test in tests {
-            let input = EventReader::from_str(&test.content);
+            let input = Instance::reader(test.content.as_bytes());
             let mut parser = Instance::new(false /* verbose */);
             let actual = parser.parse(input);
             match actual {
