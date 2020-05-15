@@ -991,6 +991,10 @@ func (c *compiler) fillDerives(ir *Root) {
 }
 
 func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) derives {
+	// TODO(fxb/52257): Remove this temporary hack.
+	if eci == "fuchsia.sysmem/BufferCollectionInfo_2" {
+		return newDerives()
+	}
 	if dc.inExternalLibrary(types.ParseCompoundIdentifier(eci)) {
 		// Return the set of derives that we assume external types have.
 		// If an externally referenced type fails to have all of these derives
