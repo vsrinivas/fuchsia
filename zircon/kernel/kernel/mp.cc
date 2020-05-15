@@ -88,7 +88,7 @@ struct mp_sync_context {
   mp_sync_task_t task;
   void* task_context;
   // Mask of which CPUs need to finish the task
-  volatile cpu_mask_t outstanding_cpus;
+  ktl::atomic<cpu_mask_t> outstanding_cpus;
 };
 
 static void mp_sync_task(void* raw_context) {
@@ -96,7 +96,7 @@ static void mp_sync_task(void* raw_context) {
   context->task(context->task_context);
   // use seq-cst atomic to ensure this update is not seen before the
   // side-effects of context->task
-  atomic_and((int*)&context->outstanding_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
+  context->outstanding_cpus.fetch_and(~cpu_num_to_mask(arch_curr_cpu_num()));
 }
 
 /* @brief Execute a task on the specified CPUs, and block on the calling
@@ -182,7 +182,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   while (1) {
     // See comment in mp_unplug_trampoline about related CPU hotplug
     // guarantees.
-    cpu_mask_t outstanding = atomic_load_relaxed((int*)&sync_context.outstanding_cpus);
+    cpu_mask_t outstanding = sync_context.outstanding_cpus.load(ktl::memory_order_relaxed);
     cpu_mask_t online = mp_get_online_mask();
     if ((outstanding & online) == 0) {
       break;
