@@ -46,6 +46,7 @@ fbl::Array<uint8_t> LoadTemplateData() {
 
 void RandomFill(char* data, size_t length) {
   for (size_t i = 0; i < length; i++) {
+    // TODO(jfsulliv): Use explicit seed
     data[i] = (char)rand();
   }
 }
@@ -81,6 +82,13 @@ void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
   static fbl::Array<uint8_t> template_data = LoadTemplateData();
   GenerateBlob(
       [](char* data, size_t length) {
+        // TODO(jfsulliv): Use explicit seed
+        int nonce = rand();
+        size_t nonce_size = fbl::min(sizeof(nonce), length);
+        memcpy(data, &nonce, nonce_size);
+        data += nonce_size;
+        length -= nonce_size;
+
         while (length > 0) {
           size_t to_copy = fbl::min(template_data.size(), length);
           memcpy(data, template_data.get(), to_copy);
