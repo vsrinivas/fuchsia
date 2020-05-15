@@ -345,7 +345,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 // checkForEBUSY runs an lsof on /dev/net/tun if QEMU startup failed due to an EBUSY.
 func checkForEBUSY(ctx context.Context, err error) {
 	// Only perform the check if the error is an EBUSY.
-	if err == nil || strings.Contains(err.Error(), syscall.EBUSY.Error()) {
+	if err == nil || !strings.Contains(err.Error(), syscall.EBUSY.Error()) {
 		if err != nil {
 			logger.Debugf(ctx, "error was not an EBUSY")
 		}
@@ -357,7 +357,7 @@ func checkForEBUSY(ctx context.Context, err error) {
 	cmd := exec.Command("lsof", "+c", "0", "/dev/net/tun")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Wait(); err != nil {
+	if err := cmd.Run(); err != nil {
 		logger.Errorf(ctx, "running lsof failed: %v", err)
 	}
 }
