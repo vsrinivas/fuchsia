@@ -21,6 +21,7 @@ pub mod hardware_power_statecontrol;
 pub mod hwinfo;
 pub mod input;
 pub mod launch;
+pub mod light;
 pub mod location;
 pub mod logging;
 pub mod netstack;
