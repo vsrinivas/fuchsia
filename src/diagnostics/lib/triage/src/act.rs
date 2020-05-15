@@ -93,15 +93,16 @@ impl ActionContext<'_> {
     fn consider(&mut self, action: &Action, namespace: &String, name: &String) {
         let was_triggered = match self.metric_state.metric_value(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
-                self.act(namespace, name, &action);
+                self.act(&action);
                 true
             }
             MetricValue::Bool(false) => false,
+            MetricValue::Missing(reason) => {
+                self.warn(format!("[ERROR] In config '{}': {}", namespace, reason));
+                false
+            }
             other => {
-                self.warn(format!(
-                    "ERROR: In '{}', action '{}' used bad metric '{}' with value {}",
-                    namespace, name, action.trigger, other
-                ));
+                self.warn(format!("[ERROR] In config '{}': {}", namespace, other));
                 false
             }
         };
@@ -112,11 +113,8 @@ impl ActionContext<'_> {
         self.action_results.add_warning(warning);
     }
 
-    fn act(&mut self, namespace: &String, name: &String, action: &Action) {
-        self.warn(format!(
-            "Warning: '{}' in '{}' detected '{}': '{}' was true",
-            name, namespace, action.print, action.trigger
-        ));
+    fn act(&mut self, action: &Action) {
+        self.warn(format!("[WARNING] {}.", action.print));
     }
 }
 
@@ -176,14 +174,8 @@ mod test {
             DiagnosticData { source: String::from("source"), inspect: InspectFetcher::new_empty() };
         let mut context = ActionContext::new(&metrics, &actions, &inspect_context);
         let results = context.process();
-        assert!(warnings_include(
-            results.get_warnings(),
-            "Warning: 'do_true' in 'file' detected 'True was fired': 'true' was true"
-        ));
-        assert!(warnings_include(
-            results.get_warnings(),
-            "Warning: 'do_operation' in 'file' detected 'Inequality triggered': '0 < 10' was true"
-        ));
+        assert!(warnings_include(results.get_warnings(), "[WARNING] True was fired"));
+        assert!(warnings_include(results.get_warnings(), "[WARNING] Inequality triggered"));
         assert!(!warnings_include(results.get_warnings(), "False was fired"));
     }
 }

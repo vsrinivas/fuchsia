@@ -175,16 +175,10 @@ impl InspectFetcher {
                 values.push(value)
             }
         }
-        if !found_component {
+        if !found_component || values.is_empty() {
             return Ok(vec![MetricValue::Missing(format!(
-                "Component of {} matched nothing",
-                selector_string
-            ))]);
-        }
-        if values.is_empty() {
-            return Ok(vec![MetricValue::Missing(format!(
-                "Tree of {} matched nothing",
-                selector_string
+                "No value found matching selector {}",
+                selector_string.to_string()
             ))]);
         }
         Ok(values.into_iter().map(|value| MetricValue::from(value.property)).collect())
@@ -260,20 +254,20 @@ mod test {
             );
             assert_wrong!(
                 "INSPECT:*/foo/*:root.dataInt",
-                "Tree of */foo/*:root.dataInt matched nothing"
+                "No value found matching selector */foo/*:root.dataInt"
             );
             assert_wrong!(
                 "INSPECT:*/fo/*:root.dataInt",
-                "Component of */fo/*:root.dataInt matched nothing"
+                "No value found matching selector */fo/*:root.dataInt"
             );
             assert_wrong!("INSPECT:*/foo/*:root:data:Int", "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
             assert_wrong!(
                 "INSPECT:*/foo/*:root/kid:dataInt",
-                "Tree of */foo/*:root/kid:dataInt matched nothing"
+                "No value found matching selector */foo/*:root/kid:dataInt"
             );
             assert_wrong!(
                 "INSPECT:*/bar/*:base/array:dataInt",
-                "Tree of */bar/*:base/array:dataInt matched nothing"
+                "No value found matching selector */bar/*:base/array:dataInt"
             );
             assert_wrong!("INSPECT:*/bar/*:base:array", "Arrays not supported yet");
         }

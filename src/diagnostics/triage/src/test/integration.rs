@@ -252,7 +252,7 @@ integration_test!(
     vec![],
     vec![],
     1,
-    "Warning: 'act1' in 'other' detected 'yes on A!': 'sample::c1' was true"
+    "[WARNING] yes on A!"
 );
 
 integration_test!(
@@ -261,7 +261,7 @@ integration_test!(
     vec![],
     vec![],
     1,
-    "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
+    "[WARNING] Used some of disk"
 );
 
 integration_test!(
@@ -279,7 +279,7 @@ integration_test!(
     vec!["foo"],
     vec![],
     1,
-    "Warning: 'act1' in 'sample_tags' detected 'trigger foo tag': 'c' was true"
+    "[WARNING] trigger foo tag"
 );
 
 integration_test!(
@@ -297,7 +297,7 @@ integration_test!(
     vec!["foo"],
     vec!["foo"],
     1,
-    "Warning: 'act1' in 'sample_tags' detected 'trigger foo tag': 'c' was true"
+    "[WARNING] trigger foo tag"
 );
 
 integration_test!(
@@ -315,5 +315,5 @@ integration_test!(
     vec![],
     vec![],
     1,
-    "Warning: 'error_rate_too_high' in 'error_rate' detected 'Error rate for app.cmx is too high': 'error_rate > 0.9' was true"
+    "[WARNING] Error rate for app.cmx is too high"
 );

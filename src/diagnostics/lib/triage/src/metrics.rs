@@ -468,11 +468,9 @@ impl<'a> MetricState<'a> {
         let right = self.evaluate(namespace, &operands[1]);
 
         match (&left, &right) {
-            // Check if either of the values is a `Missing` metric and pass
-            // it along. This allows us to preserve error messaging.
-            (MetricValue::Missing(_), _) | (_, MetricValue::Missing(_)) => {
-                MetricValue::Missing(format!("{:?} or {:?} not comparable", &left, &right))
-            }
+            // We forward ::Missing for better error messaging.
+            (MetricValue::Missing(reason), _) => MetricValue::Missing(reason.to_string()),
+            (_, MetricValue::Missing(reason)) => MetricValue::Missing(reason.to_string()),
             _ => MetricValue::Bool(function(&left, &right)),
         }
     }
@@ -488,11 +486,17 @@ impl<'a> MetricState<'a> {
         }
         let mut result: bool = match self.evaluate(namespace, &operands[0]) {
             MetricValue::Bool(value) => value,
+            MetricValue::Missing(reason) => {
+                return MetricValue::Missing(reason);
+            }
             bad => return MetricValue::Missing(format!("{:?} is not boolean", bad)),
         };
         for operand in operands[1..].iter() {
             result = match self.evaluate(namespace, operand) {
                 MetricValue::Bool(value) => function(result, value),
+                MetricValue::Missing(reason) => {
+                    return MetricValue::Missing(reason);
+                }
                 bad => return MetricValue::Missing(format!("{:?} is not boolean", bad)),
             }
         }
@@ -509,6 +513,9 @@ impl<'a> MetricState<'a> {
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::Bool(true) => MetricValue::Bool(false),
             MetricValue::Bool(false) => MetricValue::Bool(true),
+            MetricValue::Missing(reason) => {
+                return MetricValue::Missing(reason);
+            }
             bad => return MetricValue::Missing(format!("{:?} not boolean", bad)),
         }
     }
