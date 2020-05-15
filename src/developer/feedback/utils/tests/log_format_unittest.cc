@@ -5,6 +5,7 @@
 #include "src/developer/feedback/utils/log_format.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 
 #include <gtest/gtest.h>
@@ -48,8 +49,17 @@ TEST(LogFormatTest, Check_CorrectSeverity) {
       Format(BuildLogMessage(FX_LOG_INFO + FX_LOG_WARNING + FX_LOG_ERROR + FX_LOG_FATAL, "line 5"));
   EXPECT_EQ(log_message, "[15604.000][07559][07687][] INVALID: line 5\n");
 
-  log_message = Format(BuildLogMessage(-1, "line 6"));
-  EXPECT_EQ(log_message, "[15604.000][07559][07687][] VLOG(1): line 6\n");
+  log_message = Format(BuildLogMessage(FX_LOG_TRACE, "line 6"));
+  EXPECT_EQ(log_message, "[15604.000][07559][07687][] TRACE: line 6\n");
+
+  log_message = Format(BuildLogMessage(FX_LOG_DEBUG, "line 7"));
+  EXPECT_EQ(log_message, "[15604.000][07559][07687][] DEBUG: line 7\n");
+
+  log_message = Format(BuildLogMessage(FX_LOG_INFO - 1, "line 8"));
+  EXPECT_EQ(log_message, "[15604.000][07559][07687][] VLOG(1): line 8\n");
+
+  log_message = Format(BuildLogMessage(FX_LOG_INFO - 12, "line 9"));
+  EXPECT_EQ(log_message, "[15604.000][07559][07687][] VLOG(12): line 9\n");
 }
 
 TEST(LogFormatTest, Check_CorrectTime) {

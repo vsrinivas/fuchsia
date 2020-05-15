@@ -5,6 +5,7 @@
 #include "src/developer/feedback/utils/log_format.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/logger.h>
 
 #include <cinttypes>
 
@@ -15,8 +16,12 @@ namespace feedback {
 namespace {
 
 std::string SeverityToString(const int32_t severity) {
-  if (severity < 0) {
-    return fxl::StringPrintf("VLOG(%d)", -severity);
+  if (severity == FX_LOG_TRACE) {
+    return "TRACE";
+  } else if (severity == FX_LOG_DEBUG) {
+    return "DEBUG";
+  } else if (severity > FX_LOG_DEBUG && severity < FX_LOG_INFO) {
+    return fxl::StringPrintf("VLOG(%d)", FX_LOG_INFO - severity);
   } else if (severity == FX_LOG_INFO) {
     return "INFO";
   } else if (severity == FX_LOG_WARNING) {

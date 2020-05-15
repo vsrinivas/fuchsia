@@ -80,6 +80,7 @@ source_set("logs") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//zircon/public/lib/zx",
   ]
 }
 
