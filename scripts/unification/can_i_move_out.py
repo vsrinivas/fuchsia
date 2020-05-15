@@ -124,7 +124,10 @@ def find_libraries(zircon_dir, type):
             return False
         with open(build_path, 'r') as build_file:
             content = build_file.read()
-            return 'Fuchsia GN build' not in content
+            return (
+                '//build/unification/zx_library.gni' not in content and
+                '//build/unification/fidl_alias.gni' not in content and
+                'Fuchsia GN build' not in content)
 
     for _, dirs, _ in os.walk(base):
         return [lib_label(type, dir) for dir in dirs if has_zn_build_file(dir)]
