@@ -5,18 +5,12 @@
 #ifndef SRC_LIB_TESTING_LOOP_FIXTURE_TEST_LOOP_FIXTURE_H_
 #define SRC_LIB_TESTING_LOOP_FIXTURE_TEST_LOOP_FIXTURE_H_
 
-#include <lib/async-testing/test_loop.h>
-#include <lib/fit/function.h>
-
-#include <functional>
-
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/macros.h"
+#include "test_loop.h"
 
 namespace gtest {
-
-// An extension of gtest's testing::Test class which sets up a message loop for
+// An extension of Test class which sets up a message loop for
 // the test.
 //
 // Example:
@@ -34,57 +28,7 @@ namespace gtest {
 //
 //     /* Make assertions about the state of the test case, say about |foo|. */
 //   }
-class TestLoopFixture : public ::testing::Test {
- protected:
-  TestLoopFixture();
-  ~TestLoopFixture();
-
-  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
-
-  // Returns the current fake clock time.
-  zx::time Now() { return loop_.Now(); }
-
-  // Dispatches all waits and all tasks posted to the message loop with
-  // deadlines up until |deadline|, progressively advancing the fake clock.
-  // Returns true iff any tasks or waits were invoked during the run.
-  bool RunLoopUntil(zx::time deadline) { return loop_.RunUntil(deadline); }
-
-  // Dispatches all waits and all tasks posted to the message loop with
-  // deadlines up until |duration| from the current time, progressively
-  // advancing the fake clock.
-  // Returns true iff any tasks or waits were invoked during the run.
-  bool RunLoopFor(zx::duration duration) { return loop_.RunFor(duration); };
-
-  // Dispatches all waits and all tasks posted to the message loop with
-  // deadlines up until the current time, progressively advancing the fake
-  // clock.
-  // Returns true iff any tasks or waits were invoked during the run.
-  bool RunLoopUntilIdle() { return loop_.RunUntilIdle(); }
-
-  // Repeatedly runs the loop by |increment| until nothing further is left to
-  // dispatch.
-  void RunLoopRepeatedlyFor(zx::duration increment);
-
-  // Quits the message loop. If called while running, it will immediately
-  // exit and dispatch no further tasks or waits; if called before running,
-  // then next call to run will immediately exit. Further calls to run will
-  // continue to dispatch.
-  void QuitLoop() { loop_.Quit(); }
-
-  // A callback that quits the message loop when called.
-  fit::closure QuitLoopClosure() {
-    return [this] { loop_.Quit(); };
-  }
-
-  // Accessor for the underlying TestLoop.
-  async::TestLoop& test_loop() { return loop_; }
-
- private:
-  // The test message loop for the test fixture.
-  async::TestLoop loop_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestLoopFixture);
-};
+class TestLoopFixture : public ::loop_fixture::TestLoop, public ::testing::Test {};
 
 }  // namespace gtest
 

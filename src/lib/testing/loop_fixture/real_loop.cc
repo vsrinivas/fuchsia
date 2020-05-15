@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/gtest/real_loop_fixture.h"
+#include "real_loop.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/zx/clock.h>
 
-namespace gtest {
+namespace loop_fixture {
 
 namespace {
 
@@ -43,23 +43,23 @@ bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
 
 }  // namespace
 
-RealLoopFixture::RealLoopFixture() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
+RealLoop::RealLoop() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
-RealLoopFixture::~RealLoopFixture() = default;
+RealLoop::~RealLoop() = default;
 
-async_dispatcher_t* RealLoopFixture::dispatcher() { return loop_.dispatcher(); }
+async_dispatcher_t* RealLoop::dispatcher() { return loop_.dispatcher(); }
 
-void RealLoopFixture::RunLoop() {
+void RealLoop::RunLoop() {
   loop_.Run();
   loop_.ResetQuit();
 }
 
-bool RealLoopFixture::RunLoopWithTimeout(zx::duration timeout) {
+bool RealLoop::RunLoopWithTimeout(zx::duration timeout) {
   return RunGivenLoopWithTimeout(&loop_, timeout);
 }
 
-bool RealLoopFixture::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
-                                                zx::duration timeout, zx::duration step) {
+bool RealLoop::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition, zx::duration timeout,
+                                         zx::duration step) {
   const zx::time timeout_deadline = zx::deadline_after(timeout);
 
   while (zx::clock::get_monotonic() < timeout_deadline && loop_.GetState() == ASYNC_LOOP_RUNNABLE) {
@@ -82,19 +82,19 @@ bool RealLoopFixture::RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
   return condition();
 }
 
-void RealLoopFixture::RunLoopUntil(fit::function<bool()> condition, zx::duration step) {
+void RealLoop::RunLoopUntil(fit::function<bool()> condition, zx::duration step) {
   RunLoopWithTimeoutOrUntil(std::move(condition), zx::duration::infinite(), step);
 }
 
-void RealLoopFixture::RunLoopUntilIdle() {
+void RealLoop::RunLoopUntilIdle() {
   loop_.RunUntilIdle();
   loop_.ResetQuit();
 }
 
-void RealLoopFixture::QuitLoop() { loop_.Quit(); }
+void RealLoop::QuitLoop() { loop_.Quit(); }
 
-fit::closure RealLoopFixture::QuitLoopClosure() {
+fit::closure RealLoop::QuitLoopClosure() {
   return [this] { loop_.Quit(); };
 }
 
-}  // namespace gtest
+}  // namespace loop_fixture
