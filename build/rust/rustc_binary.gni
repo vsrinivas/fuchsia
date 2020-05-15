@@ -41,6 +41,10 @@ import("//build/rust/rustc_test.gni")
 #     Equivalent to adding a `rustc_test` target with that name and the same
 #     source_root.
 #
+#   test_args (optional)
+#     List of flags to pass directly to the test binary, e.g.
+#     ["--nocapture"].
+#
 #   test_environments (optional)
 #     What environments unit tests, if provided, should target. Only used here
 #     for linux and mac tests, with a default value of a general linux/mac
@@ -121,6 +125,10 @@ template("rustc_binary") {
       name = invoker.target_name + "_bin_test"
       if (defined(invoker.name)) {
         name = invoker.name + "_bin_test"
+      }
+
+      if (defined(invoker.test_args)) {
+        args = invoker.test_args
       }
 
       configs = []

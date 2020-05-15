@@ -38,6 +38,10 @@ import("//build/testing/test_spec.gni")
 #     environment (as a function of $current_os).
 #     See environments parameter on //build/testing/test_spec.gni for more
 #     details.
+
+#   args (optional)
+#     List of flags to pass directly to the test binary, e.g.
+#     ["--nocapture"].
 #
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
@@ -92,6 +96,13 @@ template("rustc_test") {
     test_spec(test_spec_target_name) {
       target = ":${invoker.target_name}"
       path = test_output_file
+
+      command = [ rebase_path(test_output_file, root_build_dir) ]
+
+      if (defined(invoker.args)) {
+        command += invoker.args
+      }
+
       deps = []
       if (defined(invoker.deps)) {
         deps += invoker.deps
