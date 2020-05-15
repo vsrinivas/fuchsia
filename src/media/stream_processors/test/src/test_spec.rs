@@ -79,7 +79,7 @@ async fn run_cases_serially(
             .await
             .context(format!("Running case {}", case.name))?;
         for validator in case.validators {
-            validator.validate(&output).context(format!("Validating case {}", case.name))?;
+            validator.validate(&output).await.context(format!("Validating case {}", case.name))?;
         }
     }
 

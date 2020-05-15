@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
+use async_trait::async_trait;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
@@ -29,8 +30,9 @@ impl H264NalValidator {
     }
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for H264NalValidator {
-    fn validate(&self, output: &[Output]) -> Result<()> {
+    async fn validate(&self, output: &[Output]) -> Result<()> {
         let packets: Vec<&OutputPacket> = output_packets(output).collect();
         let mut file = self.output_file()?;
         let mut stream = H264Stream::from(vec![]);

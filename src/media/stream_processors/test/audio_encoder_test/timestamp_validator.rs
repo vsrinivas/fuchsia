@@ -1,6 +1,7 @@
 //! Validations on timestamps of encoded audio packets.
 
 use crate::pcm_audio::*;
+use async_trait::async_trait;
 use stream_processor_test::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -72,8 +73,9 @@ impl TimestampValidator {
     }
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for TimestampValidator {
-    fn validate(&self, output: &[Output]) -> Result<()> {
+    async fn validate(&self, output: &[Output]) -> Result<()> {
         for (i, packet) in output_packets(output).enumerate() {
             let expected = self.expected_timestamp(i);
             let actual = packet.packet.timestamp_ish;

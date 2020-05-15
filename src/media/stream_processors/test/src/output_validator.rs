@@ -4,6 +4,7 @@
 
 use crate::FatalError;
 use anyhow::Error;
+use async_trait::async_trait;
 use fidl_fuchsia_media::{FormatDetails, StreamOutputFormat};
 use fidl_table_validation::*;
 use fuchsia_stream_processors::*;
@@ -51,8 +52,9 @@ pub enum Output {
 ///
 /// Failure should be indicated by returning an error, not by panic, so that the full context of
 /// the error will be available in the failure output.
+#[async_trait(?Send)]
 pub trait OutputValidator {
-    fn validate(&self, output: &[Output]) -> Result<(), Error>;
+    async fn validate(&self, output: &[Output]) -> Result<(), Error>;
 }
 
 /// Validates that the output contains the expected number of packets.
@@ -60,8 +62,9 @@ pub struct OutputPacketCountValidator {
     pub expected_output_packet_count: usize,
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for OutputPacketCountValidator {
-    fn validate(&self, output: &[Output]) -> Result<(), Error> {
+    async fn validate(&self, output: &[Output]) -> Result<(), Error> {
         let actual_output_packet_count: usize = output
             .iter()
             .filter(|output| match output {
@@ -87,8 +90,9 @@ pub struct TerminatesWithValidator {
     pub expected_terminal_output: Output,
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for TerminatesWithValidator {
-    fn validate(&self, output: &[Output]) -> Result<(), Error> {
+    async fn validate(&self, output: &[Output]) -> Result<(), Error> {
         let actual_terminal_output = output.last().ok_or(FatalError(format!(
             "In terminal output: expected {:?}; found: None",
             Some(&self.expected_terminal_output)
@@ -112,8 +116,9 @@ pub struct FormatValidator {
     pub expected_format: FormatDetails,
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for FormatValidator {
-    fn validate(&self, output: &[Output]) -> Result<(), Error> {
+    async fn validate(&self, output: &[Output]) -> Result<(), Error> {
         let packets: Vec<&OutputPacket> = output_packets(output).collect();
         let format = &packets
             .first()
@@ -178,8 +183,9 @@ impl BytesValidator {
     }
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for BytesValidator {
-    fn validate(&self, output: &[Output]) -> Result<(), Error> {
+    async fn validate(&self, output: &[Output]) -> Result<(), Error> {
         let packets: Vec<&OutputPacket> = output_packets(output).collect();
         let oob = packets
             .first()

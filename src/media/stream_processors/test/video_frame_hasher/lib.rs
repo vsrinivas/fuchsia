@@ -1,5 +1,6 @@
 //! Hashes video frames.
 
+use async_trait::async_trait;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use hex::encode;
@@ -171,8 +172,9 @@ pub struct VideoFrameHasher {
     pub expected_digest: ExpectedDigest,
 }
 
+#[async_trait(?Send)]
 impl OutputValidator for VideoFrameHasher {
-    fn validate(&self, output: &[Output]) -> Result<(), anyhow::Error> {
+    async fn validate(&self, output: &[Output]) -> Result<(), anyhow::Error> {
         let mut hasher = Sha256::default();
 
         output
