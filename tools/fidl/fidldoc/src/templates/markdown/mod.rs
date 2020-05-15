@@ -215,6 +215,40 @@ mod test {
     }
 
     #[test]
+    fn render_toc_test() {
+        let source = include_str!("testdata/_toc.yaml");
+
+        let mut table_of_contents: Vec<crate::TableOfContentsItem> = vec![];
+        table_of_contents.push(crate::TableOfContentsItem {
+            name: "fuchsia.auth".to_string(),
+            link: "fuchsia.auth/README.md".to_string(),
+            description: "Fuchsia Auth API".to_string(),
+        });
+        table_of_contents.push(crate::TableOfContentsItem {
+            name: "fuchsia.media".to_string(),
+            link: "fuchsia.media/README.md".to_string(),
+            description: "Fuchsia Media API".to_string(),
+        });
+
+        let fidl_config = json!(null);
+        let declarations: Vec<String> = Vec::new();
+
+        let main_fidl_doc = json!({
+            "table_of_contents": table_of_contents,
+            "fidldoc_version": "0.0.4",
+            "config": fidl_config,
+            "search": declarations,
+            "url_path": "/",
+        });
+
+        let template = MarkdownTemplate::new(&PathBuf::new());
+
+        let result = render_template(&template.handlebars, "toc".to_string(), &main_fidl_doc)
+            .expect("Unable to render toc template");
+        assert_eq!(result, source);
+    }
+
+    #[test]
     fn golden_test() {
         let template = MarkdownTemplate::new(&PathBuf::new());
 
