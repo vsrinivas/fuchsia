@@ -248,18 +248,27 @@ async fn clone_outgoing_root(
 #[async_trait]
 impl EventSynthesisProvider for CapabilityReadyNotifier {
     async fn provide(&self, realm: Arc<Realm>, filter: EventFilter) -> Vec<Event> {
-        let outgoing_node_result = async {
-            let execution = realm.lock_execution().await;
-            if execution.runtime.is_none() {
-                return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
+        let maybe_outgoing_node_result =
+            async {
+                let execution = realm.lock_execution().await;
+                if execution.runtime.is_none() {
+                    return None;
+                }
+                let runtime = execution.runtime.as_ref().unwrap();
+                let out_dir = match runtime.outgoing_dir.as_ref().ok_or(
+                    ModelError::open_directory_error(realm.abs_moniker.clone(), "/".to_string()),
+                ) {
+                    Ok(out_dir) => out_dir,
+                    Err(e) => return Some(Err(e)),
+                };
+                Some(clone_outgoing_root(&out_dir, &realm.abs_moniker).await)
             }
-            let runtime = execution.runtime.as_ref().unwrap();
-            let out_dir = &runtime.outgoing_dir.as_ref().ok_or(
-                ModelError::open_directory_error(realm.abs_moniker.clone(), "/".to_string()),
-            )?;
-            clone_outgoing_root(&out_dir, &realm.abs_moniker).await
-        }
-        .await;
+            .await;
+
+        let outgoing_node_result = match maybe_outgoing_node_result {
+            None => return vec![],
+            Some(result) => result,
+        };
 
         let expose_decls = {
             if let Some(state) = realm.lock_state().await.as_ref() {

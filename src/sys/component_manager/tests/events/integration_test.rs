@@ -283,7 +283,7 @@ async fn event_capability_ready() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     let mut messages = vec![];
-    for _ in 0..4 {
+    for _ in 0..3 {
         let event = echo_rx.next().await.unwrap();
         messages.push(event.message.clone());
         event.resume();
@@ -291,7 +291,6 @@ async fn event_capability_ready() -> Result<(), Error> {
     messages.sort_unstable();
     assert_eq!(
         vec![
-            "Correctly timed out on 4th event",
             "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw /bar on ./child:0",
             "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw /foo on ./child:0",
             "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error /bleep on ./child:0",

@@ -7,13 +7,12 @@ use {
     fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd},
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    files_async,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    files_async, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
-    fuchsia_zircon::DurationNum,
-    futures::{FutureExt, StreamExt},
+    futures::StreamExt,
     io_util,
     maplit::hashmap,
+    std::collections::HashSet,
     test_utils_lib::events::{CapabilityReady, Event, EventSource, Handler},
 };
 
@@ -60,11 +59,13 @@ async fn main() -> Result<(), Error> {
         "/bar".to_string() => vec![format!("baz/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
     };
 
-    for _ in 0..3 {
+    let mut seen = HashSet::new();
+
+    while seen.len() != 3 {
         let event = event_stream.expect_type::<CapabilityReady>().await?;
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");
         match &event.result {
-            Ok(payload) => {
+            Ok(payload) if !seen.contains(&payload.path) => {
                 payload.node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).expect("clone node");
                 let directory = io_util::node_to_directory(node_clone).expect("node to directory");
 
@@ -82,8 +83,9 @@ async fn main() -> Result<(), Error> {
                         event.target_moniker()
                     )))
                     .await;
+                seen.insert(payload.path.clone());
             }
-            Err(error) => {
+            Err(error) if !seen.contains(&error.path) => {
                 let _ = echo
                     .echo_string(Some(&format!(
                         "[{}] error {} on {}",
@@ -92,26 +94,11 @@ async fn main() -> Result<(), Error> {
                         event.target_moniker()
                     )))
                     .await;
+                seen.insert(error.path.clone());
             }
+            _ => {}
         }
         event.resume().await?;
-    }
-
-    // Child is exposing one more dir (/qux) ensure we don't see it by timing out when waiting for
-    // a third event.
-    let timed_out = event_stream
-        .expect_type::<CapabilityReady>()
-        .map(|result| match result {
-            Ok(_) => Ok(false),
-            Err(e) => Err(e),
-        })
-        .on_timeout(5.seconds().after_now(), || Ok(true))
-        .await?;
-
-    if timed_out {
-        let _ = echo.echo_string(Some(&format!("Correctly timed out on 4th event"))).await;
-    } else {
-        panic!("Got unexpected third event");
     }
 
     fs.collect::<()>().await;

@@ -50,15 +50,16 @@ async fn main() -> Result<(), Error> {
     // There were 4 running instances when the stream was created: this instance itself and three
     // more. We are also expecting capability ready for one of them.
     let mut running = vec![];
-    let mut capability_ready = vec![];
-    for _ in 0..5 {
+    let mut capability_ready = BTreeSet::new();
+
+    while running.len() != 4 || capability_ready.len() != 1 {
         let event = event_stream.next().await?;
         match event.event_type {
             Some(Running::TYPE) => {
                 running.push(event.target_moniker.unwrap().to_string());
             }
             Some(CapabilityReady::TYPE) => {
-                capability_ready.push(event.target_moniker.unwrap().to_string());
+                capability_ready.insert(event.target_moniker.unwrap().to_string());
             }
             other => panic!("unexpected event type: {:?}", other),
         }
@@ -82,9 +83,22 @@ async fn main() -> Result<(), Error> {
     drop(instances);
 
     // The three instances were marked for destruction.
-    for _ in 0..3 {
-        let _ = event_stream.expect_type::<MarkedForDestruction>().await?;
-        let _ = echo.echo_string(Some(&format!("{:?}", MarkedForDestruction::TYPE))).await?;
+    let mut seen_marked_for_destruction = 0;
+    while seen_marked_for_destruction != 3 {
+        let event = event_stream.next().await?;
+        match event.event_type {
+            Some(CapabilityReady::TYPE) => {
+                // ignore. we could get a duplicate here.
+            }
+            Some(MarkedForDestruction::TYPE) => {
+                let _ =
+                    echo.echo_string(Some(&format!("{:?}", MarkedForDestruction::TYPE))).await?;
+                seen_marked_for_destruction += 1;
+            }
+            event => {
+                panic!("Got unexpected event type: {:?}", event);
+            }
+        }
     }
 
     Ok(())
