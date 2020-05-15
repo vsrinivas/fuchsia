@@ -8,7 +8,6 @@
 #define ZIRCON_KERNEL_INCLUDE_KTL_ATOMIC_H_
 
 #include <atomic>
-#include <utility>
 
 namespace ktl {
 
