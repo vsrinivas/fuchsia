@@ -19,7 +19,6 @@ namespace blobfs {
 using digest::Digest;
 using digest::MerkleTreeCreator;
 using digest::MerkleTreeVerifier;
-using BlobSrcFunction = void (*)(char* data, size_t length);
 
 void RandomFill(char* data, size_t length) {
   for (size_t i = 0; i < length; i++) {

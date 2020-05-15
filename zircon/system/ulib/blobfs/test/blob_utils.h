@@ -12,7 +12,7 @@
 
 namespace blobfs {
 
-using BlobSrcFunction = void (*)(char* data, size_t length);
+using BlobSrcFunction = std::function<void(char* data, size_t length)>;
 
 // An in-memory representation of a blob.
 struct BlobInfo {

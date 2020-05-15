@@ -37,10 +37,25 @@ struct DirArgs {
 class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
  public:
   Directory(Minfs* fs);
-  ~Directory();
+  ~Directory() final;
 
   // fbl::Recyclable interface.
   void fbl_recycle() final { VnodeMinfs::fbl_recycle(); }
+
+  // fs::Vnode interface.
+  fs::VnodeProtocolSet GetProtocols() const final;
+  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
+  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
+  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
+  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
+                      size_t* out_actual) final;
+  zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
+  zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
+  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,
+                     fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
+  zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
+  zx_status_t Truncate(size_t len) final;
 
  private:
   // minfs::Vnode interface.
@@ -59,21 +74,6 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   bool HasPendingAllocation(blk_t vmo_offset) final;
   void CancelPendingWriteback() final;
 #endif
-
-  // fs::Vnode interface.
-  fs::VnodeProtocolSet GetProtocols() const final;
-  zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
-  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
-  zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
-                      size_t* out_actual) final;
-  zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
-  zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
-  zx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir, fbl::StringPiece oldname,
-                     fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) final;
-  zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
-  zx_status_t Truncate(size_t len) final;
 
   // Other, non-virtual methods:
 

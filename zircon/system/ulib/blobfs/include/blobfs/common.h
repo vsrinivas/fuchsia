@@ -24,10 +24,10 @@
 
 namespace blobfs {
 
-// The minimum number of blocks that must be saved by
-// compression to consider on-disk compression before writeback.
-constexpr uint64_t kCompressionMinBlocksSaved = 8;
-constexpr uint64_t kCompressionMinBytesSaved = kCompressionMinBlocksSaved * kBlobfsBlockSize;
+// The minimum size of a blob that we will consider for compression. Attempting
+// to compress a blob smaller than this will not result in any size savings, so
+// we can just skip it and save some work.
+constexpr uint64_t kCompressionSizeThresholdBytes = kBlobfsBlockSize;
 
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;

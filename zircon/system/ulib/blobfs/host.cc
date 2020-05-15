@@ -89,7 +89,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
   out_info->compressed_data.reset(new uint8_t[max]);
   out_info->compressed = false;
 
-  if (mapping.length() < kCompressionMinBytesSaved) {
+  if (mapping.length() < kCompressionSizeThresholdBytes) {
     return ZX_OK;
   }
 
@@ -111,7 +111,8 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
     return status;
   }
 
-  if (mapping.length() > compressor->Size() + kCompressionMinBytesSaved) {
+  if (fbl::round_up(compressor->Size(), kBlobfsBlockSize) <
+      fbl::round_up(mapping.length(), kBlobfsBlockSize)) {
     out_info->compressed_length = compressor->Size();
     out_info->compressed = true;
   }

@@ -177,7 +177,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     return status;
   }
 
-  if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionMinBytesSaved) {
+  if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionSizeThresholdBytes) {
     write_info->compressor =
         BlobCompressor::Create(blobfs_->write_compression_algorithm(), inode_.blob_size);
     if (!write_info->compressor) {
@@ -489,8 +489,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 }
 
 void Blob::ConsiderCompressionAbort() {
-  ZX_DEBUG_ASSERT(write_info_->compressor);
-  if (inode_.blob_size - kCompressionMinBytesSaved < write_info_->compressor->Size()) {
+  // There's no point compressing if we're not going to actually save any disk space.
+  if (fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize) >=
+      fbl::round_up(inode_.blob_size, kBlobfsBlockSize)) {
     write_info_->compressor.reset();
   }
 }

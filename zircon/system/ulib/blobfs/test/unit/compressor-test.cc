@@ -6,18 +6,25 @@
 
 #include <stdlib.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <algorithm>
 #include <memory>
 
 #include <blobfs/format.h>
+#include <blobfs/mkfs.h>
+#include <block-client/cpp/fake-device.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
 #include <zxtest/zxtest.h>
 
+#include "blobfs.h"
 #include "compression/blob-compressor.h"
 #include "compression/decompressor.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
 #include "compression/zstd-seekable.h"
+#include "test/blob_utils.h"
 #include "zircon/errors.h"
 
 namespace blobfs {
@@ -393,6 +400,121 @@ TEST(CompressorTests, DecompressZSTDNonZeroNonAdvancing) {
   NonZeroHintNonAdvancingZSTDDecompressor decompressor;
   ASSERT_OK(decompressor.Decompress(uncompressed_buf, &uncompressed_size, compressed_buf,
                                     compressed_size));
+}
+
+class BlobfsTestFixture : public zxtest::Test {
+ protected:
+  BlobfsTestFixture() {
+    constexpr uint64_t kBlockCount = 1024;
+    auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
+    ASSERT_OK(FormatFilesystem(device.get()));
+    blobfs::MountOptions options;
+    ASSERT_OK(Blobfs::Create(nullptr, std::move(device), &options, zx::resource(), &blobfs_));
+    fbl::RefPtr<fs::Vnode> root;
+    ASSERT_OK(blobfs_->OpenRootNode(&root));
+    root_ = fbl::RefPtr<Directory>::Downcast(std::move(root));
+  }
+
+  fbl::RefPtr<fs::Vnode> AddBlobToBlobfs(size_t data_size, DataType type) {
+    std::unique_ptr<BlobInfo> blob_info;
+    GenerateBlob([type](char* data, size_t length) {
+                   auto generated_data = GenerateInput(type, 0, length);
+                   memcpy(data, generated_data.get(), length);
+                 }, "", data_size, &blob_info);
+
+    fbl::RefPtr<fs::Vnode> file;
+    zx_status_t status = root_->Create(&file, blob_info->path + 1, 0);
+    if (status != ZX_OK) {
+      ADD_FAILURE("Could not create file: %u", status);
+      return nullptr;
+    }
+
+    status = file->Truncate(data_size);
+    if (status != ZX_OK) {
+      ADD_FAILURE("Could not truncate file: %u", status);
+      return nullptr;
+    }
+    size_t actual = 0;
+    status = file->Write(blob_info->data.get(), data_size, 0, &actual);
+    if (status != ZX_OK) {
+      ADD_FAILURE("Could not write file: %u", status);
+      return nullptr;
+    }
+    if (actual != data_size) {
+      ADD_FAILURE("Unexpected amount of written data, was %zu expected %zu", actual, data_size);
+      return nullptr;
+    }
+
+    return file;
+  }
+
+ private:
+  std::unique_ptr<blobfs::Blobfs> blobfs_;
+  fbl::RefPtr<Directory> root_;
+};
+
+using CompressorBlobfsTests = BlobfsTestFixture;
+
+// Test that we do compress small blobs with compressible content.
+TEST_F(CompressorBlobfsTests, CompressSmallCompressibleBlobs) {
+  struct TestCase {
+    size_t data_size;
+    size_t expected_max_storage_size;
+  };
+
+  TestCase test_cases[] = {
+      {
+          16 * 1024 - 1,
+          16 * 1024,
+      },
+      {
+          16 * 1024,
+          16 * 1024,
+      },
+      {
+          16 * 1024 + 1,
+          16 * 1024,
+      },
+  };
+
+  for (const TestCase& test_case : test_cases) {
+    printf("Test case: data size %zu\n", test_case.data_size);
+    fbl::RefPtr<fs::Vnode> file = AddBlobToBlobfs(test_case.data_size, DataType::Compressible);
+    ASSERT_NO_FAILURES();
+
+    fs::VnodeAttributes attributes;
+    ASSERT_OK(file->GetAttributes(&attributes));
+
+    EXPECT_EQ(attributes.content_size, test_case.data_size);
+    EXPECT_LE(attributes.storage_size, test_case.expected_max_storage_size);
+
+    ASSERT_OK(file->Close());
+  }
+}
+
+// Test that we do not inflate small blobs, even if they are incompressible.
+TEST_F(CompressorBlobfsTests, DoNotInflateSmallIncompressibleBlobs) {
+  size_t data_sizes[] = {
+      8 * 1024 - 1, 8 * 1024, 8 * 1024 + 1, 16 * 1024 - 1, 16 * 1024, 16 * 1024 + 1,
+  };
+
+  for (size_t data_size : data_sizes) {
+    printf("Test case: data size %zu\n", data_size);
+    fbl::RefPtr<fs::Vnode> file = AddBlobToBlobfs(data_size, DataType::Random);
+    ASSERT_NO_FAILURES();
+
+    fs::VnodeAttributes attributes;
+    ASSERT_OK(file->GetAttributes(&attributes));
+
+    EXPECT_EQ(attributes.content_size, data_size);
+    // Beyond 1 block, we need 1 block for the Merkle tree.
+    size_t expected_max_storage_size = fbl::round_up(data_size, kBlobfsBlockSize)
+                                       + (data_size > kBlobfsBlockSize ? kBlobfsBlockSize : 0);
+
+    EXPECT_LE(attributes.storage_size, expected_max_storage_size);
+
+    ASSERT_OK(file->Close());
+  }
 }
 
 }  // namespace

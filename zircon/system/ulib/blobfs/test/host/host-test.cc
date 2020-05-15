@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/host.h>
-
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
+#include <blobfs/host.h>
 #include <zxtest/zxtest.h>
 
 namespace blobfs {
@@ -64,6 +66,23 @@ TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
     ASSERT_OK(ReadBlock(file.fd(), JournalStartBlock(*superblock) + n, block));
     EXPECT_BYTES_EQ(zero_block, block, kBlobfsBlockSize, "Journal should be formatted with zeros");
   }
+}
+
+// Verify that we compress small files.
+TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
+  File fs_file(tmpfile());
+  EXPECT_EQ(0, Mkfs(fs_file.fd(), 10000));
+
+  constexpr size_t all_zero_size = 12 * 1024;
+  File blob_file(tmpfile());
+  EXPECT_EQ(0, ftruncate(blob_file.fd(), all_zero_size));
+
+  constexpr bool compress = true;
+  MerkleInfo info;
+  EXPECT_EQ(ZX_OK, blobfs_preprocess(blob_file.fd(), compress, &info));
+
+  EXPECT_TRUE(info.compressed);
+  EXPECT_LE(info.compressed_length, all_zero_size);
 }
 
 }  // namespace

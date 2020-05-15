@@ -34,12 +34,9 @@ class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::Interf
 class Directory final : public fs::Vnode {
 #endif
  public:
-  // Constructs the "directory" blob.
   explicit Directory(Blobfs* bs);
-  virtual ~Directory();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Directory);
+  ~Directory() final;
 
- private:
   ////////////////
   // fs::Vnode interface.
 
@@ -66,6 +63,7 @@ class Directory final : public fs::Vnode {
                              SetCorruptBlobHandlerCompleter::Sync completer) final;
 #endif
 
+ private:
   ////////////////
   // Other methods.
 

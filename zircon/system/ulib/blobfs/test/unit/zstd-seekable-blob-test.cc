@@ -89,7 +89,7 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
 
  protected:
   // Use a blob size that is large enough to avoid aborting compression.
-  uint64_t blob_size_ = 2 * kCompressionMinBytesSaved;
+  uint64_t blob_size_ = 2 * kCompressionSizeThresholdBytes;
 
   uint32_t LookupInode(const BlobInfo& info) {
     Digest digest;
