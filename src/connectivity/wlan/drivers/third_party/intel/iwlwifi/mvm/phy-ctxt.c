@@ -54,7 +54,7 @@ const wlan_channel_t default_channel = {
 //
 // Returns:
 //   the band ID.
-static wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num) {
+wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num) {
   return chan_num < 14 ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
 }
 

@@ -14,6 +14,15 @@ extern "C" {
 namespace wlan {
 namespace testing {
 
+static void build_response_with_status(SimMvmResponse* resp, uint32_t status) {
+  // Check 'struct iwl_rx_packet'. The 'len_n_flags' includes the 'iwl_cmd_header' size and
+  // its payload, which is 'iwl_cmd_response'.
+  resp->resize(sizeof(struct iwl_cmd_header) + sizeof(struct iwl_cmd_response));
+
+  struct iwl_cmd_response* cmd_resp = reinterpret_cast<struct iwl_cmd_response*>(resp->data());
+  cmd_resp->status = cpu_to_le32(status);
+}
+
 zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
   IWL_INSPECT_HOST_CMD(cmd);
   uint8_t opcode = iwl_cmd_opcode(cmd->id);
@@ -56,6 +65,12 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case MAC_CONTEXT_CMD:
         case SCAN_OFFLOAD_REQUEST_CMD:
           return ZX_OK;
+
+        // Command would return 'status' back to driver.
+        case BINDING_CONTEXT_CMD:
+          build_response_with_status(&resp, 0);
+          ret = ZX_OK;
+          break;
 
         case NVM_ACCESS_CMD:
           ret = nvm_.HandleCommand(cmd, &resp);

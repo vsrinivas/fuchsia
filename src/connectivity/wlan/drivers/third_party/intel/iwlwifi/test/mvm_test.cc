@@ -24,6 +24,23 @@ namespace wlan {
 namespace testing {
 namespace {
 
+// Helper function to create a PHY context for the interface.
+//
+static void setup_phy_ctxt(struct iwl_mvm_vif* mvmvif) TA_NO_THREAD_SAFETY_ANALYSIS {
+  // Create a PHY context and assign it to mvmvif.
+  wlan_channel_t chandef = {
+      // any arbitrary values
+      .primary = 6,
+  };
+  uint16_t phy_ctxt_id;
+
+  struct iwl_mvm* mvm = mvmvif->mvm;
+  mtx_unlock(&mvm->mutex);
+  ASSERT_EQ(ZX_OK, iwl_mvm_add_chanctx(mvm, &chandef, &phy_ctxt_id));
+  mvmvif->phy_ctxt = &(mvm->phy_ctxts[phy_ctxt_id]);
+  mtx_lock(&mvm->mutex);
+}
+
 class MvmTest : public SingleApTest {
  public:
   MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -401,6 +418,27 @@ TEST_F(TimeEventTest, NormalCase) {
   // wait_for_notif is false.
   ASSERT_EQ(ZX_OK, iwl_mvm_protect_session(mvm_, mvmvif_, 1, 2, 3, false));
   ASSERT_EQ(ZX_OK, iwl_mvm_stop_session_protection(mvmvif_));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                               Binding Test
+//
+class BindingTest : public MvmTest {
+ public:
+  BindingTest() { setup_phy_ctxt(mvmvif_); }
+};
+
+TEST_F(BindingTest, CheckArgs) {
+  // Failed because phy_ctxt is unexpected.
+  mvmvif_->phy_ctxt = NULL;
+  ASSERT_EQ(ZX_ERR_BAD_STATE, iwl_mvm_binding_add_vif(mvmvif_));
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_binding_remove_vif(mvmvif_));
+}
+
+TEST_F(BindingTest, NormalCase) {
+  ASSERT_EQ(ZX_OK, iwl_mvm_binding_add_vif(mvmvif_));
+  ASSERT_EQ(ZX_OK, iwl_mvm_binding_remove_vif(mvmvif_));
 }
 
 }  // namespace

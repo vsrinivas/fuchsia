@@ -32,13 +32,11 @@
  *
  *****************************************************************************/
 
-#include <net/mac80211.h>
-
-#include "fw-api.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 struct iwl_mvm_iface_iterator_data {
-  struct ieee80211_vif* ignore_vif;
+  struct iwl_mvm_vif* ignore_vif;
   int idx;
 
   struct iwl_mvm_phy_ctxt* phyctxt;
@@ -47,19 +45,19 @@ struct iwl_mvm_iface_iterator_data {
   uint16_t colors[MAX_MACS_IN_BINDING];
 };
 
-static int iwl_mvm_binding_cmd(struct iwl_mvm* mvm, uint32_t action,
-                               struct iwl_mvm_iface_iterator_data* data) {
+static zx_status_t iwl_mvm_binding_cmd(struct iwl_mvm* mvm, uint32_t action,
+                                       struct iwl_mvm_iface_iterator_data* data) {
   struct iwl_binding_cmd cmd;
   struct iwl_mvm_phy_ctxt* phyctxt = data->phyctxt;
-  int i, ret;
-  uint32_t status;
+  int i;
   int size;
 
   memset(&cmd, 0, sizeof(cmd));
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT)) {
     size = sizeof(cmd);
-    if (phyctxt->channel->band == NL80211_BAND_2GHZ || !iwl_mvm_is_cdb_supported(mvm)) {
+    if (iwl_mvm_get_channel_band(phyctxt->chandef.primary) == WLAN_INFO_BAND_2GHZ ||
+        !iwl_mvm_is_cdb_supported(mvm)) {
       cmd.lmac_id = cpu_to_le32(IWL_LMAC_24G_INDEX);
     } else {
       cmd.lmac_id = cpu_to_le32(IWL_LMAC_5G_INDEX);
@@ -79,26 +77,25 @@ static int iwl_mvm_binding_cmd(struct iwl_mvm* mvm, uint32_t action,
     cmd.macs[i] = cpu_to_le32(FW_CMD_ID_AND_COLOR(data->ids[i], data->colors[i]));
   }
 
-  status = 0;
-  ret = iwl_mvm_send_cmd_pdu_status(mvm, BINDING_CONTEXT_CMD, size, &cmd, &status);
-  if (ret) {
+  uint32_t status = 0;
+  zx_status_t ret = iwl_mvm_send_cmd_pdu_status(mvm, BINDING_CONTEXT_CMD, size, &cmd, &status);
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to send binding (action:%d): %d\n", action, ret);
     return ret;
   }
 
   if (status) {
     IWL_ERR(mvm, "Binding command failed: %u\n", status);
-    ret = -EIO;
+    ret = ZX_ERR_IO;
   }
 
   return ret;
 }
 
-static void iwl_mvm_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_iface_iterator(void* _data, struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm_iface_iterator_data* data = _data;
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
-  if (vif == data->ignore_vif) {
+  if (mvmvif == data->ignore_vif) {
     return;
   }
 
@@ -115,19 +112,17 @@ static void iwl_mvm_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_v
   data->idx++;
 }
 
-static int iwl_mvm_binding_update(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                  struct iwl_mvm_phy_ctxt* phyctxt, bool add) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
+static zx_status_t iwl_mvm_binding_update(struct iwl_mvm_vif* mvmvif,
+                                          struct iwl_mvm_phy_ctxt* phyctxt, bool add) {
   struct iwl_mvm_iface_iterator_data data = {
-      .ignore_vif = vif,
+      .ignore_vif = mvmvif,
       .phyctxt = phyctxt,
   };
   uint32_t action = FW_CTXT_ACTION_MODIFY;
 
-  iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-  ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                             iwl_mvm_iface_iterator, &data);
+  ieee80211_iterate_active_interfaces_atomic(mvmvif->mvm, iwl_mvm_iface_iterator, &data);
 
   /*
    * If there are no other interfaces yet we
@@ -142,8 +137,10 @@ static int iwl_mvm_binding_update(struct iwl_mvm* mvm, struct ieee80211_vif* vif
   }
 
   if (add) {
-    if (WARN_ON_ONCE(data.idx >= MAX_MACS_IN_BINDING)) {
-      return -EINVAL;
+    if (data.idx >= MAX_MACS_IN_BINDING) {
+      IWL_WARN(mvmvif, "cannot add. reached max # of binding: %d >= %d\n", data.idx,
+               MAX_MACS_IN_BINDING);
+      return ZX_ERR_OUT_OF_RANGE;
     }
 
     data.ids[data.idx] = mvmvif->id;
@@ -151,16 +148,16 @@ static int iwl_mvm_binding_update(struct iwl_mvm* mvm, struct ieee80211_vif* vif
     data.idx++;
   }
 
-  return iwl_mvm_binding_cmd(mvm, action, &data);
+  return iwl_mvm_binding_cmd(mvmvif->mvm, action, &data);
 }
 
-int iwl_mvm_binding_add_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
-  if (WARN_ON_ONCE(!mvmvif->phy_ctxt)) {
-    return -EINVAL;
+zx_status_t iwl_mvm_binding_add_vif(struct iwl_mvm_vif* mvmvif) {
+  if (!mvmvif->phy_ctxt) {
+    IWL_ERR(mvmvif, "%s(): mvmvif->phy_ctxt is NULL\n", __func__);
+    return ZX_ERR_BAD_STATE;
   }
 
+#if 0   // NEEDS_PORTING
   /*
    * Update SF - Disable if needed. if this fails, SF might still be on
    * while many macs are bound, which is forbidden - so fail the binding.
@@ -168,24 +165,25 @@ int iwl_mvm_binding_add_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   if (iwl_mvm_sf_update(mvm, vif, false)) {
     return -EINVAL;
   }
+#endif  // NEEDS_PORTING
 
-  return iwl_mvm_binding_update(mvm, vif, mvmvif->phy_ctxt, true);
+  return iwl_mvm_binding_update(mvmvif, mvmvif->phy_ctxt, true);
 }
 
-int iwl_mvm_binding_remove_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  int ret;
-
-  if (WARN_ON_ONCE(!mvmvif->phy_ctxt)) {
-    return -EINVAL;
+zx_status_t iwl_mvm_binding_remove_vif(struct iwl_mvm_vif* mvmvif) {
+  if (!mvmvif->phy_ctxt) {
+    IWL_ERR(mvmvif, "phy_ctxt cannot be null\n");
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  ret = iwl_mvm_binding_update(mvm, vif, mvmvif->phy_ctxt, false);
+  zx_status_t ret = iwl_mvm_binding_update(mvmvif, mvmvif->phy_ctxt, false);
 
-  if (!ret)
+#if 0   // NEEDS_PORTING
+  if (ret != ZX_OK)
     if (iwl_mvm_sf_update(mvm, vif, true)) {
       IWL_ERR(mvm, "Failed to update SF state\n");
     }
+#endif  // NEEDS_PORTING
 
   return ret;
 }

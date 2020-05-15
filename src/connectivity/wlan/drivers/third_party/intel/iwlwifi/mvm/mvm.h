@@ -1719,8 +1719,8 @@ void iwl_mvm_mac_ctxt_recalc_tsf_id(struct iwl_mvm* mvm, struct ieee80211_vif* v
 void iwl_mvm_probe_resp_data_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_channel_switch_noa_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 /* Bindings */
-int iwl_mvm_binding_add_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
-int iwl_mvm_binding_remove_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+zx_status_t iwl_mvm_binding_add_vif(struct iwl_mvm_vif* mvmvif);
+zx_status_t iwl_mvm_binding_remove_vif(struct iwl_mvm_vif* mvmvif);
 
 /* Quota management */
 static inline size_t iwl_mvm_quota_cmd_size(struct iwl_mvm* mvm) {
@@ -2130,6 +2130,7 @@ zx_status_t iwl_mvm_init(void);
 // For phy-ctxt.c
 //
 extern const wlan_channel_t default_channel;
+wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //
