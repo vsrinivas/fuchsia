@@ -13,9 +13,6 @@ namespace hid_input_report {
 class Mouse : public Device {
  public:
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
-  ReportDescriptor GetDescriptor() override;
-
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
   ParseResult CreateDescriptor(
       fidl::Allocator* allocator,
@@ -29,11 +26,11 @@ class Mouse : public Device {
   DeviceType GetDeviceType() const override { return DeviceType::kMouse; }
 
  private:
-  std::optional<hid::Attributes> movement_x_ = {};
-  std::optional<hid::Attributes> movement_y_ = {};
-  std::optional<hid::Attributes> position_x_ = {};
-  std::optional<hid::Attributes> position_y_ = {};
-  std::optional<hid::Attributes> scroll_v_ = {};
+  std::optional<hid::Attributes> movement_x_;
+  std::optional<hid::Attributes> movement_y_;
+  std::optional<hid::Attributes> position_x_;
+  std::optional<hid::Attributes> position_y_;
+  std::optional<hid::Attributes> scroll_v_;
   std::array<hid::Attributes, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons_;
   size_t num_buttons_ = 0;
 

@@ -53,7 +53,6 @@ ParseResult ConsumerControl::ParseInputReportDescriptor(
   std::array<hid::ReportField, fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
       button_fields;
   size_t num_buttons = 0;
-  descriptor_.input = ConsumerControlInputDescriptor();
 
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
     const hid::ReportField& field = hid_report_descriptor.input_fields[i];
@@ -63,14 +62,12 @@ ParseResult ConsumerControl::ParseInputReportDescriptor(
       if (num_buttons >= button_fields.size()) {
         return ParseResult::kTooManyItems;
       }
-      descriptor_.input->buttons[num_buttons] = *button;
       button_fields[num_buttons] = field;
       num_buttons += 1;
     }
   }
 
   // No error, write to class members.
-  descriptor_.input->num_buttons = num_buttons;
 
   num_buttons_ = num_buttons;
   button_fields_ = button_fields;
@@ -112,47 +109,6 @@ ParseResult ConsumerControl::CreateDescriptor(
       allocator->make<fuchsia_input_report::ConsumerControlInputDescriptor>(input.build()));
   descriptor->set_consumer_control(
       allocator->make<fuchsia_input_report::ConsumerControlDescriptor>(consumer.build()));
-
-  return ParseResult::kOk;
-}
-
-ReportDescriptor ConsumerControl::GetDescriptor() {
-  ReportDescriptor report_descriptor = {};
-  report_descriptor.descriptor = descriptor_;
-  return report_descriptor;
-}
-
-ParseResult ConsumerControl::ParseInputReport(const uint8_t* data, size_t len,
-                                              InputReport* report) {
-  if (len != input_report_size_) {
-    return ParseResult::kReportSizeMismatch;
-  }
-
-  ConsumerControlInputReport consumer_control_report = {};
-  size_t button_index = 0;
-
-  for (const hid::ReportField& field : button_fields_) {
-    double val_out_double;
-    if (!ExtractAsUnitType(data, len, field.attr, &val_out_double)) {
-      continue;
-    }
-
-    uint32_t val_out = static_cast<uint32_t>(val_out_double);
-    if (val_out == 0) {
-      continue;
-    }
-
-    auto button = HidToConsumerControlButton(field.attr.usage);
-    if (!button) {
-      continue;
-    }
-    consumer_control_report.pressed_buttons[button_index++] = *button;
-  }
-
-  consumer_control_report.num_pressed_buttons = button_index;
-
-  // Now that we can't fail, set the real report.
-  report->report = consumer_control_report;
 
   return ParseResult::kOk;
 }

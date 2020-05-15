@@ -13,9 +13,6 @@ namespace hid_input_report {
 class ConsumerControl : public Device {
  public:
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
-  ReportDescriptor GetDescriptor() override;
-
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
   ParseResult CreateDescriptor(
       fidl::Allocator* allocator,

@@ -5,6 +5,8 @@
 #ifndef SRC_UI_INPUT_LIB_HID_INPUT_REPORT_KEYBOARD_H_
 #define SRC_UI_INPUT_LIB_HID_INPUT_REPORT_KEYBOARD_H_
 
+#include <set>
+
 #include "src/ui/input/lib/hid-input-report/descriptors.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
@@ -13,9 +15,6 @@ namespace hid_input_report {
 class Keyboard : public Device {
  public:
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
-  ReportDescriptor GetDescriptor() override;
-
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
   ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report, uint8_t* data,
                               size_t data_size, size_t* data_out_size) override;
@@ -44,7 +43,8 @@ class Keyboard : public Device {
   size_t input_report_size_ = 0;
   uint8_t input_report_id_ = 0;
 
-  size_t num_input_keys_ = 0;
+  // The ordered, unique list of key values.
+  std::set<::llcpp::fuchsia::ui::input2::Key> key_values_;
 
   // Fields for the output reports.
   std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS> led_fields_;

@@ -21,8 +21,6 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
   hid::Attributes values[fuchsia_input_report::SENSOR_MAX_VALUES] = {};
   size_t num_values = 0;
 
-  SensorInputDescriptor descriptor = {};
-
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
     const hid::ReportField& field = hid_report_descriptor.input_fields[i];
 
@@ -41,15 +39,10 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
       return ParseResult::kTooManyItems;
     }
     values[num_values] = field.attr;
-
-    descriptor.values[num_values].type = type;
-    descriptor.values[num_values].axis = LlcppAxisFromAttribute(values[num_values]);
     num_values++;
   }
 
   // No error, write to class members.
-  descriptor.num_values = num_values;
-  descriptor_.input = descriptor;
   num_values_ = num_values;
   for (size_t i = 0; i < num_values; i++) {
     values_[i] = values[i];
@@ -59,12 +52,6 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
   report_id_ = hid_report_descriptor.report_id;
 
   return ParseResult::kOk;
-}
-
-ReportDescriptor Sensor::GetDescriptor() {
-  ReportDescriptor report_descriptor = {};
-  report_descriptor.descriptor = descriptor_;
-  return report_descriptor;
 }
 
 ParseResult Sensor::CreateDescriptor(fidl::Allocator* allocator,
@@ -91,26 +78,6 @@ ParseResult Sensor::CreateDescriptor(fidl::Allocator* allocator,
       allocator->make<fuchsia_input_report::SensorDescriptor::Frame>());
   sensor.set_input(allocator->make<fuchsia_input_report::SensorInputDescriptor>(input.build()));
   descriptor->set_sensor(allocator->make<fuchsia_input_report::SensorDescriptor>(sensor.build()));
-
-  return ParseResult::kOk;
-}
-
-ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
-  SensorInputReport sensor_report = {};
-  if (len != report_size_) {
-    return ParseResult::kReportSizeMismatch;
-  }
-
-  for (size_t i = 0; i < num_values_; i++) {
-    double value_out;
-    if (hid::ExtractAsUnitType(data, len, values_[i], &value_out)) {
-      sensor_report.values[i] = static_cast<int64_t>(value_out);
-    }
-  }
-  sensor_report.num_values = num_values_;
-
-  // Now that we can't fail, set the real report.
-  report->report = sensor_report;
 
   return ParseResult::kOk;
 }

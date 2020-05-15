@@ -50,9 +50,6 @@ class Device {
   virtual ~Device() = default;
 
   virtual ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) = 0;
-  virtual ReportDescriptor GetDescriptor() = 0;
-
-  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) = 0;
 
   virtual ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report,
                                       uint8_t* data, size_t data_size, size_t* data_out_size) {

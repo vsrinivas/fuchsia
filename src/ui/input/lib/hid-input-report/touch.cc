@@ -20,7 +20,6 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   size_t num_contacts = 0;
   hid::Attributes buttons[fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS];
   uint8_t num_buttons = 0;
-  TouchInputDescriptor descriptor = {};
 
   // Traverse up the nested collections to the Application collection.
   hid::Collection* main_collection = hid_report_descriptor.input_fields[0].col;
@@ -36,11 +35,9 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
   if (main_collection->usage ==
       hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreen)) {
-    descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
     touch_type_ = fuchsia_input_report::TouchType::TOUCHSCREEN;
   } else if (main_collection->usage ==
              hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchPad)) {
-    descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHPAD;
     touch_type_ = fuchsia_input_report::TouchType::TOUCHPAD;
   } else {
     return ParseResult::kNoCollection;
@@ -57,7 +54,6 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
         return ParseResult::kTooManyItems;
       }
       buttons[num_buttons] = field.attr;
-      descriptor.buttons[num_buttons] = static_cast<uint8_t>(field.attr.usage.usage);
       num_buttons++;
     }
 
@@ -81,42 +77,34 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
       return ParseResult::kTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];
-    ContactInputDescriptor* contact_descriptor = &descriptor.contacts[num_contacts - 1];
 
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)) {
       contact->contact_id = field.attr;
-      contact_descriptor->contact_id = LlcppAxisFromAttribute(*contact->contact_id);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch)) {
       contact->tip_switch = field.attr;
-      contact_descriptor->is_pressed = LlcppAxisFromAttribute(*contact->tip_switch);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       contact->position_x = field.attr;
-      contact_descriptor->position_x = LlcppAxisFromAttribute(*contact->position_x);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       contact->position_y = field.attr;
-      contact_descriptor->position_y = LlcppAxisFromAttribute(*contact->position_y);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipPressure)) {
       contact->pressure = field.attr;
-      contact_descriptor->pressure = LlcppAxisFromAttribute(*contact->pressure);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kWidth)) {
       contact->contact_width = field.attr;
-      contact_descriptor->contact_width = LlcppAxisFromAttribute(*contact->contact_width);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kHeight)) {
       contact->contact_height = field.attr;
-      contact_descriptor->contact_height = LlcppAxisFromAttribute(*contact->contact_height);
     }
   }
 
@@ -129,22 +117,11 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     buttons_[i] = buttons[i];
   }
   num_buttons_ = num_buttons;
-  descriptor.num_buttons = num_buttons;
-
-  descriptor.max_contacts = static_cast<uint32_t>(num_contacts);
-  descriptor.num_contacts = num_contacts;
-  descriptor_.input = descriptor;
 
   report_size_ = hid_report_descriptor.input_byte_sz;
   report_id_ = hid_report_descriptor.report_id;
 
   return ParseResult::kOk;
-}
-
-ReportDescriptor Touch::GetDescriptor() {
-  ReportDescriptor report_descriptor = {};
-  report_descriptor.descriptor = descriptor_;
-  return report_descriptor;
 }
 
 ParseResult Touch::CreateDescriptor(fidl::Allocator* allocator,
@@ -206,82 +183,6 @@ ParseResult Touch::CreateDescriptor(fidl::Allocator* allocator,
       allocator->make<fuchsia_input_report::TouchDescriptor::Frame>());
   touch.set_input(allocator->make<fuchsia_input_report::TouchInputDescriptor>(input.build()));
   descriptor->set_touch(allocator->make<fuchsia_input_report::TouchDescriptor>(touch.build()));
-
-  return ParseResult::kOk;
-}
-
-ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
-  TouchInputReport touch_report = {};
-  if (len != report_size_) {
-    return ParseResult::kReportSizeMismatch;
-  }
-
-  double value_out;
-
-  // Extract the global items.
-  for (size_t i = 0; i < num_buttons_; i++) {
-    if (hid::ExtractAsUnitType(data, len, buttons_[i], &value_out)) {
-      uint8_t pressed = (value_out > 0) ? 1 : 0;
-      if (pressed) {
-        touch_report.pressed_buttons[touch_report.num_pressed_buttons] =
-            static_cast<uint8_t>(buttons_[i].usage.usage);
-        touch_report.num_pressed_buttons++;
-      }
-    }
-  }
-
-  // Extract each touch item.
-  size_t contact_num = 0;
-  for (size_t i = 0; i < descriptor_.input->num_contacts; i++) {
-    ContactInputReport& contact = touch_report.contacts[contact_num];
-    if (descriptor_.input->contacts[i].is_pressed) {
-      if (hid::ExtractAsUnitType(data, len, *contacts_[i].tip_switch, &value_out)) {
-        contact.is_pressed = static_cast<bool>(value_out);
-        if (!*contact.is_pressed) {
-          continue;
-        }
-      }
-    }
-    contact_num++;
-    if (descriptor_.input->contacts[i].contact_id) {
-      // Some touchscreens we support mistakenly set the logical range to 0-1 for the
-      // tip switch and then never reset the range for the contact id. For this reason,
-      // we have to do an "unconverted" extraction.
-      uint32_t contact_id;
-      if (hid::ExtractUint(data, len, *contacts_[i].contact_id, &contact_id)) {
-        contact.contact_id = contact_id;
-      }
-    }
-    if (descriptor_.input->contacts[i].position_x) {
-      if (hid::ExtractAsUnitType(data, len, *contacts_[i].position_x, &value_out)) {
-        contact.position_x = static_cast<int64_t>(value_out);
-      }
-    }
-    if (descriptor_.input->contacts[i].position_y) {
-      if (hid::ExtractAsUnitType(data, len, *contacts_[i].position_y, &value_out)) {
-        contact.position_y = static_cast<int64_t>(value_out);
-      }
-    }
-    if (descriptor_.input->contacts[i].pressure) {
-      if (hid::ExtractAsUnitType(data, len, *contacts_[i].pressure, &value_out)) {
-        contact.pressure = static_cast<int64_t>(value_out);
-      }
-    }
-    if (descriptor_.input->contacts[i].contact_width) {
-      if (hid::ExtractAsUnitType(data, len, *contacts_[i].contact_width, &value_out)) {
-        contact.contact_width = static_cast<int64_t>(value_out);
-      }
-    }
-    if (descriptor_.input->contacts[i].contact_height) {
-      if (hid::ExtractAsUnitType(data, len, *contacts_[i].contact_height, &value_out)) {
-        contact.contact_height = static_cast<int64_t>(value_out);
-      }
-    }
-  }
-  touch_report.num_contacts = contact_num;
-
-  // Now that we can't fail, set the real report.
-  report->report = touch_report;
 
   return ParseResult::kOk;
 }
