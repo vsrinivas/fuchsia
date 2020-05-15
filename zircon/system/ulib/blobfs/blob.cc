@@ -53,8 +53,9 @@ using digest::MerkleTreeCreator;
 
 bool SupportsPaging(const Inode& inode) {
   CompressionAlgorithm algorithm = AlgorithmForInode(inode);
-  if (algorithm == CompressionAlgorithm::UNCOMPRESSED
-      || algorithm == CompressionAlgorithm::CHUNKED) {
+  if (algorithm == CompressionAlgorithm::UNCOMPRESSED ||
+      algorithm == CompressionAlgorithm::CHUNKED ||
+      algorithm == CompressionAlgorithm::ZSTD_SEEKABLE) {
     return true;
   }
   return false;

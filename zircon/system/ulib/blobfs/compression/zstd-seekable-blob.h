@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_BLOB_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_BLOB_H_
 
-#include <lib/fzl/vmo-mapper.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <stdint.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -45,7 +45,7 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   // Create a |ZSTDSeekableBlob|. It is the invoker's responsibility to ensure that the VMO
   // populated on |compressed_block_collection.Read()| corresponds to |mapped_vmo|.
   static zx_status_t Create(
-      fzl::VmoMapper* mapped_vmo,
+      fzl::OwnedVmoMapper* mapped_vmo,
       std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection,
       std::unique_ptr<ZSTDSeekableBlob>* out);
 
@@ -57,13 +57,13 @@ class ZSTDSeekableBlob : public RandomAccessCompressedBlob {
   }
 
  private:
-  ZSTDSeekableBlob(fzl::VmoMapper* mapped_vmo,
+  ZSTDSeekableBlob(fzl::OwnedVmoMapper* mapped_vmo,
                    std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection);
 
   zx_status_t ReadHeader();
 
   ZSTDSeekableHeader header_;
-  fzl::VmoMapper* mapped_vmo_;
+  fzl::OwnedVmoMapper* mapped_vmo_;
   std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection_;
 };
 

@@ -255,6 +255,15 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return status;
   }
 
+  if (options->pager) {
+    status = ZSTDSeekableBlobCollection::Create(fs.get(), fs.get(), fs.get(), fs->allocator_.get(),
+                                                &fs->zstd_seekable_blob_collection_);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Could not initialize compressed blob collection for paging");
+      return status;
+    }
+  }
+
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
     return status;
@@ -283,8 +292,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
                 CompressionAlgorithmToString(fs->write_compression_algorithm_));
 
   auto* fs_ptr = fs.get();
-  zx::status<BlobLoader> loader = BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr,
-                                                     fs->Metrics());
+  zx::status<BlobLoader> loader =
+      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs_ptr, fs->Metrics(),
+                         fs->zstd_seekable_blob_collection());
   if (!loader.is_ok()) {
     FS_TRACE_ERROR("blobfs: Failed to initialize loader: %s\n", loader.status_string());
     return loader.status_value();
@@ -691,9 +701,15 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
     vnode->CloneWatcherTeardown();
   });
 
-  // Reset loader_ now, since it has internally allocated buffers attached to the FIFO it needs to
+  // Reset |loader_| now, since it has internally allocated buffers attached to the FIFO it needs to
   // detach.
   loader_.Reset();
+
+  // Reset |zstd_seekable_blob_collection_| now. It owns a VMO which is attached to the block FIFO,
+  // and detaching that VMO (on destruction of |ZSTDSeekableBlobCollection|) will fail after
+  // |Blobfs::Reset()| is finished, since blobfs gives up ownership of the |block_device_| object at
+  // the end of |Blobfs::Reset()|.
+  zstd_seekable_blob_collection_ = nullptr;
 
   // Write the clean bit.
   if (writability_ == Writability::Writable) {

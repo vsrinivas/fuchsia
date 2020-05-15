@@ -4,7 +4,7 @@
 
 #include "zstd-seekable-blob.h"
 
-#include <lib/fzl/vmo-mapper.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -26,7 +26,9 @@ namespace blobfs {
 
 namespace {
 
-int ComputeOffsetAndNumBytesForRead(ZSTDSeekableFile* file, size_t num_bytes, uint32_t* out_data_block_offset, uint32_t* out_num_blocks, uint64_t* out_data_byte_offset) {
+int ComputeOffsetAndNumBytesForRead(ZSTDSeekableFile* file, size_t num_bytes,
+                                    uint32_t* out_data_block_offset, uint32_t* out_num_blocks,
+                                    uint64_t* out_data_byte_offset) {
   // |file->byte_offset| does not account for ZSTD seekable header.
   uint64_t data_byte_offset;
   if (add_overflow(kZSTDSeekableHeaderSize, file->byte_offset, &data_byte_offset)) {
@@ -102,7 +104,8 @@ int ZSTDRead(void* void_ptr_zstd_seekable_file, void* buf, size_t num_bytes) {
   uint32_t data_block_offset;
   uint32_t num_blocks;
   uint64_t data_byte_offset;
-  int result = ComputeOffsetAndNumBytesForRead(file, num_bytes, &data_block_offset, &num_blocks, &data_byte_offset);
+  int result = ComputeOffsetAndNumBytesForRead(file, num_bytes, &data_block_offset, &num_blocks,
+                                               &data_byte_offset);
   if (result != 0) {
     // Note: |zx_status_t|, tracing/logging managed by |ComputeOffsetAndNumBytesForRead|.
     return result;
@@ -213,7 +216,7 @@ int ZSTDSeek(void* void_ptr_zstd_seekable_file, long long byte_offset, int origi
 }
 
 zx_status_t ZSTDSeekableBlob::Create(
-    fzl::VmoMapper* mapped_vmo,
+    fzl::OwnedVmoMapper* mapped_vmo,
     std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection,
     std::unique_ptr<ZSTDSeekableBlob>* out) {
   std::unique_ptr<ZSTDSeekableBlob> blob(
@@ -284,7 +287,7 @@ zx_status_t ZSTDSeekableBlob::Read(uint8_t* buf, uint64_t data_byte_offset, uint
 }
 
 ZSTDSeekableBlob::ZSTDSeekableBlob(
-    fzl::VmoMapper* mapped_vmo,
+    fzl::OwnedVmoMapper* mapped_vmo,
     std::unique_ptr<ZSTDCompressedBlockCollection> compressed_block_collection)
     : mapped_vmo_(mapped_vmo),
       compressed_block_collection_(std::move(compressed_block_collection)) {}

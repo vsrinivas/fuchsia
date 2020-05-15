@@ -15,6 +15,8 @@
 #include <fbl/auto_call.h>
 #include <fs/trace.h>
 
+#include "compression/zstd-seekable.h"
+
 namespace blobfs {
 
 zx_status_t UserPager::InitPager() {
@@ -113,8 +115,13 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, cons
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  return info->decompressor ? TransferCompressedPagesToVmo(offset, length, vmo, info)
-                            : TransferUncompressedPagesToVmo(offset, length, vmo, info);
+  if (info->decompressor != nullptr) {
+    return TransferChunkedPagesToVmo(offset, length, vmo, info);
+  } else if (info->zstd_seekable_blob_collection != nullptr) {
+    return TransferZSTDSeekablePagesToVmo(offset, length, vmo, info);
+  } else {
+    return TransferUncompressedPagesToVmo(offset, length, vmo, info);
+  }
 }
 
 zx_status_t UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
@@ -162,9 +169,9 @@ zx_status_t UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
   return ZX_OK;
 }
 
-zx_status_t UserPager::TransferCompressedPagesToVmo(uint64_t requested_offset,
-                                                    uint64_t requested_length, const zx::vmo& vmo,
-                                                    UserPagerInfo* info) {
+zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
+                                                 uint64_t requested_length, const zx::vmo& vmo,
+                                                 UserPagerInfo* info) {
   ZX_DEBUG_ASSERT(info->decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
@@ -178,15 +185,8 @@ zx_status_t UserPager::TransferCompressedPagesToVmo(uint64_t requested_offset,
   }
   CompressionMapping mapping = mapping_status.value();
 
-  TRACE_DURATION("blobfs", "UserPager::TransferCompressedPagesToVmo", "offset",
+  TRACE_DURATION("blobfs", "UserPager::TransferChunkedPagesToVmo", "offset",
                  mapping.decompressed_offset, "length", mapping.decompressed_length);
-
-  auto decommit = fbl::MakeAutoCall([this, length = mapping.decompressed_length]() {
-    // Decommit pages in the transfer buffer that might have been populated. All blobs share the
-    // same transfer buffer - this prevents data leaks between different blobs.
-    transfer_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
-                              nullptr, 0);
-  });
 
   // The compressed frame may not fall at a block aligned address, but we read in block aligned
   // chunks. This offset will be applied to the buffer we pass to decompression.
@@ -202,6 +202,13 @@ zx_status_t UserPager::TransferCompressedPagesToVmo(uint64_t requested_offset,
     return status;
   }
 
+  auto decommit_compressed = fbl::MakeAutoCall([this, length = read_len]() {
+    // Decommit pages in the transfer buffer that might have been populated. All blobs share the
+    // same transfer buffer - this prevents data leaks between different blobs.
+    transfer_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
+                              nullptr, 0);
+  });
+
   // Map the transfer VMO in order to pass the decompressor a pointer to the data.
   fzl::VmoMapper compressed_mapper;
   status = compressed_mapper.Map(transfer_buffer_, 0, read_len, ZX_VM_PERM_READ);
@@ -210,6 +217,13 @@ zx_status_t UserPager::TransferCompressedPagesToVmo(uint64_t requested_offset,
     return status;
   }
   auto unmap_compression = fbl::MakeAutoCall([&]() { compressed_mapper.Unmap(); });
+
+  auto decommit_decompressed = fbl::MakeAutoCall([this, length = mapping.decompressed_length]() {
+    // Decommit pages in the decompression buffer that might have been populated. All blobs share
+    // the same transfer buffer - this prevents data leaks between different blobs.
+    decompression_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
+                                   nullptr, 0);
+  });
 
   // Map the decompression VMO.
   fzl::VmoMapper decompressed_mapper;
@@ -252,4 +266,73 @@ zx_status_t UserPager::TransferCompressedPagesToVmo(uint64_t requested_offset,
   }
   return ZX_OK;
 }
+
+zx_status_t UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
+                                                      uint64_t requested_length, const zx::vmo& vmo,
+                                                      UserPagerInfo* info) {
+  // This code path assumes a ZSTD Seekable blob.
+  ZX_DEBUG_ASSERT(info && info->zstd_seekable_blob_collection);
+
+  // Extend read range to align with ZSTD Seekable frame size.
+  const auto offset = fbl::round_down(requested_offset, kZSTDSeekableMaxFrameSize);
+  const auto frame_aligned_length =
+      fbl::round_up(requested_offset + requested_length, kZSTDSeekableMaxFrameSize);
+  const auto read_length = std::min(info->data_length_bytes - offset, frame_aligned_length);
+
+  // Use page-aligned length for mapping decompression buffer and supplying pages.
+  const auto page_aligned_length = fbl::round_up(read_length, static_cast<size_t>(PAGE_SIZE));
+
+  // Sanity check: Merkle alignment on ZSTD Seekable frame-aligned offset+length should be a no-op.
+  [[maybe_unused]] auto aligned_offset = offset;
+  [[maybe_unused]] auto aligned_length = read_length;
+  ZX_ASSERT(info->verifier->Align(&aligned_offset, &aligned_length) == ZX_OK &&
+            offset == aligned_offset && read_length == aligned_length);
+
+  auto decommit = fbl::MakeAutoCall([this, length = page_aligned_length]() {
+    // Decommit pages in the compression buffer that might have been populated. All blobs share the
+    // same transfer buffer - this prevents data leaks between different blobs.
+    decompression_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, length, nullptr, 0);
+  });
+
+  // Map the decompression VMO in order to pass it to |ZSTDSeekableBlobCollection::Read|.
+  fzl::VmoMapper decompression_mapping;
+  zx_status_t status = decompression_mapping.Map(decompression_buffer_, 0, page_aligned_length,
+                                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  auto unmap = fbl::MakeAutoCall([&]() { decompression_mapping.Unmap(); });
+
+  status = info->zstd_seekable_blob_collection->Read(
+      info->identifier, static_cast<uint8_t*>(decompression_mapping.start()), offset, read_length);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to read from ZSTD Seekable archive to service page fault: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  // Verify the decompressed pages.
+  status = info->verifier->VerifyPartial(decompression_mapping.start(), read_length, offset,
+                                         read_length);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to verify transfer vmo: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  // We need to unmap the decompression VMO before its pages can be transferred to the destination
+  // VMO, via |zx_pager_supply_pages|.
+  decompression_mapping.Unmap();
+
+  // Move the pages from the decompression buffer to the destination VMO.
+  status = pager_.supply_pages(vmo, offset, page_aligned_length, decompression_buffer_, 0);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to supply pages to paged VMO: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace blobfs

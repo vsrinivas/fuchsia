@@ -112,6 +112,7 @@ class MockBlobFactory {
     pager_info.identifier = identifier;
     pager_info.data_length_bytes = kBlobSize;
     pager_info.decompressor = CreateDecompressor(raw_data, kBlobSize, algorithm);
+    pager_info.zstd_seekable_blob_collection = nullptr;
 
     auto page_watcher = std::make_unique<PageWatcher>(pager_, std::move(pager_info));
 

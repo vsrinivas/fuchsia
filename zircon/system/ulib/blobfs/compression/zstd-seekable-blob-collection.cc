@@ -4,7 +4,6 @@
 
 #include "zstd-seekable-blob-collection.h"
 
-#include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -31,18 +30,9 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   std::unique_ptr<ZSTDSeekableBlobCollection> cbc(
       new ZSTDSeekableBlobCollection(vmoid_registry, space_manager, txn_handler, node_finder));
 
-  // Initialize shared transfer buffer.
-  zx_status_t status = zx::vmo::create(kCompressedTransferBufferBytes, 0, &cbc->transfer_vmo_);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs][compressed] Failed to initialize transfer VMO: %s\n",
-                   zx_status_get_string(status));
-    return status;
-  }
-
   // Map shared transfer buffer.
-  fzl::VmoMapper mapper;
-  status = cbc->mapped_vmo_.Map(cbc->transfer_vmo_, 0, kCompressedTransferBufferBytes,
-                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  zx_status_t status =
+      cbc->mapped_vmo_.CreateAndMap(kCompressedTransferBufferBytes, "zstd-seekable-compressed");
   if (status != ZX_OK) {
     FS_TRACE_ERROR("[blobfs][compressed] Failed to map transfer VMO: %s\n",
                    zx_status_get_string(status));
@@ -50,7 +40,7 @@ zx_status_t ZSTDSeekableBlobCollection::Create(storage::VmoidRegistry* vmoid_reg
   }
 
   // Attach shared transfer buffer to block device.
-  status = cbc->vmoid_.AttachVmo(cbc->transfer_vmo_);
+  status = cbc->vmoid_.AttachVmo(cbc->mapped_vmo_.vmo());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("[blobfs][compressed] Failed to register transfer VMO: %s\n",
                    zx_status_get_string(status));

@@ -5,8 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_BLOB_COLLECTION_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_BLOB_COLLECTION_H_
 
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/vmo.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <stdint.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
@@ -69,7 +68,7 @@ class ZSTDSeekableBlobCollection {
   fs::LegacyTransactionHandler* txn_handler_;
   NodeFinder* node_finder_;
 
-  // Storage transfer VMO, its ID from binding it to a block device, and its mapping in memory.
+  // Storage transfer VMO's mapping in memory and ID from binding it to a block device.
   // It is safe to keep this VMO mapped and pass it to inidividual blobs for each read because
   // all components involved in compressed blob reads:
   //
@@ -79,9 +78,8 @@ class ZSTDSeekableBlobCollection {
   //      a) Decompress and discard the data before requesting more,
   //         or
   //      b) Copy the data before requesting more.
-  zx::vmo transfer_vmo_;
+  fzl::OwnedVmoMapper mapped_vmo_;
   storage::OwnedVmoid vmoid_;
-  fzl::VmoMapper mapped_vmo_;
 };
 
 }  // namespace blobfs

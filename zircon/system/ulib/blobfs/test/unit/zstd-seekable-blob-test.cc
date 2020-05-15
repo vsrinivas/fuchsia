@@ -6,12 +6,13 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fzl/vmo-mapper.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
@@ -27,7 +28,6 @@
 #include <fbl/auto_call.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>
-#include <stdlib.h>
 
 #include "allocator/allocator.h"
 #include "blob.h"
@@ -53,9 +53,7 @@ void ZeroToSevenBlobSrcFunction(char* data, size_t length) {
   }
 }
 
-void CanaryBlobSrcFunction(char* data, size_t length) {
-  memset(data, kCanaryInt, length);
-}
+void CanaryBlobSrcFunction(char* data, size_t length) { memset(data, kCanaryInt, length); }
 
 class ZSTDSeekableBlobTest : public zxtest::Test {
  public:
@@ -67,8 +65,8 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
-                             &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
                                                  &compressed_blob_collection_));
@@ -159,8 +157,8 @@ class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
-                             &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
@@ -186,8 +184,8 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
 
     // Construct BlobFS with non-seekable ZSTD algorithm. This should cause errors in the seekable
     // read path.
-    ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(),
-              &fs_));
+    ASSERT_OK(
+        Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 
     ASSERT_OK(ZSTDSeekableBlobCollection::Create(vmoid_registry(), space_manager(),
                                                  transaction_handler(), node_finder(),
@@ -226,19 +224,14 @@ TEST_F(ZSTDSeekAndReadTest, SmallReadOverTwoBlocks) {
   // Perform setup usually managed by `ZSTDSeekableBlobCollection`. This is done manually because
   // the test will manually invoke `ZSTDSeek` and `ZSTDRead` rather than
   // `ZSTDSeekableBlobCollection.Read()` invoking them indirectly.
-  zx::vmo read_buffer_vmo;
   const uint64_t read_buffer_num_bytes = fbl::round_up(blob_data_size, kBlobfsBlockSize);
-  ASSERT_OK(zx::vmo::create(read_buffer_num_bytes, 0, &read_buffer_vmo));
-
-  fzl::VmoMapper mapper;
-  ASSERT_OK(
-      mapper.Map(read_buffer_vmo, 0, read_buffer_num_bytes, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(read_buffer_num_bytes, "zstd-seekable-compressed"));
   // Note: `fzl::OwnedVmoMapper` would be cleaner than an auto call, but constraints on
   // `ZSTDSeekableBlob::Create()` (which exist due to constraints on its clients) require using the
   // unowned variant here.
-  auto unmap = fbl::MakeAutoCall([&]() { mapper.Unmap(); });
   storage::OwnedVmoid vmoid(vmoid_registry());
-  ASSERT_OK(vmoid.AttachVmo(read_buffer_vmo));
+  ASSERT_OK(vmoid.AttachVmo(mapper.vmo()));
   uint32_t num_merkle_blocks = ComputeNumMerkleTreeBlocks(*node_finder()->GetNode(node_index));
   auto blocks = std::make_unique<ZSTDCompressedBlockCollectionImpl>(
       &vmoid, 2 /* 2 blocks in only blob in test */, space_manager(), transaction_handler(),

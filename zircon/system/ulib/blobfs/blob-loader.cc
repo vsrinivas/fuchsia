@@ -23,6 +23,7 @@
 #include "compression/chunked.h"
 #include "compression/decompressor.h"
 #include "compression/seekable-decompressor.h"
+#include "compression/zstd-seekable-blob-collection.h"
 #include "iterator/block-iterator.h"
 
 namespace blobfs {
@@ -36,19 +37,21 @@ constexpr size_t kScratchBufferSize = 4 * kBlobfsBlockSize;
 
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
                        NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics,
+                       ZSTDSeekableBlobCollection* zstd_seekable_blob_collection,
                        fzl::OwnedVmoMapper scratch_vmo, storage::OwnedVmoid scratch_vmoid)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       node_finder_(node_finder),
       pager_(pager),
       metrics_(metrics),
+      zstd_seekable_blob_collection_(zstd_seekable_blob_collection),
       scratch_vmo_(std::move(scratch_vmo)),
       scratch_vmoid_(std::move(scratch_vmoid)) {}
 
-zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
-                                          BlockIteratorProvider* block_iter_provider,
-                                          NodeFinder* node_finder, UserPager* pager,
-                                          BlobfsMetrics* metrics) {
+zx::status<BlobLoader> BlobLoader::Create(
+    TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
+    NodeFinder* node_finder, UserPager* pager, BlobfsMetrics* metrics,
+    ZSTDSeekableBlobCollection* zstd_seekable_blob_collection) {
   fzl::OwnedVmoMapper scratch_vmo;
   storage::OwnedVmoid scratch_vmoid(txn_manager);
   zx_status_t status = scratch_vmo.CreateAndMap(kScratchBufferSize, "blobfs-loader");
@@ -62,7 +65,8 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
     return zx::error(status);
   }
   return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, pager, metrics,
-                           std::move(scratch_vmo), std::move(scratch_vmoid)));
+                           zstd_seekable_blob_collection, std::move(scratch_vmo),
+                           std::move(scratch_vmoid)));
 }
 
 void BlobLoader::Reset() {
@@ -161,7 +165,9 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   }
 
   std::unique_ptr<SeekableDecompressor> decompressor;
-  if ((status = InitDecompressor(node_index, *inode, *verifier, &decompressor)) != ZX_OK) {
+  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection = nullptr;
+  if ((status = InitForDecompression(node_index, *inode, *verifier, &decompressor,
+                                     &zstd_seekable_blob_collection)) != ZX_OK) {
     return status;
   }
 
@@ -171,6 +177,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   userpager_info.data_length_bytes = inode->blob_size;
   userpager_info.verifier = std::move(verifier);
   userpager_info.decompressor = std::move(decompressor);
+  userpager_info.zstd_seekable_blob_collection = zstd_seekable_blob_collection;
   auto page_watcher = std::make_unique<PageWatcher>(pager_, std::move(userpager_info));
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
@@ -245,11 +252,17 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   return ZX_OK;
 }
 
-zx_status_t BlobLoader::InitDecompressor(uint32_t node_index, const Inode& inode,
-                                         const BlobVerifier& verifier,
-                                         std::unique_ptr<SeekableDecompressor>* decompressor_out) {
+zx_status_t BlobLoader::InitForDecompression(
+    uint32_t node_index, const Inode& inode, const BlobVerifier& verifier,
+    std::unique_ptr<SeekableDecompressor>* decompressor_out,
+    ZSTDSeekableBlobCollection** zstd_seekable_blob_collection_out) {
   CompressionAlgorithm algorithm = AlgorithmForInode(inode);
   if (algorithm == CompressionAlgorithm::UNCOMPRESSED) {
+    return ZX_OK;
+  } else if (algorithm == CompressionAlgorithm::ZSTD_SEEKABLE) {
+    // The ZSTD Seekable strategy manages its decompressors independent of |BlobLoader|. Store a
+    // pointer to the object that encapsulates this management strategy and return.
+    *zstd_seekable_blob_collection_out = zstd_seekable_blob_collection_;
     return ZX_OK;
   } else if (algorithm != CompressionAlgorithm::CHUNKED) {
     return ZX_ERR_NOT_SUPPORTED;

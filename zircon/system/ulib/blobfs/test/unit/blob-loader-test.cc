@@ -149,7 +149,8 @@ class BlobLoaderTest : public zxtest::Test {
   BlobLoader CreateLoader(UserPager* pager) const {
     auto* fs_ptr = fs_.get();
     zx::status<BlobLoader> loader =
-        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics());
+        BlobLoader::Create(fs_ptr, fs_ptr, fs_->GetNodeFinder(), pager, fs_->Metrics(),
+                           fs_->zstd_seekable_blob_collection());
     EXPECT_EQ(loader.status_value(), ZX_OK);
     // TODO(jfsulliv): Pessimizing move seems to be necessary, since otherwise fitx::result::value
     // selects the const-ref variant and the (deleted) copy constructor of BlobLoader is invoked
@@ -295,8 +296,7 @@ void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
   EXPECT_EQ(info->size_merkle, 0);
 }
 
-// TODO(44820): Enable when compressed, pageable blobs are supported.
-// TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 TEST_F(ChunkCompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(this); }
 
@@ -386,8 +386,7 @@ void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
   EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
 }
 
-// TODO(44820): Enable when compressed, pageable blobs are supported.
-// TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(this); }
 
@@ -419,10 +418,9 @@ void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   EXPECT_BYTES_EQ(merkle.start(), info->merkle.get(), info->size_merkle);
 }
 
-// TODO(44820): Enable when compressed, pageable blobs are supported.
-// TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
-//   DoTest_Paged_LargeBlob_NonAlignedLength(this);
-// }
+TEST_F(ZstdSeekableCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
+  DoTest_Paged_LargeBlob_NonAlignedLength(this);
+}
 TEST_F(ChunkCompressedBlobLoaderTest, Paged_LargeBlob_NonAlignedLength) {
   DoTest_Paged_LargeBlob_NonAlignedLength(this);
 }

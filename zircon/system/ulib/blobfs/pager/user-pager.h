@@ -18,6 +18,7 @@
 
 #include "../blob-verifier.h"
 #include "../compression/seekable-decompressor.h"
+#include "../compression/zstd-seekable-blob-collection.h"
 
 namespace blobfs {
 
@@ -35,9 +36,20 @@ struct UserPagerInfo {
   // Used to verify the pages as they are read in.
   // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
   std::unique_ptr<BlobVerifier> verifier;
-  // An optional decompressor which should be applied to the raw bytes received from the disk.
-  // If unset, the data is assumed to be uncompressed and is not modified.
+  // An optional decompressor used by the chunked compression strategy. The decompressor is invoked
+  // on the raw bytes received from the disk. If unset, blob data is assumed to be managed via some
+  // other compression strategy (including the "uncompressed" strategy).
   std::unique_ptr<SeekableDecompressor> decompressor;
+  // An optional blobs management object used by the ZSTD Seekable compression strategy. If unset,
+  // blob data is assumed to be managed via some other compression strategy (including the
+  // "uncompressed" strategy). Note that this object is global to the |Blobfs| instance, and is
+  // copied here to maintain short-term consistency between |UserPager| strategy implementations.
+  //
+  // TODO(51072): Decompression strategies should have common abstractions to, among other things,
+  // avoid the need for both |decompressor| and |zstd_seekable_blob_collection|. This change is
+  // somewhat complicated by the fact that ZSTD Seekable decompression manages its own
+  // compressed-space buffer rather than reusing |transfer_buffer_| as chunked decompression does.
+  ZSTDSeekableBlobCollection* zstd_seekable_blob_collection = nullptr;
 };
 
 // The size of a transfer buffer for reading from storage.
@@ -116,8 +128,10 @@ class UserPager {
   // The same alignment guarantees for GetBlockAlignedReadRange() apply.
   ReadRange GetBlockAlignedExtendedRange(UserPagerInfo* info, uint64_t offset, uint64_t length);
 
-  zx_status_t TransferCompressedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                           UserPagerInfo* info);
+  zx_status_t TransferChunkedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                        UserPagerInfo* info);
+  zx_status_t TransferZSTDSeekablePagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                             UserPagerInfo* info);
   zx_status_t TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
                                              UserPagerInfo* info);
   // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
