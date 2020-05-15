@@ -30,11 +30,58 @@ enum SystemPowerState : uint8 {
 };
 const uint32 MAX_SYSTEM_POWER_STATES = 7;
 
+/// The maxium number of seconds the server will wait for responses from all SuspendWatchers before
+/// changing the system power state.
+// TODO(52274): Track how long it takes to persist the reboot reason and adjust this value.
+const uint32 MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS = 5;
+
 /// Provides administration services for the device manager service and the device tree it controls.
 [Discoverable]
 protocol Admin {
-    /// Ask all devices to enter into the system power state indicated by 'state'.
-    /// The devices will get into a low power state, that corresponds to the system
-    /// power state 'state'.
+    /// Ask all devices to enter into the system power state indicated by 'state'. The devices will
+    /// get into a low power state, that corresponds to the system power state 'state'.
+    [Transitional = "soon to be deprecated in favor of Suspend2() "]
     Suspend(SystemPowerState state) -> () error zx.status;
+
+    /// Ask all devices to enter into the system power state indicated by 'request.state' and, in
+    /// the case of a reboot or a poweroff, specify the reason for the request. The devices will
+    /// get into a low power state, that corresponds to the system power state 'request.state'.
+    [Transitional = "replacing Suspend() in the future "]
+    Suspend2(SuspendRequest request) -> () error zx.status;
+};
+
+/// Allows components to register a callback that will be executed when Suspend or
+/// Suspend2 is called. The main purpose of this protocol is to be able to track reboot reasons.
+/// Consider relying Component Framework's orderly shutdown if you're looking at using this
+/// protocol.
+/// [Discoverable]
+// TODO(52277): Revisit this protocol once Component Manager performs an orderly
+// shutdown.
+protocol SuspendWatcherRegister {
+    /// Register a callback to be executed when Suspend or Suspend2 is called.
+    Register(SuspendWatcher watcher);
+};
+
+/// Allows components to be notified when Suspend or Suspend2 is called. Watchers will be given
+/// 'MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS' to return before the system power state is changed.
+protocol SuspendWatcher {
+    /// Callback executed to notify watchers that a change in the system power state is at most
+    /// 'MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS' away. Watchers should acknowldege after they
+    /// have performed any necessary actions in response to 'request' in order to prevent delaying
+    /// the system power state change.
+    OnSuspendRequest(SuspendRequest request) -> ();
+};
+
+/// The system should enter the power state 'state' and if a reboot or power off is being requested
+/// a reason should be provided.
+table SuspendRequest {
+    1: SystemPowerState state;
+    2: RebootReason reason;
+};
+
+/// Reasons why components instruct a device to reboot.
+enum RebootReason : uint16 {
+    USER_REQUEST = 1;
+    SYSTEM_UPDATE = 2;
+    HIGH_TEMPERATURE = 3;
 };

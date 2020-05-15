@@ -236,6 +236,7 @@ impl SystemShutdownHandler {
                             let result = self.handle_suspend(state, None).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
+                        fpowercontrol::AdminRequest::Suspend2 { request: _, responder: _ } => (),
                     }
                 }
                 Ok(())
