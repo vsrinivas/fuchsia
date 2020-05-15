@@ -123,7 +123,7 @@ sudo ip link set qemu up
 ##### macOS
 
 You need to install
-[TunTap](http://tuntaposx.sourceforge.net/index.xhtml){:.external}, kernal
+[TunTap](http://tuntaposx.sourceforge.net/index.xhtml){:.external}, kernel
 extensions that allow macOS to create virtual network interfaces.
 
 For macOS 10.9 (Mavericks) and 10.10 (Yosemite), install TunTap using this
