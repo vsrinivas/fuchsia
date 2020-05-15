@@ -38,6 +38,7 @@ executable("main") {
     ":reboot_log",
     ":reporter",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -76,6 +77,9 @@ source_set("main_service") {
     ":last_reboot_info_provider",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/developer/feedback/utils:inspect_protocol_stats",
   ]
 }
 

@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -24,10 +25,13 @@ int main(int argc, char** argv) {
   async::Executor executor(loop.dispatcher());
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
+  auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
+  inspect::Node& root_node = inspector->root();
+
   const feedback::RebootLog reboot_log =
       feedback::RebootLog::ParseRebootLog("/boot/log/last-panic.txt");
 
-  feedback::MainService main_service(reboot_log);
+  feedback::MainService main_service(reboot_log, &root_node);
 
   // fuchsia.feedback.LastRebootInfoProvider
   context->outgoing()->AddPublicService(
