@@ -5,7 +5,7 @@
 #include "src/developer/debug/debug_agent/object_provider.h"
 
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -18,6 +18,10 @@
 namespace debug_agent {
 
 namespace {
+
+const std::string GetRootJobPath() {
+  return "/svc/" + std::string(fuchsia::boot::RootJob::Name_);
+}
 
 template <typename ResultObject>
 std::vector<ResultObject> GetChildObjects(const ObjectProvider& provider, zx_handle_t parent,
@@ -190,30 +194,23 @@ zx_koid_t ObjectProvider::GetComponentJobKoid() const {
   return koid;
 }
 
-// TODO(brettw) this is based on the code in Zircon's task-utils which uses
-// this hack to get the root job handle. It will likely need to be updated
-// when a better way to get the root job is found.
 zx::job ObjectProvider::GetRootJob() const {
-  int fd = open("/svc/fuchsia.boot.RootJob", O_RDWR);
-  if (fd < 0) {
-    FX_NOTREACHED();
-    return zx::job();
-  }
+  zx::job root_job;
+  fuchsia::boot::RootJobSyncPtr root_job_ptr;
 
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
+  zx_status_t status = fdio_service_connect(GetRootJobPath().c_str(),
+                          root_job_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_NOTREACHED();
     return zx::job();
   }
 
-  zx_handle_t root_job;
-  zx_status_t fidl_status = fuchsia_boot_RootJobGet(channel.get(), &root_job);
-  if (fidl_status != ZX_OK) {
+  status = root_job_ptr->Get(&root_job);
+  if (status != ZX_OK) {
     FX_NOTREACHED();
     return zx::job();
   }
-  return zx::job(root_job);
+  return root_job;
 }
 
 zx_status_t ObjectProvider::ListHandleRights(zx_handle_t handle, std::string* out) const {
