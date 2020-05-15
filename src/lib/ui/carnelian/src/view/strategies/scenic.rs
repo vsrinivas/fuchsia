@@ -319,15 +319,16 @@ impl ViewStrategy for ScenicViewStrategy {
                         .expect("unbounded_send");
                 });
                 self.content_material.set_texture_resource(Some(&self.image_pipe));
-                self.image_pipe_client
-                    .present_image(
-                        available as u32,
-                        0,
-                        &mut iter::once(buffer_ready_event_for_image_pipe),
-                        &mut iter::once(image_freed_event),
-                    )
-                    .await
-                    .expect("#### present_image");
+                let image_present_event = self.image_pipe_client.present_image(
+                    available as u32,
+                    0,
+                    &mut iter::once(buffer_ready_event_for_image_pipe),
+                    &mut iter::once(image_freed_event),
+                );
+                fasync::spawn_local(async move {
+                    image_present_event.await.expect("to present_image");
+                });
+                // Image is guaranteed to be presented at this point.
                 plumber.frame_set.mark_presented(available);
             }
         }
@@ -341,8 +342,9 @@ impl ViewStrategy for ScenicViewStrategy {
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
+        info: fidl_fuchsia_images::PresentationInfo,
     ) {
-        scenic_present_done(&mut self.scenic_resources);
+        scenic_present_done(&mut self.scenic_resources, info);
     }
 
     fn handle_scenic_input_event(

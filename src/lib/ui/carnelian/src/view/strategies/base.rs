@@ -18,6 +18,7 @@ pub(crate) trait ViewStrategy {
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
+        _info: fidl_fuchsia_images::PresentationInfo,
     ) {
     }
     fn handle_scenic_input_event(

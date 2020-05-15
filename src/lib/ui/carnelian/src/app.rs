@@ -338,7 +338,7 @@ pub(crate) enum MessageInternal {
     ServiceConnection(zx::Channel, &'static str),
     CreateView(ViewToken, ViewRefControl, ViewRef),
     ScenicEvent(Vec<fidl_fuchsia_ui_scenic::Event>, ViewKey),
-    ScenicPresentDone(ViewKey),
+    ScenicPresentDone(ViewKey, fidl_fuchsia_images::PresentationInfo),
     Update(ViewKey),
     UpdateAllViews,
     ImageFreed(ViewKey, u64, u32),
@@ -408,9 +408,9 @@ impl App {
             MessageInternal::ScenicEvent(events, view_id) => {
                 self.handle_session_event(view_id, events);
             }
-            MessageInternal::ScenicPresentDone(view_id) => {
+            MessageInternal::ScenicPresentDone(view_id, info) => {
                 let view = self.get_view(view_id);
-                view.present_done();
+                view.present_done(info);
             }
             MessageInternal::Update(view_id) => {
                 let view = self.get_view(view_id);

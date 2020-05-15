@@ -20,7 +20,7 @@ use fuchsia_async::{self as fasync, Interval};
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::{EntityNode, SessionPtr, View};
 use fuchsia_zircon::{Duration, Event, Time};
-use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt};
+use futures::{channel::mpsc::UnboundedSender, StreamExt};
 
 mod strategies;
 
@@ -342,6 +342,9 @@ pub struct ScenicResources {
     root_node: EntityNode,
     session: SessionPtr,
     pending_present_count: usize,
+    presentation_interval: u64,
+    next_presentation_time: u64,
+    last_presentation_time: u64,
     app_sender: UnboundedSender<MessageInternal>,
 }
 
@@ -374,6 +377,9 @@ impl ScenicResources {
             root_node,
             session: session.clone(),
             pending_present_count: 0,
+            presentation_interval: 0,
+            next_presentation_time: 0,
+            last_presentation_time: 0,
             app_sender,
         }
     }
@@ -382,25 +388,39 @@ impl ScenicResources {
 fn scenic_present(scenic_resources: &mut ScenicResources, key: ViewKey) {
     if scenic_resources.pending_present_count < 3 {
         let app_sender = scenic_resources.app_sender.clone();
-        fasync::spawn_local(
-            scenic_resources
-                .session
-                .lock()
-                .present(0)
-                .map_ok(move |_| {
-                    app_sender
-                        .unbounded_send(MessageInternal::ScenicPresentDone(key))
-                        .expect("unbounded_send");
-                })
-                .unwrap_or_else(|e| panic!("present error: {:?}", e)),
-        );
+        let presentation_time = scenic_resources.next_presentation_time;
+        let present_event = scenic_resources.session.lock().present(presentation_time);
+        fasync::spawn_local(async move {
+            let info = present_event.await.expect("to present");
+            app_sender
+                .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
+                .expect("unbounded_send");
+        });
+        // Advance presentation time.
         scenic_resources.pending_present_count += 1;
+        scenic_resources.last_presentation_time = presentation_time;
+        scenic_resources.next_presentation_time += scenic_resources.presentation_interval;
     }
 }
 
-fn scenic_present_done(scenic_resources: &mut ScenicResources) {
+fn scenic_present_done(
+    scenic_resources: &mut ScenicResources,
+    info: fidl_fuchsia_images::PresentationInfo,
+) {
     assert_ne!(scenic_resources.pending_present_count, 0);
     scenic_resources.pending_present_count -= 1;
+    scenic_resources.presentation_interval = info.presentation_interval;
+    // Determine next presentation time relative to presentation that
+    // is no longer pending. Add one to ensure that presentation is past
+    // previous.
+    let next_presentation_time = info.presentation_time + 1;
+    // Re-calculate next presentation time based on number of
+    // presentations pending and make sure it is never before the
+    // last presentation time.
+    scenic_resources.next_presentation_time = scenic_resources.last_presentation_time.max(
+        next_presentation_time
+            + info.presentation_interval * scenic_resources.pending_present_count as u64,
+    );
 }
 
 #[derive(Debug)]
@@ -536,8 +556,8 @@ impl ViewController {
         self.present();
     }
 
-    pub(crate) fn present_done(&mut self) {
-        self.strategy.present_done(&self.make_view_details(), &mut self.assistant);
+    pub(crate) fn present_done(&mut self, info: fidl_fuchsia_images::PresentationInfo) {
+        self.strategy.present_done(&self.make_view_details(), &mut self.assistant, info);
     }
 
     fn handle_metrics_changed(&mut self, metrics: &Metrics) {
