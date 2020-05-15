@@ -2786,7 +2786,11 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
                                          head_end);
 
           if (start == cur->parent_start_limit_) {
-            cur->parent_start_limit_ = head_end;
+            // head_end is an offset in cur->parent_ so it needs to be converted via
+            // cur->parent_offset_. First do some paranoid validation that this does not underflow.
+            DEBUG_ASSERT(head_end >= cur->parent_offset_);
+            DEBUG_ASSERT(cur->parent_start_limit_ <= head_end - cur->parent_offset_);
+            cur->parent_start_limit_ = head_end - cur->parent_offset_;
           }
 
           DEBUG_ASSERT((cur_end & 1) == 0);  // cur_end is page aligned

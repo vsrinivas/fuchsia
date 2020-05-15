@@ -1766,8 +1766,7 @@ TEST_F(VmoClone2TestCase, NoSnapshotPager) {
   ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, ZX_PAGE_SIZE, &uni_clone));
 
   zx::vmo clone;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, ZX_PAGE_SIZE, &clone),
-            ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, ZX_PAGE_SIZE, &clone), ZX_ERR_NOT_SUPPORTED);
   ASSERT_EQ(uni_clone.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, ZX_PAGE_SIZE, &clone),
             ZX_ERR_NOT_SUPPORTED);
 }
@@ -1790,6 +1789,77 @@ TEST_F(VmoClone2TestCase, Uncached) {
             ZX_ERR_BAD_STATE);
 
   ASSERT_EQ(*vmo_mapping.ptr(), kOriginalData);
+}
+
+// This test case is derived from a failure found by the kstress tool and exists to prevent
+// regressions. The comments here describe a failure path that no longer exists, but could be useful
+// should this test ever regress. As such it describes specific kernel implementation details at
+// time of writing.
+TEST_F(VmoClone2TestCase, ParentStartLimitRegression) {
+  // This is validating that when merging a hidden VMO with a remaining child that parent start
+  // limits are updated correctly. Specifically if both the VMO being merged and its sibling have
+  // a non-zero parent offset, then when we recursively free unused ranges up through into the
+  // parent we need to calculate the correct offset for parent_start_limit. More details after a
+  // diagram:
+  //
+  //         R
+  //         |
+  //     |-------|
+  //     M       S
+  //     |
+  //  |-----|
+  //  C     H
+  //
+  // Here R is the hidden root, M is the hidden VMO being merged with a child and S is its sibling.
+  // When we close C and merge M with H there may be a portion of R that is now no longer
+  // referenced, i.e. neither H nor S referenced it. Lets give some specific values (in pages) of:
+  //  S has offset 2 (in R), length 1
+  //  M has offset 1 (in R), length 2
+  //  C has offset 0 (in M), length 1
+  //  H has offset 1 (in M), length 1
+  // In this setup page 0 is already (due to lack of reference) in R, and when C is closed page 1
+  // can also be closed, as both H and S share the same view of just page 2.
+  //
+  // Before M and H are merged the unused pages are first freed. This frees page 1 in R and attempts
+  // to update parent_start_limit in M. As H has offset 1, and C is gone, M should gain a
+  // parent_start_limit of 1. Previously the new parent_start_limit of M was calculated as an offset
+  // in R (the parent) and not M. As M is offset by 1 in R this led to parent_start_limit of 2 and
+  // not 1.
+  //
+  // Although M is going away its parent_start_limit still matters as it effects the merge with the
+  // child, and the helper that has the bug is used in many other locations.
+  //
+  // As a final detail the vmo H also needs to be a hidden VMO (i.e. it needs to have 2 children)
+  // in order to trigger the correct path when merging that has this problem.
+
+  // Create the root R.
+  zx::vmo vmo_r;
+
+  ASSERT_OK(zx::vmo::create(0x3000, 0, &vmo_r));
+
+  zx::vmo vmo_m;
+  ASSERT_OK(vmo_r.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0x1000, 0x2000, &vmo_m));
+
+  zx::vmo vmo_c;
+  ASSERT_OK(vmo_m.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0x0, 0x1000, &vmo_c));
+
+  // R is in the space where want S, create the range we want and close R to end up with S as the
+  // child of the hidden parent.
+  zx::vmo vmo_s;
+  ASSERT_OK(vmo_r.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0x2000, 0x1000, &vmo_s));
+  vmo_r.reset();
+
+  // Same as turning s->r turn m->h.
+  zx::vmo vmo_h;
+  ASSERT_OK(vmo_m.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0x1000, 0x1000, &vmo_h));
+  vmo_m.reset();
+
+  // Turn H into a hidden parent by creating a child.
+  zx::vmo vmo_hc;
+  ASSERT_OK(vmo_h.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0x0, 0x1000, &vmo_hc));
+
+  // This is where it might explode.
+  vmo_c.reset();
 }
 
 }  // namespace vmo_test
