@@ -335,6 +335,7 @@ struct I2cProxyRequest {
   I2cOp op;
   size_t op_count;
   uint32_t flags;
+  uint64_t trace_id;
 };
 
 struct I2cProxyResponse {

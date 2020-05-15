@@ -35,6 +35,7 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
     void* cookie;
     size_t length;
     size_t op_count;
+    uint64_t trace_id;
   };
 
   int I2cThread();

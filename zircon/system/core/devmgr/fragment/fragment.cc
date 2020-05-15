@@ -14,6 +14,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/fragment-device.h>
+#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 
 #include "proxy-protocol.h"
@@ -287,6 +288,7 @@ zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t*
                              uint32_t* out_resp_size, zx::handle* req_handles,
                              uint32_t req_handle_count, zx::handle* resp_handles,
                              uint32_t* resp_handle_count) {
+  TRACE_DURATION("i2c", "I2c FragmentProxy RpcI2c");
   if (!i2c_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -297,6 +299,7 @@ zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
   auto* resp = reinterpret_cast<I2cProxyResponse*>(resp_buf);
   *out_resp_size = sizeof(*resp);
+  TRACE_FLOW_END("i2c", "I2c FragmentProxy I2cTransact Flow", req->trace_id);
 
   switch (req->op) {
     case I2cOp::TRANSACT: {
@@ -638,8 +641,7 @@ zx_status_t Fragment::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t*
     case UsbModeSwitchOp::SET_MODE:
       return ums_client_.proto_client().SetMode(req->mode);
     default:
-      zxlogf(ERROR, "%s: unknown USB Mode Switch op %u", __func__,
-             static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown USB Mode Switch op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }

@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 
 namespace fragment {
 
@@ -548,11 +549,16 @@ void FragmentProxy::I2cTransact(const i2c_op_t* op_list, size_t op_count,
     return callback(cookie, ZX_ERR_BUFFER_TOO_SMALL, nullptr, 0);
   }
 
+  TRACE_DURATION("i2c", "I2c FragmentProxy I2cTransact");
   uint8_t req_buffer[kProxyMaxTransferSize];
   auto req = reinterpret_cast<I2cProxyRequest*>(req_buffer);
   req->header.proto_id = ZX_PROTOCOL_I2C;
   req->op = I2cOp::TRANSACT;
   req->op_count = op_count;
+  if (TRACE_ENABLED()) {
+    req->trace_id = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("i2c", "I2c FragmentProxy I2cTransact Flow", req->trace_id);
+  }
 
   auto rpc_ops = reinterpret_cast<I2cProxyOp*>(&req[1]);
   ZX_ASSERT(op_count < I2C_MAX_RW_OPS);

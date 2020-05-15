@@ -85,10 +85,12 @@ int I2cBus::I2cThread() {
     sync_completion_reset(&txn_signal_);
     I2cTxn* txn;
 
-    TRACE_DURATION("i2c", "I2cBus Process Queued Transacts");
     mutex_.Acquire();
     while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
       mutex_.Release();
+
+      TRACE_DURATION("i2c", "I2cBus Process Queued Transacts");
+      TRACE_FLOW_END("i2c", "I2cBus Transact Flow", txn->trace_id, "Flow", txn->trace_id);
 
       auto op_list = reinterpret_cast<i2c_op_t*>(txn + 1);
       auto op_count = txn->op_count;
@@ -206,6 +208,10 @@ void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count
   txn->op_count = op_count;
   txn->transact_cb = callback;
   txn->cookie = cookie;
+  if (TRACE_ENABLED()) {
+    txn->trace_id = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("i2c", "I2cBus Transact Flow", txn->trace_id, "Flow", txn->trace_id);
+  }
 
   // copy the op_list
   auto* dest = reinterpret_cast<uint8_t*>(txn + 1);
