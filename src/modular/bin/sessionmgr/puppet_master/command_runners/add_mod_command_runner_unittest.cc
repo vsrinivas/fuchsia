@@ -115,19 +115,14 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
 
   done = false;
   std::vector<std::string> full_path{"parent_mod", "mod"};
-  story_storage_->ReadModuleData(std::move(full_path))
-      ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_EQ("mod_url", module_data->module_url());
-        EXPECT_EQ(full_path, module_data->module_path());
-        EXPECT_FALSE(module_data->module_deleted());
-        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
-        EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
-        EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
-        EXPECT_EQ(0u, module_data->parameter_map().entries.size());
-        done = true;
-      });
-
-  RunLoopUntil([&] { return done; });
+  auto module_data = story_storage_->ReadModuleData(std::move(full_path));
+  EXPECT_EQ("mod_url", module_data->module_url());
+  EXPECT_EQ(full_path, module_data->module_path());
+  EXPECT_FALSE(module_data->module_deleted());
+  EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
+  EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
+  EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
+  EXPECT_EQ(0u, module_data->parameter_map().entries.size());
 }
 
 // Explicitly leave surface_parent_mod_name as null when providing the Intent.
@@ -146,21 +141,15 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
                    });
   RunLoopUntil([&] { return done; });
 
-  done = false;
   std::vector<std::string> full_path{"mod"};
-  story_storage_->ReadModuleData(std::move(full_path))
-      ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_EQ("mod_url", module_data->module_url());
-        EXPECT_EQ(full_path, module_data->module_path());
-        EXPECT_FALSE(module_data->module_deleted());
-        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
-        EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
-        EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
-        EXPECT_EQ(0u, module_data->parameter_map().entries.size());
-        done = true;
-      });
-
-  RunLoopUntil([&] { return done; });
+  auto module_data = story_storage_->ReadModuleData(std::move(full_path));
+  EXPECT_EQ("mod_url", module_data->module_url());
+  EXPECT_EQ(full_path, module_data->module_path());
+  EXPECT_FALSE(module_data->module_deleted());
+  EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
+  EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
+  EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
+  EXPECT_EQ(0u, module_data->parameter_map().entries.size());
 }
 
 TEST_F(AddModCommandRunnerTest, ExecuteNoModulesFound) {

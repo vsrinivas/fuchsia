@@ -43,9 +43,7 @@ void TestWithSessionStorage::SetLinkValue(modular::StoryStorage* const story_sto
 
 void TestWithSessionStorage::WriteModuleData(modular::StoryStorage* const story_storage,
                                              fuchsia::modular::ModuleData module_data) {
-  bool done{};
-  story_storage->WriteModuleData(std::move(module_data))->Then([&] { done = true; });
-  RunLoopUntil([&] { return done; });
+  story_storage->WriteModuleData(std::move(module_data));
 }
 
 std::string TestWithSessionStorage::GetLinkValue(modular::StoryStorage* const story_storage,

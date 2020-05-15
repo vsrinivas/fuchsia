@@ -51,8 +51,6 @@ void TestStoryCommandExecutor::ExecuteCommandsInternal(
         //   Intent intent
         //   SurfaceRelation surface_relation
 
-        // These calls are all synchronous now, masquerading as asynchronous
-        // callbacks for incremental refactoring purposes.
         story_storage_->WriteModuleData(std::move(module_data));
 
         // This test currently only persists adding mods (assuming there is a story_storage_);

@@ -873,22 +873,20 @@ class StoryControllerImpl::StartCall : public Operation<> {
 
     // Start all modules that were not themselves explicitly started by another
     // module.
-    storage_->ReadAllModuleData()->Then(
-        [this, flow](std::vector<fuchsia::modular::ModuleData> data) {
-          for (auto& module_data : data) {
-            // Don't start the module if it is embedded, or if it has been
-            // marked deleted.
-            if (module_data.module_deleted() || module_data.is_embedded()) {
-              continue;
-            }
-            FX_CHECK(module_data.has_intent());
-            operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
-                story_controller_impl_, std::move(module_data),
-                nullptr /* module_controller_request */, [flow] {}));
-          }
+    auto all_data = storage_->ReadAllModuleData();
+    for (auto& module_data : all_data) {
+      // Don't start the module if it is embedded, or if it has been
+      // marked deleted.
+      if (module_data.module_deleted() || module_data.is_embedded()) {
+        continue;
+      }
+      FX_CHECK(module_data.has_intent());
+      operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
+          story_controller_impl_, std::move(module_data), nullptr /* module_controller_request */,
+          [flow] {}));
+    }
 
-          story_controller_impl_->SetRuntimeState(fuchsia::modular::StoryState::RUNNING);
-        });
+    story_controller_impl_->SetRuntimeState(fuchsia::modular::StoryState::RUNNING);
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned

@@ -34,30 +34,16 @@ ModuleData Clone(const ModuleData& data) {
 TEST_F(StoryStorageTest, ReadModuleData_NonexistentModule) {
   auto storage = CreateStorage();
 
-  bool read_done{};
   std::vector<std::string> path;
   path.push_back("a");
-  storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
-    read_done = true;
-    ASSERT_FALSE(data);
-  });
-
-  RunLoopUntil([&] { return read_done; });
+  auto data = storage->ReadModuleData(path);
+  ASSERT_FALSE(data);
 }
 
 TEST_F(StoryStorageTest, ReadAllModuleData_Empty) {
   auto storage = CreateStorage();
-
-  bool read_done{};
-  fidl::VectorPtr<ModuleData> all_module_data;
-  storage->ReadAllModuleData()->Then([&](std::vector<ModuleData> data) {
-    read_done = true;
-    all_module_data.emplace(std::move(data));
-  });
-
-  RunLoopUntil([&] { return read_done; });
-  ASSERT_TRUE(all_module_data);
-  EXPECT_EQ(0u, all_module_data->size());
+  auto all_module_data = storage->ReadAllModuleData();
+  EXPECT_EQ(0u, all_module_data.size());
 }
 
 TEST_F(StoryStorageTest, WriteReadModuleData) {
@@ -90,37 +76,19 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   module_data2.mutable_module_path()->push_back("path2");
   storage->WriteModuleData(Clone(module_data2));
 
-  // We don't need to explicitly wait on WriteModuleData() because the
-  // implementation: 1) serializes all storage operations and 2) guarantees the
-  // WriteModuleData() action is finished only once the data has been written.
-  ModuleData read_data1;
-  bool read1_done{};
-  storage->ReadModuleData(module_data1.module_path())->Then([&](ModuleDataPtr data) {
-    read1_done = true;
-    ASSERT_TRUE(data);
-    read_data1 = std::move(*data);
-  });
+  auto read_data1 = storage->ReadModuleData(module_data1.module_path());
+  ASSERT_TRUE(read_data1);
+  auto read_data2 = storage->ReadModuleData(module_data2.module_path());
+  ASSERT_TRUE(read_data2);
 
-  ModuleData read_data2;
-  bool read2_done{};
-  storage->ReadModuleData(module_data2.module_path())->Then([&](ModuleDataPtr data) {
-    read2_done = true;
-    ASSERT_TRUE(data);
-    read_data2 = std::move(*data);
-  });
-
-  RunLoopUntil([&] { return read1_done && read2_done; });
-  EXPECT_TRUE(fidl::Equals(module_data1, read_data1));
-  EXPECT_TRUE(fidl::Equals(module_data2, read_data2));
+  EXPECT_TRUE(fidl::Equals(module_data1, *read_data1));
+  EXPECT_TRUE(fidl::Equals(module_data2, *read_data2));
 
   // Read the same data back with ReadAllModuleData().
-  fidl::VectorPtr<ModuleData> all_module_data;
-  storage->ReadAllModuleData()->Then(
-      [&](std::vector<ModuleData> data) { all_module_data.emplace(std::move(data)); });
-  RunLoopUntil([&] { return !!all_module_data; });
-  EXPECT_EQ(2u, all_module_data->size());
-  EXPECT_TRUE(fidl::Equals(module_data1, all_module_data->at(0)));
-  EXPECT_TRUE(fidl::Equals(module_data2, all_module_data->at(1)));
+  auto all_module_data = storage->ReadAllModuleData();
+  EXPECT_EQ(2u, all_module_data.size());
+  EXPECT_TRUE(fidl::Equals(module_data1, all_module_data.at(0)));
+  EXPECT_TRUE(fidl::Equals(module_data2, all_module_data.at(1)));
 
   // We should get a notification every time module data is updated for the
   // first subscription.
@@ -146,44 +114,26 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
   path.push_back("a");
 
   // Case 1: Don't mutate anything.
-  bool update_done{};
-  storage->UpdateModuleData(path, [](ModuleDataPtr* ptr) { EXPECT_FALSE(*ptr); })->Then([&] {
-    update_done = true;
-  });
-  RunLoopUntil([&] { return update_done; });
+  storage->UpdateModuleData(path, [](ModuleDataPtr* ptr) { EXPECT_FALSE(*ptr); });
 
-  bool read_done{};
   ModuleData read_data;
-  storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
-    read_done = true;
-    EXPECT_FALSE(data);
-  });
-  RunLoopUntil([&] { return read_done; });
+  EXPECT_FALSE(storage->ReadModuleData(path));
   // Since nothing changed, we should not have seen a notification.
   EXPECT_FALSE(got_notification);
 
   // Case 2: Initialize an otherwise empty record.
-  update_done = false;
-  storage
-      ->UpdateModuleData(path,
-                         [&](ModuleDataPtr* ptr) {
-                           EXPECT_FALSE(*ptr);
+  storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) {
+    EXPECT_FALSE(*ptr);
 
-                           *ptr = ModuleData::New();
-                           (*ptr)->set_module_path(path);
-                           (*ptr)->set_module_url("foobar");
-                         })
-      ->Then([&] { update_done = true; });
-  RunLoopUntil([&] { return update_done; });
-
-  read_done = false;
-  storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
-    read_done = true;
-    ASSERT_TRUE(data);
-    EXPECT_EQ(path, data->module_path());
-    EXPECT_EQ("foobar", data->module_url());
+    *ptr = ModuleData::New();
+    (*ptr)->set_module_path(path);
+    (*ptr)->set_module_url("foobar");
   });
-  RunLoopUntil([&] { return read_done; });
+
+  auto data = storage->ReadModuleData(path);
+  ASSERT_TRUE(data);
+  EXPECT_EQ(path, data->module_path());
+  EXPECT_EQ("foobar", data->module_url());
   // Now something changed, so we should see a notification.
   EXPECT_TRUE(got_notification);
   EXPECT_EQ("foobar", notified_module_data.module_url());
@@ -192,13 +142,9 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
   got_notification = false;
   storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) { EXPECT_TRUE(*ptr); });
 
-  read_done = false;
-  storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
-    read_done = true;
-    ASSERT_TRUE(data);
-    EXPECT_EQ("foobar", data->module_url());
-  });
-  RunLoopUntil([&] { return read_done; });
+  data = storage->ReadModuleData(path);
+  ASSERT_TRUE(data);
+  EXPECT_EQ("foobar", data->module_url());
   // Now something changed, so we should see a notification.
   EXPECT_FALSE(got_notification);
 
@@ -208,13 +154,9 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
     (*ptr)->set_module_url("baz");
   });
 
-  read_done = false;
-  storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
-    read_done = true;
-    ASSERT_TRUE(data);
-    EXPECT_EQ("baz", data->module_url());
-  });
-  RunLoopUntil([&] { return read_done; });
+  data = storage->ReadModuleData(path);
+  ASSERT_TRUE(data);
+  EXPECT_EQ("baz", data->module_url());
   // Now something changed, so we should see a notification.
   EXPECT_TRUE(got_notification);
   EXPECT_EQ("baz", notified_module_data.module_url());

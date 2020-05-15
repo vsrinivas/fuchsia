@@ -66,14 +66,12 @@ class StoryStorage {
 
   // Returns the current ModuleData for |module_path|. If not found, the
   // returned value is null.
-  FuturePtr<ModuleDataPtr> ReadModuleData(const std::vector<std::string>& module_path);
-  // Like ReadModuleData, but synchronous for convenience.
-  ModuleDataPtr ReadModuleDataSync(const std::vector<std::string>& module_path);
+  ModuleDataPtr ReadModuleData(const std::vector<std::string>& module_path);
 
   // Writes |module_data| to storage. The returned future is completed
   // once |module_data| has been written and a notification confirming the
   // write has been received.
-  FuturePtr<> WriteModuleData(ModuleData module_data);
+  void WriteModuleData(ModuleData module_data);
 
   // Reads the ModuleData for |module_path|, calls |mutate_fn| which may modify
   // the contents, and writes the resulting ModuleData back to storage.
@@ -86,11 +84,11 @@ class StoryStorage {
   //
   // It is illegal to change ModuleDataPtr->module_path in |mutate_fn| or to
   // reset to null an otherwise initialized ModuleDataPtr.
-  FuturePtr<> UpdateModuleData(const std::vector<std::string>& module_path,
-                               fit::function<void(ModuleDataPtr*)> mutate_fn);
+  void UpdateModuleData(const std::vector<std::string>& module_path,
+                        fit::function<void(ModuleDataPtr*)> mutate_fn);
 
   // Returns all ModuleData entries for all mods.
-  FuturePtr<std::vector<ModuleData>> ReadAllModuleData();
+  std::vector<ModuleData> ReadAllModuleData();
 
   // =========================================================================
   // Link data

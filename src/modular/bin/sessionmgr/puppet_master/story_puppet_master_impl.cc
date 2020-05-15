@@ -165,7 +165,7 @@ class AnnotateModuleOperation
       return;
     }
     story_storage_ = std::move(story_storage);
-    auto module_data = story_storage_->ReadModuleDataSync({module_id_});
+    auto module_data = story_storage_->ReadModuleData({module_id_});
     if (module_data != nullptr) {
       AnnotateModuleIfFirstAttempt(std::move(module_data));
     } else {
@@ -206,11 +206,10 @@ class AnnotateModuleOperation
 
     // Save the new version of module_data with annotations added.
     module_data->set_annotations(std::move(new_annotations));
-    story_storage_->WriteModuleData(std::move(*module_data))->Then([this]() mutable {
-      fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
-      result.set_response({});
-      Done(std::move(result));
-    });
+    story_storage_->WriteModuleData(std::move(*module_data));
+    fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
+    result.set_response({});
+    Done(std::move(result));
   }
 
   SessionStorage* const session_storage_;

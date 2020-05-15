@@ -98,7 +98,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
     // Operation stays alive until flow goes out of scope.
     fuchsia::modular::ModuleData module_data;
     out_module_data_.Clone(&module_data);
-    story_storage_->WriteModuleData(std::move(module_data))->Then([flow] {});
+    story_storage_->WriteModuleData(std::move(module_data));
   }
 
   StoryStorage* const story_storage_;  // Not owned.

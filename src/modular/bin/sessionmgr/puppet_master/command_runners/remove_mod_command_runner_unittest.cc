@@ -55,13 +55,8 @@ TEST_F(RemoveModCommandRunnerTest, Execute) {
                   });
   RunLoopUntil([&] { return done; });
 
-  done = false;
-  story_storage->ReadModuleData(std::move(mod_name))
-      ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_TRUE(module_data->module_deleted());
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  auto module_data = story_storage->ReadModuleData(std::move(mod_name));
+  EXPECT_TRUE(module_data->module_deleted());
 }
 
 TEST_F(RemoveModCommandRunnerTest, ExecuteNoModuleData) {
@@ -110,13 +105,8 @@ TEST_F(RemoveModCommandRunnerTest, ExecuteModNameTransitional) {
                   });
   RunLoopUntil([&] { return done; });
 
-  done = false;
-  story_storage->ReadModuleData(std::move(mod_name))
-      ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_TRUE(module_data->module_deleted());
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
+  auto module_data = story_storage->ReadModuleData(std::move(mod_name));
+  EXPECT_TRUE(module_data->module_deleted());
 }
 
 }  // namespace

@@ -21,19 +21,17 @@ namespace {}  // namespace
 
 StoryStorage::StoryStorage() {}
 
-FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
+void StoryStorage::WriteModuleData(ModuleData module_data) {
   auto module_path = fidl::Clone(module_data.module_path());
   auto key = MakeModuleKey(module_path);
   auto saved = CloneOptional(module_data);
   module_data_backing_storage_[key] = std::move(*saved);
 
   DispatchWatchers(module_data);
-
-  return Future<>::CreateCompleted("StoryStorage.WriteModuleData");
 }
 
-FuturePtr<> StoryStorage::UpdateModuleData(const std::vector<std::string>& module_path,
-                                           fit::function<void(ModuleDataPtr*)> mutate_fn) {
+void StoryStorage::UpdateModuleData(const std::vector<std::string>& module_path,
+                                    fit::function<void(ModuleDataPtr*)> mutate_fn) {
   auto key = MakeModuleKey(module_path);
 
   ModuleDataPtr data{};
@@ -60,17 +58,9 @@ FuturePtr<> StoryStorage::UpdateModuleData(const std::vector<std::string>& modul
     FX_DCHECK(!previously_populated) << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
                                         "set to null an existing ModuleData record.";
   }
-
-  // Return completed future.
-  return Future<>::CreateCompleted("StoryStorage.UpdateModuleData.ret");
 }
 
-FuturePtr<ModuleDataPtr> StoryStorage::ReadModuleData(const std::vector<std::string>& module_path) {
-  auto data = ReadModuleDataSync(module_path);
-  return Future<ModuleDataPtr>::CreateCompleted("StoryStorage.ReadModuleData.ret", std::move(data));
-}
-
-ModuleDataPtr StoryStorage::ReadModuleDataSync(const std::vector<std::string>& module_path) {
+ModuleDataPtr StoryStorage::ReadModuleData(const std::vector<std::string>& module_path) {
   auto key = MakeModuleKey(module_path);
   auto it = module_data_backing_storage_.find(key);
   ModuleDataPtr data{};
@@ -80,7 +70,7 @@ ModuleDataPtr StoryStorage::ReadModuleDataSync(const std::vector<std::string>& m
   return data;
 }
 
-FuturePtr<std::vector<ModuleData>> StoryStorage::ReadAllModuleData() {
+std::vector<ModuleData> StoryStorage::ReadAllModuleData() {
   std::vector<ModuleData> vec;
   vec.reserve(module_data_backing_storage_.size());
   for (auto it = module_data_backing_storage_.begin(); it != module_data_backing_storage_.end();
@@ -89,9 +79,7 @@ FuturePtr<std::vector<ModuleData>> StoryStorage::ReadAllModuleData() {
     it->second.Clone(&elem);
     vec.push_back(std::move(elem));
   }
-
-  return Future<std::vector<ModuleData>>::CreateCompleted("StoryStorage.ReadAllModuleData.ret",
-                                                          std::move(vec));
+  return vec;
 }
 
 namespace {
