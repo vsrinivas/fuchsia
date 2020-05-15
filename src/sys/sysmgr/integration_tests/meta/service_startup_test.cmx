@@ -3,23 +3,20 @@
         "fuchsia.test": {
             "injected-services": {
                 "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/echo_server_rust.cmx"
-            },
-            "system-services": [
-                "fuchsia.boot.WriteOnlyLog"
-            ]
+            }
         }
     },
     "program": {
         "binary": "test/service_startup_test"
     },
     "sandbox": {
-        "pkgfs": [
-            "packages"
+        "features": [
+            "hub"
         ],
         "services": [
             "fidl.examples.echo.Echo",
-            "fuchsia.boot.WriteOnlyLog",
-            "fuchsia.process.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

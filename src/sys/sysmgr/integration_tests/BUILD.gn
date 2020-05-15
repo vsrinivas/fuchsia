@@ -65,7 +65,6 @@ executable("service_startup_test") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr:appmgr_for_test",
     "//third_party/googletest:gmock",
   ]
 
