@@ -45,21 +45,9 @@ class SessionStorage {
     on_story_updated_ = std::move(callback);
   }
 
-  // Creates a new story and returns a story id. |story_name| may be null.
-  //
-  // If |story_name| is not provided, a UUID will be generated as the name.
-  //
-  // TODO(thatguy): Allowing for null story names is left in for backwards
-  // compatibility with existing code. The intention is that all clients
-  // outside the FW (through FIDL interfaces) use story names exclusively.  It
-  // is unclear if internal story IDs should be an implementation detail of
-  // SessionStorage, or if they should be exposed to the story runtime
-  // architecture.
-  std::string CreateStory(fidl::StringPtr story_name,
+  // Creates a new story with the given name and returns |story_name|.
+  std::string CreateStory(std::string story_name,
                           std::vector<fuchsia::modular::Annotation> annotations);
-
-  // Same as above, but defaults |story_name| to nullptr.
-  std::string CreateStory(std::vector<fuchsia::modular::Annotation> annotations);
 
   // Deletes the |story_id| from the list of known stories.
   void DeleteStory(fidl::StringPtr story_id);

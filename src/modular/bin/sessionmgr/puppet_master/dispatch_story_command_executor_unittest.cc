@@ -63,10 +63,6 @@ class DispatchStoryCommandExecutorTest : public gtest::RealLoopFixture {
                                                                std::move(command_runners_));
   }
 
-  fidl::StringPtr CreateStory() {
-    return session_storage_->CreateStory({} /* extra_info */, {});
-  }
-
   void AddCommandRunner(fuchsia::modular::StoryCommand::Tag tag,
                         TestCommandRunner::ExecuteFunc func, bool delay_done = false) {
     command_runners_.emplace(tag, new TestCommandRunner(std::move(func), delay_done));
@@ -93,7 +89,7 @@ TEST_F(DispatchStoryCommandExecutorTest, InvalidStory) {
 }
 
 TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
-  auto expected_story_id = CreateStory();
+  auto expected_story_id = session_storage_->CreateStory("story", {});
 
   // We expect that each command is dispatched to the command runner for that
   // command.
@@ -106,7 +102,7 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
                               fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
       ++actual_execute_count;
       EXPECT_EQ(tag, command.Which());
-      EXPECT_EQ(expected_story_id, story_id);
+      EXPECT_EQ(expected_story_id, story_id.value());
       return fuchsia::modular::ExecuteStatus::OK;
     });
   }
@@ -130,12 +126,12 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
 
   RunLoopUntil([&]() { return done; });
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
-  EXPECT_EQ(expected_story_id, result.story_id);
+  EXPECT_EQ(expected_story_id, result.story_id.value());
   EXPECT_EQ(4, actual_execute_count);
 }
 
 TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
-  auto story_id = CreateStory();
+  auto story_id = session_storage_->CreateStory("story", {});
 
   // Commands are run sequentially.
   std::vector<std::string> names;
@@ -179,7 +175,7 @@ TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
 }
 
 TEST_F(DispatchStoryCommandExecutorTest, ErrorsAbortEarly) {
-  auto story_id = CreateStory();
+  auto story_id = session_storage_->CreateStory("story", {});
 
   // Commands after those that report an error don't run. The reported error
   // code is returned.

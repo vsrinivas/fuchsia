@@ -10,7 +10,6 @@
 
 #include <unordered_set>
 
-#include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -19,19 +18,15 @@ namespace modular {
 
 SessionStorage::SessionStorage() {}
 
-std::string SessionStorage::CreateStory(fidl::StringPtr story_name,
+std::string SessionStorage::CreateStory(std::string story_name,
                                         std::vector<fuchsia::modular::Annotation> annotations) {
-  if (!story_name || story_name->empty()) {
-    story_name = uuid::Generate();
-  }
-
   // Check if the story already exists.  If it does, this whole function should
   // behave as a noop.
   auto it = story_data_backing_store_.find(story_name);
   if (it == story_data_backing_store_.end()) {
     fuchsia::modular::internal::StoryData story_data({});
-    story_data.set_story_name(story_name.value_or(""));
-    story_data.mutable_story_info()->set_id(story_name.value_or(""));
+    story_data.set_story_name(story_name);
+    story_data.mutable_story_info()->set_id(story_name);
     story_data.mutable_story_info()->set_last_focus_time(0);
     story_data.mutable_story_info()->set_annotations(std::move(annotations));
 
@@ -45,11 +40,7 @@ std::string SessionStorage::CreateStory(fidl::StringPtr story_name,
     }
   }
 
-  return story_name.value();
-}
-
-std::string SessionStorage::CreateStory(std::vector<fuchsia::modular::Annotation> annotations) {
-  return CreateStory(/*story_name=*/nullptr, std::move(annotations));
+  return story_name;
 }
 
 void SessionStorage::DeleteStory(fidl::StringPtr story_name) {

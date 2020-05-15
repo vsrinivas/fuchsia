@@ -60,7 +60,6 @@ source_set("session_storage") {
   ]
 
   deps = [
-    "//src/lib/uuid",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/fidl:clone",
   ]
