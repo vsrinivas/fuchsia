@@ -31,5 +31,8 @@ template("plugins") {
       "--deps",
       lib_str,
     ]
+
+    # Rebuild if the template changes
+    inputs = [ "//src/developer/development-bridge/build/templates/plugins.md" ]
   }
 }

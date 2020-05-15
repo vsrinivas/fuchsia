@@ -31,5 +31,8 @@ template("command") {
       "--deps",
       lib_str,
     ]
+
+    # Rebuild if the template changes
+    inputs = [ "//src/developer/development-bridge/build/templates/command.md" ]
   }
 }
