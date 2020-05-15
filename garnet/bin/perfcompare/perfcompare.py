@@ -64,8 +64,7 @@ import scipy.stats
 # instance) vs. "boot_datasets" (always a list or iterable) avoids that
 # ambiguity.
 #
-# The fuchsia_perfcompare.py infra recipe represents those datasets on the
-# filesystem as follows:
+# The infra recipe represents those datasets on the filesystem as follows:
 #
 #  * Process dataset: a single .fuchsiaperf.json file.
 #
@@ -541,9 +540,9 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         help='Number of boots to put in each group.  To get realistic'
         ' results that reflect how the perfcompare trybots would behave,'
         ' this should match the boots_per_revision setting in the'
-        ' fuchsia_perfcompare.py recipe.  (Since that code is currently'
-        ' not part of the Fuchsia checkout, we cannot make the settings'
-        ' match automatically.)')
+        ' infra recipe.  (Since that code is currently not part of the'
+        ' Fuchsia checkout, we cannot make the settings match'
+        ' automatically.)')
     subparser.add_argument('results_dirs', nargs='+')
     subparser.set_defaults(func=lambda args: ValidatePerfCompare(args, out_fh))
 
