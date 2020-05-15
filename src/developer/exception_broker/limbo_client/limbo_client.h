@@ -9,7 +9,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls/exception.h>
 
-namespace fuchsia {
 namespace exception {
 
 class LimboClient {
@@ -41,12 +40,11 @@ class LimboClient {
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
 
-  ProcessLimboSyncPtr connection_;
+  fuchsia::exception::ProcessLimboSyncPtr connection_;
 
   bool active_ = false;
 };
 
 }  // namespace exception
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_

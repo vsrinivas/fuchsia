@@ -7,13 +7,16 @@
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/exception/cpp/fidl.h"
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-namespace fuchsia {
 namespace exception {
 namespace {
+
+using fuchsia::exception::ExceptionInfo;
+using fuchsia::exception::ExceptionType;
 
 bool GetExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
@@ -71,7 +74,7 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(limbo.NewRequest());
 
-  ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+  fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result;
   zx_status_t status = limbo->WatchProcessesWaitingOnException(&result);
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
@@ -82,7 +85,6 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
 
 }  // namespace
 }  // namespace exception
-}  // namespace fuchsia
 
 int main(int argc, char* argv[]) {
   if (!fxl::SetTestSettings(argc, argv))

@@ -10,7 +10,6 @@
 
 #include <string>
 
-namespace fuchsia {
 namespace exception {
 
 // This struct represents all the state needed to keep correct track of an exception.
@@ -40,4 +39,3 @@ bool SpawnCrasher(ExceptionContext* pe);
 bool MarkExceptionAsHandled(ExceptionContext* pe);
 
 }  // namespace exception
-}  // namespace fuchsia

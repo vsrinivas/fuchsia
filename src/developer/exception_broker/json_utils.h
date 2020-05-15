@@ -7,7 +7,6 @@
 #include <set>
 #include <string>
 
-namespace fuchsia {
 namespace exception {
 
 // |content| is the string contents of the config file loaded for ExceptionBroker.
@@ -16,6 +15,5 @@ namespace exception {
 std::set<std::string> ExtractFilters(const std::string& content);
 
 }  // namespace exception
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_JSON_UTILS_H_

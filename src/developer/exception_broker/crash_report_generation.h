@@ -9,7 +9,6 @@
 
 #include <third_party/crashpad/util/file/string_file.h>
 
-namespace fuchsia {
 namespace exception {
 
 // If |string_file| is empty, this function will error out.
@@ -20,6 +19,5 @@ zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 zx::vmo GenerateMinidumpVMO(const zx::exception& exception, std::string* process_name);
 
 }  // namespace exception
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_CRASH_REPORT_GENERATION_H_

@@ -9,7 +9,6 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fuchsia {
 namespace exception {
 
 LimboClient::LimboClient(std::shared_ptr<sys::ServiceDirectory> services)
@@ -40,7 +39,7 @@ zx_status_t LimboClient::ListProcesses(std::vector<ProcessDescription>* processe
   if (!connection_)
     return ZX_ERR_UNAVAILABLE;
 
-  ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+  fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result;
   if (zx_status_t status = connection_->WatchProcessesWaitingOnException(&result); status != ZX_OK)
     return status;
 
@@ -68,7 +67,7 @@ zx_status_t LimboClient::Release(zx_koid_t pid) {
   if (!connection_)
     return ZX_ERR_UNAVAILABLE;
 
-  ProcessLimbo_ReleaseProcess_Result result;
+  fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result;
   if (zx_status_t status = connection_->ReleaseProcess(pid, &result); status != ZX_OK)
     return status;
 
@@ -87,15 +86,14 @@ zx_status_t LimboClient::AppendFilters(const std::vector<std::string>& filters) 
   if (!connection_)
     return ZX_ERR_UNAVAILABLE;
 
-  ProcessLimbo_AppendFilters_Result result;
+  fuchsia::exception::ProcessLimbo_AppendFilters_Result result;
   if (zx_status_t status = connection_->AppendFilters(filters, &result); status != ZX_OK)
     return status;
 
-  if (result.Which() == ProcessLimbo_AppendFilters_Result::Tag::kErr)
+  if (result.Which() == fuchsia::exception::ProcessLimbo_AppendFilters_Result::Tag::kErr)
     return result.err();
 
   return ZX_OK;
 }
 
 }  // namespace exception
-}  // namespace fuchsia

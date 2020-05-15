@@ -23,12 +23,16 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-namespace fuchsia {
 namespace exception {
 
-inline void ToString(const ExceptionType& value, std::ostream* os) { *os << value; }
+inline void ToString(const fuchsia::exception::ExceptionType& value, std::ostream* os) {
+  *os << value;
+}
 
 namespace {
+
+using fuchsia::exception::ExceptionInfo;
+using fuchsia::exception::ExceptionType;
 
 // ExceptionBroker unit test -----------------------------------------------------------------------
 //
@@ -275,4 +279,3 @@ TEST(ExceptionBroker, GettingInvalidVMO) {
 
 }  // namespace
 }  // namespace exception
-}  // namespace fuchsia

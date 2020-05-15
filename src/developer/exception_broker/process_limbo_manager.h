@@ -11,7 +11,6 @@
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
 namespace exception {
 
 class ProcessLimboHandler;
@@ -24,7 +23,7 @@ class ProcessLimboManager {
 
   fxl::WeakPtr<ProcessLimboManager> GetWeakPtr();
 
-  void AddToLimbo(ProcessException);
+  void AddToLimbo(fuchsia::exception::ProcessException);
 
   // Notify all handlers that limbo changed.
   void NotifyLimboChanged();
@@ -35,7 +34,7 @@ class ProcessLimboManager {
   bool SetActive(bool active);
   bool active() const { return active_; }
 
-  const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
+  const std::map<zx_koid_t, fuchsia::exception::ProcessException>& limbo() const { return limbo_; }
 
   void set_filters(std::set<std::string> filters) { filters_ = std::move(filters); }
   const std::set<std::string>& filters() const { return filters_; }
@@ -50,7 +49,7 @@ class ProcessLimboManager {
  private:
   // Returns the list of process metadata for processes waiting on exceptions
   // Corresponds to the return value of |WatchProcessesWaitingOnException|.
-  std::vector<ProcessExceptionMetadata> ListProcessesInLimbo();
+  std::vector<fuchsia::exception::ProcessExceptionMetadata> ListProcessesInLimbo();
 
   // TODO(45962): This is an extremely naive approach. There are several policies to make this more
   //              robust:
@@ -58,7 +57,7 @@ class ProcessLimboManager {
   //                - Define an eviction policy (FIFO probably).
   //                - Set a timeout for exceptions (configurable).
   //                - Decide on a throttle mechanism (if the same process is crashing continously).
-  std::map<zx_koid_t, ProcessException> limbo_;
+  std::map<zx_koid_t, fuchsia::exception::ProcessException> limbo_;
 
   bool active_ = false;
 
@@ -77,7 +76,7 @@ class ProcessLimboManager {
 // Handles *one* process limbo connection. Having one handler per connection lets us do patterns
 // like hanging get, which requires to recongnize per-connection state. The limbo manager is the
 // common state all connections query.
-class ProcessLimboHandler : public ProcessLimbo {
+class ProcessLimboHandler : public fuchsia::exception::ProcessLimbo {
  public:
   explicit ProcessLimboHandler(fxl::WeakPtr<ProcessLimboManager> limbo_manager);
 
@@ -86,7 +85,7 @@ class ProcessLimboHandler : public ProcessLimbo {
   void ActiveStateChanged(bool state);
 
   // Called when a process goes in or out of limbo (ProcessLimboManager::AddToLimbo).
-  void LimboChanged(std::vector<ProcessExceptionMetadata> processes);
+  void LimboChanged(std::vector<fuchsia::exception::ProcessExceptionMetadata> processes);
 
   // fuchsia.exception.ProcessLimbo implementation.
   void SetActive(bool active, SetActiveCallback) override;
@@ -119,6 +118,5 @@ class ProcessLimboHandler : public ProcessLimbo {
 };
 
 }  // namespace exception
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_PROCESS_LIMBO_MANAGER_H_

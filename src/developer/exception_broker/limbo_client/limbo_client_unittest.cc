@@ -17,11 +17,10 @@
 
 #include "src/developer/exception_broker/limbo_client/options.h"
 
-namespace fuchsia {
 namespace exception {
 namespace {
 
-class StubProcessLimbo : public ProcessLimbo {
+class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
  public:
   void set_active(bool active) { active_ = active; }
   bool active_call() const { return active_call_; }
@@ -47,15 +46,15 @@ class StubProcessLimbo : public ProcessLimbo {
 
   void WatchProcessesWaitingOnException(
       ProcessLimbo::WatchProcessesWaitingOnExceptionCallback callback) override {
-    std::vector<ProcessExceptionMetadata> exceptions;
+    std::vector<fuchsia::exception::ProcessExceptionMetadata> exceptions;
     exceptions.reserve(exceptions_.size());
     for (auto [process_koid, thread_koid, exception] : exceptions_) {
-      ExceptionInfo info = {};
+      fuchsia::exception::ExceptionInfo info = {};
       info.process_koid = process_koid;
       info.thread_koid = thread_koid;
-      info.type = static_cast<ExceptionType>(exception);
+      info.type = static_cast<fuchsia::exception::ExceptionType>(exception);
 
-      ProcessExceptionMetadata metadata = {};
+      fuchsia::exception::ProcessExceptionMetadata metadata = {};
       metadata.set_info(std::move(info));
 
       zx::process process;
@@ -389,4 +388,3 @@ TEST(LimboClient, ReleaseOption) {
 
 }  // namespace
 }  // namespace exception
-}  // namespace fuchsia

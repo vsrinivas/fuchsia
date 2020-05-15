@@ -13,7 +13,6 @@
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-namespace fuchsia {
 namespace exception {
 
 namespace {
@@ -28,8 +27,7 @@ TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
 
   sys::testing::ServiceDirectoryProvider services;
 
-  auto broker =
-      fuchsia::exception::ExceptionBroker::Create(loop.dispatcher(), services.service_directory());
+  auto broker = ExceptionBroker::Create(loop.dispatcher(), services.service_directory());
 
   ASSERT_FALSE(broker->limbo_manager().active());
 }
@@ -40,8 +38,8 @@ TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
 
   sys::testing::ServiceDirectoryProvider services;
 
-  auto broker = fuchsia::exception::ExceptionBroker::Create(
-      loop.dispatcher(), services.service_directory(), kTestConfigFile);
+  auto broker =
+      ExceptionBroker::Create(loop.dispatcher(), services.service_directory(), kTestConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 
@@ -59,8 +57,8 @@ TEST(ExceptionBrokerConfig, FilterArray) {
 
   sys::testing::ServiceDirectoryProvider services;
 
-  auto broker = fuchsia::exception::ExceptionBroker::Create(
-      loop.dispatcher(), services.service_directory(), kFilterConfigFile);
+  auto broker =
+      ExceptionBroker::Create(loop.dispatcher(), services.service_directory(), kFilterConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 
@@ -75,7 +73,6 @@ TEST(ExceptionBrokerConfig, FilterArray) {
 }
 
 }  // namespace exception
-}  // namespace fuchsia
 
 int main(int argc, char* argv[]) {
   if (!fxl::SetTestSettings(argc, argv))

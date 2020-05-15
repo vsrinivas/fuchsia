@@ -5,12 +5,16 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "fuchsia/exception/cpp/fidl.h"
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fuchsia {
 namespace exception {
 
 namespace {
+
+using fuchsia::exception::MAX_EXCEPTIONS_PER_CALL;
+using fuchsia::exception::ProcessException;
+using fuchsia::exception::ProcessExceptionMetadata;
 
 // Removes all stale weak pointers from the handler list.
 void PruneStaleHandlers(std::vector<fxl::WeakPtr<ProcessLimboHandler>>* handlers) {
@@ -249,7 +253,7 @@ void ProcessLimboHandler::RetrieveException(zx_koid_t process_koid, RetrieveExce
   if (!VerifyState(limbo_manager_, &cb))
     return;
 
-  ProcessLimbo_RetrieveException_Result result;
+  fuchsia::exception::ProcessLimbo_RetrieveException_Result result;
 
   auto& limbo = limbo_manager_->limbo_;
 
@@ -325,4 +329,3 @@ void ProcessLimboHandler::RemoveFilters(std::vector<std::string> filters,
 }
 
 }  // namespace exception
-}  // namespace fuchsia

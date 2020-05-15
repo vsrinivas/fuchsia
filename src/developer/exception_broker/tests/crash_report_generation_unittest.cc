@@ -8,7 +8,6 @@
 
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 
-namespace fuchsia {
 namespace exception {
 namespace {
 
@@ -74,4 +73,3 @@ TEST(CrashReportGeneration, GenerateMinidump) {
 
 }  // namespace
 }  // namespace exception
-}  // namespace fuchsia

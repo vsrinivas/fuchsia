@@ -10,7 +10,6 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fuchsia {
 namespace exception {
 
 bool SpawnCrasher(ExceptionContext* pe) {
@@ -100,4 +99,3 @@ bool MarkExceptionAsHandled(ExceptionContext* pe) {
 }
 
 }  // namespace exception
-}  // namespace fuchsia

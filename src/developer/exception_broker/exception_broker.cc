@@ -9,15 +9,18 @@
 
 #include <third_party/crashpad/util/file/string_file.h>
 
+#include "fuchsia/exception/cpp/fidl.h"
 #include "src/developer/exception_broker/crash_report_generation.h"
 #include "src/developer/exception_broker/json_utils.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 
-namespace fuchsia {
 namespace exception {
 
 namespace {
+
+using fuchsia::exception::ExceptionInfo;
+using fuchsia::exception::ProcessException;
 
 constexpr char kEnableJitdConfigPath[] = "/config/data/enable_jitd_on_startup.json";
 
@@ -159,4 +162,3 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
 }
 
 }  // namespace exception
-}  // namespace fuchsia

@@ -12,7 +12,6 @@
 #include "src/developer/exception_broker/process_limbo_manager.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace fuchsia {
 namespace exception {
 
 // ExceptionBroker is meant to distribute exceptions according to some configuration.
@@ -20,7 +19,7 @@ namespace exception {
 // crash reporting will occur, but the broker can be used to make other systems handle exceptions,
 // such as debuggers.
 
-class ExceptionBroker : public Handler {
+class ExceptionBroker : public fuchsia::exception::Handler {
  public:
   // If |override_filepath| is defined, it will attempt to locate that file instead of the default
   // config one. See exception_broker.cc for the prod filepath.
@@ -30,7 +29,8 @@ class ExceptionBroker : public Handler {
 
   // fuchsia.exception.Handler implementation.
 
-  void OnException(zx::exception exception, ExceptionInfo info, OnExceptionCallback) override;
+  void OnException(zx::exception exception, fuchsia::exception::ExceptionInfo info,
+                   OnExceptionCallback) override;
 
   fxl::WeakPtr<ExceptionBroker> GetWeakPtr();
 
@@ -42,7 +42,7 @@ class ExceptionBroker : public Handler {
   const ProcessLimboManager& limbo_manager() const { return limbo_manager_; }
 
  private:
-  void FileCrashReport(ProcessException);  // |use_limbo_| == false.
+  void FileCrashReport(fuchsia::exception::ProcessException);  // |use_limbo_| == false.
 
   ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services);
 
@@ -60,6 +60,5 @@ class ExceptionBroker : public Handler {
 };
 
 }  // namespace exception
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_

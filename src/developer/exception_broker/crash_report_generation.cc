@@ -14,7 +14,6 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fuchsia {
 namespace exception {
 
 // GenerateVMOFromStringFile -----------------------------------------------------------------------
@@ -120,4 +119,3 @@ zx::vmo GenerateMinidumpVMO(const zx::exception& exception, std::string* process
 }
 
 }  // namespace exception
-}  // namespace fuchsia

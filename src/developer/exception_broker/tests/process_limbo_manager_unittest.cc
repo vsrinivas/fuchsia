@@ -11,13 +11,23 @@
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/exception/cpp/fidl.h"
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/developer/exception_broker/tests/crasher_wrapper.h"
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fuchsia {
 namespace exception {
 namespace {
+
+using fuchsia::exception::ExceptionInfo;
+using fuchsia::exception::ExceptionType;
+using fuchsia::exception::ProcessException;
+using fuchsia::exception::ProcessExceptionMetadata;
+using fuchsia::exception::ProcessLimbo_AppendFilters_Result;
+using fuchsia::exception::ProcessLimbo_ReleaseProcess_Result;
+using fuchsia::exception::ProcessLimbo_RemoveFilters_Result;
+using fuchsia::exception::ProcessLimbo_RetrieveException_Result;
+using fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result;
 
 struct TestContext {
   async::Loop loop;
@@ -672,4 +682,3 @@ TEST(ProcessLimboManager, DisablingFrees) {
 
 }  // namespace
 }  // namespace exception
-}  // namespace fuchsia

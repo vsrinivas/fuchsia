@@ -9,7 +9,6 @@
 
 #include <string>
 
-namespace fuchsia {
 namespace exception {
 
 class LimboClient;
@@ -20,6 +19,5 @@ using OptionFunction = zx_status_t (*)(LimboClient*, const std::vector<const cha
 OptionFunction ParseArgs(int argc, const char* argv[], std::ostream&);
 
 }  // namespace exception
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_OPTIONS_H_

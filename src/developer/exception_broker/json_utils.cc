@@ -8,7 +8,6 @@
 #include <third_party/rapidjson/include/rapidjson/document.h>
 #include <third_party/rapidjson/include/rapidjson/error/en.h>
 
-namespace fuchsia {
 namespace exception {
 
 std::set<std::string> ExtractFilters(const std::string& content) {
@@ -48,4 +47,3 @@ std::set<std::string> ExtractFilters(const std::string& content) {
 }
 
 }  // namespace exception
-}  // namespace fuchsia

@@ -13,8 +13,6 @@
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
 #include "src/developer/exception_broker/limbo_client/options.h"
 
-using namespace fuchsia::exception;
-
 namespace {
 
 void PrintError(zx_status_t status) {
@@ -31,10 +29,10 @@ std::vector<const char*> ArgsToVec(int argc, const char* argv[]) {
   return args;
 }
 
-};  // namespace
+}  // namespace
 
 int main(int argc, const char* argv[]) {
-  OptionFunction func = ParseArgs(argc, argv, std::cout);
+  exception::OptionFunction func = exception::ParseArgs(argc, argv, std::cout);
   if (!func)
     return EXIT_FAILURE;
 
@@ -44,7 +42,7 @@ int main(int argc, const char* argv[]) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto& services = context->svc();
 
-  LimboClient client(services);
+  exception::LimboClient client(services);
   if (zx_status_t status = client.Init(); status != ZX_OK) {
     PrintError(status);
     return EXIT_FAILURE;

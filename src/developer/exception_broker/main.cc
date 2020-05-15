@@ -11,12 +11,9 @@
 #include "src/developer/exception_broker/exception_broker.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
-using fuchsia::exception::ProcessLimbo;
-using fuchsia::exception::ProcessLimboHandler;
-
 namespace {
 
-void LogProcessLimboStatus(const fuchsia::exception::ProcessLimboManager& limbo) {
+void LogProcessLimboStatus(const exception::ProcessLimboManager& limbo) {
   if (!limbo.active()) {
     FX_LOGS(INFO) << "Process Limbo is not active at startup.";
     return;
@@ -34,7 +31,7 @@ int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  auto broker = fuchsia::exception::ExceptionBroker::Create(loop.dispatcher(), context->svc());
+  auto broker = exception::ExceptionBroker::Create(loop.dispatcher(), context->svc());
   if (!broker)
     return EXIT_FAILURE;
 
@@ -43,22 +40,27 @@ int main() {
   context->outgoing()->AddPublicService(handler_bindings.GetHandler(broker.get()));
 
   // Crete a new handler for each connection.
-  fidl::BindingSet<ProcessLimbo, std::unique_ptr<ProcessLimboHandler>> limbo_bindings;
+  fidl::BindingSet<fuchsia::exception::ProcessLimbo,
+                   std::unique_ptr<exception::ProcessLimboHandler>>
+      limbo_bindings;
   auto& limbo_manager = broker->limbo_manager();
 
   // Everytime a new request comes for this service, we create a new handler. This permits us to
   // track per-connection state.
-  context->outgoing()->AddPublicService(fidl::InterfaceRequestHandler<ProcessLimbo>(
-      [&limbo_manager, &limbo_bindings](fidl::InterfaceRequest<ProcessLimbo> request) {
-        // Create a new handler exclusive to this connection.
-        auto handler = std::make_unique<ProcessLimboHandler>(limbo_manager.GetWeakPtr());
+  context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<fuchsia::exception::ProcessLimbo>(
+          [&limbo_manager,
+           &limbo_bindings](fidl::InterfaceRequest<fuchsia::exception::ProcessLimbo> request) {
+            // Create a new handler exclusive to this connection.
+            auto handler =
+                std::make_unique<exception::ProcessLimboHandler>(limbo_manager.GetWeakPtr());
 
-        // Track this handler in the limbo manager, so it can be notified about events.
-        limbo_manager.AddHandler(handler->GetWeakPtr());
+            // Track this handler in the limbo manager, so it can be notified about events.
+            limbo_manager.AddHandler(handler->GetWeakPtr());
 
-        // Add the handler to the bindings, which is where the fidl calls come through.
-        limbo_bindings.AddBinding(std::move(handler), std::move(request));
-      }));
+            // Add the handler to the bindings, which is where the fidl calls come through.
+            limbo_bindings.AddBinding(std::move(handler), std::move(request));
+          }));
 
   LogProcessLimboStatus(broker->limbo_manager());
 
