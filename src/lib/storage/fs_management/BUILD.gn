@@ -37,6 +37,7 @@ test_package("fs_management_tests") {
   deps = [
     ":fs_management.manifest",
     ":fs_management_test",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
   ]
   tests = [
     {

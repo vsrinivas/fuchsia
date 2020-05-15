@@ -515,9 +515,10 @@ mod tests {
     }
 
     fn ramdisk_blobfs(block_size: u64) -> (RamdiskClient, Filesystem<Blobfs>) {
-        let ramdisk = RamdiskClient::create(block_size, 1 << 16).expect("failed to make ramdisk");
-        let device_path = ramdisk.get_path();
-        let blobfs = Blobfs::new(device_path).expect("failed to make new blobfs");
+        let ramdisk =
+            RamdiskClient::builder(block_size, 1 << 16).isolated_dev_root().build().unwrap();
+        let device = ramdisk.open().unwrap();
+        let blobfs = Blobfs::from_channel(device).unwrap();
         (ramdisk, blobfs)
     }
 
@@ -525,22 +526,6 @@ mod tests {
     fn blobfs_format_fsck_success() {
         let block_size = 512;
         let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
-
-        blobfs.format().expect("failed to format blobfs");
-        blobfs.fsck().expect("failed to fsck blobfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn blobfs_from_channel_format_fsck_success() {
-        let block_size = 512;
-        let (ramdisk, _) = ramdisk_blobfs(block_size);
-
-        let (block_device, server_chan) = zx::Channel::create().expect("failed to create channel");
-        fdio::service_connect(ramdisk.get_path(), server_chan).expect("failed to connect");
-
-        let mut blobfs = Blobfs::from_channel(block_device).expect("failed to make new blobfs");
 
         blobfs.format().expect("failed to format blobfs");
         blobfs.fsck().expect("failed to fsck blobfs");
@@ -568,8 +553,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    // #[test]
-    #[allow(dead_code)] // TODO(36120): test is flakey. Re-enable when flake is tracked down.
+    #[test]
     fn blobfs_format_mount_write_remount_read_unmount() {
         let block_size = 512;
         let mount_point = "/test-fs-root";
@@ -605,9 +589,10 @@ mod tests {
     }
 
     fn ramdisk_minfs(block_size: u64) -> (RamdiskClient, Filesystem<Minfs>) {
-        let ramdisk = RamdiskClient::create(block_size, 1 << 16).expect("failed to make ramdisk");
-        let device_path = ramdisk.get_path();
-        let minfs = Minfs::new(device_path).expect("failed to make new minfs");
+        let ramdisk =
+            RamdiskClient::builder(block_size, 1 << 16).isolated_dev_root().build().unwrap();
+        let device = ramdisk.open().unwrap();
+        let minfs = Minfs::from_channel(device).unwrap();
         (ramdisk, minfs)
     }
 
@@ -615,22 +600,6 @@ mod tests {
     fn minfs_format_fsck_success() {
         let block_size = 8192;
         let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
-
-        minfs.format().expect("failed to format minfs");
-        minfs.fsck().expect("failed to fsck minfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn minfs_from_channel_format_fsck_success() {
-        let block_size = 8192;
-        let (ramdisk, _) = ramdisk_minfs(block_size);
-
-        let (block_device, server_chan) = zx::Channel::create().expect("failed to create channel");
-        fdio::service_connect(ramdisk.get_path(), server_chan).expect("failed to connect");
-
-        let mut minfs = Minfs::from_channel(block_device).expect("failed to make new minfs");
 
         minfs.format().expect("failed to format minfs");
         minfs.fsck().expect("failed to fsck minfs");
@@ -667,8 +636,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    // #[test]
-    #[allow(dead_code)] // TODO(36120): test is flakey. Re-enable when flake is tracked down.
+    #[test]
     fn minfs_format_mount_write_remount_read_unmount() {
         let block_size = 8192;
         let mount_point = "/test-fs-root";
