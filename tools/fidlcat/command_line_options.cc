@@ -6,13 +6,13 @@
 
 #include <lib/cmdline/args_parser.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <regex.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
 #include <filesystem>
 #include <fstream>
-#include <regex>
 #include <set>
 #include <string>
 #include <vector>
@@ -116,6 +116,25 @@ const char* const kExcludeSyscallFilterHelp = R"(  --exclude-syscalls
       --exclude-syscalls.
       To display all the syscalls but the zx_handle syscalls, use:
         --syscalls=".*" --exclude-syscalls="zx_handle_.*")";
+
+const char* const kMessageFilterHelp = R"(  --messages
+      A regular expression which selects the messages to display.
+      To display a message, the method name must satisfy the regexp.
+      This option can be specified multiple times.
+      Message filtering works on the method's fully qualified name.)";
+
+const char* const kExcludeMessageFilterHelp = R"(  --exclude-messages
+      A regular expression which selects the messages to not display.
+      If a message method name satisfy the regexp, the message is not displayed
+      (even if it satifies --messages).
+      This option can be specified multiple times.
+      Message filtering works on the method's fully qualified name.)";
+
+const char* const kTriggerFilterHelp = R"(  --trigger
+      Start displaying messages and syscalls only when a message for which the
+      method name satisfies the filter is found.
+      This option can be specified multiple times.
+      Message filtering works on the method's fully qualified name.)";
 
 const char* const kPrettyPrintHelp = R"(  --pretty-print
       Use a formated print instead of JSON.)";
@@ -232,6 +251,10 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("syscalls", 0, kSyscallFilterHelp, &CommandLineOptions::syscall_filters);
   parser.AddSwitch("exclude-syscalls", 0, kExcludeSyscallFilterHelp,
                    &CommandLineOptions::exclude_syscall_filters);
+  parser.AddSwitch("messages", 0, kMessageFilterHelp, &CommandLineOptions::message_filters);
+  parser.AddSwitch("exclude-messages", 0, kExcludeMessageFilterHelp,
+                   &CommandLineOptions::exclude_message_filters);
+  parser.AddSwitch("trigger", 0, kTriggerFilterHelp, &CommandLineOptions::trigger_filters);
   parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp, &CommandLineOptions::pretty_print);
   parser.AddSwitch("with-process-info", 0, kWithProcessInfoHelp,
                    &CommandLineOptions::with_process_info);
@@ -271,14 +294,50 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
-    decode_options->syscall_filters.emplace_back(std::regex("zx_channel_.*"));
+    regex_t r;
+    regcomp(&r, "zx_channel_.*", REG_EXTENDED);
+    decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
   } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {
     for (const auto& filter : options->syscall_filters) {
-      decode_options->syscall_filters.emplace_back(std::regex(filter));
+      regex_t r;
+      if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
+        decode_options->syscall_filters.emplace_back(std::make_unique<Regex>(r));
+      } else {
+        return "Bad filter for --syscalls: " + filter;
+      }
     }
   }
   for (const auto& filter : options->exclude_syscall_filters) {
-    decode_options->exclude_syscall_filters.emplace_back(std::regex(filter));
+    regex_t r;
+    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
+      decode_options->exclude_syscall_filters.emplace_back(std::make_unique<Regex>(r));
+    } else {
+      return "Bad filter for --exclude-syscalls: " + filter;
+    }
+  }
+  for (const auto& filter : options->message_filters) {
+    regex_t r;
+    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
+      decode_options->message_filters.emplace_back(std::make_unique<Regex>(r));
+    } else {
+      return "Bad filter for --messages: " + filter;
+    }
+  }
+  for (const auto& filter : options->exclude_message_filters) {
+    regex_t r;
+    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
+      decode_options->exclude_message_filters.emplace_back(std::make_unique<Regex>(r));
+    } else {
+      return "Bad filter for --exclude-messages: " + filter;
+    }
+  }
+  for (const auto& filter : options->trigger_filters) {
+    regex_t r;
+    if (regcomp(&r, filter.c_str(), REG_EXTENDED) == 0) {
+      decode_options->trigger_filters.emplace_back(std::make_unique<Regex>(r));
+    } else {
+      return "Bad filter for --trigger: " + filter;
+    }
   }
 
   display_options->pretty_print = options->pretty_print;

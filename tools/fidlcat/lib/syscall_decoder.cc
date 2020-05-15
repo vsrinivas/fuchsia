@@ -476,6 +476,33 @@ void SyscallDecoder::Destroy() {
 }
 
 void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
+  if (!dispatcher_->display_started()) {
+    // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
+    if (decoder->invoked_event() == nullptr) {
+      return;
+    }
+    const fidl_codec::FidlMessageValue* message = decoder->invoked_event()->GetMessage();
+    if ((message == nullptr) ||
+        !dispatcher_->decode_options().IsTrigger(message->method()->fully_qualified_name())) {
+      return;
+    }
+    // We found a trigger => allow the display.
+    dispatcher_->set_display_started();
+  }
+  if (dispatcher_->has_filter() && decoder->syscall()->has_fidl_message()) {
+    // We have filters and this is a syscalls with a FIDL message.
+    // Only display the syscall if the message satifies the conditions.
+    const fidl_codec::FidlMessageValue* message = decoder->invoked_event()->GetMessage();
+    if ((message == nullptr) || !dispatcher_->decode_options().SatisfiesMessageFilters(
+                                    message->method()->fully_qualified_name())) {
+      return;
+    }
+  }
+  displayed_ = true;
+  DisplayInputs(decoder);
+}
+
+void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
   const fidl_codec::Colors& colors = dispatcher_->colors();
   std::string line_header = decoder->process_name() + ' ' + colors.red +
                             std::to_string(decoder->process_id()) + colors.reset + ':' +
@@ -527,6 +554,35 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 }
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
+  if (!displayed_) {
+    // The display of the syscall wasn't allowed by the input arguments. Check if the output
+    // arguments allows its display.
+    if (!dispatcher_->display_started()) {
+      // The user specified a trigger. Check if this is a message which satisfies one of the
+      // triggers.
+      if (decoder->output_event() == nullptr) {
+        return;
+      }
+      const fidl_codec::FidlMessageValue* message = decoder->output_event()->GetMessage();
+      if ((message == nullptr) ||
+          !dispatcher_->decode_options().IsTrigger(message->method()->fully_qualified_name())) {
+        return;
+      }
+      dispatcher_->set_display_started();
+    }
+    if (dispatcher_->has_filter() && decoder->syscall()->has_fidl_message()) {
+      // We have filters and this is a syscalls with a FIDL message.
+      // Only display the syscall if the message satifies the conditions.
+      const fidl_codec::FidlMessageValue* message = decoder->output_event()->GetMessage();
+      if ((message == nullptr) || !dispatcher_->decode_options().SatisfiesMessageFilters(
+                                      message->method()->fully_qualified_name())) {
+        return;
+      }
+    }
+    // We can display the syscall but the inputs have not been displayed => display the inputs
+    // before displaying the outputs.
+    DisplayInputs(decoder);
+  }
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
     if (dispatcher_->last_displayed_syscall() != this) {
       // Add a blank line to tell the user that this display is not linked to the

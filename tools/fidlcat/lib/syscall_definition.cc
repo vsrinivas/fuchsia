@@ -3233,7 +3233,8 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
-    Syscall* zx_channel_read = Add("zx_channel_read", SyscallReturnType::kStatus);
+    Syscall* zx_channel_read =
+        Add("zx_channel_read", SyscallReturnType::kStatus, SyscallKind::kChannelRead);
     // Arguments
     auto handle = zx_channel_read->Argument<zx_handle_t>(SyscallType::kHandle);
     auto options = zx_channel_read->Argument<uint32_t>(SyscallType::kUint32);
@@ -3268,7 +3269,8 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
-    Syscall* zx_channel_read_etc = Add("zx_channel_read_etc", SyscallReturnType::kStatus);
+    Syscall* zx_channel_read_etc =
+        Add("zx_channel_read_etc", SyscallReturnType::kStatus, SyscallKind::kChannelRead);
     // Arguments
     auto handle = zx_channel_read_etc->Argument<zx_handle_t>(SyscallType::kHandle);
     auto options = zx_channel_read_etc->Argument<uint32_t>(SyscallType::kUint32);
@@ -3304,7 +3306,8 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
-    Syscall* zx_channel_write = Add("zx_channel_write", SyscallReturnType::kStatus);
+    Syscall* zx_channel_write =
+        Add("zx_channel_write", SyscallReturnType::kStatus, SyscallKind::kChannelWrite);
     // Arguments
     auto handle = zx_channel_write->Argument<zx_handle_t>(SyscallType::kHandle);
     auto options = zx_channel_write->Argument<uint32_t>(SyscallType::kUint32);
@@ -3326,7 +3329,8 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_write->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelWrite);
   }
   {
-    Syscall* zx_channel_call = Add("zx_channel_call", SyscallReturnType::kStatus);
+    Syscall* zx_channel_call =
+        Add("zx_channel_call", SyscallReturnType::kStatus, SyscallKind::kChannelCall);
     // Arguments
     auto handle = zx_channel_call->Argument<zx_handle_t>(SyscallType::kHandle);
     auto options = zx_channel_call->Argument<uint32_t>(SyscallType::kUint32);

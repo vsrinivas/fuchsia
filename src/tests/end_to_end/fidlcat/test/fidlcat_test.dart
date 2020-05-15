@@ -148,5 +148,41 @@ void main(List<String> arguments) {
 
       await instance.agentResult;
     });
+
+    test('Test --trigger', () async {
+      var instance = RunFidlcat();
+      await instance
+          .run(log, sl4fDriver, fidlcatPath, ['--trigger=.*EchoString']);
+
+      final lines = instance.stdout.split('\n\n');
+
+      /// The first displayed message must be EchoString.
+      expect(
+          lines[2],
+          contains(
+              'sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          reason: instance.additionalResult);
+
+      await instance.agentResult;
+    });
+
+    test('Test --messages', () async {
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, [
+        '--messages=.*EchoString',
+        '--exclude-syscalls=zx_channel_create'
+      ]);
+
+      final lines = instance.stdout.split('\n\n');
+
+      /// The first and second displayed messages must be EchoString (everything else has been
+      /// filtered out).
+      expect(lines[2], contains('sent request fidl.examples.echo/Echo.EchoString = {"value":"hello world"}'),
+          reason: instance.additionalResult);
+      expect(lines[3], contains('received response fidl.examples.echo/Echo.EchoString = {"response":"hello world"}'),
+          reason: instance.additionalResult);
+
+      await instance.agentResult;
+    });
   }, timeout: _timeout);
 }

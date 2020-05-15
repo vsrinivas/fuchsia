@@ -288,6 +288,46 @@ To display all the syscalls but the zx_handle syscalls, use:
 
 --syscalls ".\*" --exclude-syscalls "zx_handle_.\*"
 
+## Filtering messages
+
+By default, fidlcat displays all the messages.
+
+You can specify the messages you want to display using:
+
+*   **--messages** allows you to specify one or more regular expressions the messages must satisfy
+to be displayed.
+
+*   **--exclude-messages** allows you to specify one or more regular expressions the messages must
+not satisfy to be displayed.
+
+If both options are used at the same time, to be displayed, a message must satisfy one of the
+regular expressions specified with **--messages** and not satisfy any regular expression specified
+with **--exclude-messages**.
+
+Message filtering works on the method's fully qualified name. For example, with:
+
+```
+--messages=".*Open"
+```
+
+Methods like:
+
+```
+fuchsia.io/Directory.Open
+fuchsia.io/Node.OnOpen
+```
+
+Will match.
+
+## Postponing the message display
+
+By default, everything is displayed as soon as an application is monitored. You can differ the
+display using **--trigger**. With this option the display will start only if one message satisfying
+one of the regular expressions specified with **--trigger** is encountered.
+
+This is really useful when you need to understand what's going on after you received or emit a
+particular message.
+
 ## Symbols
 
 Fidlcat can connect to a symbol server. You have to use the option:

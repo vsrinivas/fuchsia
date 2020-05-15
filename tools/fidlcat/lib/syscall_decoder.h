@@ -308,12 +308,15 @@ class SyscallDisplay : public SyscallUse {
       : dispatcher_(dispatcher), os_(os) {}
 
   void SyscallInputsDecoded(SyscallDecoder* decoder) override;
+  void DisplayInputs(SyscallDecoder* decoder);
   void SyscallOutputsDecoded(SyscallDecoder* decoder) override;
   void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override;
 
  private:
   SyscallDisplayDispatcher* const dispatcher_;
   std::ostream& os_;
+  // True if the syscall is displayed (from the inputs' point of view).
+  bool displayed_ = false;
 };
 
 class SyscallCompare : public SyscallDisplay {

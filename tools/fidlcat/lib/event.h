@@ -120,6 +120,8 @@ class Event {
   // the event has an unknown koid.
   bool NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference);
 
+  const fidl_codec::FidlMessageValue* GetMessage() const;
+
  private:
   int64_t timestamp_;
   const Thread* const thread_;

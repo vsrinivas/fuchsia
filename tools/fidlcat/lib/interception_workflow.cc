@@ -5,7 +5,6 @@
 #include "tools/fidlcat/lib/interception_workflow.h"
 
 #include <cstring>
-#include <regex>
 #include <string>
 #include <thread>
 
@@ -439,7 +438,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
         put_breakpoint = false;
         for (const auto& syscall_filter :
              syscall_decoder_dispatcher()->decode_options().syscall_filters) {
-          if (regex_match(syscall->name(), syscall_filter)) {
+          if (syscall_filter->Matches(syscall->name())) {
             put_breakpoint = true;
             break;
           }
@@ -448,7 +447,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
       if (put_breakpoint) {
         for (const auto& syscall_filter :
              syscall_decoder_dispatcher()->decode_options().exclude_syscall_filters) {
-          if (regex_match(syscall->name(), syscall_filter)) {
+          if (syscall_filter->Matches(syscall->name())) {
             put_breakpoint = false;
             break;
           }

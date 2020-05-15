@@ -6,6 +6,8 @@
 #define TOOLS_FIDLCAT_COMMAND_LINE_OPTIONS_H_
 
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "src/lib/fidl_codec/display_options.h"
 #include "tools/fidlcat/lib/decode_options.h"
@@ -24,6 +26,9 @@ struct CommandLineOptions {
   std::vector<std::string> fidl_ir_paths;
   std::vector<std::string> syscall_filters;
   std::vector<std::string> exclude_syscall_filters;
+  std::vector<std::string> message_filters;
+  std::vector<std::string> exclude_message_filters;
+  std::vector<std::string> trigger_filters;
   bool pretty_print = false;
   bool with_process_info = false;
   int stack_level = 0;

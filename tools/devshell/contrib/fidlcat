@@ -52,6 +52,19 @@
 ##                          --exclude-syscalls.
 ##                          To display all the syscalls but the zx_handle syscalls, use:
 ##                          --syscalls ".*" --exclude-syscalls "zx_handle_.*"
+##    --messages            A regular expression which selects the messages to display.
+##                          To display a message, the method name must satisfy the regexp.
+##                          This option can be specified multiple times.
+##                          Message filtering works on the method's fully qualified name.
+##    --exclude-messages    A regular expression which selects the messages to not display.
+##                          If a message method name satisfy the regexp, the message is not
+##                          displayed (even if it satifies --messages).
+##                          This option can be specified multiple times.
+##                          Message filtering works on the method's fully qualified name.
+##    --trigger=<regexp>    Start displaying messages and syscalls only when a message for which
+##                          the method name satisfies the filter is found.
+##                          This option can be specified multiple times.
+##                          Message filtering works on the method's fully qualified name.
 ##    --dump-messages       Always does a hexadecimal dump of the messages even if we can
 ##                          decode them.
 ##    --verbose=<value>     The log verbosity.  Legal values are "info", "warning",
@@ -163,6 +176,15 @@ while [[ $# -gt 0 ]]; do
       arguments+=("$1")
       ;;
     --exclude-syscalls=*)
+      arguments+=("$1")
+      ;;
+    --messages=*)
+      arguments+=("$1")
+      ;;
+    --exclude-messages=*)
+      arguments+=("$1")
+      ;;
+    --trigger=*)
       arguments+=("$1")
       ;;
     --verbose=*)

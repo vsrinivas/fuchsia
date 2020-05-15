@@ -154,6 +154,13 @@ bool Event::NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference) {
   return false;
 }
 
+const fidl_codec::FidlMessageValue* Event::GetMessage() const {
+  if (outline_fields_.size() == 0) {
+    return nullptr;
+  }
+  return outline_fields_.begin()->second->AsFidlMessageValue();
+}
+
 void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) const {
   printer << syscall()->name();
   printer.DisplayInline(syscall()->input_inline_members(), inline_fields());

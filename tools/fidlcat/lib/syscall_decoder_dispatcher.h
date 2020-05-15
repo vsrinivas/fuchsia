@@ -1166,14 +1166,27 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
                                                    Stage stage) const override;
 };
 
+enum class SyscallKind {
+  // Describes a function (like startup functions).
+  kFunction,
+  // Describes a regular syscall (with no special handling).
+  kRegularSyscall,
+  // zx_channel_read and zx_channel_read_etc syscalls.
+  kChannelRead,
+  // zx_channel_write and zx_channel_write_etc syscalls.
+  kChannelWrite,
+  // zx_channel_call syscall.
+  kChannelCall
+};
+
 // Defines a syscall we want to decode/display.
 class Syscall {
  public:
-  Syscall(std::string_view name, SyscallReturnType return_type, bool is_function)
+  Syscall(std::string_view name, SyscallReturnType return_type, SyscallKind kind)
       : name_(name),
         return_type_(return_type),
-        is_function_(is_function),
-        breakpoint_name_(is_function_ ? name_ : "$plt(" + name_ + ")") {}
+        kind_(kind),
+        breakpoint_name_((kind == SyscallKind::kFunction) ? name_ : "$plt(" + name_ + ")") {}
 
   // Name of the syscall.
   [[nodiscard]] const std::string& name() const { return name_; }
@@ -1181,8 +1194,25 @@ class Syscall {
   // Type of the syscall returned value.
   [[nodiscard]] SyscallReturnType return_type() const { return return_type_; }
 
+  // Kind of the syscall.
+  SyscallKind kind() const { return kind_; }
+
   // True if this class describes a regular function and not a syscall.
-  bool is_function() const { return is_function_; }
+  bool is_function() const { return kind_ == SyscallKind::kFunction; }
+
+  // True if this class describes a zx_channel_read or zx_channel_read_etc.
+  bool is_channel_read() const { return kind_ == SyscallKind::kChannelRead; }
+
+  // True if this class describes a zx_channel_write or zx_channel_write_etc.
+  bool is_channel_write() const { return kind_ == SyscallKind::kChannelWrite; }
+
+  // True if this class describes a zx_channel_call.
+  bool is_channel_call() const { return kind_ == SyscallKind::kChannelCall; }
+
+  // True if the syscall exchanges at least one FIDL message.
+  bool has_fidl_message() const {
+    return is_channel_read() || is_channel_write() || is_channel_call();
+  }
 
   // Name of the breakpoint used to watch the syscall.
   [[nodiscard]] const std::string& breakpoint_name() const { return breakpoint_name_; }
@@ -1476,7 +1506,7 @@ class Syscall {
  private:
   const std::string name_;
   const SyscallReturnType return_type_;
-  const bool is_function_;
+  const SyscallKind kind_;
   const std::string breakpoint_name_;
   std::vector<std::unique_ptr<SyscallArgumentBase>> arguments_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> inputs_;
@@ -1499,6 +1529,15 @@ class SyscallDecoderDispatcher {
       : decode_options_(decode_options) {
     Populate();
     ComputeTypes();
+    if (!decode_options.trigger_filters.empty()) {
+      // We have at least one trigger => wait for a message satisfying the trigger before displaying
+      // any syscall.
+      display_started_ = false;
+    }
+    if (!decode_options.message_filters.empty() ||
+        !decode_options.exclude_message_filters.empty()) {
+      has_filter_ = true;
+    }
   }
   virtual ~SyscallDecoderDispatcher() = default;
 
@@ -1513,6 +1552,11 @@ class SyscallDecoderDispatcher {
 
   const Inference& inference() const { return inference_; }
   Inference& inference() { return inference_; }
+
+  bool display_started() const { return display_started_; }
+  void set_display_started() { display_started_ = true; }
+
+  bool has_filter() const { return has_filter_; }
 
   Process* SearchProcess(zx_koid_t koid) const {
     auto process = processes_.find(koid);
@@ -1601,15 +1645,16 @@ class SyscallDecoderDispatcher {
 
   // Add a function we want to put a breakpoint on. Used by Populate.
   Syscall* AddFunction(std::string_view name, SyscallReturnType return_type) {
-    auto syscall = std::make_unique<Syscall>(name, return_type, /*is_function=*/true);
+    auto syscall = std::make_unique<Syscall>(name, return_type, SyscallKind::kFunction);
     auto result = syscall.get();
     syscalls_.push_back(std::move(syscall));
     return result;
   }
 
   // Add a syscall. Used by Populate.
-  Syscall* Add(std::string_view name, SyscallReturnType return_type) {
-    auto syscall = std::make_unique<Syscall>(name, return_type, /*is_function=*/false);
+  Syscall* Add(std::string_view name, SyscallReturnType return_type,
+               SyscallKind kind = SyscallKind::kRegularSyscall) {
+    auto syscall = std::make_unique<Syscall>(name, return_type, kind);
     auto result = syscall.get();
     syscalls_.push_back(std::move(syscall));
     return result;
@@ -1672,6 +1717,14 @@ class SyscallDecoderDispatcher {
 
   // All the handles for which we have some information.
   Inference inference_;
+
+  // True if we are now displaying messages and syscalls. If decode_options_.trigger_filters is not
+  // empty, it starts with a false value and switchs to true when a message that satisfies one of
+  // the filter is found.
+  bool display_started_ = true;
+
+  // True if we are filtering messages.
+  bool has_filter_ = false;
 };
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
