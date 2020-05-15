@@ -173,7 +173,7 @@ void ReopenThread(const std::string& path, std::atomic_bool* done) {
     }
     attempts++;
   }
-  printf("Reopened %d times\n", attempts);
+  fprintf(stderr, "Reopened %d times\n", attempts);
 }
 
 // The purpose of this test is to repro the case where a blob is being retrieved from the blob hash
@@ -196,7 +196,7 @@ void RunCreateWriteReopenTest() {
   std::string path(info->path);
 
   for (size_t i = 0; i < num_ops; i++) {
-    printf("Running op %lu... ", i);
+    fprintf(stderr, "Running op %lu...\n", i);
     fbl::unique_fd fd;
     fbl::unique_fd anchor_fd;
 

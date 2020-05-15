@@ -59,7 +59,7 @@ void RunNoSpaceTest() {
     last_info = std::move(info);
 
     if (++count % 50 == 0) {
-      printf("Allocated %lu blobs\n", count);
+      fprintf(stderr, "Allocated %lu blobs\n", count);
     }
   }
 }

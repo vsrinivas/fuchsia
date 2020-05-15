@@ -68,7 +68,7 @@ void RunFragmentationTest(FilesystemTest* test) {
     do_small_blob = !do_small_blob;
 
     if (++count % 50 == 0) {
-      printf("Allocated %lu blobs\n", count);
+      fprintf(stderr, "Allocated %lu blobs\n", count);
     }
   }
 
