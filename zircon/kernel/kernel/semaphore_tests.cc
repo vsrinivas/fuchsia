@@ -12,7 +12,6 @@
 #include <lockdep/lockdep.h>
 
 using lockdep::Guard;
-// using lockdep::ThreadLock;
 
 static bool smoke_test() {
   BEGIN_TEST;
