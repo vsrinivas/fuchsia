@@ -220,9 +220,7 @@ __NO_INLINE static void bench_memcpy() {
 __NO_INLINE static void bench_spinlock() {
   spin_lock_saved_state_t state;
   spin_lock_saved_state_t state2;
-  spin_lock_t lock;
-
-  spin_lock_init(&lock);
+  SpinLock lock;
 
 #define COUNT (128 * 1024 * 1024)
   // test 1: acquire/release a spinlock with interrupts already disabled
@@ -230,8 +228,8 @@ __NO_INLINE static void bench_spinlock() {
 
   uint64_t c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
-    spin_lock(&lock);
-    spin_unlock(&lock);
+    lock.Acquire();
+    lock.Release();
   }
   c = arch::Cycles() - c;
 
@@ -245,8 +243,8 @@ __NO_INLINE static void bench_spinlock() {
 
   c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
-    spin_lock_irqsave(&lock, state2);
-    spin_unlock_irqrestore(&lock, state2);
+    lock.AcquireIrqSave(state2);
+    lock.ReleaseIrqRestore(state2);
   }
   c = arch::Cycles() - c;
 
@@ -260,8 +258,8 @@ __NO_INLINE static void bench_spinlock() {
   // test 2: acquire/release a spinlock with irq save and irqs enabled
   c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
-    spin_lock_irqsave(&lock, state2);
-    spin_unlock_irqrestore(&lock, state2);
+    lock.AcquireIrqSave(state2);
+    lock.ReleaseIrqRestore(state2);
   }
   c = arch::Cycles() - c;
 
