@@ -2179,7 +2179,7 @@ mod tests {
     /// Create an IPv4 packet builder.
     fn get_ipv4_builder() -> Ipv4PacketBuilder {
         Ipv4PacketBuilder::new(
-            Ipv4Addr::new([192, 168, 0, 100]),
+            DUMMY_CONFIG_V4.remote_ip,
             DUMMY_CONFIG_V4.local_ip,
             10,
             IpProto::Udp,
@@ -2252,8 +2252,7 @@ mod tests {
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
         bytes[6] = Ipv6ExtHdrType::Fragment.into(); // Next Header
         bytes[7] = 64;
-        bytes[8..24]
-            .copy_from_slice(&[16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
+        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         bytes[40] = IpProto::Udp.into();
         bytes[42] = fragment_offset >> 5;
@@ -2610,7 +2609,15 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Trigger the timer (simulate a timeout for the fragmented packet)
-        assert!(trigger_next_timer(&mut ctx));
+        let key = FragmentCacheKey::<_>::new(
+            I::DUMMY_CONFIG.remote_ip.get(),
+            I::DUMMY_CONFIG.local_ip.get(),
+            u32::from(fragment_id),
+        );
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            IpLayerTimerId::new_reassembly_timeout_timer_id(key)
+        );
 
         // Make sure no other times exist..
         assert_eq!(ctx.dispatcher.timer_events().count(), 0);

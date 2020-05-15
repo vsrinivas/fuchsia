@@ -200,40 +200,41 @@ pub(crate) fn set_logger_for_test() {
 
 /// Skip current time forward to trigger the next timer event.
 ///
-/// Returns true if a timer was triggered, false if there were no timers waiting
+/// Returns the `TimerId` if a timer was triggered, `None` if there were no timers waiting
 /// to be triggered.
-pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
+pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> Option<TimerId> {
     match ctx.dispatcher.timer_events.pop() {
         Some(InstantAndData(t, id)) => {
             ctx.dispatcher.current_time = t;
             handle_timeout(ctx, id);
-            true
+            Some(id)
         }
-        None => false,
+        None => None,
     }
 }
 
 /// Skip current time forward by `duration`, triggering all timer events until then,
 /// inclusive.
 ///
-/// Returns the number of timer events triggered.
-pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duration) -> usize {
+/// Returns the `TimerId` of the timer events triggered.
+pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duration) -> Vec<TimerId> {
     let end_time = ctx.dispatcher.now() + duration;
-    let mut timers_fired = 0;
+    let mut timer_ids = Vec::new();
 
     while let Some(tmr) = ctx.dispatcher.timer_events.peek() {
         if tmr.0 > end_time {
             break;
         }
 
-        assert!(trigger_next_timer(ctx));
-        timers_fired += 1;
+        let timer_id = trigger_next_timer(ctx);
+        assert!(timer_id.is_some());
+        timer_ids.push(timer_id.unwrap());
     }
 
     assert!(ctx.dispatcher.now() <= end_time);
     ctx.dispatcher.current_time = end_time;
 
-    timers_fired
+    timer_ids
 }
 
 /// Trigger timer events until`f` callback returns true or passes the max

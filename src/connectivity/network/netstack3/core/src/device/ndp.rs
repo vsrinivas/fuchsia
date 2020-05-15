@@ -3654,7 +3654,12 @@ mod tests {
                     .count(),
                 1
             );
-            assert!(trigger_next_timer(ctx));
+
+            assert_eq!(
+                trigger_next_timer(ctx).unwrap(),
+                NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+            );
+
             assert_eq!(
                 ctx.dispatcher().frames_sent().len(),
                 offset + usize::try_from(i).unwrap() + 1
@@ -3700,7 +3705,10 @@ mod tests {
         };
 
         for i in 0..usize::from(count) {
-            assert!(trigger_next_timer(ctx));
+            assert_eq!(
+                trigger_next_timer(ctx).unwrap(),
+                NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+            );
             assert_eq!(ctx.dispatcher().frames_sent().len(), offset + i + 1);
             validate_simple_ra(&ctx.dispatcher().frames_sent()[offset + i].1, 0);
         }
@@ -4126,7 +4134,11 @@ mod tests {
         for packet_num in 0..usize::from(MAX_MULTICAST_SOLICIT) {
             assert_eq!(ctx.dispatcher.frames_sent().len(), packet_num + 1);
 
-            testutil::trigger_next_timer(&mut ctx);
+            assert_eq!(
+                testutil::trigger_next_timer(&mut ctx).unwrap(),
+                NdpTimerId::new_link_address_resolution(dev_id.id().into(), remote_ip().get())
+                    .into()
+            );
         }
         // check that we hit the timeout after MAX_MULTICAST_SOLICIT
         assert_eq!(
@@ -4421,7 +4433,11 @@ mod tests {
         // Only local should be in the solicited node multicast group.
         assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
         assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
-        assert!(testutil::trigger_next_timer(net.context("local")));
+
+        assert_eq!(
+            testutil::trigger_next_timer(net.context("local")).unwrap(),
+            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip().get()).into()
+        );
 
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
             net.context("local"),
@@ -4510,7 +4526,10 @@ mod tests {
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
         for _ in 0..3 {
-            assert!(testutil::trigger_next_timer(&mut ctx));
+            assert_eq!(
+                testutil::trigger_next_timer(&mut ctx).unwrap(),
+                NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip().get()).into()
+            );
         }
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
             &ctx,
@@ -4560,9 +4579,12 @@ mod tests {
             AddrSubnet::new(local_ip().get(), 128).unwrap(),
         )
         .unwrap();
+
+        let expected_timer_id =
+            NdpTimerId::new_dad_ns_transmission(device_id.id().into(), local_ip().get()).into();
         // during the first and second period, the remote host is still down.
-        assert!(testutil::trigger_next_timer(net.context("local")));
-        assert!(testutil::trigger_next_timer(net.context("local")));
+        assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
+        assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
         add_ip_addr_subnet(
             net.context("remote"),
             device_id,
@@ -4636,7 +4658,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -4690,7 +4712,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     trait UnwrapNdp<B: ByteSlice> {
@@ -5084,7 +5106,7 @@ mod tests {
 
         // Router invalidation timeout must have been cleared since we invalided with the
         // received router advertisement with lifetime 0.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
 
         //
         // Receive new router advertisement with non-0 router lifetime, but let it get invalidated
@@ -5128,7 +5150,10 @@ mod tests {
         assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 37);
 
         // Invaldate the router by triggering the timeout.
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_invalidation(device_id.id().into(), src_ip).into()
+        );
         let ndp_state =
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
                 &mut ctx,
@@ -5137,7 +5162,7 @@ mod tests {
         assert!(!ndp_state.has_default_router(&src_ip));
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -5294,7 +5319,10 @@ mod tests {
         assert_eq!(neighbor.state, NeighborEntryState::Stale);
 
         // Trigger router invalidation.
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_invalidation(device_id.id().into(), src_ip).into()
+        );
 
         // Neighbor entry shouldn't change except for `is_router` which should now be `false`.
         let ndp_state =
@@ -5521,7 +5549,10 @@ mod tests {
         // Timeout the prefix.
         //
 
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_prefix_invalidation(device_id.into(), addr_subnet).into()
+        );
 
         // Prefix should no longer be in our list.
         let ndp_state =
@@ -5531,7 +5562,7 @@ mod tests {
         assert!(!ndp_state.has_prefix(&addr_subnet));
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -5569,7 +5600,10 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
         let time = ctx.now();
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+        );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
@@ -5584,7 +5618,10 @@ mod tests {
 
         // Should get 2 more router solicitation messages
         let time = ctx.now();
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+        );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
@@ -5604,7 +5641,10 @@ mod tests {
         )
         .unwrap();
         let time = ctx.now();
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+        );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
@@ -5627,7 +5667,7 @@ mod tests {
         assert_eq!(code, IcmpUnusedCode);
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
         // Should have only sent 3 packets (Router solicitations).
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
@@ -5649,7 +5689,10 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
         let time = ctx.now();
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+        );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
@@ -5657,7 +5700,10 @@ mod tests {
 
         // Should trigger 1 more router solicitations
         let time = ctx.now();
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+        );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
 
@@ -5673,7 +5719,7 @@ mod tests {
         }
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -5712,7 +5758,8 @@ mod tests {
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
-        assert!(trigger_next_timer(&mut ctx));
+
+        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
 
         // Should have sent a router solicitation and still have the timer setup.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
@@ -5766,7 +5813,8 @@ mod tests {
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
-        assert!(trigger_next_timer(&mut ctx));
+
+        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
 
         // Should have sent a frame and have a router solicitation timer setup.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
@@ -5794,7 +5842,7 @@ mod tests {
         assert_eq!(timers.len(), 1);
 
         // Send the first router solicitation after being turned into a host.
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
 
         // Should have sent a router solicitation.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
@@ -5879,13 +5927,15 @@ mod tests {
         // Disable DAD during DAD.
         ndp_configs.set_dup_addr_detect_transmits(None);
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-
+        let expected_timer_id =
+            NdpTimerId::new_dad_ns_transmission(device.id().into(), dummy_config.remote_ip.get())
+                .into();
         // Allow aleady started DAD to complete (2 more more NS, 3 more timers).
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
@@ -6071,7 +6121,15 @@ mod tests {
             .unwrap(),
             AddressState::Tentative
         );
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(3)), 3);
+        let expected_timer_id = NdpTimerId::new_dad_ns_transmission(
+            device.id().into(),
+            TEST_LOCAL_MAC.to_ipv6_link_local().addr().get(),
+        )
+        .into();
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs(3)),
+            &[expected_timer_id, expected_timer_id, expected_timer_id]
+        );
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
@@ -6297,7 +6355,14 @@ mod tests {
         confirm_dad_frame_timer(&mut ctx, device);
 
         // Complete DAD.
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_dad_ns_transmission(
+                device.id().into(),
+                TEST_LOCAL_MAC.to_ipv6_link_local().addr().get()
+            )
+            .into()
+        );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
@@ -6535,7 +6600,10 @@ mod tests {
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+        );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1, 1800);
 
@@ -6592,7 +6660,11 @@ mod tests {
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert!(trigger_next_timer(&mut ctx));
+
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+        );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1, 1800);
 
@@ -6642,7 +6714,11 @@ mod tests {
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        assert!(trigger_next_timer(&mut ctx));
+
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+        );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
         validate_simple_ra(&ctx.dispatcher().frames_sent()[2].1, 1800);
     }
@@ -6737,7 +6813,11 @@ mod tests {
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert!(trigger_next_timer(&mut ctx));
+
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+        );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         validate_simple_ra(&ctx.dispatcher().frames_sent()[0].1, 1800);
 
@@ -6782,7 +6862,11 @@ mod tests {
 
         // Send the Router Advertisement.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert!(trigger_next_timer(&mut ctx));
+
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+        );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         validate_simple_ra(&ctx.dispatcher().frames_sent()[1].1, 1800);
 
@@ -7301,7 +7385,7 @@ mod tests {
         );
 
         // No timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -7435,7 +7519,11 @@ mod tests {
         );
 
         // Complete DAD
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), 1);
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs(1)),
+            vec!(NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into())
+        );
+
         let entry =
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
                 .last()
@@ -7544,7 +7632,7 @@ mod tests {
         );
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -7944,7 +8032,10 @@ mod tests {
         );
 
         // Trigger the deprecation timer.
-        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(
+            trigger_next_timer(&mut ctx).unwrap(),
+            NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr).into()
+        );
 
         // At this point, the address (that was tentative) should just be invalidated (removed)
         // since we should not have any existing connections using the tentative address.
@@ -7955,7 +8046,7 @@ mod tests {
         );
 
         // No more timers.
-        assert!(!trigger_next_timer(&mut ctx));
+        assert!(trigger_next_timer(&mut ctx).is_none());
     }
 
     #[test]
@@ -8083,7 +8174,7 @@ mod tests {
         inner_test(&mut ctx, device, src_ip, dst_ip, subnet, expected_addr_sub, 1001, 7201, 7201);
 
         // Make remaining lifetime < 2 hrs.
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)), 0);
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)).len(), 0);
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than that, don't update
         // valid lifetime
@@ -8105,7 +8196,7 @@ mod tests {
         inner_test(&mut ctx, device, src_ip, dst_ip, subnet, expected_addr_sub, 1001, 7202, 7202);
 
         // Make remaining lifetime < 2 hrs.
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)), 0);
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)).len(), 0);
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than that, don't update
         // valid lifetime.

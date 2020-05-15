@@ -193,7 +193,7 @@ pub(crate) enum FragmentReassemblyError {
 pub(crate) struct FragmentCacheKey<A: IpAddress>(A, A, u32);
 
 impl<A: IpAddress> FragmentCacheKey<A> {
-    fn new(src_ip: A, dst_ip: A, fragment_id: u32) -> Self {
+    pub(crate) fn new(src_ip: A, dst_ip: A, fragment_id: u32) -> Self {
         FragmentCacheKey(src_ip, dst_ip, fragment_id)
     }
 }
