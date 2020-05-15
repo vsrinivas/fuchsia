@@ -85,7 +85,7 @@ group("tests") {
     "//zircon/system/utest/backtrace-request:backtrace-request-integration-package",
     "//zircon/system/utest/blobfs-bench:blobfs-bench-package",
     "//zircon/system/utest/channel-fatal:channel-fatal-package",
-    "//zircon/system/utest/chromeos-disk-setup:chromeos-disk-setup-package",
+    "//zircon/system/ulib/chromeos-disk-setup/test:chromeos-disk-setup-package",
     "//zircon/system/utest/cleanup:cleanup-package",
     "//zircon/system/utest/closure-queue:closure-queue-package",
     "//zircon/system/utest/compiler:compiler-package",
