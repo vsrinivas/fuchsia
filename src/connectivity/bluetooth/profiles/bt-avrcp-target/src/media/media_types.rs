@@ -27,11 +27,6 @@ fn time_nanos_to_millis(t: i64) -> u32 {
 /// contract.
 fn media_timeline_fn_to_position(t: TimelineFunction, current_time: i64) -> Option<u32> {
     let diff = current_time - t.reference_time;
-    if diff.is_negative() {
-        fx_log_warn!("Current time is before reference time. This is not possible.");
-        return None;
-    }
-
     let ratio = if t.reference_delta == 0 {
         fx_log_warn!("Reference delta is zero. Violation of TimelineFunction API.");
         return None;
@@ -40,6 +35,13 @@ fn media_timeline_fn_to_position(t: TimelineFunction, current_time: i64) -> Opti
     };
 
     let position_nanos = diff * ratio + t.subject_time;
+
+    // Some media sources report the reference time ahead of the current time. This is OK.
+    // However, since AVRCP does not report negative playback positions, clamp the position at 0.
+    if position_nanos.is_negative() {
+        return Some(0);
+    }
+
     Some(time_nanos_to_millis(position_nanos))
 }
 
@@ -749,8 +751,9 @@ mod tests {
     /// 2. Normal case with media paused.
     /// 3. Error case with invalid timeline function -> should return None.
     /// 4. Normal case with media in fast forwarding.
-    /// 5. Error case where current time is less than reference time. This means we
-    /// went back in time!
+    /// 5. Normal case where reference time is in the future.
+    ///   a. The calculated song position is positive and returned.
+    ///   b. The calculated song position is negative, and clamped at 0.
     fn test_timeline_fn_to_song_position() {
         // 1. Normal case, media is playing.
         let mut timeline_fn = fidl_media_types::TimelineFunction::new_empty();
@@ -766,8 +769,7 @@ mod tests {
         let expected_position = 20; // 20060095 / 1000000 = 520millis
 
         let song_position = media_timeline_fn_to_position(timeline_fn, curr_time);
-        assert!(song_position.is_some());
-        assert_eq!(song_position.unwrap(), expected_position);
+        assert_eq!(song_position, Some(expected_position));
 
         // 2. Normal case, media is paused.
         timeline_fn = fidl_media_types::TimelineFunction::new_empty();
@@ -785,8 +787,7 @@ mod tests {
         let expected_position = 534; // 534973087 / 1000000 = 534 millis.
 
         let song_position = media_timeline_fn_to_position(timeline_fn, curr_time);
-        assert!(song_position.is_some());
-        assert_eq!(song_position.unwrap(), expected_position);
+        assert_eq!(song_position, Some(expected_position));
 
         // 3. Invalid case, `reference_delta` = 0, which violates the MediaSession contract.
         timeline_fn = fidl_media_types::TimelineFunction::new_empty();
@@ -817,23 +818,39 @@ mod tests {
         let expected_position = 1; // 1520690 / 1000000 = 1 millis
 
         let song_position = media_timeline_fn_to_position(timeline_fn, curr_time);
-        assert!(song_position.is_some());
-        assert_eq!(song_position.unwrap(), expected_position);
+        assert_eq!(song_position, Some(expected_position));
 
-        // 5. Error case, went back in time.
+        // 5a. Future reference time, but the calculated position is positive.
         timeline_fn = fidl_media_types::TimelineFunction::new_empty();
         // Playback started at some random time.
-        timeline_fn.subject_time = 534912992;
+        timeline_fn.subject_time = 123456789;
         // Monotonic clock time at beginning of media.
-        timeline_fn.reference_time = 500000000;
-        // Playback rate = 0, it's paused.
-        timeline_fn.subject_delta = 0;
-        timeline_fn.reference_delta = 0;
+        timeline_fn.reference_time = 500010000;
+        // Normal playback rate.
+        timeline_fn.subject_delta = 1;
+        timeline_fn.reference_delta = 1;
         // Current time of the system.
-        let curr_time = 400060095;
+        let curr_time = 500000000;
+        let expected_position = 123; //  -10000 + 123456789 = 123446789 nanos = 123ms
 
         let song_position = media_timeline_fn_to_position(timeline_fn, curr_time);
-        assert!(song_position.is_none());
+        assert_eq!(song_position, Some(expected_position));
+
+        // 5b. Future reference time, but the calculated position is negative.
+        timeline_fn = fidl_media_types::TimelineFunction::new_empty();
+        // Playback started at some random time.
+        timeline_fn.subject_time = 0;
+        // Monotonic clock time at beginning of media.
+        timeline_fn.reference_time = 500010000;
+        // Normal playback rate.
+        timeline_fn.subject_delta = 1;
+        timeline_fn.reference_delta = 1;
+        // Current time of the system.
+        let curr_time = 500000000;
+        let expected_position = 0; //  -10000 + 0 = -10000 -> capped at 0.
+
+        let song_position = media_timeline_fn_to_position(timeline_fn, curr_time);
+        assert_eq!(song_position, Some(expected_position));
     }
 
     #[test]
