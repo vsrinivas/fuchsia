@@ -25,7 +25,6 @@
 #include <fbl/alloc_checker.h>
 #include <kernel/spinlock.h>
 #include <ktl/limits.h>
-#include <lk/init.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
 

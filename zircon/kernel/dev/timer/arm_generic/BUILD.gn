@@ -13,6 +13,7 @@ zx_library("arm_generic") {
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fixed_point",
+    "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/affine",

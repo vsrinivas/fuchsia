@@ -19,7 +19,6 @@
 #include <dev/pcie_bridge.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/spinlock.h>
-#include <lk/init.h>
 #include <vm/vm.h>
 
 #include <zircon/errors.h>

@@ -43,6 +43,9 @@ if (is_asan) {
       "asan-stubs.cc",
     ]
     sources += [ "asan-init-$zircon_cpu.cc" ]
-    deps = [ "..:headers" ]
+    deps = [
+      "$zx/kernel/lib/init",
+      "..:headers",
+    ]
   }
 }

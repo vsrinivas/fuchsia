@@ -12,7 +12,6 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>
-#include <lk/init.h>
 #include <pdev/driver.h>
 
 // Mask for the bit indicating RNG status.

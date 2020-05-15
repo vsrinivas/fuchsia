@@ -15,8 +15,10 @@ zx_library("acpi_tables") {
     "$zx/kernel/arch/x86:headers",
   ]
 
+  deps = [ "$zx/kernel/lib/init" ]
+
   # TODO: testonly
-  deps = [ ":test" ]
+  deps += [ ":test" ]
 }
 
 source_set("test") {

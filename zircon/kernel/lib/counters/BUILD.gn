@@ -22,5 +22,6 @@ zx_library("counters") {
   sources = []
   if (is_kernel) {
     sources += [ "counters.cc" ]
+    deps = [ "$zx/kernel/lib/init" ]
   }
 }

@@ -34,6 +34,7 @@ source_set("generic-arm") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/init",
     "$zx/kernel/lib/lockdep",
     "$zx/kernel/lib/memory_limit",
     "$zx/kernel/lib/topology",

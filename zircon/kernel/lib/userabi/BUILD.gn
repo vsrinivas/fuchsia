@@ -245,7 +245,7 @@ if (is_kernel) {
           public_deps = []
           install = []
           debug = []
-        }
+        },
       ]
     }
   }
@@ -270,6 +270,7 @@ if (is_kernel) {
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/init",
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/zircon-internal",
     ]

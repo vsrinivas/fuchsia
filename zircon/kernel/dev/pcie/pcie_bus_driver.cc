@@ -18,7 +18,6 @@
 #include <kernel/mutex.h>
 #include <ktl/limits.h>
 #include <ktl/move.h>
-#include <lk/init.h>
 #include <vm/vm_aspace.h>
 
 /* TODO(johngro) : figure this out someday.

@@ -17,7 +17,6 @@
 #include <fbl/alloc_checker.h>
 #include <kernel/topology.h>
 #include <ktl/unique_ptr.h>
-#include <lk/init.h>
 
 #define LOCAL_TRACE 0
 

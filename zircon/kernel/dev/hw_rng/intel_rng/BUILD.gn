@@ -9,5 +9,6 @@ source_set("intel_rng") {
   deps = [
     "$zx/kernel/dev/hw_rng",
     "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/init",
   ]
 }

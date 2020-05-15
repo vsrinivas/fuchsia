@@ -36,6 +36,7 @@ zx_library("pc") {
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/fixed_point",
     "$zx/kernel/lib/gfxconsole",
+    "$zx/kernel/lib/init",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/lockdep",
     "$zx/kernel/lib/memory_limit",

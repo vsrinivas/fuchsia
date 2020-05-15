@@ -20,7 +20,6 @@
 #include <fbl/algorithm.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
-#include <lk/init.h>
 #include <vm/vm.h>
 
 #define LOCAL_TRACE 0

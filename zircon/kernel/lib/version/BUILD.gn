@@ -50,6 +50,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":version-string($default_toolchain)",
       "$zx/kernel/lib/console",
+      "$zx/kernel/lib/init",
     ]
   }
 }
