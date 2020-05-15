@@ -39,9 +39,9 @@ source_set("common") {
     "//zircon/system/ulib/trace",
 
     # The engine is chosen by the binary, we just need engine headers here.
-    "//zircon/public/lib/trace-engine-headers-for-reader",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-engine:trace-engine-headers-for-reader",
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/trace-test-utils",
 
@@ -74,7 +74,7 @@ test("trace") {
   output_dir = "$root_out_dir/zircon-migrated"
   deps = [
     ":common",
-    "//zircon/public/lib/trace-engine",
+    "//zircon/system/ulib/trace-engine",
   ]
   data_deps = [ ":trace-static-engine" ]
 }
@@ -97,7 +97,7 @@ test("trace-static-engine") {
   }
   deps = [
     ":common",
-    "//zircon/public/lib/trace-engine",
+    "//zircon/system/ulib/trace-engine",
   ]
 }
 

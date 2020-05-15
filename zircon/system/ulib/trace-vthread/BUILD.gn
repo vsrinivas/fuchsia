@@ -50,7 +50,7 @@ zx_library("trace-vthread") {
     "//zircon/system/ulib/trace",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
-    "//zircon/public/lib/trace-engine",
+    "//zircon/system/ulib/trace-engine",
   ]
   deps = [
     ":common",
@@ -74,7 +74,7 @@ zx_library("trace-vthread-with-static-engine") {
     "//zircon/system/ulib/trace:trace-with-static-engine",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
-    "//zircon/public/lib/trace-engine-static",
+    "//zircon/system/ulib/trace-engine:trace-engine-static",
   ]
   deps = [
     ":common",

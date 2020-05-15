@@ -18,9 +18,9 @@ source_set("importer") {
   public_deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace-engine",
   ]
 
   # TODO(47051): UBSan has found an instance of undefined behavior in this target.
@@ -85,7 +85,7 @@ executable("importer_test_app") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/trace-engine",
+    "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-test-utils",
   ]
 }

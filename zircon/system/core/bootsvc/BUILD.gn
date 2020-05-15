@@ -61,7 +61,6 @@ executable("bin") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/bootfs",
@@ -71,6 +70,7 @@ executable("bin") {
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
   ]
 }
 

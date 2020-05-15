@@ -94,7 +94,6 @@ test("fs") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -112,6 +111,7 @@ test("fs") {
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
   ]
 }
 

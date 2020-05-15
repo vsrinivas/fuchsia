@@ -14,7 +14,7 @@ rustc_library("trace") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:libc",
   ]
-  non_rust_deps = [ "//zircon/public/lib/trace-engine" ]
+  non_rust_deps = [ "//zircon/system/ulib/trace-engine" ]
 }
 
 unittest_package("rust-trace-test") {

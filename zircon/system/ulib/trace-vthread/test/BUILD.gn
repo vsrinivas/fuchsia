@@ -59,7 +59,7 @@ test("trace-vthread-test") {
   }
   deps = [
     ":test-common",
-    "//zircon/public/lib/trace-engine",
+    "//zircon/system/ulib/trace-engine",
   ]
 }
 
@@ -76,7 +76,7 @@ test("trace-vthread-with-static-engine-test") {
   }
   deps = [
     ":test-common",
-    "//zircon/public/lib/trace-engine-static",
+    "//zircon/system/ulib/trace-engine:trace-engine-static",
   ]
 }
 

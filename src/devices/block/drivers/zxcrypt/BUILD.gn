@@ -51,7 +51,7 @@ driver_module("zxcrypt") {
     # This seems to get pulled in by //zircon/public/lib/driver, which is
     # needed by //zircon/public/lib/zxcrypt-dev.  But happily it doesn't show
     # up in our dynamically-linked shared libraries, so we're okay.
-    #"//zircon/public/lib/trace-engine",
+    #"//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/zircon-crypto",
 
     # Some day, we'd also like to be able to assert we don't pull in fdio here,

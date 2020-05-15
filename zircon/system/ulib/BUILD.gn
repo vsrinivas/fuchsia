@@ -397,17 +397,12 @@ group("ulib") {
 #------------------
 #------------------
 #------------------
-    "trace-engine",
 #------------------
 #------------------
-    "trace-engine:trace-engine-driver",
 #------------------
 #------------------
-    "trace-engine:trace-engine-headers-for-handler",
-    "trace-engine:trace-engine-headers-for-reader",
 #------------------
 #------------------
-    "trace-engine:trace-engine-static",
 #------------------
 #------------------
 #------------------
@@ -599,7 +594,6 @@ group("ulib-host") {
     "tftp",
 #------------------
 #------------------
-    "trace-engine:trace-engine-headers-for-reader",
 #------------------
 #------------------
 #------------------

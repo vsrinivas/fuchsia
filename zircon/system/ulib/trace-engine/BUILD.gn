@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # Three copies of libtrace-engine are built:
 # 1) Shared library for use by userspace tracing.
 # 2) Static library for use by userspace tracing.
@@ -22,7 +34,7 @@ trace_engine_headers = [
 
 trace_engine_header_deps = [
   # <trace-engine/handler.h> has #include <lib/async/dispatcher.h>.
-  "$zx/system/ulib/async:headers",
+  "//zircon/public/lib/async",
 ]
 
 template("trace_engine_library") {
@@ -45,10 +57,9 @@ template("trace_engine_library") {
       "nonce.cc",
     ]
     deps = [
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/zx",
     ]
   }
 }
@@ -57,7 +68,6 @@ template("trace_engine_library") {
 trace_engine_library("trace-engine") {
   sdk = "shared"
   sdk_publishable = true
-  extra_configs = [ "$zx_build/public/gn/config:static-libc++" ]
   shared = true
   static = false
 }

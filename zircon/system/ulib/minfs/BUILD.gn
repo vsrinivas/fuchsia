@@ -116,7 +116,6 @@ zx_library("minfs") {
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/trace-engine",
       "//zircon/public/lib/zx",
       "//zircon/system/fidl/fuchsia-device:c",
       "//zircon/system/fidl/fuchsia-device:llcpp",
@@ -128,6 +127,7 @@ zx_library("minfs") {
       "//zircon/system/ulib/storage-metrics",
       "//zircon/system/ulib/storage/operation",
       "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/trace-engine",
     ]
     sources += [
       "allocator/allocator.cc",

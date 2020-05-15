@@ -90,6 +90,11 @@
     "sdk": false
   },
   {
+    "label": "//zircon/system/ulib/trace-engine:trace-engine",
+    "name": "trace-engine",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
     "name": "zbi-bootfs",
     "sdk": false

@@ -35,7 +35,7 @@ zx_library("trace-test-utils") {
     # <trace-test-utils/fixture.h> needs these
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/trace-engine",
+    "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-reader",
   ]
   deps = [

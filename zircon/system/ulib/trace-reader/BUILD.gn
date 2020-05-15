@@ -31,7 +31,7 @@ zx_library("trace-reader") {
   ]
   public_deps = [
     # <trace-reader/records.h> has #include <trace-engine/types.h>.
-    "//zircon/public/lib/trace-engine-headers-for-reader",
+    "//zircon/system/ulib/trace-engine:trace-engine-headers-for-reader",
 
     # <trace-reader/records.h> has #include <fbl/array.h>.
     "//zircon/public/lib/fbl",
@@ -46,6 +46,5 @@ zx_library("trace-reader") {
 
   # TODO(41892): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs +=
-      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }

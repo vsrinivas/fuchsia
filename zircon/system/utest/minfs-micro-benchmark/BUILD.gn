@@ -41,7 +41,6 @@ test("minfs-micro-benchmark") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:c",
@@ -58,6 +57,7 @@ test("minfs-micro-benchmark") {
     "//zircon/system/ulib/perftest",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
   ]
 }
 
