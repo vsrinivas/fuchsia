@@ -242,7 +242,7 @@ struct Opt {
     #[structopt(short = "i", long = "inspect")]
     job_id: Option<u32>,
 
-    // Properties to exclude from display when presenting Inspect trees.
+    /// Properties to exclude from display when presenting Inspect trees.
     #[structopt(
         short = "e",
         long = "exclude-objects",
@@ -251,6 +251,7 @@ struct Opt {
     )]
     exclude_objects: Vec<String>,
 
+    /// Show number of log messages for each component broken down by severity.
     #[structopt(long = "log-stats")]
     log_stats: bool,
 }
@@ -268,9 +269,9 @@ struct ComponentLogStats {
 }
 
 impl ComponentLogStats {
-    fn get_sort_key(&self) -> (u64, u64, u64, u64, u64, u64) {
+    fn get_sort_key(&self) -> (u64, u64, u64, u64, u64) {
         (
-            self.fatal_logs,
+            // Fatal logs are reported separately. They shouldn't affect the order of the output.
             self.error_logs,
             self.warning_logs,
             self.info_logs,
@@ -337,14 +338,23 @@ async fn print_log_stats() -> Result<(), Error> {
         .collect::<Vec<_>>();
     stats_list.sort_by_key(|x| Reverse(x.get_sort_key()));
 
+    // Number of fatal logs is expected to be zero. If that's not the case, report it here.
+    for stats in &stats_list {
+        if stats.fatal_logs != 0 {
+            println!(
+                "Found {} fatal log messages for component {}",
+                stats.fatal_logs, stats.component_url
+            );
+        }
+    }
+
     println!(
-        "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
-        "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "Total", "Component"
+        "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
+        "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "Total", "Component"
     );
     for stats in stats_list {
         println!(
-            "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
-            stats.fatal_logs,
+            "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
             stats.error_logs,
             stats.warning_logs,
             stats.info_logs,
