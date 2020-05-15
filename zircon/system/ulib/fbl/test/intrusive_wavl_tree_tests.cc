@@ -344,8 +344,7 @@ using BalanceTestKeyType = uint64_t;
 using BalanceTestObjPtr = std::unique_ptr<BalanceTestObj>;
 using BalanceTestTree =
     WAVLTree<BalanceTestKeyType, BalanceTestObjPtr,
-             DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>,
-             DefaultObjectTag,
+             DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>, DefaultObjectTag,
              DefaultWAVLTreeTraits<BalanceTestObjPtr, DefaultObjectTag>, WAVLBalanceTestObserver>;
 
 class BalanceTestObj {
@@ -668,9 +667,7 @@ RUN_ZXTEST(WavlTreeTest, UPCDTE,  LowerBound)
 RUN_ZXTEST(WavlTreeTest, RPTE, LowerBound)
 
 
-// TODO(50594) : Remove this when we can.
-//
-// Negative compilation tests which make sure that we don't accidentally
+// Negative compilation test which make sure that we don't accidentally
 // mismatch pointer types between the node and the container.
 TEST(WavlTreeTest, MismatchedPointerType) {
   struct Obj {
@@ -679,6 +676,20 @@ TEST(WavlTreeTest, MismatchedPointerType) {
   };
 #if TEST_WILL_NOT_COMPILE || 0
   [[maybe_unused]] fbl::WAVLTree<uintptr_t, std::unique_ptr<Obj>> tree;
+#endif
+}
+
+// Negative compilation test which make sure that we cannot try to use a node
+// flagged with AllowRemoveFromContainer with a WAVLTree.  Note:  While it would
+// be a rather complicated refactor, we _could_ allow this, but only if we first
+// introduce a version of the WAVLTree which does not track the size of the
+// container.
+TEST(WavlTreeTest, NoRemoveFromContainer) {
+  struct Obj : public WAVLTreeContainable<Obj*, NodeOptions::AllowRemoveFromContainer> {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::WAVLTree<uintptr_t, Obj*> tree;
 #endif
 }
 

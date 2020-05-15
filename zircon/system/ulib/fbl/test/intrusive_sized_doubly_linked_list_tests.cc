@@ -57,6 +57,15 @@ static_assert(std::is_same_v<
               std::tuple<typename SizedDLLTraits<int*>::Tag1, typename SizedDLLTraits<int*>::Tag2,
                          typename SizedDLLTraits<int*>::Tag3>>);
 
+// Negative compilation test which make sure that we cannot try to use a node
+// flagged with AllowRemoveFromContainer with a sized list.
+TEST(SizedDoublyLinkedListTest, NoRemoveFromContainer) {
+  struct Obj : public DoublyLinkedListable<Obj*, NodeOptions::AllowRemoveFromContainer> {};
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::SizedDoublyLinkedList<Obj*> list;
+#endif
+}
+
 // clang-format off
 DEFINE_TEST_OBJECTS(SizedDLL);
 using UMTE   = DEFINE_TEST_THUNK(Sequence, SizedDLL, Unmanaged);

@@ -182,6 +182,13 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     HoldAll,
   };
 
+  enum class EraseMethod {
+    ContainerErase,             // Erase of the form "my_container.erase(iter_or_object);"
+    ObjRemoveFromContainer,     // Erase of the form "object.RemoveFromContainer();"
+    NodeRemoveFromContainer,    // Erase of the form "object.node_.RemoveFromContainer<Traits>;"
+    GlobalRemoveFromContainer,  // Erase of the form "fbl::RemoveFromContainer<Tag>(object)"
+  };
+
   TestEnvironment() { TestEnvTraits::ResetCustomDeleter(); }
   ~TestEnvironment() { Reset(); }
 
@@ -289,7 +296,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     TestEnvTraits::CheckCustomDeleteInvocations(OBJ_COUNT);
   }
 
-  template <typename TargetType>
+  template <EraseMethod Method = EraseMethod::ContainerErase, typename TargetType>
   void DoErase(TargetType&& target, size_t ndx, size_t remaining, bool check_ndx = true) {
     ASSERT_TRUE(ndx < OBJ_COUNT);
     ASSERT_TRUE(remaining <= OBJ_COUNT);
@@ -300,8 +307,23 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     size_t erased_ndx;
 
     {
-      // Erase the item and sanity check it against our tracking.
-      PtrType tmp = container().erase(target);
+      // Erase the item and sanity check it against our tracking using the
+      // technique specified by EraseMethod and the deduced TargetType.
+      PtrType tmp{nullptr};
+      if constexpr (Method == EraseMethod::ContainerErase) {
+        tmp = container().erase(target);
+      } else if constexpr (Method == EraseMethod::ObjRemoveFromContainer) {
+        tmp = target.RemoveFromContainer();
+      } else if constexpr (Method == EraseMethod::NodeRemoveFromContainer) {
+        auto& node_state = NodeTraits::node_state(target);
+        tmp = node_state.template RemoveFromContainer<NodeTraits>();
+      } else if constexpr (Method == EraseMethod::GlobalRemoveFromContainer) {
+        tmp = fbl::RemoveFromContainer<typename ContainerType::TagType>(target);
+      } else {
+        static_assert(Method == EraseMethod::ContainerErase,
+                      "Unrecognized EraseMethod in test expansion");
+      }
+
       ASSERT_NOT_NULL(tmp);
       if (check_ndx) {
         EXPECT_EQ(tmp->value(), ndx);
@@ -399,14 +421,15 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     EXPECT_EQ(0u, Size(container()));
   }
 
-  void DirectErase() {
+  template <EraseMethod Method>
+  void DirectEraseHelper() {
     // Remove all of the elements from the container by erasing using direct
     // node pointers which should end up always being at the front of the
     // container.
     ASSERT_NO_FAILURES(Populate(container(), RefAction::HoldAll));
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
       ASSERT_NOT_NULL(objects()[i]);
-      DoErase(*objects()[i], i, OBJ_COUNT - i);
+      DoErase<Method>(*objects()[i], i, OBJ_COUNT - i);
     }
 
     EXPECT_EQ(0u, ObjType::live_obj_count());
@@ -419,7 +442,7 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     for (size_t i = 0; i < OBJ_COUNT; ++i) {
       size_t ndx = OBJ_COUNT - i - 1;
       ASSERT_NOT_NULL(objects()[ndx]);
-      DoErase(*objects()[ndx], ndx, ndx + 1);
+      DoErase<Method>(*objects()[ndx], ndx, ndx + 1);
     }
 
     EXPECT_EQ(0u, ObjType::live_obj_count());
@@ -432,7 +455,76 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
     ASSERT_NO_FAILURES(Populate(container(), RefAction::HoldAll));
     for (size_t i = 1; i < OBJ_COUNT - 1; ++i) {
       ASSERT_NOT_NULL(objects()[i]);
-      DoErase(*objects()[i], i, OBJ_COUNT - i + 1);
+      DoErase<Method>(*objects()[i], i, OBJ_COUNT - i + 1);
+    }
+  }
+
+  void DirectErase() { ASSERT_NO_FAILURES(DirectEraseHelper<EraseMethod::ContainerErase>()); }
+
+  void ObjRemoveFromContainer() {
+    ASSERT_NO_FAILURES(DirectEraseHelper<EraseMethod::ObjRemoveFromContainer>());
+  }
+
+  void NodeRemoveFromContainer() {
+    typename ContainerTraits::OtherContainerType other_container;
+    ASSERT_NO_FAILURES(DirectEraseHelper<EraseMethod::NodeRemoveFromContainer>());
+    other_container.clear();
+  }
+
+  void GlobalRemoveFromContainer() {
+    ASSERT_NO_FAILURES(DirectEraseHelper<EraseMethod::GlobalRemoveFromContainer>());
+
+    // If the pointer type is one which can be copied, reset the test
+    // environment and do one last test.  Add some objects into one of the
+    // tagged forms of the container that our test objects can exist in, then
+    // erase them using the global fbl::RemoveFromContainer using a non-default
+    // tag.
+    if constexpr (PtrTraits::CanCopy) {
+      using TaggedContainer = typename ContainerTraits::TaggedType1;
+      using Tag = typename ContainerTraits::Tag1;
+
+      Reset();
+      ASSERT_NO_FAILURES(Populate(container(), RefAction::HoldNone));
+
+      TaggedContainer tagged_container;
+      while (!container().is_empty()) {
+        ContainerUtils<TaggedContainer>::MoveInto(tagged_container, container().pop_front());
+      }
+
+      constexpr size_t kStepSize = 3;
+      static_assert(OBJ_COUNT % kStepSize != 0, "Step size must be co-prime with object count");
+      for (size_t i = 0; i < OBJ_COUNT; ++i) {
+        size_t ndx = (i * kStepSize) % OBJ_COUNT;
+        size_t remaining = OBJ_COUNT - i;
+        EXPECT_EQ(remaining, ObjType::live_obj_count());
+        EXPECT_EQ(remaining, Size(tagged_container));
+
+        // Remove the object from the container, letting the pointer go out of
+        // scope immediately.
+        {
+          PtrType tmp = fbl::RemoveFromContainer<Tag>(*objects()[ndx]);
+          ASSERT_NOT_NULL(tmp);
+        }
+
+        // The size of the container should have shrunk.  If we were holding an
+        // internal reference because this was an unmanaged object, or a
+        // RefCounted object selected to be held, then we need to explicitly
+        // release our internal reference before we see the live object count
+        // drop.
+        EXPECT_EQ(remaining - 1, Size(tagged_container));
+        if (HoldingObject(ndx)) {
+          EXPECT_EQ(remaining, ObjType::live_obj_count());
+        }
+        ReleaseObject(ndx);
+        EXPECT_EQ(remaining - 1, ObjType::live_obj_count());
+      }
+
+      EXPECT_EQ(0, ObjType::live_obj_count());
+      EXPECT_EQ(0, Size(tagged_container));
+
+      // Do not let a container of unmanaged pointers assert if we failed to empty
+      // it for any reason.
+      tagged_container.clear();
     }
   }
 

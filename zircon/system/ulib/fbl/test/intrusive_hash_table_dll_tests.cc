@@ -94,6 +94,21 @@ class HTDLLTraits {
   using TaggedType3 = HashTable<size_t, PtrType, DoublyLinkedList<PtrType, Tag3>>;
 };
 
+// Negative compilation test which make sure that we cannot try to use a node
+// flagged with AllowRemoveFromContainer with a hashtable with doubly linked
+// list buckets.  Even though the buckets themselves _could_ do this, the
+// HashTable currently tracks its size which makes direct node removal
+// impossible.  This could be relaxed if we chose to introduce a version of the
+// hashtable which did not maintain an ongoing size count.
+TEST(DoublyLinkedHashTableTest, NoRemoveFromContainer) {
+  struct Obj : public DoublyLinkedListable<Obj*, NodeOptions::AllowRemoveFromContainer> {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::HashTable<uintptr_t, Obj*, fbl::DoublyLinkedList<Obj*>> hashtable;
+#endif
+}
+
 // clang-format off
 DEFINE_TEST_OBJECTS(HTDLL);
 using UMTE   = DEFINE_TEST_THUNK(Associative, HTDLL, Unmanaged);

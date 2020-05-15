@@ -94,6 +94,18 @@ class HTSLLTraits {
   using TaggedType3 = TaggedHashTable<size_t, PtrType, Tag3>;
 };
 
+// Negative compilation test which make sure that we cannot try to use a node
+// flagged with AllowRemoveFromContainer with a hashtable with singly linked
+// list buckets.
+TEST(SinglyLinkedHashTableTest, NoRemoveFromContainer) {
+  struct Obj : public SinglyLinkedListable<Obj*, NodeOptions::AllowRemoveFromContainer> {
+    uintptr_t GetKey() const { return reinterpret_cast<uintptr_t>(this); }
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::HashTable<uintptr_t, Obj*, fbl::SinglyLinkedList<Obj*>> hashtable;
+#endif
+}
+
 // clang-format off
 DEFINE_TEST_OBJECTS(HTSLL);
 using UMTE   = DEFINE_TEST_THUNK(Associative, HTSLL, Unmanaged);

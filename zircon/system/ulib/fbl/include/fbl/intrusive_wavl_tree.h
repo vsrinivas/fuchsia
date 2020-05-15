@@ -221,10 +221,16 @@ class __POINTER(KeyType_) WAVLTree {
 
   // Default construction gives an empty tree.
   constexpr WAVLTree() noexcept {
+    using NodeState = internal::node_state_t<NodeTraits, RefType>;
+
     // Make certain that the type of pointer we are expected to manage matches
     // the type of pointer that our Node type expects to manage.
-    static_assert(std::is_same_v<PtrType, internal::node_ptr_t<NodeTraits, RefType>>,
+    static_assert(std::is_same_v<PtrType, typename NodeState::PtrType>,
                   "WAVLTree's pointer type must match its Node's pointerType");
+
+    // WAVLTree does not currently support direct remove-from-container.
+    static_assert(!(NodeState::kNodeOptions & NodeOptions::AllowRemoveFromContainer),
+                  "WAVLTree does not support nodes which allow RemoveFromContainer.");
   }
 
   // Rvalue construction is permitted, but will result in the move of the tree

@@ -56,6 +56,26 @@ static_assert(
                    std::tuple<typename SLLTraits<int*>::Tag1, typename SLLTraits<int*>::Tag2,
                               typename SLLTraits<int*>::Tag3>>);
 
+// Negative compilation tests which make sure that we don't accidentally
+// mismatch pointer types between the node and the container.
+TEST(SinglyLinkedListTest, MismatchedPointerType) {
+  struct Obj {
+    fbl::SinglyLinkedListNodeState<Obj*> sll_node_state_;
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::SinglyLinkedList<std::unique_ptr<Obj>> list;
+#endif
+}
+
+// Negative compilation test which make sure that we cannot try to use a node
+// flagged with AllowRemoveFromContainer with a sized list.
+TEST(SinglyLinkedListTest, NoRemoveFromContainer) {
+  struct Obj : public SinglyLinkedListable<Obj*, NodeOptions::AllowRemoveFromContainer> {};
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::SinglyLinkedList<Obj*> list;
+#endif
+}
+
 // clang-format off
 DEFINE_TEST_OBJECTS(SLL);
 using UMTE   = DEFINE_TEST_THUNK(Sequence, SLL, Unmanaged);
@@ -249,19 +269,6 @@ RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  ReplaceIfMove)
 RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  ReplaceIfMove)
 RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ReplaceIfMove)
 // clang-format on
-
-// TODO(50594) : Remove this when we can.
-//
-// Negative compilation tests which make sure that we don't accidentally
-// mismatch pointer types between the node and the container.
-TEST(SinglyLinkedListTest, MismatchedPointerType) {
-  struct Obj {
-    fbl::SinglyLinkedListNodeState<Obj*> sll_node_state_;
-  };
-#if TEST_WILL_NOT_COMPILE || 0
-  [[maybe_unused]] fbl::SinglyLinkedList<std::unique_ptr<Obj>> list;
-#endif
-}
 
 }  // namespace intrusive_containers
 }  // namespace tests

@@ -310,10 +310,16 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
 
   // Default construction gives an empty list.
   constexpr SinglyLinkedList() noexcept {
+    using NodeState = internal::node_state_t<NodeTraits, RefType>;
+
     // Make certain that the type of pointer we are expected to manage matches
     // the type of pointer that our Node type expects to manage.
-    static_assert(std::is_same_v<PtrType, internal::node_ptr_t<NodeTraits, RefType>>,
+    static_assert(std::is_same_v<PtrType, typename NodeState::PtrType>,
                   "SinglyLinkedList's pointer type must match its Node's pointerType");
+
+    // SinglyLinkedList does not currently support direct remove-from-container.
+    static_assert(!(NodeState::kNodeOptions & NodeOptions::AllowRemoveFromContainer),
+                  "SinglyLinkedList does not support nodes which allow RemoveFromContainer.");
   }
 
   // Rvalue construction is permitted, but will result in the move of the list

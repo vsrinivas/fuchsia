@@ -6,12 +6,13 @@
 #define FBL_INTRUSIVE_HASH_TABLE_H_
 
 #include <zircon/assert.h>
+
+#include <utility>
+
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
-
-#include <utility>
 
 namespace fbl {
 
@@ -74,6 +75,7 @@ class __POINTER(_KeyType) HashTable {
   using PtrType = _PtrType;
   using PtrTraits = internal::ContainerPtrTraits<PtrType>;
   using ValueType = typename PtrTraits::ValueType;
+  using RefType = typename PtrTraits::RefType;
 
   // Key types/traits
   using KeyType = _KeyType;
@@ -111,7 +113,22 @@ class __POINTER(_KeyType) HashTable {
   static_assert(kNumBuckets > 0, "Hash tables must have at least one bucket");
   static_assert(std::is_unsigned_v<HashType>, "HashTypes must be unsigned integers");
 
-  constexpr HashTable() {}
+  constexpr HashTable() noexcept {
+    using NodeState = internal::node_state_t<NodeTraits, RefType>;
+
+    // Make certain that the type of pointer we are expected to manage matches
+    // the type of pointer that our Node type expects to manage.  In theory, our
+    // bucket has already performed this check for us, but extra sanity checks
+    // are always welcome.
+    static_assert(std::is_same_v<PtrType, typename NodeState::PtrType>,
+                  "SinglyLinkedList's pointer type must match its Node's pointerType");
+
+    // HashTable does not currently support direct remove-from-container (but
+    // could do so if it did not track size)
+    static_assert(!(NodeState::kNodeOptions & NodeOptions::AllowRemoveFromContainer),
+                  "HashTable does not support nodes which allow RemoveFromContainer.");
+  }
+
   ~HashTable() { ZX_DEBUG_ASSERT(PtrTraits::IsManaged || is_empty()); }
 
   // Standard begin/end, cbegin/cend iterator accessors.

@@ -162,6 +162,10 @@ enum class NodeOptions : uint64_t {
   // AllowMultiContainerUptr option to their Containable mix-in.
   AllowMultiContainerUptr = (1 << 4),
 
+  // Nodes with this flag permitted to be directly removed from their container,
+  // without needing to go through the container's erase method.
+  AllowRemoveFromContainer = (1 << 5),
+
   // Reserved bits reserved for testing purposes and should always be ignored by
   // node implementations.
   ReservedBits = 0xF000000000000000,
@@ -313,15 +317,26 @@ namespace internal {
 DECLARE_HAS_MEMBER_TYPE(has_tag_types, TagTypes);
 }
 
-// This is a free function because making it a member function presents complicated lookup issues
-// since the specific Containable classes exist as members of the ContainableBaseClasses<...>, and
-// you'd need to say obj.template GetContainableByTag<TagType>().InContainer, which is super ugly.
+// These are free function because making it a member function presents
+// complicated lookup issues since the specific Containable classes exist as
+// members of the ContainableBaseClasses<...>, and you'd need to say
+// obj.template GetContainableByTag<TagType>().InContainer (or
+// RemoveFromContainer), which is super ugly.
 template <typename TagType = DefaultObjectTag, typename Containable>
 bool InContainer(const Containable& c) {
   if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
     return c.InContainer();
   } else {
     return c.template GetContainableByTag<TagType>().InContainer();
+  }
+}
+
+template <typename TagType = DefaultObjectTag, typename Containable>
+auto RemoveFromContainer(Containable& c) {
+  if constexpr (std::is_same_v<TagType, DefaultObjectTag>) {
+    return c.RemoveFromContainer();
+  } else {
+    return c.template GetContainableByTag<TagType>().RemoveFromContainer();
   }
 }
 

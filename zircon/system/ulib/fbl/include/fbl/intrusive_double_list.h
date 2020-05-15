@@ -47,6 +47,12 @@ class SequenceContainerTestEnvironment;
 }  // namespace intrusive_containers
 }  // namespace tests
 
+// fwd decl of the list base class.
+namespace internal {
+template <typename PtrType>
+class DoublyLinkedListBase;
+}
+
 template <typename PtrType_, NodeOptions Options = NodeOptions::None>
 struct DoublyLinkedListNodeState
     : public internal::CommonNodeStateBase<DoublyLinkedListNodeState<PtrType_, Options>> {
@@ -70,6 +76,14 @@ struct DoublyLinkedListNodeState
   bool IsValid() const { return ((next_ == nullptr) == (prev_ == nullptr)); }
   bool InContainer() const { return (next_ != nullptr); }
 
+  template <typename NodeTraits>
+  PtrType_ RemoveFromContainer() {
+    static_assert(kNodeOptions & NodeOptions::AllowRemoveFromContainer,
+                  "Node does not support direct RemoveFromContainer operations");
+
+    return internal::DoublyLinkedListBase<PtrType_>::template internal_erase<NodeTraits>(*this);
+  }
+
   // Defer to CommonNodeStateBase for enforcement of the various copy/move
   // rules.  Make sure, however, that we explicitly do not allow our own default
   // construction/assignment operators change anything about our state.
@@ -87,6 +101,8 @@ struct DoublyLinkedListNodeState
  private:
   template <typename, typename, SizeOrder, typename>
   friend class DoublyLinkedList;
+  template <typename>
+  friend class internal::DoublyLinkedListBase;
   template <typename>
   friend class tests::intrusive_containers::SequenceContainerTestEnvironment;
   friend class tests::intrusive_containers::DoublyLinkedListChecker;
@@ -133,16 +149,92 @@ struct DoublyLinkedListable {
     return Node::dll_node_state_.InContainer();
   }
 
+  PtrType RemoveFromContainer() {
+    using ListTraits = DefaultDoublyLinkedListTraits<PtrType, TagType_>;
+    return dll_node_state_.template RemoveFromContainer<ListTraits>();
+  }
+
  private:
   friend struct DefaultDoublyLinkedListTraits<PtrType, TagType>;
   DoublyLinkedListNodeState<PtrType, Options> dll_node_state_;
 };
 
+namespace internal {
+
+template <typename PtrType_>
+class DoublyLinkedListBase {
+ public:
+  constexpr DoublyLinkedListBase() = default;
+  ~DoublyLinkedListBase() {}
+
+  using PtrType = PtrType_;
+  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
+  using RawPtrType = typename PtrTraits::RawPtrType;
+
+ protected:
+  template <typename, NodeOptions>
+  friend struct ::fbl::DoublyLinkedListNodeState;
+
+  template <typename NodeTraits, typename NodeStateType>
+  static PtrType internal_erase(NodeStateType& node_ns) {
+    // No one should be calling internal erase with an invalid node state, or a
+    // node state which is not in-container.
+    ZX_DEBUG_ASSERT(node_ns.IsValid() && node_ns.InContainer());
+
+    // Fetch the previous node's node state (this may be our own in the case
+    // that we are the only element on the list)
+    auto& prev_node_ns = NodeTraits::node_state(*node_ns.prev_);
+
+    // Find the prev pointer we need to update.  If we are removing the tail
+    // of the list, the prev pointer is head_'s prev pointer.  Otherwise, it
+    // is the prev pointer of the node which currently follows "next_"
+    auto& tgt_prev = internal::is_sentinel_ptr(node_ns.next_)
+                         ? NodeTraits::node_state(*head_from_sentinel(node_ns.next_)).prev_
+                         : NodeTraits::node_state(*node_ns.next_).prev_;
+
+    // Find the next pointer we need to update.  If the next_ pointer of the
+    // previous node state is a sentinel, removing the head of the list and the
+    // next_ pointer we need to update is actually the head_ for the list.
+    // Otherwise, it is simply the next_ pointer of the previous node state.
+    auto& tgt_next = internal::is_sentinel_ptr(prev_node_ns.next_)
+                         ? head_from_sentinel(prev_node_ns.next_)
+                         : prev_node_ns.next_;
+
+    RawPtrType erased = tgt_next;
+
+    tgt_prev = node_ns.prev_;
+    tgt_next = node_ns.next_;
+    node_ns.prev_ = nullptr;
+    node_ns.next_ = nullptr;
+
+    return PtrTraits::Reclaim(erased);
+  }
+
+  constexpr RawPtrType sentinel() const { return internal::make_sentinel<RawPtrType>(this); }
+
+  // State consists of a raw pointer to the head of the list.  Initially, this
+  // is set to the special sentinel value, which allows iterators set to
+  // this->end() to back up to the tail of the list.
+  RawPtrType head_ = sentinel();
+
+ private:
+  // Fetch a reference to the head_ member the list referenced by a sentinel
+  // value.
+  static RawPtrType& head_from_sentinel(RawPtrType node) {
+    return internal::unmake_sentinel<DoublyLinkedListBase<PtrType_>*>(node)->head_;
+  }
+};
+
+}  // namespace internal
+
 template <typename PtrType_, typename TagType_ = DefaultObjectTag,
           SizeOrder ListSizeOrder_ = SizeOrder::N,
           typename NodeTraits_ = DefaultDoublyLinkedListTraits<PtrType_, TagType_>>
-class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
+class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBase<PtrType_>,
+                                             private internal::SizeTracker<ListSizeOrder_> {
  private:
+  using Base = internal::DoublyLinkedListBase<PtrType_>;
+
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>
   class iterator_impl;
@@ -152,12 +244,12 @@ class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListS
  public:
   // Aliases used to reduce verbosity and expose types/traits to tests
   static constexpr SizeOrder ListSizeOrder = ListSizeOrder_;
-  using PtrType = PtrType_;
+  using typename Base::PtrType;
   using TagType = TagType_;
   using NodeTraits = NodeTraits_;
 
-  using PtrTraits = internal::ContainerPtrTraits<PtrType>;
-  using RawPtrType = typename PtrTraits::RawPtrType;
+  using typename Base::PtrTraits;
+  using typename Base::RawPtrType;
   using ValueType = typename PtrTraits::ValueType;
   using RefType = typename PtrTraits::RefType;
   using CheckerType = ::fbl::tests::intrusive_containers::DoublyLinkedListChecker;
@@ -176,10 +268,19 @@ class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListS
 
   // Default construction gives an empty list.
   constexpr DoublyLinkedList() noexcept {
+    using NodeState = internal::node_state_t<NodeTraits, RefType>;
+
     // Make certain that the type of pointer we are expected to manage matches
     // the type of pointer that our Node type expects to manage.
-    static_assert(std::is_same_v<PtrType, internal::node_ptr_t<NodeTraits, RefType>>,
+    static_assert(std::is_same_v<PtrType, typename NodeState::PtrType>,
                   "DoublyLinkedList's pointer type must match its Node's pointer type");
+
+    // Direct remove-from-container is only allowed if this list does not keep
+    // track of it's size.
+    static_assert((ListSizeOrder == SizeOrder::N) ||
+                      !(NodeState::kNodeOptions & NodeOptions::AllowRemoveFromContainer),
+                  "Nodes which allow RemoveFromContainer may not be used with DoublyLinkedLists "
+                  "that track size");
   }
 
   // Rvalue construction is permitted, but will result in the move of the list
@@ -574,7 +675,7 @@ class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListS
     iterator_impl& operator--() {
       if (node_) {
         if (internal::is_sentinel_ptr(node_)) {
-          auto list = internal::unmake_sentinel<ListPtrType>(node_);
+          auto list = unmake_sentinel(node_);
           node_ = list->tail();
         } else {
           auto& ns = NodeTraits::node_state(*node_);
@@ -624,10 +725,14 @@ class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListS
 
    private:
     friend class DoublyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>;
-    using ListPtrType = const DoublyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>*;
+    using ListType = const DoublyLinkedList<PtrType_, TagType_, ListSizeOrder_, NodeTraits_>;
 
     iterator_impl(const typename PtrTraits::RawPtrType node)
         : node_(const_cast<typename PtrTraits::RawPtrType>(node)) {}
+
+    const ListType* unmake_sentinel(typename PtrTraits::RawPtrType p) {
+      return static_cast<const ListType*>(internal::unmake_sentinel<typename ListType::Base*>(p));
+    }
 
     typename PtrTraits::RawPtrType node_ = nullptr;
   };
@@ -689,33 +794,15 @@ class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListS
   }
 
   PtrType internal_erase(RawPtrType node) {
-    if (!node || internal::is_sentinel_ptr(node))
+    if (!node || internal::is_sentinel_ptr(node)) {
       return PtrType(nullptr);
+    }
 
     // No matter what happens after this, we are going to be 1 smaller after this operation.
     this->DecSizeTracker(1);
 
-    auto& node_ns = NodeTraits::node_state(*node);
-    ZX_DEBUG_ASSERT((node_ns.prev_ != nullptr) && (node_ns.next_ != nullptr));
-
-    // Find the prev pointer we need to update.  If we are removing the tail
-    // of the list, the prev pointer is head_'s prev pointer.  Otherwise, it
-    // is the prev pointer of the node which currently follows "ptr".
-    auto& tgt_prev = internal::is_sentinel_ptr(node_ns.next_)
-                         ? NodeTraits::node_state(*head_).prev_
-                         : NodeTraits::node_state(*node_ns.next_).prev_;
-
-    // Find the next pointer we need to update.  If we are removing the
-    // head of the list, this is head_.  Otherwise it is the next pointer of
-    // the node which comes before us in the list.
-    auto& tgt_next = (head_ == node) ? head_ : NodeTraits::node_state(*node_ns.prev_).next_;
-
-    tgt_prev = node_ns.prev_;
-    tgt_next = node_ns.next_;
-    node_ns.prev_ = nullptr;
-    node_ns.next_ = nullptr;
-
-    return PtrTraits::Reclaim(node);
+    // Defer to our base implementation in order to remove this node.
+    return Base::template internal_erase<NodeTraits>(NodeTraits::node_state(*node));
   }
 
   PtrType internal_swap(typename PtrTraits::RefType node, PtrType&& ptr) {
@@ -769,10 +856,8 @@ class __POINTER(PtrType_) DoublyLinkedList : private internal::SizeTracker<ListS
     return NodeTraits::node_state(*head_).prev_;
   }
 
-  // State consists of a raw pointer to the head of the list.  Initially, this
-  // is set to the special sentinel value, which allows iterators set to
-  // this->end() to back up to the tail of the list.
-  RawPtrType head_ = sentinel();
+  using Base::head_;
+  using Base::sentinel;
 };
 
 // SizedDoublyLinkedList<> is an alias for a DoublyLinkedList<> which keeps

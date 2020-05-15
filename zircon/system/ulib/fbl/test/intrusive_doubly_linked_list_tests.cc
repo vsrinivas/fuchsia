@@ -20,15 +20,15 @@ struct OtherListTraits {
   }
 };
 
-template <typename PtrType>
+template <typename PtrType, NodeOptions kNodeOptions = NodeOptions::None>
 class DLLTraits {
  public:
   // clang-format off
     using TestObjBaseType         = TestObjBase;
 
     using ContainerType           = DoublyLinkedList<PtrType>;
-    using ContainableBaseClass    = DoublyLinkedListable<PtrType>;
-    using ContainerStateType      = DoublyLinkedListNodeState<PtrType>;
+    using ContainableBaseClass    = DoublyLinkedListable<PtrType, kNodeOptions>;
+    using ContainerStateType      = DoublyLinkedListNodeState<PtrType, kNodeOptions>;
 
     using OtherContainerStateType = ContainerStateType;
     using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
@@ -39,9 +39,9 @@ class DLLTraits {
     struct Tag3 {};
 
     using TaggedContainableBaseClasses =
-        fbl::ContainableBaseClasses<TaggedDoublyLinkedListable<PtrType, Tag1>,
-                                    TaggedDoublyLinkedListable<PtrType, Tag2>,
-                                    TaggedDoublyLinkedListable<PtrType, Tag3>>;
+        fbl::ContainableBaseClasses<DoublyLinkedListable<PtrType, kNodeOptions, Tag1>,
+                                    DoublyLinkedListable<PtrType, kNodeOptions, Tag2>,
+                                    DoublyLinkedListable<PtrType, kNodeOptions, Tag3>>;
 
     using TaggedType1 = TaggedDoublyLinkedList<PtrType, Tag1>;
     using TaggedType2 = TaggedDoublyLinkedList<PtrType, Tag2>;
@@ -56,6 +56,17 @@ static_assert(
                    std::tuple<typename DLLTraits<int*>::Tag1, typename DLLTraits<int*>::Tag2,
                               typename DLLTraits<int*>::Tag3>>);
 
+// Negative compilation tests which make sure that we don't accidentally
+// mismatch pointer types between the node and the container.
+TEST(DoublyLinkedListTest, MismatchedPointerType) {
+  struct Obj {
+    fbl::DoublyLinkedListNodeState<Obj*> dll_node_state_;
+  };
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::DoublyLinkedList<std::unique_ptr<Obj>> list;
+#endif
+}
+
 // clang-format off
 DEFINE_TEST_OBJECTS(DLL);
 using UMTE   = DEFINE_TEST_THUNK(Sequence, DLL, Unmanaged);
@@ -63,6 +74,17 @@ using UPDDTE = DEFINE_TEST_THUNK(Sequence, DLL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(Sequence, DLL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(Sequence, DLL, RefPtr);
 VERIFY_CONTAINER_SIZES(DLL, sizeof(void*));
+
+// Versions of the test objects which support removing an object from its
+// container without needing a reference to the container itself.
+template <typename PtrType>
+using RFC_DLLTraits = DLLTraits<PtrType, fbl::NodeOptions::AllowRemoveFromContainer>;
+DEFINE_TEST_OBJECTS(RFC_DLL);
+using RFC_UMTE   = DEFINE_TEST_THUNK(Sequence, RFC_DLL, Unmanaged);
+using RFC_UPDDTE = DEFINE_TEST_THUNK(Sequence, RFC_DLL, UniquePtrDefaultDeleter);
+using RFC_UPCDTE = DEFINE_TEST_THUNK(Sequence, RFC_DLL, UniquePtrCustomDeleter);
+using RFC_RPTE   = DEFINE_TEST_THUNK(Sequence, RFC_DLL, RefPtr);
+VERIFY_CONTAINER_SIZES(RFC_DLL, sizeof(void*));
 
 //////////////////////////////////////////
 // General container specific tests.
@@ -98,6 +120,42 @@ RUN_ZXTEST(DoublyLinkedListTest, UMTE,    DirectErase)
 RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  DirectErase)
 RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  DirectErase)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    DirectErase)
+
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ObjRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ObjRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ObjRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ObjRemoveFromContainer)
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(DoublyLinkedListTest, UMTE,    NodeRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  NodeRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  NodeRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RPTE,    NodeRemoveFromContainer)
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(DoublyLinkedListTest, UMTE,    GlobalRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  GlobalRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  GlobalRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RPTE,    GlobalRemoveFromContainer)
+#endif
+
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UMTE,    ObjRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UPDDTE,  ObjRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UPCDTE,  ObjRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_RPTE,    ObjRemoveFromContainer)
+
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UMTE,    NodeRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UPDDTE,  NodeRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UPCDTE,  NodeRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_RPTE,    NodeRemoveFromContainer)
+
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UMTE,    GlobalRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UPDDTE,  GlobalRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_UPCDTE,  GlobalRemoveFromContainer)
+RUN_ZXTEST(DoublyLinkedListTest, RFC_RPTE,    GlobalRemoveFromContainer)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    MakeIterator)
 RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  MakeIterator)
@@ -241,19 +299,6 @@ RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReplaceMove)
 RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ReplaceMove)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ReplaceMove)
 // clang-format on
-
-// TODO(50594) : Remove this when we can.
-//
-// Negative compilation tests which make sure that we don't accidentally
-// mismatch pointer types between the node and the container.
-TEST(DoublyLinkedListTest, MismatchedPointerType) {
-  struct Obj {
-    fbl::DoublyLinkedListNodeState<Obj*> dll_node_state_;
-  };
-#if TEST_WILL_NOT_COMPILE || 0
-  [[maybe_unused]] fbl::DoublyLinkedList<std::unique_ptr<Obj>> list;
-#endif
-}
 
 }  // namespace intrusive_containers
 }  // namespace tests

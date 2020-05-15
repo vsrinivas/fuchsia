@@ -57,6 +57,15 @@ static_assert(std::is_same_v<
               std::tuple<typename SizedSLLTraits<int*>::Tag1, typename SizedSLLTraits<int*>::Tag2,
                          typename SizedSLLTraits<int*>::Tag3>>);
 
+// Negative compilation test which make sure that we cannot try to use a node
+// flagged with AllowRemoveFromContainer with a sized list.
+TEST(SizedSinglyLinkedListTest, NoRemoveFromContainer) {
+  struct Obj : public SinglyLinkedListable<Obj*, NodeOptions::AllowRemoveFromContainer> {};
+#if TEST_WILL_NOT_COMPILE || 0
+  [[maybe_unused]] fbl::SizedSinglyLinkedList<Obj*> list;
+#endif
+}
+
 // clang-format off
 DEFINE_TEST_OBJECTS(SizedSLL);
 using UMTE   = DEFINE_TEST_THUNK(Sequence, SizedSLL, Unmanaged);
