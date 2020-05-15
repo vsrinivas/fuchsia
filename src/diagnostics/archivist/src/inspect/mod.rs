@@ -138,7 +138,7 @@ impl InspectDataCollector {
         while let Some(entry) = entries.next().await {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.
-            if let Some(proxy) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry)? {
+            if let Ok(Some(proxy)) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry) {
                 let maybe_vmo = proxy
                     .get_content()
                     .err_into::<anyhow::Error>()
@@ -153,7 +153,8 @@ impl InspectDataCollector {
                 continue;
             }
 
-            if let Some(proxy) = self.maybe_load_service::<InspectMarker>(inspect_proxy, &entry)? {
+            if let Ok(Some(proxy)) = self.maybe_load_service::<InspectMarker>(inspect_proxy, &entry)
+            {
                 self.maybe_add(&entry.name, InspectData::DeprecatedFidl(proxy));
                 continue;
             }
@@ -228,9 +229,6 @@ impl InspectDataCollector {
         entry: &files_async::DirEntry,
     ) -> Result<Option<S::Proxy>, Error> {
         if entry.name.ends_with(S::SERVICE_NAME) {
-            if entry.kind != files_async::DirentKind::Service {
-                return Ok(None);
-            }
             let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
             fdio::service_connect_at(dir_proxy.as_ref(), &entry.name, server.into_channel())?;
             return Ok(Some(proxy));
