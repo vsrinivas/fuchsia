@@ -36,6 +36,7 @@ group("all") {
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:guest_runner",
+    "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:magma-arm-mali",
@@ -181,6 +182,7 @@ group("cmdutils") {
     "//examples/cowsay",
     "//garnet/bin/time",
     "//garnet/bin/uname",
+    "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:sched",
     "//garnet/packages/prod:vim",
@@ -262,6 +264,11 @@ group("guest_runner") {
     "//src/virtualization/bin/vmm/device:virtio_rng",
     "//src/virtualization/bin/vmm/device:virtio_wl",
   ]
+}
+
+group("hwstress") {
+  testonly = true
+  public_deps = [ "//garnet/bin/hwstress" ]
 }
 
 group("insntrace") {

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/hwstress_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

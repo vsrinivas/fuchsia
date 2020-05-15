@@ -26,6 +26,7 @@ group("all") {
     "//garnet/bin/glob",
     "//garnet/bin/http:http_service_tests",
     "//garnet/bin/http/tests/manual/mwget",
+    "//garnet/bin/hwstress:tests",
     "//garnet/bin/insntrace/tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/log_listener:log_listener_tests",

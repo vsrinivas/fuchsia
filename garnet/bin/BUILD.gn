@@ -13,6 +13,7 @@ group("bin") {
     "fidl_compatibility_test",
     "glob",
     "http",
+    "hwstress",
     "insntrace",
     "ktrace_provider",
     "log_listener",
