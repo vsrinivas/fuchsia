@@ -193,7 +193,7 @@ pub enum EventErrorPayload {
     Discovered,
     MarkedForDestruction,
     Resolved,
-    Started,
+    Started { component_url: String },
     Stopped,
     Running,
 }
@@ -209,15 +209,18 @@ impl fmt::Debug for EventErrorPayload {
         let mut formatter = fmt.debug_struct("EventErrorPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventErrorPayload::CapabilityReady { path, .. } => {
-                formatter.field("path", &path).finish()
+            EventErrorPayload::CapabilityReady { path, component_url } => {
+                formatter.field("path", &path);
+                formatter.field("component_url", &component_url).finish()
+            }
+            EventErrorPayload::Started { component_url } => {
+                formatter.field("component_url", &component_url).finish()
             }
             EventErrorPayload::CapabilityRouted
             | EventErrorPayload::Destroyed
             | EventErrorPayload::Discovered
             | EventErrorPayload::MarkedForDestruction
             | EventErrorPayload::Resolved
-            | EventErrorPayload::Started
             | EventErrorPayload::Stopped
             | EventErrorPayload::Running => formatter.finish(),
         }

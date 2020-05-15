@@ -7,7 +7,8 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved, Started},
+    matches::assert_matches,
+    test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved, Started, StartedError},
 };
 
 #[fasync::run_singlethreaded]
@@ -32,11 +33,17 @@ async fn main() -> Result<(), Error> {
     // error.
     let started_event = event_stream.expect_exact::<Started>(EventMatcher::new()).await?;
 
-    assert_eq!(resolved_event.error, started_event.result.err());
-
     if resolved_event.error.is_some() {
+        assert_matches!(
+            &started_event.result.err(),
+            Some(StartedError {
+                component_url,
+                description: _,
+            }) if component_url == "fuchsia-pkg://fuchsia.com/events_integration_test#meta/does_not_exist.cm"
+        );
         let _ = echo.echo_string(Some("ERROR")).await?;
     } else {
+        assert!(started_event.result.err().is_none());
         let _ = echo.echo_string(Some("PAYLOAD")).await?;
     }
 

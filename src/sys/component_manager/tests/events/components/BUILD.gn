@@ -98,6 +98,7 @@ rustc_binary("resolved_error_reporter_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:matches",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

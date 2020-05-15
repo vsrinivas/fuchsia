@@ -122,6 +122,9 @@ flexible union EventErrorPayload {
 
     /// Payload for CapabilityRouted events
     2: CapabilityRoutedError capability_routed;
+
+    /// Payload for Started events
+    3: StartedError started;
 };
 
 /// Error payload for CapabilityReady events
@@ -139,6 +142,12 @@ table CapabilityRoutedError {
     /// For a path-based capability, this is the path.
     /// For a runner capability, this is the name.
     1: string:MAX_CAPABILITY_ID_LENGTH capability_id;
+};
+
+/// Error payload for Started events
+table StartedError {
+    /// The url of the component that started.
+    1: fuchsia.url.Url component_url;
 };
 
 /// Encapsulates additional data/protocols for some event types.

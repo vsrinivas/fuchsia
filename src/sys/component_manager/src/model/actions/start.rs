@@ -94,7 +94,10 @@ pub(super) async fn do_start(
         Err(e) => {
             let event = Event::new(
                 realm.abs_moniker.clone(),
-                Err(EventError::new(&e, EventErrorPayload::Started)),
+                Err(EventError::new(
+                    &e,
+                    EventErrorPayload::Started { component_url: realm.component_url.clone() },
+                )),
             );
             realm.hooks.dispatch(&event).await?;
             return Err(e);

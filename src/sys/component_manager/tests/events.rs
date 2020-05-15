@@ -852,80 +852,6 @@ macro_rules! create_event {
                     ty: $protocol_ty:ty,
                 }
             )*},
-        }
-    ) => {
-        paste::item! {
-            pub struct [<$event_type Payload>] {
-                $(pub $protocol_name: $protocol_ty,)*
-                $(pub $data_name: $data_ty,)*
-            }
-
-            pub struct $event_type {
-                target_moniker: String,
-                handler: Option<fsys::HandlerProxy>,
-                timestamp: zx::Time,
-                pub result: Result<[<$event_type Payload>], EventError>,
-            }
-
-            impl $event_type {
-                pub fn unwrap_payload<'a>(&'a self) -> &'a [<$event_type Payload>] {
-                    self.result.as_ref().unwrap()
-                }
-            }
-
-            impl Event for $event_type {
-                create_event!(@build impl-event-shared $event_type $event_name);
-
-                fn from_fidl(event: fsys::Event) -> Result<Self, Error> {
-
-                    // Extract the payload from the Event object.
-                    let result = match event.event_result {
-                        Some(fsys::EventResult::Payload(payload)) => {
-                            create_event!(@build with-payload-success-case payload {
-                                event_type: $event_type,
-                                payload: $($data_name, $data_ty)*,
-                                protocols: $($protocol_name, $protocol_ty)*
-                            })
-                        },
-                        Some(fsys::EventResult::Error(p)) => Ok(Err(
-                                EventError {
-                                    description: p.description.ok_or(
-                                        format_err!("Missing error description"))?
-                                }
-                            )),
-                        None => Err(format_err!("Missing event_result from Event object")),
-                        _ => Err(format_err!("Unexpected event result")),
-                    }?;
-
-                    let event = create_event!(@build from-fidl-shared $event_type event result);
-                    Ok(event)
-                }
-            }
-
-            impl Handler for $event_type {
-                fn handler_proxy(self) -> Option<fsys::HandlerProxy> {
-                    self.handler
-                }
-            }
-        }
-    };
-
-    (
-        event_type: $event_type:ident,
-        event_name: $event_name:ident,
-        payload: {
-            data: {$(
-                {
-                    name: $data_name:ident,
-                    ty: $data_ty:ty,
-                }
-            )*},
-            protocols: {$(
-                {
-                    name: $protocol_name:ident,
-                    ty: $protocol_ty:ty,
-                }
-            )*},
         },
         error_payload: {
             $(
@@ -1064,6 +990,12 @@ create_event!(
             }
         },
         protocols: {},
+    },
+    error_payload: {
+        {
+            name: component_url,
+            ty: String,
+        }
     }
 );
 create_event!(Stopped, stopped);

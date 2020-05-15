@@ -124,6 +124,16 @@ fn maybe_create_event_result(
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
         }))),
+        Err(EventError {
+            source,
+            event_error_payload: EventErrorPayload::Started { component_url },
+        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
+            error_payload: Some(fsys::EventErrorPayload::Started(fsys::StartedError {
+                component_url: Some(component_url.to_string()),
+            })),
+            description: Some(format!("{}", source)),
+            ..fsys::EventError::empty()
+        }))),
         Err(EventError { source, .. }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
