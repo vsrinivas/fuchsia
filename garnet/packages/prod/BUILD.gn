@@ -12,101 +12,6 @@ group("acpidump") {
   }
 }
 
-group("broadcom") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
-    "//src/connectivity/wlan/drivers/wlanif",
-    "//src/connectivity/wlan/drivers/wlanphy",
-  ]
-}
-
-group("bluetooth_hid") {
-  testonly = true
-  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-hog" ]
-}
-
-group("tracing") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/cpuperf_provider",
-    "//garnet/bin/cpuperf_provider:report_generators",
-    "//garnet/bin/ktrace_provider",
-    "//garnet/bin/trace",
-    "//garnet/bin/trace2json",
-    "//garnet/bin/trace_manager",
-    "//garnet/bin/traceutil",
-    "//src/developer/memory/monitor",
-  ]
-}
-
-group("bluetooth_intel") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:bluetooth_hci",
-    "//src/connectivity/bluetooth/hci/intel",
-  ]
-}
-
-# WARNING: Known to topaz.
-group("scenic") {
-  public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//garnet/packages/prod:vulkan",
-    "//src/ui/bin/activity",
-    "//src/ui/bin/ime:ime_service",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/bin/root_presenter:configs",
-    "//src/ui/scenic",
-  ]
-}
-
-# WARNING: Known to topaz.
-group("scenic_no_ime") {
-  public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//garnet/packages/prod:vulkan",
-    "//src/ui/bin/activity",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/bin/root_presenter:configs",
-    "//src/ui/scenic",
-  ]
-}
-
-group("cpuperf") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/cpuperf",
-    "//garnet/bin/cpuperf/print:host_cpuperf_print",
-  ]
-}
-
-# WARNING: Known to topaz.
-group("drivers") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:bluetooth_drivers",
-    "//garnet/packages/prod:openthread",
-    "//garnet/packages/prod:vulkan",
-    "//garnet/packages/prod:wlan_drivers",
-    "//src/camera/drivers",
-    "//src/connectivity/ppp:drivers",
-    "//src/connectivity/telephony:drivers",
-    "//src/graphics/drivers",
-    "//src/media/drivers",
-  ]
-  if (target_cpu == "x64") {
-    public_deps += [
-      "//garnet/packages/prod:goldfish-vulkan",
-      "//garnet/packages/prod:magma-intel-gen",
-    ]
-  }
-}
-
-group("openthread") {
-  testonly = true
-  public_deps = [ "//src/connectivity/openthread/drivers/ot-radio:openthread" ]
-}
-
 group("all") {
   testonly = true
   public_deps = [
@@ -179,35 +84,161 @@ group("atheros") {
   ]
 }
 
-group("wifi_intel") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
-  ]
+group("bluetooth_a2dp") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp-sink" ]
 }
 
-group("realtek") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/realtek/rtl88xx",
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
-  ]
-}
-
-group("memory_monitor") {
-  public_deps = [
-    "//garnet/packages/config:services",
-    "//src/developer/memory/monitor",
-  ]
-}
-
-group("insntrace") {
+group("bluetooth_all") {
   testonly = true
   public_deps = [
-    "//garnet/bin/insntrace",
-    "//garnet/bin/insntrace:host_insntrace_print",
+    "//garnet/packages/prod:bluetooth_atheros",
+    "//garnet/packages/prod:bluetooth_core",
+    "//garnet/packages/prod:bluetooth_hci",
+    "//garnet/packages/prod:bluetooth_intel",
+    "//garnet/packages/prod:bluetooth_profiles",
   ]
+}
+
+group("bluetooth_atheros") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:bluetooth_hci",
+    "//src/connectivity/bluetooth/hci/atheros",
+  ]
+}
+
+group("bluetooth_avrcp") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp" ]
+}
+
+group("bluetooth_core") {
+  public_deps = [
+    "//src/connectivity/bluetooth/core/bt-gap",
+    "//src/connectivity/bluetooth/core/bt-host",
+    "//src/connectivity/bluetooth/core/bt-init",
+    "//src/connectivity/bluetooth/tools/bt-snoop",
+  ]
+}
+
+group("bluetooth_drivers") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/bluetooth/core/bt-host",
+    "//src/connectivity/bluetooth/hci/atheros",
+    "//src/connectivity/bluetooth/hci/emulator",
+    "//src/connectivity/bluetooth/hci/intel",
+    "//src/connectivity/bluetooth/hci/passthrough",
+    "//src/connectivity/bluetooth/profiles/bt-hog",
+  ]
+}
+
+group("bluetooth_hci") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/hci/passthrough" ]
+}
+
+group("bluetooth_hid") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-hog" ]
+}
+
+group("bluetooth_intel") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:bluetooth_hci",
+    "//src/connectivity/bluetooth/hci/intel",
+  ]
+}
+
+group("bluetooth_profiles") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:bluetooth_a2dp",
+    "//garnet/packages/prod:bluetooth_avrcp",
+    "//garnet/packages/prod:bluetooth_hid",
+  ]
+}
+
+group("broadcom") {
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
+    "//src/connectivity/wlan/drivers/wlanif",
+    "//src/connectivity/wlan/drivers/wlanphy",
+  ]
+}
+
+group("chrealm") {
+  testonly = true
+  public_deps = [ "//garnet/bin/chrealm" ]
+}
+
+group("cmdutils") {
+  testonly = true
+  public_deps = [
+    "//examples/cowsay",
+    "//garnet/bin/time",
+    "//garnet/bin/uname",
+    "//garnet/packages/prod:sbase",
+    "//garnet/packages/prod:vim",
+  ]
+}
+
+group("cobalt_client") {
+  testonly = true
+  public_deps = [
+    "//src/cobalt/bin/app:cobalt",
+    "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
+  ]
+}
+
+group("cpuperf") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cpuperf",
+    "//garnet/bin/cpuperf/print:host_cpuperf_print",
+  ]
+}
+
+group("debug_agent") {
+  testonly = true
+  public_deps = [ "//src/developer/debug/debug_agent" ]
+}
+
+# WARNING: Known to topaz.
+group("drivers") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:bluetooth_drivers",
+    "//garnet/packages/prod:openthread",
+    "//garnet/packages/prod:vulkan",
+    "//garnet/packages/prod:wlan_drivers",
+    "//src/camera/drivers",
+    "//src/connectivity/ppp:drivers",
+    "//src/connectivity/telephony:drivers",
+    "//src/graphics/drivers",
+    "//src/media/drivers",
+  ]
+  if (target_cpu == "x64") {
+    public_deps += [
+      "//garnet/packages/prod:goldfish-vulkan",
+      "//garnet/packages/prod:magma-intel-gen",
+    ]
+  }
+}
+
+group("far") {
+  testonly = true
+  public_deps = [
+    "//src/sys/pkg/bin/far",
+    "//src/sys/pkg/bin/far:host",
+  ]
+}
+
+group("goldfish-vulkan") {
+  testonly = true
+  public_deps = [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
 }
 
 group("guest_runner") {
@@ -231,69 +262,61 @@ group("guest_runner") {
   ]
 }
 
-group("usb_video") {
-  testonly = true
-  public_deps = [ "//src/camera/drivers/usb_video" ]
-}
-
-group("bluetooth_atheros") {
+group("insntrace") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:bluetooth_hci",
-    "//src/connectivity/bluetooth/hci/atheros",
+    "//garnet/bin/insntrace",
+    "//garnet/bin/insntrace:host_insntrace_print",
   ]
 }
 
-group("bluetooth_hci") {
+group("iquery") {
   testonly = true
-  public_deps = [ "//src/connectivity/bluetooth/hci/passthrough" ]
+  public_deps = [ "//src/diagnostics/iquery" ]
 }
 
-group("cmdutils") {
-  testonly = true
+group("magma-arm-mali") {
   public_deps = [
-    "//examples/cowsay",
-    "//garnet/bin/time",
-    "//garnet/bin/uname",
-    "//garnet/packages/prod:sbase",
-    "//garnet/packages/prod:vim",
+    "//garnet/packages/prod:sysmem_connector",
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
   ]
 }
 
-group("bluetooth_drivers") {
-  testonly = true
+group("magma-img-rgx-mt8167") {
+  public_deps =
+      [ "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan" ]
+}
+
+if (target_cpu == "x64") {
+  group("magma-intel-gen") {
+    public_deps = [
+      "//garnet/packages/prod:sysmem_connector",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
+    ]
+  }
+}
+
+group("magma-qcom-adreno") {
   public_deps = [
-    "//src/connectivity/bluetooth/core/bt-host",
-    "//src/connectivity/bluetooth/hci/atheros",
-    "//src/connectivity/bluetooth/hci/emulator",
-    "//src/connectivity/bluetooth/hci/intel",
-    "//src/connectivity/bluetooth/hci/passthrough",
-    "//src/connectivity/bluetooth/profiles/bt-hog",
+    "//garnet/packages/prod:sysmem_connector",
+    "//src/graphics/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
   ]
 }
 
-group("vboot_reference") {
+group("magma-vsl-gc") {
+  public_deps = [ "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan" ]
+}
+
+group("memory_monitor") {
   public_deps = [
-    "//tools/vboot_reference:cgpt_host",
-    "//tools/vboot_reference:futility_host",
+    "//garnet/packages/config:services",
+    "//src/developer/memory/monitor",
   ]
 }
 
-group("cobalt_client") {
+group("network-speed-test") {
   testonly = true
-  public_deps = [
-    "//src/cobalt/bin/app:cobalt",
-    "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
-  ]
-}
-
-group("bluetooth_profiles") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:bluetooth_a2dp",
-    "//garnet/packages/prod:bluetooth_avrcp",
-    "//garnet/packages/prod:bluetooth_hid",
-  ]
+  public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
 }
 
 group("network_time") {
@@ -301,60 +324,30 @@ group("network_time") {
   public_deps = [ "//garnet/bin/network_time_service" ]
 }
 
-group("vim") {
+group("openthread") {
   testonly = true
-  public_deps = [ "//third_party/vim" ]
+  public_deps = [ "//src/connectivity/openthread/drivers/ot-radio:openthread" ]
 }
 
-group("telephony") {
-  testonly = true
+group("ralink") {
   public_deps = [
-    "//src/connectivity/telephony/drivers/qmi-fake-transport",
-    "//src/connectivity/telephony/drivers/qmi-usb-transport",
-    "//src/connectivity/telephony/ril-at",
-    "//src/connectivity/telephony/ril-at:ril-at-tests",
-    "//src/connectivity/telephony/ril-qmi",
-    "//src/connectivity/telephony/ril-qmi:ril-qmi-tests",
-    "//src/connectivity/telephony/telephony",
-    "//src/connectivity/telephony/tools/ril-ctl",
+    "//src/connectivity/wlan/drivers/mediatek/ralink",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
-group("tiles") {
-  testonly = true
-  public_deps = [ "//src/ui/tools/tiles" ]
-}
-
-group("vulkan") {
+group("realtek") {
   public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//src/graphics/bin/vulkan_loader",
+    "//src/connectivity/wlan/drivers/realtek/rtl88xx",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
 group("run") {
   testonly = true
   public_deps = [ "//garnet/bin/run" ]
-}
-
-group("chrealm") {
-  testonly = true
-  public_deps = [ "//garnet/bin/chrealm" ]
-}
-
-group("bluetooth_avrcp") {
-  testonly = true
-  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp" ]
-}
-
-group("bluetooth_a2dp") {
-  testonly = true
-  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp-sink" ]
-}
-
-group("network-speed-test") {
-  testonly = true
-  public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
 }
 
 group("sbase") {
@@ -440,11 +433,58 @@ group("sbase") {
   ]
 }
 
-group("test_runner") {
+# WARNING: Known to topaz.
+group("scenic") {
+  public_deps = [
+    "//garnet/packages/prod:sysmem_connector",
+    "//garnet/packages/prod:vulkan",
+    "//src/ui/bin/activity",
+    "//src/ui/bin/ime:ime_service",
+    "//src/ui/bin/root_presenter",
+    "//src/ui/bin/root_presenter:configs",
+    "//src/ui/scenic",
+  ]
+}
+
+# WARNING: Known to topaz.
+group("scenic_no_ime") {
+  public_deps = [
+    "//garnet/packages/prod:sysmem_connector",
+    "//garnet/packages/prod:vulkan",
+    "//src/ui/bin/activity",
+    "//src/ui/bin/root_presenter",
+    "//src/ui/bin/root_presenter:configs",
+    "//src/ui/scenic",
+  ]
+}
+
+group("setui_client") {
+  testonly = true
+  public_deps = [ "//garnet/bin/setui_client" ]
+}
+
+group("sysmem_connector") {
+  public_deps = [ "//garnet/bin/sysmem_connector" ]
+}
+
+group("tee_manager") {
+  public_deps = [
+    "//src/security/tee_manager",
+    "//src/security/tee_manager:config",
+  ]
+}
+
+group("telephony") {
   testonly = true
   public_deps = [
-    "//garnet/bin/test_runner:run_integration_tests",
-    "//garnet/bin/test_runner:run_test",
+    "//src/connectivity/telephony/drivers/qmi-fake-transport",
+    "//src/connectivity/telephony/drivers/qmi-usb-transport",
+    "//src/connectivity/telephony/ril-at",
+    "//src/connectivity/telephony/ril-at:ril-at-tests",
+    "//src/connectivity/telephony/ril-qmi",
+    "//src/connectivity/telephony/ril-qmi:ril-qmi-tests",
+    "//src/connectivity/telephony/telephony",
+    "//src/connectivity/telephony/tools/ril-ctl",
   ]
 }
 
@@ -453,57 +493,63 @@ group("terminal") {
   public_deps = [ "//garnet/bin/terminal" ]
 }
 
-group("wlanif") {
+group("test_runner") {
+  testonly = true
   public_deps = [
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanif",
+    "//garnet/bin/test_runner:run_integration_tests",
+    "//garnet/bin/test_runner:run_test",
   ]
 }
 
-group("wlanphy") {
+group("tiles") {
+  testonly = true
+  public_deps = [ "//src/ui/tools/tiles" ]
+}
+
+group("tracing") {
+  testonly = true
   public_deps = [
+    "//garnet/bin/cpuperf_provider",
+    "//garnet/bin/cpuperf_provider:report_generators",
+    "//garnet/bin/ktrace_provider",
+    "//garnet/bin/trace",
+    "//garnet/bin/trace2json",
+    "//garnet/bin/trace_manager",
+    "//garnet/bin/traceutil",
+    "//src/developer/memory/monitor",
+  ]
+}
+
+group("usb_video") {
+  testonly = true
+  public_deps = [ "//src/camera/drivers/usb_video" ]
+}
+
+group("vboot_reference") {
+  public_deps = [
+    "//tools/vboot_reference:cgpt_host",
+    "//tools/vboot_reference:futility_host",
+  ]
+}
+
+group("vim") {
+  testonly = true
+  public_deps = [ "//third_party/vim" ]
+}
+
+group("vulkan") {
+  public_deps = [
+    "//garnet/packages/prod:sysmem_connector",
+    "//src/graphics/bin/vulkan_loader",
+  ]
+}
+
+group("wifi_intel") {
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanphy",
   ]
-}
-
-group("far") {
-  testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/far",
-    "//src/sys/pkg/bin/far:host",
-  ]
-}
-
-group("ralink") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/mediatek/ralink",
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
-  ]
-}
-
-group("iquery") {
-  testonly = true
-  public_deps = [ "//src/diagnostics/iquery" ]
-}
-
-group("bluetooth_core") {
-  public_deps = [
-    "//src/connectivity/bluetooth/core/bt-gap",
-    "//src/connectivity/bluetooth/core/bt-host",
-    "//src/connectivity/bluetooth/core/bt-init",
-    "//src/connectivity/bluetooth/tools/bt-snoop",
-  ]
-}
-
-group("debug_agent") {
-  testonly = true
-  public_deps = [ "//src/developer/debug/debug_agent" ]
-}
-
-group("sysmem_connector") {
-  public_deps = [ "//garnet/bin/sysmem_connector" ]
 }
 
 group("wlan_drivers") {
@@ -518,62 +564,16 @@ group("wlan_drivers") {
   ]
 }
 
-group("bluetooth_all") {
-  testonly = true
+group("wlanif") {
   public_deps = [
-    "//garnet/packages/prod:bluetooth_atheros",
-    "//garnet/packages/prod:bluetooth_core",
-    "//garnet/packages/prod:bluetooth_hci",
-    "//garnet/packages/prod:bluetooth_intel",
-    "//garnet/packages/prod:bluetooth_profiles",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanif",
   ]
 }
 
-group("magma-arm-mali") {
+group("wlanphy") {
   public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
-}
-
-if (target_cpu == "x64") {
-  group("magma-intel-gen") {
-    public_deps = [
-      "//garnet/packages/prod:sysmem_connector",
-      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
-    ]
-  }
-}
-
-group("magma-img-rgx-mt8167") {
-  public_deps =
-      [ "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan" ]
-}
-
-group("magma-qcom-adreno") {
-  public_deps = [
-    "//garnet/packages/prod:sysmem_connector",
-    "//src/graphics/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
-  ]
-}
-
-group("magma-vsl-gc") {
-  public_deps = [ "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan" ]
-}
-
-group("setui_client") {
-  testonly = true
-  public_deps = [ "//garnet/bin/setui_client" ]
-}
-
-group("tee_manager") {
-  public_deps = [
-    "//src/security/tee_manager",
-    "//src/security/tee_manager:config",
-  ]
-}
-
-group("goldfish-vulkan") {
-  testonly = true
-  public_deps = [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
 }
