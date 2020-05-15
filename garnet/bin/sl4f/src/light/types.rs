@@ -49,7 +49,7 @@ impl LightMethod {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub enum SerializableCapability {
     Brightness,
     Rgb,
@@ -76,7 +76,7 @@ impl From<SerializableCapability> for Capability {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableInfo {
     pub name: String,
     pub capability: SerializableCapability,
@@ -92,7 +92,22 @@ impl SerializableInfo {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+impl From<Info> for SerializableInfo {
+    fn from(info: Info) -> Self {
+        SerializableInfo {
+            name: info.name.clone(),
+            capability: SerializableCapability::from(info.capability),
+        }
+    }
+}
+
+impl From<SerializableInfo> for Info {
+    fn from(info: SerializableInfo) -> Self {
+        Info { name: info.name.clone(), capability: Capability::from(info.capability) }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializableRgb {
     pub red: u8,
     pub green: u8,
@@ -106,7 +121,19 @@ impl SerializableRgb {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+impl From<Rgb> for SerializableRgb {
+    fn from(rgb: Rgb) -> Self {
+        SerializableRgb { red: rgb.red, green: rgb.green, blue: rgb.blue }
+    }
+}
+
+impl From<SerializableRgb> for Rgb {
+    fn from(rgb: SerializableRgb) -> Self {
+        Rgb { red: rgb.red, green: rgb.green, blue: rgb.blue }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableGroupInfo {
     pub name: String,
     pub count: u32,
@@ -120,6 +147,26 @@ impl SerializableGroupInfo {
             name: group_info.name.clone(),
             count: group_info.count,
             capability: SerializableCapability::from(group_info.capability),
+        }
+    }
+}
+
+impl From<GroupInfo> for SerializableGroupInfo {
+    fn from(info: GroupInfo) -> Self {
+        SerializableGroupInfo {
+            name: info.name.clone(),
+            count: info.count,
+            capability: SerializableCapability::from(info.capability),
+        }
+    }
+}
+
+impl From<SerializableGroupInfo> for GroupInfo {
+    fn from(info: SerializableGroupInfo) -> Self {
+        GroupInfo {
+            name: info.name.clone(),
+            count: info.count,
+            capability: Capability::from(info.capability),
         }
     }
 }
