@@ -4,19 +4,17 @@
 
 use crate::bind_program::{Condition, ConditionOp, Statement};
 use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionLocated};
-use crate::device_specification::{self, Property};
-use crate::errors::{self, UserError};
+use crate::device_specification::{DeviceSpecification, Property};
+use crate::errors::UserError;
 use crate::instruction::{InstructionDebugInfo, RawAstLocation};
 use crate::parser_common::{self, CompoundIdentifier, Span, Value};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::path::PathBuf;
 use std::str::FromStr;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum DebuggerError {
-    FileError(errors::FileError),
     BindParserError(parser_common::BindParserError),
     CompilerError(compiler::CompilerError),
     DuplicateKey(CompoundIdentifier),
@@ -108,31 +106,26 @@ enum DebuggerOutput<'a> {
     },
 }
 
-pub fn debug(
-    program: PathBuf,
-    libraries: &[PathBuf],
-    device_file: PathBuf,
-) -> Result<(), DebuggerError> {
-    let device_str = compiler::read_file(&device_file).map_err(DebuggerError::FileError)?;
-    let program_str = compiler::read_file(&program).map_err(DebuggerError::FileError)?;
+pub fn debug_from_str<'a>(
+    instructions: &[SymbolicInstructionLocated<'a>],
+    symbol_table: &SymbolTable,
+    device_file: &str,
+) -> Result<bool, DebuggerError> {
+    let device_specification =
+        DeviceSpecification::from_str(device_file).map_err(DebuggerError::BindParserError)?;
 
-    let device_ast =
-        device_specification::Ast::from_str(&device_str).map_err(DebuggerError::BindParserError)?;
+    debug_from_device_specification(instructions, symbol_table, device_specification)
+}
 
-    let (instructions, symbol_table) = compiler::compile_to_symbolic(&program_str, libraries)
-        .map_err(DebuggerError::CompilerError)?;
-
-    let mut debugger = Debugger::new(&device_ast.properties, &instructions, &symbol_table)?;
+pub fn debug_from_device_specification<'a>(
+    instructions: &[SymbolicInstructionLocated<'a>],
+    symbol_table: &SymbolTable,
+    device_specification: DeviceSpecification,
+) -> Result<bool, DebuggerError> {
+    let mut debugger = Debugger::new(&device_specification.properties, instructions, symbol_table)?;
     let binds = debugger.evaluate_bind_program()?;
     debugger.log_output()?;
-
-    if binds {
-        println!("Driver binds to device.");
-    } else {
-        println!("Driver doesn't bind to device.");
-    }
-
-    Ok(())
+    Ok(binds)
 }
 
 struct Debugger<'a> {

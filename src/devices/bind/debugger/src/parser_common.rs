@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // lazy_static is required for re_find_static.
+use crate::errors::UserError;
 use lazy_static::lazy_static;
 use nom::{
     branch::alt,
@@ -19,6 +20,7 @@ use nom::{
 use nom_locate::LocatedSpan;
 use regex::Regex;
 use std::fmt;
+use thiserror::Error;
 
 pub type NomSpan<'a> = LocatedSpan<&'a str>;
 
@@ -87,7 +89,7 @@ pub enum Value {
     Identifier(CompoundIdentifier),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum BindParserError {
     Type(String),
     StringLiteral(String),
@@ -111,8 +113,15 @@ pub enum BindParserError {
     AcceptKeyword(String),
     AbortKeyword(String),
     NoStatements(String),
+    Eof(String),
     UnterminatedComment,
     Unknown(String, ErrorKind),
+}
+
+impl fmt::Display for BindParserError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", UserError::from(self.clone()))
+    }
 }
 
 impl ParseError<NomSpan<'_>> for BindParserError {

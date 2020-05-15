@@ -10,7 +10,7 @@ use nom::{bytes::complete::tag, sequence::separated_pair, IResult};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ast {
+pub struct DeviceSpecification {
     pub properties: Vec<Property>,
 }
 
@@ -20,12 +20,12 @@ pub struct Property {
     pub value: Value,
 }
 
-impl FromStr for Ast {
+impl FromStr for DeviceSpecification {
     type Err = BindParserError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match device_specification(NomSpan::new(input)) {
-            Ok((_, ast)) => Ok(ast),
+            Ok((_, spec)) => Ok(spec),
             Err(nom::Err::Error(e)) => Err(e),
             Err(nom::Err::Failure(e)) => Err(e),
             Err(nom::Err::Incomplete(_)) => {
@@ -35,6 +35,41 @@ impl FromStr for Ast {
     }
 }
 
+impl DeviceSpecification {
+    pub fn new() -> Self {
+        DeviceSpecification { properties: Vec::new() }
+    }
+
+    pub fn add_property(&mut self, key: &str, value: &str) -> Result<(), BindParserError> {
+        match property_from_pair(NomSpan::new(key), NomSpan::new(value)) {
+            Ok((_, property)) => {
+                self.properties.push(property);
+                Ok(())
+            }
+            Err(nom::Err::Error(e)) => Err(e),
+            Err(nom::Err::Failure(e)) => Err(e),
+            Err(nom::Err::Incomplete(_)) => {
+                unreachable!("Parser should never generate Incomplete errors")
+            }
+        }
+    }
+}
+
+fn property_from_pair<'a, 'b>(
+    key: NomSpan<'a>,
+    value: NomSpan<'b>,
+) -> IResult<(NomSpan<'a>, NomSpan<'b>), Property, BindParserError> {
+    let (key_remaining, key) = compound_identifier(key)?;
+    if !key_remaining.fragment().is_empty() {
+        return Err(nom::Err::Error(BindParserError::Eof(key_remaining.fragment().to_string())));
+    }
+    let (value_remaining, value) = condition_value(value)?;
+    if !value_remaining.fragment().is_empty() {
+        return Err(nom::Err::Error(BindParserError::Eof(value_remaining.fragment().to_string())));
+    }
+    Ok(((key_remaining, value_remaining), Property { key, value }))
+}
+
 fn property(input: NomSpan) -> IResult<NomSpan, Property, BindParserError> {
     let key = ws(compound_identifier);
     let separator = ws(map_err(tag("="), BindParserError::Assignment));
@@ -42,9 +77,9 @@ fn property(input: NomSpan) -> IResult<NomSpan, Property, BindParserError> {
     Ok((input, Property { key, value }))
 }
 
-fn device_specification(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
+fn device_specification(input: NomSpan) -> IResult<NomSpan, DeviceSpecification, BindParserError> {
     let (input, properties) = many_until_eof(ws(property))(input)?;
-    Ok((input, Ast { properties }))
+    Ok((input, DeviceSpecification { properties }))
 }
 
 #[cfg(test)]
@@ -61,6 +96,14 @@ mod test {
             check_result(
                 property(NomSpan::new("abc = 5")),
                 "",
+                Property { key: make_identifier!["abc"], value: Value::NumericLiteral(5) },
+            );
+        }
+
+        #[test]
+        fn simple_from_pair() {
+            assert_eq!(
+                property_from_pair(NomSpan::new("abc"), NomSpan::new("5")).unwrap().1,
                 Property { key: make_identifier!["abc"], value: Value::NumericLiteral(5) },
             );
         }
@@ -84,10 +127,46 @@ mod test {
         }
 
         #[test]
+        fn invalid_from_pair() {
+            assert_eq!(
+                property_from_pair(NomSpan::new("abc def"), NomSpan::new("5")),
+                Err(nom::Err::Error(BindParserError::Eof(" def".to_string())))
+            );
+
+            assert_eq!(
+                property_from_pair(NomSpan::new("_abc"), NomSpan::new("5")),
+                Err(nom::Err::Error(BindParserError::Identifier("_abc".to_string())))
+            );
+
+            assert_eq!(
+                property_from_pair(NomSpan::new("abc"), NomSpan::new("5 42")),
+                Err(nom::Err::Error(BindParserError::Eof(" 42".to_string())))
+            );
+
+            assert_eq!(
+                property_from_pair(NomSpan::new("abc"), NomSpan::new("@")),
+                Err(nom::Err::Error(BindParserError::ConditionValue("@".to_string())))
+            );
+        }
+
+        #[test]
         fn empty() {
             assert_eq!(
                 property(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::Identifier("".to_string())))
+            );
+        }
+
+        #[test]
+        fn empty_from_pair() {
+            assert_eq!(
+                property_from_pair(NomSpan::new(""), NomSpan::new("5")),
+                Err(nom::Err::Error(BindParserError::Identifier("".to_string())))
+            );
+
+            assert_eq!(
+                property_from_pair(NomSpan::new("abc"), NomSpan::new("")),
+                Err(nom::Err::Error(BindParserError::ConditionValue("".to_string())))
             );
         }
     }
@@ -100,7 +179,7 @@ mod test {
             check_result(
                 device_specification(NomSpan::new("abc = 5\nxyz = true")),
                 "",
-                Ast {
+                DeviceSpecification {
                     properties: vec![
                         Property { key: make_identifier!["abc"], value: Value::NumericLiteral(5) },
                         Property { key: make_identifier!["xyz"], value: Value::BoolLiteral(true) },
@@ -114,7 +193,7 @@ mod test {
             check_result(
                 device_specification(NomSpan::new("")),
                 "",
-                Ast { properties: Vec::new() },
+                DeviceSpecification { properties: Vec::new() },
             );
         }
     }

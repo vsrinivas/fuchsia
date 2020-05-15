@@ -5,7 +5,7 @@
 use crate::bind_library;
 use crate::bind_program::{self, Condition, ConditionOp, Statement};
 use crate::dependency_graph::{self, DependencyGraph};
-use crate::errors::{self, UserError};
+use crate::errors::UserError;
 use crate::instruction;
 use crate::make_identifier;
 use crate::offline_debugger::AstLocation;
@@ -13,15 +13,11 @@ use crate::parser_common::{self, CompoundIdentifier, Include, Value};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
-use std::fs::File;
-use std::io::Read;
 use std::ops::Deref;
-use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum CompilerError {
-    FileError(errors::FileError),
     BindParserError(parser_common::BindParserError),
     DependencyError(dependency_graph::DependencyError<CompoundIdentifier>),
     DuplicateIdentifier(CompoundIdentifier),
@@ -42,43 +38,29 @@ impl fmt::Display for CompilerError {
 
 pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
 
-pub fn read_file(path: &PathBuf) -> Result<String, errors::FileError> {
-    let mut file = File::open(path).map_err(|_| errors::FileError::FileOpenError(path.clone()))?;
-    let mut buf = String::new();
-    file.read_to_string(&mut buf).map_err(|_| errors::FileError::FileReadError(path.clone()))?;
-    Ok(buf)
-}
-
 pub fn compile(
-    program: PathBuf,
-    libraries: &[PathBuf],
+    program: &str,
+    libraries: &[String],
 ) -> Result<Vec<instruction::InstructionDebug>, CompilerError> {
-    let program_str = read_file(&program).map_err(CompilerError::FileError)?;
-
-    let (symbolic_instructions, _) = compile_to_symbolic(&program_str, libraries)?;
-
+    let (symbolic_instructions, _) = compile_to_symbolic(program, libraries)?;
     Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
 }
 
 pub fn compile_to_symbolic<'a>(
     program_str: &'a str,
-    libraries: &[PathBuf],
+    libraries: &[String],
 ) -> Result<(Vec<SymbolicInstructionLocated<'a>>, SymbolTable), CompilerError> {
     let ast = bind_program::Ast::try_from(program_str).map_err(CompilerError::BindParserError)?;
 
-    let mut library_asts = vec![];
-    for library in libraries {
-        let library_str = read_file(library).map_err(CompilerError::FileError)?;
-        library_asts.push(
-            bind_library::Ast::try_from(library_str.as_str())
-                .map_err(CompilerError::BindParserError)?,
-        );
-    }
+    let library_asts: Vec<bind_library::Ast> = libraries
+        .into_iter()
+        .map(|lib| {
+            bind_library::Ast::try_from(lib.as_str()).map_err(CompilerError::BindParserError)
+        })
+        .collect::<Result<_, CompilerError>>()?;
 
-    let dependencies: Vec<&bind_library::Ast> = resolve_dependencies(&ast, library_asts.iter())?;
-
+    let dependencies = resolve_dependencies(&ast, library_asts.iter())?;
     let symbol_table = construct_symbol_table(dependencies.into_iter())?;
-
     let symbolic_instructions = compile_statements(ast.statements, &symbol_table)?;
 
     Ok((symbolic_instructions, symbol_table))

@@ -8,7 +8,6 @@ use crate::dependency_graph::DependencyError;
 use crate::offline_debugger;
 use crate::parser_common::{BindParserError, CompoundIdentifier};
 use std::fmt;
-use std::path::PathBuf;
 
 pub struct UserError {
     index: String,
@@ -33,31 +32,6 @@ impl fmt::Display for UserError {
             writeln!(f, "{}", span)?;
         }
         Ok(())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum FileError {
-    FileOpenError(PathBuf),
-    FileReadError(PathBuf),
-}
-
-impl From<FileError> for UserError {
-    fn from(error: FileError) -> Self {
-        match error {
-            FileError::FileOpenError(path) => UserError::new(
-                "E100",
-                &format!("Failed to open file: {}.", path.to_string_lossy()),
-                None,
-                false,
-            ),
-            FileError::FileReadError(path) => UserError::new(
-                "E101",
-                &format!("Failed to read file: {}.", path.to_string_lossy()),
-                None,
-                false,
-            ),
-        }
     }
 }
 
@@ -151,6 +125,9 @@ impl From<BindParserError> for UserError {
                 Some(span),
                 false,
             ),
+            BindParserError::Eof(span) => {
+                UserError::new("E025", "Expected end of file.", Some(span), false)
+            }
             BindParserError::UnterminatedComment => {
                 UserError::new("E023", "Found an unterminated multiline comment.", None, false)
             }
@@ -167,7 +144,6 @@ impl From<BindParserError> for UserError {
 impl From<CompilerError> for UserError {
     fn from(error: CompilerError) -> Self {
         match error {
-            CompilerError::FileError(error) => UserError::from(error),
             CompilerError::BindParserError(error) => UserError::from(error),
             CompilerError::DependencyError(error) => UserError::from(error),
             CompilerError::DuplicateIdentifier(identifier) => UserError::new(
@@ -241,7 +217,6 @@ impl From<DependencyError<CompoundIdentifier>> for UserError {
 impl From<offline_debugger::DebuggerError> for UserError {
     fn from(error: offline_debugger::DebuggerError) -> Self {
         match error {
-            offline_debugger::DebuggerError::FileError(error) => UserError::from(error),
             offline_debugger::DebuggerError::BindParserError(error) => UserError::from(error),
             offline_debugger::DebuggerError::CompilerError(error) => UserError::from(error),
             offline_debugger::DebuggerError::DuplicateKey(identifier) => UserError::new(

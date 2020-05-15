@@ -9,6 +9,7 @@ use bind_debugger::instruction::{Condition, Instruction, InstructionDebug};
 use bind_debugger::{compiler, offline_debugger};
 use std::fmt::Write;
 use std::fs::File;
+use std::io::prelude::*;
 use std::io::{self, BufRead, Write as IoWrite};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -121,11 +122,23 @@ fn write_bind_template(
     Ok(output)
 }
 
+fn read_file(path: &PathBuf) -> Result<String, Error> {
+    let mut file = File::open(path)?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf)?;
+    Ok(buf)
+}
+
 fn handle_command(command: Command) -> Result<(), Error> {
     match command {
         Command::Debug { options, device_file } => {
             let includes = handle_includes(options.include, options.include_file)?;
-            offline_debugger::debug(options.input, &includes, device_file)?;
+            let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
+            let program = read_file(&options.input)?;
+            let (instructions, symbol_table) = compiler::compile_to_symbolic(&program, &includes)?;
+
+            let device = read_file(&device_file)?;
+            offline_debugger::debug_from_str(&instructions, &symbol_table, &device)?;
             Ok(())
         }
         Command::Compile { options, output, depfile, disable_autobind } => {
@@ -172,7 +185,9 @@ fn handle_compile(
         Box::new(io::stdout())
     };
 
-    let instructions = compiler::compile(input, &includes)?;
+    let program = read_file(&input)?;
+    let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
+    let instructions = compiler::compile(&program, &includes)?;
     let output_string = write_bind_template(instructions, disable_autobind)?;
 
     output_writer.write(output_string.as_bytes()).context("Failed to write to output")?;
