@@ -1,5 +1,6 @@
 use {
     super::generic::{CurrentStateCache, Listener, Message},
+    crate::access_point::types,
     fidl_fuchsia_wlan_policy as fidl_policy,
     futures::{channel::mpsc, future::BoxFuture, prelude::*},
 };
@@ -22,11 +23,21 @@ pub struct ApStatesUpdate {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApStateUpdate {
-    pub state: fidl_policy::OperatingState,
-    pub mode: Option<fidl_policy::ConnectivityMode>,
-    pub band: Option<fidl_policy::OperatingBand>,
+    pub state: types::OperatingState,
+    pub mode: Option<types::ConnectivityMode>,
+    pub band: Option<types::OperatingBand>,
     pub frequency: Option<u32>,
     pub clients: Option<ConnectedClientInformation>,
+}
+
+impl ApStateUpdate {
+    pub fn new(
+        state: types::OperatingState,
+        mode: types::ConnectivityMode,
+        band: types::OperatingBand,
+    ) -> Self {
+        ApStateUpdate { state, mode: Some(mode), band: Some(band), frequency: None, clients: None }
+    }
 }
 
 impl Into<Vec<fidl_policy::AccessPointState>> for ApStatesUpdate {
@@ -34,9 +45,9 @@ impl Into<Vec<fidl_policy::AccessPointState>> for ApStatesUpdate {
         self.access_points
             .iter()
             .map(|ap| fidl_policy::AccessPointState {
-                state: Some(ap.state),
-                mode: ap.mode,
-                band: ap.band,
+                state: Some(fidl_policy::OperatingState::from(ap.state)),
+                mode: ap.mode.map(|mode| fidl_policy::ConnectivityMode::from(mode)),
+                band: ap.band.map(|band| fidl_policy::OperatingBand::from(band)),
                 frequency: ap.frequency,
                 clients: ap.clients.map(|c| c.into()),
             })
@@ -88,9 +99,9 @@ mod tests {
         let update = ApStatesUpdate {
             access_points: vec![{
                 ApStateUpdate {
-                    state: fidl_policy::OperatingState::Starting,
-                    mode: Some(fidl_policy::ConnectivityMode::Unrestricted),
-                    band: Some(fidl_policy::OperatingBand::Any),
+                    state: types::OperatingState::Starting,
+                    mode: Some(types::ConnectivityMode::Unrestricted),
+                    band: Some(types::OperatingBand::Any),
                     frequency: None,
                     clients: Some(ConnectedClientInformation { count: 0 }),
                 }
@@ -103,9 +114,9 @@ mod tests {
             ApStatesUpdate {
                 access_points: vec![{
                     ApStateUpdate {
-                        state: fidl_policy::OperatingState::Starting,
-                        mode: Some(fidl_policy::ConnectivityMode::Unrestricted),
-                        band: Some(fidl_policy::OperatingBand::Any),
+                        state: types::OperatingState::Starting,
+                        mode: Some(types::ConnectivityMode::Unrestricted),
+                        band: Some(types::OperatingBand::Any),
                         frequency: None,
                         clients: Some(ConnectedClientInformation { count: 0 }),
                     }
@@ -119,9 +130,9 @@ mod tests {
         let state = ApStatesUpdate {
             access_points: vec![{
                 ApStateUpdate {
-                    state: fidl_policy::OperatingState::Starting,
-                    mode: Some(fidl_policy::ConnectivityMode::Unrestricted),
-                    band: Some(fidl_policy::OperatingBand::Any),
+                    state: types::OperatingState::Starting,
+                    mode: Some(types::ConnectivityMode::Unrestricted),
+                    band: Some(types::OperatingBand::Any),
                     frequency: Some(200),
                     clients: Some(ConnectedClientInformation { count: 1 }),
                 }

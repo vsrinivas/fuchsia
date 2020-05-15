@@ -24,6 +24,8 @@ use {
     std::sync::Arc,
 };
 
+pub mod types;
+
 #[derive(Debug)]
 struct AccessPointInner {
     proxy: Option<fidl_sme::ApSmeProxy>,
@@ -337,27 +339,23 @@ impl AccessPoint {
         let state = match result.result {
             Ok(result_code) => match result_code {
                 fidl_sme::StartApResultCode::Success
-                | fidl_sme::StartApResultCode::AlreadyStarted => {
-                    fidl_policy::OperatingState::Active
-                }
+                | fidl_sme::StartApResultCode::AlreadyStarted => types::OperatingState::Active,
                 ref state => {
                     error!("AP did not start: {:?}", state);
-                    fidl_policy::OperatingState::Failed
+                    types::OperatingState::Failed
                 }
             },
             Err(e) => {
                 error!("Failed to communicate with AP SME: {}", e);
-                fidl_policy::OperatingState::Failed
+                types::OperatingState::Failed
             }
         };
         let update = listener::ApStatesUpdate {
-            access_points: vec![listener::ApStateUpdate {
-                state: state,
-                mode: Some(result.mode),
-                band: Some(result.band),
-                frequency: None,
-                clients: None,
-            }],
+            access_points: vec![listener::ApStateUpdate::new(
+                state,
+                types::ConnectivityMode::from(result.mode),
+                types::OperatingBand::from(result.band),
+            )],
         };
         match self.send_listener_message(listener::Message::NotifyListeners(update)) {
             Ok(()) => {}
@@ -383,7 +381,7 @@ impl AccessPoint {
                 Err(e) => {
                     error!("Failed to stop AP: {}", e);
                     vec![listener::ApStateUpdate {
-                        state: fidl_policy::OperatingState::Failed,
+                        state: types::OperatingState::Failed,
                         mode: None,
                         band: None,
                         frequency: None,
@@ -706,7 +704,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Active);
+        assert_eq!(summary.access_points[0].state, types::OperatingState::Active);
     }
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
@@ -777,7 +775,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Failed);
+        assert_eq!(summary.access_points[0].state, types::OperatingState::Failed);
     }
 
     /// Tests the case where there are no interfaces available to handle a StartAccessPoint
@@ -933,7 +931,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Active);
+        assert_eq!(summary.access_points[0].state, types::OperatingState::Active);
     }
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to handle the
@@ -1038,7 +1036,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Failed);
+        assert_eq!(summary.access_points[0].state, types::OperatingState::Failed);
     }
 
     /// Tests the case where StopAccessPoint is called, but there are no interfaces to service the
@@ -1160,7 +1158,7 @@ mod tests {
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
 
-        assert_eq!(summary.access_points[0].state, fidl_policy::OperatingState::Failed);
+        assert_eq!(summary.access_points[0].state, types::OperatingState::Failed);
     }
 
     #[test]
