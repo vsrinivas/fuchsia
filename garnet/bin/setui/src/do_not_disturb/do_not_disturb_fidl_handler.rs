@@ -1,8 +1,8 @@
 use {
+    crate::fidl_hanging_get_responder,
     crate::fidl_processor::process_stream,
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
-    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbRequestStream, DoNotDisturbSettings,
         DoNotDisturbWatchResponder, Error,
@@ -12,11 +12,11 @@ use {
     futures::FutureExt,
 };
 
-impl Sender<DoNotDisturbSettings> for DoNotDisturbWatchResponder {
-    fn send_response(self, data: DoNotDisturbSettings) {
-        self.send(data).log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
-    }
-}
+fidl_hanging_get_responder!(
+    DoNotDisturbSettings,
+    DoNotDisturbWatchResponder,
+    DoNotDisturbMarker::DEBUG_NAME
+);
 
 impl From<SettingResponse> for DoNotDisturbSettings {
     fn from(response: SettingResponse) -> Self {

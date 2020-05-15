@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::fidl_processor::process_stream, crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::Sender, fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_media::AudioRenderUsage, fidl_fuchsia_settings::*, fuchsia_async as fasync,
-    futures::future::LocalBoxFuture, futures::prelude::*,
+    crate::fidl_hanging_get_result_responder, crate::fidl_processor::process_stream,
+    crate::switchboard::base::*, crate::switchboard::hanging_get_handler::Sender,
+    fidl::endpoints::ServiceMarker, fidl_fuchsia_media::AudioRenderUsage, fidl_fuchsia_settings::*,
+    fuchsia_async as fasync, futures::future::LocalBoxFuture, futures::prelude::*,
 };
 
-impl Sender<AudioSettings> for AudioWatchResponder {
-    fn send_response(self, data: AudioSettings) {
-        self.send(&mut Ok(data)).log_fidl_response_error(AudioMarker::DEBUG_NAME);
-    }
-}
+fidl_hanging_get_result_responder!(AudioSettings, AudioWatchResponder, AudioMarker::DEBUG_NAME);
 
 impl From<SettingResponse> for AudioSettings {
     fn from(response: SettingResponse) -> Self {

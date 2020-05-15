@@ -10,17 +10,14 @@ use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
+use crate::fidl_hanging_get_result_responder;
 use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 
-impl Sender<IntlSettings> for IntlWatchResponder {
-    fn send_response(self, data: IntlSettings) {
-        self.send(&mut Ok(data)).log_fidl_response_error(IntlMarker::DEBUG_NAME);
-    }
-}
+fidl_hanging_get_result_responder!(IntlSettings, IntlWatchResponder, IntlMarker::DEBUG_NAME);
 
 impl From<SettingResponse> for IntlSettings {
     fn from(response: SettingResponse) -> Self {

@@ -41,7 +41,9 @@ fn convert_login_override(
         }
     }
 }
-
+/// This cannot use the fidl_common::fidl_hanging_get_responder since 
+/// SettingsObject and SystemSettings are defined outside this crate and
+/// therefore cannot convert between types.
 impl Sender<SystemSettings> for SetUiServiceWatchResponder {
     fn send_response(self, data: SystemSettings) {
         let mut mode = None;

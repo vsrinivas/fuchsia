@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::fidl_hanging_get_responder;
 use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
@@ -15,11 +16,7 @@ use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 use std::convert::TryFrom;
 
-impl Sender<SetupSettings> for SetupWatchResponder {
-    fn send_response(self, data: SetupSettings) {
-        self.send(data).unwrap();
-    }
-}
+fidl_hanging_get_responder!(SetupSettings, SetupWatchResponder, SetupMarker::DEBUG_NAME);
 
 impl TryFrom<SetupSettings> for SettingRequest {
     type Error = &'static str;

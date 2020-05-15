@@ -82,6 +82,7 @@ mod system;
 
 pub mod agent;
 pub mod config;
+pub mod fidl_common;
 pub mod message;
 pub mod registry;
 pub mod service_context;

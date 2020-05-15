@@ -14,17 +14,17 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 
+use crate::fidl_hanging_get_result_responder;
 use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
 };
-
 use crate::switchboard::hanging_get_handler::Sender;
 
-impl Sender<PrivacySettings> for PrivacyWatchResponder {
-    fn send_response(self, data: PrivacySettings) {
-        self.send(&mut Ok(data)).log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
-    }
-}
+fidl_hanging_get_result_responder!(
+    PrivacySettings,
+    PrivacyWatchResponder,
+    PrivacyMarker::DEBUG_NAME
+);
 
 impl From<SettingResponse> for PrivacySettings {
     fn from(response: SettingResponse) -> Self {

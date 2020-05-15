@@ -7,22 +7,21 @@ use futures::FutureExt;
 
 use futures::future::LocalBoxFuture;
 
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
     Error, NightModeMarker, NightModeRequest, NightModeRequestStream, NightModeSetResponder,
     NightModeSettings, NightModeWatchResponder,
 };
 use fuchsia_async as fasync;
 
+use crate::fidl_hanging_get_responder;
 use crate::switchboard::base::*;
-
 use crate::switchboard::hanging_get_handler::Sender;
 
-impl Sender<NightModeSettings> for NightModeWatchResponder {
-    fn send_response(self, data: NightModeSettings) {
-        self.send(data).log_fidl_response_error(NightModeMarker::DEBUG_NAME);
-    }
-}
+fidl_hanging_get_responder!(
+    NightModeSettings,
+    NightModeWatchResponder,
+    NightModeMarker::DEBUG_NAME
+);
 
 impl From<SettingResponse> for NightModeSettings {
     fn from(response: SettingResponse) -> Self {

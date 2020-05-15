@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::fidl_hanging_get_result_responder,
     crate::fidl_processor::{process_stream, RequestContext},
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -12,11 +14,7 @@ use {
     futures::prelude::*,
 };
 
-impl Sender<SystemSettings> for SystemWatchResponder {
-    fn send_response(self, data: SystemSettings) {
-        self.send(&mut Ok(data)).unwrap();
-    }
-}
+fidl_hanging_get_result_responder!(SystemSettings, SystemWatchResponder, SystemMarker::DEBUG_NAME);
 
 impl From<SettingResponse> for SystemSettings {
     fn from(response: SettingResponse) -> Self {

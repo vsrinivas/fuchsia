@@ -12,6 +12,7 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 
+use crate::fidl_hanging_get_result_responder;
 use crate::switchboard::accessibility_types::{
     AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
 };
@@ -20,11 +21,11 @@ use crate::switchboard::base::{
 };
 use crate::switchboard::hanging_get_handler::Sender;
 
-impl Sender<AccessibilitySettings> for AccessibilityWatchResponder {
-    fn send_response(self, data: AccessibilitySettings) {
-        self.send(&mut Ok(data)).log_fidl_response_error(AccessibilityMarker::DEBUG_NAME);
-    }
-}
+fidl_hanging_get_result_responder!(
+    AccessibilitySettings,
+    AccessibilityWatchResponder,
+    AccessibilityMarker::DEBUG_NAME
+);
 
 impl From<SettingResponse> for AccessibilitySettings {
     fn from(response: SettingResponse) -> Self {
