@@ -353,6 +353,11 @@ async fn print_log_stats() -> Result<(), Error> {
         "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "Total", "Component"
     );
     for stats in stats_list {
+        let last_slash_index = stats.component_url.rfind("/");
+        let short_name = match last_slash_index {
+            Some(index) => &stats.component_url[index + 1..],
+            None => stats.component_url.as_str(),
+        };
         println!(
             "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
             stats.error_logs,
@@ -361,7 +366,7 @@ async fn print_log_stats() -> Result<(), Error> {
             stats.debug_logs,
             stats.trace_logs,
             stats.total_logs,
-            stats.component_url
+            short_name
         );
     }
 
