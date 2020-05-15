@@ -138,6 +138,12 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
     return ZX_OK;
   }
 
+  void HidDeviceGetHidDeviceInfo(hid_device_info_t* out_info) {
+    out_info->vendor_id = 0xabc;
+    out_info->product_id = 123;
+    out_info->version = 5;
+  }
+
   zx_status_t HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                  const uint8_t* report_list, size_t report_count) {
     report_ = std::vector<uint8_t>(report_list, report_list + report_count);
@@ -231,6 +237,37 @@ TEST_F(HidDevTest, GetReportDescTest) {
   ASSERT_TRUE(mouse.has_movement_y());
   ASSERT_EQ(-127, mouse.movement_y().range.min);
   ASSERT_EQ(127, mouse.movement_y().range.max);
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDevTest, ReportDescInfoTest) {
+  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
+  fake_hid_.SetReportDesc(boot_mouse);
+
+  ASSERT_OK(device_->Bind());
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  ASSERT_OK(result.status());
+
+  hid_device_info_t info;
+  fake_hid_.HidDeviceGetHidDeviceInfo(&info);
+
+  auto& desc = result->descriptor;
+  ASSERT_TRUE(desc.has_device_info());
+  ASSERT_EQ(desc.device_info().vendor_id, info.vendor_id);
+  ASSERT_EQ(desc.device_info().product_id, info.product_id);
+  ASSERT_EQ(desc.device_info().version, info.version);
 
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);

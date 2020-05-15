@@ -105,6 +105,16 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
 
 void InputReport::CreateDescriptor(fidl::Allocator* allocator,
                                    fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
+  hid_device_info_t info;
+  hiddev_.GetHidDeviceInfo(&info);
+
+  fuchsia_input_report::DeviceInfo fidl_info;
+  fidl_info.vendor_id = info.vendor_id;
+  fidl_info.product_id = info.product_id;
+  fidl_info.version = info.version;
+  descriptor->set_device_info(
+      allocator->make<fuchsia_input_report::DeviceInfo>(std::move(fidl_info)));
+
   for (auto& device : devices_) {
     device->CreateDescriptor(allocator, descriptor);
   }

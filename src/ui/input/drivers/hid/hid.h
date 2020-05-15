@@ -60,6 +60,8 @@ class HidDevice : public HidDeviceType,
   // |HidDeviceProtocol|
   zx_status_t HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                  const uint8_t* report_data, size_t report_count);
+  // |HidDeviceProtocol|
+  void HidDeviceGetHidDeviceInfo(hid_device_info_t* out_info);
 
   static void IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t time);
 

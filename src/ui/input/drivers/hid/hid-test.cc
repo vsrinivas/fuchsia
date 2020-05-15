@@ -186,6 +186,9 @@ class HidDeviceTest : public zxtest::Test {
     hid_info_t info = {};
     info.device_class = HID_DEVICE_CLASS_POINTER;
     info.boot_device = true;
+    info.vendor_id = 0xabc;
+    info.product_id = 123;
+    info.version = 5;
     fake_hidbus_.SetHidInfo(info);
   }
 
@@ -605,6 +608,20 @@ TEST_F(HidDeviceTest, SettingBootModeKbd) {
   for (size_t i = 0; i < boot_kbd_desc_size; i++) {
     ASSERT_EQ(boot_kbd_desc[i], received_desc[i]);
   }
+}
+
+TEST_F(HidDeviceTest, BanjoGetHidDeviceInfo) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(fake_hidbus_.GetProto()));
+
+  hid_device_info_t info;
+  device_->HidDeviceGetHidDeviceInfo(&info);
+
+  hid_info_t hidbus_info;
+  ASSERT_OK(fake_hidbus_.HidbusQuery(0, &hidbus_info));
+  ASSERT_EQ(hidbus_info.vendor_id, info.vendor_id);
+  ASSERT_EQ(hidbus_info.product_id, info.product_id);
+  ASSERT_EQ(hidbus_info.version, info.version);
 }
 
 TEST_F(HidDeviceTest, BanjoGetDescriptor) {

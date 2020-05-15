@@ -23,6 +23,12 @@ protocol HidReportListener {
     ReceiveReport(vector<uint8>:MAX_REPORT_LEN report, zx.time report_time);
 };
 
+struct HidDeviceInfo {
+    uint32 vendor_id;
+    uint32 product_id;
+    uint32 version;
+};
+
 [Layout = "ddk-protocol"]
 protocol HidDevice {
     /// Register a listener to begin receiving HID Reports. At the moment only a single listener
@@ -31,6 +37,8 @@ protocol HidDevice {
 
     /// Unregister the listener.
     UnregisterListener();
+
+    GetHidDeviceInfo() -> (HidDeviceInfo info);
 
     GetDescriptor() -> (zx.status s, vector<uint8>:MAX_DESC_LEN descriptor);
 
