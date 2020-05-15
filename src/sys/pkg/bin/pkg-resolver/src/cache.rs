@@ -259,7 +259,7 @@ impl ToResolveStatus for MerkleForError {
             MerkleForError::NotFound => Status::NOT_FOUND,
             MerkleForError::InvalidTargetPath(_) => Status::INTERNAL,
             // FIXME(42326) when tuf::Error gets an HTTP error variant, this should be mapped to Status::UNAVAILABLE
-            MerkleForError::TufError(_) => Status::INTERNAL,
+            MerkleForError::FetchTargetDescription(..) => Status::INTERNAL,
             MerkleForError::NoCustomMetadata => Status::INTERNAL,
             MerkleForError::SerdeError(_) => Status::INTERNAL,
         }
@@ -320,7 +320,9 @@ impl From<&MerkleForError> for metrics::MerkleForUrlMetricDimensionResult {
     fn from(e: &MerkleForError) -> metrics::MerkleForUrlMetricDimensionResult {
         match e {
             MerkleForError::NotFound => metrics::MerkleForUrlMetricDimensionResult::NotFound,
-            MerkleForError::TufError(_) => metrics::MerkleForUrlMetricDimensionResult::TufError,
+            MerkleForError::FetchTargetDescription(..) => {
+                metrics::MerkleForUrlMetricDimensionResult::TufError
+            }
             MerkleForError::InvalidTargetPath(_) => {
                 metrics::MerkleForUrlMetricDimensionResult::InvalidTargetPath
             }
@@ -359,8 +361,8 @@ pub enum MerkleForError {
     #[error("the package was not found in the repository")]
     NotFound,
 
-    #[error("tuf returned an unexpected error")]
-    TufError(#[source] tuf::error::Error),
+    #[error("unexpected tuf error when fetching target description for {0:?}")]
+    FetchTargetDescription(String, #[source] tuf::error::Error),
 
     #[error("the target path is not safe")]
     InvalidTargetPath(#[source] tuf::error::Error),

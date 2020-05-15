@@ -189,14 +189,7 @@ impl Repository {
         let description =
             updating_client.fetch_target_description(&target_path).await.map_err(|e| match e {
                 TufError::NotFound => MerkleForError::NotFound,
-                other => {
-                    fx_log_err!(
-                        "failed to lookup merkle for {:?} with TUF error {:?}",
-                        target_path,
-                        other
-                    );
-                    MerkleForError::TufError(other)
-                }
+                other => MerkleForError::FetchTargetDescription(target_path.value().into(), other),
             })?;
 
         let custom = description.custom().ok_or(MerkleForError::NoCustomMetadata)?.to_owned();
