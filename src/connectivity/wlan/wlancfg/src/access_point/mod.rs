@@ -466,7 +466,7 @@ fn derive_ap_config(
     let channel = match band {
         fidl_policy::OperatingBand::Any => 11,
         fidl_policy::OperatingBand::Only24Ghz => 11,
-        fidl_policy::OperatingBand::Only5Ghz => 52,
+        fidl_policy::OperatingBand::Only5Ghz => 36,
     };
     let radio_cfg = fidl_sme::RadioConfig {
         override_phy: true,
