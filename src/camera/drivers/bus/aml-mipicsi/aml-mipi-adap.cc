@@ -293,7 +293,7 @@ void AmlMipiDevice::AdapAlignStart(const mipi_adap_info_t* info) {
  */
 
 int AmlMipiDevice::AdapterIrqHandler() {
-  zxlogf(INFO, "%s start", __func__);
+  zxlogf(TRACE, "%s start", __func__);
   zx_status_t status = ZX_OK;
 
   while (running_.load()) {

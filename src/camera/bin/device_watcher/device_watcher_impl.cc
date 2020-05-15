@@ -243,8 +243,7 @@ void DeviceWatcherImpl::Client::CheckDevicesChanged() {
 
 void DeviceWatcherImpl::Client::WatchDevices(WatchDevicesCallback callback) {
   if (callback_) {
-    FX_PLOGS(INFO, ZX_ERR_BAD_STATE)
-        << "Client called WatchDevices while a previous call was still pending.";
+    FX_LOGS(INFO) << "Client called WatchDevices while a previous call was still pending.";
     binding_.Close(ZX_ERR_BAD_STATE);
     return;
   }
@@ -257,8 +256,7 @@ void DeviceWatcherImpl::Client::WatchDevices(WatchDevicesCallback callback) {
 void DeviceWatcherImpl::Client::ConnectToDevice(
     TransientDeviceId id, fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
   if (!last_sent_ids_.has_value()) {
-    FX_PLOGS(INFO, ZX_ERR_BAD_STATE)
-        << "Clients must watch for devices prior to attempting a connection.";
+    FX_LOGS(INFO) << "Clients must watch for devices prior to attempting a connection.";
     request.Close(ZX_ERR_BAD_STATE);
     return;
   }

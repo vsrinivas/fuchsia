@@ -131,7 +131,6 @@ void DeviceImpl::PostBind(fidl::InterfaceRequest<fuchsia::camera3::Device> reque
                           bool exclusive) {
   auto task = [this, request = std::move(request), exclusive]() mutable {
     if (exclusive && !clients_.empty()) {
-      FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kDeviceAlreadyBound;
       request.Close(ZX_ERR_ALREADY_BOUND);
       return;
     }
@@ -178,12 +177,11 @@ void DeviceImpl::PostConnectToStream(uint32_t index,
 void DeviceImpl::ConnectToStream(uint32_t index,
                                  fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
   if (index > streams_.size()) {
-    FX_PLOGS(INFO, ZX_ERR_INVALID_ARGS) << "Client requested invalid stream index " << index;
     request.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
+
   if (streams_[index]) {
-    FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kStreamAlreadyBound;
     request.Close(ZX_ERR_ALREADY_BOUND);
     return;
   }

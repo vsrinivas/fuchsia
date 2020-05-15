@@ -81,18 +81,17 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
 
   zx_status_t SendFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) override {
     if (stopped_) {
-      FX_PLOGS(ERROR, ZX_ERR_BAD_STATE) << "Client has not started the stream";
+      FX_LOGS(INFO) << "Client has not started the stream";
       return ZX_ERR_BAD_STATE;
     }
     if (outstanding_error_frame_) {
-      FX_PLOGS(ERROR, ZX_ERR_BAD_STATE) << "Client has not yet acknowledged a previous error frame";
+      FX_LOGS(INFO) << "Client has not yet acknowledged a previous error frame";
       return ZX_ERR_BAD_STATE;
     }
     if (info.frame_status == fuchsia::camera2::FrameStatus::OK) {
       auto it = outstanding_buffer_ids_.find(info.buffer_id);
       if (it != outstanding_buffer_ids_.end()) {
-        FX_PLOGS(ERROR, ZX_ERR_BAD_STATE)
-            << "Client has not yet returned buffer_id " << info.buffer_id;
+        FX_LOGS(INFO) << "Client has not yet returned buffer_id " << info.buffer_id;
         return ZX_ERR_BAD_STATE;
       }
       outstanding_buffer_ids_.insert(info.buffer_id);

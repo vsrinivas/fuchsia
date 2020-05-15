@@ -34,13 +34,13 @@ inline void Unbind(fidl::InterfacePtr<T>& p) {
 inline fit::result<fuchsia::camera3::Configuration, zx_status_t> Convert(
     const fuchsia::camera2::hal::Config& config) {
   if (config.stream_configs.empty()) {
-    FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Config reported no streams.";
+    FX_LOGS(ERROR) << "Config reported no streams.";
     return fit::error(ZX_ERR_INTERNAL);
   }
   fuchsia::camera3::Configuration ret{};
   for (const auto& stream_config : config.stream_configs) {
     if (stream_config.image_formats.empty()) {
-      FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Stream reported no image formats.";
+      FX_LOGS(ERROR) << "Stream reported no image formats.";
       return fit::error(ZX_ERR_INTERNAL);
     }
     fuchsia::camera3::StreamProperties stream_properties{};

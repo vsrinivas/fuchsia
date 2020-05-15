@@ -247,8 +247,7 @@ void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index
 
 void BufferCollage::OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
   if (view_provider_binding_.is_bound()) {
-    FX_LOGS(ERROR) << "Camera Gym only supports one view provider instance.";
-    request.Close(ZX_ERR_NOT_SUPPORTED);
+    request.Close(ZX_ERR_ALREADY_BOUND);
     return;
   }
 

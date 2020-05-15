@@ -158,12 +158,12 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   const auto* next_node_internal =
       GetNextNodeInPipeline(info->stream_config->properties.stream_type(), result.value().first);
   if (!next_node_internal) {
-    FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Failed to get next node";
+    FX_LOGS(ERROR) << "Failed to get next node";
     return ZX_ERR_INTERNAL;
   }
 
   if (next_node_internal->type == NodeType::kOutputStream) {
-    FX_PLOGS(ERROR, ZX_ERR_NOT_SUPPORTED)
+    FX_LOGS(ERROR)
         << "Cannot create this stream due to unexpected ordering of stream create requests";
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -226,7 +226,6 @@ void PipelineManager::ConfigureStreamPipeline(
               // If the same stream is requested again, we return failure.
               if (HasStreamType(full_resolution_stream_->configured_streams(),
                                 info.stream_config->properties.stream_type())) {
-                FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
                 status = ZX_ERR_ALREADY_BOUND;
                 return;
               }
@@ -252,7 +251,6 @@ void PipelineManager::ConfigureStreamPipeline(
               // If the same stream is requested again, we return failure.
               if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
                                 info.stream_config->properties.stream_type())) {
-                FX_PLOGST(ERROR, kTag, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
                 status = ZX_ERR_ALREADY_BOUND;
                 return;
               }

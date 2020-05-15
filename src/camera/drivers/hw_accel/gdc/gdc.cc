@@ -324,7 +324,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 }
 
 int GdcDevice::FrameProcessingThread() {
-  FX_LOG(INFO, kTag, "start");
+  FX_LOG(TRACE, kTag, "start");
   for (;;) {
     fbl::AutoLock al(&processing_queue_lock_);
     while (processing_queue_.empty() && !shutdown_) {

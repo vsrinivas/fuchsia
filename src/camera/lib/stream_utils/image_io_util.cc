@@ -18,8 +18,7 @@ namespace camera {
 std::unique_ptr<ImageIOUtil> ImageIOUtil::Create(
     fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection, const std::string& dir_path) {
   if (buffer_collection->buffer_count <= 0) {
-    FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS)
-        << "Failed to create ImageIOUtil with empty BufferCollection.";
+    FX_LOGS(INFO) << "Failed to create ImageIOUtil with empty BufferCollection.";
     return nullptr;
   }
 
@@ -32,7 +31,7 @@ std::unique_ptr<ImageIOUtil> ImageIOUtil::Create(
   auto stream_io = std::make_unique<ImageIOUtil>(std::move(buffer_collection_clone), dir_path);
 
   if (!files::CreateDirectory(stream_io->GetDirpath())) {
-    FX_PLOGS(ERROR, ZX_ERR_IO) << "Failed to create on-disk directory to write to.";
+    FX_LOGS(ERROR) << "Failed to create on-disk directory to write to.";
     return nullptr;
   }
 

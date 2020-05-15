@@ -132,7 +132,7 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
     buffer_collections_.emplace(index, nullptr);
   }
   if (buffer_collections_[index].is_bound()) {
-    FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
+    FX_LOGS(ERROR) << "Stream already bound by caller.";
     return fit::error(ZX_ERR_ALREADY_BOUND);
   }
 

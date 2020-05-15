@@ -136,8 +136,7 @@ void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
   }
 
   if (frame_callback_) {
-    FX_PLOGS(INFO, ZX_ERR_BAD_STATE)
-        << "Client called GetNextFrame while a previous call was still pending.";
+    FX_LOGS(INFO) << "Client called GetNextFrame while a previous call was still pending.";
     CloseConnection(ZX_ERR_BAD_STATE);
     return;
   }
