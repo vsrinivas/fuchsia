@@ -11,6 +11,7 @@
 #include <trace.h>
 #include <zircon/listnode.h>
 
+#include <kernel/auto_lock.h>
 #include <kernel/event.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
@@ -23,21 +24,20 @@ static spin_lock_t dpc_lock = SPIN_LOCK_INITIAL_VALUE;
 zx_status_t Dpc::Queue(bool reschedule) {
   DEBUG_ASSERT(func_);
 
+  struct percpu* cpu;
   // disable interrupts before finding lock
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&dpc_lock, state);
+  {
+    AutoSpinLock lock{&dpc_lock};
 
-  if (InContainer()) {
-    spin_unlock_irqrestore(&dpc_lock, state);
-    return ZX_ERR_ALREADY_EXISTS;
+    if (InContainer()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    cpu = get_local_percpu();
+
+    // put the dpc at the tail of the list and signal the worker
+    cpu->dpc_list.push_back(this);
   }
-
-  struct percpu* cpu = get_local_percpu();
-
-  // put the dpc at the tail of the list and signal the worker
-  cpu->dpc_list.push_back(this);
-
-  spin_unlock_irqrestore(&dpc_lock, state);
 
   cpu->dpc_event.SignalEtc(reschedule);
 
@@ -48,20 +48,19 @@ zx_status_t Dpc::QueueThreadLocked() {
   DEBUG_ASSERT(func_);
 
   // interrupts are already disabled
-  spin_lock(&dpc_lock);
+  {
+    AutoSpinLockNoIrqSave lock{&dpc_lock};
 
-  if (InContainer()) {
-    spin_unlock(&dpc_lock);
-    return ZX_ERR_ALREADY_EXISTS;
+    if (InContainer()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    struct percpu* cpu = get_local_percpu();
+
+    // put the dpc at the tail of the list and signal the worker
+    cpu->dpc_list.push_back(this);
+    cpu->dpc_event.SignalThreadLocked();
   }
-
-  struct percpu* cpu = get_local_percpu();
-
-  // put the dpc at the tail of the list and signal the worker
-  cpu->dpc_list.push_back(this);
-  cpu->dpc_event.SignalThreadLocked();
-
-  spin_unlock(&dpc_lock);
 
   return ZX_OK;
 }
@@ -74,23 +73,27 @@ void Dpc::Invoke() {
 zx_status_t DpcSystem::Shutdown(uint cpu_id, zx_time_t deadline) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&dpc_lock, state);
+  Thread* t;
+  Event* dpc_event;
+  {
+    AutoSpinLock lock{&dpc_lock};
 
-  auto& percpu = percpu::Get(cpu_id);
-  DEBUG_ASSERT(!percpu.dpc_stop);
+    auto& percpu = percpu::Get(cpu_id);
+    DEBUG_ASSERT(!percpu.dpc_stop);
 
-  // Ask the DPC thread to terminate.
-  percpu.dpc_stop = true;
+    // Ask the DPC thread to terminate.
+    percpu.dpc_stop = true;
 
-  // Take the thread pointer so we can join outside the spinlock.
-  Thread* t = percpu.dpc_thread;
-  percpu.dpc_thread = nullptr;
+    // Take the percpu dpc_event so we can signal it outside the spinlock.
+    dpc_event = &percpu.dpc_event;
 
-  spin_unlock_irqrestore(&dpc_lock, state);
+    // Take the thread pointer so we can join outside the spinlock.
+    t = percpu.dpc_thread;
+    percpu.dpc_thread = nullptr;
+  }
 
   // Wake it.
-  percpu.dpc_event.SignalNoResched();
+  dpc_event->SignalNoResched();
 
   // Wait for it to terminate.
   return t->Join(nullptr, deadline);
@@ -99,8 +102,7 @@ zx_status_t DpcSystem::Shutdown(uint cpu_id, zx_time_t deadline) {
 void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&dpc_lock, state);
+  AutoSpinLock lock{&dpc_lock};
 
   uint cur_cpu = arch_curr_cpu_num();
   DEBUG_ASSERT(cpu_id != cur_cpu);
@@ -122,8 +124,6 @@ void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
   DEBUG_ASSERT(percpu.dpc_list.is_empty());
   percpu.dpc_stop = false;
   percpu.dpc_initialized = false;
-
-  spin_unlock_irqrestore(&dpc_lock, state);
 }
 
 int DpcSystem::WorkerThread(void* arg) {
