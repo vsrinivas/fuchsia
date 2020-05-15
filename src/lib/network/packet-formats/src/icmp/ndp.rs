@@ -253,17 +253,85 @@ pub mod options {
 
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{AddrSubnet, AddrSubnetError, Ipv6Addr};
+    use net_types::UnicastAddress;
     use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::U32;
+
+    /// The number of reserved bytes immediately following the kind and length
+    /// bytes in a Redirected Header option.
+    ///
+    /// See [RFC 4861 section 4.6.3] for more information.
+    ///
+    /// [RFC 4861 section 4.6.3]: https://tools.ietf.org/html/rfc4861#section-4.6.3
+    const REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH: usize = 6;
 
     /// The length of an NDP MTU option, excluding the first 2 bytes (kind and length bytes).
     ///
     /// See [RFC 4861 section 4.6.3] for more information.
     ///
     /// [RFC 4861 section 4.6.3]: https://tools.ietf.org/html/rfc4861#section-4.6.3
-    const MTU_OPTION_LEN: usize = 6;
+    const MTU_OPTION_LENGTH: usize = 6;
+
+    /// The number of reserved bytes immediately following the kind and length
+    /// bytes in an MTU option.
+    ///
+    /// See [RFC 4861 section 4.6.4] for more information.
+    ///
+    /// [RFC 4861 section 4.6.4]: https://tools.ietf.org/html/rfc4861#section-4.6.4
+    const MTU_OPTION_RESERVED_BYTES_LENGTH: usize = 2;
+
+    /// Minimum number of bytes in a Recursive DNS Server option, excluding the
+    /// kind and length bytes.
+    ///
+    /// This guarantees that a valid Recurisve DNS Server option holds at least
+    /// 1 address.
+    ///
+    /// See [RFC 8106 section 5.3.1] for more information.
+    ///
+    /// [RFC 8106 section 5.3.1]: https://tools.ietf.org/html/rfc8106#section-5.1
+    const MIN_RECURSIVE_DNS_SERVER_OPTION_LENGTH: usize = 22;
+
+    /// The number of reserved bytes immediately following the kind and length
+    /// bytes in a Recursive DNS Server option.
+    ///
+    /// See [RFC 8106 section 5.3.1] for more information.
+    ///
+    /// [RFC 8106 section 5.3.1]: https://tools.ietf.org/html/rfc8106#section-5.1
+    const RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH: usize = 2;
+
+    /// Recursive DNS Server that is advertised by a router in Router Advertisements.
+    ///
+    /// See [RFC 8106 section 5.1].
+    ///
+    /// [RFC 8106 section 5.1]: https://tools.ietf.org/html/rfc8106#section-5.1
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub struct RecursiveDnsServer<'a> {
+        lifetime: u32,
+        addresses: &'a [Ipv6Addr],
+    }
+
+    impl<'a> RecursiveDnsServer<'a> {
+        /// Returns a new `RecursiveDnsServer`.
+        pub fn new(lifetime: u32, addresses: &'a [Ipv6Addr]) -> RecursiveDnsServer<'a> {
+            RecursiveDnsServer { lifetime, addresses }
+        }
+
+        /// Returns the length of time in seconds (relative to the time the packet is
+        /// sent) that the DNS servers are valid for name resolution.
+        ///
+        /// A value of all one bits (`std::u32::MAX`) represents infinity; a value
+        /// of 0 means that the servers MUST no longer be used.
+        pub fn lifetime(&self) -> u32 {
+            self.lifetime
+        }
+
+        /// Returns the recursive DNS server addresses.
+        pub fn iter_addresses(&self) -> &'a [Ipv6Addr] {
+            self.addresses
+        }
+    }
 
     /// Number of bytes in a Prefix Information option, excluding the kind
     /// and length bytes.
@@ -271,18 +339,7 @@ pub mod options {
     /// See [RFC 4861 section 4.6.2] for more information.
     ///
     /// [RFC 4861 section 4.6.2]: https://tools.ietf.org/html/rfc4861#section-4.6.2
-    const PREFIX_INFORMATION_OPTION_LEN: usize = 30;
-
-    create_protocol_enum!(
-        #[allow(missing_docs)]
-        pub enum NdpOptionType: u8 {
-            SourceLinkLayerAddress, 1, "Source Link-Layer Address";
-            TargetLinkLayerAddress, 2, "Target Link-Layer Address";
-            PrefixInformation, 3, "Prefix Information";
-            RedirectedHeader, 4, "Redirected Header";
-            Mtu, 5, "MTU";
-        }
-    );
+    const PREFIX_INFORMATION_OPTION_LENGTH: usize = 30;
 
     /// Prefix information that is advertised by a router in Router Advertisements.
     ///
@@ -397,6 +454,19 @@ pub mod options {
         }
     }
 
+    create_protocol_enum!(
+        /// The types of NDP options that may be found in NDP messages.
+        #[allow(missing_docs)]
+        pub enum NdpOptionType: u8 {
+            SourceLinkLayerAddress, 1, "Source Link-Layer Address";
+            TargetLinkLayerAddress, 2, "Target Link-Layer Address";
+            PrefixInformation, 3, "Prefix Information";
+            RedirectedHeader, 4, "Redirected Header";
+            Mtu, 5, "MTU";
+            RecursiveDnsServer, 25, "Recursive DNS Server";
+        }
+    );
+
     /// NDP options that may be found in NDP messages.
     #[allow(missing_docs)]
     #[derive(Debug, PartialEq, Eq)]
@@ -408,6 +478,8 @@ pub mod options {
         RedirectedHeader { original_packet: &'a [u8] },
 
         MTU(u32),
+
+        RecursiveDnsServer(RecursiveDnsServer<'a>),
     }
 
     impl<'a> From<&NdpOption<'a>> for NdpOptionType {
@@ -418,6 +490,7 @@ pub mod options {
                 NdpOption::PrefixInformation(_) => NdpOptionType::PrefixInformation,
                 NdpOption::RedirectedHeader { .. } => NdpOptionType::RedirectedHeader,
                 NdpOption::MTU { .. } => NdpOptionType::Mtu,
+                NdpOption::RecursiveDnsServer(_) => NdpOptionType::RecursiveDnsServer,
             }
         }
     }
@@ -427,6 +500,7 @@ pub mod options {
     pub struct NdpOptionsImpl;
 
     impl OptionsImplLayout for NdpOptionsImpl {
+        // TODO(52288): Return more verbose logs on parsing errors.
         type Error = ();
 
         // For NDP options the length should be multiplied by 8.
@@ -456,10 +530,45 @@ pub mod options {
                                 LayoutVerified::<_, PrefixInformation>::new(data).ok_or(())?;
                             NdpOption::PrefixInformation(data.into_ref())
                         }
-                        NdpOptionType::RedirectedHeader => {
-                            NdpOption::RedirectedHeader { original_packet: &data[6..] }
+                        NdpOptionType::RedirectedHeader => NdpOption::RedirectedHeader {
+                            original_packet: &data
+                                [REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH..],
+                        },
+                        NdpOptionType::Mtu => NdpOption::MTU(NetworkEndian::read_u32(
+                            &data[MTU_OPTION_RESERVED_BYTES_LENGTH..],
+                        )),
+                        NdpOptionType::RecursiveDnsServer => {
+                            if data.len() < MIN_RECURSIVE_DNS_SERVER_OPTION_LENGTH {
+                                return Err(());
+                            }
+
+                            // Skip the reserved bytes which immediately follow the kind and length
+                            // bytes.
+                            let (_, data) =
+                                data.split_at(RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH);
+
+                            // As per RFC 8106 section 5.1, the 32 bit lifetime field immediately
+                            // follows the reserved field.
+                            let (lifetime, data) =
+                                LayoutVerified::<_, U32>::new_from_prefix(data).ok_or(())?;
+
+                            // As per RFC 8106 section 5.1, the list of addresses immediately
+                            // follows the lifetime field.
+                            let addresses =
+                                LayoutVerified::<_, [Ipv6Addr]>::new_slice_unaligned(data)
+                                    .ok_or(())?
+                                    .into_slice();
+
+                            // As per RFC 8106 section 5.3.1, the addresses should all be unicast.
+                            if !addresses.iter().all(UnicastAddress::is_unicast) {
+                                return Err(());
+                            }
+
+                            NdpOption::RecursiveDnsServer(RecursiveDnsServer::new(
+                                lifetime.get(),
+                                addresses,
+                            ))
                         }
-                        NdpOptionType::Mtu => NdpOption::MTU(NetworkEndian::read_u32(&data[2..])),
                     })
                 })
                 .transpose()
@@ -472,10 +581,17 @@ pub mod options {
         fn option_length(option: &Self::Option) -> usize {
             match option {
                 NdpOption::SourceLinkLayerAddress(data)
-                | NdpOption::TargetLinkLayerAddress(data)
-                | NdpOption::RedirectedHeader { original_packet: data } => data.len(),
-                NdpOption::MTU(_) => MTU_OPTION_LEN,
-                NdpOption::PrefixInformation(_) => PREFIX_INFORMATION_OPTION_LEN,
+                | NdpOption::TargetLinkLayerAddress(data) => data.len(),
+                NdpOption::PrefixInformation(_) => PREFIX_INFORMATION_OPTION_LENGTH,
+                NdpOption::RedirectedHeader { original_packet } => {
+                    REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH + original_packet.len()
+                }
+                NdpOption::MTU(_) => MTU_OPTION_LENGTH,
+                NdpOption::RecursiveDnsServer(RecursiveDnsServer { lifetime, addresses }) => {
+                    RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH
+                        + core::mem::size_of_val(lifetime)
+                        + core::mem::size_of_val(*addresses)
+                }
             }
         }
 
@@ -486,16 +602,43 @@ pub mod options {
         fn serialize(buffer: &mut [u8], option: &Self::Option) {
             match option {
                 NdpOption::SourceLinkLayerAddress(data)
-                | NdpOption::TargetLinkLayerAddress(data)
-                | NdpOption::RedirectedHeader { original_packet: data } => {
-                    buffer.copy_from_slice(data);
-                }
+                | NdpOption::TargetLinkLayerAddress(data) => buffer.copy_from_slice(data),
                 NdpOption::PrefixInformation(pfx_info) => {
                     buffer.copy_from_slice(pfx_info.as_bytes());
                 }
+                NdpOption::RedirectedHeader { original_packet } => {
+                    // As per RFC 4861 section 4.6.3, the first 6 bytes following the kind and length
+                    // bytes are reserved so we zero them. The IP header + data field immediately
+                    // follows.
+                    let (reserved_bytes, original_packet_bytes) =
+                        buffer.split_at_mut(REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH);
+                    reserved_bytes
+                        .copy_from_slice(&[0; REDIRECTED_HEADER_OPTION_RESERVED_BYTES_LENGTH]);
+                    original_packet_bytes.copy_from_slice(original_packet);
+                }
                 NdpOption::MTU(mtu) => {
-                    buffer[..2].copy_from_slice(&[0; 2]);
-                    NetworkEndian::write_u32(&mut buffer[2..], *mtu);
+                    // As per RFC 4861 section 4.6.4, the first 2 bytes following the kind and length
+                    // bytes are reserved so we zero them. The MTU field immediately follows.
+                    let (reserved_bytes, mtu_bytes) =
+                        buffer.split_at_mut(MTU_OPTION_RESERVED_BYTES_LENGTH);
+                    reserved_bytes.copy_from_slice(&[0; MTU_OPTION_RESERVED_BYTES_LENGTH]);
+                    mtu_bytes.copy_from_slice(U32::new(*mtu).as_bytes());
+                }
+                NdpOption::RecursiveDnsServer(RecursiveDnsServer { lifetime, addresses }) => {
+                    // As per RFC 8106 section 5.1, the first 2 bytes following the kind and length
+                    // bytes are reserved so we zero them.
+                    let (reserved_bytes, buffer) =
+                        buffer.split_at_mut(RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH);
+                    reserved_bytes
+                        .copy_from_slice(&[0; RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH]);
+
+                    // As per RFC 8106 section 5.1, the 32 bit lifetime field immediately
+                    // follows the reserved field, with the list of addresses immediately
+                    // following the lifetime field.
+                    let (lifetime_bytes, addresses_bytes) =
+                        buffer.split_at_mut(core::mem::size_of_val(lifetime));
+                    lifetime_bytes.copy_from_slice(U32::new(*lifetime).as_bytes());
+                    addresses_bytes.copy_from_slice(addresses.as_bytes());
                 }
             }
         }
@@ -504,13 +647,43 @@ pub mod options {
 
 #[cfg(test)]
 mod tests {
+    use core::convert::TryFrom;
+
+    use byteorder::{ByteOrder, NetworkEndian};
+    use net_types::ip::{Ip, IpAddress};
+    use packet::serialize::Serializer;
     use packet::{InnerPacketBuilder, ParseBuffer};
 
     use super::*;
     use crate::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs};
     use crate::ipv6::Ipv6Packet;
-    use byteorder::{ByteOrder, NetworkEndian};
-    use packet::serialize::Serializer;
+
+    #[test]
+    fn parse_serialize_redirected_header() {
+        let expected_packet = [1, 2, 3, 4, 5, 6, 7, 8];
+        let options = &[options::NdpOption::RedirectedHeader { original_packet: &expected_packet }];
+        let serialized = OptionsSerializer::<_>::new(options.iter())
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap();
+        // 8 bytes for the kind, length and reserved byes + the bytes for the packet.
+        let mut expected = [0; 16];
+        // The first two bytes are the kind and length bytes, respectively. This is then
+        // followed by 6 reserved bytes.
+        //
+        // NDP options hold the number of bytes in units of 8 bytes.
+        (&mut expected[..2]).copy_from_slice(&[4, 2]);
+        (&mut expected[8..]).copy_from_slice(&expected_packet);
+        assert_eq!(serialized.as_ref(), expected);
+
+        let parsed = Options::parse(&expected[..]).unwrap();
+        let parsed = parsed.iter().collect::<Vec<options::NdpOption<'_>>>();
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(
+            options::NdpOption::RedirectedHeader { original_packet: &expected_packet },
+            parsed[0]
+        );
+    }
 
     #[test]
     fn parse_serialize_mtu_option() {
@@ -520,6 +693,10 @@ mod tests {
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();
+        // An MTU option is exactly 8 bytes.
+        //
+        // The first two bytes are the kind and length bytes, respectively. This is then
+        // followed by 2 reserved bytes.
         let mut expected = [5, 1, 0, 0, 0, 0, 0, 0];
         NetworkEndian::write_u32(&mut expected[4..], expected_mtu);
         assert_eq!(serialized.as_ref(), expected);
@@ -527,11 +704,7 @@ mod tests {
         let parsed = Options::parse(&expected[..]).unwrap();
         let parsed = parsed.iter().collect::<Vec<options::NdpOption<'_>>>();
         assert_eq!(parsed.len(), 1);
-        if let options::NdpOption::MTU(mtu) = &parsed[0] {
-            assert_eq!(*mtu, expected_mtu);
-        } else {
-            unreachable!("parsed option should have been an mtu option");
-        }
+        assert_eq!(options::NdpOption::MTU(expected_mtu), parsed[0]);
     }
 
     #[test]
@@ -549,6 +722,10 @@ mod tests {
             .into_serializer()
             .serialize_vec_outer()
             .unwrap();
+        // A Prefix Information option is exactly 32 bytes.
+        //
+        // The first two bytes are the kind and length bytes, respectively. This is then
+        // immediately followed by the prefix information fields.
         let mut expected = [0; 32];
         expected[0] = 3;
         expected[1] = 4;
@@ -558,11 +735,97 @@ mod tests {
         let parsed = Options::parse(&expected[..]).unwrap();
         let parsed = parsed.iter().collect::<Vec<options::NdpOption<'_>>>();
         assert_eq!(parsed.len(), 1);
-        if let options::NdpOption::PrefixInformation(prefix_info) = &parsed[0] {
-            assert_eq!(expected_prefix_info, **prefix_info);
-        } else {
-            unreachable!("parsed option should have been a prefix information option");
-        }
+        assert_eq!(options::NdpOption::PrefixInformation(&expected_prefix_info), parsed[0]);
+    }
+
+    #[test]
+    fn parse_serialize_rdnss_option() {
+        let test = |addrs: &[Ipv6Addr]| {
+            let lifetime = 120;
+            let expected_rdnss = options::RecursiveDnsServer::new(lifetime, addrs);
+            let options = &[options::NdpOption::RecursiveDnsServer(expected_rdnss.clone())];
+            let serialized = OptionsSerializer::<_>::new(options.iter())
+                .into_serializer()
+                .serialize_vec_outer()
+                .unwrap();
+            // 8 bytes for the kind, length, reserved and lifetime bytes + the bytes for
+            // the addresses.
+            let mut expected = vec![0; 8 + addrs.len() * usize::from(Ipv6Addr::BYTES)];
+            // The first two bytes are the kind and length bytes, respectively. This is then
+            // followed by 2 reserved bytes.
+            //
+            // NDP options hold the number of bytes in units of 8 bytes.
+            (&mut expected[..4]).copy_from_slice(&[
+                25,
+                1 + u8::try_from(addrs.len()).unwrap() * 2,
+                0,
+                0,
+            ]);
+            // The lifetime field.
+            NetworkEndian::write_u32(&mut expected[4..8], lifetime);
+            // The list of addressess.
+            (&mut expected[8..]).copy_from_slice(addrs.as_bytes());
+            assert_eq!(serialized.as_ref(), expected.as_slice());
+
+            let parsed = Options::parse(&expected[..])
+                .expect("should have parsed a valid recursive dns erver option");
+            let parsed = parsed.iter().collect::<Vec<options::NdpOption<'_>>>();
+            assert_eq!(parsed.len(), 1);
+            assert_eq!(options::NdpOption::RecursiveDnsServer(expected_rdnss), parsed[0]);
+        };
+        test(&[Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])]);
+        test(&[
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]),
+        ]);
+    }
+
+    #[test]
+    fn parse_serialize_rdnss_option_error() {
+        let addrs = [
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]),
+        ];
+        let lifetime = 120;
+        // 8 bytes for the kind, length, reserved and lifetime bytes + the bytes for
+        // the addresses.
+        let mut buf = vec![0; 8 + addrs.len() * usize::from(Ipv6Addr::BYTES)];
+        // The first two bytes are the kind and length bytes, respectively. This is then
+        // followed by 2 reserved bytes.
+        //
+        // NDP options hold the number of bytes in units of 8 bytes.
+        (&mut buf[..4]).copy_from_slice(&[25, 1 + u8::try_from(addrs.len()).unwrap() * 2, 0, 0]);
+        // The lifetime field.
+        NetworkEndian::write_u32(&mut buf[4..8], lifetime);
+        // The list of addressess.
+        (&mut buf[8..]).copy_from_slice(addrs.as_bytes());
+
+        // Sanity check to make sure `buf` is normally valid.
+        let _parsed = Options::parse(&buf[..])
+            .expect("should have parsed a valid recursive dns erver option");
+
+        // The option must hold at least 1 address.
+        let _err = Options::parse(&buf[..8]).expect_err(
+            "should not have parsed a recursive dns server option that has no addresses",
+        );
+
+        // The option must hold full IPv6 addresses.
+        let _err = Options::parse(&buf[..buf.len()-1])
+            .expect_err("should not have parsed a recursive dns server option that cuts off in the middle of an address");
+
+        // The option must only hold unicast addresses; unspecified is not allowed.
+        (&mut buf[8..8 + usize::from(Ipv6Addr::BYTES)])
+            .copy_from_slice(Ipv6::UNSPECIFIED_ADDRESS.as_bytes());
+        let _parsed = Options::parse(&buf[..]).expect_err(
+            "should not have parsed a recursive dns erver option with an unspecified address",
+        );
+
+        // The option must only hold unicast addresses; multicast is not allowed.
+        (&mut buf[8..8 + usize::from(Ipv6Addr::BYTES)])
+            .copy_from_slice(Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.as_bytes());
+        let _parsed = Options::parse(&buf[..]).expect_err(
+            "should not have parsed a recursive dns erver option with a multicast address",
+        );
     }
 
     #[test]
