@@ -74,6 +74,7 @@ aggregate_manifest("legacy-aux") {
     ":bin.null-namespace-child",
     ":hermetic.decompress-lz4f",
     ":hermetic.decompress-zstd",
+    ":test.sys.fdio-constructor-test",
     ":test.sys.fdio-test",
     ":test.sys.hermetic-compute-module-test",
     ":test.sys.libc-test",
@@ -164,6 +165,7 @@ aggregate_manifest("legacy-aux") {
 aggregate_manifest("legacy-tests") {
   deps = [
     ":bin.null-namespace-child",
+    ":test.sys.fdio-constructor-test",
     ":test.sys.fdio-test",
     ":test.sys.hermetic-compute-module-test",
     ":test.sys.libc-test",

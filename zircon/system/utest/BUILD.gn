@@ -70,6 +70,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/fdio/test",
 #------------------
 #------------------
+      "$zx/system/ulib/fdio/test/constructors",
 #------------------
 #------------------
 #------------------
