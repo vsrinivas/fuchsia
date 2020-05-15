@@ -19,7 +19,6 @@ protocol KeySystem {
     ///
     /// - response `properties` the properties of the `KeySystem`
     ///   implementation.
-    [Transitional]
     GetProperties() -> (KeySystemProperties properties);
 
     /// Adds a client data store to the `KeySystem`.
@@ -36,7 +35,6 @@ protocol KeySystem {
     ///   added `data_store_id` and the server should close the channel.
     /// + request `data_store_params` the parameters to be used for this data
     ///   store.
-    [Transitional]
     AddDataStore(uint32 data_store_id,
                  DataStoreParams data_store_params) -> () error Error;
 
@@ -51,7 +49,6 @@ protocol KeySystem {
     ///  store to be removed. It is invalid for the client to provide
     ///  [`NO_DATA_STORE`] or a `data_store_id` value that has not previously
     ///  been added.
-    [Transitional]
     DestroyDataStore(uint32 data_store_id);
 
     /// Creates a new [`ContentDecryptionModule`].
@@ -69,7 +66,6 @@ protocol KeySystem {
     /// + request `data_store_id` the data store that should be used by the
     ///   `ContentDecryptionModule`.
     /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
-    [Transitional]
     CreateContentDecryptionModule2(uint32 data_store_id,
                                    request<ContentDecryptionModule> cdm);
 };
