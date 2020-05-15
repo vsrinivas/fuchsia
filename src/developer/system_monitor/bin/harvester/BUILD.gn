@@ -127,6 +127,12 @@ executable("system_monitor_harvester_test") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":system_monitor_harvester_tests" ]
+}
+
 test_package("system_monitor_harvester_tests") {
   deps = [ ":system_monitor_harvester_test" ]
 

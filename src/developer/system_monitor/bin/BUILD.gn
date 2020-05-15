@@ -2,7 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("system_monitor") {
+group("bin") {
   testonly = true
   deps = [ "harvester" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "//src/developer/system_monitor/bin/harvester:tests" ]
 }
