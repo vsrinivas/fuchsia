@@ -483,7 +483,8 @@ struct iwl_mvm_vif {
   // Merged from 'struct ieee80211_vif'
   bool ht_enabled;
   struct {
-    uint8_t dtim_period;
+    uint8_t dtim_period;  // Number of beacons. In most cases, it is 3.
+    uint16_t beacon_int;  // In time unit. In most cases, it is 100.
     uint8_t bssid[ETH_ALEN];
     wlan_channel_t chandef;
 
@@ -1817,7 +1818,7 @@ void rs_update_last_rssi(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
 
 /* power management */
 zx_status_t iwl_mvm_power_update_device(struct iwl_mvm* mvm);
-int iwl_mvm_power_update_mac(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_power_update_mac(struct iwl_mvm* mvm);
 int iwl_mvm_power_update_ps(struct iwl_mvm* mvm);
 int iwl_mvm_power_mac_dbgfs_read(struct iwl_mvm* mvm, struct ieee80211_vif* vif, char* buf,
                                  int bufsz);

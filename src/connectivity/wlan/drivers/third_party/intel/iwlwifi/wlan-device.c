@@ -410,6 +410,10 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
     goto unlock;
   }
 
+  // Set default values into the mvmvif
+  mvmvif->bss_conf.beacon_int = 100;
+  mvmvif->bss_conf.dtim_period = 3;
+
   // Add MAC interface
   device_add_args_t mac_args = {
       .version = DEVICE_ADD_ARGS_VERSION,

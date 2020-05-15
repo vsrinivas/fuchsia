@@ -332,4 +332,12 @@ static inline const char* ieee80211_cipher_str(const uint8_t* oui, uint8_t ciphe
 }
 // clang-format on
 
+// Converts the from Time Unit (TU) to microseconds.
+//
+// Note that the returning value is in microsecond unit (not zx_duration_t). To convert it, use:
+//
+//   ZX_USEC(ieee80211_tu_to_usec(tu));
+//
+static inline int ieee80211_tu_to_usec(int tu) { return tu * 1024; }
+
 #endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_IEEE80211_H_

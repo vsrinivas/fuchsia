@@ -47,9 +47,11 @@ class MvmTest : public SingleApTest {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
-    mvm_->mvmvif[0] = mvmvif_;
+    mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
     mvmvif_->ifc.ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
         calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
+    mvm_->mvmvif[0] = mvmvif_;
+    mvm_->vif_count++;
 
     mtx_lock(&mvm_->mutex);
   }
@@ -439,6 +441,60 @@ TEST_F(BindingTest, CheckArgs) {
 TEST_F(BindingTest, NormalCase) {
   ASSERT_EQ(ZX_OK, iwl_mvm_binding_add_vif(mvmvif_));
   ASSERT_EQ(ZX_OK, iwl_mvm_binding_remove_vif(mvmvif_));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                               Power Test
+//
+class PowerTest : public MvmTest {
+ public:
+  PowerTest() { setup_phy_ctxt(mvmvif_); }
+};
+
+// By default, only one interface is created and its ps_disabled is false. So:
+//
+//   - mvmvif->pm_enabled is true.
+//   - mvmvif->ps_disabled is false.
+//   - thus, mvm->ps_disabled is false as well.
+//
+TEST_F(PowerTest, DefaultCase) {
+  ASSERT_EQ(ZX_OK, iwl_mvm_power_update_mac(mvm_));
+  EXPECT_EQ(true, mvmvif_->pm_enabled);
+  EXPECT_EQ(false, mvmvif_->ps_disabled);
+  EXPECT_EQ(false, mvm_->ps_disabled);
+}
+
+// Disable the PS of interface. We shall see MVM PS is disabled as well.
+//
+//   - mvmvif->pm_enabled is true.
+//   - mvmvif->ps_disabled is false.
+//   - thus, mvm->ps_disabled is false as well.
+//
+TEST_F(PowerTest, PsDisabled) {
+  mvmvif_->ps_disabled = true;
+  ASSERT_EQ(ZX_OK, iwl_mvm_power_update_mac(mvm_));
+  EXPECT_EQ(true, mvmvif_->pm_enabled);
+  EXPECT_EQ(true, mvmvif_->ps_disabled);
+  EXPECT_EQ(true, mvm_->ps_disabled);
+}
+
+// The input pm_enabled has no effect since it is determined by iwl_mvm_power_update_mac() according
+// to the current interface configuraiton.
+//
+// The expected results are identical to the default case above.
+//
+TEST_F(PowerTest, PmHasNoEffect) {
+  mvmvif_->pm_enabled = false;
+  ASSERT_EQ(ZX_OK, iwl_mvm_power_update_mac(mvm_));
+  EXPECT_EQ(true, mvmvif_->pm_enabled);
+  EXPECT_EQ(false, mvmvif_->ps_disabled);
+  EXPECT_EQ(false, mvm_->ps_disabled);
+
+  mvmvif_->pm_enabled = true;
+  ASSERT_EQ(ZX_OK, iwl_mvm_power_update_mac(mvm_));
+  EXPECT_EQ(true, mvmvif_->pm_enabled);
+  EXPECT_EQ(false, mvmvif_->ps_disabled);
+  EXPECT_EQ(false, mvm_->ps_disabled);
 }
 
 }  // namespace

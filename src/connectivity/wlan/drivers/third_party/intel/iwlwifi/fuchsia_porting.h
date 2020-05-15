@@ -306,6 +306,7 @@ static inline void* page_address(const struct page* page) { return page->virtual
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define max_t(type, a, b) MAX((type)(a), (type)(b))
 #define min_t(type, a, b) MIN((type)(a), (type)(b))
 
 static inline void list_splice_after_tail(list_node_t* splice_from, list_node_t* pos) {

@@ -64,6 +64,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case BT_CONFIG:
         case MAC_CONTEXT_CMD:
         case SCAN_OFFLOAD_REQUEST_CMD:
+        case MAC_PM_POWER_TABLE:
           return ZX_OK;
 
         // Command would return 'status' back to driver.
