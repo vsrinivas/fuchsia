@@ -137,8 +137,8 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
 // Issues a kernel panic when a fatal lock order violation is detected.
 void SystemLockValidationFatal(AcquiredLockEntry* lock_entry, ThreadLockState* state,
                                void* caller_address, void* caller_frame, LockResult result) {
-  _panic(caller_address, caller_frame, "Fatal lock violation detected! name=%s reason=%s\n",
-         LockClassState::GetName(lock_entry->id()), ToString(result));
+  panic("Fatal lock violation detected! name=%s, reason=%s, pc=%p, stack frame=%p\n",
+        LockClassState::GetName(lock_entry->id()), ToString(result), caller_address, caller_frame);
 }
 
 // Prints a kernel oops when a circular lock dependency is detected.
