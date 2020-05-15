@@ -6,6 +6,7 @@
 #define SRC_CAMERA_LIB_STREAM_UTILS_IMAGE_IO_UTIL_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/fit/result.h>
 
 namespace camera {
 
@@ -30,7 +31,7 @@ class ImageIOUtil {
   // Args:
   //  |buffer_collection| A reference to a buffer collection to be used by a consumer to store
   //                      frames in.
-  static std::unique_ptr<ImageIOUtil> Create(
+  static fit::result<std::unique_ptr<ImageIOUtil>, zx_status_t> Create(
       fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection, const std::string& dir_path);
 
   // Deletes all data written to disk by this ImageIOUtil so far.

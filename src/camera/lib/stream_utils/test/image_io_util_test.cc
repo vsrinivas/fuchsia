@@ -38,19 +38,19 @@ void CreateTestBufferCollection(fuchsia::sysmem::BufferCollectionInfo_2* buffer_
 TEST(ImageIOUtilTest, ConstructorSanity) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   ASSERT_NO_FATAL_FAILURE(CreateTestBufferCollection(&buffer_collection));
-  ASSERT_NE(ImageIOUtil::Create(&buffer_collection, ""), nullptr);
+  ASSERT_TRUE(ImageIOUtil::Create(&buffer_collection, "").is_ok());
 }
 
 TEST(ImageIOUtilTest, ConstructorFailsWithEmptyBufferCollection) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-  ASSERT_EQ(ImageIOUtil::Create(&buffer_collection, ""), nullptr);
+  ASSERT_TRUE(ImageIOUtil::Create(&buffer_collection, "").is_error());
 }
 
 TEST(ImageIOUtilTest, RemoveFromDiskCorrectly) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   ASSERT_NO_FATAL_FAILURE(CreateTestBufferCollection(&buffer_collection));
   // TODO(nzo): also requires a test to check for deleting nested files.
-  auto image_io_util = ImageIOUtil::Create(&buffer_collection, "");
+  auto image_io_util = ImageIOUtil::Create(&buffer_collection, "").take_value();
 
   ASSERT_TRUE(files::WriteFile(image_io_util->GetFilepath(0),
                                reinterpret_cast<const char*>(kTestData.data()), kTestSize));
@@ -63,7 +63,7 @@ TEST(ImageIOUtilTest, WriteToDiskCorrectly) {
   // TODO(nzo): also requires a test to check for writing multiple + nested files.
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   ASSERT_NO_FATAL_FAILURE(CreateTestBufferCollection(&buffer_collection));
-  auto image_io_util = ImageIOUtil::Create(&buffer_collection, "");
+  auto image_io_util = ImageIOUtil::Create(&buffer_collection, "").take_value();
 
   zx_status_t status = image_io_util->WriteImageData(0);
   ASSERT_EQ(status, ZX_OK);

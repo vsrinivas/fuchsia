@@ -15,27 +15,27 @@
 
 namespace camera {
 
-std::unique_ptr<ImageIOUtil> ImageIOUtil::Create(
+fit::result<std::unique_ptr<ImageIOUtil>, zx_status_t> ImageIOUtil::Create(
     fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection, const std::string& dir_path) {
   if (buffer_collection->buffer_count <= 0) {
-    FX_LOGS(INFO) << "Failed to create ImageIOUtil with empty BufferCollection.";
-    return nullptr;
+    FX_LOGS(DEBUG) << "Failed to create ImageIOUtil with empty BufferCollection.";
+    return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_clone;
   zx_status_t status = buffer_collection->Clone(&buffer_collection_clone);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to clone BufferCollection.";
-    return nullptr;
+    FX_LOGS(ERROR) << "Failed to clone BufferCollection.";
+    return fit::error(status);
   }
   auto stream_io = std::make_unique<ImageIOUtil>(std::move(buffer_collection_clone), dir_path);
 
   if (!files::CreateDirectory(stream_io->GetDirpath())) {
     FX_LOGS(ERROR) << "Failed to create on-disk directory to write to.";
-    return nullptr;
+    return fit::error(ZX_ERR_IO);
   }
 
-  return stream_io;
+  return fit::ok(std::move(stream_io));
 }
 
 // TODO(nzo): add functionality to ensure all previously written images (i.e. before this
