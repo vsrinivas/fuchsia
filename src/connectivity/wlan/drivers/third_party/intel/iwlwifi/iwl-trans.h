@@ -709,7 +709,7 @@ struct iwl_dram_data {
  * @dbg_rec_on: true iff there is a fw debug recording currently active
  */
 struct iwl_trans {
-  const struct iwl_trans_ops* ops;
+  struct iwl_trans_ops* ops;
   struct iwl_op_mode* op_mode;
   const struct iwl_cfg* cfg;
   struct iwl_drv* drv;
@@ -1175,7 +1175,7 @@ static inline bool iwl_trans_fw_running(struct iwl_trans* trans) {
  * transport helper functions
  *****************************************************/
 struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* cfg,
-                                  const struct iwl_trans_ops* ops);
+                                  struct iwl_trans_ops* ops);
 void iwl_trans_free(struct iwl_trans* trans);
 void iwl_trans_ref(struct iwl_trans* trans);
 void iwl_trans_unref(struct iwl_trans* trans);

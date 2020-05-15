@@ -3105,7 +3105,7 @@ static void iwl_trans_pcie_resume(struct iwl_trans* trans) {
 #define IWL_TRANS_PM_OPS
 #endif /* CONFIG_PM_SLEEP */
 
-static const struct iwl_trans_ops trans_ops_pcie = {
+static struct iwl_trans_ops trans_ops_pcie = {
     IWL_TRANS_COMMON_OPS,
     IWL_TRANS_PM_OPS.start_hw = iwl_trans_pcie_start_hw,
     .fw_alive = iwl_trans_pcie_fw_alive,
