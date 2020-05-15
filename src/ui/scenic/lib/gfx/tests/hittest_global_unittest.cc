@@ -13,6 +13,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <limits>
@@ -38,6 +39,7 @@
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -194,10 +196,14 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
   };
 
   CustomSession sess = CreateRootSession(16, 9);
+  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
   {
     sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
                                               "MyViewHolder"));
-    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    auto pair = scenic::ViewRefPair::New();
+    view_ref_koid = utils::ExtractKoid(pair.view_ref);
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(pair.control_ref),
+                                        std::move(pair.view_ref), "MyView"));
     sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
                                                {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
 
@@ -231,16 +237,8 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
+    EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
     EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
-    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
-    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
-    static const glm::vec4 expected = {1, 1.5f, -1, 1};
-    // We need to use 1000 * epsilon as the projection transform scales by 1000.
-    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
-    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
-        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
-        << glm::to_string(expected);
   }
 }
 
@@ -260,10 +258,14 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
   };
 
   CustomSession sess = CreateRootSession(16, 9);
+  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
   {
     sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
                                               "MyViewHolder"));
-    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    auto pair = scenic::ViewRefPair::New();
+    view_ref_koid = utils::ExtractKoid(pair.view_ref);
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(pair.control_ref),
+                                        std::move(pair.view_ref), "MyView"));
     sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
                                                {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
 
@@ -293,16 +295,8 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
+    EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
     EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
-    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
-    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
-    static const glm::vec4 expected = {1, 1.5f, -1, 1};
-    // We need to use 1000 * epsilon as the projection transform scales by 1000.
-    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
-    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
-        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
-        << glm::to_string(expected);
   }
 }
 
@@ -323,10 +317,14 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
   };
 
   CustomSession sess = CreateRootSession(16, 9);
+  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
   {
     sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
                                               "MyViewHolder"));
-    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    auto pair = scenic::ViewRefPair::New();
+    view_ref_koid = utils::ExtractKoid(pair.view_ref);
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(pair.control_ref),
+                                        std::move(pair.view_ref), "MyView"));
     sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
                                                {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
 
@@ -357,16 +355,8 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
+    EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
     EXPECT_NEAR(hit.distance, 0.998f, std::numeric_limits<float>::epsilon());
-    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
-    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
-    static const glm::vec4 expected = {2.f / 3, 4.f / 3, -1, 1};
-    // We need to use 1000 * epsilon as the projection transform scales by 1000.
-    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
-    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
-        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
-        << glm::to_string(expected);
   }
 }
 
@@ -387,10 +377,14 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
   };
 
   CustomSession sess = CreateRootSession(16, 9);
+  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
   {
     sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
                                               "MyViewHolder"));
-    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
+    auto pair = scenic::ViewRefPair::New();
+    view_ref_koid = utils::ExtractKoid(pair.view_ref);
+    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(pair.control_ref),
+                                        std::move(pair.view_ref), "MyView"));
     sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
                                                {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
 
@@ -426,16 +420,8 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
+    EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
     EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
-    const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_point);
-    const glm::vec4 view = hit.screen_to_view_transform * ray.At(hit.distance);
-    static const glm::vec4 expected = {5, 7.5f / 3, -1, 1};
-    // We need to use 1000 * epsilon as the projection transform scales by 1000.
-    static constexpr float epsilon = std::numeric_limits<float>::epsilon() * 1000;
-    EXPECT_TRUE(glm::all(glm::epsilonEqual(view, expected, epsilon)))
-        << "View hit coordinates " << glm::to_string(view) << " should be approximately "
-        << glm::to_string(expected);
   }
 }
 
@@ -861,7 +847,7 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 
 // A comprehensive test that sets up a root session and two view sessions, with a ShapeNode in the
 // root scene and in each View, and checks if both view hits are produced by the
-// |SessionHitAccumulator|.
+// |ViewHitAccumulator|.
 TEST_F(MultiSessionHitTestTest, GlobalHits) {
   // Create our tokens for View/ViewHolder creation.
   auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();
@@ -908,10 +894,15 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
-  const uint32_t kViewId1 = 2001;
   CustomSession s_1(2, engine()->session_context());
+  zx_koid_t view_ref_koid1 = ZX_KOID_INVALID;
   {
-    s_1.Apply(scenic::NewCreateViewCmd(kViewId1, std::move(view_token_1), "view_1"));
+    auto pair = scenic::ViewRefPair::New();
+    view_ref_koid1 = utils::ExtractKoid(pair.view_ref);
+    const uint32_t kViewId1 = 2001;
+    s_1.Apply(scenic::NewCreateViewCmd(kViewId1, std::move(view_token_1),
+                                       std::move(pair.control_ref), std::move(pair.view_ref),
+                                       "view_1"));
 
     const uint32_t kRootNodeId = 2002;
     s_1.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -928,10 +919,15 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_1.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
   }
 
-  const uint32_t kViewId2 = 3001;
   CustomSession s_2(3, engine()->session_context());
+  zx_koid_t view_ref_koid2 = ZX_KOID_INVALID;
   {
-    s_2.Apply(scenic::NewCreateViewCmd(kViewId2, std::move(view_token_2), "view_2"));
+    auto pair = scenic::ViewRefPair::New();
+    view_ref_koid2 = utils::ExtractKoid(pair.view_ref);
+    const uint32_t kViewId2 = 3001;
+    s_2.Apply(scenic::NewCreateViewCmd(kViewId2, std::move(view_token_2),
+                                       std::move(pair.control_ref), std::move(pair.view_ref),
+                                       "view_2"));
 
     const uint32_t kRootNodeId = 3002;
     s_2.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -949,15 +945,15 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   {
-    SessionHitAccumulator accumulator;
+    ViewHitAccumulator accumulator;
     PerformGlobalHitTest(layer_stack(), glm::vec2{4, 4}, &accumulator);
 
     const auto& hits = accumulator.hits();
 
     // All that for this!
-    ASSERT_EQ(hits.size(), 2u) << "Should see two hits across two view sessions.";
-    EXPECT_EQ(hits[0].view->id(), kViewId2);
-    EXPECT_EQ(hits[1].view->id(), kViewId1);
+    ASSERT_EQ(hits.size(), 2u) << "Should see two hits across two views.";
+    EXPECT_EQ(hits[0].view_ref_koid, view_ref_koid2);
+    EXPECT_EQ(hits[1].view_ref_koid, view_ref_koid1);
   }
 }
 

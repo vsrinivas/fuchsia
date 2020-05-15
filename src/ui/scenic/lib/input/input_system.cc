@@ -350,19 +350,14 @@ void InputSystem::InjectTouchEventHitTested(
   const Phase pointer_phase = world_space_pointer_event.phase;
 
   if (pointer_phase == Phase::ADD) {
-    gfx::SessionHitAccumulator accumulator;
+    gfx::ViewHitAccumulator accumulator;
     PerformGlobalHitTest(layer_stack, screen_space_coords, &accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
     std::vector<zx_koid_t> hit_views;
-    {
-      for (const gfx::ViewHit& hit : hits) {
-        hit_views.push_back(hit.view->view_ref_koid());
-        if (/*TODO(SCN-919): view_id may mask input */ false) {
-          break;
-        }
-      }
+    for (const gfx::ViewHit& hit : hits) {
+      hit_views.push_back(hit.view_ref_koid);
     }
 
     FX_VLOGS(1) << "View hits: ";
@@ -435,8 +430,7 @@ void InputSystem::InjectTouchEventHitTested(
       PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
 
       if (top_hit.hit()) {
-        const gfx::ViewHit& hit = *top_hit.hit();
-        view_ref_koid = hit.view->view_ref_koid();
+        view_ref_koid = top_hit.hit()->view_ref_koid;
       }
     }
 
@@ -498,7 +492,7 @@ void InputSystem::InjectMouseEventHitTested(
 
     std::vector</*view_ref_koids*/ zx_koid_t> hit_views;
     if (top_hit.hit()) {
-      hit_views.push_back(top_hit.hit()->view->view_ref_koid());
+      hit_views.push_back(top_hit.hit()->view_ref_koid);
     }
 
     FX_VLOGS(1) << "View hits: ";
@@ -539,7 +533,7 @@ void InputSystem::InjectMouseEventHitTested(
     PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
 
     if (top_hit.hit()) {
-      const zx_koid_t top_view_koid = top_hit.hit()->view->view_ref_koid();
+      const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;
       ReportPointerEventToView(world_space_pointer_event, top_view_koid);
     }
   }

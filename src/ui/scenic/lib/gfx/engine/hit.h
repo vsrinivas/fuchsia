@@ -5,11 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_HIT_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_HIT_H_
 
-#include "src/ui/lib/escher/geometry/types.h"
-#include "src/ui/scenic/lib/gfx/engine/session.h"
+#include <zircon/types.h>
+
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
-#include "src/ui/scenic/lib/gfx/resources/view.h"
-#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -27,16 +25,10 @@ struct NodeHit {
   float distance = 0;
 };
 
-// Describes where a hit occurred within the content of a view.
+// Describes which view was hit and the distance to the view.
 struct ViewHit {
-  // The view containing the geometry that was hit. Care should be taken not to hold onto this
-  // pointer or this hit struct longer than necessary.
-  ViewPtr view;
-
-  // The transformation matrix that maps the raw (pre-rotation) screen space coordinate system of
-  // the hit ray to the coordinate system of the view. This in conjunction with |distance| defines
-  // the hit coordinate in view coordinates.
-  escher::mat4 screen_to_view_transform;
+  // The view_ref_koid of the view containing the geometry that was hit.
+  zx_koid_t view_ref_koid;
 
   // The distance from the ray's origin to the closest point of intersection in multiples of the
   // ray's direction vector. As the ray may be transformed during hit testing and in accumulator

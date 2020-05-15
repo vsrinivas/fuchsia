@@ -7,14 +7,11 @@
 
 #include <lib/fit/function.h>
 
-#include <list>
 #include <optional>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
-#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -56,12 +53,12 @@ class MappingAccumulator : public HitAccumulator<U> {
   fit::function<std::optional<V>(const U&)> const mapping_;
 };
 
-// Accumulates one hit per session per layer, on the top view in each, sorted by depth per layer.
+// Accumulates one hit per view per layer, on the top view in each, sorted by depth per layer.
 //
 // We specifically want sort-first-by-layer-then-by-depth ordering.
 //
 // TODO(24152): Return full set of hits to each client.
-class SessionHitAccumulator : public HitAccumulator<ViewHit> {
+class ViewHitAccumulator : public HitAccumulator<ViewHit> {
  public:
   const std::vector<ViewHit>& hits() const { return hits_; }
 
@@ -69,14 +66,14 @@ class SessionHitAccumulator : public HitAccumulator<ViewHit> {
   void Add(const ViewHit& hit) override;
 
   // |HitAccumulator<ViewHit>|
-  // This implementation sorts hits for the layer by distance and resets session deduplication for
+  // This implementation sorts hits for the layer by distance and resets view deduplication for
   // the next layer and returns true.
   bool EndLayer() override;
 
  private:
   std::vector<ViewHit> hits_;
-  // Used to accumulate the topmost hit in each session.
-  std::map<SessionId, ViewHit> sessions_;
+  // Used to accumulate the topmost hit in each view.
+  std::map</*view_ref_koid*/ zx_koid_t, ViewHit> views_;
 };
 
 // Accumulates one hit overall, on the top view by depth. Hits are in the coordinate space of the
@@ -94,27 +91,6 @@ class TopHitAccumulator : public HitAccumulator<ViewHit> {
 
  private:
   std::optional<ViewHit> hit_;
-};
-
-// Accumulates and reports on hit collisions. This accumulator is used by the hit tester for
-// diagnostics alongside a user-requested accumulator.
-class CollisionAccumulator : public HitAccumulator<NodeHit> {
- public:
-  // Compiles the global IDs of accumulated depth collisions. One element is produced for each set
-  // of nodes with colliding hit distances.
-  std::vector<std::vector<GlobalId>> Report() const;
-
-  // |HitAccumulator<NodeHit>|
-  void Add(const NodeHit& hit) override;
-
-  // |HitAccumulator<NodeHit>|
-  // This implementation clears the internal map and returns true.
-  bool EndLayer() override;
-
- private:
-  // multimap of node global IDs keyed by depth. This is a map of vectors rather than a true
-  // multimap because we need to skip singletons, which is hard to do on a C++ multimap.
-  std::unordered_map<float, std::vector<GlobalId>> ids_by_depth_;
 };
 
 }  // namespace gfx

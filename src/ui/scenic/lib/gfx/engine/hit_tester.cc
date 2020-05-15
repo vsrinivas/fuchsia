@@ -21,40 +21,15 @@ namespace gfx {
 
 namespace {
 
-// TODO(45071): Re-enable when we no longer have known misbehaving clients.
-// void LogDistanceCollisionWarning(const std::vector<std::vector<GlobalId>>& collisions) {
-//   if (!collisions.empty()) {
-//     std::ostringstream warning_message("Input-hittable nodes with ids ");
-
-//     for (const std::vector<GlobalId>& ids : collisions) {
-//       warning_message << "[ ";
-//       for (const GlobalId& id : ids) {
-//         warning_message << id << " ";
-//       }
-//       warning_message << "] ";
-//     }
-//     warning_message << "are at equal distance and overlapping. See "
-//                        "https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions";
-
-//     FX_LOGS(WARNING) << warning_message.str();
-//   }
-// }
-
-std::optional<ViewHit> CreateViewHit(const NodeHit& hit,
-                                     const glm::mat4& screen_to_world_transform) {
+std::optional<ViewHit> CreateViewHit(const NodeHit& hit) {
   FX_DCHECK(hit.node);
   ViewPtr view = hit.node->FindOwningView();  // hit.node is a raw ptr, use and drop.
   if (!view) {
     return std::nullopt;
   }
 
-  FX_DCHECK(view->GetViewNode());
-
-  const glm::mat4 world_to_local = glm::inverse(view->GetViewNode()->GetGlobalTransform());
-  const glm::mat4 screen_to_local = world_to_local * screen_to_world_transform;
   return ViewHit{
-      .view = view,
-      .screen_to_view_transform = screen_to_local,
+      .view_ref_koid = view->view_ref_koid(),
       .distance = hit.distance,
   };
 }
@@ -85,8 +60,6 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
   FX_DCHECK(starting_node);
   FX_DCHECK(accumulator);
 
-  CollisionAccumulator collision_reporter;
-
   // Hit testing scene graph iteratively by depth first traversal.
   std::stack<HitTestNode> stack;
   stack.push(HitTestNode{.node = starting_node, .parent_intersection = Node::IntersectionInfo()});
@@ -106,7 +79,6 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
     if (local_intersection.did_hit) {
       FX_VLOGS(2) << "\tHit: " << current_node.node->global_id();
       NodeHit hit{.node = current_node.node, .distance = local_intersection.distance};
-      collision_reporter.Add(hit);
       accumulator->Add(hit);
     }
 
@@ -119,10 +91,6 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
       });
     }
   }
-
-  // TODO(45071): Re-enable when we no longer have known misbehaving clients.
-  // Warn if there are objects at the same distance as that is a user error.
-  // LogDistanceCollisionWarning(collision_reporter.Report());
 }
 
 void PerformGlobalHitTest(const LayerStackPtr& layer_stack, const glm::vec2& screen_space_coords,
@@ -131,13 +99,10 @@ void PerformGlobalHitTest(const LayerStackPtr& layer_stack, const glm::vec2& scr
   FX_VLOGS(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
 
   for (auto& layer : layer_stack->layers()) {
-    const glm::mat4 screen_to_world_transform = layer->GetScreenToWorldSpaceTransform();
-
     MappingAccumulator<NodeHit, ViewHit> transforming_accumulator(
-        accumulator, [transform = screen_to_world_transform](const NodeHit& hit) {
-          return CreateViewHit(hit, transform);
-        });
+        accumulator, [](const NodeHit& hit) { return CreateViewHit(hit); });
 
+    const glm::mat4 screen_to_world_transform = layer->GetScreenToWorldSpaceTransform();
     const escher::ray4 camera_ray = screen_to_world_transform * ray;
     fxl::WeakPtr<Scene> scene = layer->scene();
     if (scene)

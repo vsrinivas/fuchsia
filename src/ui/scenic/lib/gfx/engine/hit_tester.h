@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_HIT_TESTER_H_
 
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
+#include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 
 namespace scenic_impl {

@@ -8,24 +8,22 @@
 
 #include <algorithm>
 
-#include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
-
 namespace scenic_impl {
 namespace gfx {
 
-void SessionHitAccumulator::Add(const ViewHit& hit) {
-  ViewHit& incumbent = sessions_.emplace(hit.view->session_id(), hit).first->second;
+void ViewHitAccumulator::Add(const ViewHit& hit) {
+  ViewHit& incumbent = views_.emplace(hit.view_ref_koid, hit).first->second;
 
   if (hit.distance < incumbent.distance) {
     incumbent = hit;
   }
 }
 
-bool SessionHitAccumulator::EndLayer() {
+bool ViewHitAccumulator::EndLayer() {
   size_t layer_start = hits_.size();
-  hits_.reserve(hits_.size() + sessions_.size());
+  hits_.reserve(hits_.size() + views_.size());
 
-  for (auto& [_, hit] : sessions_) {
+  for (auto& [_, hit] : views_) {
     hits_.push_back(std::move(hit));
   }
 
@@ -33,7 +31,7 @@ bool SessionHitAccumulator::EndLayer() {
   std::sort(hits_.begin() + layer_start, hits_.end(),
             [](const ViewHit& a, const ViewHit& b) { return a.distance < b.distance; });
 
-  sessions_.clear();
+  views_.clear();
 
   return true;
 }
@@ -45,28 +43,6 @@ void TopHitAccumulator::Add(const ViewHit& hit) {
 }
 
 bool TopHitAccumulator::EndLayer() { return !hit_; }
-
-std::vector<std::vector<GlobalId>> CollisionAccumulator::Report() const {
-  std::vector<std::vector<GlobalId>> report;
-
-  for (const auto& [_, ids] : ids_by_depth_) {
-    if (ids.size() > 1) {
-      // Potential savings: restrict this to one call per layer and move instead of copy.
-      report.push_back(ids);
-    }
-  }
-
-  return report;
-}
-
-void CollisionAccumulator::Add(const NodeHit& hit) {
-  ids_by_depth_[hit.distance].push_back(hit.node->global_id());
-}
-
-bool CollisionAccumulator::EndLayer() {
-  ids_by_depth_.clear();
-  return true;
-}
 
 }  // namespace gfx
 }  // namespace scenic_impl
