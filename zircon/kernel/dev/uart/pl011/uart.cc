@@ -59,7 +59,7 @@ static Cbuf uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock uart_spinlock;
 
 static inline void pl011_mask_tx() { UARTREG(uart_base, UART_IMSC) &= ~(1 << 5); }
 
@@ -82,7 +82,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
       uart_rx_buf.WriteChar(c);
     }
   }
-  spin_lock(&uart_spinlock);
+  uart_spinlock.Acquire();
   if (isr & (1 << 5)) {
     /*
      * Signal any waiting Tx and mask Tx interrupts once we
@@ -91,7 +91,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     uart_dputc_event.Signal();
     pl011_mask_tx();
   }
-  spin_unlock(&uart_spinlock);
+  uart_spinlock.Release();
 
   return IRQ_EOI_DEACTIVATE;
 }
@@ -162,20 +162,20 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  spin_lock_irqsave(&uart_spinlock, state);
+  uart_spinlock.AcquireIrqSave(state);
   while (len > 0) {
     // Is FIFO Full ?
     while (UARTREG(uart_base, UART_FR) & (1 << 5)) {
       if (block) {
         /* Unmask Tx interrupts before we block on the event */
         pl011_unmask_tx();
-        spin_unlock_irqrestore(&uart_spinlock, state);
+        uart_spinlock.ReleaseIrqRestore(state);
         uart_dputc_event.Wait();
       } else {
-        spin_unlock_irqrestore(&uart_spinlock, state);
+        uart_spinlock.ReleaseIrqRestore(state);
         arch::Yield();
       }
-      spin_lock_irqsave(&uart_spinlock, state);
+      uart_spinlock.AcquireIrqSave(state);
     }
     if (!copied_CR && map_NL && *str == '\n') {
       copied_CR = true;
@@ -186,7 +186,7 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  spin_unlock_irqrestore(&uart_spinlock, state);
+  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void pl011_start_panic() { uart_tx_irq_enabled = false; }

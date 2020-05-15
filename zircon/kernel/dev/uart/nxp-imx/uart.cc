@@ -73,7 +73,7 @@ static Cbuf uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock uart_spinlock;
 
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 
@@ -89,12 +89,12 @@ static interrupt_eoi uart_irq_handler(void* arg) {
 
   /* Signal if anyone is waiting to TX */
   if (UARTREG(MX8_UCR1) & UCR1_TRDYEN) {
-    spin_lock(&uart_spinlock);
+    uart_spinlock.Acquire();
     if (!(UARTREG(MX8_USR2) & UTS_TXFULL)) {
       // signal
       uart_dputc_event.Signal();
     }
-    spin_unlock(&uart_spinlock);
+    uart_spinlock.Release();
   }
 
   return IRQ_EOI_DEACTIVATE;
@@ -136,18 +136,18 @@ static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  spin_lock_irqsave(&uart_spinlock, state);
+  uart_spinlock.AcquireIrqSave(state);
 
   while (len > 0) {
     // is FIFO full?
     while ((UARTREG(MX8_UTS) & UTS_TXFULL)) {
-      spin_unlock_irqrestore(&uart_spinlock, state);
+      uart_spinlock.ReleaseIrqRestore(state);
       if (block) {
         uart_dputc_event.Wait();
       } else {
         arch::Yield();
       }
-      spin_lock_irqsave(&uart_spinlock, state);
+      uart_spinlock.AcquireIrqSave(state);
     }
     if (*str == '\n' && map_NL && !copied_CR) {
       copied_CR = true;
@@ -158,7 +158,7 @@ static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  spin_unlock_irqrestore(&uart_spinlock, state);
+  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void imx_start_panic() { uart_tx_irq_enabled = false; }

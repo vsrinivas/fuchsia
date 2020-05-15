@@ -103,7 +103,7 @@ static Cbuf uart_rx_buf;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock uart_spinlock;
 
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 #define SOCREG(reg) (*(volatile uint32_t*)((soc_base) + (reg)))
@@ -121,12 +121,12 @@ static interrupt_eoi uart_irq_handler(void* arg) {
   // Signal if anyone is waiting to TX
   if (UARTREG(UART_LSR) & UART_LSR_THRE) {
     UARTREG(UART_IER) &= ~UART_IER_ETBEI;  // Disable TX interrupt
-    spin_lock(&uart_spinlock);
+    uart_spinlock.Acquire();
     // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
     // 1. The reschedule flag is not supposed to be true in interrupt context.
     // 2. AutounsignalEvent only wakes up one thread per Signal() call.
     uart_dputc_event.Signal();
-    spin_unlock(&uart_spinlock);
+    uart_spinlock.Release();
   }
 
   return IRQ_EOI_DEACTIVATE;
@@ -167,19 +167,19 @@ static void mt8167_dputs(const char* str, size_t len, bool block, bool map_NL) {
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  spin_lock_irqsave(&uart_spinlock, state);
+  uart_spinlock.AcquireIrqSave(state);
 
   while (len > 0) {
     // is FIFO full?
     while (!(UARTREG(UART_LSR) & UART_LSR_THRE)) {
-      spin_unlock_irqrestore(&uart_spinlock, state);
+      uart_spinlock.ReleaseIrqRestore(state);
       if (block) {
         UARTREG(UART_IER) |= UART_IER_ETBEI;  // Enable TX interrupt.
         uart_dputc_event.Wait();
       } else {
         arch::Yield();
       }
-      spin_lock_irqsave(&uart_spinlock, state);
+      uart_spinlock.AcquireIrqSave(state);
     }
     if (*str == '\n' && map_NL && !copied_CR) {
       copied_CR = true;
@@ -190,7 +190,7 @@ static void mt8167_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  spin_unlock_irqrestore(&uart_spinlock, state);
+  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void mt8167_start_panic() { uart_tx_irq_enabled = false; }

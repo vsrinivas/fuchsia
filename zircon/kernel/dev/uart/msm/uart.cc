@@ -118,7 +118,7 @@ static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 static AutounsignalEvent uart_txemt_event{true};
 
-static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock uart_spinlock;
 
 static inline uint32_t uart_read(int offset) { return readl(uart_base + offset); }
 
@@ -275,18 +275,18 @@ static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  spin_lock_irqsave(&uart_spinlock, state);
+  uart_spinlock.AcquireIrqSave(state);
 
   while (len > 0) {
     // is FIFO full?
     while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXRDY)) {
-      spin_unlock_irqrestore(&uart_spinlock, state);
+      uart_spinlock.ReleaseIrqRestore(state);
       if (block) {
         uart_dputc_event.Wait();
       } else {
         uart_txemt_event.Wait();
       }
-      spin_lock_irqsave(&uart_spinlock, state);
+      uart_spinlock.AcquireIrqSave(state);
     }
     if (*str == '\n' && map_NL && !copied_CR) {
       copied_CR = true;
@@ -297,7 +297,7 @@ static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  spin_unlock_irqrestore(&uart_spinlock, state);
+  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static const struct pdev_uart_ops uart_ops = {

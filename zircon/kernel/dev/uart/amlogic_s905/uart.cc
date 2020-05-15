@@ -104,7 +104,7 @@ static uint32_t s905_uart_irq = 0;
 static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
-static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock uart_spinlock;
 
 static interrupt_eoi uart_irq(void* arg) {
   uintptr_t base = (uintptr_t)arg;
@@ -130,13 +130,13 @@ static interrupt_eoi uart_irq(void* arg) {
 
   /* handle TX */
   if (UARTREG(s905_uart_base, S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
-    spin_lock(&uart_spinlock);
+    uart_spinlock.Acquire();
     if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
     /* Signal any waiting Tx */
     {
       uart_dputc_event.Signal();
     }
-    spin_unlock(&uart_spinlock);
+    uart_spinlock.Release();
   }
 
   return IRQ_EOI_DEACTIVATE;
@@ -233,17 +233,17 @@ static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
   if (!uart_tx_irq_enabled) {
     block = false;
   }
-  spin_lock_irqsave(&uart_spinlock, state);
+  uart_spinlock.AcquireIrqSave(state);
   while (len > 0) {
     /* Is FIFO Full ? */
     while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL) {
-      spin_unlock_irqrestore(&uart_spinlock, state);
+      uart_spinlock.ReleaseIrqRestore(state);
       if (block) {
         uart_dputc_event.Wait();
       } else {
         arch::Yield();
       }
-      spin_lock_irqsave(&uart_spinlock, state);
+      uart_spinlock.AcquireIrqSave(state);
     }
 
     if (*str == '\n' && map_NL && !copied_CR) {
@@ -255,7 +255,7 @@ static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
       len--;
     }
   }
-  spin_unlock_irqrestore(&uart_spinlock, state);
+  uart_spinlock.ReleaseIrqRestore(state);
 }
 
 static void s905_uart_start_panic() { uart_tx_irq_enabled = false; }
