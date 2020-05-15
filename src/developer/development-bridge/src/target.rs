@@ -772,7 +772,6 @@ mod test {
     fn test_wait_for_rcs() {
         hoist::run(async move {
             let t = Arc::new(Target::new("foo"));
-            assert!(t.wait_for_state_with_rcs(0, Duration::from_millis(1)).await.is_err());
             assert!(t.wait_for_state_with_rcs(1, Duration::from_millis(1)).await.is_err());
             assert!(t.wait_for_state_with_rcs(10, Duration::from_millis(1)).await.is_err());
             let t_clone = t.clone();

@@ -304,6 +304,8 @@ mod test {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
                 .arg(target.nodename.clone())
+                .stdout(Stdio::piped())
+                .stdin(Stdio::piped())
                 .spawn()
                 .context(ERR_CTX)?,
         ))
