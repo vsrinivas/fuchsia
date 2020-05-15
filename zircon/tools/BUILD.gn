@@ -37,7 +37,6 @@ foreach(host, standard_build_hosts) {
       "kazoo",
       "ktrace-dump",
       "lz4",
-      "merkleroot",
       "zbi",
     ]
   }

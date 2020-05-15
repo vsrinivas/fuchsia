@@ -207,9 +207,9 @@ sdk_molecule("core_tools") {
     "//tools/net/dev_finder:device-finder_sdk",
     "//zircon/public/tool/fidl-format:fidl-format_sdk",
     "//zircon/public/tool/fidlc:fidlc_sdk",
-    "//zircon/public/tool/merkleroot:merkleroot_sdk",
     "//zircon/public/tool/zbi:zbi_sdk",
     "//zircon/tools/fvm:fvm_sdk",
+    "//zircon/tools/merkleroot:merkleroot_sdk",
     "//zircon/tools/minfs:minfs_sdk",
   ]
 

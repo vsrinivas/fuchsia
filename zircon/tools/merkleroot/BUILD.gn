@@ -2,10 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_host_tool("merkleroot") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+import("//build/cpp/sdk_executable.gni")
+
+sdk_executable("merkleroot") {
+  category = "partner"
   sources = [ "merkleroot.cc" ]
   deps = [
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
   ]
 }
