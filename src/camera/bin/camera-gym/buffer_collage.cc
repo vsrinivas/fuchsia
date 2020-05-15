@@ -417,7 +417,12 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
 
 void BufferCollage::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {
   if (event.has_mic_mute()) {
-    camera_muted_ = event.mic_mute();
+    auto muted = event.mic_mute();
+    if (muted == camera_muted_) {
+      return;
+    }
+
+    camera_muted_ = muted;
     FX_LOGS(INFO) << "Camera is " << (camera_muted_ ? "muted" : "unmuted") << ".";
     UpdateLayout();
   }
