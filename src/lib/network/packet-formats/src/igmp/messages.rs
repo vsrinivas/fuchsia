@@ -8,7 +8,9 @@ use core::convert::TryFrom;
 use core::ops::Deref;
 
 use net_types::ip::Ipv4Addr;
-use packet::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
+use packet::records::{
+    LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout, ParsedRecord, RecordParseResult,
+};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -371,7 +373,7 @@ impl<'a> LimitedRecordsImpl<'a> for IgmpMembershipReportV3 {
 
     fn parse<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
-    ) -> Result<Option<Option<GroupRecord<&'a [u8]>>>, ParseError> {
+    ) -> RecordParseResult<GroupRecord<&'a [u8]>, ParseError> {
         let header = data
             .take_obj_front::<GroupRecordHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "Can't take group record header"))?;
@@ -384,7 +386,7 @@ impl<'a> LimitedRecordsImpl<'a> for IgmpMembershipReportV3 {
             .take_front(usize::from(header.aux_data_len) * 4)
             .ok_or_else(debug_err_fn!(ParseError::Format, "Can't skip auxiliary data"))?;
 
-        Ok(Some(Some(Self::Record { header, sources })))
+        Ok(ParsedRecord::Parsed(Self::Record { header, sources }))
     }
 }
 

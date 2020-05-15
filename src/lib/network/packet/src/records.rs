@@ -28,6 +28,39 @@ use crate::serialize::InnerPacketBuilder;
 use crate::util::{FromRaw, MaybeParsed};
 use crate::{BufferView, BufferViewMut};
 
+/// A type that encapsuates the result of a record parsing operation.
+pub type RecordParseResult<T, E> = std::result::Result<ParsedRecord<T>, E>;
+
+/// A type that encapsulates the successful result of a parsing operation.
+pub enum ParsedRecord<T> {
+    /// A record was successfully consumed and parsed.
+    Parsed(T),
+
+    /// A record was consumed but not parsed for non-fatal reasons.
+    ///
+    /// The caller should attempt to parse the next record to get a successfully
+    /// parsed record.
+    ///
+    /// An example of a record that is skippable is a record used for padding.
+    Skipped,
+
+    /// All possible records have been already been consumed; there is nothing
+    /// left to parse.
+    ///
+    /// The behavior is unspecified if callers attempt to parse another record.
+    Done,
+}
+
+impl<T> ParsedRecord<T> {
+    /// Does this result indicate that a record was consumed?
+    pub fn consumed(&self) -> bool {
+        match self {
+            ParsedRecord::Parsed(_) | ParsedRecord::Skipped => true,
+            ParsedRecord::Done => false,
+        }
+    }
+}
+
 /// A parsed sequence of records.
 ///
 /// `Records` represents a pre-parsed sequence of records whose structure is
@@ -215,23 +248,18 @@ pub trait RecordsImpl<'a>: RecordsImplLayout {
     /// Parses a record with some context.
     ///
     /// `parse_with_context` takes a variable-length `data` and a `context` to
-    /// maintain state, and returns `Ok(Some(Some(o)))` if the record is
-    /// successfully parsed as `o`, `Ok(Some(None))` if the record is
-    /// well-formed but the implementer can't extract a concrete object (e.g.
-    /// the record is an unimplemented enumeration, but it can be safely
-    /// "skipped"), `Ok(None)` if `parse_with_context` is unable to parse more
-    /// records, and `Err(err)` if the `data` is malformed for the attempted
-    /// record parsing.
+    /// maintain state.
     ///
     /// `data` may be empty. It is up to the implementer to handle an exhausted
     /// `data`.
     ///
-    /// When returning `Ok(Some(None))` it's the implementer's responsibility to
-    /// consume the bytes of the record from `data`. If this doesn't happen,
-    /// then `parse_with_context` will be called repeatedly on the same `data`,
-    /// and the program will be stuck in an infinite loop. If the implementation
-    /// is unable to know how many bytes to consume from `data` in order to skip
-    /// the record, `parse_with_context` must return `Err`.
+    /// When returning `Ok(ParsedRecord::Skipped)`, it's the implementer's
+    /// responsibility to consume the bytes of the record from `data`. If this
+    /// doesn't happen, then `parse_with_context` will be called repeatedly on
+    /// the same `data`, and the program will be stuck in an infinite loop. If
+    /// the implementation is unable to determine how many bytes to consume from
+    /// `data` in order to skip the record, `parse_with_context` must return
+    /// `Err`.
     ///
     /// `parse_with_context` must be deterministic, or else
     /// [`Records::parse_with_context`] cannot guarantee that future iterations
@@ -239,7 +267,7 @@ pub trait RecordsImpl<'a>: RecordsImplLayout {
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Self::Context,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error>;
+    ) -> RecordParseResult<Self::Record, Self::Error>;
 }
 
 /// An implementation of a raw records parser.
@@ -331,13 +359,13 @@ impl<'a, R: LimitedRecordsImpl<'a>> RecordsImpl<'a> for LimitedRecordsImplBridge
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         bytes: &mut BV,
         context: &mut Self::Context,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+    ) -> RecordParseResult<Self::Record, Self::Error> {
         let limit_hit = *context == 0;
 
         if bytes.is_empty() || limit_hit {
             return match R::EXACT_LIMIT_ERROR {
                 Some(_) if bytes.is_empty() ^ limit_hit => Err(R::EXACT_LIMIT_ERROR.unwrap()),
-                _ => Ok(None),
+                _ => Ok(ParsedRecord::Done),
             };
         }
 
@@ -403,7 +431,7 @@ pub trait LimitedRecordsImpl<'a>: LimitedRecordsImplLayout {
     /// [`RecordsImpl::parse_with_context`].
     fn parse<BV: BufferView<&'a [u8]>>(
         bytes: &mut BV,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error>;
+    ) -> RecordParseResult<Self::Record, Self::Error>;
 }
 
 /// An implementation of a records serializer.
@@ -766,23 +794,10 @@ where
     BV: BufferView<&'a [u8]>,
 {
     loop {
-        match R::parse_with_context(bytes, context) {
-            // `parse_with_context` cannot parse any more, return Ok(None) to
-            // let the caller know that we have parsed all possible records for
-            // a given `bytes`.
-            Ok(None) => return Ok(None),
-
-            // `parse_with_context` was unable to parse a record, not because
-            // `bytes` was malformed but for other non fatal reasons, so we can
-            // skip.
-            Ok(Some(None)) => {}
-
-            // `parse_with_context` was able to parse a record, so return it.
-            Ok(Some(Some(o))) => return Ok(Some(o)),
-
-            // `parse_with_context` had an error so pass that error to the
-            // caller.
-            Err(err) => return Err(err),
+        match R::parse_with_context(bytes, context)? {
+            ParsedRecord::Done => return Ok(None),
+            ParsedRecord::Skipped => {}
+            ParsedRecord::Parsed(o) => return Ok(Some(o)),
         }
     }
 }
@@ -860,16 +875,16 @@ mod test {
 
     fn parse_dummy_rec<'a, BV>(
         data: &mut BV,
-    ) -> Result<Option<Option<LayoutVerified<&'a [u8], DummyRecord>>>, ()>
+    ) -> RecordParseResult<LayoutVerified<&'a [u8], DummyRecord>, ()>
     where
         BV: BufferView<&'a [u8]>,
     {
         if data.is_empty() {
-            return Ok(None);
+            return Ok(ParsedRecord::Done);
         }
 
         match data.take_obj_front::<DummyRecord>() {
-            Some(res) => Ok(Some(Some(res))),
+            Some(res) => Ok(ParsedRecord::Parsed(res)),
             None => Err(()),
         }
     }
@@ -892,7 +907,7 @@ mod test {
         fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
             _context: &mut Self::Context,
-        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        ) -> RecordParseResult<Self::Record, Self::Error> {
             parse_dummy_rec(data)
         }
     }
@@ -913,7 +928,7 @@ mod test {
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        ) -> RecordParseResult<Self::Record, Self::Error> {
             parse_dummy_rec(data)
         }
     }
@@ -936,7 +951,7 @@ mod test {
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        ) -> RecordParseResult<Self::Record, Self::Error> {
             parse_dummy_rec(data)
         }
     }
@@ -972,9 +987,9 @@ mod test {
         fn parse_with_context<BV: BufferView<&'a [u8]>>(
             bytes: &mut BV,
             context: &mut Self::Context,
-        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        ) -> RecordParseResult<Self::Record, Self::Error> {
             if bytes.len() < core::mem::size_of::<DummyRecord>() {
-                Ok(None)
+                Ok(ParsedRecord::Done)
             } else if bytes.as_ref()[0..core::mem::size_of::<DummyRecord>()]
                 .iter()
                 .any(|x| context.disallowed[*x as usize])
@@ -1031,18 +1046,17 @@ mod test {
         fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
             context: &mut Self::Context,
-        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        ) -> RecordParseResult<Self::Record, Self::Error> {
             if !context.iter {
                 context.pre_parse_counter += 1;
             }
 
             let ret = parse_dummy_rec_with_context(data, context);
 
-            match ret {
-                Ok(Some(Some(_))) if !context.iter => {
+            if let Ok(ParsedRecord::Parsed(_)) = ret {
+                if !context.iter {
                     context.post_parse_counter += 1;
                 }
-                _ => {}
             }
 
             ret
@@ -1054,19 +1068,19 @@ mod test {
             data: &mut BV,
             context: &mut Self::Context,
         ) -> Result<bool, Self::Error> {
-            Self::parse_with_context(data, context).map(|p| p.is_some())
+            Self::parse_with_context(data, context).map(|r| r.consumed())
         }
     }
 
     fn parse_dummy_rec_with_context<'a, BV>(
         data: &mut BV,
         context: &mut StatefulContext,
-    ) -> Result<Option<Option<LayoutVerified<&'a [u8], DummyRecord>>>, ()>
+    ) -> RecordParseResult<LayoutVerified<&'a [u8], DummyRecord>, ()>
     where
         BV: BufferView<&'a [u8]>,
     {
         if data.is_empty() {
-            return Ok(None);
+            return Ok(ParsedRecord::Done);
         }
 
         if !context.iter {
@@ -1074,7 +1088,7 @@ mod test {
         }
 
         match data.take_obj_front::<DummyRecord>() {
-            Some(res) => Ok(Some(Some(res))),
+            Some(res) => Ok(ParsedRecord::Parsed(res)),
             None => Err(()),
         }
     }
@@ -1432,7 +1446,7 @@ pub mod options {
         fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
             _context: &mut Self::Context,
-        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        ) -> RecordParseResult<Self::Record, Self::Error> {
             next::<_, O>(data)
         }
     }
@@ -1721,9 +1735,7 @@ pub mod options {
         fn serialize_padding(buf: &mut [u8], length: usize);
     }
 
-    fn next<'a, BV, O>(
-        bytes: &mut BV,
-    ) -> Result<Option<Option<O::Option>>, OptionParseErr<O::Error>>
+    fn next<'a, BV, O>(bytes: &mut BV) -> RecordParseResult<O::Option, OptionParseErr<O::Error>>
     where
         BV: BufferView<&'a [u8]>,
         O: OptionsImpl<'a>,
@@ -1732,14 +1744,14 @@ pub mod options {
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
         loop {
             let kind = match bytes.take_byte_front() {
-                None => return Ok(None),
+                None => return Ok(ParsedRecord::Done),
                 Some(k) => {
                     // Can't do pattern matching with associated constants, so
                     // do it the good-ol' way:
                     if Some(k) == O::NOP {
                         continue;
                     } else if Some(k) == O::END_OF_OPTIONS {
-                        return Ok(None);
+                        return Ok(ParsedRecord::Done);
                     }
                     k
                 }
@@ -1757,7 +1769,7 @@ pub mod options {
             // above.
             let option_data = bytes.take_front(len - 2).unwrap();
             match O::parse(kind, option_data) {
-                Ok(Some(o)) => return Ok(Some(Some(o))),
+                Ok(Some(o)) => return Ok(ParsedRecord::Parsed(o)),
                 Ok(None) => {}
                 Err(err) => return Err(OptionParseErr::External(err)),
             }

@@ -11,7 +11,10 @@ use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 use packet::records::options::{
     AlignedOptionsSerializerImpl, LengthEncoding, OptionsImplLayout, OptionsSerializerImpl,
 };
-use packet::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout, RecordsRawImpl};
+use packet::records::{
+    ParsedRecord, RecordParseResult, Records, RecordsContext, RecordsImpl, RecordsImplLayout,
+    RecordsRawImpl,
+};
 use packet::BufferView;
 
 use crate::ip::{IpProto, Ipv6ExtHdrType};
@@ -169,7 +172,7 @@ impl Ipv6ExtensionHeaderImpl {
     fn parse_hop_by_hop_options<'a, BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Ipv6ExtensionHeaderParsingContext,
-    ) -> Result<Option<Option<Ipv6ExtensionHeader<'a>>>, Ipv6ExtensionHeaderParsingError> {
+    ) -> Result<ParsedRecord<Ipv6ExtensionHeader<'a>>, Ipv6ExtensionHeaderParsingError> {
         let (next_header, hdr_ext_len) = Self::get_next_hdr_and_len(data, context)?;
 
         // As per RFC 8200 section 4.3, Hdr Ext Len is the length of this extension
@@ -208,17 +211,17 @@ impl Ipv6ExtensionHeaderImpl {
         context.headers_parsed += 1;
         context.bytes_parsed += 2 + expected_len;
 
-        Ok(Some(Some(Ipv6ExtensionHeader {
+        Ok(ParsedRecord::Parsed(Ipv6ExtensionHeader {
             next_header,
             data: Ipv6ExtensionHeaderData::HopByHopOptions { options },
-        })))
+        }))
     }
 
     /// Parse Routing Extension Header.
     fn parse_routing<'a, BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Ipv6ExtensionHeaderParsingContext,
-    ) -> Result<Option<Option<Ipv6ExtensionHeader<'a>>>, Ipv6ExtensionHeaderParsingError> {
+    ) -> Result<ParsedRecord<Ipv6ExtensionHeader<'a>>, Ipv6ExtensionHeaderParsingError> {
         // All routing extension headers (regardless of type) will have
         // 4 bytes worth of data we need to look at.
         let (next_header, hdr_ext_len) = Self::get_next_hdr_and_len(data, context)?;
@@ -250,7 +253,7 @@ impl Ipv6ExtensionHeaderImpl {
             context.headers_parsed += 1;
             context.bytes_parsed += expected_len;
 
-            Ok(Some(None))
+            Ok(ParsedRecord::Skipped)
         } else {
             // As per RFC 8200, if we encounter a routing header with an unrecognized
             // routing type, and segments left is non-zero, we MUST discard the packet
@@ -267,7 +270,7 @@ impl Ipv6ExtensionHeaderImpl {
     fn parse_fragment<'a, BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Ipv6ExtensionHeaderParsingContext,
-    ) -> Result<Option<Option<Ipv6ExtensionHeader<'a>>>, Ipv6ExtensionHeaderParsingError> {
+    ) -> Result<ParsedRecord<Ipv6ExtensionHeader<'a>>, Ipv6ExtensionHeaderParsingError> {
         // Fragment Extension Header requires exactly 8 bytes so make sure
         // `data` has at least 8 bytes left. If `data` has at least 8 bytes left,
         // we are guaranteed that all `take_front` calls done by this
@@ -287,19 +290,19 @@ impl Ipv6ExtensionHeaderImpl {
         context.headers_parsed += 1;
         context.bytes_parsed += 8;
 
-        Ok(Some(Some(Ipv6ExtensionHeader {
+        Ok(ParsedRecord::Parsed(Ipv6ExtensionHeader {
             next_header,
             data: Ipv6ExtensionHeaderData::Fragment {
                 fragment_data: FragmentData { bytes: data.take_front(6).unwrap() },
             },
-        })))
+        }))
     }
 
     /// Parse Destination Options Extension Header.
     fn parse_destination_options<'a, BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Ipv6ExtensionHeaderParsingContext,
-    ) -> Result<Option<Option<Ipv6ExtensionHeader<'a>>>, Ipv6ExtensionHeaderParsingError> {
+    ) -> Result<ParsedRecord<Ipv6ExtensionHeader<'a>>, Ipv6ExtensionHeaderParsingError> {
         let (next_header, hdr_ext_len) = Self::get_next_hdr_and_len(data, context)?;
 
         // As per RFC 8200 section 4.6, Hdr Ext Len is the length of this extension
@@ -336,10 +339,10 @@ impl Ipv6ExtensionHeaderImpl {
         context.headers_parsed += 1;
         context.bytes_parsed += 2 + expected_len;
 
-        Ok(Some(Some(Ipv6ExtensionHeader {
+        Ok(ParsedRecord::Parsed(Ipv6ExtensionHeader {
             next_header,
             data: Ipv6ExtensionHeaderData::DestinationOptions { options },
-        })))
+        }))
     }
 }
 
@@ -354,7 +357,7 @@ impl<'a> RecordsImpl<'a> for Ipv6ExtensionHeaderImpl {
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Self::Context,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+    ) -> RecordParseResult<Self::Record, Self::Error> {
         let expected_hdr = context.next_header;
 
         match Ipv6ExtHdrType::from(expected_hdr) {
@@ -367,7 +370,7 @@ impl<'a> RecordsImpl<'a> for Ipv6ExtensionHeaderImpl {
                 if is_valid_next_header_upper_layer(expected_hdr) {
                     // Stop parsing extension headers when we find a Next Header value
                     // for a higher level protocol.
-                    Ok(None)
+                    Ok(ParsedRecord::Done)
                 } else {
                     // Should never end up here because we guarantee that if we hit an
                     // invalid Next Header field while parsing extension headers, we will
@@ -853,10 +856,10 @@ where
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Self::Context,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+    ) -> RecordParseResult<Self::Record, Self::Error> {
         // If we have no more bytes left, we are done.
         let kind = match data.take_byte_front() {
-            None => return Ok(None),
+            None => return Ok(ParsedRecord::Done),
             Some(k) => k,
         };
 
@@ -874,7 +877,7 @@ where
             context.options_parsed += 1;
             context.bytes_parsed += 1;
 
-            return Ok(Some(None));
+            return Ok(ParsedRecord::Skipped);
         }
 
         let len = data
@@ -891,7 +894,7 @@ where
             context.options_parsed += 1;
             context.bytes_parsed += 2 + (len as usize);
 
-            return Ok(Some(None));
+            return Ok(ParsedRecord::Skipped);
         }
 
         // Parse the actual option data.
@@ -906,7 +909,7 @@ where
                 context.options_parsed += 1;
                 context.bytes_parsed += 2 + (len as usize);
 
-                Ok(Some(Some(ExtensionHeaderOption { action, mutable, data: o })))
+                Ok(ParsedRecord::Parsed(ExtensionHeaderOption { action, mutable, data: o }))
             }
             ExtensionHeaderOptionDataParseResult::ErrorAt(offset) => {
                 // The precondition here is that `bytes_parsed + offset` must point inside the

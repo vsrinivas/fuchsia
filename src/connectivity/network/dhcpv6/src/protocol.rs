@@ -9,7 +9,10 @@ use fuchsia_syslog::fx_log_warn;
 use mdns::protocol::{Domain, ParseError};
 use num_derive::FromPrimitive;
 use packet::{
-    records::{Records, RecordsImpl, RecordsImplLayout, RecordsSerializer, RecordsSerializerImpl},
+    records::{
+        ParsedRecord, RecordParseResult, Records, RecordsImpl, RecordsImplLayout,
+        RecordsSerializer, RecordsSerializerImpl,
+    },
     BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata,
 };
 use std::{
@@ -220,9 +223,9 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         _context: &mut Self::Context,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+    ) -> RecordParseResult<Self::Record, Self::Error> {
         if data.len() == 0 {
-            return Ok(None);
+            return Ok(ParsedRecord::Done);
         }
 
         let opt_code = data.take_obj_front::<U16>().ok_or(ProtocolError::BufferExhausted)?.get();
@@ -286,7 +289,7 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
             }
         }?;
 
-        Ok(Some(Some(opt)))
+        Ok(ParsedRecord::Parsed(opt))
     }
 }
 
