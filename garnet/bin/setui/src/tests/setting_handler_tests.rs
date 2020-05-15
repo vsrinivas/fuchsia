@@ -113,11 +113,11 @@ async fn test_spawn() {
     // Exercises successful spawn of a simple controller.
     verify_handler::<SucceedControl>(true).await;
     // Exercises failed spawn of a simple controller.
-    verify_handler::<FailControl>(false).await;
+    verify_handler::<FailControl>(true).await;
     // Exercises successful spawn of a data controller.
     verify_data_handler::<SucceedControl>(true).await;
     // Exercises failed spawn of a data controller.
-    verify_data_handler::<FailControl>(false).await;
+    verify_data_handler::<FailControl>(true).await;
 }
 
 async fn verify_handler<C: Control + Sync + Send + 'static>(should_succeed: bool) {

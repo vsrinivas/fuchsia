@@ -49,6 +49,13 @@ impl RestoreAgent {
                                 fx_log_info!("setting does not support restore:{:?}", setting_type);
                                 continue;
                             }
+                            Ok(Err(SwitchboardError::UnhandledType { setting_type })) => {
+                                fx_log_info!(
+                                    "setting not available for restore: {:?}",
+                                    setting_type
+                                );
+                                continue;
+                            }
                             _ => {
                                 fx_log_err!("error during restore for {:?}", component);
                                 return Err(AgentError::UnexpectedError);

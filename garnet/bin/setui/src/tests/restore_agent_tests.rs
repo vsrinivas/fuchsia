@@ -69,6 +69,13 @@ async fn test_restore() {
     )
     .await;
 
+    // Should succeed when the setting is not available.
+    verify_restore_handling(
+        Box::new(|| Err(SwitchboardError::UnhandledType { setting_type: SettingType::Unknown })),
+        true,
+    )
+    .await;
+
     // Snould fail when any other error is introduced.
     verify_restore_handling(
         Box::new(|| Err(SwitchboardError::UnexpectedError { description: "foo".to_string() })),
