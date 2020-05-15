@@ -145,8 +145,8 @@ test_package("isolated-ota-tests") {
 
   meta = [
     {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-integration-test.cmx")
+      path =
+          rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
       dest = "pkg-cache.cmx"
     },
     {
@@ -200,8 +200,8 @@ package("isolated-swd") {
 
   meta = [
     {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-integration-test.cmx")
+      path =
+          rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
       dest = "pkg-cache-isolated.cmx"
     },
     {
