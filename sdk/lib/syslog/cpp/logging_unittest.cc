@@ -140,7 +140,7 @@ TEST_F(LoggingFixture, LogT) {
 
 TEST_F(LoggingFixture, VLogT) {
   LogSettings new_settings;
-  new_settings.min_log_level = (LOG_INFO - 1);  // verbosity = 1
+  new_settings.min_log_level = (LOG_INFO - 2);  // verbosity = 2
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings, {});
@@ -148,15 +148,18 @@ TEST_F(LoggingFixture, VLogT) {
   int line = __LINE__ + 1;
   FX_VLOGST(1, "first") << "First message";
   FX_VLOGST(2, "second") << "ABCD";
+  FX_VLOGST(3, "third") << "EFGH";
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
   EXPECT_THAT(log, testing::HasSubstr("[first] VLOG(1): [logging_unittest.cc(" +
                                       std::to_string(line) + ")] First message"));
+  EXPECT_THAT(log, testing::HasSubstr("second"));
+  EXPECT_THAT(log, testing::HasSubstr("ABCD"));
 
-  EXPECT_THAT(log, testing::Not(testing::HasSubstr("second")));
-  EXPECT_THAT(log, testing::Not(testing::HasSubstr("ABCD")));
+  EXPECT_THAT(log, testing::Not(testing::HasSubstr("third")));
+  EXPECT_THAT(log, testing::Not(testing::HasSubstr("EFGH")));
 }
 
 TEST_F(LoggingFixture, DVLogNoMinLevel) {

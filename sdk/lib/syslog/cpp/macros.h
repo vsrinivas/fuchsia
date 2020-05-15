@@ -138,7 +138,7 @@ static inline int GetSeverityFromVerbosity(int verbosity) {
 }
 
 #define FX_VLOG_IS_ON(verbose_level) \
-  (GetSeverityFromVerbosity(verbose_level) <= ::syslog::GetVlogVerbosity())
+  (GetSeverityFromVerbosity(verbose_level) >= ::syslog::GetVlogVerbosity())
 
 #define FX_VLOG_STREAM(verbose_level, tag)                                                        \
   ::syslog::LogMessage(GetSeverityFromVerbosity(verbose_level), __FILE__, __LINE__, nullptr, tag) \
