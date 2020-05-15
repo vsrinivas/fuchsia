@@ -5,6 +5,7 @@ use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
+use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
 use std::{convert::TryFrom, mem, str};
@@ -16,10 +17,49 @@ pub const MAX_DATAGRAM_LEN: usize = 2032;
 pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
 
-/// A type-safe(r) [`LogMessage`].
+const PID_LABEL: &str = "__pid";
+const TID_LABEL: &str = "__tid";
+const DROPPED_LABEL: &str = "__dropped";
+const TAG_LABEL: &str = "__tag";
+const MESSAGE_LABEL: &str = "__msg";
+
+/// An enum containing well known argument names passed through logs.
+///
+/// This currently contains the fields of logs sent as a [`LogMessage`].
+/// Once structured logs are passed to archivist, this will be extended
+/// to contain any custom argument names.
 ///
 /// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
+pub enum MessageLabel {
+    ProcessId,
+    ThreadId,
+    Dropped,
+    Tag,
+    Msg,
+}
+
+impl AsRef<str> for MessageLabel {
+    fn as_ref(&self) -> &str {
+        match self {
+            // TODO(50519) - ensure that strings reported here align with naming
+            // decisions made for the structured log format sent by other components.
+            Self::ProcessId => PID_LABEL,
+            Self::ThreadId => TID_LABEL,
+            Self::Dropped => DROPPED_LABEL,
+            Self::Tag => TAG_LABEL,
+            Self::Msg => MESSAGE_LABEL,
+        }
+    }
+}
+
+/// A representation of a structured log's payload.
+pub type LogHierarchy = NodeHierarchy<MessageLabel>;
+/// A representation of a property in a structured log.
+pub type LogProperty = Property<MessageLabel>;
+
+/// An internal representation of a structured log.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Message {
     /// Size this message took up on the wire.
     pub size: usize,
@@ -30,20 +70,10 @@ pub struct Message {
     /// Timestamp reported by the writer.
     pub time: zx::Time,
 
-    /// Process koid as reported by the writer.
-    pub pid: zx::sys::zx_koid_t,
-
-    /// Thread koid as reported by the writer.
-    pub tid: zx::sys::zx_koid_t,
-
-    /// Number of logs the writer had to drop before writing this message.
-    pub dropped_logs: usize,
-
-    /// Tags annotating the context or semantics of this message.
-    pub tags: Vec<String>,
-
-    /// The message's string contents.
-    pub contents: String,
+    /// Payload of the structured log. Until the structured log encoding supports
+    /// nested structures, the contents consist of a single LogHierarchy with
+    /// properties and no children.
+    pub contents: LogHierarchy,
 }
 
 impl Accounted for Message {
@@ -108,18 +138,24 @@ impl Message {
         let mut msg_end = cursor + 1;
         while msg_end < bytes.len() {
             if bytes[msg_end] == 0 {
-                let contents = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
+                let message = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
+                let message_len = message.len();
+                let mut contents = LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Uint(MessageLabel::ProcessId, pid),
+                        LogProperty::Uint(MessageLabel::ThreadId, tid),
+                        LogProperty::Uint(MessageLabel::Dropped, dropped_logs as u64),
+                        LogProperty::string(MessageLabel::Msg, message),
+                    ],
+                    vec![],
+                );
+                for tag in tags {
+                    contents
+                        .add_property(vec!["root"], LogProperty::String(MessageLabel::Tag, tag));
+                }
 
-                return Ok(Self {
-                    size: cursor + contents.len() + 1,
-                    tags,
-                    contents,
-                    pid,
-                    tid,
-                    time,
-                    severity,
-                    dropped_logs,
-                });
+                return Ok(Self { size: cursor + message_len + 1, time, severity, contents });
             }
             msg_end += 1;
         }
@@ -127,16 +163,58 @@ impl Message {
         Err(StreamError::OutOfBounds)
     }
 
+    /// Returns the pid associated with the message, if one exists.
+    pub fn pid(&self) -> Option<u64> {
+        self.contents.properties.iter().find_map(|property| match property {
+            LogProperty::Uint(MessageLabel::ProcessId, pid) => Some(*pid),
+            _ => None,
+        })
+    }
+
+    /// Returns the tid associated with the message, if one exists.
+    pub fn tid(&self) -> Option<u64> {
+        self.contents.properties.iter().find_map(|property| match property {
+            LogProperty::Uint(MessageLabel::ThreadId, tid) => Some(*tid),
+            _ => None,
+        })
+    }
+
+    /// Returns any tags associated with the message.
+    pub fn tags(&self) -> impl Iterator<Item = &str> {
+        // Multiple tags are supported for the `LogMessage` format and are represented
+        // as multiple instances of MessageLabel::Tag arguments.
+        self.contents.properties.iter().filter_map(|property| match property {
+            LogProperty::String(MessageLabel::Tag, tag) => Some(tag.as_str()),
+            _ => None,
+        })
+    }
+
+    /// Returns the string log associated with the message, if one exists.
+    pub fn msg(&self) -> Option<&str> {
+        self.contents.properties.iter().find_map(|property| match property {
+            LogProperty::String(MessageLabel::Msg, msg) => Some(msg.as_str()),
+            _ => None,
+        })
+    }
+
+    /// Returns number of dropped logs if reported in the message.
+    pub fn dropped_logs(&self) -> Option<u64> {
+        self.contents.properties.iter().find_map(|property| match property {
+            LogProperty::Uint(MessageLabel::Dropped, dropped) => Some(*dropped),
+            _ => None,
+        })
+    }
+
     /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
     pub fn for_listener(&self) -> LogMessage {
         LogMessage {
-            pid: self.pid,
-            tid: self.tid,
+            pid: self.pid().unwrap_or(zx::sys::ZX_KOID_INVALID),
+            tid: self.tid().unwrap_or(zx::sys::ZX_KOID_INVALID),
             time: self.time.into_nanos(),
             severity: self.severity.for_listener(),
-            dropped_logs: self.dropped_logs as _,
-            tags: self.tags.clone(),
-            msg: self.contents.clone(),
+            dropped_logs: self.dropped_logs().unwrap_or(0) as _,
+            tags: self.tags().map(String::from).collect(),
+            msg: self.msg().unwrap_or("").to_string(),
         }
     }
 }
@@ -371,21 +449,28 @@ mod tests {
         let data_size = b_start + b_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminate message
-        let parsed = Message::from_logger(buffer).unwrap();
+        let mut parsed = Message::from_logger(buffer).unwrap();
+        let mut expected = Message {
+            size: METADATA_SIZE + data_size,
+            time: zx::Time::from_nanos(packet.metadata.time),
+            severity: Severity::Debug,
+            contents: LogHierarchy::new(
+                "root",
+                vec![
+                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(MessageLabel::Tag, "AAAAAAAAAAA"),
+                    LogProperty::string(MessageLabel::Msg, "BBBBB"),
+                ],
+                vec![],
+            ),
+        };
 
-        assert_eq!(
-            parsed,
-            Message {
-                size: METADATA_SIZE + data_size,
-                pid: packet.metadata.pid,
-                tid: packet.metadata.tid,
-                time: zx::Time::from_nanos(packet.metadata.time),
-                severity: Severity::Debug,
-                dropped_logs: packet.metadata.dropped_logs as usize,
-                tags: vec![String::from("AAAAAAAAAAA")],
-                contents: String::from("BBBBB"),
-            }
-        );
+        parsed.contents.sort();
+        expected.contents.sort();
+
+        assert_eq!(parsed, expected);
     }
 
     #[test]
@@ -436,21 +521,28 @@ mod tests {
         let data_size = c_start + c_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
-        let parsed = Message::from_logger(buffer).unwrap();
+        let mut parsed = Message::from_logger(buffer).unwrap();
+        let mut expected = Message {
+            size: METADATA_SIZE + data_size,
+            time: zx::Time::from_nanos(packet.metadata.time),
+            severity: Severity::Debug,
+            contents: LogHierarchy::new(
+                "root",
+                vec![
+                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(MessageLabel::Tag, "AAAAAAAAAAA"),
+                    LogProperty::string(MessageLabel::Tag, "BBBBB"),
+                    LogProperty::string(MessageLabel::Msg, "CCCCC"),
+                ],
+                vec![],
+            ),
+        };
+        parsed.contents.sort();
+        expected.contents.sort();
 
-        assert_eq!(
-            parsed,
-            Message {
-                size: METADATA_SIZE + data_size,
-                pid: packet.metadata.pid,
-                tid: packet.metadata.tid,
-                time: zx::Time::from_nanos(packet.metadata.time),
-                severity: Severity::Debug,
-                dropped_logs: packet.metadata.dropped_logs as usize,
-                tags: vec![String::from("AAAAAAAAAAA"), String::from("BBBBB")],
-                contents: String::from("CCCCC"),
-            }
-        );
+        assert_eq!(parsed, expected);
     }
 
     #[test]
@@ -478,22 +570,39 @@ mod tests {
         let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
         let full_buffer = &packet.as_bytes()[..];
 
-        let min_parsed = Message::from_logger(min_buffer).unwrap();
-        let full_parsed = Message::from_logger(full_buffer).unwrap();
+        let mut min_parsed = Message::from_logger(min_buffer).unwrap();
+        let mut full_parsed = Message::from_logger(full_buffer).unwrap();
+
+        let mut expected_properties = vec![
+            LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+            LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+            LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+            LogProperty::String(
+                MessageLabel::Msg,
+                String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
+            ),
+        ];
+        let mut tag_properties = (0..MAX_TAGS as _)
+            .map(|tag_num| {
+                LogProperty::String(
+                    MessageLabel::Tag,
+                    String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap(),
+                )
+            })
+            .collect::<Vec<LogProperty>>();
+        expected_properties.append(&mut tag_properties);
+        let mut expected_contents = LogHierarchy::new("root", expected_properties, vec![]);
+
+        // sort hierarchies so we can do direct comparison
+        expected_contents.sort();
+        min_parsed.contents.sort();
+        full_parsed.contents.sort();
 
         let expected_message = Message {
             size: METADATA_SIZE + msg_end,
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
             time: zx::Time::from_nanos(packet.metadata.time),
             severity: Severity::Debug,
-            dropped_logs: packet.metadata.dropped_logs as usize,
-            contents: String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
-            tags: (0..MAX_TAGS as _)
-                .map(|tag_num| {
-                    String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap()
-                })
-                .collect(),
+            contents: expected_contents,
         };
 
         assert_eq!(min_parsed, expected_message);
@@ -525,22 +634,37 @@ mod tests {
         );
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
-        let parsed = Message::from_logger(buffer).unwrap();
+        let mut parsed = Message::from_logger(buffer).unwrap();
+        parsed.contents.sort();
+
+        let mut expected_contents = LogHierarchy::new(
+            "root",
+            vec![
+                LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                LogProperty::string(MessageLabel::Msg, ""),
+            ],
+            vec![],
+        );
+        for tag_num in 0..MAX_TAGS as _ {
+            expected_contents.add_property(
+                vec!["root"],
+                LogProperty::String(
+                    MessageLabel::Tag,
+                    String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2]).unwrap(),
+                ),
+            );
+        }
+        expected_contents.sort();
 
         assert_eq!(
             parsed,
             Message {
                 size: METADATA_SIZE + msg_start,
-                pid: packet.metadata.pid,
-                tid: packet.metadata.tid,
                 time: zx::Time::from_nanos(packet.metadata.time),
                 severity: Severity::Debug,
-                dropped_logs: packet.metadata.dropped_logs as usize,
-                tags: (0..MAX_TAGS as _)
-                    .map(|tag_num| String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2])
-                        .unwrap())
-                    .collect(),
-                contents: String::new(),
+                contents: expected_contents
             }
         );
     }
@@ -560,13 +684,18 @@ mod tests {
             parsed,
             Message {
                 size: METADATA_SIZE + 3,
-                pid: packet.metadata.pid,
-                tid: packet.metadata.tid,
                 time: zx::Time::from_nanos(packet.metadata.time),
                 severity: Severity::Debug,
-                dropped_logs: packet.metadata.dropped_logs as usize,
-                tags: vec![],
-                contents: String::from("AA"),
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                        LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                        LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                        LogProperty::string(MessageLabel::Msg, "AA")
+                    ],
+                    vec![],
+                ),
             }
         );
     }
@@ -582,13 +711,18 @@ mod tests {
         let mut parsed = Message::from_logger(buffer).unwrap();
         let mut expected_message = Message {
             size: METADATA_SIZE + 1,
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
             time: zx::Time::from_nanos(packet.metadata.time),
             severity: Severity::Info,
-            dropped_logs: packet.metadata.dropped_logs as usize,
-            tags: vec![],
-            contents: String::new(),
+            contents: LogHierarchy::new(
+                "root",
+                vec![
+                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(MessageLabel::Msg, ""),
+                ],
+                vec![],
+            ),
         };
 
         assert_eq!(parsed, expected_message);
@@ -634,13 +768,18 @@ mod tests {
         let mut parsed = Message::from_logger(buffer).unwrap();
         let mut expected_message = Message {
             size: METADATA_SIZE + 1,
-            pid: packet.metadata.pid,
-            tid: packet.metadata.tid,
             time: zx::Time::from_nanos(packet.metadata.time),
             severity: Severity::Verbose(10),
-            dropped_logs: packet.metadata.dropped_logs as usize,
-            tags: vec![],
-            contents: String::new(),
+            contents: LogHierarchy::new(
+                "root",
+                vec![
+                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(MessageLabel::Msg, ""),
+                ],
+                vec![],
+            ),
         };
 
         assert_eq!(parsed, expected_message);

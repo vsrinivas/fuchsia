@@ -4,7 +4,7 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use super::message::{Message, Severity, METADATA_SIZE};
+use super::message::{LogHierarchy, LogProperty, Message, MessageLabel, Severity, METADATA_SIZE};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use fuchsia_async as fasync;
@@ -145,14 +145,19 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
     };
 
     Some(Message {
-        size: METADATA_SIZE + 5/*tag*/ + contents.len() + 1,
+        size: METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1,
         time,
-        pid,
-        tid,
         severity,
-        dropped_logs: 0,
-        tags: vec![String::from("klog")],
-        contents,
+        contents: LogHierarchy::new(
+            "root",
+            vec![
+                LogProperty::Uint(MessageLabel::ProcessId, pid),
+                LogProperty::Uint(MessageLabel::ThreadId, tid),
+                LogProperty::string(MessageLabel::Tag, "klog"),
+                LogProperty::string(MessageLabel::Msg, contents),
+            ],
+            vec![],
+        ),
     })
 }
 
@@ -264,13 +269,18 @@ pub mod tests {
             log_message,
             Message {
                 size: METADATA_SIZE + 6 + "test log".len(),
-                pid: klog.pid,
-                tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
                 severity: Severity::Info,
-                dropped_logs: 0,
-                tags: vec![String::from("klog")],
-                contents: String::from("test log"),
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
+                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
+                        LogProperty::string(MessageLabel::Tag, "klog"),
+                        LogProperty::string(MessageLabel::Msg, "test log")
+                    ],
+                    vec![]
+                )
             }
         );
 
@@ -281,14 +291,22 @@ pub mod tests {
             log_message,
             Message {
                 size: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
-                pid: klog.pid,
-                tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
                 severity: Severity::Info,
-                dropped_logs: 0,
-                tags: vec![String::from("klog")],
-                contents: String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
-                    .unwrap(),
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
+                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
+                        LogProperty::string(MessageLabel::Tag, "klog"),
+                        LogProperty::string(
+                            MessageLabel::Msg,
+                            String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
+                                .unwrap()
+                        )
+                    ],
+                    vec![]
+                )
             }
         );
 
@@ -299,13 +317,18 @@ pub mod tests {
             log_message,
             Message {
                 size: METADATA_SIZE + 6,
-                pid: klog.pid,
-                tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
                 severity: Severity::Info,
-                dropped_logs: 0,
-                tags: vec![String::from("klog")],
-                contents: String::from_utf8(vec![]).unwrap(),
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
+                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
+                        LogProperty::string(MessageLabel::Tag, "klog"),
+                        LogProperty::string(MessageLabel::Msg, "")
+                    ],
+                    vec![]
+                )
             }
         );
 
@@ -334,13 +357,18 @@ pub mod tests {
             log_bridge.existing_logs().await.unwrap(),
             vec![Message {
                 size: METADATA_SIZE + 6 + "test log".len(),
-                pid: klog.pid,
-                tid: klog.tid,
                 time: zx::Time::from_nanos(klog.timestamp),
                 severity: Severity::Info,
-                dropped_logs: 0,
-                tags: vec![String::from("klog")],
-                contents: String::from("test log"),
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Uint(MessageLabel::ProcessId, klog.pid),
+                        LogProperty::Uint(MessageLabel::ThreadId, klog.tid),
+                        LogProperty::string(MessageLabel::Tag, "klog"),
+                        LogProperty::string(MessageLabel::Msg, "test log")
+                    ],
+                    vec![]
+                )
             }]
         );
 
@@ -361,9 +389,9 @@ pub mod tests {
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "test log");
+        assert_eq!(log_message.msg().unwrap(), "test log");
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "second test log");
+        assert_eq!(log_message.msg().unwrap(), "second test log");
 
         // unprocessable logs should be skipped.
         let debug_log = TestDebugLog::new();
@@ -372,7 +400,7 @@ pub mod tests {
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "test log");
+        assert_eq!(log_message.msg().unwrap(), "test log");
     }
 
     #[fasync::run_until_stalled(test)]
@@ -394,27 +422,27 @@ pub mod tests {
         let mut log_stream = Box::pin(log_bridge.listen());
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "ERROR: first log");
+        assert_eq!(log_message.msg().unwrap(), "ERROR: first log");
         assert_eq!(log_message.severity, Severity::Error);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "first log error");
+        assert_eq!(log_message.msg().unwrap(), "first log error");
         assert_eq!(log_message.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "WARNING: second log");
+        assert_eq!(log_message.msg().unwrap(), "WARNING: second log");
         assert_eq!(log_message.severity, Severity::Warn);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "INFO: third log");
+        assert_eq!(log_message.msg().unwrap(), "INFO: third log");
         assert_eq!(log_message.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, "fourth log");
+        assert_eq!(log_message.msg().unwrap(), "fourth log");
         assert_eq!(log_message.severity, Severity::Info);
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&log_message.contents, &long_log);
+        assert_eq!(log_message.msg().unwrap(), &long_log);
         assert_eq!(log_message.severity, Severity::Info);
     }
 }

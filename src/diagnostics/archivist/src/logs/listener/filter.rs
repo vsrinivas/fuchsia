@@ -78,11 +78,11 @@ impl MessageFilter {
     /// This filter defaults to open, allowing messages through. If multiple portions of the filter
     /// are specified, they are additive, only allowing messages through that pass all criteria.
     pub fn should_send(&self, log_message: &Message) -> bool {
-        let reject_pid = self.pid.map(|p| p != log_message.pid).unwrap_or(false);
-        let reject_tid = self.tid.map(|t| t != log_message.tid).unwrap_or(false);
+        let reject_pid = self.pid.map(|p| log_message.pid() != Some(p)).unwrap_or(false);
+        let reject_tid = self.tid.map(|t| log_message.tid() != Some(t)).unwrap_or(false);
         let reject_severity = self.min_severity.map(|m| m > log_message.severity).unwrap_or(false);
         let reject_tags =
-            !self.tags.is_empty() && !log_message.tags.iter().any(|t| self.tags.contains(t));
+            !self.tags.is_empty() && !log_message.tags().any(|tag| self.tags.contains(tag));
 
         !(reject_pid || reject_tid || reject_severity || reject_tags)
     }

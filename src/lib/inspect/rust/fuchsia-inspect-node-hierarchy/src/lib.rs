@@ -471,6 +471,11 @@ where
             | Property::DoubleArray(name, _) => name.as_ref(),
         }
     }
+
+    /// Convenience wrapper to construct a String property.
+    pub fn string(key: impl Into<Key>, value: impl Into<String>) -> Self {
+        Property::String(key.into(), value.into())
+    }
 }
 
 /// Wrapper for the tools needed to filter a single NodeHierarchy based on selectors

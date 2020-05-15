@@ -72,7 +72,9 @@ impl Stream for LogMessageSocket {
 
 #[cfg(test)]
 mod tests {
-    use super::super::message::{fx_log_packet_t, Message, Severity, METADATA_SIZE};
+    use super::super::message::{
+        fx_log_packet_t, LogHierarchy, LogProperty, Message, MessageLabel, Severity, METADATA_SIZE,
+    };
     use super::*;
 
     use fuchsia_async::DurationExt;
@@ -104,19 +106,26 @@ mod tests {
         sin.write(packet.as_bytes()).unwrap();
         let mut expected_p = Message {
             size: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
-            pid: packet.metadata.pid as _,
-            tid: packet.metadata.tid as _,
             time: zx::Time::from_nanos(packet.metadata.time),
             severity: Severity::Info,
-            dropped_logs: packet.metadata.dropped_logs as usize,
-            tags: Vec::with_capacity(1),
-            contents: String::from("BBBBB"),
+            contents: LogHierarchy::new(
+                "root",
+                vec![
+                    LogProperty::Uint(MessageLabel::ProcessId, packet.metadata.pid),
+                    LogProperty::Uint(MessageLabel::ThreadId, packet.metadata.tid),
+                    LogProperty::Uint(MessageLabel::Dropped, packet.metadata.dropped_logs as _),
+                    LogProperty::string(MessageLabel::Tag, "AAAAA"),
+                    LogProperty::string(MessageLabel::Msg, "BBBBB"),
+                ],
+                vec![],
+            ),
         };
-        expected_p.tags.push(String::from("AAAAA"));
+        expected_p.contents.sort();
         let calltimes = Arc::new(AtomicUsize::new(0));
         let c = calltimes.clone();
         let f = ls
-            .map_ok(move |msg| {
+            .map_ok(move |mut msg| {
+                msg.contents.sort();
                 assert_eq!(msg, expected_p);
                 c.fetch_add(1, Ordering::Relaxed);
             })
