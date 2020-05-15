@@ -677,7 +677,6 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
 
   bool netboot = false;
   bool vruncmd = false;
-  fbl::String vcmd;
 
   auto params = GetServiceStarterParams(coordinator->boot_args());
 
@@ -707,21 +706,12 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
       args[argc++] = interface;
     }
 
-    zx::process proc;
     zx_status_t status =
         launcher_.Launch(svc_job_, "netsvc", args, nullptr, -1, coordinator->root_resource(),
-                         nullptr, nullptr, 0, &proc, FS_ALL);
-    if (status == ZX_OK) {
-      if (vruncmd) {
-        zx_info_handle_basic_t info = {};
-        proc.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-        proc.reset();
-        vcmd = fbl::StringPrintf("dlog -f -t -p %zu", info.koid);
-      }
-    } else {
+                         nullptr, nullptr, 0, nullptr, FS_ALL);
+    if (status != ZX_OK) {
       vruncmd = false;
     }
-    __UNUSED auto leaked_handle = proc.release();
   }
 
   if (!coordinator->disable_netsvc()) {
@@ -784,7 +774,7 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
         "/boot/bin/virtual-console", "--shells", num_shells, nullptr, nullptr, nullptr};
     if (vruncmd) {
       args[3] = "--run";
-      args[4] = vcmd.data();
+      args[4] = "dlog -f -t";
     }
     launcher_.Launch(svc_job_, "virtual-console", args, env.data(), -1,
                      coordinator->root_resource(), handles, types, handle_count, nullptr, FS_ALL);
