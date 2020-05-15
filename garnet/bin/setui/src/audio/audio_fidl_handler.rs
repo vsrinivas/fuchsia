@@ -130,7 +130,7 @@ pub fn spawn_audio_fidl_handler(switchboard_client: SwitchboardClient, stream: A
                             }
                         }
                         AudioRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, false).await;
                         }
                         _ => {
                             return Ok(Some(req));

@@ -83,7 +83,7 @@ pub fn spawn_accessibility_fidl_handler(
                             set_accessibility(&context.switchboard_client, settings, responder).await;
                         }
                         AccessibilityRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, false).await;
                         }
                         _ => {
                             return Ok(Some(req));

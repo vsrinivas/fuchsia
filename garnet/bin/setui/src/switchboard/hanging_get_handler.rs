@@ -3,8 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::switchboard::base::*, anyhow::Error, fuchsia_async as fasync, futures::lock::Mutex,
-    futures::stream::StreamExt, std::marker::PhantomData, std::sync::Arc,
+    crate::switchboard::base::*,
+    anyhow::{format_err, Error},
+    fuchsia_async as fasync,
+    futures::channel::mpsc::UnboundedSender,
+    futures::lock::Mutex,
+    futures::stream::StreamExt,
+    std::marker::PhantomData,
+    std::sync::Arc,
 };
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -24,11 +30,26 @@ struct HangingGetController<T> {
 
 impl<T> HangingGetController<T> {
     fn new() -> HangingGetController<T> {
-        HangingGetController {
+        let mut controller = HangingGetController {
             last_sent_value: None,
             change_function: Box::new(|_old: &T, _new: &T| true),
             should_send: true,
-        }
+        };
+
+        // Initialize with same method use for resetting.
+        controller.initialize();
+
+        controller
+    }
+
+    fn initialize(&mut self) {
+        self.last_sent_value = None;
+        self.should_send = true;
+        self.change_function = Box::new(|_old: &T, _new: &T| true);
+    }
+
+    fn on_error(&mut self) {
+        self.initialize();
     }
 
     /// Sets the function that will be called on_change. Note that this will
@@ -71,17 +92,18 @@ where
     ST: Sender<T> + Send + Sync + 'static,
 {
     switchboard_client: SwitchboardClient,
-    _listen_session: Box<dyn ListenSession + Send + Sync>,
-    pending_responders: Vec<ST>,
+    listen_session: Option<Box<dyn ListenSession + Send + Sync>>,
+    pending_responders: Vec<(ST, Option<UnboundedSender<()>>)>,
     data_type: PhantomData<T>,
     setting_type: SettingType,
     controller: HangingGetController<T>,
-    command_tx: futures::channel::mpsc::UnboundedSender<ListenCommand>,
+    command_tx: UnboundedSender<ListenCommand>,
 }
 
 /// Trait that should be implemented to send data to the hanging get watcher.
 pub trait Sender<T> {
     fn send_response(self, data: T);
+    fn on_error(self);
 }
 
 enum ListenCommand {
@@ -110,18 +132,9 @@ where
     ) -> Arc<Mutex<HangingGetHandler<T, ST>>> {
         let (on_command_sender, mut on_command_receiver) =
             futures::channel::mpsc::unbounded::<ListenCommand>();
-        let on_command_sender_clone = on_command_sender.clone();
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
             switchboard_client: switchboard_client.clone(),
-            _listen_session: switchboard_client
-                .listen(
-                    setting_type,
-                    Arc::new(move |setting| {
-                        on_command_sender_clone.unbounded_send(ListenCommand::Change(setting)).ok();
-                    }),
-                )
-                .await
-                .expect("started listening successfully"),
+            listen_session: None,
             pending_responders: Vec::new(),
             data_type: PhantomData,
             setting_type: setting_type,
@@ -155,8 +168,9 @@ where
     }
 
     /// Park a new hanging get in the handler
-    pub async fn watch(&mut self, responder: ST) {
-        self.watch_with_change_fn(Box::new(|_old: &T, _new: &T| true), responder).await;
+    pub async fn watch(&mut self, responder: ST, error_sender: Option<UnboundedSender<()>>) {
+        self.watch_with_change_fn(Box::new(|_old: &T, _new: &T| true), responder, error_sender)
+            .await;
     }
 
     /// Park a new hanging get in the handler, along with a change function.
@@ -168,28 +182,68 @@ where
         &mut self,
         change_function: ChangeFunction<T>,
         responder: ST,
+        error_sender: Option<UnboundedSender<()>>,
     ) {
         self.controller.set_change_function(change_function);
 
-        self.pending_responders.push(responder);
+        self.pending_responders.push((responder, error_sender));
+
+        if self.listen_session.is_none() {
+            let command_tx_clone = self.command_tx.clone();
+            if let Ok(session) = self
+                .switchboard_client
+                .listen(
+                    self.setting_type,
+                    Arc::new(move |setting| {
+                        command_tx_clone.unbounded_send(ListenCommand::Change(setting)).ok();
+                    }),
+                )
+                .await
+            {
+                self.listen_session = Some(session);
+            } else {
+                self.on_error();
+                return;
+            }
+        }
+
         if self.controller.on_watch() {
-            let response = self.get_response().await.expect("got current value");
-            self.send_if_needed(response).await;
+            if let Ok(response) = self.get_response().await {
+                self.send_if_needed(response).await
+            } else {
+                self.on_error();
+            }
         }
     }
 
     /// Called when receiving a notification that value has changed.
     async fn on_change(&mut self) {
-        let response = self.get_response().await.expect("got current value");
-        if self.controller.on_change(&T::from(response.clone())) {
-            self.send_if_needed(response).await;
+        if let Ok(response) = self.get_response().await {
+            if self.controller.on_change(&T::from(response.clone())) {
+                self.send_if_needed(response).await;
+            }
+        } else {
+            self.on_error();
+        }
+    }
+
+    fn on_error(&mut self) {
+        self.listen_session = None;
+        self.controller.on_error();
+        if !self.pending_responders.is_empty() {
+            while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
+                responder.on_error();
+                if let Some(exit_tx) = optional_exit_tx {
+                    exit_tx.unbounded_send(()).ok();
+                }
+            }
         }
     }
 
     /// Called when receiving a notification that value has changed.
     async fn send_if_needed(&mut self, response: SettingResponse) {
         if !self.pending_responders.is_empty() {
-            while let Some(responder) = self.pending_responders.pop() {
+            while let Some((responder, _)) = self.pending_responders.pop() {
                 responder.send_response(T::from(response.clone()));
             }
             self.controller.on_send(T::from(response));
@@ -203,10 +257,10 @@ where
             if let Ok(Some(setting_response)) = response_rx.await.expect("got result") {
                 Ok(setting_response)
             } else {
-                panic!("Couldn't get value");
+                Err(format_err!("Couldn't get value"))
             }
         } else {
-            panic!("made request");
+            Err(format_err!("Couldn't make request"))
         }
     }
 }
@@ -214,7 +268,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Error;
+    use anyhow::{format_err, Error};
     use fuchsia_async::DurationExt;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc::UnboundedSender;
@@ -225,12 +279,19 @@ mod tests {
 
     const SETTING_TYPE: SettingType = SettingType::Display;
 
+    #[derive(PartialEq, Debug, Clone)]
     struct TestStruct {
         id: f32,
     }
 
+    #[derive(PartialEq, Debug, Clone)]
+    enum Event {
+        Data(TestStruct),
+        Error,
+    }
+
     struct TestSender {
-        sender: UnboundedSender<TestStruct>,
+        sender: UnboundedSender<Event>,
     }
 
     struct TestListenSession {}
@@ -243,13 +304,48 @@ mod tests {
         fn drop(&mut self) {}
     }
 
+    struct TestSwitchboardBuilder {
+        id_to_send: Arc<RwLock<Option<f32>>>,
+        always_fail: bool,
+    }
+
+    impl TestSwitchboardBuilder {
+        fn new() -> Self {
+            Self { id_to_send: Arc::new(RwLock::new(None)), always_fail: false }
+        }
+
+        fn set_initial_id(mut self, id: f32) -> Self {
+            self.id_to_send = Arc::new(RwLock::new(Some(id)));
+            self
+        }
+
+        fn set_always_fail(mut self, always_fail: bool) -> Self {
+            self.always_fail = always_fail;
+            self
+        }
+
+        fn build(self) -> Arc<Mutex<TestSwitchboard>> {
+            Arc::new(Mutex::new(TestSwitchboard {
+                id_to_send: self.id_to_send,
+                setting_type: None,
+                listener: None,
+                always_fail: self.always_fail,
+            }))
+        }
+    }
+
     struct TestSwitchboard {
-        id_to_send: Arc<RwLock<f32>>,
+        id_to_send: Arc<RwLock<Option<f32>>>,
         setting_type: Option<SettingType>,
         listener: Option<ListenCallback>,
+        always_fail: bool,
     }
 
     impl TestSwitchboard {
+        fn set_id(&mut self, id: f32) {
+            self.id_to_send = Arc::new(RwLock::new(Some(id)));
+        }
+
         fn notify_listener(&self) {
             if let Some(setting_type_value) = self.setting_type {
                 if let Some(listener_sender) = self.listener.clone() {
@@ -263,7 +359,11 @@ mod tests {
 
     impl Sender<TestStruct> for TestSender {
         fn send_response(self, data: TestStruct) {
-            self.sender.unbounded_send(data).unwrap();
+            self.sender.unbounded_send(Event::Data(data)).unwrap();
+        }
+
+        fn on_error(self) {
+            self.sender.unbounded_send(Event::Error).unwrap();
         }
     }
 
@@ -286,10 +386,17 @@ mod tests {
             assert_eq!(setting_type, SETTING_TYPE);
             assert_eq!(request, SettingRequest::Get);
 
-            let value = *self.id_to_send.read();
-            callback
-                .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(false, value)))))
-                .unwrap();
+            if self.always_fail {
+                callback
+                    .send(Err(SwitchboardError::UnexpectedError {
+                        description: "set failure".to_string(),
+                    }))
+                    .unwrap();
+            } else if let Some(value) = *self.id_to_send.read() {
+                callback
+                    .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(false, value)))))
+                    .unwrap();
+            }
             Ok(())
         }
 
@@ -298,20 +405,28 @@ mod tests {
             setting_type: SettingType,
             listener: ListenCallback,
         ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
+            if self.always_fail {
+                return Err(format_err!("failure"));
+            }
+
             self.setting_type = Some(setting_type);
             self.listener = Some(listener);
             Ok(Box::new(TestListenSession {}))
         }
     }
 
+    fn verify_id(event: Event, id: f32) {
+        if let Event::Data(data) = event {
+            assert_eq!(data.id, id);
+        } else {
+            panic!("Should be data");
+        }
+    }
+
+    /// Ensures errors are gracefully handed back by the hanging_get
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_change_after_watch() {
-        let current_id = Arc::new(RwLock::new(ID1));
-        let switchboard_handle = Arc::new(Mutex::new(TestSwitchboard {
-            id_to_send: current_id.clone(),
-            listener: None,
-            setting_type: None,
-        }));
+    async fn test_error_resolution() {
+        let switchboard_handle = TestSwitchboardBuilder::new().set_always_fail(true).build();
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
@@ -321,44 +436,66 @@ mod tests {
             .await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
-            futures::channel::mpsc::unbounded::<TestStruct>();
+            futures::channel::mpsc::unbounded::<Event>();
+
+        let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
 
         {
             let mut hanging_get_lock = hanging_get_handler.lock().await;
-            hanging_get_lock.watch(TestSender { sender: hanging_get_responder.clone() }).await;
+            hanging_get_lock
+                .watch(TestSender { sender: hanging_get_responder.clone() }, Some(exit_tx))
+                .await;
+        }
+
+        // The responder should receive an error
+        assert_eq!(hanging_get_listener.next().await.unwrap(), Event::Error);
+
+        // When set, the exit sender should also be fired
+        assert_eq!(exit_rx.next().await, Some(()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_change_after_watch() {
+        let switchboard_handle = TestSwitchboardBuilder::new().set_initial_id(ID1).build();
+
+        let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
+            HangingGetHandler::create(
+                SwitchboardClient::new(&(switchboard_handle.clone() as SwitchboardHandle)),
+                SettingType::Display,
+            )
+            .await;
+
+        let (hanging_get_responder, mut hanging_get_listener) =
+            futures::channel::mpsc::unbounded::<Event>();
+
+        {
+            let mut hanging_get_lock = hanging_get_handler.lock().await;
+            hanging_get_lock
+                .watch(TestSender { sender: hanging_get_responder.clone() }, None)
+                .await;
         }
 
         // First get should return immediately
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID1);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID1);
 
         // Subsequent one should wait until new value is notified
         {
             let mut hanging_get_lock = hanging_get_handler.lock().await;
-            hanging_get_lock.watch(TestSender { sender: hanging_get_responder.clone() }).await;
+            hanging_get_lock
+                .watch(TestSender { sender: hanging_get_responder.clone() }, None)
+                .await;
         }
 
-        {
-            *current_id.write() = ID2;
-        }
+        switchboard_handle.lock().await.set_id(ID2);
 
-        {
-            let switchboard = switchboard_handle.lock().await;
-            switchboard.notify_listener();
-        }
+        switchboard_handle.lock().await.notify_listener();
 
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID2);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID2);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_after_change() {
-        let current_id = Arc::new(RwLock::new(ID1));
-        let switchboard_handle = Arc::new(Mutex::new(TestSwitchboard {
-            id_to_send: current_id.clone(),
-            listener: None,
-            setting_type: None,
-        }));
+        let switchboard_handle = TestSwitchboardBuilder::new().set_initial_id(ID1).build();
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
@@ -368,44 +505,36 @@ mod tests {
             .await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
-            futures::channel::mpsc::unbounded::<TestStruct>();
+            futures::channel::mpsc::unbounded::<Event>();
 
         {
             let mut hanging_get_lock = hanging_get_handler.lock().await;
-            hanging_get_lock.watch(TestSender { sender: hanging_get_responder.clone() }).await;
+            hanging_get_lock
+                .watch(TestSender { sender: hanging_get_responder.clone() }, None)
+                .await;
         }
 
         // First get should return immediately
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID1);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID1);
 
-        {
-            *current_id.write() = ID2;
-        }
+        switchboard_handle.lock().await.set_id(ID2);
 
         // Subsequent one should wait until new value is notified
         {
             let mut hanging_get_lock = hanging_get_handler.lock().await;
-            hanging_get_lock.watch(TestSender { sender: hanging_get_responder.clone() }).await;
+            hanging_get_lock
+                .watch(TestSender { sender: hanging_get_responder.clone() }, None)
+                .await;
         }
 
-        {
-            let switchboard = switchboard_handle.lock().await;
-            switchboard.notify_listener();
-        }
+        switchboard_handle.lock().await.notify_listener();
 
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID2);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID2);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_with_change_function() {
-        let current_id = Arc::new(RwLock::new(ID1));
-        let switchboard_handle = Arc::new(Mutex::new(TestSwitchboard {
-            id_to_send: current_id.clone(),
-            listener: None,
-            setting_type: None,
-        }));
+        let switchboard_handle = TestSwitchboardBuilder::new().set_initial_id(ID1).build();
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
             HangingGetHandler::create(
@@ -415,7 +544,7 @@ mod tests {
             .await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
-            futures::channel::mpsc::unbounded::<TestStruct>();
+            futures::channel::mpsc::unbounded::<Event>();
 
         let min_difference = 2.0;
         let change_function =
@@ -427,41 +556,32 @@ mod tests {
                 .watch_with_change_fn(
                     Box::new(change_function),
                     TestSender { sender: hanging_get_responder.clone() },
+                    None,
                 )
                 .await;
         }
 
         // First get should return immediately even with change function
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID1);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID1);
 
-        {
-            *current_id.write() = ID2;
-        }
+        switchboard_handle.lock().await.set_id(ID2);
 
-        {
-            let switchboard = switchboard_handle.lock().await;
-            switchboard.notify_listener();
-        }
+        switchboard_handle.lock().await.notify_listener();
 
         // Subsequent watch should return ignoring change function
         {
             let mut hanging_get_lock = hanging_get_handler.lock().await;
-            hanging_get_lock.watch(TestSender { sender: hanging_get_responder.clone() }).await;
+            hanging_get_lock
+                .watch(TestSender { sender: hanging_get_responder.clone() }, None)
+                .await;
         }
 
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID2);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID2);
 
         // Subsequent watch with change function should only return if change is big enough
-        {
-            *current_id.write() = ID2 + 1.0;
-        }
+        switchboard_handle.lock().await.set_id(ID2 + 1.0);
 
-        {
-            let switchboard = switchboard_handle.lock().await;
-            switchboard.notify_listener();
-        }
+        switchboard_handle.lock().await.notify_listener();
 
         {
             let mut hanging_get_lock = hanging_get_handler.lock().await;
@@ -469,6 +589,7 @@ mod tests {
                 .watch_with_change_fn(
                     Box::new(change_function),
                     TestSender { sender: hanging_get_responder.clone() },
+                    None,
                 )
                 .await;
         }
@@ -477,17 +598,11 @@ mod tests {
         let sleep_duration = zx::Duration::from_millis(1);
         fasync::Timer::new(sleep_duration.after_now()).await;
 
-        {
-            *current_id.write() = ID2 + 3.0;
-        }
+        switchboard_handle.lock().await.set_id(ID2 + 3.0);
 
-        {
-            let switchboard = switchboard_handle.lock().await;
-            switchboard.notify_listener();
-        }
+        switchboard_handle.lock().await.notify_listener();
 
-        let data = hanging_get_listener.next().await.unwrap();
-        assert_eq!(data.id, ID2 + 3.0);
+        verify_id(hanging_get_listener.next().await.unwrap(), ID2 + 3.0);
     }
 
     #[test]

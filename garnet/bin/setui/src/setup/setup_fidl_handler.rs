@@ -144,7 +144,7 @@ pub fn spawn_setup_fidl_handler(switchboard_client: SwitchboardClient, stream: S
                             };
                         }
                         SetupRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, true).await;
                         }
                         _ => return Ok(Some(req)),
                     }

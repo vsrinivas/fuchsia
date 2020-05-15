@@ -87,7 +87,7 @@ pub fn spawn_privacy_fidl_handler(
                             set(&context.switchboard_client, settings, responder).await;
                         }
                         PrivacyRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, false).await;
                         }
                         _ => {
                             return Ok(Some(req));

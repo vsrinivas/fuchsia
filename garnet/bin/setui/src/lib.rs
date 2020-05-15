@@ -88,6 +88,9 @@ pub mod registry;
 pub mod service_context;
 pub mod switchboard;
 
+/// A common trigger for exiting.
+pub type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
+
 /// Runtime defines where the environment will exist. Service is meant for
 /// production environments and will hydrate components to be discoverable as
 /// an environment service. Nested creates a service only usable in the scope

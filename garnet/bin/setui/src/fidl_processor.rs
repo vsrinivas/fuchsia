@@ -8,10 +8,11 @@ use fidl::endpoints::{Request, ServiceMarker};
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::lock::Mutex;
-use futures::TryStreamExt;
+use futures::{FutureExt, StreamExt, TryStreamExt};
 
 use crate::switchboard::base::{SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
+use crate::ExitSender;
 
 pub type RequestResultCreator<'a, S> = LocalBoxFuture<'a, Result<Option<Request<S>>, Error>>;
 
@@ -28,6 +29,7 @@ where
 {
     pub switchboard_client: SwitchboardClient,
     hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST>>>,
+    exit_tx: ExitSender,
 }
 
 impl<T, ST> RequestContext<T, ST>
@@ -35,14 +37,27 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    pub async fn watch(&self, responder: ST) {
+    pub async fn watch(&self, responder: ST, close_on_error: bool) {
         let mut hanging_get_lock = self.hanging_get_handler.lock().await;
-        hanging_get_lock.watch(responder).await;
+        hanging_get_lock
+            .watch(responder, if close_on_error { Some(self.exit_tx.clone()) } else { None })
+            .await;
     }
 
-    pub async fn watch_with_change_fn(&self, change_function: ChangeFunction<T>, responder: ST) {
+    pub async fn watch_with_change_fn(
+        &self,
+        change_function: ChangeFunction<T>,
+        responder: ST,
+        close_on_error: bool,
+    ) {
         let mut hanging_get_lock = self.hanging_get_handler.lock().await;
-        hanging_get_lock.watch_with_change_fn(change_function, responder).await;
+        hanging_get_lock
+            .watch_with_change_fn(
+                change_function,
+                responder,
+                if close_on_error { Some(self.exit_tx.clone()) } else { None },
+            )
+            .await;
     }
 }
 
@@ -55,6 +70,7 @@ where
         RequestContext {
             switchboard_client: self.switchboard_client.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
+            exit_tx: self.exit_tx.clone(),
         }
     }
 }
@@ -78,6 +94,7 @@ where
         &self,
         switchboard: SwitchboardClient,
         request: Request<S>,
+        exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S>;
 }
 
@@ -137,10 +154,12 @@ where
         &self,
         switchboard_client: SwitchboardClient,
         request: Request<S>,
+        exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext {
             switchboard_client: switchboard_client.clone(),
             hanging_get_handler: self.hanging_get_handler.clone(),
+            exit_tx: exit_tx.clone(),
         };
 
         return (self.callback)(context.clone(), request);
@@ -192,19 +211,36 @@ where
     // Process the stream. Note that we pass in the processor here as it cannot
     // be used again afterwards.
     pub async fn process(mut self) {
-        while let Ok(Some(mut req)) = self.request_stream.try_next().await {
-            for processing_unit in &self.processing_units {
-                // If the processing unit consumes the request (a non-empty
-                // result is returned) or an error occurs, exit processing this
-                // request. Otherwise, hand the request to the next processing
-                // unit
-                match processing_unit.process(self.switchboard_client.clone(), req).await {
-                    Ok(Some(return_request)) => {
-                        req = return_request;
+        let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
+        loop {
+            // Note that we create a fuse outside the select! to prevent it from
+            // being called from outside the select! macro.
+            let mut fused_stream = self.request_stream.try_next().fuse();
+            futures::select! {
+                request = fused_stream => {
+                    if let Ok(Some(mut req)) = request {
+                        for processing_unit in &self.processing_units {
+                            // If the processing unit consumes the request (a non-empty
+                            // result is returned) or an error occurs, exit processing this
+                            // request. Otherwise, hand the request to the next processing
+                            // unit
+                            match processing_unit.process(
+                                    self.switchboard_client.clone(),
+                                    req, exit_tx.clone()).await {
+                                Ok(Some(return_request)) => {
+                                    req = return_request;
+                                }
+                                _ => {
+                                    break
+                                }
+                            }
+                        }
+                    } else {
+                       return;
                     }
-                    _ => {
-                        break;
-                    }
+                }
+                exit = exit_rx.next() => {
+                    return;
                 }
             }
         }

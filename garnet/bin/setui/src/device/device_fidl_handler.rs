@@ -41,7 +41,7 @@ pub fn spawn_device_fidl_handler(
                     #[allow(unreachable_patterns)]
                     match req {
                         DeviceRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, true).await;
                         }
                         _ => {
                             return Ok(Some(req));

@@ -54,7 +54,7 @@ pub fn spawn_system_fidl_handler(
                             }
                         }
                         SystemRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, false).await;
                         }
                         _ => {
                             return Ok(Some(req));

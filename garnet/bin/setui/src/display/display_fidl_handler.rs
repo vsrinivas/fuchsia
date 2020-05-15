@@ -89,7 +89,7 @@ pub fn spawn_display_fidl_handler(
                                     .log_fidl_response_error(DisplayMarker::DEBUG_NAME);
                             }},
                         DisplayRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, false).await;
                         },
                         _ => {
                             return Ok(Some(req));
@@ -125,6 +125,7 @@ pub fn spawn_display_fidl_handler(
                                         },
                                     ),
                                     responder,
+                                    false,
                                 )
                                 .await;
                         }

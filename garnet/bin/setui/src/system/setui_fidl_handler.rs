@@ -41,7 +41,7 @@ fn convert_login_override(
         }
     }
 }
-/// This cannot use the fidl_common::fidl_hanging_get_responder since 
+/// This cannot use the fidl_common::fidl_hanging_get_responder since
 /// SettingsObject and SystemSettings are defined outside this crate and
 /// therefore cannot convert between types.
 impl Sender<SystemSettings> for SetUiServiceWatchResponder {
@@ -58,6 +58,8 @@ impl Sender<SystemSettings> for SetUiServiceWatchResponder {
         })
         .ok();
     }
+
+    fn on_error(self) {}
 }
 
 pub fn spawn_setui_fidl_handler(
@@ -100,7 +102,7 @@ pub fn spawn_setui_fidl_handler(
                 return Ok(None);
               }
 
-              context.watch(responder).await;
+              context.watch(responder, true).await;
             }
             _ => {
               return Ok(Some(req));

@@ -73,7 +73,7 @@ pub fn spawn_intl_fidl_handler(switchboard_client: SwitchboardClient, stream: In
                         IntlRequest::Set { settings, responder } => {
                             set(context.clone(), settings, responder).await;
                         }
-                        IntlRequest::Watch { responder } => context.watch(responder).await,
+                        IntlRequest::Watch { responder } => context.watch(responder, false).await,
                         _ => {
                             return Ok(Some(req));
                         }

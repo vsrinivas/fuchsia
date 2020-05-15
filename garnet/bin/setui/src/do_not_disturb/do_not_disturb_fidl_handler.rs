@@ -82,7 +82,7 @@ pub fn spawn_do_not_disturb_fidl_handler(
                                 }
                             }
                             DoNotDisturbRequest::Watch { responder } => {
-                                context.watch(responder).await
+                                context.watch(responder, true).await
                             }
                             _ => {
                                 return Ok(Some(req));

@@ -62,7 +62,7 @@ pub fn spawn_night_mode_fidl_handler(
                             set(&context.switchboard_client, settings, responder).await;
                         }
                         NightModeRequest::Watch { responder } => {
-                            context.watch(responder).await;
+                            context.watch(responder, true).await;
                         }
                         _ => {
                             return Ok(Some(req));
