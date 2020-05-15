@@ -61,6 +61,7 @@ class GnTester(object):
         self.clang = clang
         self.proj_dir = proj_dir
         self.out_dir = out_dir
+        self.continue_on_error = True
         # Import gen_fidl_response_file_unittest
         GEN_FIDL_RESP_FILE_TEST_PATH = os.path.join(
             proj_dir, 'tests', 'gen_fidl_response_file_unittest.py')
@@ -87,7 +88,7 @@ class GnTester(object):
         print "FIDL response file unit test passed."
 
     def _run_cmd(self, args, cwd=None):
-        job = Popen(args, cwd=cwd, stdout=PIPE)
+        job = Popen(args, cwd=cwd, stdout=PIPE, stderr=PIPE)
         (stdoutdata, stderrdata) = job.communicate()
         print stdoutdata
         if job.returncode:
@@ -102,6 +103,8 @@ class GnTester(object):
         except Exception as err:
             print "ERROR Running test %s: %s" % (test, err)
             self._test_failed = True
+            if not self.continue_on_error:
+                raise err
 
     def _build_test_project(self, arch):
         """Builds the test project for given architecture."""
@@ -109,7 +112,7 @@ class GnTester(object):
         self._invoke_ninja(arch)
         print "Test project for %s built successfully" % arch
 
-    def _invoke_gn(self, arch):
+    def _invoke_gn(self, arch, additional_args=""):
         """Invokes GN targeting the given architecture.
 
         Example invocation:
@@ -119,8 +122,9 @@ class GnTester(object):
         invocation = [
             self.gn, "gen",
             os.path.join(self.out_dir, arch),
-            "--args=target_cpu=\"{cpu}\" target_os=\"fuchsia\" clang_base_path=\"{clang}\""
-            .format(cpu=arch, clang=self.clang)
+            "--args=target_cpu=\"{cpu}\" target_os=\"fuchsia\" clang_base_path=\"{clang}\" {additional_args}"
+            .format(
+                cpu=arch, clang=self.clang, additional_args=additional_args)
         ]
         # invoke command
         print 'Running gn gen: "%s"' % ' '.join(invocation)
@@ -135,6 +139,8 @@ class GnTester(object):
         invocation = [
             # Invoke the ninja binary
             self.ninja,
+            "-d",
+            "explain",
             # Add Ninja flag to command e.g. `-C`
             "-C",
             # Add output directory to command
@@ -151,16 +157,35 @@ class GnTester(object):
         # Build test project
         self._build_test_project(arch)
         # Verify package dep file for built project
-        package_dep_file_contents = "gen/tests/package/package/package.archive_manifest: lib/libfdio.so lib/libunwind.so.1 lib/libc++abi.so.1 hello_bin lib/ld.so.1 lib/libc++.so.2"
+
+        expected = set([
+            'gen/tests/package/package/test_component_no_ext_v1.cmx',
+            'gen/tests/package/package/test_component_no_ext_v1_renamed.cmx',
+            'gen/tests/package/package/test_component_renamed.cm',
+            'gen/tests/package/package/test_component_renamed.cmx',
+            'gen/tests/package/package/original.cmx', 'lib/libfdio.so',
+            '../../tests/package/meta/test_component_no_ext_v1',
+            'lib/libunwind.so.1', '../../tests/package/meta/original.cmx',
+            '../../tests/package/meta/test_component.cmx', 'lib/libc++abi.so.1',
+            'hello_bin', 'lib/ld.so.1', 'lib/libc++.so.2'
+        ])
+
         dep_filepath = os.path.join(
             self.out_dir, arch, "gen", "tests", "package", "package_stamp.d")
         with open(dep_filepath, 'r') as dep_file:
             dep_file_contents = dep_file.read()
-            if dep_file_contents != package_dep_file_contents:
-                msg = 'Dep file %s' % dep_filepath
-                msg += 'expected to have contents:\n\n%s\n\n' % package_dep_file_contents
-                msg += 'but got \n\n%s\n\n' % dep_file_contents
-                raise AssertionError(msg)
+            parts = dep_file_contents.split(':')
+            if len(parts) != 2:
+                raise AssertionError('Expected file: deps, but got %s' % dep_file_contents)
+            actual = set(parts[1].split(' '))
+            missing = [ dep.strip() for dep in expected if dep.strip() and dep.strip() not in actual]
+            unexpected = [ dep.strip() for dep in actual if dep.strip() and dep.strip() not in expected]
+
+            if len(missing) > 0:
+                raise AssertionError('missing dependencies: %s in actual %s' % (missing, actual))
+            if len(unexpected) > 0:
+               raise AssertionError('unexpected dependencies: %s from expected %s' % (unexpected, expected))
+
 
     def _verify_rebuild_noop(self, arch):
         """Builds each architecture twice, confirming the second is a noop."""
@@ -178,17 +203,70 @@ class GnTester(object):
             raise AssertionError(msg)
         print "Test project rebuilt successfully"
 
+    def _verify_component_override(self, arch):
+        """Checks that changing BUILD.gn properties of a component template triggers rebuild."""
+        # Build test project initially
+        self._build_test_project(arch)
+        self._host_tests(arch)
+        # Build test project a second time but with the rename flag.
+        self._invoke_gn(arch, additional_args="do_rename_test=true")
+        (stdout, stderr) = self._invoke_ninja(arch)
+        self._host_tests(arch)
+
+    def _verify_cmx_touch(self, arch):
+        """Touches the original.cmx file and confirms it is detected as dirty."""
+        # Build test project initially
+        self._build_test_project(arch)
+
+        # Touch the file
+        fname = os.path.join(
+            SCRIPT_DIR, "tests", "package", "meta", "original.cmx")
+        if os.path.exists(fname):
+            self._run_cmd(['touch', fname])
+        else:
+            raise AssertionError("File not found: %s" % fname)
+
+        # Build test project a second time
+        (stdout, stderr) = self._invoke_ninja(arch)
+        # Verify that the manifest is copied.
+        ninja_copy_string = 'older than most recent input ../../tests/package/meta/original.cmx'
+        if not ninja_copy_string in stderr:
+            msg = 'Touching //tests/package/meta/original.cmx did not trigger rebuild.\n'
+            msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_copy_string
+            msg += '"%s"' % stdout
+            raise AssertionError(msg)
+
+        # Verify touching the manifest source *and* overriding the name
+        self._invoke_gn(arch, additional_args="do_rename_test=true")
+        self._invoke_ninja(arch)
+        self._host_tests(arch)
+
+        if os.path.exists(fname):
+            self._run_cmd(['touch', fname])
+        else:
+            raise AssertionError("File not found: %s" % fname)
+
+        # Build test project a second time
+        (stdout, stderr) = self._invoke_ninja(arch)
+        # Verify that the manifest is copied.
+        ninja_copy_string = 'older than most recent input ../../tests/package/meta/original.cmx'
+        if not ninja_copy_string in stderr:
+            msg = 'Touching //tests/package/meta/original.cmx did not trigger rebuild.\n'
+            msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_copy_string
+            msg += '"%s"' % stdout
+            raise AssertionError(msg)
+
     def _run_build_tests(self):
         """Run the build tests, once per architecture."""
         for arch in ARCHES:
             self._run_test("_build_test_project", arch)
+            self._run_test("_host_tests", arch)
             self._run_test("_verify_package_depfile", arch)
             self._run_test("_verify_rebuild_noop", arch)
-            self._run_test("_host_tests", arch)
+            self._run_test("_verify_component_override", arch)
+            self._run_test("_verify_cmx_touch", arch)
 
     def _host_tests(self, arch):
-        # Build test project to generate far archives
-        self._build_test_project(arch)
         invocation = [
             HOST_TEST_PATH,
             os.path.join("out", arch, 'all_host_tests.txt')
@@ -228,16 +306,22 @@ def main():
         '--out-dir',
         help='Path to the out directory, defaults to %s' % DEFAULT_OUT_DIR,
         default=DEFAULT_OUT_DIR)
+    parser.add_argument(
+        '--quit-on-error', help='Quit when test fails', action='store_true')
     args = parser.parse_args()
-    if GnTester(
-            gn=args.gn,
-            ninja=args.ninja,
-            clang=args.clang,
-            proj_dir=args.proj_dir,
-            out_dir=args.out_dir,
-    ).run():
+    tester = GnTester(
+        gn=args.gn,
+        ninja=args.ninja,
+        clang=args.clang,
+        proj_dir=args.proj_dir,
+        out_dir=args.out_dir,
+    )
+
+    tester.continue_on_error = not args.quit_on_error
+    if tester.run():
         print "ERROR: One or more tests failed."
         return 1
+    print "SUCCESS: All tests passed."
     return 0
 
 

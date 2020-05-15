@@ -17,8 +17,9 @@ executable("hello_fidl") {
 }
 
 fuchsia_component("test_fidl_cmx") {
-  manifest = "//tests/package/meta/test_component.cmx"
+  manifest = "meta/fidl_component.cmx"
   data_deps = [ ":hello_fidl" ]
+  deps = [ ":hello_fidl" ]
 }
 
 fuchsia_package("static_fidl_test_package") {

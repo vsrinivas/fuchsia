@@ -126,15 +126,12 @@ def _parse_component(component_info_file):
     return component_info
 
 
-def _get_app_filename(component_info):
-    for c in component_info:
-        if c.get('type') == 'dep':
-            pos = c.get('source').find(':')
-            return c.get('source')[pos + 1:]
-
-
 def _get_component_manifests(component_info):
     return [c for c in component_info if c.get('type') == 'manifest']
+
+
+def _get_resource_items(component_info):
+    return [c for c in component_info if c.get('type') == 'resource']
 
 
 def _get_expanded_files(runtime_deps_file):
@@ -161,14 +158,14 @@ def _get_expanded_files(runtime_deps_file):
     return expanded_files
 
 
-def _write_gn_deps_file(depfile_path, manifest_path, out_dir, expanded_files):
+def _write_gn_deps_file(
+        depfile_path, package_manifest, component_manifests, out_dir,
+        expanded_files):
     with open(depfile_path, 'w') as depfile:
-        manifest_path = os.path.relpath(manifest_path, out_dir)
-        deps_list = []
-        for f in expanded_files:
-            deps_list.append(os.path.relpath(f, out_dir))
+        deps_list = [os.path.relpath(f, out_dir) for f in expanded_files]
+        deps_list.extend(component_manifests)
         deps_string = ' '.join(deps_list)
-        depfile.write('%s: %s' % (manifest_path, deps_string))
+        depfile.write('%s: %s' % (package_manifest, deps_string))
 
 
 def _write_meta_package_manifest(
@@ -206,65 +203,78 @@ def _write_component_manifest(manifest, component_info, manifest_path, out_dir):
             'meta/%s=%s\n' % (
                 os.path.basename(manifest_dest_file_path),
                 os.path.relpath(manifest_dest_file_path, out_dir)))
+        return manifest_dest_file_path
 
 
 def _write_package_manifest(
         manifest, expanded_files, out_dir, exclude_file, root_dir,
-        component_info, binaries):
+        component_info):
     """Writes the package manifest for a Fuchsia package
 
     Returns a list of binaries in the package.
 
-    Raises an exception if the app filename does not match the package path.
     Raises an exception if excluded files are not found."""
-    app_filename = _get_app_filename(component_info)
     gen_dir = os.path.normpath(os.path.join(out_dir, 'gen'))
-    app_found = False
     excluded_files_set = set(exclude_file)
+    roots = [gen_dir, root_dir, out_dir]
+
+    # Filter out component manifests. These are written out elsewhere.
+    excluded_files_set.update(
+        [
+            make_package_path(
+                os.path.relpath(cf.get('source'), out_dir), roots)
+            for cf in _get_component_manifests(component_info)
+            if os.path.relpath(cf.get('source'), out_dir) in expanded_files
+        ])
+
+    # Write out resource files with specific package paths, and exclude them from
+    # the list of expanded files so they are not listed twice in the manifest.
+    for resource in _get_resource_items(component_info):
+        relative_src_file = os.path.relpath(resource.get('source'), out_dir)
+        resource_path = make_package_path(relative_src_file, roots)
+        manifest.write('%s=%s\n' % (resource.get('dest'), relative_src_file))
+        excluded_files_set.add(resource_path)
+
     for current_file in expanded_files:
-        if _is_binary(current_file):
-            binaries.append(current_file)
         current_file = _get_stripped_path(current_file)
         # make_package_path() may relativize to either the source root or
         # output directory.
-        in_package_path = make_package_path(
-            current_file, [gen_dir, root_dir, out_dir])
-        if in_package_path == app_filename:
-            app_found = True
+        in_package_path = make_package_path(current_file, roots)
 
         if in_package_path in excluded_files_set:
             excluded_files_set.remove(in_package_path)
-            continue
+        else:
+            manifest.write('%s=%s\n' % (in_package_path, current_file))
 
-        manifest.write('%s=%s\n' % (in_package_path, current_file))
-
-    if len(excluded_files_set) > 0:
+    # Check to make sure we saw all expected files to
+    if excluded_files_set:
         raise Exception(
             'Some files were excluded with --exclude-file, but '
             'not found in the deps list: %s' % ', '.join(excluded_files_set))
 
-    if not app_found:
-        raise Exception('Could not locate executable inside runtime_deps.')
-
 
 def _build_manifest(args):
     expanded_files = _get_expanded_files(args.runtime_deps_file)
-    _write_gn_deps_file(
-        args.depfile_path, args.manifest_path, args.out_dir, expanded_files)
-    binaries = []  # keep track of binaries to write build IDs
+    component_info = _parse_component(args.json_file)
+    component_manifests = []
     with open(args.manifest_path, 'w') as manifest:
         _write_meta_package_manifest(
             manifest, args.manifest_path, args.app_name, args.out_dir,
             args.package_version)
-        for component_info in _parse_component(args.json_file):
+        for component_item in component_info:
             _write_package_manifest(
                 manifest, expanded_files, args.out_dir, args.exclude_file,
-                args.root_dir, component_info, binaries)
-            _write_component_manifest(
-                manifest, component_info, args.manifest_path, args.out_dir)
+                args.root_dir, component_item)
+            component_manifests.append(
+                _write_component_manifest(
+                    manifest, component_item, args.manifest_path, args.out_dir))
 
+    binaries = [f for f in expanded_files if _is_binary(f)]
     _write_build_ids_txt(binaries, args.build_ids_file)
 
+    _write_gn_deps_file(
+        args.depfile_path, args.manifest_path, component_manifests,
+        args.out_dir, expanded_files)
     return 0
 
 

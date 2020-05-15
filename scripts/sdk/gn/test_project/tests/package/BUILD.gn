@@ -11,10 +11,15 @@ executable("hello_bin") {
   sources = [ "hello.cc" ]
 }
 
+executable("renamed_exe") {
+  sources = [ "hello.cc" ]
+  output_name = "hello"
+}
+
 # Produces meta/test_component.cmx
 fuchsia_component("test_component_cmx") {
   manifest = "meta/test_component.cmx"
-  data_deps = [ ":hello_bin" ]
+  data_deps = [ ":renamed_exe" ]
 }
 
 # Produces meta/test_component_renamed.cmx
@@ -52,45 +57,184 @@ fuchsia_component("test_component_renamed_cm") {
   data_deps = [ ":hello_bin" ]
 }
 
+fuchsia_component("vk_validation_component") {
+  manifest = "meta/test_component.cmx"
+  manifest_output_name = "vk_validation"
+  data_deps = [
+    ":hello_bin",
+    "//build:vulkan_validation",
+  ]
+}
+
+fuchsia_component("with_resources") {
+  manifest = "meta/test_component.cmx"
+  manifest_output_name = "resource-user"
+  data_deps = [ ":hello_bin" ]
+  resources = [
+    {
+      path = "resources.txt"
+      dest = "data/resources.txt"
+    },
+  ]
+}
+
+declare_args() {
+  do_rename_test = false
+}
+
+# Produces meta/overridden_name.cmx
+fuchsia_component("test_override_component") {
+  manifest = "meta/original.cmx"
+  if (do_rename_test) {
+    manifest_output_name = "overridden_name"
+  }
+  data_deps = [ ":hello_bin" ]
+}
+
+fuchsia_package("simple_package_v1") {
+  deps = [ ":test_component_cmx" ]
+}
+
+fuchsia_package("simple_package_v2") {
+  deps = [ ":test_component_cm" ]
+}
+
 fuchsia_package("package") {
   deps = [
-    ":test_component_cm",
-    ":test_component_cmx",
     ":test_component_no_ext_v1_cmx",
     ":test_component_no_ext_v1_renamed_cmx",
     ":test_component_renamed_cm",
     ":test_component_renamed_cmx",
+    ":test_override_component",
   ]
+}
+
+fuchsia_package("package_with_vk") {
+  deps = [ ":vk_validation_component" ]
+}
+
+fuchsia_package("resource_pkg") {
+  deps = [ ":with_resources" ]
 }
 
 # Copy far.sh to the output dir. This script is used
 # in the static analysis test.
-copy("far_test_script") {
-  sources = [ "//tests/package/far.sh" ]
+# manifest_check.sh looks for a specific manifest file.
+copy("copy_test_scripts") {
+  sources = [
+    "//tests/package/far.sh",
+    "//tests/package/manifest_check.sh",
+  ]
   outputs = [ "${target_gen_dir}/{{source_file_part}}" ]
 }
 
+_packages = [
+  "package",
+  "simple_package_v2",
+  "simple_package_v1",
+  "package_with_vk",
+  "resource_pkg",
+]
+
+foreach(pkg, _packages) {
+  # Static far analysis test.
+  shellscript_test("package_analysis_test_$pkg") {
+    script_template_file = "run_package_analysis_test_template.txt"
+    template_keys = [
+      "script_path",
+      "far_bin_path",
+      "package_name",
+    ]
+    template_data = {
+      script_path = rebase_path("${target_gen_dir}/far.sh")
+      far_bin_path = rebase_path("${tools_out_dir}/far")
+      package_name = rebase_path("${target_gen_dir}/$pkg/$pkg")
+    }
+    data_deps = [
+      ":$pkg",
+      ":copy_test_scripts",
+      "//build:sdk_tools",
+    ]
+  }
+}
+
 # Static far analysis test.
-shellscript_test("package_analysis_test") {
+shellscript_test("manifest_check_test") {
   script_template_file = "run_package_analysis_test_template.txt"
   template_keys = [
-    "far_sh_path",
+    "script_path",
     "far_bin_path",
     "package_name",
+    "manifest_name",
   ]
   template_data = {
-    far_sh_path = rebase_path("${target_gen_dir}/far.sh")
+    script_path = rebase_path("${target_gen_dir}/manifest_check.sh")
     far_bin_path = rebase_path("${tools_out_dir}/far")
     package_name = rebase_path("${target_gen_dir}/package/package")
+    if (do_rename_test) {
+      manifest_name = "overridden_name.cmx"
+    } else {
+      manifest_name = "original.cmx"
+    }
   }
   data_deps = [
-    ":far_test_script",
+    ":copy_test_scripts",
     ":package",
+    "//build:sdk_tools",
+  ]
+}
+
+shellscript_test("resource_check_test") {
+  script_template_file = "run_package_analysis_test_template.txt"
+  template_keys = [
+    "script_path",
+    "far_bin_path",
+    "package_name",
+    "manifest_name",
+  ]
+  template_data = {
+    script_path = rebase_path("${target_gen_dir}/manifest_check.sh")
+    far_bin_path = rebase_path("${tools_out_dir}/far")
+    package_name = rebase_path("${target_gen_dir}/resource_pkg/resource_pkg")
+    manifest_name = "data/resources.txt"
+  }
+  data_deps = [
+    ":copy_test_scripts",
+    ":resource_pkg",
+    "//build:sdk_tools",
+  ]
+}
+
+shellscript_test("vk_check_test") {
+  script_template_file = "run_package_analysis_test_template.txt"
+  template_keys = [
+    "script_path",
+    "far_bin_path",
+    "package_name",
+    "manifest_name",
+  ]
+  template_data = {
+    script_path = rebase_path("${target_gen_dir}/manifest_check.sh")
+    far_bin_path = rebase_path("${tools_out_dir}/far")
+    package_name =
+        rebase_path("${target_gen_dir}/package_with_vk/package_with_vk")
+    manifest_name = "lib/VkLayer_khronos_validation.so data/vulkan/explicit_layer.d/VkLayer_core_validation.json"
+  }
+  data_deps = [
+    ":copy_test_scripts",
+    ":package_with_vk",
     "//build:sdk_tools",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":package_analysis_test" ]
+  deps = [
+    ":manifest_check_test",
+    ":resource_check_test",
+    ":vk_check_test",
+  ]
+  foreach(pkg, _packages) {
+    deps += [ ":package_analysis_test_$pkg" ]
+  }
 }

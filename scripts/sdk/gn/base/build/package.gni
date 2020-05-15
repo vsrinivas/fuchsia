@@ -45,6 +45,8 @@ template("fuchsia_package") {
   # target names
   _manifest_target = "${target_name}__archive-manifest"
   _metadata_target = "${target_name}__archive-metadata"
+  _packaged_components_metadata_target =
+      "${target_name}__packaged_components_metadata"
 
   # output values
   _pkg_out_dir = "${target_gen_dir}/${package_name}"
@@ -54,7 +56,7 @@ template("fuchsia_package") {
   _package_file = "$_pkg_out_dir/package"
   _fidl_json_refs_file = "${fidl_ref_out_dir}/${package_name}_all_fidl_refs.txt"
 
-  _packaged_components_metadata =
+  _packaged_components_metadata_file =
       "${target_gen_dir}/${package_name}_packaged_components_metadata.json"
 
   _package_deps = []
@@ -67,9 +69,9 @@ template("fuchsia_package") {
 
   # Generates a JSON file containing the contents of each of the
   # components being included in this package.
-  generated_file("${package_name}_packaged_components_metadata") {
+  generated_file(_packaged_components_metadata_target) {
     forward_variables_from(invoker, [ "testonly" ])
-    outputs = [ _packaged_components_metadata ]
+    outputs = [ _packaged_components_metadata_file ]
     data_keys = [ "contents" ]
     output_conversion = "json"
     deps = _package_deps
@@ -88,14 +90,13 @@ template("fuchsia_package") {
   }
 
   action(_manifest_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
+    forward_variables_from(invoker, [ "testonly" ])
     script = "${fuchsia_sdk}/build/prepare_package_inputs.py"
 
-    inputs = [ _runtime_deps_file ]
+    inputs = [
+      _runtime_deps_file,
+      _packaged_components_metadata_file,
+    ]
 
     outputs = [
       _archive_manifest,
@@ -103,11 +104,13 @@ template("fuchsia_package") {
       _package_file,
     ]
 
-    if (!defined(deps)) {
-      deps = []
-    }
     data_deps = _package_deps
-    deps += _package_deps
+
+    deps = _package_deps
+    deps += [ ":${_packaged_components_metadata_target}" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
 
     # Use a depfile to trigger package rebuilds if any of the files (static
     # assets, shared libraries, etc.) included by the package have changed.
@@ -129,7 +132,7 @@ template("fuchsia_package") {
       "--build-ids-file",
       rebase_path(_build_ids_file, root_build_dir),
       "--json-file",
-      rebase_path(_packaged_components_metadata),
+      rebase_path(_packaged_components_metadata_file),
     ]
 
     if (defined(excluded_files)) {

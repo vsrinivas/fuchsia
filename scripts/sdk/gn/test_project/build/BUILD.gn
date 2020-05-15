@@ -15,3 +15,15 @@ copy("sdk_tools") {
   sources = [ "//third_party/fuchsia-sdk/tools/far" ]
   outputs = [ "${tools_out_dir}/{{source_file_part}}" ]
 }
+
+# This matches the target from Chromium
+group("vulkan_validation") {
+  data_deps = [
+    "//third_party/fuchsia-sdk/pkg/vulkan_layers:VkLayer_core_validation",
+    "//third_party/fuchsia-sdk/pkg/vulkan_layers:VkLayer_khronos_validation",
+    "//third_party/fuchsia-sdk/pkg/vulkan_layers:VkLayer_object_lifetimes",
+    "//third_party/fuchsia-sdk/pkg/vulkan_layers:VkLayer_stateless_validation",
+    "//third_party/fuchsia-sdk/pkg/vulkan_layers:VkLayer_thread_safety",
+    "//third_party/fuchsia-sdk/pkg/vulkan_layers:VkLayer_unique_objects",
+  ]
+}

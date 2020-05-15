@@ -24,7 +24,7 @@ template("fuchsia_pm_tool") {
                              "testonly",
                              "deps",
                              "public_deps",
-                             "visibility"
+                             "visibility",
                            ])
     _valid_commands = [
       "build",
