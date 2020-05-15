@@ -6,6 +6,7 @@ group("lib") {
   testonly = true
   deps = [
     "internet-checksum",
+    "net-declare",
     "net-types",
     "network-device",
   ]
@@ -16,6 +17,7 @@ group("tests") {
 
   deps = [
     "//src/connectivity/lib/internet-checksum:tests",
+    "//src/connectivity/lib/net-declare:tests",
     "//src/connectivity/lib/net-types:tests",
     "//src/connectivity/lib/network-device:tests",
   ]
