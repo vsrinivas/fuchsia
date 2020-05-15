@@ -138,6 +138,11 @@ if (defined(zx)) {
       rebase_path("$zx/vdso/zx_syscall.fidl"),
     ]
 
+    inputs = [
+      "$zx/vdso/zx_common.fidl",
+      "$zx/vdso/zx_syscall.fidl",
+    ]
+
     outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]
 
     sources = [

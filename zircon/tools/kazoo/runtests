@@ -6,7 +6,8 @@
 
 set -e
 
-pushd ../../..
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+pushd $DIR/../../..
 
 fx ninja -C out/default.zircon \
   host-x64-linux-clang/obj/tools/fidl/fidlc \
