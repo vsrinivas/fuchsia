@@ -79,6 +79,13 @@ class TestFixture : public ::gtest::RealLoopFixture {
   virtual void ExpectDisconnect() { ExpectError(ZX_ERR_PEER_CLOSED); }
   void ExpectError(zx_status_t expect_error);
 
+  // Promote to public so that non-subclasses can advance through time.
+  using ::gtest::RealLoopFixture::RunLoop;
+  using ::gtest::RealLoopFixture::RunLoopUntil;
+  using ::gtest::RealLoopFixture::RunLoopUntilIdle;
+  using ::gtest::RealLoopFixture::RunLoopWithTimeout;
+  using ::gtest::RealLoopFixture::RunLoopWithTimeoutOrUntil;
+
  protected:
   void SetUp() override;
   void TearDown() override;

@@ -43,10 +43,16 @@ source_set("hermetic_audio_test") {
   testonly = true
 
   sources = [
+    "audio_buffer.h",
+    "capturer_shim.h",
     "hermetic_audio_environment.cc",
     "hermetic_audio_environment.h",
     "hermetic_audio_test.cc",
     "hermetic_audio_test.h",
+    "renderer_shim.cc",
+    "renderer_shim.h",
+    "virtual_device.cc",
+    "virtual_device.h",
   ]
 
   public_deps = [
@@ -58,6 +64,10 @@ source_set("hermetic_audio_test") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/syslog/cpp",
+    "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/audio/lib/format",
+    "//src/media/audio/lib/logging",
+    "//src/media/audio/lib/wav",
   ]
 
   deps = [ "//sdk/fidl/fuchsia.scheduler" ]

@@ -6,45 +6,93 @@
 #define SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/device/audio.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
+#include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/test/capturer_shim.h"
 #include "src/media/audio/lib/test/constants.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
+#include "src/media/audio/lib/test/renderer_shim.h"
 #include "src/media/audio/lib/test/test_fixture.h"
+#include "src/media/audio/lib/test/virtual_device.h"
 
 namespace media::audio::test {
 
 class HermeticAudioTest : public TestFixture {
- public:
+ protected:
+  static void SetUpTestSuite();
+  static void SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options options);
+  static void TearDownTestSuite();
+
   static HermeticAudioEnvironment* environment() {
     auto ptr = HermeticAudioTest::environment_.get();
     FX_CHECK(ptr) << "No Environment; Did you forget to call SetUpTestSuite?";
     return ptr;
   }
 
- protected:
-  static void SetUpTestSuite();
-  static void SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options options);
-  static void TearDownTestSuite();
-
- private:
-  static std::unique_ptr<HermeticAudioEnvironment> environment_;
-};
-
-//
-// HermeticAudioCoreTestBase
-//
-// This set of tests verifies asynchronous usage of audio_core protocols, in a hermetic environment.
-// TODO(mpuryear): either split into separate .h/.cc files, or combine with HermeticAudioTest.
-// TODO(mpuryear): if we don't anticipate non-hermetic tests, remove "Hermetic" from class names.
-class HermeticAudioCoreTest : public HermeticAudioTest {
- protected:
   void SetUp() override;
   void TearDown() override;
 
   void ExpectCallback() override;
   void ExpectDisconnect() override;
 
+  // The returned pointers are owned by this class.
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  VirtualOutput<SampleFormat>* CreateOutput(const audio_stream_unique_id_t& device_id,
+                                            Format format, size_t frame_count);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  VirtualInput<SampleFormat>* CreateInput(const audio_stream_unique_id_t& device_id, Format format,
+                                          size_t frame_count);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  AudioRendererShim<SampleFormat>* CreateAudioRenderer(
+      Format format, size_t frame_count,
+      fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  AudioCapturerShim<SampleFormat>* CreateAudioCapturer(
+      Format format, size_t frame_count, fuchsia::media::AudioCapturerConfiguration config);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  UltrasoundRendererShim<SampleFormat>* CreateUltrasoundRenderer(Format format, size_t frame_count);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  UltrasoundCapturerShim<SampleFormat>* CreateUltrasoundCapturer(Format format, size_t frame_count);
+
+  // Takes ownership of the AudioDeviceEnumerator. This is useful when tests need to watch for
+  // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.
+  fuchsia::media::AudioDeviceEnumeratorPtr TakeOwnershipOfAudioDeviceEnumerator();
+
+  // TODO(49807): make this private; this is currently used by fidl tests
   fuchsia::media::AudioCorePtr audio_core_;
+
+ private:
+  static std::unique_ptr<HermeticAudioEnvironment> environment_;
+  static fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
+
+  void WatchForDeviceArrivals();
+  void WaitForDeviceDepartures();
+  void OnDefaultDeviceChanged(uint64_t old_default_token, uint64_t new_default_token);
+
+  struct DeviceInfo {
+    std::unique_ptr<VirtualDevice<fuchsia::virtualaudio::Output>> output;
+    std::unique_ptr<VirtualDevice<fuchsia::virtualaudio::Input>> input;
+    std::optional<fuchsia::media::AudioDeviceInfo> info;
+    bool is_removed = false;
+    bool is_default = false;
+  };
+
+  std::unordered_map<uint64_t, std::string> token_to_unique_id_;
+  std::unordered_map<std::string, DeviceInfo> devices_;
+  std::vector<std::unique_ptr<CapturerShimImpl>> capturers_;
+  std::vector<std::unique_ptr<RendererShimImpl>> renderers_;
+
+  fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
+  fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 };
 
 }  // namespace media::audio::test

@@ -37,7 +37,7 @@ constexpr size_t kDefaultPayloadBufferSize = PAGE_SIZE;
 // AudioRendererTest
 //
 // This set of tests verifies asynchronous usage of AudioRenderer.
-class AudioRendererTest : public HermeticAudioCoreTest {
+class AudioRendererTest : public HermeticAudioTest {
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -73,7 +73,7 @@ class AudioRendererClockTest : public AudioRendererTest {
 // AudioRendererTest implementation
 //
 void AudioRendererTest::SetUp() {
-  HermeticAudioCoreTest::SetUp();
+  HermeticAudioTest::SetUp();
 
   audio_core_->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler(ErrorHandler());
@@ -85,11 +85,11 @@ void AudioRendererTest::TearDown() {
   EXPECT_EQ(bound_renderer_expected_, audio_renderer_.is_bound());
   audio_renderer_.Unbind();
 
-  HermeticAudioCoreTest::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 void AudioRendererTest::SetNegativeExpectations() {
-  HermeticAudioCoreTest::SetNegativeExpectations();
+  HermeticAudioTest::SetNegativeExpectations();
   bound_renderer_expected_ = false;
 }
 

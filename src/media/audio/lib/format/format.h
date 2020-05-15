@@ -29,6 +29,7 @@ class Format {
   const TimelineRate& frames_per_ns() const { return frames_per_ns_; }
   const TimelineRate& frame_to_media_ratio() const { return frame_to_media_ratio_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
+  uint32_t bytes_per_sample() const { return bytes_per_frame_ / channels(); }
   uint32_t valid_bits_per_channel() const { return valid_bits_per_channel_; }
 
  private:

@@ -14,7 +14,7 @@ namespace media::audio::test {
 //
 // AudioTest
 //
-class AudioTest : public HermeticAudioCoreTest {
+class AudioTest : public HermeticAudioTest {
  protected:
   void TearDown() override;
 
@@ -25,7 +25,7 @@ class AudioTest : public HermeticAudioCoreTest {
 //
 // UsageVolumeControlTest
 //
-class UsageVolumeControlTest : public HermeticAudioCoreTest {};
+class UsageVolumeControlTest : public HermeticAudioTest {};
 
 //
 // AudioTest implementation
@@ -34,13 +34,13 @@ void AudioTest::TearDown() {
   audio_renderer_.Unbind();
   audio_capturer_.Unbind();
 
-  HermeticAudioCoreTest::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 //
 // UsageReporterTest
 //
-class UsageReporterTest : public HermeticAudioCoreTest {
+class UsageReporterTest : public HermeticAudioTest {
  protected:
   class FakeUsageWatcher : public fuchsia::media::UsageWatcher {
    public:
@@ -83,57 +83,12 @@ TEST_F(UsageReporterTest, ConnectToUsageReporter) {
 //
 // UsageGainReporterTest
 //
-class UsageGainReporterTest : public HermeticAudioCoreTest {
+class UsageGainReporterTest : public HermeticAudioTest {
  protected:
   static void SetUpTestSuite() {
-    HermeticAudioCoreTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
+    HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
         .audio_core_config_data_path = "/pkg/data/test_output",
     });
-  }
-  void SetUp() override {
-    HermeticAudioCoreTest::SetUp();
-    environment()->ConnectToService(virtualaudio_control_.NewRequest());
-    virtualaudio_control_->Enable();
-  }
-  void TearDown() override {
-    // Ensure all devices are now removed
-    fuchsia::media::AudioDeviceEnumeratorSyncPtr enumerator;
-    environment()->ConnectToService(enumerator.NewRequest());
-    RunLoopUntil([&enumerator] {
-      std::vector<fuchsia::media::AudioDeviceInfo> devices;
-      zx_status_t status = enumerator->GetDevices(&devices);
-      FX_CHECK(status == ZX_OK);
-      return devices.empty();
-    });
-
-    virtualaudio_control_->Disable();
-    HermeticAudioCoreTest::TearDown();
-  }
-
-  fuchsia::virtualaudio::OutputPtr AddVirtualOutput(
-      const std::array<uint8_t, 16>& output_unique_id) {
-    fuchsia::media::AudioDeviceEnumeratorPtr enumerator;
-    environment()->ConnectToService(enumerator.NewRequest());
-
-    bool device_default = false;
-    enumerator.events().OnDefaultDeviceChanged = [&device_default](uint64_t old_default_token,
-                                                                   uint64_t new_default_token) {
-      device_default = (new_default_token != 0) ? true : false;
-    };
-
-    fuchsia::virtualaudio::OutputPtr output;
-
-    bool device_started = false;
-    output.events().OnStart = [&device_started](zx_time_t start_time) { device_started = true; };
-
-    environment()->ConnectToService(output.NewRequest());
-    output.set_error_handler(ErrorHandler());
-    output->SetUniqueId(output_unique_id);
-    output->Add();
-
-    RunLoopUntil([&device_started, &device_default] { return device_started & device_default; });
-
-    return output;
   }
 
   class FakeGainListener : public fuchsia::media::UsageGainListener {
@@ -165,11 +120,9 @@ class UsageGainReporterTest : public HermeticAudioCoreTest {
     float last_gain_dbfs_ = 0.0;
   };
 
-  fuchsia::virtualaudio::ControlSyncPtr virtualaudio_control_;
-
   // This matches the configuration in test_output_audio_core_config.json
   const std::string device_id_string_ = "ffffffffffffffffffffffffffffffff";
-  const std::array<uint8_t, 16> device_id_array_ = {{
+  const audio_stream_unique_id_t device_id_array_ = {{
       0xff,
       0xff,
       0xff,
@@ -195,8 +148,16 @@ class UsageGainReporterTest : public HermeticAudioCoreTest {
 TEST_F(UsageGainReporterTest, ConnectToUsageGainReporter) {
   fit::closure completer = CompletionCallback([] {});
 
-  // Keep output alive for duration of test
-  auto output = AddVirtualOutput(device_id_array_);
+  // The specific choice of format doesn't matter here, any output device will do.
+  constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  constexpr auto kSampleRate = 48000;
+  auto format = Format::Create({
+                                   .sample_format = kSampleFormat,
+                                   .channels = 2,
+                                   .frames_per_second = kSampleRate,
+                               })
+                    .value();
+  CreateOutput<kSampleFormat>(device_id_array_, format, kSampleRate /* 1s buffer */);
 
   fuchsia::media::Usage usage;
   usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);

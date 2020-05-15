@@ -60,9 +60,7 @@ class AudioDeviceServiceTest : public HermeticAudioTest {
 template <typename T>
 void AudioDeviceServiceTest<T>::SetUp() {
   HermeticAudioTest::SetUp();
-
-  environment()->ConnectToService(audio_device_enumerator_.NewRequest());
-  audio_device_enumerator_.set_error_handler(ErrorHandler());
+  audio_device_enumerator_ = std::move(TakeOwnershipOfAudioDeviceEnumerator());
 
   zx::channel local_channel;
   zx::channel remote_channel;

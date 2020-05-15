@@ -24,7 +24,7 @@ using testing::VerifySameClock;
 // AudioCapturerTest
 //
 // This set of tests verifies asynchronous usage of AudioCapturer.
-class AudioCapturerTest : public HermeticAudioCoreTest {
+class AudioCapturerTest : public HermeticAudioTest {
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -45,7 +45,7 @@ class AudioCapturerClockTest : public AudioCapturerTest {
 // AudioCapturerTest implementation
 //
 void AudioCapturerTest::SetUp() {
-  HermeticAudioCoreTest::SetUp();
+  HermeticAudioTest::SetUp();
 
   audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
   audio_capturer_.set_error_handler(ErrorHandler());
@@ -57,11 +57,11 @@ void AudioCapturerTest::TearDown() {
   EXPECT_EQ(bound_capturer_expected_, audio_capturer_.is_bound());
   audio_capturer_.Unbind();
 
-  HermeticAudioCoreTest::TearDown();
+  HermeticAudioTest::TearDown();
 }
 
 void AudioCapturerTest::SetNegativeExpectations() {
-  HermeticAudioCoreTest::SetNegativeExpectations();
+  HermeticAudioTest::SetNegativeExpectations();
   bound_capturer_expected_ = false;
 }
 

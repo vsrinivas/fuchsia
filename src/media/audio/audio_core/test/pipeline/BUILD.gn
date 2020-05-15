@@ -60,8 +60,6 @@ executable("audio_pipeline_tests_bin") {
 
   sources = [
     "audio_pipeline_test.cc",
-    "hermetic_audio_pipeline_test.cc",
-    "hermetic_audio_pipeline_test.h",
     "ultrasound_test.cc",
   ]
 
