@@ -14,10 +14,7 @@ zx_library("unittest") {
     "unittest.cc",
     "watchdog.cc",
   ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-  ]
+  deps = [ "$zx/system/ulib/pretty" ]
   if (current_os == "linux") {
     libs = [ "pthread" ]
   }

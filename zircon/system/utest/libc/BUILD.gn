@@ -5,6 +5,7 @@
 zx_test("libc") {
   sources = [ "libc.c" ]
   deps = [
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
 
     # For unittests of _impl.h headers.
