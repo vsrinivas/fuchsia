@@ -175,10 +175,10 @@ impl Target {
         }
     }
 
-    async fn update_state(&self, other: TargetState) {
+    async fn update_state(&self, mut other: TargetState) {
         let mut state = self.state.lock().await;
-        if state.rcs.is_none() {
-            state.rcs = other.rcs.clone();
+        if let Some(rcs) = other.rcs.take() {
+            state.rcs = Some(rcs);
         }
     }
 
@@ -256,23 +256,48 @@ impl Target {
     }
 
     pub async fn run_host_pipe(target: Arc<Target>) {
-        hoist::spawn(async move {
-            {
-                let mut state = target.state.lock().await;
-                if state.host_pipe_loop_started {
-                    return;
-                }
-                state.host_pipe_loop_started = true;
-            }
+        Target::run_host_pipe_with_allocator(target, onet::HostPipeConnection::new).await
+    }
 
-            // In the rare (and wildly unlikely) scenario that host pipe gets
-            // disconnected before we get here, just exit, else start it up.
-            let mut pipe = target.host_pipe.lock().await;
-            if pipe.is_none() && target.state.lock().await.host_pipe_disconnected {
+    async fn run_host_pipe_with_allocator(
+        target: Arc<Target>,
+        host_pipe_allocator: impl Fn(Arc<Target>) -> Result<onet::HostPipeConnection, Error> + 'static,
+    ) {
+        {
+            let mut state = target.state.lock().await;
+            if state.host_pipe_loop_started {
                 return;
             }
-            *pipe = Some(onet::HostPipeConnection::new(target.clone()).await.unwrap());
-        });
+            state.host_pipe_loop_started = true;
+        }
+
+        // In the rare (and wildly unlikely) scenario that host pipe gets
+        // disconnected before we get here, just exit, else start it up.
+        let mut pipe = target.host_pipe.lock().await;
+        if pipe.is_none() && target.state.lock().await.host_pipe_disconnected {
+            return;
+        }
+        log::info!("Initiating overnet host-pipe");
+
+        // Hack alert: since there's no error returned in this function, this unwraps
+        // the error here and sets that host_pipe_loop_started is false. In order to
+        // accomplish this, since the `?` operator isn't supported in a function that
+        // returns `()` the "error" is returned as a Future that is awaited (as it
+        // returns `()` anyway).
+        //
+        // At the time of implementation this can only happen if there is
+        // an error spawning a thread, so this is pretty unlikely (but it is tested).
+        *pipe = match host_pipe_allocator(target.clone()).map_err(|e| {
+                log::warn!(
+                    "Error starting host pipe connection, setting host_pipe_loop_started to false: {:?}", e
+                );
+                async {
+                    target.state.lock().await.host_pipe_loop_started = false;
+                }
+            }) {
+                Ok(p) => Some(p),
+                Err(fut) => return fut.await,
+            };
     }
 }
 
@@ -761,7 +786,7 @@ mod test {
                 state.rcs = Some(conn);
             });
             // Adds a few hundred thousands as this is a race test.
-            assert!(t.wait_for_state_with_rcs(500000, Duration::from_millis(1)).await.is_ok());
+            t.wait_for_state_with_rcs(500000, Duration::from_millis(1)).await.unwrap();
         });
     }
 
@@ -769,7 +794,7 @@ mod test {
     fn test_target_disconnect_no_process() {
         hoist::run(async move {
             let t = Target::new("fooberdoober");
-            assert!(t.disconnect().await.is_ok());
+            t.disconnect().await.unwrap();
         });
     }
 
@@ -777,14 +802,51 @@ mod test {
     fn test_target_disconnect_multiple_invocations() {
         hoist::run(async move {
             let t = Arc::new(Target::new("flabbadoobiedoo"));
+            {
+                let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
+                t.addrs_insert(addr).await;
+            }
             // Assures multiple "simultaneous" invocations to start the target
             // doesn't put it into a bad state that would hang.
             let _: ((), (), ()) = futures::join!(
-                Target::run_host_pipe(t.clone()),
-                Target::run_host_pipe(t.clone()),
-                Target::run_host_pipe(t.clone()),
+                Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
+                Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
+                Target::run_host_pipe_with_allocator(t.clone(), onet::HostPipeConnection::new),
             );
-            assert!(t.disconnect().await.is_ok());
+            t.disconnect().await.unwrap();
+        });
+    }
+
+    #[test]
+    fn test_target_run_host_pipe_failure_sets_loop_false() {
+        hoist::run(async move {
+            let t = Arc::new(Target::new("bonanza"));
+            Target::run_host_pipe_with_allocator(t.clone(), |_| {
+                Result::<onet::HostPipeConnection, Error>::Err(anyhow!(
+                    "testing error to check state"
+                ))
+            })
+            .await;
+            assert!(!t.state.lock().await.host_pipe_loop_started);
+        });
+    }
+
+    #[test]
+    fn test_target_run_host_pipe_skips_if_started() {
+        hoist::run(async move {
+            let t = Arc::new(Target::new("bloop"));
+            {
+                t.state.lock().await.host_pipe_loop_started = true;
+            }
+            // The error returned in this function should be skipped leaving
+            // the loop state set to true.
+            Target::run_host_pipe_with_allocator(t.clone(), |_| {
+                Result::<onet::HostPipeConnection, Error>::Err(anyhow!(
+                    "testing error to check state"
+                ))
+            })
+            .await;
+            assert!(t.state.lock().await.host_pipe_loop_started);
         });
     }
 }

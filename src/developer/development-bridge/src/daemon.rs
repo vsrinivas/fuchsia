@@ -140,9 +140,6 @@ impl Daemon {
                     {
                         continue;
                     }
-                    if tc.get(peer.id.id.into()).await.is_some() {
-                        continue;
-                    }
                     let remote_control_proxy = ok_or_continue!(RCSConnection::new(&mut peer.id)
                         .await
                         .context("unable to convert proxy to target"));
