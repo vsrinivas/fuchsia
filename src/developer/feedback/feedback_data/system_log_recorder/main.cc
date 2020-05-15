@@ -16,8 +16,8 @@
 
 constexpr zx::duration kWritePeriod = zx::sec(1);
 
-// At most 8KB of logs will be persisted each second.
-constexpr size_t kMaxWriteSizeInBytes = 8 * 1024;
+// At most 16KB of logs will be persisted each second.
+constexpr size_t kMaxWriteSizeInBytes = 16 * 1024;
 
 int main(int argc, const char** argv) {
   using namespace feedback;
