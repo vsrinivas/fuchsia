@@ -294,8 +294,8 @@ template("sdk_static_library") {
       rebase_path(sdk_manifest_file),
       "--runtime-deps-file",
       rebase_path(runtime_deps_file),
-      "--root-out-dir",
-      rebase_path(root_out_dir),
+      "--root-build-dir",
+      rebase_path(root_build_dir),
     ]
 
     deps = [
