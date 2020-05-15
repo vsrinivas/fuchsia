@@ -175,7 +175,7 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
     return;
   }
 
-  if (config.device_config().device_type() != fuchsia::ui::input3::PointerDeviceType::TOUCH) {
+  if (config.device_config().device_type() != fuchsia::ui::pointerflow::DeviceType::TOUCH) {
     FX_LOGS(ERROR) << "InjectorRegistry::Register : Only TOUCH device type is supported.";
     return;
   }

@@ -21,7 +21,7 @@ using InjectorId = uint64_t;
 struct InjectorSettings {
   fuchsia::ui::pointerflow::DispatchPolicy dispatch_policy;
   uint32_t device_id;
-  fuchsia::ui::input3::PointerDeviceType device_type;
+  fuchsia::ui::pointerflow::DeviceType device_type;
   zx_koid_t context_koid;
   zx_koid_t target_koid;
 };
@@ -48,7 +48,7 @@ class Injector : public fuchsia::ui::pointerflow::Injector {
   // otherwise.
   // Event streams are expected to start with an ADD, followed by a number of CHANGE events, and
   // ending in either a REMOVE or a CANCEL. Anything else is invalid.
-  bool ValidateEventStream(uint32_t pointer_id, fuchsia::ui::input3::PointerEventPhase phase);
+  bool ValidateEventStream(uint32_t pointer_id, fuchsia::ui::pointerflow::EventPhase phase);
 
   // Injects a CANCEL event for each ongoing stream and stops tracking them.
   void CancelOngoingStreams();

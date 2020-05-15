@@ -12,6 +12,9 @@
 namespace lib_ui_input_tests {
 namespace {
 
+using Phase = fuchsia::ui::pointerflow::EventPhase;
+using DeviceType = fuchsia::ui::pointerflow::DeviceType;
+
 TEST(PointerEventTranslationTest, ReversePointerTraceHACK) {
   const float high = -3.40282e+38;
   const float low = 2.22222e+06;
@@ -31,7 +34,7 @@ TEST(PointerEventTranslationTest, Add) {
   event.set_pointer_id(2);
   event.set_position_x(3);
   event.set_position_y(4);
-  event.set_phase(fuchsia::ui::input3::PointerEventPhase::ADD);
+  event.set_phase(Phase::ADD);
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
       scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
@@ -60,7 +63,7 @@ TEST(PointerEventTranslationTest, Change) {
   event.set_pointer_id(2);
   event.set_position_x(3);
   event.set_position_y(4);
-  event.set_phase(fuchsia::ui::input3::PointerEventPhase::CHANGE);
+  event.set_phase(Phase::CHANGE);
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
       scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
@@ -82,7 +85,7 @@ TEST(PointerEventTranslationTest, Remove) {
   event.set_pointer_id(2);
   event.set_position_x(3);
   event.set_position_y(4);
-  event.set_phase(fuchsia::ui::input3::PointerEventPhase::REMOVE);
+  event.set_phase(Phase::REMOVE);
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
       scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
@@ -111,7 +114,7 @@ TEST(PointerEventTranslationTest, Cancel) {
   event.set_pointer_id(2);
   event.set_position_x(3);
   event.set_position_y(4);
-  event.set_phase(fuchsia::ui::input3::PointerEventPhase::CANCEL);
+  event.set_phase(Phase::CANCEL);
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
       scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
@@ -133,7 +136,7 @@ TEST(PointerEventTranslationTest, TraceFlowId) {
   event.set_pointer_id(2);
   event.set_position_x(3);
   event.set_position_y(4);
-  event.set_phase(fuchsia::ui::input3::PointerEventPhase::ADD);
+  event.set_phase(Phase::ADD);
 
   // Create a trace id with some high bits and low bits.
   constexpr float high = 7;

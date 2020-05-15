@@ -91,7 +91,7 @@ std::vector<PointerEvent> PointerFlowEventToGfxPointerEvent(
 
   std::vector<fuchsia::ui::input::PointerEvent> events;
   switch (event.phase()) {
-    case fuchsia::ui::input3::PointerEventPhase::ADD: {
+    case fuchsia::ui::pointerflow::EventPhase::ADD: {
       PointerEvent down;
       fidl::Clone(pointer_event, &down);
       pointer_event.phase = fuchsia::ui::input::PointerEventPhase::ADD;
@@ -100,12 +100,12 @@ std::vector<PointerEvent> PointerFlowEventToGfxPointerEvent(
       events.emplace_back(std::move(down));
       break;
     }
-    case fuchsia::ui::input3::PointerEventPhase::CHANGE: {
+    case fuchsia::ui::pointerflow::EventPhase::CHANGE: {
       pointer_event.phase = fuchsia::ui::input::PointerEventPhase::MOVE;
       events.emplace_back(std::move(pointer_event));
       break;
     }
-    case fuchsia::ui::input3::PointerEventPhase::REMOVE: {
+    case fuchsia::ui::pointerflow::EventPhase::REMOVE: {
       PointerEvent up;
       fidl::Clone(pointer_event, &up);
       up.phase = fuchsia::ui::input::PointerEventPhase::UP;
@@ -114,7 +114,7 @@ std::vector<PointerEvent> PointerFlowEventToGfxPointerEvent(
       events.emplace_back(std::move(pointer_event));
       break;
     }
-    case fuchsia::ui::input3::PointerEventPhase::CANCEL: {
+    case fuchsia::ui::pointerflow::EventPhase::CANCEL: {
       pointer_event.phase = fuchsia::ui::input::PointerEventPhase::CANCEL;
       events.emplace_back(std::move(pointer_event));
       break;

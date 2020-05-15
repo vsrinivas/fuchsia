@@ -11,7 +11,7 @@
 namespace scenic_impl {
 namespace input {
 
-using fuchsia::ui::input3::PointerEventPhase;
+using fuchsia::ui::pointerflow::EventPhase;
 
 namespace {
 
@@ -104,19 +104,18 @@ void Injector::Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
   callback();
 }
 
-bool Injector::ValidateEventStream(uint32_t pointer_id,
-                                   fuchsia::ui::input3::PointerEventPhase phase) {
+bool Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
   const bool stream_is_ongoing = ongoing_streams_.count(pointer_id) > 0;
-  const bool double_add = stream_is_ongoing && phase == PointerEventPhase::ADD;
-  const bool invalid_start = !stream_is_ongoing && phase != PointerEventPhase::ADD;
+  const bool double_add = stream_is_ongoing && phase == EventPhase::ADD;
+  const bool invalid_start = !stream_is_ongoing && phase != EventPhase::ADD;
   if (double_add || invalid_start) {
     return false;
   }
 
   // Update stream state.
-  if (phase == PointerEventPhase::ADD) {
+  if (phase == EventPhase::ADD) {
     ongoing_streams_.insert(pointer_id);
-  } else if (phase == PointerEventPhase::REMOVE || phase == PointerEventPhase::CANCEL) {
+  } else if (phase == EventPhase::REMOVE || phase == EventPhase::CANCEL) {
     ongoing_streams_.erase(pointer_id);
   }
 

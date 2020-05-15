@@ -5,7 +5,6 @@
 library fuchsia.ui.pointerflow;
 
 using fuchsia.ui.views;
-using fuchsia.ui.input3;
 using zx;
 
 const uint32 MAX_INJECT = 128;
@@ -115,13 +114,37 @@ table InjectorConfig {
     4: DispatchPolicy dispatch_policy;
 };
 
+/// A characterization of a device that issues pointer event streams.
+enum DeviceType {
+    /// A device intended for manipulation by direct contact over its surface.
+    TOUCH = 1;
+};
+
+/// The possible states of a pointer event stream's state machine.
+///
+/// A typical pointer will move through this state machine:
+/// ADD - CHANGE* - REMOVE
+enum EventPhase {
+    /// The device has started tracking the pointer.
+    ADD = 1;
+
+    /// The device has reported an update to the pointer state.
+    CHANGE = 2;
+
+    /// The device has stopped tracking the pointer.
+    REMOVE = 3;
+
+    /// The event stream is no longer available.
+    CANCEL = 4;
+};
+
 /// A specification of the pointer device.
 table DeviceConfig {
     /// An identifier for the pointer device that issues pointer event streams.
     1: uint32 device_id;
 
     /// A characterization of the pointer device.
-    2: fuchsia.ui.input3.PointerDeviceType device_type;
+    2: DeviceType device_type;
 };
 
 /// The region from which injection is attempted for injected events.  As the
@@ -216,7 +239,7 @@ table Event {
 
     /// The state of this event in the pointer event stream's state machine.
     /// Required field.
-    3: fuchsia.ui.input3.PointerEventPhase phase;
+    3: EventPhase phase;
 
     /// The horizontal position of this event, interpreted in the injector's
     /// coordinate system.

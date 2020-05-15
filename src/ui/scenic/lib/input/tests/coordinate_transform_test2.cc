@@ -32,7 +32,7 @@ class CoordinateTransformTest2 : public InputSystemTest {
     InputSystemTest::TearDown();
   }
 
-  void Inject(float x, float y, fuchsia::ui::input3::PointerEventPhase phase) {
+  void Inject(float x, float y, fuchsia::ui::pointerflow::EventPhase phase) {
     FX_CHECK(injector_);
     fuchsia::ui::pointerflow::Event event;
     event.set_timestamp(0);
@@ -52,7 +52,7 @@ class CoordinateTransformTest2 : public InputSystemTest {
       {
         fuchsia::ui::pointerflow::DeviceConfig device_config;
         device_config.set_device_id(1);
-        device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+        device_config.set_device_type(fuchsia::ui::pointerflow::DeviceType::TOUCH);
         config.set_device_config(std::move(device_config));
       }
       {
@@ -202,10 +202,10 @@ TEST_F(CoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyTransformed) {
   // pre-transformation.
   {
     RegisterInjector(client_1.view_ref(), client_2.view_ref());
-    Inject(0, 0, fuchsia::ui::input3::PointerEventPhase::ADD);
-    Inject(5, 0, fuchsia::ui::input3::PointerEventPhase::CHANGE);
-    Inject(5, 5, fuchsia::ui::input3::PointerEventPhase::CHANGE);
-    Inject(0, 5, fuchsia::ui::input3::PointerEventPhase::REMOVE);
+    Inject(0, 0, fuchsia::ui::pointerflow::EventPhase::ADD);
+    Inject(5, 0, fuchsia::ui::pointerflow::EventPhase::CHANGE);
+    Inject(5, 5, fuchsia::ui::pointerflow::EventPhase::CHANGE);
+    Inject(0, 5, fuchsia::ui::pointerflow::EventPhase::REMOVE);
     RunLoopUntilIdle();
   }
 
@@ -271,10 +271,10 @@ TEST_F(CoordinateTransformTest2, ClipSpaceTransformedScene_ShouldHaveNoImpactOnO
   // pre-transformation.
   {
     RegisterInjector(client_1.view_ref(), client_2.view_ref());
-    Inject(0, 0, fuchsia::ui::input3::PointerEventPhase::ADD);
-    Inject(5, 0, fuchsia::ui::input3::PointerEventPhase::CHANGE);
-    Inject(5, 5, fuchsia::ui::input3::PointerEventPhase::CHANGE);
-    Inject(0, 5, fuchsia::ui::input3::PointerEventPhase::REMOVE);
+    Inject(0, 0, fuchsia::ui::pointerflow::EventPhase::ADD);
+    Inject(5, 0, fuchsia::ui::pointerflow::EventPhase::CHANGE);
+    Inject(5, 5, fuchsia::ui::pointerflow::EventPhase::CHANGE);
+    Inject(0, 5, fuchsia::ui::pointerflow::EventPhase::REMOVE);
     RunLoopUntilIdle();
   }
 

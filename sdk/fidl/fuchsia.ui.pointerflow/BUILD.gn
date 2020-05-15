@@ -10,7 +10,7 @@ fidl("fuchsia.ui.pointerflow") {
   sources = [ "inject.fidl" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.input3",
     "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
   ]
 }

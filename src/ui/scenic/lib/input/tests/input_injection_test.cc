@@ -15,7 +15,8 @@
 #include "src/ui/scenic/lib/input/tests/util.h"
 
 using fuchsia::ui::views::ViewRef;
-using Phase = fuchsia::ui::input3::PointerEventPhase;
+using Phase = fuchsia::ui::pointerflow::EventPhase;
+using DeviceType = fuchsia::ui::pointerflow::DeviceType;
 
 namespace lib_ui_input_tests {
 namespace {
@@ -78,7 +79,7 @@ class InputInjectionTest : public InputSystemTest {
 scenic_impl::input::InjectorSettings StandardInjectorSettings() {
   return {.dispatch_policy = fuchsia::ui::pointerflow::DispatchPolicy::EXCLUSIVE,
           .device_id = 1,
-          .device_type = fuchsia::ui::input3::PointerDeviceType::TOUCH,
+          .device_type = DeviceType::TOUCH,
           .context_koid = 1,
           .target_koid = 2};
 }
@@ -87,7 +88,7 @@ fuchsia::ui::pointerflow::Event InjectionEventTemplate() {
   fuchsia::ui::pointerflow::Event event;
   event.set_timestamp(1111);
   event.set_pointer_id(2222);
-  event.set_phase(fuchsia::ui::input3::PointerEventPhase::CHANGE);
+  event.set_phase(Phase::CHANGE);
   event.set_position_x(3333);
   event.set_position_y(4444);
   return event;
@@ -109,7 +110,7 @@ TEST_F(InputInjectionTest, RegisterAttemptWithCorrectArguments_ShouldSucceed) {
     {
       fuchsia::ui::pointerflow::DeviceConfig device_config;
       device_config.set_device_id(1);
-      device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+      device_config.set_device_type(DeviceType::TOUCH);
       config.set_device_config(std::move(device_config));
     }
     {
@@ -181,7 +182,7 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDeviceConfig_ShouldFail) {
     fuchsia::ui::pointerflow::InjectorConfig config;
     fidl::Clone(base_config, &config);
     fuchsia::ui::pointerflow::DeviceConfig device_config;
-    device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+    device_config.set_device_type(DeviceType::TOUCH);
     config.set_device_config(std::move(device_config));
 
     input_system()->Register(std::move(config), injector.NewRequest(),
@@ -225,8 +226,8 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDeviceConfig_ShouldFail) {
     fuchsia::ui::pointerflow::DeviceConfig device_config;
     device_config.set_device_id(1);
     // Set to not TOUCH.
-    device_config.set_device_type(static_cast<fuchsia::ui::input3::PointerDeviceType>(
-        static_cast<uint32_t>(fuchsia::ui::input3::PointerDeviceType::TOUCH) + 1));
+    device_config.set_device_type(
+        static_cast<DeviceType>(static_cast<uint32_t>(DeviceType::TOUCH) + 1));
     config.set_device_config(std::move(device_config));
 
     input_system()->Register(std::move(config), injector.NewRequest(),
@@ -249,7 +250,7 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
     fuchsia::ui::pointerflow::DeviceConfig device_config;
     {
       device_config.set_device_id(1);
-      device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+      device_config.set_device_type(DeviceType::TOUCH);
       base_config.set_device_config(std::move(device_config));
     }
     base_config.set_dispatch_policy(fuchsia::ui::pointerflow::DispatchPolicy::EXCLUSIVE);
@@ -477,7 +478,7 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDispatchPolicy_ShouldFail) {
   {
     fuchsia::ui::pointerflow::DeviceConfig device_config;
     device_config.set_device_id(1);
-    device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+    device_config.set_device_type(DeviceType::TOUCH);
     base_config.set_device_config(std::move(device_config));
   }
   {
@@ -544,7 +545,7 @@ TEST_F(InputInjectionTest, ChannelDying_ShouldNotCrash) {
       {
         fuchsia::ui::pointerflow::DeviceConfig device_config;
         device_config.set_device_id(1);
-        device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+        device_config.set_device_type(DeviceType::TOUCH);
         config.set_device_config(std::move(device_config));
       }
       {
@@ -580,7 +581,7 @@ TEST_F(InputInjectionTest, MultipleRegistrations_ShouldSucceed) {
     {
       fuchsia::ui::pointerflow::DeviceConfig device_config;
       device_config.set_device_id(1);
-      device_config.set_device_type(fuchsia::ui::input3::PointerDeviceType::TOUCH);
+      device_config.set_device_type(DeviceType::TOUCH);
       config.set_device_config(std::move(device_config));
     }
     {
@@ -646,7 +647,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
   {  // Inject one event.
     bool injection_callback_fired = false;
     fuchsia::ui::pointerflow::Event event = InjectionEventTemplate();
-    event.set_phase(fuchsia::ui::input3::PointerEventPhase::ADD);
+    event.set_phase(Phase::ADD);
     std::vector<fuchsia::ui::pointerflow::Event> events;
     events.emplace_back(std::move(event));
     injector->Inject({std::move(events)},
@@ -663,7 +664,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
     bool injection_callback_fired = false;
     std::vector<fuchsia::ui::pointerflow::Event> events;
     fuchsia::ui::pointerflow::Event event1 = InjectionEventTemplate();
-    event1.set_phase(fuchsia::ui::input3::PointerEventPhase::CHANGE);
+    event1.set_phase(Phase::CHANGE);
     events.emplace_back(std::move(event1));
     injector->Inject({std::move(events)},
                      [&injection_callback_fired] { injection_callback_fired = true; });
@@ -677,7 +678,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
     bool injection_callback_fired = false;
     std::vector<fuchsia::ui::pointerflow::Event> events;
     fuchsia::ui::pointerflow::Event event2 = InjectionEventTemplate();
-    event2.set_phase(fuchsia::ui::input3::PointerEventPhase::REMOVE);
+    event2.set_phase(Phase::REMOVE);
     events.emplace_back(std::move(event2));
     injector->Inject({std::move(events)},
                      [&injection_callback_fired] { injection_callback_fired = true; });
