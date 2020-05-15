@@ -23,7 +23,7 @@ use fidl_fuchsia_media::{
 };
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::{
@@ -232,8 +232,8 @@ async fn handle_volume_request(
 
         // Logging for debugging volume changes.
         if stream_is_media {
-            fx_log_info!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
-            fx_log_info!(
+            fx_log_debug!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
+            fx_log_debug!(
                 "[earcons_agent] New media user volume: {:?}, Last media user volume: {:?}",
                 new_media_user_volume,
                 *last_media_user_volume_lock
@@ -276,7 +276,7 @@ async fn play_media_volume_sound(volume: Option<f32>, common_earcons_params: Com
         (sound_player_connection.as_ref(), volume)
     {
         if priority_stream_playing.load(Ordering::SeqCst) {
-            fx_log_info!("Detected a stream already playing, not playing earcons sound");
+            fx_log_debug!("Detected a stream already playing, not playing earcons sound");
             return;
         }
 

@@ -5,7 +5,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::PlayerProxy,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_debug, fx_log_err},
     fuchsia_zircon::{self as zx},
     futures::lock::Mutex,
     std::collections::HashSet,
@@ -48,7 +48,7 @@ pub async fn play_sound<'a>(
         };
         if let Some(file_channel) = sound_file_channel {
             match sound_player_proxy.add_sound_from_file(id, file_channel).await {
-                Ok(_) => fx_log_info!("[earcons] Added sound to Player: {}", file_name),
+                Ok(_) => fx_log_debug!("[earcons] Added sound to Player: {}", file_name),
                 Err(e) => {
                     return Err(format_err!("[earcons] Unable to add sound to Player: {}", e));
                 }
