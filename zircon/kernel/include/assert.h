@@ -19,21 +19,21 @@
 // Assert that |x| is true, else panic.
 //
 // ASSERT is always enabled and |x| will be evaluated regardless of any build arguments.
-#define ASSERT(x)                                                      \
-  do {                                                                 \
-    if (unlikely(!(x))) {                                              \
-      PANIC("ASSERT FAILED at (%s:%d): %s\n", __FILE__, __LINE__, #x); \
-    }                                                                  \
+#define ASSERT(x)                          \
+  do {                                     \
+    if (unlikely(!(x))) {                  \
+      assert_fail(__FILE__, __LINE__, #x); \
+    }                                      \
   } while (0)
 
 // Assert that |x| is true, else panic with the given message.
 //
 // ASSERT_MSG is always enabled and |x| will be evaluated regardless of any build arguments.
-#define ASSERT_MSG(x, msg, msgargs...)                                                     \
-  do {                                                                                     \
-    if (unlikely(!(x))) {                                                                  \
-      PANIC("ASSERT FAILED at (%s:%d): %s\n" msg "\n", __FILE__, __LINE__, #x, ##msgargs); \
-    }                                                                                      \
+#define ASSERT_MSG(x, msg, msgargs...)                         \
+  do {                                                         \
+    if (unlikely(!(x))) {                                      \
+      assert_fail_msg(__FILE__, __LINE__, #x, msg, ##msgargs); \
+    }                                                          \
   } while (0)
 
 // Conditionally implement DEBUG_ASSERT based on LK_DEBUGLEVEL in kernel space.
@@ -51,22 +51,22 @@
 //
 // Depending on build arguments, DEBUG_ASSERT may or may not be enabled. When disabled, |x| will not
 // be evaluated.
-#define DEBUG_ASSERT(x)                                                      \
-  do {                                                                       \
-    if (DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {                        \
-      PANIC("DEBUG ASSERT FAILED at (%s:%d): %s\n", __FILE__, __LINE__, #x); \
-    }                                                                        \
+#define DEBUG_ASSERT(x)                               \
+  do {                                                \
+    if (DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) { \
+      assert_fail(__FILE__, __LINE__, #x);            \
+    }                                                 \
   } while (0)
 
 // Assert that |x| is true, else panic with the given message.
 //
 // Depending on build arguments, DEBUG_ASSERT_MSG may or may not be enabled. When disabled, |x| will
 // not be evaluated.
-#define DEBUG_ASSERT_MSG(x, msg, msgargs...)                                                     \
-  do {                                                                                           \
-    if (DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {                                            \
-      PANIC("DEBUG ASSERT FAILED at (%s:%d): %s\n" msg "\n", __FILE__, __LINE__, #x, ##msgargs); \
-    }                                                                                            \
+#define DEBUG_ASSERT_MSG(x, msg, msgargs...)                   \
+  do {                                                         \
+    if (DEBUG_ASSERT_IMPLEMENTED && unlikely(!(x))) {          \
+      assert_fail_msg(__FILE__, __LINE__, #x, msg, ##msgargs); \
+    }                                                          \
   } while (0)
 
 // implement _COND versions of DEBUG_ASSERT which only emit the body if
@@ -92,5 +92,14 @@
 //
 // assert() is defined only because third-party code used in the kernel expects it.
 #define assert(x) DEBUG_ASSERT(x)
+
+__BEGIN_CDECLS
+
+// The following functions are called when an assert fails.
+void assert_fail(const char *file, int line, const char *expression) __NO_RETURN __NO_INLINE;
+void assert_fail_msg(const char *file, int line, const char *expression, const char *fmt,
+                     ...) __NO_RETURN __NO_INLINE;
+
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_LIBC_INCLUDE_ASSERT_H_
