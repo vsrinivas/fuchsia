@@ -26,6 +26,7 @@
 #include "async_loop_ref_counted_rpc_handler.h"
 #include "composite_device.h"
 #include "driver_test_reporter.h"
+#include "inspect.h"
 #include "metadata.h"
 
 class Coordinator;
@@ -348,6 +349,8 @@ class Device
 
   uint32_t protocol_id() const { return protocol_id_; }
 
+  DeviceInspect& inspect() { return *inspect_; }
+
   bool is_bindable() const {
     return !(flags & (DEV_CTX_BOUND | DEV_CTX_INVISIBLE)) && (state_ != Device::State::kDead);
   }
@@ -384,6 +387,11 @@ class Device
 
   void set_host(fbl::RefPtr<DriverHost> host);
   const fbl::RefPtr<DriverHost>& host() const { return host_; }
+
+  void set_local_id(uint64_t local_id) {
+    local_id_ = local_id;
+    inspect().set_local_id(local_id);
+  }
   uint64_t local_id() const { return local_id_; }
 
   const fbl::DoublyLinkedList<std::unique_ptr<Metadata>>& metadata() const { return metadata_; }
@@ -460,18 +468,34 @@ class Device
   Devnode* devnode() { return self; }
 
   // TODO(teisenbe): We probably want more states.
-  enum class State {
-    kActive,
-    kInitializing,  // The driver_host is in the process of running the device init hook.
-    kSuspending,    // The driver_host is in the process of suspending the device.
-    kSuspended,
-    kResuming,   // The driver_host is in the process of resuming the device.
-    kResumed,    // Resume is complete. Will be marked active, after all children resume.
-    kUnbinding,  // The driver_host is in the process of unbinding and removing the device.
-    kDead,       // The device has been remove()'d
-  };
+#define STATE_VALUES(macro)                                                                        \
+  macro(kActive)                                                                                   \
+      macro(kInitializing) /* The driver_host is in the process of running the device init hook.*/ \
+      macro(kSuspending)   /* The driver_host is in the process of suspending the device.*/        \
+      macro(kSuspended)                                                                            \
+          macro(kResuming) /* The driver_host is in the process of resuming the device.*/          \
+      macro(kResumed) /* Resume is complete. Will be marked active, after all children resume.*/   \
+      macro(                                                                                       \
+          kUnbinding) /* The driver_host is in the process of unbinding and removing the device.*/ \
+      macro(kDead)    /* The device has been remove()'d*/
 
-  void set_state(Device::State state) { state_ = state; }
+#define MAKE_ENUM_VALUE(state) state,
+  enum class State { STATE_VALUES(MAKE_ENUM_VALUE) };
+#undef ENUM_VALUE
+#define MAKE_SWITCH_STATEMENT(state) \
+  case State::state:                 \
+    return #state;
+  static std::string StateToString(State state) {
+    switch (state) { STATE_VALUES(MAKE_SWITCH_STATEMENT) }
+  }
+#undef MAKE_SWITCH_STATEMENT
+#undef STATE_VALUES
+
+  void set_state(Device::State state) {
+    state_ = state;
+    inspect().set_state(StateToString(state));
+  }
+
   State state() const { return state_; }
 
   void clear_wait_make_visible() { wait_make_visible_ = false; }
@@ -479,6 +503,8 @@ class Device
 
   void inc_num_removal_attempts() { num_removal_attempts_++; }
   size_t num_removal_attempts() const { return num_removal_attempts_; }
+
+  void InitializeInspectValues();
 
   enum class TestStateMachine {
     kTestNotStarted = 1,
@@ -641,6 +667,8 @@ class Device
 
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
+
+  std::optional<DeviceInspect> inspect_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_H_

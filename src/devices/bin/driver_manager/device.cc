@@ -42,6 +42,9 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       client_remote_(std::move(client_remote)),
       wait_make_visible_(wait_make_visible) {
   test_reporter = std::make_unique<DriverTestReporter>(name_);
+  inspect_.emplace(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
+                   name_.c_str());
+  set_state(Device::State::kActive);  // set default state
 }
 
 Device::~Device() {
@@ -132,6 +135,8 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
     dev->CreateInitTask();
   }
 
+  dev->InitializeInspectValues();
+
   *device = std::move(dev);
   return ZX_OK;
 }
@@ -176,6 +181,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, fbl::RefPtr<Driver
 
   VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name().data());
 
+  dev->InitializeInspectValues();
   *device = std::move(dev);
   return ZX_OK;
 }
@@ -205,9 +211,31 @@ zx_status_t Device::CreateProxy() {
   }
 
   dev->flags = DEV_CTX_PROXY;
+
+  dev->InitializeInspectValues();
+
   proxy_ = std::move(dev);
   VLOGF(1, "Created proxy device %p '%s'", this, name_.data());
   return ZX_OK;
+}
+
+void Device::InitializeInspectValues() {
+  inspect().set_driver(libname().c_str());
+  inspect().set_protocol_id(protocol_id_);
+  inspect().set_flags(flags);
+  inspect().set_properties(props());
+
+  char path[fuchsia_device_manager_DEVICE_PATH_MAX] = {};
+  coordinator->GetTopologicalPath(fbl::RefPtr(this), path, fuchsia_device_manager_DEVICE_PATH_MAX);
+  inspect().set_topological_path(path);
+
+  std::string type("Device");
+  if (flags & DEV_CTX_PROXY) {
+    type = std::string("Proxy device");
+  } else if (protocol_id_ == ZX_PROTOCOL_COMPOSITE) {
+    type = std::string("Composite device");
+  }
+  inspect().set_type(type);
 }
 
 void Device::DetachFromParent() {
@@ -226,7 +254,7 @@ zx_status_t Device::SignalReadyForBind(zx::duration delay) {
 void Device::CreateInitTask() {
   // We only ever create an init task when a device is initially added.
   ZX_ASSERT(!active_init_);
-  state_ = Device::State::kInitializing;
+  set_state(Device::State::kInitializing);
   active_init_ = InitTask::Create(fbl::RefPtr(this));
 }
 
@@ -286,7 +314,7 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
   if (status != ZX_OK) {
     return status;
   }
-  state_ = Device::State::kSuspending;
+  set_state(Device::State::kSuspending);
   suspend_completion_ = std::move(completion);
   return ZX_OK;
 }
@@ -301,7 +329,7 @@ zx_status_t Device::SendResume(uint32_t target_system_state, ResumeCompletion co
   if (status != ZX_OK) {
     return status;
   }
-  state_ = Device::State::kResuming;
+  set_state(Device::State::kResuming);
   resume_completion_ = std::move(completion);
   return ZX_OK;
 }
@@ -311,10 +339,10 @@ void Device::CompleteSuspend(zx_status_t status) {
     // If a device is being removed, any existing suspend task will be forcibly completed,
     // in which case we should not update the state.
     if (state_ != Device::State::kDead) {
-      state_ = Device::State::kSuspended;
+      set_state(Device::State::kSuspended);
     }
   } else {
-    state_ = Device::State::kActive;
+    set_state(Device::State::kActive);
   }
 
   active_suspend_ = nullptr;
@@ -325,9 +353,9 @@ void Device::CompleteSuspend(zx_status_t status) {
 
 void Device::CompleteResume(zx_status_t status) {
   if (status != ZX_OK) {
-    state_ = Device::State::kSuspended;
+    set_state(Device::State::kSuspended);
   } else {
-    state_ = Device::State::kResumed;
+    set_state(Device::State::kResumed);
   }
   if (resume_completion_) {
     resume_completion_(status);
@@ -382,7 +410,7 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
     return ZX_ERR_UNAVAILABLE;
   }
   VLOGF(1, "Unbinding device %p '%s'", this, name_.data());
-  state_ = Device::State::kUnbinding;
+  set_state(Device::State::kUnbinding);
   unbind_completion_ = std::move(completion);
   zx_status_t status = dh_send_unbind(this);
   if (status != ZX_OK) {
@@ -397,7 +425,7 @@ zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
     return ZX_ERR_UNAVAILABLE;
   }
   VLOGF(1, "Completing removal of device %p '%s'", this, name_.data());
-  state_ = Device::State::kUnbinding;
+  set_state(Device::State::kUnbinding);
   remove_completion_ = std::move(completion);
   zx_status_t status = dh_send_complete_removal(
       this, [dev = fbl::RefPtr(this)]() mutable { dev->CompleteRemove(); });
@@ -630,10 +658,10 @@ void Device::set_host(fbl::RefPtr<DriverHost> host) {
     host_->devices().erase(*this);
   }
   host_ = std::move(host);
-  local_id_ = 0;
+  set_local_id(0);
   if (host_) {
     host_->devices().push_back(this);
-    local_id_ = host_->new_device_id();
+    set_local_id(host_->new_device_id());
   }
 }
 

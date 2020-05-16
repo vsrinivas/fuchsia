@@ -128,6 +128,8 @@ test("driver_manager_test") {
 
   deps = [
     ":lib",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
