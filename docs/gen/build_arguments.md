@@ -2114,6 +2114,27 @@ a list that can be spliced into [`select_variant`](#select_variant).
 
 From //build/config/BUILDCONFIG.gn:699
 
+### shaderc_enable_spvc_parser
+Enables using the parsing built into spvc instead spirv-cross
+
+**Current value (from the default):** `false`
+
+From [//third_party/shaderc/shaderc_features.gni:17](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#17)
+
+### shaderc_spvc_disable_context_logging
+Disables logging to messages in context struct
+
+**Current value (from the default):** `false`
+
+From [//third_party/shaderc/shaderc_features.gni:23](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#23)
+
+### shaderc_spvc_enable_direct_logging
+Enables logging directly out to the terminal
+
+**Current value (from the default):** `false`
+
+From [//third_party/shaderc/shaderc_features.gni:20](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#20)
+
 ### signed_image
 
 **Current value (from the default):** `false`
