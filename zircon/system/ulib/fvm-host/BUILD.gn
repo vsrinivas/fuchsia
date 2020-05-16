@@ -53,12 +53,12 @@ zx_library("fvm-host") {
   deps = [
     "//third_party/boringssl",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/system/ulib/blobfs",
+    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/transaction",
     "//zircon/system/ulib/fvm",

@@ -41,7 +41,6 @@ driver_module("usb-audio") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/boringssl",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
@@ -49,6 +48,7 @@ driver_module("usb-audio") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/dispatcher-pool",
   ]
   public_configs = [ ":Wno-unused-function" ]

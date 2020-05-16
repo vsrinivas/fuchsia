@@ -32,14 +32,14 @@ zx_library("fvm") {
   ]
   deps = [
     "//third_party/boringssl",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/lz4",
+    "//zircon/system/ulib/digest",
   ]
   public_deps = [
     # <fvm/fvm.h> has #include <digest/digest.h>.
-    "//zircon/public/lib/digest",
+    "//zircon/system/ulib/digest",
 
     # <fvm/fvm.h> has #include <gpt/gpt.h>.
     "//zircon/system/ulib/gpt",

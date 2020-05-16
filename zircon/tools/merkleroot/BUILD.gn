@@ -15,7 +15,7 @@ sdk_executable("merkleroot") {
   category = "partner"
   sources = [ "merkleroot.cc" ]
   deps = [
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/digest",
   ]
 }

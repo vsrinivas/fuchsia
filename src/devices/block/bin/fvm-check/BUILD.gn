@@ -16,11 +16,11 @@ executable("fvm-check") {
   deps = [
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client",

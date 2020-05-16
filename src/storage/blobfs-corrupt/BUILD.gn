@@ -10,10 +10,10 @@ executable("blobfs-corrupt") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -25,11 +25,11 @@ executable("blobfs-corrupt-test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -40,10 +40,10 @@ source_set("common") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//zircon/public/lib/digest",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/digest",
   ]
 }
 
