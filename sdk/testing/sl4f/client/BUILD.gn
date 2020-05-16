@@ -86,6 +86,7 @@ dart_test("sl4f_client_tests") {
     "trace_processing_test.dart",
     "trace_processing_test_data.dart",
     "update_test.dart",
+    "webdriver_from_existing_chromedriver_test.dart",
     "webdriver_test.dart",
   ]
 

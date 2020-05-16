@@ -26,25 +26,37 @@ final _log = Logger('Webdriver');
 ///
 /// TODO(satsukiu): Add e2e test for facade functionality
 class WebDriverConnector {
-  /// Relative path of chromedriver binary.
+  /// Relative path of chromedriver binary, only provided if an existing
+  /// chromedriver is not already running.
   final String _chromedriverPath;
 
   /// SL4F client.
   final Sl4f _sl4f;
 
   /// Helper for starting processes.
+  ///
+  /// Will be null if constructed with [fromExistingChromedriver()].
   final ProcessHelper _processHelper;
 
   /// Helper for instantiating WebDriver objects.
   final WebDriverHelper _webDriverHelper;
 
   /// A handle to the process running Chromedriver.
+  ///
+  /// Will be null if constructed using [fromExistingChromedriver()], or if
+  /// [initialize()] hasn't been called.
   io.Process _chromedriverProcess;
+  io.Process get chromedriverProcess => _chromedriverProcess;
 
   /// The port Chromedriver is listening on.
+  ///
+  /// If the [fromExistingChromedriver()] constructor is used, Chromedriver has
+  /// already started; use that port. If it isn't passed in, an unused port is
+  /// picked.
   int _chromedriverPort;
 
-  /// A mapping from an exposed port number on the DUT to an open WebDriver session.
+  /// A mapping from an exposed port number on the DUT to an open WebDriver
+  /// session.
   Map<int, WebDriverSession> _webDriverSessions;
 
   WebDriverConnector(String chromeDriverPath, Sl4f sl4f,
@@ -55,12 +67,25 @@ class WebDriverConnector {
         _webDriverHelper = webDriverHelper ?? WebDriverHelper(),
         _webDriverSessions = {};
 
-  /// Starts ChromeDriver and enables DevTools for any future created Chrome
-  /// contexts.  As this will not enable DevTools on any already opened
-  /// contexts, `initialize` must be called prior to the instantiation of the
-  /// Chrome context that needs to be driven.
+  WebDriverConnector.fromExistingChromedriver(int chromedriverPort, Sl4f sl4f)
+      : _chromedriverPort = chromedriverPort,
+        _sl4f = sl4f,
+        _webDriverHelper = WebDriverHelper(),
+        _webDriverSessions = {},
+        // Chromedriver is already running so the below are set to null.
+        _chromedriverPath = null,
+        _processHelper = null;
+
+  /// Starts ChromeDriver (if not already running) and enables DevTools for any
+  /// future created Chrome contexts.
+  ///
+  /// As this will not enable DevTools on any already opened contexts,
+  /// `initialize` must be called prior to the instantiation of the Chrome
+  /// context that needs to be driven.
   Future<void> initialize() async {
-    await _startChromedriver();
+    if (_chromedriverPort == null) {
+      await _startChromedriver();
+    }
     // TODO(satsukiu): return a nicer error, or don't fail if devtools is already enabled
     await _sl4f.request('webdriver_facade.EnableDevTools');
   }
@@ -77,6 +102,7 @@ class WebDriverConnector {
         return _chromedriverProcess.exitCode;
       });
       _chromedriverProcess = null;
+      _chromedriverPort = null;
     }
 
     for (final session in _webDriverSessions.entries) {
