@@ -243,7 +243,7 @@ static void mp_unplug_trampoline(void) {
 
   // do *not* enable interrupts, we want this CPU to never receive another
   // interrupt
-  spin_unlock(&thread_lock);
+  thread_lock.Release();
 
   // Stop and then shutdown this CPU's platform timer.
   platform_stop_timer();

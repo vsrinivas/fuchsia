@@ -190,7 +190,7 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     // C2: Release thread_lock
     // C2: Context switch to this thread
     // C2: Running this thread, evaluate arch_curr_cpu_num() -> C2
-    holding_thread_lock = spin_lock_holder_cpu(&thread_lock) == arch_curr_cpu_num();
+    holding_thread_lock = thread_lock.HolderCpu() == arch_curr_cpu_num();
   }
 
   [log, holding_thread_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {

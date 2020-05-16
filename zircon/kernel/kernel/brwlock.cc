@@ -108,7 +108,7 @@ void BrwLock<PI>::ContendedReadAcquire() {
   AutoReschedDisable resched_disable;
   resched_disable.Disable();
   {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     // Remove our optimistic reader from the count, and put a waiter on there instead.
     uint64_t prev =
         state_.state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
@@ -143,7 +143,7 @@ void BrwLock<PI>::ContendedWriteAcquire() {
   AutoReschedDisable resched_disable;
   resched_disable.Disable();
   {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     // Mark ourselves as waiting
     uint64_t prev = state_.state_.fetch_add(kBrwLockWaiter, ktl::memory_order_relaxed);
     // If there is a writer then we just block, they will wake us up
@@ -226,7 +226,7 @@ void BrwLock<PI>::ReleaseWakeup() {
   AutoReschedDisable resched_disable;
   resched_disable.Disable();
   {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     uint64_t count = state_.state_.load(ktl::memory_order_relaxed);
     if ((count & kBrwLockWaiterMask) != 0 && (count & kBrwLockWriter) == 0 &&
         (count & kBrwLockReaderMask) == 0) {
@@ -237,7 +237,7 @@ void BrwLock<PI>::ReleaseWakeup() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadUpgrade() {
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   // Convert our reading into waiting
   uint64_t prev =

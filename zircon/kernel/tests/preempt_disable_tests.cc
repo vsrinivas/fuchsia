@@ -37,7 +37,7 @@ static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
   // preempt_disable is set.
   thread->preempt_pending_ = false;
   {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     Scheduler::Reschedule();
   }
   ASSERT(thread->preempt_pending_);

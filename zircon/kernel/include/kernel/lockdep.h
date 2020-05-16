@@ -41,11 +41,11 @@ using lockdep::LockFlagsTrackingDisabled;
 //
 // Example usage:
 //
-//  extern spin_lock_t thread_lock;
+//  extern SpinLock thread_lock;
 //  LOCK_DEP_SINGLETON_LOCK_WRAPPER(ThreadLock, thread_lock [, LockFlags]);
 //
 //  void DoThreadStuff() {
-//      Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+//      Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 //      // ...
 //  }
 #define DECLARE_SINGLETON_LOCK_WRAPPER(name, global_lock, ...) \

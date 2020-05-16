@@ -532,7 +532,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
   DEBUG_ASSERT(magic_ == kOwnedMagic);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   // Remember what the maximum effective priority of the wait queue was before
   // we add current_thread to it.

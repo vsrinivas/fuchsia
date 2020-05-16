@@ -129,7 +129,7 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
   // Whether to force the components to be marked present in the xsave area.
   bool mark_present = access == RegAccess::kSet;
 
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -175,7 +175,7 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
 }  // namespace
 
 zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -203,7 +203,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
 }
 
 zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_regs_t* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -248,7 +248,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
 }
 
 zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -278,7 +278,7 @@ zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_st
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -311,7 +311,7 @@ zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
   // Don't leak any reserved fields.
   memset(out, 0, sizeof(zx_thread_state_fp_regs));
 
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -333,7 +333,7 @@ zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
 }
 
 zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -365,7 +365,7 @@ zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_re
 }
 
 zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -383,7 +383,7 @@ zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out)
 }
 
 zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -425,7 +425,7 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
 }
 
 zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
   *out = thread->arch_.fs_base;
@@ -433,7 +433,7 @@ zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out) {
 }
 
 zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
   thread->arch_.fs_base = *in;
@@ -441,7 +441,7 @@ zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in) {
 }
 
 zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
   *out = thread->arch_.gs_base;
@@ -449,7 +449,7 @@ zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out) {
 }
 
 zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
   thread->arch_.gs_base = *in;

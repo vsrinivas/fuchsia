@@ -38,13 +38,13 @@ class Semaphore {
 
   // Observe the current internal count of the semaphore.
   uint64_t count() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     return count_;
   }
 
   // Observe the current internal count of waiters
   uint64_t num_waiters() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     return waitq_.Count();
   }
 

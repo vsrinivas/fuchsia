@@ -338,7 +338,7 @@ static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len
 
   // We could be panicking whilst already holding the thread_lock. If so we must avoid calling
   // functions that will grab it again.
-  if (spin_lock_held(&thread_lock)) {
+  if (thread_lock.IsHeld()) {
     vmm_set_active_aspace_locked(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
   } else {
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));

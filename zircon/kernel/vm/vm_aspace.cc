@@ -540,7 +540,7 @@ void VmAspace::AttachToThread(Thread* t) {
   DEBUG_ASSERT(t);
 
   // point the lk thread at our object via the dummy C vmm_aspace_t struct
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // not prepared to handle setting a new address space or one on a running thread
   DEBUG_ASSERT(!t->aspace_);

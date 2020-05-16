@@ -378,7 +378,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     // otherwise the combination of releasing the mutex and enqueuing the
     // current thread would not be atomic, which would mean that we could
     // miss wakeups.
-    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
     guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
 
@@ -455,7 +455,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
   // explicitly update ownership as it joins the queue once it has made it
   // inside of the thread lock.
   {
-    Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
     if (futex_ref->waiters_.IsEmpty() && futex_ref->waiters_.AssignOwner(nullptr)) {
       Scheduler::Reschedule();
     }
@@ -498,7 +498,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
     // OwnedWakeQueue will handle the ownership bookkeeping for us.
     {
       using Action = OwnedWaitQueue::Hook::Action;
-      Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
       // Attempt to wake |wake_count| threads.  Count the number of thread that
       // we have successfully woken, and assign each of their blocking futex IDs
@@ -631,7 +631,7 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
     // actual manipulation of the various wait queues.
     {
       DEBUG_ASSERT(wake_futex_ref != nullptr);
-      Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
       bool do_resched;
 
       using Action = OwnedWaitQueue::Hook::Action;
@@ -716,7 +716,7 @@ zx_status_t FutexContext::FutexGetOwner(user_in_ptr<const zx_futex_t> value_ptr,
   // to enter the thread lock in order to check.
   if (futex_ref != nullptr) {
     {  // explicit lock scope
-      Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
       if (const Thread* owner = futex_ref->waiters_.owner(); owner != nullptr) {
         // Any thread which owns a FutexState's wait queue *must* be a

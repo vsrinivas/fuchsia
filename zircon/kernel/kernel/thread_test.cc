@@ -394,7 +394,7 @@ bool set_migrate_ready_threads_test() {
       thread_state state;
       cpu_num_t curr_cpu;
       {
-        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
         state = worker->state_;
         curr_cpu = worker->scheduler_state_.curr_cpu();
       }

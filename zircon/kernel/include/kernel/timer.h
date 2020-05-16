@@ -90,6 +90,11 @@ struct Timer {
   // timer cancel, which is needed in a few special cases.
   // returns ZX_OK if spinlock was acquired, ZX_ERR_TIMED_OUT if timer was canceled.
   zx_status_t TrylockOrCancel(spin_lock_t* lock) TA_TRY_ACQ(false, lock);
+
+  // Like the above, but for a SpinLock
+  zx_status_t TrylockOrCancel(SpinLock* lock) TA_TRY_ACQ(false, lock) {
+    return TrylockOrCancel(lock->GetInternal());
+  }
 };
 
 struct TimerQueue {

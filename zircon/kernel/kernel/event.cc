@@ -57,7 +57,7 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, bool interruptable, uint
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   current_thread->interruptable_ = interruptable;
 
@@ -126,14 +126,14 @@ int Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(threa
  * @return  Returns the number of threads that have been unblocked.
  */
 int Event::SignalEtc(bool reschedule, zx_status_t wait_result) {
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   return SignalInternal(reschedule, wait_result);
 }
 
 /* same as above, but the thread lock must already be held */
 int Event::SignalThreadLocked() {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   return SignalInternal(false, ZX_OK);
 }

@@ -11,7 +11,7 @@
 
 #include <kernel/lockdep.h>
 
-extern spin_lock_t thread_lock;
+extern SpinLock thread_lock;
 DECLARE_SINGLETON_LOCK_WRAPPER(ThreadLock, thread_lock,
                                (LockFlagsReportingDisabled | LockFlagsTrackingDisabled));
 

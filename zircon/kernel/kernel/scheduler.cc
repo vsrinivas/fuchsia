@@ -232,12 +232,12 @@ void Scheduler::Dump() {
 }
 
 SchedWeight Scheduler::GetTotalWeight() const {
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   return weight_total_;
 }
 
 size_t Scheduler::GetRunnableTasks() const {
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   const int64_t total_runnable_tasks = runnable_fair_task_count_ + runnable_deadline_task_count_;
   return static_cast<size_t>(total_runnable_tasks);
 }
@@ -670,7 +670,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   SchedulerState* const current_state = &current_thread->scheduler_state_;
 
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
   // Aside from the thread_lock, spinlocks should never be held over a reschedule.
   DEBUG_ASSERT(arch_num_spinlocks_held() == 1);
   DEBUG_ASSERT_MSG(current_thread->state_ != THREAD_RUNNING, "state %d\n", current_thread->state_);
@@ -1159,7 +1159,7 @@ void Scheduler::Remove(Thread* thread) {
 void Scheduler::Block() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_block"_stringref};
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   Thread* const current_thread = Thread::Current::Get();
 
@@ -1176,7 +1176,7 @@ bool Scheduler::Unblock(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock"_stringref};
 
   DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   const SchedTime now = CurrentTime();
   SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name_, now.raw_value());
@@ -1199,7 +1199,7 @@ bool Scheduler::Unblock(list_node* list) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock_list"_stringref};
 
   DEBUG_ASSERT(list);
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   const SchedTime now = CurrentTime();
 
@@ -1231,7 +1231,7 @@ bool Scheduler::Unblock(list_node* list) {
 }
 
 void Scheduler::UnblockIdle(Thread* thread) {
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   SchedulerState* const state = &thread->scheduler_state_;
 
@@ -1247,7 +1247,7 @@ void Scheduler::UnblockIdle(Thread* thread) {
 void Scheduler::Yield() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_yield"_stringref};
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state_;
@@ -1280,7 +1280,7 @@ void Scheduler::Yield() {
 void Scheduler::Preempt() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_preempt"_stringref};
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state_;
@@ -1299,7 +1299,7 @@ void Scheduler::Preempt() {
 void Scheduler::Reschedule() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_reschedule"_stringref};
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state_;
@@ -1327,7 +1327,7 @@ void Scheduler::Migrate(Thread* thread) {
 
   SchedulerState* const state = &thread->scheduler_state_;
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
   cpu_mask_t cpus_to_reschedule_mask = 0;
 
   if (thread->state_ == THREAD_RUNNING) {
@@ -1368,7 +1368,7 @@ void Scheduler::Migrate(Thread* thread) {
 void Scheduler::MigrateUnpinnedThreads() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_migrate_unpinned"_stringref};
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   const cpu_num_t current_cpu = arch_curr_cpu_num();
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
@@ -1603,7 +1603,7 @@ void Scheduler::ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_r
 
   SchedulerState* const state = &thread->scheduler_state_;
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
   SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
                 ToString(thread->state_), state->base_priority_, state->effective_priority_,
                 state->inherited_priority_);
@@ -1636,7 +1636,7 @@ void Scheduler::ChangeDeadline(Thread* thread, const SchedDeadlineParams& params
 
   SchedulerState* const state = &thread->scheduler_state_;
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
   SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
                 ToString(thread->state_), state->base_priority_, state->effective_priority_,
                 state->inherited_priority_);
@@ -1669,7 +1669,7 @@ void Scheduler::InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_
 
   SchedulerState* const state = &thread->scheduler_state_;
 
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
   SCHED_LTRACEF("thread={%s, %s} base=%d effective=%d inherited=%d\n", thread->name_,
                 ToString(thread->state_), state->base_priority_, state->effective_priority_,
                 state->inherited_priority_);

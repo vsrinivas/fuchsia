@@ -176,7 +176,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
 
   {
     // we contended with someone else, will probably need to block
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
     // Check if the queued flag is currently set. The contested flag can only be changed
     // whilst the thread lock is held so we know we aren't racing with anyone here. This
@@ -256,7 +256,7 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
   // the state variable needs to exit in either path.
   __UNUSED spin_lock_saved_state_t irq_state;
   if constexpr (TLS == ThreadLockState::NotHeld) {
-    spin_lock_irqsave(&thread_lock, irq_state);
+    thread_lock.AcquireIrqSave(irq_state);
   }
 
   // Attempt to release a thread. If there are still waiters in the queue
@@ -318,7 +318,7 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
 
   // compile-time conditionally THREAD_UNLOCK
   if constexpr (TLS == ThreadLockState::NotHeld) {
-    spin_unlock_irqrestore(&thread_lock, irq_state);
+    thread_lock.ReleaseIrqRestore(irq_state);
   }
 }
 
@@ -334,7 +334,7 @@ void Mutex::ReleaseThreadLocked(const bool allow_reschedule) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread_lock.IsHeld());
 
   // This special version of release will pass through the allow_reschedule flag
   // and not acquire the thread_lock

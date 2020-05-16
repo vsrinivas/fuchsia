@@ -27,7 +27,7 @@ static constexpr uint64_t kMdscrSSMask = 1;
 static constexpr uint64_t kSSMaskSPSR = (1 << 21);
 
 zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -52,7 +52,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
 }
 
 zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_regs_t* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -77,7 +77,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
 }
 
 zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -100,7 +100,7 @@ zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_st
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -131,7 +131,7 @@ zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) 
 }
 
 zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* out) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -147,7 +147,7 @@ zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* ou
 }
 
 zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_regs* in) {
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -167,7 +167,7 @@ zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out)
   out->hw_bps_count = arm64_hw_breakpoint_count();
   out->hw_wps_count = arm64_hw_watchpoint_count();
 
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
@@ -214,7 +214,7 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 

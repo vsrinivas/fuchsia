@@ -39,7 +39,7 @@ static inline void spin_lock_init(spin_lock_t* lock) { *lock = SPIN_LOCK_INITIAL
 
 // which cpu currently holds the spin lock
 // returns UINT_MAX if not held
-static inline uint spin_lock_holder_cpu(spin_lock_t* lock) {
+static inline uint spin_lock_holder_cpu(const spin_lock_t* lock) {
   return arch_spin_lock_holder_cpu(lock);
 }
 
@@ -103,6 +103,8 @@ class TA_CAP("mutex") SpinLock {
   }
 
   void AssertHeld() TA_ASSERT() { DEBUG_ASSERT(IsHeld()); }
+
+  uint HolderCpu() const { return spin_lock_holder_cpu(&spinlock_); }
 
   spin_lock_t* GetInternal() TA_RET_CAP(spinlock_) { return &spinlock_; }
 

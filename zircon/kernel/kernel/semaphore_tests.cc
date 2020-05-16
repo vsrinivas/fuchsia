@@ -84,7 +84,7 @@ static int wait_sema_thread(void* arg) {
 }
 
 static bool thread_is_blocked(const Thread* t) {
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   return (t->state_ == THREAD_BLOCKED);
 }
 

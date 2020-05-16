@@ -147,14 +147,14 @@ class Barrier {
  public:
   constexpr Barrier(bool signaled = false) : signaled_{signaled} {}
   ~Barrier() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     ASSERT(queue_.IsEmpty());
   }
 
   void Signal(bool state) {
     bool expected = !state;
     if (signaled_.compare_exchange_strong(expected, state) && state) {
-      Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+      Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
       queue_.WakeAll(true, ZX_OK);
     }
   }
@@ -164,7 +164,7 @@ class Barrier {
       return;
     }
 
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     if (state()) {
       return;
     }
@@ -190,7 +190,7 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
   DISALLOW_COPY_ASSIGN_AND_MOVE(LockedOwnedWaitQueue);
 
   void ReleaseAllThreads() TA_EXCL(thread_lock) {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
     if (OwnedWaitQueue::WakeThreads(ktl::numeric_limits<uint32_t>::max())) {
       Scheduler::Reschedule();
@@ -198,7 +198,7 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
   }
 
   void ReleaseOneThread() TA_EXCL(thread_lock) {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
     auto hook = [](Thread*, void*) { return Hook::Action::SelectAndAssignOwner; };
 
@@ -309,7 +309,7 @@ class TestThread {
       return -2;
     }
 
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     return thread_->scheduler_state_.inherited_priority();
   }
 
@@ -318,7 +318,7 @@ class TestThread {
       return -2;
     }
 
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     return thread_->scheduler_state_.effective_priority();
   }
 
@@ -327,7 +327,7 @@ class TestThread {
       return -2;
     }
 
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     return thread_->scheduler_state_.base_priority();
   }
 
@@ -405,7 +405,7 @@ bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, 
   ASSERT_FALSE(static_cast<bool>(op_));
 
   op_ = [this, owned_wq, owner_thrd = owner ? owner->thread_ : nullptr, timeout]() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
     thread_->interruptable_ = true;
     owned_wq->BlockAndAssignOwner(timeout, owner_thrd, ResourceOwnership::Normal);
     thread_->interruptable_ = false;
@@ -507,7 +507,7 @@ bool TestThread::WaitFor() {
     if constexpr (condition == Condition::BLOCKED) {
       thread_state cur_state;
       {
-        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
         cur_state = thread_->state_;
       }
 
@@ -534,7 +534,7 @@ bool TestThread::WaitFor() {
 }
 
 void LockedOwnedWaitQueue::AssignOwner(TestThread* thread) {
-  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   if (OwnedWaitQueue::AssignOwner(thread ? thread->thread_ : nullptr)) {
     Scheduler::Reschedule();

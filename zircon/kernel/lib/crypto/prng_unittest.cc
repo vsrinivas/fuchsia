@@ -168,7 +168,7 @@ bool prng_blocks() {
   while (true) {
     {
       // The drawer thread should be blocked waiting for the prng to have enough entropy.
-      Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+      Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
       if (drawer->state_ == THREAD_BLOCKED) {
         break;
       }

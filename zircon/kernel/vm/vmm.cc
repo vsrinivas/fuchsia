@@ -102,7 +102,7 @@ static void vmm_set_active_aspace_internal(vmm_aspace_t* aspace, Lock lock) {
 }
 
 void vmm_set_active_aspace(vmm_aspace_t* aspace) {
-  vmm_set_active_aspace_internal<Guard<spin_lock_t, IrqSave>>(aspace, ThreadLock::Get());
+  vmm_set_active_aspace_internal<Guard<SpinLock, IrqSave>>(aspace, ThreadLock::Get());
 }
 
 void vmm_set_active_aspace_locked(vmm_aspace_t* aspace) {

@@ -204,7 +204,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
         " ints (hw  tmr tmr_cb)"
         " ipi (rs  gen)\n");
     for (uint i = 0; i < percpu::processor_count(); i++) {
-      Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<SpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
       // dont display time for inactive cpus
       if (!mp_is_cpu_active(i)) {
@@ -265,7 +265,7 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
   static RecurringCallback callback([]() {
     printf("----------------------------------------------------\n");
     for (uint i = 0; i < percpu::processor_count(); i++) {
-      Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<SpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
       if (!mp_is_cpu_active(i)) {
         continue;

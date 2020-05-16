@@ -485,7 +485,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
         // account for idle time if a cpu is currently idle
         {
-          Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+          Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
           zx_time_t idle_time = cpu->stats.idle_time;
           bool is_idle = mp_is_cpu_idle(i);
