@@ -54,9 +54,9 @@ executable("test_bin") {
 
   deps = [
     ":device",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 

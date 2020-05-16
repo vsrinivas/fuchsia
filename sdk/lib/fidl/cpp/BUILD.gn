@@ -232,8 +232,8 @@ source_set("test_sources") {
     ":union_migration_test_fidl",
     "//sdk/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   public_configs = [ "//sdk/config" ]
@@ -250,9 +250,9 @@ executable("conformance_test") {
     "//sdk/lib/fidl/cpp/test",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -268,9 +268,9 @@ executable("fidl_cpp_unittests") {
     "//sdk/lib/fidl/cpp/test",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

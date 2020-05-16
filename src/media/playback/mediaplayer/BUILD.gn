@@ -61,8 +61,8 @@ executable("mediaplayer_bin") {
     "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/render",
     "//src/media/playback/mediaplayer/util",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/third_party/uapp/dash:output_h",
@@ -91,8 +91,8 @@ executable("mediaplayer_test_util_bin") {
     "//src/lib/ui/base_view",
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -158,9 +158,9 @@ executable("mediaplayer_tests_bin") {
     "//src/lib/ui/base_view",
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]

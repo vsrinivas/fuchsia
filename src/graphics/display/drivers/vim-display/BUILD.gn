@@ -80,9 +80,9 @@ test("vim-display-test") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 

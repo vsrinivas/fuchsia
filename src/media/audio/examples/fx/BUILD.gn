@@ -35,10 +35,10 @@ executable("fx_bin") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/media/audio/lib/wav",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-utils",
   ]
 }

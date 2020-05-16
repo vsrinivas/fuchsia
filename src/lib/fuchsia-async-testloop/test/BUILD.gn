@@ -27,7 +27,7 @@ executable("fuchsia_async_testloop_c_test") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-testing",
   ]
   testonly = true

@@ -38,8 +38,8 @@ source_set("lib") {
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/trace-vthread",
   ]
@@ -64,8 +64,8 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

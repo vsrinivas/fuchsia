@@ -52,10 +52,10 @@ source_set("codec_impl_tests") {
     "//src/media/lib/codec_impl",
     "//src/media/lib/codec_impl/test_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -71,10 +71,10 @@ executable("decryptor_adapter_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

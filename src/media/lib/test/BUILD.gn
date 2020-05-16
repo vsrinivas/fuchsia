@@ -33,8 +33,8 @@ source_set("frame_sink") {
     "//src/lib/ui/base_view",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   deps = [
@@ -69,8 +69,8 @@ source_set("codec_client") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/media/lib/test:one_shot_event",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

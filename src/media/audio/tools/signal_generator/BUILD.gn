@@ -31,8 +31,8 @@ executable("sig_gen_bin") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/logging:cli",
     "//src/media/audio/lib/wav",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

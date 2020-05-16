@@ -60,10 +60,10 @@ driver_module("fake-asix-88179") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/inet6",
   ]
 }

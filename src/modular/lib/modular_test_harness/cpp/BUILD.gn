@@ -93,8 +93,8 @@ source_set("test_harness_impl") {
     "//src/lib/fsl",
     "//src/modular/lib/lifecycle/cpp",
     "//src/modular/lib/modular_config",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   deps = [

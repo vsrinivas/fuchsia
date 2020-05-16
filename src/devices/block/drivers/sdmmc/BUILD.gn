@@ -70,8 +70,6 @@ test("sdmmc-test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/pretty",
@@ -79,6 +77,8 @@ test("sdmmc-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }

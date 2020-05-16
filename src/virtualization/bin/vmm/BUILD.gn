@@ -25,7 +25,7 @@ source_set("guest_config") {
     "//sdk/lib/syslog/cpp",
     "//src/virtualization/bin/vmm/device",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace",
   ]
 }
@@ -144,8 +144,8 @@ executable("bin") {
   deps = [
     ":guest_config",
     ":lib",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 

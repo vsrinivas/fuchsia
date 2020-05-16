@@ -16,8 +16,8 @@ executable("test") {
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/boringssl:crypto",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]

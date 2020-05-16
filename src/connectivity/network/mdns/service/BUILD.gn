@@ -36,8 +36,8 @@ executable("bin") {
 
   deps = [
     ":source_set",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -131,8 +131,8 @@ test("mdns_test") {
   deps = [
     ":source_set",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -222,8 +222,8 @@ executable("mdns_netemul_test_agent") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -299,9 +299,9 @@ executable("mdns_netemul_multi_network_test_agent") {
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

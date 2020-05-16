@@ -128,8 +128,8 @@ source_set("common_vk") {
   if (is_fuchsia) {
     sources += [ "common/vk_surface_fuchsia.cc" ]
     deps += [
-      "//zircon/public/lib/async-loop",
-      "//zircon/public/lib/async-loop-default",
+      "//zircon/system/ulib/async-loop",
+      "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     ]
   } else {

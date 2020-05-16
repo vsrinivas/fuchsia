@@ -24,8 +24,8 @@ driver_module("virtio_socket") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

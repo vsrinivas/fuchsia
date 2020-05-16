@@ -93,10 +93,10 @@ static_library("lib") {
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//third_party/googletest:gtest_prod",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/ngunwind",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

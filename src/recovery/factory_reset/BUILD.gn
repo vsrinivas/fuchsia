@@ -47,8 +47,8 @@ executable("bin") {
     ":lib",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -58,8 +58,8 @@ executable("fdr") {
   public_deps = [
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -128,12 +128,12 @@ test("factory_reset_unittests") {
     ":lib",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",

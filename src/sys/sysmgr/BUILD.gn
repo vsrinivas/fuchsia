@@ -38,7 +38,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   if (auto_update_packages) {
@@ -55,8 +55,8 @@ executable("bin") {
     ":lib",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

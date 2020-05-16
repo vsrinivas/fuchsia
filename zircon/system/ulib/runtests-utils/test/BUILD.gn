@@ -33,13 +33,13 @@ test("service-proxy-dir") {
   sources = [ "service-proxy-dir.cc" ]
   deps = [
     ":fidl.test.echo_c",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/runtests-utils",

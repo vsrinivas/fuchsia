@@ -21,8 +21,8 @@ source_set("test_suite_lib") {
     ":measure_tape_for_case",
     "//sdk/fidl/fuchsia.test",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -30,8 +30,8 @@ executable("passing-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "passing_test_example.cc" ]
 }
@@ -40,8 +40,8 @@ executable("no-onfinished-after-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "no_onfinished_after_test_example.cc" ]
 }
@@ -50,8 +50,8 @@ executable("failing-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "failing_test_example.cc" ]
 }
@@ -60,7 +60,7 @@ executable("incomplete-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
   sources = [ "incomplete_test_example.cc" ]
 }
@@ -69,7 +69,7 @@ executable("invalid-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
   sources = [ "invalid_test_example.cc" ]
 }
@@ -78,8 +78,8 @@ executable("no-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "no_test_example.cc" ]
 }
@@ -88,8 +88,8 @@ executable("huge-test-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "huge_test_example.cc" ]
 }
@@ -98,8 +98,8 @@ executable("get-tests-hangs-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "get_tests_hangs_example.cc" ]
 }
@@ -108,8 +108,8 @@ executable("get-tests-closes-channel-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "get_tests_closes_channel_example.cc" ]
 }
@@ -118,8 +118,8 @@ executable("run-hangs-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "run_hangs_example.cc" ]
 }
@@ -128,8 +128,8 @@ executable("run-closes-channel-example") {
   deps = [
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   sources = [ "run_closes_channel_example.cc" ]
 }

@@ -1,5 +1,20 @@
 [
   {
+    "label": "//zircon/system/ulib/async-loop:async-loop",
+    "name": "async-loop",
+    "sdk": true
+  },
+  {
+    "label": "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "name": "async-loop-cpp",
+    "sdk": true
+  },
+  {
+    "label": "//zircon/system/ulib/async-loop:async-loop-default",
+    "name": "async-loop-default",
+    "sdk": true
+  },
+  {
     "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client",
     "name": "ramdevice-client",
     "sdk": false

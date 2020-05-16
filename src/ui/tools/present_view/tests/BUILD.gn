@@ -46,7 +46,7 @@ executable("present_view_unittests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/tools/present_view:lib",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
@@ -65,7 +65,7 @@ executable("present_view_apptests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 

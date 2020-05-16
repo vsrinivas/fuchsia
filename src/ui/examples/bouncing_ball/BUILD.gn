@@ -11,7 +11,7 @@ executable("bouncing_ball") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

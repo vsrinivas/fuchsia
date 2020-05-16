@@ -53,9 +53,9 @@ executable("main") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -105,8 +105,8 @@ source_set("data_provider") {
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils/cobalt",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   deps = [
@@ -210,7 +210,7 @@ source_set("main_service") {
     ":inspect_manager",
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   deps = [

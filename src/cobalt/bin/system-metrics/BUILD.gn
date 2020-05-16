@@ -42,9 +42,9 @@ source_set("system_metrics_daemon_lib") {
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//third_party/cobalt/src/registry:buckets_config",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]

@@ -92,9 +92,9 @@ source_set("fake_netstack") {
   deps = [
     "//sdk/fidl/fuchsia.netstack",
     "//src/lib/inet",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.netstack" ]
 }
@@ -161,8 +161,8 @@ source_set("lib") {
     "//src/virtualization/lib/vsh:client",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

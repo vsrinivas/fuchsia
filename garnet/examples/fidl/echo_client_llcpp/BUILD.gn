@@ -13,11 +13,11 @@ executable("bin") {
     "//garnet/examples/fidl/services:echo_llcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

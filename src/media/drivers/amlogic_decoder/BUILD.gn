@@ -155,14 +155,14 @@ if (target_cpu == "arm64") {
       "//src/lib/ddk",
       "//src/lib/ddktl",
       "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/async-loop-cpp",
-      "//zircon/public/lib/async-loop-default",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/tee-client-api",
       "//zircon/system/ulib/trace:trace-driver",
     ]
@@ -299,8 +299,8 @@ if (target_cpu == "arm64") {
     deps = [
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/sys/cpp",
-      "//zircon/public/lib/async-loop-cpp",
-      "//zircon/public/lib/async-loop-default",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
     ]
   }
 

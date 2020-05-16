@@ -22,8 +22,6 @@ executable("bin") {
     ":fidl.test.spaceship_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/ldmsg",
@@ -31,6 +29,8 @@ executable("bin") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-ldsvc:c",
     "//zircon/system/fidl/fuchsia-mem:c",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

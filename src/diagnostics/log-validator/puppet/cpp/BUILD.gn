@@ -17,9 +17,9 @@ executable("log_validator_cpp_puppet_bin") {
     "//src/diagnostics/lib/streams/cpp:streams",
     "//src/diagnostics/log-validator/fidl:validate",
     "//src/lib/fsl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

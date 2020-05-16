@@ -80,11 +80,11 @@ executable("sh_mirror_tests_bin") {
     "//src/developer/debug/ipc:client",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/memfs",
   ]
 

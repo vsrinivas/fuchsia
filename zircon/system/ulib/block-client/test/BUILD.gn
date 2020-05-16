@@ -42,12 +42,12 @@ test("block-client-unit") {
     "remote-block-device-test.cc",
   ]
   deps = [
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fidl-utils",

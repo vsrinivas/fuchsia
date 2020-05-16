@@ -33,8 +33,8 @@ executable("mpsc_queue_unittest_bin") {
     ":mpsc_queue",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

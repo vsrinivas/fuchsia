@@ -149,10 +149,10 @@ executable("pcie_test") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
     "//src/devices/testing/fake-bti",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

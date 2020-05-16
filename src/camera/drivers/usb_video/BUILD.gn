@@ -35,13 +35,13 @@ driver_module("usb_video_driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

@@ -75,8 +75,8 @@ source_set("lib") {
     "//third_party/cobalt/src/public:cobalt_service_interface",
     "//third_party/cobalt/src/system_data",
     "//third_party/cobalt/src/system_data:configuration_data",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

@@ -60,8 +60,8 @@ executable("cobalt_testapp") {
     "//third_party/cobalt/src/lib/util:clock",
     "//third_party/cobalt/src/lib/util:datetime_util",
     "//third_party/cobalt/src/registry:cobalt_registry_proto",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   configs += [ "//third_party/cobalt:cobalt_config" ]
@@ -87,7 +87,7 @@ executable("fake_timekeeper") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/sys/timekeeper:fuchsia.time",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

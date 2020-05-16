@@ -52,11 +52,11 @@ test("virtio-input-test") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/ui/input/lib/hid-input-report",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid-parser",
   ]
 

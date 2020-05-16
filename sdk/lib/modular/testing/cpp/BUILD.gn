@@ -31,8 +31,8 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

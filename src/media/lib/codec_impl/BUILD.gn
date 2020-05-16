@@ -44,10 +44,10 @@ source_set("codec_impl") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/thread-safe-deleter",
   ]

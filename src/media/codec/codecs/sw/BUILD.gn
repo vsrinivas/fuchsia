@@ -52,8 +52,8 @@ source_set("codec_adapter_sw") {
     "//src/lib/fxl",
     "//src/media/lib/codec_impl",
     "//src/media/lib/mpsc_queue",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
   ]
 }

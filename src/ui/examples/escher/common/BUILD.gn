@@ -61,8 +61,8 @@ source_set("demo_harness_fuchsia") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/vulkan/swapchain",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]

@@ -59,8 +59,8 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated/query",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/task-utils",
   ]
 }

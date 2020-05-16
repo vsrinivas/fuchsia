@@ -61,7 +61,7 @@ source_set("unittests") {
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
     "//src/modular/lib/pseudo_dir:pseudo_dir_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

@@ -16,7 +16,7 @@ source_set("src") {
     "mac:mac_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 

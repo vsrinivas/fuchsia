@@ -72,8 +72,8 @@ executable("main") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports/info",
     "//src/lib/timekeeper:system",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

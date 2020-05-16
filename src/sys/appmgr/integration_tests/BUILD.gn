@@ -56,8 +56,8 @@ executable("realm_tests") {
     "//src/sys/appmgr:lib",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
   # TODO(46530): Fix the leaks and remove this.
@@ -102,8 +102,8 @@ executable("echo_server") {
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

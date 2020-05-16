@@ -25,8 +25,8 @@ executable_package("sessionmgr") {
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/app_driver/cpp:app_driver",
     "//src/modular/lib/modular_config",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }
@@ -108,8 +108,8 @@ executable_package("dev_session_shell") {
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/fidl:view_host",
     "//src/modular/lib/testing:test_driver",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

@@ -16,9 +16,9 @@ source_set("client") {
     "//sdk/fidl/fuchsia.hardware.network",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
@@ -35,9 +35,9 @@ executable("cpp-test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 

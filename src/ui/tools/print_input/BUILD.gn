@@ -10,7 +10,7 @@ executable("print_input") {
     "//src/lib/fxl",
     "//src/lib/ui/input",
     "//src/ui/lib/input_report_reader",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

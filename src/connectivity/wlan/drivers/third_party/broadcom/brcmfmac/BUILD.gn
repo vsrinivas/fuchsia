@@ -181,10 +181,10 @@ source_set("core") {
     "//src/devices/lib/broadcom",
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/system/public",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   friend = [ "test/*" ]
 }
