@@ -12,11 +12,10 @@
 
 class NoiseSource : public GeneratedSource {
  public:
-  zx_status_t Init(float freq, float amp, float duration_secs, uint32_t frame_rate,
-                   uint32_t channels, uint32_t active,
-                   audio_sample_format_t sample_format) override {
-    auto status = GeneratedSource::Init(freq, amp, duration_secs, frame_rate, channels, active,
-                                        sample_format);
+  zx_status_t Init(float freq, float amp, Duration duration, uint32_t frame_rate, uint32_t channels,
+                   uint32_t active, audio_sample_format_t sample_format) override {
+    auto status =
+        GeneratedSource::Init(freq, amp, duration, frame_rate, channels, active, sample_format);
     pos_scalar_ = 0;
     auto seed = zx::clock::get_monotonic().get();
     srand48(seed);

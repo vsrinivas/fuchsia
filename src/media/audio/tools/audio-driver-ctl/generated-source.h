@@ -10,17 +10,21 @@
 #include <limits>
 
 #include <audio-utils/audio-stream.h>
+#include <audio-utils/duration.h>
 
 class GeneratedSource : public audio::utils::AudioSource {
  public:
   static constexpr uint32_t kAllChannelsActive = std::numeric_limits<uint32_t>::max();
 
-  virtual zx_status_t Init(float freq, float amp, float duration_secs, uint32_t frame_rate,
+  using Duration = audio::utils::Duration;
+  using LoopingDoneCallback = audio::utils::LoopingDoneCallback;
+
+  virtual zx_status_t Init(float freq, float amp, Duration duration, uint32_t frame_rate,
                            uint32_t channels, uint32_t active, audio_sample_format_t sample_format);
 
   zx_status_t GetFormat(Format* out_format) final;
   zx_status_t GetFrames(void* buffer, uint32_t buf_space, uint32_t* out_packed) final;
-  bool finished() const final { return (frames_produced_ >= frames_to_produce_); }
+  bool finished() const final;
 
  protected:
   virtual double GenerateValue(double pos) = 0;
@@ -46,6 +50,7 @@ class GeneratedSource : public audio::utils::AudioSource {
   uint32_t frame_size_;
   audio_sample_format_t sample_format_;
   GetFramesThunk get_frames_thunk_ = nullptr;
+  Duration duration_ = {};
 };
 
 #endif  // SRC_MEDIA_AUDIO_TOOLS_AUDIO_DRIVER_CTL_GENERATED_SOURCE_H_

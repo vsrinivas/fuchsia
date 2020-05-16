@@ -10,7 +10,7 @@
 
 #include <fbl/algorithm.h>
 
-zx_status_t GeneratedSource::Init(float freq, float amp, float duration_secs, uint32_t frame_rate,
+zx_status_t GeneratedSource::Init(float freq, float amp, Duration duration, uint32_t frame_rate,
                                   uint32_t channels, uint32_t active,
                                   audio_sample_format_t sample_format) {
   if (!frame_rate)
@@ -19,13 +19,18 @@ zx_status_t GeneratedSource::Init(float freq, float amp, float duration_secs, ui
   if (!channels)
     return ZX_ERR_INVALID_ARGS;
 
+  duration_ = duration;
   frame_rate_ = frame_rate;
   channels_ = channels;
   active_ = active;
 
-  frames_to_produce_ = (duration_secs == 0.0)
-                           ? std::numeric_limits<uint64_t>::max()
-                           : static_cast<uint64_t>(duration_secs * static_cast<float>(frame_rate_));
+  const bool loop = std::holds_alternative<LoopingDoneCallback>(duration);
+  if (loop) {
+    frames_to_produce_ = std::numeric_limits<uint64_t>::max();
+  } else {
+    frames_to_produce_ =
+        static_cast<uint64_t>(std::get<float>(duration) * static_cast<float>(frame_rate_));
+  }
   frames_produced_ = 0;
   amp_ = fbl::clamp<double>(amp, 0.0, 1.0);
 
@@ -141,6 +146,7 @@ zx_status_t GeneratedSource::GetFramesInternal(void* buffer, uint32_t buf_space,
     return ZX_ERR_BAD_STATE;
 
   ZX_DEBUG_ASSERT(frames_produced_ < frames_to_produce_);
+
   uint64_t todo =
       fbl::min<uint64_t>(frames_to_produce_ - frames_produced_, buf_space / frame_size_);
   double pos = pos_scalar_ * static_cast<double>(frames_produced_);
@@ -164,4 +170,13 @@ zx_status_t GeneratedSource::GetFramesInternal(void* buffer, uint32_t buf_space,
   frames_produced_ += todo;
 
   return ZX_OK;
+}
+
+bool GeneratedSource::finished() const {
+  const bool loop = std::holds_alternative<LoopingDoneCallback>(duration_);
+  if (loop) {
+    return !std::get<LoopingDoneCallback>(duration_)();
+  } else {
+    return frames_produced_ >= frames_to_produce_;
+  }
 }

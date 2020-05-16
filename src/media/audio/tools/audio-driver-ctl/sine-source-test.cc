@@ -13,7 +13,8 @@ namespace {
 TEST(SineSourceTest, SingleWave) {
   const int kNumSamples = 100;
   SineSource source;
-  ASSERT_OK(source.Init(/*freq=*/1.0, /*amp=*/1.0, /*duration_secs=*/1.0,
+  audio::utils::Duration duration = 1.0f;  // Seconds.
+  ASSERT_OK(source.Init(/*freq=*/1.0, /*amp=*/1.0, /*duration=*/duration,
                         /*frame_rate=*/kNumSamples,
                         /*channels=*/1, /*active=*/SineSource::kAllChannelsActive,
                         /*sample_format=*/AUDIO_SAMPLE_FORMAT_32BIT));

@@ -31,7 +31,7 @@ static constexpr float DEFAULT_PLUG_MONITOR_DURATION = 10.0f;
 static constexpr float MIN_PLUG_MONITOR_DURATION = 0.5f;
 static constexpr float MIN_PLAY_AMPLITUDE = 0.1f;
 static constexpr float MAX_PLAY_AMPLITUDE = 1.0f;
-static constexpr float DEFAULT_PLAY_DURATION = 1.5f;
+static constexpr float DEFAULT_PLAY_DURATION = std::numeric_limits<float>::max();
 static constexpr float DEFAULT_PLAY_AMPLITUDE = MAX_PLAY_AMPLITUDE;
 static constexpr float MIN_PLAY_DURATION = 0.001f;
 static constexpr float DEFAULT_TONE_FREQ = 440.0f;
@@ -102,22 +102,22 @@ void usage(const char* prog_name) {
   printf("tone   : Params : [<freq>] [<duration>] [<amplitude>]\n"
          "         Play a sinusoidal tone of the specified frequency for the\n"
          "         specified duration.  Frequency is clamped on the range\n"
-         "         [%.1f, %.1f] Hz.  Duration is given in seconds and floored\n"
-         "         at %d mSec.  Default is %.1f Hz for %.1f seconds\n"
+         "         [%.1f, %.1f] Hz.  Default is %.1f Hz.\n"
+         "         Duration is given in seconds and floored at %d mSec.\n"
+         "         If duration is unspecified plays until a key is pressed.\n"
          "         Output will be scaled by specified amplitude if provided.\n"
          "         Amplitude will be clamped between %.1f and %.1f\n",
           MIN_TONE_FREQ,
           MAX_TONE_FREQ,
-          static_cast<int>(MIN_PLAY_DURATION * 1000),
           DEFAULT_TONE_FREQ,
-          DEFAULT_PLAY_DURATION,
+          static_cast<int>(MIN_PLAY_DURATION * 1000),
           MIN_PLAY_AMPLITUDE,
           DEFAULT_PLAY_AMPLITUDE);
   printf("noise  : Params : [<duration>]\n"
          "         Play pseudo-white noise for the specified duration.  Duration is\n"
-         "         given in seconds and floored at %d mSec.  Default is %.1f seconds\n",
-          static_cast<int>(MIN_PLAY_DURATION * 1000),
-          DEFAULT_PLAY_DURATION);
+         "         given in seconds and floored at %d mSec.\n"
+         "         If duration is unspecified plays until a key is pressed.\n",
+          static_cast<int>(MIN_PLAY_DURATION * 1000));
   printf("play   : Params : <file>\n");
   printf("         Play the specified WAV file on the selected output.\n");
   printf("record : Params : <file> [duration]\n"
@@ -534,8 +534,9 @@ int main(int argc, const char** argv) {
   fd_waiter.Wait([&pressed](zx_status_t, uint32_t) { pressed.store(true); }, 0, POLLIN);
   auto loop_done = [&pressed]() -> bool { return !pressed.load(); };
 
-  audio::utils::AudioDeviceStream::Duration duration_config = {};
-  if (duration == std::numeric_limits<float>::max()) {
+  audio::utils::Duration duration_config = {};
+  const bool interactive = duration == std::numeric_limits<float>::max();
+  if (interactive) {
     duration_config = loop_done;
   } else {
     duration_config = duration;
@@ -563,15 +564,19 @@ int main(int argc, const char** argv) {
       }
 
       SineSource sine_source;
-      res = sine_source.Init(tone_freq, amplitude, duration, frame_rate, channels, active,
+      res = sine_source.Init(tone_freq, amplitude, duration_config, frame_rate, channels, active,
                              sample_format);
       if (res != ZX_OK) {
         printf("Failed to initialize sine wav generator (res %d)\n", res);
         return res;
       }
-
-      printf("Playing %.2f Hz tone for %.2f seconds at %.2f amplitude\n", tone_freq, duration,
-             amplitude);
+      if (interactive) {
+        printf("Playing %.2f Hz tone at %.2f amplitude until a key is pressed\n", tone_freq,
+               amplitude);
+      } else {
+        printf("Playing %.2f Hz tone for %.2f seconds at %.2f amplitude\n", tone_freq,
+               std::get<float>(duration_config), amplitude);
+      }
       return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
     }
 
@@ -582,14 +587,17 @@ int main(int argc, const char** argv) {
       }
 
       NoiseSource noise_source;
-      res =
-          noise_source.Init(tone_freq, 1.0, duration, frame_rate, channels, active, sample_format);
+      res = noise_source.Init(tone_freq, 1.0, duration_config, frame_rate, channels, active,
+                              sample_format);
       if (res != ZX_OK) {
         printf("Failed to initialize white noise generator (res %d)\n", res);
         return res;
       }
-
-      printf("Playing white noise for %.2f seconds\n", duration);
+      if (interactive) {
+        printf("Playing white noise until a key is pressed\n");
+      } else {
+        printf("Playing white noise for %.2f seconds\n", std::get<float>(duration_config));
+      }
       return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(noise_source);
     }
 

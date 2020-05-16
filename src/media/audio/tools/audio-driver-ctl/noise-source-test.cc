@@ -12,7 +12,8 @@ TEST(NoiseSourceTest, RandomContent) {
   constexpr int kNumFrames = 100;
   constexpr int kNumChannels = 4;
   NoiseSource source;
-  ASSERT_OK(source.Init(/*freq=*/1.0, /*amp=*/1.0, /*duration_secs=*/1.0,
+  audio::utils::Duration duration = 1.0f;  // Seconds.
+  ASSERT_OK(source.Init(/*freq=*/1.0, /*amp=*/1.0, /*duration=*/duration,
                         /*frame_rate=*/kNumFrames,
                         /*channels=*/kNumChannels, /*active=*/GeneratedSource::kAllChannelsActive,
                         /*sample_format=*/AUDIO_SAMPLE_FORMAT_32BIT));
