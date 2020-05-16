@@ -445,6 +445,15 @@ impl<'a> TestNetwork<'a> {
         })?;
         Ok(ep)
     }
+
+    /// Returns a fake endpoint.
+    pub fn create_fake_endpoint(&self) -> Result<TestFakeEndpoint<'a>> {
+        let (endpoint, server) =
+            fidl::endpoints::create_proxy::<netemul_network::FakeEndpointMarker>()
+                .context("failed to create launcher proxy")?;
+        let () = self.network.create_fake_endpoint(server)?;
+        return Ok(TestFakeEndpoint { endpoint, _sandbox: self.sandbox });
+    }
 }
 
 /// A virtual network endpoint backed by Netemul.
@@ -457,6 +466,21 @@ pub struct TestEndpoint<'a> {
 
 impl<'a> std::ops::Deref for TestEndpoint<'a> {
     type Target = netemul_network::EndpointProxy;
+
+    fn deref(&self) -> &Self::Target {
+        &self.endpoint
+    }
+}
+
+/// A virtual fake network endpoint backed by Netemul.
+#[must_use]
+pub struct TestFakeEndpoint<'a> {
+    endpoint: netemul_network::FakeEndpointProxy,
+    _sandbox: &'a TestSandbox,
+}
+
+impl<'a> std::ops::Deref for TestFakeEndpoint<'a> {
+    type Target = netemul_network::FakeEndpointProxy;
 
     fn deref(&self) -> &Self::Target {
         &self.endpoint
@@ -552,6 +576,21 @@ impl<'a> TestInterface<'a> {
                 )
             },
         )
+    }
+
+    /// Gets the interface's info.
+    pub async fn get_info(&self) -> Result<net_stack::InterfaceInfo> {
+        self.stack.get_interface_info(self.id).await.squash_result().with_context(|| {
+            format!(
+                "stack.get_interface_info({}) for endpoint {} failed",
+                self.id, self.endpoint.name
+            )
+        })
+    }
+
+    /// Gets the interface's addresses.
+    pub async fn get_addrs(&self) -> Result<Vec<net_stack::InterfaceAddress>> {
+        Ok(self.get_info().await?.properties.addresses)
     }
 
     /// Starts DHCP on this interface.
