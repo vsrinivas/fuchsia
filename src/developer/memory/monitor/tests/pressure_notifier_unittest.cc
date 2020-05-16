@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/memory/monitor/pressure_notifier.h"
+
 #include <lib/async/default.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <gtest/gtest.h>
 
-#include "src/developer/memory/monitor/pressure.h"
-
 namespace monitor {
 namespace test {
 
 namespace fmp = fuchsia::memorypressure;
 
-class PressureFidlUnitTest : public gtest::TestLoopFixture {
+class PressureNotifierUnitTest : public gtest::TestLoopFixture {
  public:
-  PressureFidlUnitTest()
+  PressureNotifierUnitTest()
       : context_provider_(),
         context_(context_provider_.TakeContext()),
-        pressure_(false, context_.get(), async_get_default_dispatcher()) {}
+        notifier_(false, context_.get(), async_get_default_dispatcher()) {}
 
  protected:
   fmp::ProviderPtr Provider() {
@@ -29,23 +29,20 @@ class PressureFidlUnitTest : public gtest::TestLoopFixture {
     return provider;
   }
 
-  void InitialLevel() {
-    ASSERT_EQ(pressure_.InitMemPressureEvents(), ZX_OK);
-    pressure_.WaitOnLevelChange();
-  }
+  void InitialLevel() { notifier_.observer_.WaitOnLevelChange(); }
 
-  int GetWatcherCount() { return pressure_.watchers_.size(); }
+  int GetWatcherCount() { return notifier_.watchers_.size(); }
 
   void ReleaseWatchers() {
-    for (auto &w : pressure_.watchers_) {
-      pressure_.ReleaseWatcher(w->proxy.get());
+    for (auto &w : notifier_.watchers_) {
+      notifier_.ReleaseWatcher(w->proxy.get());
     }
   }
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<sys::ComponentContext> context_;
-  Pressure pressure_;
+  PressureNotifier notifier_;
 };
 
 class PressureWatcherForTest : public fmp::Watcher {
@@ -80,7 +77,7 @@ class PressureWatcherForTest : public fmp::Watcher {
   OnLevelChangedCallback stashed_cb_;
 };
 
-TEST_F(PressureFidlUnitTest, Watcher) {
+TEST_F(PressureNotifierUnitTest, Watcher) {
   // Scoped so that the Watcher gets deleted. We can then verify that the Provider has no watchers
   // remaining.
   {
@@ -102,7 +99,7 @@ TEST_F(PressureFidlUnitTest, Watcher) {
   ASSERT_EQ(GetWatcherCount(), 0);
 }
 
-TEST_F(PressureFidlUnitTest, NoResponse) {
+TEST_F(PressureNotifierUnitTest, NoResponse) {
   PressureWatcherForTest watcher(false);
 
   watcher.Register(Provider());
@@ -116,7 +113,7 @@ TEST_F(PressureFidlUnitTest, NoResponse) {
   ASSERT_EQ(watcher.NumChanges(), 1);
 }
 
-TEST_F(PressureFidlUnitTest, DelayedResponse) {
+TEST_F(PressureNotifierUnitTest, DelayedResponse) {
   PressureWatcherForTest watcher(false);
 
   watcher.Register(Provider());
@@ -135,7 +132,7 @@ TEST_F(PressureFidlUnitTest, DelayedResponse) {
   ASSERT_EQ(watcher.NumChanges(), 2);
 }
 
-TEST_F(PressureFidlUnitTest, MultipleWatchers) {
+TEST_F(PressureNotifierUnitTest, MultipleWatchers) {
   // Scoped so that the Watcher gets deleted. We can then verify that the Provider has no watchers
   // remaining.
   {
@@ -161,7 +158,7 @@ TEST_F(PressureFidlUnitTest, MultipleWatchers) {
   ASSERT_EQ(GetWatcherCount(), 0);
 }
 
-TEST_F(PressureFidlUnitTest, MultipleWatchersNoResponse) {
+TEST_F(PressureNotifierUnitTest, MultipleWatchersNoResponse) {
   PressureWatcherForTest watcher1(false);
   PressureWatcherForTest watcher2(false);
 
@@ -179,7 +176,7 @@ TEST_F(PressureFidlUnitTest, MultipleWatchersNoResponse) {
   ASSERT_EQ(watcher2.NumChanges(), 1);
 }
 
-TEST_F(PressureFidlUnitTest, MultipleWatchersDelayedResponse) {
+TEST_F(PressureNotifierUnitTest, MultipleWatchersDelayedResponse) {
   PressureWatcherForTest watcher1(false);
   PressureWatcherForTest watcher2(false);
 
@@ -204,7 +201,7 @@ TEST_F(PressureFidlUnitTest, MultipleWatchersDelayedResponse) {
   ASSERT_EQ(watcher2.NumChanges(), 2);
 }
 
-TEST_F(PressureFidlUnitTest, MultipleWatchersMixedResponse) {
+TEST_F(PressureNotifierUnitTest, MultipleWatchersMixedResponse) {
   // Set up watcher1 to not respond immediately, and watcher2 to respond immediately.
   PressureWatcherForTest watcher1(false);
   PressureWatcherForTest watcher2(true);
@@ -232,7 +229,7 @@ TEST_F(PressureFidlUnitTest, MultipleWatchersMixedResponse) {
   ASSERT_EQ(watcher2.NumChanges(), 2);
 }
 
-TEST_F(PressureFidlUnitTest, ReleaseWatcherNoPendingCallback) {
+TEST_F(PressureNotifierUnitTest, ReleaseWatcherNoPendingCallback) {
   PressureWatcherForTest watcher(true);
 
   watcher.Register(Provider());
@@ -252,7 +249,7 @@ TEST_F(PressureFidlUnitTest, ReleaseWatcherNoPendingCallback) {
   ASSERT_EQ(GetWatcherCount(), 0);
 }
 
-TEST_F(PressureFidlUnitTest, ReleaseWatcherPendingCallback) {
+TEST_F(PressureNotifierUnitTest, ReleaseWatcherPendingCallback) {
   PressureWatcherForTest watcher(false);
 
   watcher.Register(Provider());

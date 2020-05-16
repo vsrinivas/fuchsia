@@ -21,8 +21,8 @@ executable("memory_monitor_unittests") {
     "high_water_unittest.cc",
     "metrics_unittest.cc",
     "monitor_fidl_unittest.cc",
-    "pressure_fidl_unittest.cc",
-    "pressure_unittest.cc",
+    "pressure_notifier_unittest.cc",
+    "pressure_observer_unittest.cc",
   ]
 
   deps = [

@@ -189,8 +189,8 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     }
   }
 
-  pressure_ =
-      std::make_unique<Pressure>(watch_memory_pressure, component_context_.get(), dispatcher);
+  pressure_notifier_ = std::make_unique<PressureNotifier>(watch_memory_pressure,
+                                                          component_context_.get(), dispatcher);
 
   SampleAndPost();
 }

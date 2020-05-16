@@ -20,7 +20,7 @@
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/metrics.h"
-#include "src/developer/memory/monitor/pressure.h"
+#include "src/developer/memory/monitor/pressure_notifier.h"
 #include "src/lib/fxl/command_line.h"
 
 namespace monitor {
@@ -68,7 +68,7 @@ class Monitor : public fuchsia::memory::Monitor {
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
   std::unique_ptr<Metrics> metrics_;
-  std::unique_ptr<Pressure> pressure_;
+  std::unique_ptr<PressureNotifier> pressure_notifier_;
   fuchsia::hardware::ram::metrics::DevicePtr ram_device_;
   uint64_t pending_bandwidth_measurements_ = 0;
 

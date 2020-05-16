@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/memory/monitor/pressure.h"
+#include "src/developer/memory/monitor/pressure_observer.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/types.h>
@@ -14,21 +14,19 @@
 namespace monitor {
 namespace test {
 
-class PressureUnitTest : public gtest::TestLoopFixture {
+class PressureObserverUnitTest : public gtest::TestLoopFixture {
  public:
-  PressureUnitTest() : pressure_(false) {}
+  PressureObserverUnitTest() : observer_(false) {}
 
  protected:
   void RetrieveAndVerifyEvents() {
-    ASSERT_EQ(pressure_.InitMemPressureEvents(), ZX_OK);
-
     std::array<zx_koid_t, Level::kNumLevels> koids;
     for (size_t i = 0; i < Level::kNumLevels; i++) {
       // Events are valid.
-      ASSERT_TRUE(pressure_.events_[i].is_valid());
+      ASSERT_TRUE(observer_.events_[i].is_valid());
 
       zx_info_handle_basic_t info;
-      ASSERT_EQ(zx_object_get_info(pressure_.events_[i].get(), ZX_INFO_HANDLE_BASIC, &info,
+      ASSERT_EQ(zx_object_get_info(observer_.events_[i].get(), ZX_INFO_HANDLE_BASIC, &info,
                                    sizeof(info), nullptr, nullptr),
                 ZX_OK);
       koids[i] = info.koid;
@@ -45,33 +43,31 @@ class PressureUnitTest : public gtest::TestLoopFixture {
   }
 
   void VerifyInitialLevel() {
-    ASSERT_EQ(pressure_.InitMemPressureEvents(), ZX_OK);
     // The first wait returns immediately, signaling the current pressure level.
-    pressure_.WaitOnLevelChange();
+    observer_.WaitOnLevelChange();
 
     // Memory pressure level is valid.
-    ASSERT_LT(pressure_.level_, Level::kNumLevels);
+    ASSERT_LT(observer_.level_, Level::kNumLevels);
   }
 
   void VerifyEventsWaitedOn() {
-    ASSERT_EQ(pressure_.InitMemPressureEvents(), ZX_OK);
-    pressure_.WaitOnLevelChange();
+    observer_.WaitOnLevelChange();
 
     // Events we will wait on exclude the one currently asserted.
     for (size_t i = 0; i < Level::kNumLevels - 1; i++) {
-      ASSERT_NE(pressure_.wait_items_[i].handle, pressure_.events_[pressure_.level_].get());
+      ASSERT_NE(observer_.wait_items_[i].handle, observer_.events_[observer_.level_].get());
     }
   }
 
  private:
-  Pressure pressure_;
+  PressureObserver observer_;
 };
 
-TEST_F(PressureUnitTest, Events) { RetrieveAndVerifyEvents(); }
+TEST_F(PressureObserverUnitTest, Events) { RetrieveAndVerifyEvents(); }
 
-TEST_F(PressureUnitTest, InitialLevel) { VerifyInitialLevel(); }
+TEST_F(PressureObserverUnitTest, InitialLevel) { VerifyInitialLevel(); }
 
-TEST_F(PressureUnitTest, WaitOnEvents) { VerifyEventsWaitedOn(); }
+TEST_F(PressureObserverUnitTest, WaitOnEvents) { VerifyEventsWaitedOn(); }
 
 }  // namespace test
 }  // namespace monitor
