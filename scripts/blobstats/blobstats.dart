@@ -387,8 +387,6 @@ class BlobStats {
       });
     }
 
-    await outputDir.create(recursive: true);
-
     var sink = new File(pathJoin(outputDir.path, "data.js")).openWrite();
     sink.write("var tree_data=");
     sink.write(json.encode(rootTree));
@@ -550,6 +548,7 @@ Future main(List<String> args) async {
   stats.printBlobs(40);
   stats.printPackages();
   stats.printOverallSavings();
+  await outputDir.create(recursive: true);
   await stats.csvBlobs();
   await stats.csvPackages();
   await stats.packagesToChromiumBinarySizeTree();
