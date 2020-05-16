@@ -142,8 +142,14 @@ static ui32 next_free_vpg(FTLN ftl) {
   if (ftl->free_vpn == (ui32)-1) {
     ui32 b;
 
-    // Find free block with highest wear count. Error if none are free.
-    b = FtlnHiWcFreeBlk(ftl);
+    if (ftl->num_free_blks > FTL_FREE_THRESHOLD_FOR_LOW_WEAR_ALLOCATION) {
+      // Find free block with the lowest wear count.
+      b = FtlnLoWcFreeBlk(ftl);
+    } else {
+      // Find free block with highest wear count.
+      b = FtlnHiWcFreeBlk(ftl);
+    }
+    // Error if none are free.
     if (b == (ui32)-1)
       return b;
 

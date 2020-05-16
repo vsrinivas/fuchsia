@@ -45,6 +45,14 @@
 // adversely affect performance, whilst keeping the range of wear closer.
 #define FTL_LOW_WEAR_BOOST_LAG  190
 
+// If there are more than this number of blocks free, allocate volume pages
+// from free blocks that have the lowest wear rather than the highest wear.
+// Recycling will only occur when there are not many free blocks, at which
+// point we will allocate volume pages from highest wear. This is what we want
+// because we're trying to move cold data from blocks with low wear to blocks
+// with high wear.
+#define FTL_FREE_THRESHOLD_FOR_LOW_WEAR_ALLOCATION 40
+
 // Default block read limits to avoid read-disturb errors.
 #define MLC_NAND_RC_LIMIT 100000
 #define SLC_NAND_RC_LIMIT 1000000
