@@ -82,7 +82,7 @@ group("tests") {
     "//zircon/system/ulib/zxio/test:zxio-package",
     "//zircon/system/ulib/zxtest/test:zxtest-package",
     "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-package",
-    "//zircon/system/utest/backtrace-request:backtrace-request-integration-package",
+    "//zircon/system/ulib/backtrace-request/test:backtrace-request-integration-package",
     "//zircon/system/utest/blobfs-bench:blobfs-bench-package",
     "//zircon/system/utest/channel-fatal:channel-fatal-package",
     "//zircon/system/ulib/chromeos-disk-setup/test:chromeos-disk-setup-package",

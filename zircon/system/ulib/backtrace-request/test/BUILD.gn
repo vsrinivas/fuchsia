@@ -42,3 +42,29 @@ unittest_package("backtrace-request-package") {
     },
   ]
 }
+
+# Integration test for requesting a backtrace.
+#
+# Related unittests exist alongside the backtrace and crashsvc code, but
+# this verifies that the pieces are working together correctly.
+test("backtrace-request-integration") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "backtrace-request-integration-test.cc" ]
+  deps = [
+    "//zircon/public/lib/backtrace-request",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("backtrace-request-integration-package") {
+  package_name = "backtrace-request-integration"
+  deps = [ ":backtrace-request-integration" ]
+
+  tests = [
+    {
+      name = "backtrace-request-integration"
+      dest = "backtrace-request-integration-test"
+    },
+  ]
+}
