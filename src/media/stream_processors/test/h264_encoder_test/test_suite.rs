@@ -9,6 +9,7 @@ use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
 use std::io::Write;
 use std::rc::Rc;
+use stream_processor_decoder_factory::*;
 use stream_processor_encoder_factory::*;
 use stream_processor_test::*;
 
@@ -71,6 +72,45 @@ impl OutputValidator for H264NalValidator {
     }
 }
 
+pub struct H264DecoderValidator {
+    num_frames: usize,
+}
+
+#[async_trait(?Send)]
+impl OutputValidator for H264DecoderValidator {
+    async fn validate(&self, output: &[Output]) -> Result<()> {
+        let decoder_factory = Rc::new(DecoderFactory);
+        let packets: Vec<&OutputPacket> = output_packets(output).collect();
+        let mut stream = H264Stream::from(Vec::new());
+        for p in packets {
+            stream.append(&mut p.data.clone());
+        }
+
+        let stream = Rc::new(stream);
+        let decoder = decoder_factory
+            .connect_to_stream_processor(
+                stream.as_ref(),
+                /* format_details_version_ordinal */ 1,
+            )
+            .await?;
+        let mut stream_runner = StreamRunner::new(decoder);
+        let stream_options = None;
+        let decoded_output =
+            stream_runner.run_stream(stream, stream_options.unwrap_or_default()).await?;
+
+        let decoded_frames: Vec<&OutputPacket> = output_packets(&decoded_output).collect();
+        if decoded_frames.len() != self.num_frames {
+            return Err(format_err!(
+                "Wrong number of frames received {} {}",
+                decoded_frames.len(),
+                self.num_frames
+            ));
+        }
+
+        Ok(())
+    }
+}
+
 pub struct H264EncoderTestCase {
     pub num_frames: usize,
     pub input_format: sysmem::ImageFormat2,
@@ -87,6 +127,8 @@ impl H264EncoderTestCase {
             expected_nals: self.expected_nals.clone(),
             output_file: self.output_file,
         });
+        let decode_validator = Rc::new(H264DecoderValidator { num_frames: self.num_frames });
+
         let eos_validator = Rc::new(TerminatesWithValidator {
             expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
         });
@@ -94,13 +136,13 @@ impl H264EncoderTestCase {
         let case = TestCase {
             name: "Terminates with EOS test",
             stream,
-            validators: vec![nal_validator, eos_validator],
+            validators: vec![nal_validator, decode_validator, eos_validator],
             stream_options: None,
         };
 
         let spec = TestSpec {
             cases: vec![case],
-            relation: CaseRelation::Concurrent,
+            relation: CaseRelation::Serial,
             stream_processor_factory: Rc::new(EncoderFactory),
         };
 
@@ -112,7 +154,7 @@ impl H264EncoderTestCase {
             self.input_format,
             self.num_frames,
             self.settings.clone(),
-            /*frames_per_second=*/ 60,
+            /*frames_per_second=*/ 30,
             /*timebase=*/ Some(zx::Duration::from_seconds(1).into_nanos() as u64),
         )?))
     }

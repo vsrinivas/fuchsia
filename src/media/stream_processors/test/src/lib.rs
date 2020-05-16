@@ -18,6 +18,7 @@ pub use crate::buffer_set::*;
 pub use crate::elementary_stream::*;
 pub use crate::output_validator::*;
 pub use crate::stream::*;
+pub use crate::stream_runner::*;
 pub use crate::test_spec::*;
 use anyhow::Error;
 use thiserror::Error;

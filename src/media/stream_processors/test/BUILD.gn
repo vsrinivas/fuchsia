@@ -254,6 +254,7 @@ rustc_test("h264_encoder_test_bin") {
   source_root = "h264_encoder_test/lib.rs"
 
   deps = [
+    ":stream_processor_decoder_factory_lib",
     ":stream_processor_encoder_factory_lib",
     ":stream_processor_test_lib",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
