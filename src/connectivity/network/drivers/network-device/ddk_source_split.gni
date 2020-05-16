@@ -25,8 +25,8 @@ template("ddk_source_split") {
                            ])
     defines += [ "NETDEV_DDK" ]
     public_deps += [
-      "//zircon/public/lib/ddk",
-      "//zircon/public/lib/ddktl",
+      "//zircon/system/ulib/ddk",
+      "//zircon/system/ulib/ddktl",
     ]
   }
 
@@ -38,6 +38,6 @@ template("ddk_source_split") {
                              "public_deps",
                              "public_configs",
                            ])
-    public_deps += [ "//zircon/public/lib/syslog" ]
+    public_deps += [ "//zircon/system/ulib/syslog" ]
   }
 }

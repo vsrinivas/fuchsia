@@ -22,7 +22,7 @@ template("magma_pci_entry") {
       deps = []
     }
 
-    deps += [ "//zircon/public/lib/ddk" ]
+    deps += [ "//zircon/system/ulib/ddk" ]
 
     if (test_entry) {
       deps += [
@@ -56,7 +56,7 @@ template("magma_pdev_entry") {
       deps = []
     }
 
-    deps += [ "//zircon/public/lib/ddk" ]
+    deps += [ "//zircon/system/ulib/ddk" ]
 
     if (test_entry) {
       deps += [

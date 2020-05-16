@@ -54,7 +54,7 @@ source_set("bus_mapper") {
   deps = [
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:trace",
-    "$zircon_build_root/public/lib/ddk",
+    "$zircon_build_root/system/ulib/ddk",
     "..:logger",
     "..:object",
   ]
@@ -255,8 +255,8 @@ source_set("logger") {
 
   deps = [
     ":handle",
-    "$zircon_build_root/public/lib/syslog-static",
     "$zircon_build_root/public/lib/zx",
+    "$zircon_build_root/system/ulib/syslog:syslog-static",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
   ]
 }
@@ -266,7 +266,7 @@ source_set("logger_for_system_drivers") {
 
   sources = [ "zircon_platform_logger_ddk.cc" ]
 
-  deps = [ "$zircon_build_root/public/lib/ddk" ]
+  deps = [ "$zircon_build_root/system/ulib/ddk" ]
 }
 
 source_set("object") {

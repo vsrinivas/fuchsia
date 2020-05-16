@@ -1,73 +1,8 @@
 [
   {
-    "label": "//src/lib/ddk:ddk",
-    "name": "ddk",
-    "sdk": false
-  },
-  {
-    "label": "//src/lib/ddk:ddk-device-headers",
-    "name": "ddk-device-headers",
-    "sdk": false
-  },
-  {
-    "label": "//src/lib/ddktl:ddktl",
-    "name": "ddktl",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/devmgr-integration-test:devmgr-integration-test",
-    "name": "devmgr-integration-test",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/fdio-caller:fdio-caller",
-    "name": "fdio-caller",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/fidl-utils:fidl-utils",
-    "name": "fidl-utils",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/fs:fs",
-    "name": "fs",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/fs-management:fs-management",
-    "name": "fs-management",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/inspect:inspect",
-    "name": "inspect",
-    "sdk": true
-  },
-  {
-    "label": "//src/devices/lib/mmio:mmio",
-    "name": "mmio",
-    "sdk": false
-  },
-  {
-    "label": "//src/devices/pci/lib/pci:pci",
-    "name": "pci",
-    "sdk": false
-  },
-  {
     "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client",
     "name": "ramdevice-client",
     "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
-    "name": "ramdevice-client-static",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/syslog:syslog",
-    "name": "syslog",
-    "sdk": true
   },
   {
     "label": "//zircon/system/ulib/syslog:syslog-static",
@@ -75,28 +10,8 @@
     "sdk": false
   },
   {
-    "label": "//zircon/system/ulib/tee-client-api:tee-client-api",
-    "name": "tee-client-api",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
-    "name": "tee-client-api-headers",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/tee-client-api:tee-client-api-static",
-    "name": "tee-client-api-static",
-    "sdk": false
-  },
-  {
     "label": "//zircon/system/ulib/trace-engine:trace-engine",
     "name": "trace-engine",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/zbi-bootfs:zbi-bootfs",
-    "name": "zbi-bootfs",
     "sdk": false
   },
   {
