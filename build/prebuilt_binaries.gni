@@ -54,7 +54,7 @@ template("prebuilt_binaries") {
     if (defined(invoker.debug_archive)) {
       args += [
         "-debug-archive",
-        rebase_path(invoker.debug_archive, root_build_dir),
+        rebase_path(invoker.debug_archive),
       ]
     }
 

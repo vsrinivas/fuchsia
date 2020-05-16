@@ -43,6 +43,10 @@ var (
 	tasks          int
 )
 
+var (
+	errNoBuildIDDir = fmt.Errorf("Could not find a .build-id directory")
+)
+
 func init() {
 	colors = color.ColorAuto
 	level = logger.WarningLevel
@@ -84,7 +88,7 @@ var buildIDFileNoExtRE = regexp.MustCompile("^([0-9a-f][0-9a-f])/([0-9a-f]+)$")
 func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool {
 	for _, info := range contents {
 		// Some special files are allowed and expected.
-		if info.Name() == "LICENSE" {
+		if info.Name() == "LICENSE" || info.Name()[0] == '.' {
 			continue
 		}
 		logger.Tracef(ctx, "checking %s", info.Name())
@@ -134,39 +138,62 @@ func trimExt(p string) string {
 // getStartDir allows us to be flexible in what we accept for debugArchive.
 // This lets us use both a directory and a file for the time being allowing
 // for an easy soft transistion as needed.
-func getStartDir() string {
+func getStartDir() (string, error) {
 	if debugArchive == "" {
-		return buildIDDir
+		return buildIDDir, nil
 	}
-	info, err := os.Stat(debugArchive)
-	if err != nil {
-		return filepath.Dir(debugArchive)
+	// If the debug archive was passed, just return the first ancestor
+	// directory that exists. This allows flexibility in transitioning away
+	// from specifying the debug archive altogether. The common two cases are
+	// (1) the debug archive still exists and we will unpack the contents in
+	// the parent directory, or
+	// (2) the debug archive and some unnecessary nesting no longer exist, and
+	// some ancestor directory is where the unpacked contents now await
+	// processing.
+	dir := filepath.Dir(debugArchive)
+	for dir != "" && dir != "/" && dir != "." {
+		info, err := os.Stat(dir)
+		if err == nil {
+			if !info.IsDir() {
+				return "", fmt.Errorf("ancestor directory %s of %s is actually a file", dir, debugArchive)
+			}
+			return dir, nil
+		} else if !os.IsNotExist(err) {
+			return "", err
+		}
+		dir = filepath.Dir(dir)
 	}
-	if info.IsDir() {
-		return debugArchive
-	} else {
-		return filepath.Dir(debugArchive)
-	}
+	return "", fmt.Errorf("no ancestor directory of %s exists", debugArchive)
 }
 
-// findBuildIDDir allows us to find a build id directory associated with the
-// debugArchive location. When transitioning from a .tar.bz2 file to a .build-id
-// directory the debugArchive will remain the same and this allows the code
-// to still work.
+// In the case where a debug archive is specified but is nonexistent, as will
+// happen during the transition away from specifying the parameter altogether,
+// this means that a raw .build-id dir is now being supplied. To allow
+// flexibility around the relative path between the debug archive specification
+// and this directory, we telescoped out in getStartDir to degugArchive's
+// first existent ancestor directory; here we now telescope back in and look for
+// the first .build-id subdirectory.
 func findBuildIDDir(ctx context.Context, startDir string) (string, error) {
-	if startDir == "" || startDir == "/" {
-		return "", fmt.Errorf("Could not find a .build-id directory")
-	}
-	logger.Tracef(ctx, "checking %s", startDir)
+	logger.Tracef(ctx, "determining if %s is a .build-id directory", startDir)
 	infos, err := ioutil.ReadDir(startDir)
 	if err != nil {
 		return "", err
 	}
-	logger.Tracef(ctx, "inspecting %s", startDir)
 	if isBuildIDDir(ctx, startDir, infos) {
 		return startDir, nil
 	}
-	return findBuildIDDir(ctx, filepath.Dir(startDir))
+	for _, info := range infos {
+		if !info.IsDir() {
+			continue
+		}
+		dir, err := findBuildIDDir(ctx, filepath.Join(startDir, info.Name()))
+		if err == nil {
+			return dir, nil
+		} else if err != errNoBuildIDDir {
+			return "", err
+		}
+	}
+	return "", errNoBuildIDDir
 }
 
 // runDumpSyms starts a dump_syms command using `br` that converts an ELF file
@@ -361,7 +388,10 @@ func main() {
 			log.Fatalf("%v", err)
 		}
 	} else {
-		startDir := getStartDir()
+		startDir, err := getStartDir()
+		if err != nil {
+			log.Fatalf("could not find the start dir: %v", err)
+		}
 		log.Tracef("found %s as start directory", startDir)
 		dir, err := findBuildIDDir(ctx, startDir)
 		if err != nil {
