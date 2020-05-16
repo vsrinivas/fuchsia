@@ -260,6 +260,11 @@ impl Facade for GattClientFacade {
                 let id = parse_u64_identifier(args.clone())?;
                 gattc_read_char_by_id_async(self, id).await
             }
+            "GattcReadCharacteristicByType" => {
+                let uuid = parse_arg!(args, as_str, "uuid")?;
+                let result = self.gattc_read_char_by_type(uuid.to_string()).await?;
+                Ok(to_value(result)?)
+            }
             "GattcReadLongCharacteristicById" => {
                 let id = parse_u64_identifier(args.clone())?;
                 let offset_as_u64 = parse_offset(args.clone())?;

@@ -20,9 +20,13 @@ use futures::task::Waker;
 use parking_lot::RwLock;
 use slab::Slab;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::bluetooth::types::BleScanResponse;
+use fidl_fuchsia_bluetooth;
+use fuchsia_bluetooth::types::Uuid;
+
+use crate::bluetooth::types::{BleScanResponse, SerializableReadByTypeResult};
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use crate::common_utils::error::Sl4fError;
 
@@ -218,6 +222,44 @@ impl GattClientFacade {
                 fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             None => Ok(value),
+        }
+    }
+
+    pub async fn gattc_read_char_by_type(
+        &self,
+        raw_uuid: String,
+    ) -> Result<Vec<SerializableReadByTypeResult>, Error> {
+        let tag = "GattClientFacade::gattc_read_char_by_type";
+
+        let uuid = match Uuid::from_str(&raw_uuid) {
+            Ok(uuid) => uuid,
+            Err(e) => {
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("Unable to convert to Uuid: {:?}", e)
+                );
+            }
+        };
+
+        let mut fidl_uuid = fidl_fuchsia_bluetooth::Uuid::from(uuid);
+
+        match &self.inner.read().active_proxy {
+            Some(proxy) => match proxy.read_by_type(&mut fidl_uuid).await {
+                Ok(value) => {
+                    let responses = value.unwrap();
+                    let mut read_by_type_response_list = Vec::new();
+                    for response in responses {
+                        read_by_type_response_list
+                            .push(SerializableReadByTypeResult::new(&response));
+                    }
+                    Ok(read_by_type_response_list)
+                }
+                Err(e) => {
+                    let err_msg = format!("Failed to read characteristic by type: {}", e);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         }
     }
 

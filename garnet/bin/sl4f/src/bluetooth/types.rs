@@ -6,7 +6,8 @@ use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
 use fidl_fuchsia_bluetooth_control::RemoteDevice;
 use fidl_fuchsia_bluetooth_gatt::{
-    AttributePermissions, Characteristic, Descriptor, SecurityRequirements, ServiceInfo,
+    AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
+    ServiceInfo,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -200,5 +201,17 @@ impl From<&RemoteDevice> for CustomRemoteDevice {
             bonded: device.bonded,
             service_uuids: device.service_uuids.clone(),
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SerializableReadByTypeResult {
+    pub id: Option<u64>,
+    pub value: Option<Vec<u8>>,
+}
+
+impl SerializableReadByTypeResult {
+    pub fn new(result: &ReadByTypeResult) -> Self {
+        SerializableReadByTypeResult { id: result.id.clone(), value: result.value.clone() }
     }
 }
