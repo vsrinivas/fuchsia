@@ -41,6 +41,7 @@ test("zxio") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/sync",

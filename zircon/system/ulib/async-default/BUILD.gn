@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia)
+
+zx_library("async-default") {
+  sdk = "shared"
+  sdk_publishable = true
+  sdk_headers = [ "lib/async/default.h" ]
+  shared = true
+  sources = [ "default.c" ]
+  public_deps = [
+    # <lib/async/default.h> has #include <lib/async/dispatcher.h>.
+    "$zx/system/ulib/async:headers",
+  ]
+}
