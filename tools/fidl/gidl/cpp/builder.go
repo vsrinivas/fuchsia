@@ -21,8 +21,7 @@ func newCppValueBuilder() cppValueBuilder {
 type cppValueBuilder struct {
 	strings.Builder
 
-	varidx  int
-	lastVar string
+	varidx int
 }
 
 func (b *cppValueBuilder) newVar() string {
@@ -30,70 +29,60 @@ func (b *cppValueBuilder) newVar() string {
 	return fmt.Sprintf("v%d", b.varidx)
 }
 
-func (b *cppValueBuilder) OnBool(value bool) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("bool %s = %t;\n", newVar, value))
-	b.lastVar = newVar
-}
-
-func (b *cppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
-	newVar := b.newVar()
-	if value == -9223372036854775808 {
-		// There are no negative integer literals in C++, so need to use arithmatic to create the minimum value.
-		b.Builder.WriteString(fmt.Sprintf("%s %s = -9223372036854775807ll - 1;\n", primitiveTypeName(typ), newVar))
-	} else {
-		b.Builder.WriteString(fmt.Sprintf("%s %s = %dll;\n", primitiveTypeName(typ), newVar, value))
+func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) string {
+	switch value := value.(type) {
+	case bool:
+		return fmt.Sprintf("%t", value)
+	case int64:
+		intString := fmt.Sprintf("%dll", value)
+		if value == -9223372036854775808 {
+			intString = "-9223372036854775807ll - 1"
+		}
+		switch decl := decl.(type) {
+		case *gidlmixer.IntegerDecl:
+			return intString
+		case *gidlmixer.BitsDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), intString)
+		case *gidlmixer.EnumDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), intString)
+		default:
+			panic(fmt.Sprintf("int64 value has non-integer decl: %T", decl))
+		}
+	case uint64:
+		switch decl := decl.(type) {
+		case *gidlmixer.IntegerDecl:
+			return fmt.Sprintf("%dull", value)
+		case *gidlmixer.BitsDecl:
+			return fmt.Sprintf("%s(%dull)", typeName(decl), value)
+		case *gidlmixer.EnumDecl:
+			return fmt.Sprintf("%s(%dull)", typeName(decl), value)
+		default:
+			panic(fmt.Sprintf("uint64 value has non-integer decl: %T", decl))
+		}
+	case float64:
+		return fmt.Sprintf("%g", value)
+	case string:
+		// TODO(fxb/39686) Consider Go/C++ escape sequence differences
+		return strconv.Quote(value)
+	case gidlir.Record:
+		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
+	case []interface{}:
+		switch decl := decl.(type) {
+		case *gidlmixer.ArrayDecl:
+			return b.visitArray(value, decl)
+		case *gidlmixer.VectorDecl:
+			return b.visitVector(value, decl)
+		default:
+			panic("unknown list decl type")
+		}
+	case nil:
+		return fmt.Sprintf("%s()", typeName(decl))
+	default:
+		panic(fmt.Sprintf("%T not implemented", value))
 	}
-	b.lastVar = newVar
 }
 
-func (b *cppValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %dull;\n", primitiveTypeName(typ), newVar, value))
-	b.lastVar = newVar
-}
-
-func (b *cppValueBuilder) OnFloat64(value float64, typ fidlir.PrimitiveSubtype) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %g;\n", primitiveTypeName(typ), newVar, value))
-	b.lastVar = newVar
-}
-
-func (b *cppValueBuilder) OnString(value string, decl *gidlmixer.StringDecl) {
-	newVar := b.newVar()
-	// TODO(fxb/39686) Consider Go/C++ escape sequence differences
-	b.Builder.WriteString(fmt.Sprintf(
-		"%s %s(%s);\n", typeName(decl), newVar, strconv.Quote(value)))
-	b.lastVar = newVar
-}
-
-func (b *cppValueBuilder) OnBits(value interface{}, decl *gidlmixer.BitsDecl) {
-	gidlmixer.Visit(b, value, &decl.Underlying)
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%s);\n", newVar, typeName(decl), b.lastVar))
-	b.lastVar = newVar
-}
-
-func (b *cppValueBuilder) OnEnum(value interface{}, decl *gidlmixer.EnumDecl) {
-	gidlmixer.Visit(b, value, &decl.Underlying)
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%s);\n", newVar, typeName(decl), b.lastVar))
-	b.lastVar = newVar
-}
-
-func (b *cppValueBuilder) OnStruct(value gidlir.Record, decl *gidlmixer.StructDecl) {
-	b.onRecord(value, decl)
-}
-
-func (b *cppValueBuilder) OnTable(value gidlir.Record, decl *gidlmixer.TableDecl) {
-	b.onRecord(value, decl)
-}
-
-func (b *cppValueBuilder) OnUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) {
-	b.onRecord(value, decl)
-}
-
-func (b *cppValueBuilder) onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) {
+func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	containerVar := b.newVar()
 	nullable := decl.IsNullable()
 	if nullable {
@@ -113,8 +102,7 @@ func (b *cppValueBuilder) onRecord(value gidlir.Record, decl gidlmixer.RecordDec
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
-		gidlmixer.Visit(b, field.Value, fieldDecl)
-		fieldVar := b.lastVar
+		fieldVar := b.visit(field.Value, fieldDecl)
 
 		accessor := "."
 		if nullable {
@@ -124,50 +112,40 @@ func (b *cppValueBuilder) onRecord(value gidlir.Record, decl gidlmixer.RecordDec
 		switch decl.(type) {
 		case *gidlmixer.StructDecl:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%s%s = std::move(%s);\n", containerVar, accessor, field.Key.Name, fieldVar))
+				"%s%s%s = %s;\n", containerVar, accessor, field.Key.Name, fieldVar))
 		default:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, field.Key.Name, fieldVar))
+				"%s%sset_%s(%s);\n", containerVar, accessor, field.Key.Name, fieldVar))
 		}
 	}
-	b.lastVar = containerVar
+	return fmt.Sprintf("std::move(%s)", containerVar)
 }
 
-func (b *cppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
+func (b *cppValueBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayDecl) string {
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {
-		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
+		elements = append(elements, fmt.Sprintf("%s", b.visit(item, elemDecl)))
 	}
-	arrayVar := b.newVar()
 	// Populate the array using aggregate initialization.
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
-		arrayVar, typeName(decl), strings.Join(elements, ", ")))
-	b.lastVar = arrayVar
+	return fmt.Sprintf("%s{%s}",
+		typeName(decl), strings.Join(elements, ", "))
 }
 
-func (b *cppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.VectorDecl) {
+func (b *cppValueBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl) string {
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {
-		gidlmixer.Visit(b, item, elemDecl)
-		elements = append(elements, b.lastVar)
+		elements = append(elements, b.visit(item, elemDecl))
 	}
 	vectorVar := b.newVar()
 	// Populate the vector using push_back. We can't use an initializer list
 	// because they always copy, which breaks if the element is a unique_ptr.
 	b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), vectorVar))
 	for _, element := range elements {
-		b.Builder.WriteString(fmt.Sprintf("%s.push_back(std::move(%s));\n", vectorVar, element))
+		b.Builder.WriteString(fmt.Sprintf("%s.push_back(%s);\n", vectorVar, element))
 	}
-	b.lastVar = vectorVar
-}
-
-func (b *cppValueBuilder) OnNull(decl gidlmixer.Declaration) {
-	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), newVar))
-	b.lastVar = newVar
+	return fmt.Sprintf("std::move(%s)", vectorVar)
 }
 
 func typeName(decl gidlmixer.Declaration) string {

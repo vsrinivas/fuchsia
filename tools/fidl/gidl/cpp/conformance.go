@@ -28,7 +28,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	const auto expected = {{ .Bytes }};
 	{{/* Must use a variable because macros don't understand commas in template args. */}}
 	const auto result =
-		fidl::test::util::ValueToBytes<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
+		fidl::test::util::ValueToBytes<{{ .ValueType }}, {{ .EncoderType }}>(
 			{{ .ValueVar }}, expected);
 	EXPECT_TRUE(result);
 }
@@ -39,7 +39,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	EXPECT_TRUE(fidl::Equals(
-		fidl::test::util::DecodedBytes<decltype({{ .ValueVar }})>(bytes),
+		fidl::test::util::DecodedBytes<{{ .ValueType }}>(bytes),
 		{{ .ValueVar }}));
 }
 {{ end }}
@@ -47,7 +47,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 {{ range .EncodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	{{ .ValueBuild }}
-	fidl::test::util::CheckEncodeFailure<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
+	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}, {{ .EncoderType }}>(
 		{{ .ValueVar }}, {{ .ErrorCode }});
 }
 {{ end }}
@@ -68,15 +68,15 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, EncoderType, ValueBuild, ValueVar, Bytes string
+	Name, EncoderType, ValueType, ValueBuild, ValueVar, Bytes string
 }
 
 type decodeSuccessCase struct {
-	Name, ValueBuild, ValueVar, Bytes string
+	Name, ValueBuild, ValueType, ValueVar, Bytes string
 }
 
 type encodeFailureCase struct {
-	Name, EncoderType, ValueBuild, ValueVar, ErrorCode string
+	Name, EncoderType, ValueType, ValueBuild, ValueVar, ErrorCode string
 }
 
 type decodeFailureCase struct {
@@ -122,9 +122,8 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 			continue
 		}
 		valueBuilder := newCppValueBuilder()
-		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
+		valueVar := valueBuilder.visit(encodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -134,6 +133,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				EncoderType: encoderType(encoding.WireFormat),
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
+				ValueType:   declName(decl),
 				Bytes:       bytesBuilder(encoding.Bytes),
 			})
 		}
@@ -152,9 +152,8 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 			continue
 		}
 		valueBuilder := newCppValueBuilder()
-		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
+		valueVar := valueBuilder.visit(decodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -163,6 +162,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
 				ValueBuild: valueBuild,
 				ValueVar:   valueVar,
+				ValueType:  declName(decl),
 				Bytes: bytesBuilder(append(
 					transactionHeaderBytes(encoding.WireFormat),
 					encoding.Bytes...)),
@@ -184,9 +184,8 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		}
 
 		valueBuilder := newCppValueBuilder()
-		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
+		valueVar := valueBuilder.visit(encodeFailure.Value, decl)
 		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
 		errorCode := cppErrorCode(encodeFailure.Err)
 		for _, wireFormat := range encodeFailure.WireFormats {
 			if !wireFormatSupported(wireFormat) {
@@ -197,6 +196,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				EncoderType: encoderType(wireFormat),
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
+				ValueType:   declName(decl),
 				ErrorCode:   errorCode,
 			})
 		}

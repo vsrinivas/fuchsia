@@ -27,7 +27,8 @@ namespace {
 {{ range .BuilderBenchmarks }}
 {{ .Type }} Build{{ .Name }}() {
   {{ .ValueBuild }}
-  return {{ .ValueVar }};
+  auto result = {{ .ValueVar }};
+  return result;
 }
 bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
   return hlcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }});
@@ -114,9 +115,8 @@ func builderBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gid
 			continue
 		}
 		valueBuilder := newCppValueBuilder()
-		gidlmixer.Visit(&valueBuilder, gidlEncodeBenchmark.Value, decl)
+		valueVar := valueBuilder.visit(gidlEncodeBenchmark.Value, decl)
 		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
 		builderBenchmarks = append(builderBenchmarks, builderBenchmark{
 			Path:       gidlEncodeBenchmark.Name,
 			Name:       benchmarkName(gidlEncodeBenchmark.Name),
