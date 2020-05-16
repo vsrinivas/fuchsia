@@ -40,14 +40,12 @@ std::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
   return res;
 }
 
-zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
+zx_status_t AudioInput::Record(AudioSink& sink, Duration duration) {
   AudioStream::Format fmt = {
       .frame_rate = frame_rate_,
       .channels = static_cast<uint16_t>(channel_cnt_),
       .sample_format = sample_format_,
   };
-
-  duration_seconds = fbl::clamp(duration_seconds, MIN_DURATION, MAX_DURATION);
 
   zx_status_t res = sink.SetFormat(fmt);
   if (res != ZX_OK) {
@@ -70,7 +68,18 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     printf("Failed to establish ring buffer (%u frames, res %d)\n", ring_frames, res);
     return res;
   }
-  printf("Recording for %.1f seconds\n", duration_seconds);
+
+  long frames_expected = 0;
+  int64_t bytes_expected = 0;
+  const bool loop = std::holds_alternative<LoopingDoneCallback>(duration);
+  if (loop) {
+    printf("Recording until a key is pressed\n");
+  } else {
+    std::get<float>(duration) = fbl::clamp(std::get<float>(duration), MIN_DURATION, MAX_DURATION);
+    printf("Recording for %.1f seconds\n", std::get<float>(duration));
+    frames_expected = std::lround(frame_rate_ * std::get<float>(duration));
+    bytes_expected = frame_sz_ * frames_expected;
+  }
 
   res = StartRingBuffer();
   if (res != ZX_OK) {
@@ -82,8 +91,6 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
   uint32_t wr_ptr = 0;    // Estimated write ptr in the ring buffer.
   uint32_t consumed = 0;  // Total bytes consumed.
   uint32_t produced = 0;  // Estimated total bytes produced.
-  long frames_expected = std::lround(frame_rate_ * duration_seconds);
-  int64_t bytes_expected = frame_sz_ * frames_expected;
 
   // A transformation from time to bytes captured safe to read. We wait until we have received about
   // 4 FIFOs before start reading to make sure we are behind the HW. We start the transformation at
@@ -93,7 +100,9 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
                                                    {frame_rate_ * frame_sz_, zx::sec(1).get()}};
   auto next_wake_time = zx::time(mono_to_safe_read_bytes.ApplyInverse(2 * fifo_depth_));
 
-  while (consumed < bytes_expected) {
+  // Repeat until looping is done or until consumed >= bytes_expected.
+  while ((loop && std::get<LoopingDoneCallback>(duration)()) ||
+         (!loop && consumed < bytes_expected)) {
     // We specify a floor to avoid not having a reasonable deadline per loop.
     constexpr auto kFloorWait = zx::msec(10);
     auto floor_wake_time = zx::clock::get_monotonic() + kFloorWait;
@@ -103,7 +112,11 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     zx::nanosleep(next_wake_time);
     auto safe_read = mono_to_safe_read_bytes.Apply(zx::clock::get_monotonic().get());
 
-    consumed = std::min(safe_read, bytes_expected);
+    if (loop) {
+      consumed = static_cast<uint32_t>(safe_read) - (static_cast<uint32_t>(safe_read) % frame_sz_);
+    } else {
+      consumed = std::min(safe_read, bytes_expected);
+    }
     uint32_t increment = consumed - produced;
 
     // We want to process about 2 FIFOs worth of samples in each loop.

@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/types.h>
 
+#include <limits>
 #include <optional>
 
 #include <audio-proto-utils/format-utils.h>
@@ -19,6 +23,7 @@
 #include "generated-source.h"
 #include "noise-source.h"
 #include "sine-source.h"
+#include "src/lib/fsl/tasks/fd_waiter.h"
 #include "wav-sink.h"
 #include "wav-source.h"
 
@@ -32,7 +37,7 @@ static constexpr float MIN_PLAY_DURATION = 0.001f;
 static constexpr float DEFAULT_TONE_FREQ = 440.0f;
 static constexpr float MIN_TONE_FREQ = 15.0f;
 static constexpr float MAX_TONE_FREQ = 20000.0f;
-static constexpr float DEFAULT_RECORD_DURATION = 30.0f;
+static constexpr float DEFAULT_RECORD_DURATION = std::numeric_limits<float>::max();
 static constexpr uint32_t DEFAULT_FRAME_RATE = 48000;
 static constexpr uint32_t DEFAULT_BITS_PER_SAMPLE = 16;
 static constexpr uint32_t DEFAULT_CHANNELS = 2;
@@ -117,8 +122,8 @@ void usage(const char* prog_name) {
   printf("         Play the specified WAV file on the selected output.\n");
   printf("record : Params : <file> [duration]\n"
          "         Record to the specified WAV file from the selected input.\n"
-         "         Duration defaults to %.1f seconds if unspecified.\n",
-         DEFAULT_RECORD_DURATION);
+         "         Duration is specified in seconds.\n"
+         "         If duration is unspecified records until a key is pressed.\n");
   // clang-format on
 }
 
@@ -272,7 +277,7 @@ int main(int argc, const char** argv) {
     const char* name;
     const char* tag;
     uint32_t* val;
-  } UINT_OPTIONS[] = {
+  } OPTIONS[] = {
       // clang-format off
     { .name = "-d", .tag = "device ID",   .val = &dev_id },
     { .name = "-r", .tag = "frame rate",  .val = &frame_rate },
@@ -305,7 +310,7 @@ int main(int argc, const char** argv) {
   while (arg < argc) {
     // Check to see if this is an integer option
     bool parsed_option = false;
-    for (const auto& o : UINT_OPTIONS) {
+    for (const auto& o : OPTIONS) {
       if (!strcmp(o.name, argv[arg])) {
         // Looks like this is an integer argument we care about.
         // Attempt to parse it.
@@ -521,6 +526,21 @@ int main(int argc, const char** argv) {
   if (res != ZX_OK)
     return res;
 
+  async::Loop async_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async_loop.StartThread("audio CLI wait for key");
+  fsl::FDWaiter fd_waiter(async_loop.dispatcher());
+
+  std::atomic<bool> pressed(false);
+  fd_waiter.Wait([&pressed](zx_status_t, uint32_t) { pressed.store(true); }, 0, POLLIN);
+  auto loop_done = [&pressed]() -> bool { return !pressed.load(); };
+
+  audio::utils::AudioDeviceStream::Duration duration_config = {};
+  if (duration == std::numeric_limits<float>::max()) {
+    duration_config = loop_done;
+  } else {
+    duration_config = duration;
+  }
+
   // Execute the chosen command.
   switch (cmd) {
     case Command::INFO:
@@ -605,7 +625,8 @@ int main(int argc, const char** argv) {
       if (res != ZX_OK)
         return res;
 
-      return static_cast<audio::utils::AudioInput*>(stream.get())->Record(wav_sink, duration);
+      return static_cast<audio::utils::AudioInput*>(stream.get())
+          ->Record(wav_sink, duration_config);
     }
 
     default:

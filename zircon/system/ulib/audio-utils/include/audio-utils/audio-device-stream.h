@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include <variant>
 
 #include <fbl/vector.h>
 
@@ -30,7 +31,8 @@ class AudioDeviceStream {
   using PlugMonitorCallback = std::function<bool(bool plug_state, zx_time_t plug_time)>;
   using SupportedFormatsCallback =
       std::function<void(const audio_fidl::SupportedFormats& supported_formats)>;
-
+  using LoopingDoneCallback = std::function<bool()>;
+  using Duration = std::variant<float, LoopingDoneCallback>;
   zx_status_t Open();
   zx_status_t GetSupportedFormats(const SupportedFormatsCallback& cb) const;
   zx_status_t SetMute(bool mute);

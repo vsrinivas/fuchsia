@@ -20,7 +20,7 @@ class AudioInput : public AudioDeviceStream {
  public:
   static std::unique_ptr<AudioInput> Create(uint32_t dev_id);
   static std::unique_ptr<AudioInput> Create(const char* dev_path);
-  zx_status_t Record(AudioSink& sink, float duration_seconds);
+  zx_status_t Record(AudioSink& sink, Duration duration);
 
  private:
   friend class std::default_delete<AudioInput>;
