@@ -47,7 +47,7 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
 
   // Keep the resource alive until all CommandBuffers up to the specified
   // sequence number have finished executing.
-  void KeepAlive(uint64_t seq_num) {
+  void KeepAlive(uint64_t seq_num) const {
     sequence_number_ = seq_num > sequence_number_ ? seq_num : sequence_number_;
   }
 
@@ -60,7 +60,7 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
 
   Escher* const escher_;
   const uint64_t uid_;
-  uint64_t sequence_number_ = 0;
+  mutable uint64_t sequence_number_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Resource);
 };

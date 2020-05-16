@@ -7,24 +7,18 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace escher {
 
 namespace {
 static const float kRadiansToDegrees = 180.0 / glm::pi<float>();
-
-// Helper function for ensuring that two vectors are equal while taking into
-// account floating point discrepancies via an epsilon term.
-bool Equal(const glm::vec2 a, const glm::vec2 b) {
-  return glm::all(glm::lessThanEqual(glm::abs(a - b), glm::vec2(0.001f)));
-}
 }  // namespace
 
-bool RectangleRenderable::IsValid(const RectangleRenderable& renderable,
-                                  bool ignore_texture_for_testing) {
+bool RectangleRenderable::IsValid(const RectangleRenderable& renderable) {
   // All renderables need a valid texture.
-  if (!ignore_texture_for_testing && !renderable.texture) {
+  if (!renderable.texture) {
     FX_LOGS(WARNING) << "Renderable texture is null.";
     return false;
   }
@@ -60,7 +54,8 @@ bool RectangleRenderable::IsValid(const RectangleRenderable& renderable,
 }
 
 const RectangleRenderable RectangleRenderable::Create(const glm::mat3& matrix,
-                                                      const ClockwiseUVs& uvs, Texture* texture,
+                                                      const ClockwiseUVs& uvs,
+                                                      const Texture* texture,
                                                       const glm::vec4& color, bool is_transparent) {
   // The local-space of the renderable has its top-left origin point at (0,0) and grows
   // downward and to the right, so that the bottom-right point is at (1,-1). We apply
@@ -92,7 +87,7 @@ const RectangleRenderable RectangleRenderable::Create(const glm::mat3& matrix,
   ClockwiseUVs reordered_uvs;
   for (uint32_t i = 0; i < 4; i++) {
     for (uint32_t j = 0; j < 4; j++) {
-      if (Equal(reordered_verts[i], verts[j])) {
+      if (glm::all(glm::epsilonEqual(reordered_verts[i], verts[j], 0.001f))) {
         reordered_uvs[i] = uvs[j];
         break;
       }
@@ -107,7 +102,7 @@ const RectangleRenderable RectangleRenderable::Create(const glm::mat3& matrix,
       .color = color,
       .is_transparent = is_transparent,
   };
-  FX_DCHECK(RectangleRenderable::IsValid(renderable, /*ignore texture*/ true));
+  FX_DCHECK(IsValid(renderable));
   return renderable;
 }
 

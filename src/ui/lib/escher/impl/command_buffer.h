@@ -61,7 +61,7 @@ class CommandBuffer {
 
   // These resources will be retained until the command-buffer is finished
   // running on the GPU.
-  void KeepAlive(Resource* resource);
+  void KeepAlive(const Resource* resource);
   template <typename ResourceT>
   void KeepAlive(const fxl::RefPtr<ResourceT>& ptr) {
     KeepAlive(ptr.get());

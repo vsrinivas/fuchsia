@@ -107,7 +107,7 @@ bool CommandBuffer::ContainsSignalSemaphore(const SemaphorePtr& semaphore) const
          signal_semaphores_.end();
 }
 
-void CommandBuffer::KeepAlive(Resource* resource) {
+void CommandBuffer::KeepAlive(const Resource* resource) {
   FX_DCHECK(is_active_);
   if (sequence_number_ == resource->sequence_number()) {
     // The resource is already being kept alive by this CommandBuffer.

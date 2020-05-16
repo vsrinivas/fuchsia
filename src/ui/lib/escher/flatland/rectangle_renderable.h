@@ -74,7 +74,7 @@ struct RectangleRenderable {
   RectangleDestinationSpec dest;
 
   // Renderer never holds onto this pointer.
-  Texture* texture = nullptr;
+  const Texture* texture = nullptr;
   vec4 color = vec4(1, 1, 1, 1);
 
   // If this bool is false, the renderable will render
@@ -86,8 +86,7 @@ struct RectangleRenderable {
   // for rendering. This means making sure it has a valid texture, and
   // the the range values for its uv coordinates, extent and multiply
   // color are all within expected ranges.
-  static bool IsValid(const RectangleRenderable& renderable,
-                      bool ignore_texture_for_testing = false);
+  static bool IsValid(const RectangleRenderable& renderable);
 
   // Creates a new fully populated rectangle renderable. Rotations must
   // be in multiples of 90 degrees and a renderable without a valid texture
@@ -95,7 +94,7 @@ struct RectangleRenderable {
   // In local space, the rectangle renderable's top-left corner is at the origin,
   // which means that is the point of rotation.
   static const RectangleRenderable Create(const glm::mat3& matrix, const ClockwiseUVs& uvs,
-                                          Texture* texture, const glm::vec4& color,
+                                          const Texture* texture, const glm::vec4& color,
                                           bool is_transparent);
 };
 

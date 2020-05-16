@@ -188,7 +188,7 @@ class CommandBuffer : public Reffable {
   // Set/dirty a texture binding that will later be flushed, causing descriptor
   // sets to be written/bound as necessary.  Keeps |texture| alive while command
   // buffer is pending.
-  void BindTexture(unsigned set, unsigned binding, Texture* texture);
+  void BindTexture(unsigned set, unsigned binding, const Texture* texture);
   void BindTexture(unsigned set, unsigned binding, const TexturePtr& texture) {
     BindTexture(set, binding, texture.get());
   }

@@ -309,7 +309,7 @@ void CommandBuffer::BindUniformBuffer(uint32_t set_index, uint32_t binding, Buff
   dirty_descriptor_sets_ |= 1u << set_index;
 }
 
-void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, Texture* texture) {
+void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, const Texture* texture) {
   auto set = GetDescriptorSetBindings(set_index);
   auto b = GetDescriptorBindingInfo(set, binding);
 

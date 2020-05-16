@@ -32,62 +32,84 @@ namespace {
 
 static const float kDegreesToRadians = glm::pi<float>() / 180.f;
 
-// For these unit tests we only care about the matrices, so use this
-// wrapper function to simplify construction.
-RectangleRenderable CreateRenderable(const glm::mat4& matrix) {
-  return RectangleRenderable::Create(
-      matrix, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)}, nullptr,
-      glm::vec4(1.f), false);
-}
-
-// Helper function for ensuring that two vectors are equal while taking into
-// account floating point discrepancies via an epsilon term.
+// Wraper function for glm::all(glm::epsilonEqual()) to keep the call
+// site cleaner.
 bool Equal(const glm::vec2 a, const glm::vec2 b) {
-  return glm::all(glm::lessThanEqual(glm::abs(a - b), glm::vec2(0.001f)));
+  return glm::all(glm::epsilonEqual(a, b, 0.001f));
 }
 
 }  // anonymous namespace
 
-TEST(RectangleRenderableTest, ValidityTest) {
+class RectangleRenderableTest : public escher::test::TestWithVkValidationLayer {
+ protected:
+  void SetUp() override {
+    TestWithVkValidationLayer::SetUp();
+    auto escher = test::GetEscher();
+    auto gpu_uploader = std::make_shared<escher::BatchGpuUploader>(escher->GetWeakPtr(), 0);
+    texture_ = CreateWhiteTexture(escher, gpu_uploader.get());
+    gpu_uploader->Submit();
+  }
+
+  // For these unit tests we only care about the matrices, so use this
+  // wrapper function to simplify construction.
+  RectangleRenderable CreateRenderable(const glm::mat4& matrix) {
+    return RectangleRenderable::Create(
+        matrix, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        texture_.get(), glm::vec4(1.f), false);
+  }
+
+ private:
+  // Default 1x1 texture to add to renderables.
+  TexturePtr CreateWhiteTexture(Escher* escher, BatchGpuUploader* gpu_uploader) {
+    FX_DCHECK(escher);
+    uint8_t channels[4];
+    channels[0] = channels[1] = channels[2] = channels[3] = 255;
+    auto image = escher->NewRgbaImage(gpu_uploader, 1, 1, channels);
+    return escher->NewTexture(std::move(image), vk::Filter::eNearest);
+  }
+
+  TexturePtr texture_;
+};
+
+VK_TEST_F(RectangleRenderableTest, ValidityTest) {
   // A default renderable with no texture is invalid.
   RectangleRenderable renderable;
   EXPECT_FALSE(RectangleRenderable::IsValid(renderable));
 
-  // Is valid except for texture.
-  EXPECT_TRUE(RectangleRenderable::IsValid(renderable, true));
+  renderable = CreateRenderable(glm::mat3());
 
   // Check each of the color components: they should fail if above 1 or less than 0.
   for (uint32_t i = 0; i < 4; i++) {
     renderable.color[i] = 1.5;
-    EXPECT_FALSE(RectangleRenderable::IsValid(renderable, true));
+    EXPECT_FALSE(RectangleRenderable::IsValid(renderable));
     renderable.color[i] = -0.5;
-    EXPECT_FALSE(RectangleRenderable::IsValid(renderable, true));
+    EXPECT_FALSE(RectangleRenderable::IsValid(renderable));
     renderable.color = vec4(1.f);
   }
   // Should be valid again here, since we reset the color to vec4(1).
-  EXPECT_TRUE(RectangleRenderable::IsValid(renderable, true));
+  EXPECT_TRUE(RectangleRenderable::IsValid(renderable));
 
   // Check to see that the rectangle is not valid if the uv coordinates are
   // outside of the range [0,1].
   for (uint32_t i = 0; i < 4; i++) {
     auto old_uv = renderable.source.uv_coordinates_clockwise[i];
     renderable.source.uv_coordinates_clockwise[i] = vec2(1.1);
-    EXPECT_FALSE(RectangleRenderable::IsValid(renderable, true));
+    EXPECT_FALSE(RectangleRenderable::IsValid(renderable));
     renderable.source.uv_coordinates_clockwise[i] = vec2(-0.5);
-    EXPECT_FALSE(RectangleRenderable::IsValid(renderable, true));
+    EXPECT_FALSE(RectangleRenderable::IsValid(renderable));
     renderable.source.uv_coordinates_clockwise[i] = old_uv;
   }
   // Should be valid again here since we reset the uv coordinates.
-  EXPECT_TRUE(RectangleRenderable::IsValid(renderable, true));
+  EXPECT_TRUE(RectangleRenderable::IsValid(renderable));
 
   // The extent cannot be negative.
   renderable.dest.extent = vec2(-1, -1);
-  EXPECT_FALSE(RectangleRenderable::IsValid(renderable, true));
+  EXPECT_FALSE(RectangleRenderable::IsValid(renderable));
   renderable.dest.extent = vec2(0);
-  EXPECT_TRUE(RectangleRenderable::IsValid(renderable, true));
+  EXPECT_TRUE(RectangleRenderable::IsValid(renderable));
 }
 
-TEST(RectangleRenderableTest, ScaleAndRotate90DegreesTest) {
+VK_TEST_F(RectangleRenderableTest, ScaleAndRotate90DegreesTest) {
   glm::vec2 extent(100, 50);
   glm::mat3 matrix = glm::rotate(glm::mat3(), 90.f * kDegreesToRadians);
   matrix = glm::scale(matrix, extent);
@@ -106,7 +128,7 @@ TEST(RectangleRenderableTest, ScaleAndRotate90DegreesTest) {
   EXPECT_EQ(renderable.source.uv_coordinates_clockwise[3], vec2(0, 0));
 }
 
-TEST(RectangleRenderableTest, ScaleAndRotate180DegreesTest) {
+VK_TEST_F(RectangleRenderableTest, ScaleAndRotate180DegreesTest) {
   glm::vec2 extent(100, 50);
   glm::mat3 matrix = glm::rotate(glm::mat3(), 180.f * kDegreesToRadians);
   matrix = glm::scale(matrix, extent);
@@ -120,7 +142,7 @@ TEST(RectangleRenderableTest, ScaleAndRotate180DegreesTest) {
   EXPECT_EQ(renderable.source.uv_coordinates_clockwise[3], vec2(1, 0));
 }
 
-TEST(RectangleRenderableTest, ScaleAndRotate270DegreesTest) {
+VK_TEST_F(RectangleRenderableTest, ScaleAndRotate270DegreesTest) {
   glm::vec2 extent(100, 50);
   glm::mat3 matrix = glm::rotate(glm::mat3(), 270.f * kDegreesToRadians);
   matrix = glm::scale(matrix, extent);
@@ -136,7 +158,7 @@ TEST(RectangleRenderableTest, ScaleAndRotate270DegreesTest) {
 
 // Make sure that floating point transform values that aren't exactly
 // integers are also respected.
-TEST(RectangleRenderableTest, FloatingPointTranslateAndScaleTest) {
+VK_TEST_F(RectangleRenderableTest, FloatingPointTranslateAndScaleTest) {
   glm::vec2 offset(10.9, 20.5);
   glm::vec2 extent(100.3, 200.7);
   glm::mat3 matrix = glm::translate(glm::mat3(), offset);
@@ -147,7 +169,7 @@ TEST(RectangleRenderableTest, FloatingPointTranslateAndScaleTest) {
   EXPECT_EQ(renderable.dest.extent, extent);
 }
 
-TEST(RectangleRenderableTest, NegativeScaleTest) {
+VK_TEST_F(RectangleRenderableTest, NegativeScaleTest) {
   // If both the x and y scale components are negative, this is equivalent
   // to a positive scale rotated by 180 degrees (PI radians).
   {
@@ -197,7 +219,7 @@ TEST(RectangleRenderableTest, NegativeScaleTest) {
 }
 
 // The same operations of translate/rotate/scale on a single matrix.
-TEST(RectangleRenderableTest, OrderOfOperationsTest) {
+VK_TEST_F(RectangleRenderableTest, OrderOfOperationsTest) {
   // First subtest tests swapping scaling and translation.
   {
     // Here we scale and then translate. The origin should be at (10,5) and the extent should also
