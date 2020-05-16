@@ -17,7 +17,6 @@
 #include <zircon/types.h>
 
 #include <arch/arm64/iframe.h>
-#include <syscalls/syscalls.h>
 
 __BEGIN_CDECLS
 

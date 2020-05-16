@@ -21,7 +21,6 @@
 #include <arch/x86/iframe.h>
 #include <arch/x86/registers.h>
 #include <kernel/cpu.h>
-#include <syscalls/syscalls.h>
 
 #ifdef __cplusplus
 #include <lib/arch/intrin.h>
