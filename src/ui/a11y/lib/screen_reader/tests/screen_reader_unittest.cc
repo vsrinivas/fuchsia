@@ -8,13 +8,16 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "fuchsia/accessibility/gesture/cpp/fidl.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/swipe_recognizer_base.h"
+#include "src/ui/a11y/lib/gesture_manager/tests/mocks/mock_gesture_listener.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
@@ -29,10 +32,13 @@ namespace {
 
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using PointerEventPhase = fuchsia::ui::input::PointerEventPhase;
+using fuchsia::accessibility::gesture::Type;
 using fuchsia::accessibility::semantics::Node;
+using Phase = fuchsia::ui::input::PointerEventPhase;
 
-const std::string kRootNodeLabel = "Label A";
-const std::string kChildNodeLabel = "Label B";
+constexpr char kRootNodeLabel[] = "Label A";
+constexpr char kChildNodeLabel[] = "Label B";
+constexpr char kListenerUtterance[] = "Gesture Performed";
 constexpr uint32_t kRootNodeId = 0;
 constexpr uint32_t kChildNodeId = 1;
 constexpr accessibility_test::PointerId kPointerId = 1;
@@ -75,18 +81,24 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         a11y_focus_manager_ptr_(a11y_focus_manager_.get()),
         context_(std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_))),
         context_ptr_(context_.get()),
-        screen_reader_(std::move(context_), &view_manager_, &tts_manager_),
+        screen_reader_(std::move(context_), &view_manager_, &tts_manager_,
+                       &gesture_listener_registry_),
         semantic_provider_(&view_manager_) {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
+    gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
 
     SetupTtsEngine(&mock_tts_engine_);
     AddNodeToSemanticTree();
   }
 
-  void SendPointerEvents(const std::vector<PointerParams>& events) {
+  void SendPointerEvents(const std::vector<PointerParams>& events, uint32_t fingers = 1) {
     for (const auto& event : events) {
-      gesture_manager_.OnEvent(
-          ToPointerEvent(event, 0 /*event time (unused)*/, semantic_provider_.koid()));
+      for (uint32_t finger = 0; finger < fingers; finger++) {
+        auto pointer_event =
+            ToPointerEvent(event, 0 /*event time (unused)*/, semantic_provider_.koid());
+        pointer_event.set_pointer_id(finger);
+        gesture_manager_.OnEvent(std::move(pointer_event));
+      }
     }
   }
 
@@ -131,6 +143,8 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   a11y::TtsManager tts_manager_;
   a11y::ViewManager view_manager_;
   a11y::GestureManager gesture_manager_;
+  a11y::GestureListenerRegistry gesture_listener_registry_;
+  accessiblity_test::MockGestureListener mock_gesture_listener_;
 
   std::unique_ptr<MockA11yFocusManager> a11y_focus_manager_;
   MockA11yFocusManager* a11y_focus_manager_ptr_;
@@ -139,7 +153,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   a11y::ScreenReader screen_reader_;
   accessibility_test::MockSemanticProvider semantic_provider_;
   accessibility_test::MockTtsEngine mock_tts_engine_;
-};
+};  // namespace
 
 TEST_F(ScreenReaderTest, OnOneFingerSingleTapAction) {
   semantic_provider_.SetHitTestResult(kRootNodeId);
@@ -265,6 +279,98 @@ TEST_F(ScreenReaderTest, PreviousAction) {
   // Check if Utterance and Speak functions are called in TTS.
   ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kChildNodeLabel);
+}
+
+TEST_F(ScreenReaderTest, ThreeFingerUpSwipeAction) {
+  mock_gesture_listener_.SetOnGestureCallbackStatus(true);
+  mock_gesture_listener_.SetUtterance(kListenerUtterance);
+  // Set GestureType in the mock to something other than UP_SWIPE, so that when OnGesture() is
+  // called, we can confirm it's called with the correct gesture type.
+  mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_DOWN);
+
+  // Perform three finger Up Swipe action.
+  SendPointerEvents(DownEvents(kPointerId, {}), 3);
+  SendPointerEvents(MoveEvents(kPointerId, {}, {0, -.7f}), 3);
+  SendPointerEvents(UpEvents(kPointerId, {0, -.7f}), 3);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_gesture_listener_.is_registered());
+  // Up Gesture corresponds to Right Swipe.
+  ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_RIGHT);
+  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
+
+  // Check if Utterance and Speak functions are called in Tts.
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+}
+
+TEST_F(ScreenReaderTest, ThreeFingerDownSwipeAction) {
+  mock_gesture_listener_.SetOnGestureCallbackStatus(true);
+  mock_gesture_listener_.SetUtterance(kListenerUtterance);
+  // Set GestureType in the mock to something other than DOWN_SWIPE, so that when OnGesture() is
+  // called, we can confirm it's called with the correct gesture type.
+  mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_UP);
+
+  // Perform three finger Down Swipe action.
+  SendPointerEvents(DownEvents(kPointerId, {}), 3);
+  SendPointerEvents(MoveEvents(kPointerId, {}, {0, .7f}), 3);
+  SendPointerEvents(UpEvents(kPointerId, {0, .7f}), 3);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_gesture_listener_.is_registered());
+  // Down Gesture corresponds to Left Swipe.
+  ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_LEFT);
+  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
+
+  // Check if Utterance and Speak functions are called in Tts.
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+}
+
+TEST_F(ScreenReaderTest, ThreeFingerRightSwipeAction) {
+  mock_gesture_listener_.SetOnGestureCallbackStatus(true);
+  mock_gesture_listener_.SetUtterance(kListenerUtterance);
+  // Set GestureType in the mock to something other than RIGHT_SWIPE, so that when OnGesture() is
+  // called, we can confirm it's called with the correct gesture type.
+  mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_LEFT);
+
+  // Perform three finger Right Swipe action.
+  SendPointerEvents(DownEvents(kPointerId, {}), 3);
+  SendPointerEvents(MoveEvents(kPointerId, {}, {.7f, 0}), 3);
+  SendPointerEvents(UpEvents(kPointerId, {.7f, 0}), 3);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_gesture_listener_.is_registered());
+  // Right Gesture corresponds to Down Swipe.
+  ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_DOWN);
+  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
+
+  // Check if Utterance and Speak functions are called in Tts.
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
+}
+
+TEST_F(ScreenReaderTest, ThreeFingerLeftSwipeAction) {
+  mock_gesture_listener_.SetOnGestureCallbackStatus(true);
+  mock_gesture_listener_.SetUtterance(kListenerUtterance);
+  // Set GestureType in the mock to something other than LEFT_SWIPE, so that when OnGesture() is
+  // called, we can confirm it's called with the correct gesture type.
+  mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_RIGHT);
+
+  // Perform three finger Left Swipe action.
+  SendPointerEvents(DownEvents(kPointerId, {}), 3);
+  SendPointerEvents(MoveEvents(kPointerId, {}, {-.7f, 0}), 3);
+  SendPointerEvents(UpEvents(kPointerId, {-.7f, 0}), 3);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_gesture_listener_.is_registered());
+  // Left Gesture corresponds to Up Swipe.
+  ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_UP);
+  ASSERT_TRUE(mock_tts_engine_.ReceivedSpeak());
+
+  // Check if Utterance and Speak functions are called in Tts.
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), kListenerUtterance);
 }
 
 }  // namespace

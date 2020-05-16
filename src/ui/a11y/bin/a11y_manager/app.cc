@@ -205,7 +205,7 @@ std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto screen_reader_context =
       std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
   return std::make_unique<a11y::ScreenReader>(std::move(screen_reader_context), view_manager_,
-                                              tts_manager_);
+                                              tts_manager_, gesture_listener_registry_);
 }
 
 }  // namespace a11y_manager

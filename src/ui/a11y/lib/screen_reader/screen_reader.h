@@ -10,9 +10,10 @@
 #include <unordered_map>
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
-#include "src/ui/a11y/lib/screen_reader/explore_action.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
 #include "src/ui/a11y/lib/screen_reader/i18n/messages.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/swipe_action.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y {
@@ -30,11 +31,12 @@ namespace a11y {
 // TODO(MI4-2546): Rename this class once the final screen reader name exists.
 class ScreenReader {
  public:
-  // Pointers to Semantics Manager, TTS Manager and Gesture Manager must outlive
-  // screen reader. A11y App is responsible for creating these pointers along
-  // with Screen Reader object.
+  // Pointers to Semantics Manager, TTS Manager, Gesture Listener Registry and Gesture Manager must
+  // outlive screen reader. A11y App is responsible for creating these pointers along with Screen
+  // Reader object.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context,
-               a11y::SemanticsSource* semantics_source, a11y::TtsManager* tts_manager);
+               a11y::SemanticsSource* semantics_source, a11y::TtsManager* tts_manager,
+               a11y::GestureListenerRegistry* gesture_listener_registry);
   ~ScreenReader() = default;
 
   void BindGestures(a11y::GestureHandler* gesture_handler);
@@ -60,6 +62,9 @@ class ScreenReader {
 
   // Pointer to TTS Manager.
   a11y::TtsManager* tts_manager_;
+
+  // Pointer to Gesture Listener Registry.
+  GestureListenerRegistry* gesture_listener_registry_;
 };
 
 }  // namespace a11y
