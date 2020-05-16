@@ -239,8 +239,9 @@ impl Facade for GattClientFacade {
                 let id = parse_u64_identifier(args.clone())?;
                 let offset_as_u64 = parse_offset(args.clone())?;
                 let offset = offset_as_u64 as u16;
-                let value = parse_write_value(args)?;
-                gattc_write_long_char_by_id_async(self, id, offset, value).await
+                let value = parse_write_value(args.clone())?;
+                let reliable_mode = parse_arg!(args, as_bool, "reliable_mode")?;
+                gattc_write_long_char_by_id_async(self, id, offset, value, reliable_mode).await
             }
             "GattcWriteCharacteristicByIdWithoutResponse" => {
                 let id = parse_u64_identifier(args.clone())?;
@@ -524,8 +525,10 @@ async fn gattc_write_long_char_by_id_async(
     id: u64,
     offset: u16,
     write_value: Vec<u8>,
+    reliable_mode: bool,
 ) -> Result<Value, Error> {
-    let write_char_status = facade.gattc_write_long_char_by_id(id, offset, write_value).await?;
+    let write_char_status =
+        facade.gattc_write_long_char_by_id(id, offset, write_value, reliable_mode).await?;
     Ok(to_value(write_char_status)?)
 }
 

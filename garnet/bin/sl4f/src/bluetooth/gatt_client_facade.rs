@@ -153,15 +153,21 @@ impl GattClientFacade {
         id: u64,
         offset: u16,
         write_value: Vec<u8>,
+        reliable_mode: bool,
     ) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_write_long_char_by_id";
+
+        let reliable_mode = match reliable_mode {
+            true => ReliableMode::Enabled,
+            false => ReliableMode::Disabled,
+        };
 
         let write_long_characteristic = match &self.inner.read().active_proxy {
             Some(proxy) => proxy.write_long_characteristic(
                 id,
                 offset,
                 &write_value,
-                WriteOptions { reliable_mode: Some(ReliableMode::Disabled) },
+                WriteOptions { reliable_mode: Some(reliable_mode) },
             ),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
