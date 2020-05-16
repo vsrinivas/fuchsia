@@ -218,7 +218,7 @@ shellscript_test("vk_check_test") {
     far_bin_path = rebase_path("${tools_out_dir}/far")
     package_name =
         rebase_path("${target_gen_dir}/package_with_vk/package_with_vk")
-    manifest_name = "lib/VkLayer_khronos_validation.so data/vulkan/explicit_layer.d/VkLayer_core_validation.json"
+    manifest_name = "lib/VkLayer_khronos_validation.so data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json"
   }
   data_deps = [
     ":copy_test_scripts",
