@@ -87,7 +87,7 @@ group("tests") {
     "//zircon/system/utest/channel-fatal:channel-fatal-package",
     "//zircon/system/ulib/chromeos-disk-setup/test:chromeos-disk-setup-package",
     "//zircon/system/utest/cleanup:cleanup-package",
-    "//zircon/system/utest/closure-queue:closure-queue-package",
+    "//zircon/system/ulib/closure-queue/test:closure-queue-package",
     "//zircon/system/utest/compiler:compiler-package",
     "//zircon/system/utest/core-display:core-display-package",
     "//zircon/system/utest/cprng:cprng-package",
