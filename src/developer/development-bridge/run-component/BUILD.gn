@@ -8,5 +8,8 @@ ffx_plugin("ffx_run_component") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-  deps = [ "//third_party/rust_crates:signal-hook" ]
+  deps = [
+    "//third_party/rust_crates:async-std",
+    "//third_party/rust_crates:signal-hook",
+  ]
 }

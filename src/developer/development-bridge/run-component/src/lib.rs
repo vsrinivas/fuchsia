@@ -30,22 +30,12 @@ pub async fn run_component(
     // TODO(jwing) remove this once that is finished.
     let _ = proxy.ping();
 
-    // TODO(fxb/49063): Can't use the writer in these threads due to static lifetime.
-    let _out_thread = std::thread::spawn(move || loop {
-        let mut buf = [0u8; 128];
-        let n = cout.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
-        if n > 0 {
-            print!("{}", String::from_utf8_lossy(&buf));
-        }
-    });
-
-    let _err_thread = std::thread::spawn(move || loop {
-        let mut buf = [0u8; 128];
-        let n = cerr.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
-        if n > 0 {
-            eprint!("{}", String::from_utf8_lossy(&buf));
-        }
-    });
+    let mut stdout = async_std::io::stdout();
+    let mut stderr = async_std::io::stderr();
+    let copy_futures = futures::future::try_join(
+        futures::io::copy(fidl::AsyncSocket::from_socket(cout)?, &mut stdout),
+        futures::io::copy(fidl::AsyncSocket::from_socket(cerr)?, &mut stderr),
+    );
 
     let event_stream = proxy.take_event_stream();
     let term_thread = std::thread::spawn(move || {
@@ -53,13 +43,11 @@ pub async fn run_component(
         while let Some(result) = futures::executor::block_on(e.next()) {
             match result {
                 Ok(ComponentControllerEvent::OnTerminated { exit_code }) => {
-                    println!("Component exited with exit code: {}", exit_code);
-                    match exit_code {
-                        -1 => println!("This exit code may mean that the specified package doesn't exist.\
-                                    \nCheck that the package is in your universe (`fx set --with ...`) and that `fx serve` is running."),
-                        _ => {},
-                    };
-                    break;
+                    if exit_code == -1 {
+                        eprintln!("This exit code may mean that the specified package doesn't exist.\
+                                                                                                            \nCheck that the package is in your universe (`fx set --with ...`) and that `fx serve` is running.");
+                    }
+                    std::process::exit(exit_code as i32);
                 }
                 Err(err) => {
                     eprintln!("error reading component controller events. Component termination may not be detected correctly. {} ", err);
@@ -93,7 +81,9 @@ pub async fn run_component(
         serr,
         server_end,
     );
-    match f.await? {
+    let (copy_res, f) = futures::join!(copy_futures, f);
+    copy_res?;
+    match f? {
         Ok(_) => {}
         Err(_) => {
             return Err(anyhow!(
