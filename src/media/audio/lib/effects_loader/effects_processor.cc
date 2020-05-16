@@ -32,11 +32,15 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
     return status;
   }
 
-  // For now we only support in-place processors.
-  if (params.channels_in != params.channels_out) {
-    FX_LOGS(ERROR) << "Can't add effect; only in-place effects are currently supported.";
+  if (channels_out_ && params.channels_in != channels_out_) {
+    FX_LOGS(ERROR) << "Can't add effect; channelization mismatch. Requires " << channels_out_
+                   << ", but expects " << params.channels_in;
     return ZX_ERR_INVALID_ARGS;
   }
+  if (channels_in_ == 0) {
+    channels_in_ = params.channels_in;
+  }
+  channels_out_ = params.channels_out;
 
   if (params.block_size_frames != FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY &&
       params.block_size_frames != block_size_) {
@@ -53,21 +57,8 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   }
 
   delay_frames_ += params.signal_latency_frames;
-
-  if (effects_chain_.empty()) {
-    // This is the first effect; the processors input channels will be whatever this effect
-    // accepts.
-    channels_in_ = params.channels_in;
-  } else if (params.channels_in != channels_out_) {
-    // We have existing effects and this effect excepts different channelization than what we're
-    // currently producing.
-    FX_LOGS(ERROR) << "Can't add effect; needs " << params.channels_in << " channels but have "
-                   << channels_out_ << " channels";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  channels_out_ = params.channels_out;
   effects_chain_.emplace_back(std::move(e));
+  effects_parameters_.emplace_back(std::move(params));
   return ZX_OK;
 }
 
@@ -103,6 +94,43 @@ zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_b
     }
   }
 
+  return ZX_OK;
+}
+
+zx_status_t EffectsProcessor::Process(uint32_t num_frames, float* audio_buff_in,
+                                      float** audio_buff_out) const {
+  TRACE_DURATION("audio", "EffectsProcessor::Process", "num_frames", num_frames, "num_effects",
+                 effects_chain_.size());
+  if (audio_buff_in == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (num_frames == 0) {
+    return ZX_OK;
+  }
+
+  uint32_t channels_in = channels_in_;
+  float* input = audio_buff_in;
+  for (size_t i = 0; i < effects_chain_.size(); ++i) {
+    const auto& effect = effects_chain_[i];
+    const auto& parameters = effects_parameters_[i];
+    if (!effect) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    zx_status_t ret_val;
+    FX_DCHECK(parameters.channels_in == channels_in);
+    if (parameters.channels_out == channels_in) {
+      ret_val = effect.ProcessInPlace(num_frames, input);
+    } else {
+      ret_val = effect.Process(num_frames, input, &input);
+      channels_in = parameters.channels_out;
+    }
+    if (ret_val != ZX_OK) {
+      return ret_val;
+    }
+  }
+
+  *audio_buff_out = input;
   return ZX_OK;
 }
 

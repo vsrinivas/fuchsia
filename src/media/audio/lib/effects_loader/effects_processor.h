@@ -37,10 +37,6 @@ class EffectsProcessor {
   // put channels of last added effect. The output channels for the processor will be updated to
   // match the output channels of the newly added effect.
   //
-  // Currently AddEffect will fail if an Effect has channels_in != channels_out (ex: all effects
-  // must do in-place processing). This is a short-term limitation that will be lifted in the
-  // future.
-  //
   // Aborts if `e` is an invalid `Effect`.
   zx_status_t AddEffect(Effect e);
 
@@ -48,13 +44,12 @@ class EffectsProcessor {
   [[nodiscard]] uint16_t size() const { return effects_chain_.size(); }
 
   // Returns the number of input channels for this effect. This will be the number of channels
-  // expected for input frames to `ProcessInPlace`.
+  // expected for input frames to `Process` or `ProcessInPlace`.
   //
   // Returns 0 if this processor has no effects.
   [[nodiscard]] uint32_t channels_in() const { return channels_in_; }
 
-  // Returns the number of output channels for this effect. Currently this always equals
-  // `channels_in()`.
+  // Returns the number of output channels for this effect.
   //
   // Returns 0 if this processor has no effects.
   [[nodiscard]] uint32_t channels_out() const { return channels_out_; }
@@ -83,10 +78,13 @@ class EffectsProcessor {
 
   // These maps directly to the corresponding ABI call, for each instance.
   zx_status_t ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const;
+  zx_status_t Process(uint32_t num_frames, float* audio_buff_in, float** audio_buff_out) const;
   zx_status_t Flush() const;
 
  private:
   std::vector<Effect> effects_chain_;
+  std::vector<fuchsia_audio_effects_parameters> effects_parameters_;
+
   uint32_t channels_in_ = 0;
   uint32_t channels_out_ = 0;
   uint32_t block_size_ = 1;

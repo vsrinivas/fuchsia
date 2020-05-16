@@ -304,5 +304,86 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
   }
 }
 
+TEST_F(EffectsProcessorTest, ProcessOutOfPlace) {
+  test_effects()
+      .AddEffect("increment")
+      .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
+      .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+
+  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 2, {});
+  Effect effect2 = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
+  Effect effect3 = effects_loader()->CreateEffect(0, "", 1, 2, 4, {});
+
+  ASSERT_TRUE(effect1);
+  ASSERT_TRUE(effect2);
+  ASSERT_TRUE(effect3);
+
+  // Create processor
+  EffectsProcessor processor;
+  EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
+  EXPECT_EQ(processor.size(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 2u);
+
+  EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_OK);
+  EXPECT_EQ(processor.size(), 2u);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 2u);
+
+  EXPECT_EQ(processor.AddEffect(std::move(effect3)), ZX_OK);
+  EXPECT_EQ(processor.size(), 3u);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 4u);
+
+  float buff[4] = {0, 1.0, 2.0, 3.0};
+  float* out;
+  ASSERT_EQ(ZX_OK, processor.Process(4, buff, &out));
+
+  // The first effect will upchannel from 1 -> 2 channels, leaving 0.0 for the new channel and
+  // incrementing the current channel. The second effect will increment both, so channel 0 is
+  // incremented by 2 and channel 1 should be 1.0. The third effect will upchannel 2->4 channels
+  // and increment the existing 2 channels.
+  //
+  // So for frame N, we expect:
+  // out[N * 4] == N + 3.0f
+  // out[N * 4 + 1] == 2.0f
+  // out[N * 4 + 2] == 0.0f
+  // out[N * 4 + 3] == 0.0f
+  auto CheckFrame = [&out](size_t frame) {
+    ASSERT_FLOAT_EQ(out[4 * frame + 0], frame + 3.0f);
+    ASSERT_FLOAT_EQ(out[4 * frame + 1], 2.0f);
+    ASSERT_FLOAT_EQ(out[4 * frame + 2], 0.0f);
+    ASSERT_FLOAT_EQ(out[4 * frame + 3], 0.0f);
+  };
+  CheckFrame(0);
+  CheckFrame(1);
+  CheckFrame(2);
+  CheckFrame(3);
+}
+
+TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
+  test_effects()
+      .AddEffect("effect")
+      .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
+      .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  EffectsProcessor processor;
+
+  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  ASSERT_TRUE(effect1);
+  EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
+  EXPECT_EQ(processor.size(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 1u);
+
+  // Create an effect with 2 chans in. This should be rejected by the processor since it's currently
+  // producing 1 channel audio.
+  Effect effect2 = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
+  ASSERT_TRUE(effect2);
+  EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(processor.size(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1u);
+  EXPECT_EQ(processor.channels_out(), 1u);
+}
+
 }  // namespace
 }  // namespace media::audio

@@ -12,6 +12,7 @@ extern fuchsia_audio_effects_module_v1 fuchsia_audio_effects_module_v1_instance;
 namespace {
 
 static constexpr uint32_t TEST_EFFECTS_MAX = 255;
+static constexpr uint32_t TEST_EFFECTS_DEFAULT_MAX_FRAMES_PER_BATCH = 512;
 
 test_effect_spec g_effects[TEST_EFFECTS_MAX] = {};
 
@@ -25,7 +26,17 @@ class TestEffect {
         frame_rate_(frame_rate),
         channels_in_(chans_in),
         channels_out_(chans_out),
-        config_(config) {}
+        config_(config) {
+    // If this is an out-of-place effect, allocate our output buffer.
+    if (channels_in() != channels_out()) {
+      out_of_place_buffer_frames_ = max_batch_size();
+      if (out_of_place_buffer_frames_ == FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY) {
+        out_of_place_buffer_frames_ = TEST_EFFECTS_DEFAULT_MAX_FRAMES_PER_BATCH;
+      }
+      out_of_place_buffer_ =
+          std::make_unique<float[]>(out_of_place_buffer_frames_ * channels_out());
+    }
+  }
 
   uint32_t effect_id() const { return effect_id_; }
   uint32_t frame_rate() const { return frame_rate_; }
@@ -76,8 +87,36 @@ class TestEffect {
   }
 
   bool Process(uint32_t num_frames, const float* audio_buff_in, float** audio_buff_out) {
-    // Not yet implemented.
-    return false;
+    // If channels are equal, ProcessInPlace should be used.
+    if (channels_in() == channels_out()) {
+      return false;
+    }
+    if (!out_of_place_buffer_) {
+      return false;
+    }
+    if (num_frames > out_of_place_buffer_frames_) {
+      return false;
+    }
+
+    *audio_buff_out = out_of_place_buffer_.get();
+    auto& effect = g_effects[effect_id()];
+    for (uint32_t i = 0; i < num_frames; ++i) {
+      for (int32_t j = 0; j < channels_out(); ++j) {
+        if (effect.action == TEST_EFFECTS_ACTION_ADD) {
+          if (j < channels_in()) {
+            (*audio_buff_out)[i * channels_out() + j] =
+                audio_buff_in[i * channels_in() + j] + effect.value;
+          } else {
+            (*audio_buff_out)[i * channels_out() + j] = 0.0;
+          }
+        } else if (effect.action == TEST_EFFECTS_ACTION_ASSIGN) {
+          (*audio_buff_out)[i * channels_out() + j] = effect.value;
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   bool Flush() {
@@ -101,6 +140,9 @@ class TestEffect {
   std::string config_;
 
   size_t flush_count_ = 0;
+
+  std::unique_ptr<float[]> out_of_place_buffer_;
+  size_t out_of_place_buffer_frames_;
 };
 
 bool get_info(uint32_t effect_id, fuchsia_audio_effects_description* desc) {
@@ -114,8 +156,8 @@ bool get_info(uint32_t effect_id, fuchsia_audio_effects_description* desc) {
 fuchsia_audio_effects_handle_t create_effect(uint32_t effect_id, uint32_t frame_rate,
                                              uint16_t channels_in, uint16_t channels_out,
                                              const char* config, size_t config_length) {
-  if (effect_id > TEST_EFFECTS_MAX || channels_in != channels_out ||
-      channels_in > FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX) {
+  if (effect_id > TEST_EFFECTS_MAX || channels_in > FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX ||
+      channels_out > FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX) {
     return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
   }
 
