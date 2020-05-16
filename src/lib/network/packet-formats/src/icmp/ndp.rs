@@ -4,10 +4,14 @@
 
 //! Messages used for NDP (ICMPv6).
 
+use core::num::NonZeroU8;
+use core::time::Duration;
+
 use net_types::ip::{Ipv6, Ipv6Addr};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::icmp::{IcmpIpExt, IcmpPacket, IcmpUnusedCode};
+use crate::utils::NonZeroDuration;
 use crate::{U16, U32};
 
 /// An ICMPv6 packet with an NDP message.
@@ -107,23 +111,38 @@ impl RouterAdvertisement {
     }
 
     /// Returns the current hop limit field.
-    pub fn current_hop_limit(&self) -> u8 {
-        self.current_hop_limit
+    ///
+    /// A value of `None` means unspecified by the source of the Router Advertisement.
+    pub fn current_hop_limit(&self) -> Option<NonZeroU8> {
+        NonZeroU8::new(self.current_hop_limit)
     }
 
-    /// Returns the router lifetime, in seconds.
-    pub fn router_lifetime(&self) -> u16 {
-        self.router_lifetime.get()
+    /// Returns the router lifetime.
+    ///
+    /// A value of `None` indicates that the router is not a default router and SHOULD
+    /// NOT appear in the default router list.
+    pub fn router_lifetime(&self) -> Option<NonZeroDuration> {
+        // As per RFC 4861 section 4.2, the Router Lifetime field is held in units
+        // of seconds.
+        NonZeroDuration::new(Duration::from_secs(self.router_lifetime.get().into()))
     }
 
-    /// Returns the reachable time, in seconds.
-    pub fn reachable_time(&self) -> u32 {
-        self.reachable_time.get()
+    /// Returns the reachable time.
+    ///
+    /// A value of `None` means unspecified by the source of the Router Advertisement.
+    pub fn reachable_time(&self) -> Option<NonZeroDuration> {
+        // As per RFC 4861 section 4.2, the Reachable Time field is held in units
+        // of milliseconds.
+        NonZeroDuration::new(Duration::from_millis(self.reachable_time.get().into()))
     }
 
-    /// Returns the retransmit timer, in seconds.
-    pub fn retransmit_timer(&self) -> u32 {
-        self.retransmit_timer.get()
+    /// Returns the retransmit timer.
+    ///
+    /// A value of `None` means unspecified by the source of the Router Advertisement.
+    pub fn retransmit_timer(&self) -> Option<NonZeroDuration> {
+        // As per RFC 4861 section 4.2, the Retransmit Timer field is held in units
+        // of milliseconds
+        NonZeroDuration::new(Duration::from_millis(self.retransmit_timer.get().into()))
     }
 }
 
@@ -250,6 +269,7 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 /// Parsing and serialization of NDP options.
 pub mod options {
     use core::convert::TryFrom;
+    use core::time::Duration;
 
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{AddrSubnet, AddrSubnetError, Ipv6Addr};
@@ -257,7 +277,13 @@ pub mod options {
     use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
+    use crate::utils::NonZeroDuration;
     use crate::U32;
+
+    /// A value representing an infinite lifetime for various NDP options' lifetime
+    /// fields.
+    pub const INFINITE_LIFETIME: NonZeroDuration =
+        unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(core::u32::MAX as u64)) };
 
     /// The number of reserved bytes immediately following the kind and length
     /// bytes in a Redirected Header option.
@@ -318,13 +344,13 @@ pub mod options {
             RecursiveDnsServer { lifetime, addresses }
         }
 
-        /// Returns the length of time in seconds (relative to the time the packet is
-        /// sent) that the DNS servers are valid for name resolution.
+        /// Returns the length of time (relative to the time the packet is sent) that
+        /// the DNS servers are valid for name resolution.
         ///
-        /// A value of all one bits (`std::u32::MAX`) represents infinity; a value
-        /// of 0 means that the servers MUST no longer be used.
-        pub fn lifetime(&self) -> u32 {
-            self.lifetime
+        /// A value of [`INFINITE_LIFETIME`] represents infinity; a value of `None`
+        /// means that the servers MUST no longer be used.
+        pub fn lifetime(&self) -> Option<NonZeroDuration> {
+            NonZeroDuration::new(Duration::from_secs(self.lifetime.into()))
         }
 
         /// Returns the recursive DNS server addresses.
@@ -422,22 +448,22 @@ pub mod options {
             (self.flags_la & Self::AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG) != 0
         }
 
-        /// Get the length of time in seconds (relative to the time the
-        /// packet is sent) that the prefix is valid for the purpose of
-        /// on-link determination.
+        /// Get the length of time (relative to the time the packet is sent) that
+        /// the prefix is valid for the purpose of on-link determination and SLAAC.
         ///
-        /// A value of all one bits (`std::u32::MAX`) represents infinity.
-        pub fn valid_lifetime(&self) -> u32 {
-            self.valid_lifetime.get()
+        /// A value of [`INFINITE_LIFETIME`] represents infinity; a value of `None`
+        /// means that the prefix must no longer be used for on-link determination.
+        pub fn valid_lifetime(&self) -> Option<NonZeroDuration> {
+            NonZeroDuration::new(Duration::from_secs(self.valid_lifetime.get().into()))
         }
 
-        /// Get the length of time in seconds (relative to the time the
-        /// packet is sent) that addresses generated from the prefix via
-        /// stateless address autoconfiguration remains preferred.
+        /// Get the length of time (relative to the time the packet is sent) that
+        /// addresses generated from the prefix via SLAAC remains preferred.
         ///
-        /// A value of all one bits (`std::u32::MAX`) represents infinity.
-        pub fn preferred_lifetime(&self) -> u32 {
-            self.preferred_lifetime.get()
+        /// A value of [`INFINITE_LIFETIME`] represents infinity; a value of `None`
+        /// means that the prefix should be immediately deprecated.
+        pub fn preferred_lifetime(&self) -> Option<NonZeroDuration> {
+            NonZeroDuration::new(Duration::from_secs(self.preferred_lifetime.get().into()))
         }
 
         /// An IPv6 address or a prefix of an IPv6 address.
@@ -910,7 +936,7 @@ mod tests {
                 src_ip, dst_ip,
             ))
             .unwrap();
-        assert_eq!(icmp.message().current_hop_limit, HOP_LIMIT);
+        assert_eq!(icmp.message().current_hop_limit(), HOP_LIMIT);
         assert_eq!(icmp.message().router_lifetime(), LIFETIME);
         assert_eq!(icmp.message().reachable_time(), REACHABLE_TIME);
         assert_eq!(icmp.message().retransmit_timer(), RETRANS_TIMER);

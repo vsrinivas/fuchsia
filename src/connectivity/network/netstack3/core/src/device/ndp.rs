@@ -33,7 +33,7 @@ use net_types::{
     SpecifiedAddress, Witness,
 };
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
-use packet_formats::icmp::ndp::options::{NdpOption, PrefixInformation};
+use packet_formats::icmp::ndp::options::{NdpOption, PrefixInformation, INFINITE_LIFETIME};
 use packet_formats::icmp::ndp::{
     self, NeighborAdvertisement, NeighborSolicitation, Options, RouterAdvertisement,
     RouterSolicitation,
@@ -2730,7 +2730,23 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             let timer_id = NdpTimerId::new_router_invalidation(device_id, src_ip).into();
 
-            if ra.router_lifetime() == 0 {
+            if let Some(router_lifetime) = ra.router_lifetime() {
+                if ndp_state.has_default_router(&src_ip) {
+                    trace!(
+                        "receive_ndp_packet_inner: NDP RA from an already known router: {:?}",
+                        src_ip
+                    );
+                } else {
+                    trace!("receive_ndp_packet_inner: NDP RA from a new router: {:?}", src_ip);
+
+                    // TODO(ghanan): Make the number of default routers we store configurable?
+                    ndp_state.add_default_router(src_ip);
+                };
+
+                // Reset invalidation timeout.
+                trace!("receive_ndp_packet_inner: NDP RA: updating invalidation timer to {:?} for router: {:?}", router_lifetime, src_ip);
+                ctx.schedule_timer(router_lifetime.get(), timer_id);
+            } else {
                 if ndp_state.has_default_router(&src_ip) {
                     trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
 
@@ -2748,29 +2764,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     trace!("receive_ndp_packet_inner: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
                 }
 
-            // As per RFC 4861 section 4.2, a zero-valued router lifetime only indicates the
-            // router is not to be used as a default router and is only applied to its
-            // usefulness as a default router; it does not apply to the other information
-            // contained in this message's fields or options. Given this, we continue as normal.
-            } else {
-                if ndp_state.has_default_router(&src_ip) {
-                    trace!(
-                        "receive_ndp_packet_inner: NDP RA from an already known router: {:?}",
-                        src_ip
-                    );
-                } else {
-                    trace!("receive_ndp_packet_inner: NDP RA from a new router: {:?}", src_ip);
-
-                    // TODO(ghanan): Make the number of default routers we store configurable?
-                    ndp_state.add_default_router(src_ip);
-                };
-
-                // As per RFC 4861 section 4.2, the router livetime is in units of seconds.
-                let timer_duration = Duration::from_secs(ra.router_lifetime().into());
-
-                trace!("receive_ndp_packet_inner: NDP RA: updating invalidation timer to {:?} for router: {:?}", timer_duration, src_ip);
-                // Reset invalidation timeout.
-                ctx.schedule_timer(timer_duration, timer_id);
+                // As per RFC 4861 section 4.2, a zero-valued router lifetime only indicates the
+                // router is not to be used as a default router and is only applied to its
+                // usefulness as a default router; it does not apply to the other information
+                // contained in this message's fields or options. Given this, we continue as normal.
             }
 
             // Borrow again so that a) we shadow the original `ndp_state` and
@@ -2781,7 +2778,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             let ndp_state = ctx.get_state_mut_with(device_id);
 
             // As per RFC 4861 section 6.3.4:
-            // If the received Reachable Time value is non-zero, the host SHOULD set
+            // If the received Reachable Time value is specified, the host SHOULD set
             // its BaseReachableTime variable to the received value.  If the new
             // value differs from the previous value, the host SHOULD re-compute a
             // new random ReachableTime value.
@@ -2793,39 +2790,29 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             //               in consecutive Router Advertisements, and a host's BaseReachableTime
             //               rarely changes.  In such cases, an implementation SHOULD ensure that
             //               a new random value gets re-computed at least once every few hours.
-            if ra.reachable_time() != 0 {
-                let base_reachable_time = Duration::from_millis(ra.reachable_time().into());
-
+            if let Some(base_reachable_time) = ra.reachable_time() {
                 trace!("receive_ndp_packet_inner: NDP RA: updating base_reachable_time to {:?} for router: {:?}", base_reachable_time, src_ip);
-
-                // As per RFC 4861 section 4.2, the reachable time field is the time in
-                // milliseconds.
-                ndp_state.set_base_reachable_time(base_reachable_time);
+                ndp_state.set_base_reachable_time(base_reachable_time.get());
             }
 
             // As per RFC 4861 section 6.3.4:
             // The RetransTimer variable SHOULD be copied from the Retrans Timer
-            // field, if the received value is non-zero.
+            // field, if it is specified.
             //
             // TODO(ghanan): Make the updating of this field from the RA message configurable
             //               since the RFC does not say we MUST update the field.
-            if ra.retransmit_timer() != 0 {
-                let retransmit_timer = Duration::from_millis(ra.retransmit_timer().into());
-
+            if let Some(retransmit_timer) = ra.retransmit_timer() {
                 trace!("receive_ndp_packet_inner: NDP RA: updating retrans_timer to {:?} for router: {:?}", retransmit_timer, src_ip);
-
-                // As per RFC 4861 section 4.2, the retransmit timer field is the time in
-                // milliseconds.
-                ndp_state.set_retrans_timer(retransmit_timer);
+                ndp_state.set_retrans_timer(retransmit_timer.get());
             }
 
             // As per RFC 4861 section 6.3.4:
-            // If the received Cur Hop Limit value is non-zero, the host SHOULD set
+            // If the received Cur Hop Limit value is specified, the host SHOULD set
             // its CurHopLimit variable to the received value.
             //
             // TODO(ghanan): Make the updating of this field from the RA message configurable
             //               since the RFC does not say we MUST update the field.
-            if let Some(hop_limit) = NonZeroU8::new(ra.current_hop_limit()) {
+            if let Some(hop_limit) = ra.current_hop_limit() {
                 trace!("receive_ndp_packet_inner: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
 
                 ctx.set_hop_limit(device_id, hop_limit);
@@ -2879,70 +2866,56 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             }
                         };
 
-                        if prefix_info.on_link_flag() {
-                            if prefix_info.prefix().is_linklocal() {
-                                // If the on-link flag is set and the prefix is the link-local
-                                // prefix ignore the option, as per RFC 4861 section 6.3.4.
-                                trace!("receive_ndp_packet_inner: on-link prefix is a link local, so ignoring");
-                                continue;
-                            }
+                        if prefix_info.prefix().is_linklocal() {
+                            // As per RFC 4861 section 6.3.4 (on-link prefix determination)
+                            // and RFC 4862 section 5.5.3 (SLAAC), ignore options with the
+                            // the link-local prefix.
+                            trace!("receive_ndp_packet_inner: prefix is a link local, so ignoring");
+                            continue;
+                        }
 
+                        if prefix_info.on_link_flag() {
                             // Timer ID for this prefix's invalidation.
                             let timer_id =
                                 NdpTimerId::new_prefix_invalidation(device_id, addr_sub).into();
 
-                            if prefix_info.valid_lifetime() == 0 {
-                                if ndp_state.has_prefix(&addr_sub) {
-                                    trace!("receive_ndp_packet_inner: on-link prefix is known and has valid lifetime = 0, so invaliding");
-
-                                    // If the on-link flag is set, the valid lifetime is 0 and the
-                                    // prefix is already present in our prefix list, timeout the
-                                    // prefix immediately, as per RFC 4861 section 6.3.4.
-
-                                    // Cancel the prefix invalidation timeout if it exists.
-                                    ctx.cancel_timer(timer_id);
-
-                                    let ndp_state = ctx.get_state_mut_with(device_id);
-                                    ndp_state.invalidate_prefix(addr_sub);
-                                } else {
-                                    // If the on-link flag is set, the valid lifetime is 0 and the
-                                    // prefix is not present in our prefix list, ignore the option,
-                                    // as per RFC 4861 section 6.3.4.
-                                    trace!("receive_ndp_packet_inner: on-link prefix is unknown and is has valid lifetime = 0, so ignoring");
+                            if let Some(valid_lifetime) = prefix_info.valid_lifetime() {
+                                if !ndp_state.has_prefix(&addr_sub) {
+                                    // `add_prefix` may panic if the prefix already exists in
+                                    // our prefix list, but we will only reach here if it doesn't
+                                    // so we know `add_prefix` will not panic.
+                                    ndp_state.add_prefix(addr_sub);
                                 }
 
-                                continue;
-                            }
+                                // Reset invalidation timer.
+                                if valid_lifetime == INFINITE_LIFETIME {
+                                    // We do not need a timer to mark the prefix as invalid when it
+                                    // has an infinite lifetime.
+                                    ctx.cancel_timer(timer_id);
+                                } else {
+                                    ctx.schedule_timer(valid_lifetime.get(), timer_id);
+                                }
+                            } else if ndp_state.has_prefix(&addr_sub) {
+                                trace!("receive_ndp_packet_inner: on-link prefix is known and has valid lifetime = 0, so invaliding");
 
-                            if !ndp_state.has_prefix(&addr_sub) {
-                                // `add_prefix` may panic if the prefix already exists in
-                                // our prefix list, but we will only reach here if it doesn't
-                                // so we know `add_prefix` will not panic.
-                                ndp_state.add_prefix(addr_sub);
-                            }
+                                // If the on-link flag is set, the valid lifetime is 0 and the
+                                // prefix is already present in our prefix list, timeout the
+                                // prefix immediately, as per RFC 4861 section 6.3.4.
 
-                            // Reset invalidation timer.
-                            if prefix_info.valid_lifetime() == core::u32::MAX {
-                                // A valid lifetime of all 1 bits (== `core::u32::MAX`) represents
-                                // infinity, as per RFC 4861 section 4.6.2. Given this, we do not
-                                // need a timer to mark the prefix as invalid.
+                                // Cancel the prefix invalidation timeout if it exists.
                                 ctx.cancel_timer(timer_id);
+
+                                let ndp_state = ctx.get_state_mut_with(device_id);
+                                ndp_state.invalidate_prefix(addr_sub);
                             } else {
-                                ctx.schedule_timer(
-                                    Duration::from_secs(prefix_info.valid_lifetime().into()),
-                                    timer_id,
-                                );
+                                // If the on-link flag is set, the valid lifetime is 0 and the
+                                // prefix is not present in our prefix list, ignore the option,
+                                // as per RFC 4861 section 6.3.4.
+                                trace!("receive_ndp_packet_inner: on-link prefix is unknown and is has valid lifetime = 0, so ignoring");
                             }
                         }
 
                         if prefix_info.autonomous_address_configuration_flag() {
-                            if prefix_info.prefix().is_linklocal() {
-                                // If the autonomous flag is set and the prefix is the link-local
-                                // prefix, ignore the option, as per RFC 4862 section 5.5.3.
-                                trace!("receive_ndp_packet_inner: autonomous prefix is a link local, so ignoring");
-                                continue;
-                            }
-
                             if prefix_info.preferred_lifetime() > prefix_info.valid_lifetime() {
                                 // If the preferred lifetime is greater than the valid lifetime,
                                 // silently ignore the Prefix Information option, as per RFC 4862
@@ -2963,13 +2936,20 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             };
 
                             let now = ctx.now();
+                            // TODO(52349): Immediately deprecate the prefix when it has a 0
+                            // preferred lifetime.
                             let preferred_until = now
-                                .checked_add(Duration::from_secs(
-                                    prefix_info.preferred_lifetime().into(),
-                                ))
+                                .checked_add(
+                                    prefix_info
+                                        .preferred_lifetime()
+                                        .map(|l| l.get())
+                                        .unwrap_or(Duration::from_secs(0)),
+                                )
                                 .unwrap();
-                            let valid_for =
-                                Duration::from_secs(prefix_info.valid_lifetime().into());
+                            let valid_for = prefix_info
+                                .valid_lifetime()
+                                .map(|l| l.get())
+                                .unwrap_or(Duration::from_secs(0));
                             let valid_until = now.checked_add(valid_for).unwrap();
 
                             // Before configuring a SLAAC address, check to see if we already have

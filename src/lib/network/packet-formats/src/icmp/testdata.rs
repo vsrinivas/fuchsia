@@ -32,6 +32,11 @@ pub(crate) mod ndp_neighbor {
 }
 
 pub(crate) mod ndp_router {
+    use core::num::NonZeroU8;
+    use core::time::Duration;
+
+    use crate::utils::NonZeroDuration;
+
     pub(crate) const ADVERTISEMENT_IP_PACKET_BYTES: &[u8] = &[
         0x68, 0x00, 0x00, 0x00, 0x00, 0x38, 0x3a, 0xff, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x02, 0x00, 0x5e, 0xff, 0xfe, 0x00, 0x02, 0x65, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00,
@@ -43,17 +48,24 @@ pub(crate) mod ndp_router {
     ];
 
     /// Options in the Advertisement packet.
-    pub(crate) const HOP_LIMIT: u8 = 64;
-    pub(crate) const LIFETIME: u16 = 3600;
-    pub(crate) const REACHABLE_TIME: u32 = 0;
-    pub(crate) const RETRANS_TIMER: u32 = 0;
+    // We know this is safe because we provide a non-zero `u8` value.
+    pub(crate) const HOP_LIMIT: Option<NonZeroU8> = Some(unsafe { NonZeroU8::new_unchecked(64) });
+    // We know this is safe because we provide a non-zero `Duration` value.
+    pub(crate) const LIFETIME: Option<NonZeroDuration> =
+        Some(unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(3600)) });
+    pub(crate) const REACHABLE_TIME: Option<NonZeroDuration> = None;
+    pub(crate) const RETRANS_TIMER: Option<NonZeroDuration> = None;
 
     /// Data from the SourceLinkLayerAddress option.
     pub(crate) const SOURCE_LINK_LAYER_ADDRESS: &[u8] = &[0x00, 0x00, 0x5e, 0x00, 0x02, 0x65];
 
     /// Data from the Prefix Info option.
-    pub(crate) const PREFIX_INFO_VALID_LIFETIME: u32 = 2_592_000;
-    pub(crate) const PREFIX_INFO_PREFERRED_LIFETIME: u32 = 604_800;
+    // We know this is safe because we provide a non-zero `Duration` value.
+    pub(crate) const PREFIX_INFO_VALID_LIFETIME: Option<NonZeroDuration> =
+        Some(unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(2_592_000)) });
+    // We know this is safe because we provide a non-zero `Duration` value.
+    pub(crate) const PREFIX_INFO_PREFERRED_LIFETIME: Option<NonZeroDuration> =
+        Some(unsafe { NonZeroDuration::new_unchecked(Duration::from_secs(604_800)) });
     pub(crate) const PREFIX_ADDRESS: &[u8] = &[
         0x26, 0x20, 0x00, 0x00, 0x10, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00,

@@ -74,6 +74,7 @@ pub mod tcp;
 pub mod testdata;
 pub mod testutil;
 pub mod udp;
+pub mod utils;
 
 use core::convert::TryInto;
 
