@@ -122,6 +122,15 @@ bool asan_address_is_poisoned(uintptr_t address) {
   return shadow_val <= offset;
 }
 
+bool asan_entire_region_is_poisoned(uintptr_t address, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    if (!asan_address_is_poisoned(address + i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 uintptr_t asan_region_is_poisoned(uintptr_t address, size_t size) {
   const uintptr_t end = address + size;
   const uintptr_t aligned_begin = ROUNDUP(address, kAsanGranularity);

@@ -42,11 +42,16 @@ void asan_poison_shadow(uintptr_t address, size_t size, uint8_t value);
 // ASAN dynamic check functions - allows callers to check if an access would be valid without
 // doing the access (aka poisoned). External accesses to a poisoned address is invalid and
 // may cause a fault.
-//
-// Return true if any byte [|address|, |address + size|) is poisoned.
+
+// Return the address of the first poisoned byte in [|address|, |address + size|).
+// If no bytes are poisoned, returns 0.
 uintptr_t asan_region_is_poisoned(uintptr_t address, size_t size);
+
 // Return true if kernel |address| is poisoned.
 bool asan_address_is_poisoned(uintptr_t address);
+
+// Return true if all bytes in [|address|, |address + size|) are poisoned.
+bool asan_entire_region_is_poisoned(uintptr_t address, size_t size);
 
 // Distinguished kasan poison values.
 // LLVM defines userspace equivalents of these in compiler-rt/lib/asan/asan_internal.h

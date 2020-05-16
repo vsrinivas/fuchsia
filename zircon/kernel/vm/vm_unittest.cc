@@ -22,6 +22,7 @@
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
+#include <vm/pmm.h>
 #include <vm/pmm_checker.h>
 #include <vm/scanner.h>
 #include <vm/vm.h>
@@ -37,7 +38,7 @@ static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WR
 
 namespace {
 
-// Helper class for managing a PmmNode with fake pages. AllocRange and AllocContiguous are not
+// Helper class for managing a PmmNode with real pages. AllocRange and AllocContiguous are not
 // supported by the managed PmmNode object. Only a single instance can exist at a time.
 class ManagedPmmNode {
  public:
@@ -52,13 +53,11 @@ class ManagedPmmNode {
 
   explicit ManagedPmmNode(const uint64_t* watermarks = kDefaultArray, uint8_t watermark_count = 1,
                           uint64_t debounce = kDefaultDebounce) {
-#if __has_feature(address_sanitizer)
-    // Pmm nodes for tests do not use asan; their pages are managed independently.
-    node_.DisableKasan();
-#endif
     list_node list = LIST_INITIAL_VALUE(list);
-    for (auto& p : pages_) {
-      list_add_tail(&list, &p.queue_node);
+    ZX_ASSERT(pmm_alloc_pages(kNumPages, 0, &list) == ZX_OK);
+    vm_page_t* page;
+    list_for_every_entry (&list, page, vm_page_t, queue_node) {
+      page->set_state(VM_PAGE_STATE_FREE);
     }
     node_.AddFreePages(&list);
 
@@ -74,6 +73,11 @@ class ManagedPmmNode {
     list_node list = LIST_INITIAL_VALUE(list);
     zx_status_t status = node_.AllocPages(kNumPages, 0, &list);
     ASSERT(status == ZX_OK);
+    vm_page_t* page;
+    list_for_every_entry (&list, page, vm_page_t, queue_node) {
+      page->set_state(VM_PAGE_STATE_ALLOC);
+    }
+    pmm_free(&list);
 
     ASSERT(instance_ == this);
     instance_ = nullptr;
@@ -84,7 +88,6 @@ class ManagedPmmNode {
 
  private:
   PmmNode node_;
-  vm_page_t pages_[kNumPages] = {};
   uint8_t cur_level_ = MAX_WATERMARK_COUNT + 1;
 
   static void StateCallback(uint8_t level) { instance_->cur_level_ = level; }
@@ -3108,6 +3111,25 @@ static bool physmap_for_each_gap_test() {
   END_TEST;
 }
 
+#if __has_feature(address_sanitizer)
+static bool kasan_detects_use_after_free() {
+  BEGIN_TEST;
+  ManagedPmmNode node;
+
+  vm_page_t* page;
+  paddr_t paddr;
+  zx_status_t status = node.node().AllocPage(PMM_ALLOC_DELAY_OK, &page, &paddr);
+  ASSERT_EQ(ZX_OK, status, "pmm_alloc_page one page");
+  ASSERT_NE(paddr, 0UL);
+  EXPECT_EQ(0UL, asan_region_is_poisoned(reinterpret_cast<uintptr_t>(paddr_to_physmap(paddr)),
+                                         PAGE_SIZE));
+  node.node().FreePage(page);
+  EXPECT_TRUE(asan_entire_region_is_poisoned(reinterpret_cast<uintptr_t>(paddr_to_physmap(paddr)),
+                                             PAGE_SIZE));
+  END_TEST;
+}
+#endif  // __has_feature(address_sanitizer)
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -3204,3 +3226,9 @@ UNITTEST_END_TESTCASE(page_queues_tests, "pq", "PageQueues tests")
 UNITTEST_START_TESTCASE(physmap_tests)
 VM_UNITTEST(physmap_for_each_gap_test)
 UNITTEST_END_TESTCASE(physmap_tests, "physmap", "physmap tests")
+
+#if __has_feature(address_sanitizer)
+UNITTEST_START_TESTCASE(kasan_pmm_tests)
+VM_UNITTEST(kasan_detects_use_after_free)
+UNITTEST_END_TESTCASE(kasan_pmm_tests, "kasan_pmm", "kasan pmm tests")
+#endif  // __has_feature(address_sanitizer)

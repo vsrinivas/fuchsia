@@ -105,9 +105,6 @@ class PmmNode {
   // For test and diagnostic purposes.
   PmmChecker* Checker() { return &checker_; }
 
-  // Disable kasan poisons.
-  void DisableKasan();
-
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);
@@ -174,9 +171,6 @@ class PmmNode {
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;
   PmmChecker checker_ TA_GUARDED(lock_);
-#if __has_feature(address_sanitizer)
-  bool kasan_enabled_ TA_GUARDED(lock_) = true;
-#endif
 };
 
 // We don't need to hold the arena lock while executing this, since it is

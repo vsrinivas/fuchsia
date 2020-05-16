@@ -38,9 +38,7 @@ void noop_callback(uint8_t idx) {}
 // allowed and may cause faults or kASAN checks. Zero |value| 'unpoisons' a page.
 void PmmNode::AsanPoisonPage(vm_page_t* p, uint8_t value) {
 #if __has_feature(address_sanitizer)
-  if (likely(kasan_enabled_)) {
-    asan_poison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE, value);
-  }
+  asan_poison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE, value);
 #endif  // __has_feature(address_sanitizer)
 }
 
@@ -180,16 +178,8 @@ void PmmNode::CheckAllFreePages() {
 }
 
 #if __has_feature(address_sanitizer)
-void PmmNode::DisableKasan() {
-  Guard<Mutex> guard{&lock_};
-  kasan_enabled_ = false;
-}
-
 void PmmNode::PoisonAllFreePages() {
   Guard<Mutex> guard{&lock_};
-  if (!kasan_enabled_) {
-    return;
-  }
 
   vm_page* page;
   list_for_every_entry (&free_list_, page, vm_page, queue_node) {
