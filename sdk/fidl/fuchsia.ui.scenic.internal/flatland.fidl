@@ -370,27 +370,39 @@ protocol Flatland {
 
     // ***** Cleanup operations *****
 
-    /// Released Transforms and Content will be garbage collected by the system once they are no
-    /// longer necessary for rendering (i.e., there is no path from the Root Transform to the
-    /// object, all pending rendering has completed, and new Content is available). The only
-    /// exceptions are Link objects (see ReleaseLink() for more details).
+    /// Released Transforms will be garbage collected by the system once they are no longer
+    /// necessary for rendering. For Transforms, this means there is no path from any unreleased
+    /// Transform to the newly-released Transform.
     ///
-    /// However, once released, the id immediately goes out of scope for future function calls, and
-    /// can be reused by the client when creating new Transforms and Content.
+    /// Once released, the id immediately goes out of scope for future function calls and can be
+    /// reused when creating new Transforms.
     ///
-    /// It is an error to call Graph functions on a released id (unless that id has been reused to
-    /// construct a new object).
+    /// It is an error to call functions with a released id (unless that id has been reused to
+    /// construct a new Transform).
     ReleaseTransform(TransformId transform_id);
 
     /// Releasing a Link removes the attached sub-Graph from the scene, even if the Link is still
-    /// connected to a Transform. Unlike other Content, Links are garbage collected by the system
+    /// connected to a Transform. Unlike other resources, Links are garbage collected by the system
     /// during the next Present() because a released Link is guaranteed to provide no renderable
     /// content.
     ///
     /// Use SetLinkOnTransform(transform_id, 0) to clean up references to deleted Links.
     ///
-    /// Despite having a return type, this function is still feed-forward Like LinkToParent() and
+    /// Despite having a return type, this function is still feed-forward like LinkToParent() and
     /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
     /// presented operations have been executed.
     ReleaseLink(LinkId id) -> (ContentLinkToken token);
+
+    /// Released Images will be garbage collected by the system once they are no longer necessary
+    /// for rendering. For Images, this means the Image is no longer attached to any Transform and
+    /// any pending rendering that references the Image is complete.
+    ///
+    /// Use SetImageOnTransform(transform_id, 0) to clean up references to released Images.
+    ///
+    /// Once released, the id immediately goes out of scope for future function calls and can be
+    /// reused when creating new Images.
+    ///
+    /// It is an error to call functions with a released id (unless that id has been reused to
+    /// construct a new Image).
+    ReleaseImage(ImageId id);
 };

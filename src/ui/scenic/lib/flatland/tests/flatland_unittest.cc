@@ -203,13 +203,13 @@ class FlatlandTest : public gtest::TestLoopFixture {
   // Creates an image in |flatland| with the specified |image_id| and backing properties, and
   // returns the Renderer-generated GlobalBufferCollectionId that will be in the ImageMetadata
   // struct for that Image.
-  BufferCollectionId CreateImage(Flatland* flatland, ImageId image_id,
-                                 BufferCollectionId collection_id, uint32_t vmo_index,
-                                 ImageProperties properties) {
-    BufferCollectionId renderer_collection_id = next_collection_id_++;
+  GlobalBufferCollectionId CreateImage(Flatland* flatland, ImageId image_id,
+                                       BufferCollectionId collection_id,
+                                       ImageProperties properties) {
+    GlobalBufferCollectionId global_collection_id = next_global_collection_id_++;
 
     EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
-        .WillOnce(Return(renderer_collection_id));
+        .WillOnce(Return(global_collection_id));
 
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
     flatland->RegisterBufferCollection(collection_id, std::move(token));
@@ -217,7 +217,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     // Ensure all buffer constraints are valid for the desired image by generating constraints based
     // on the image properties.
     BufferCollectionMetadata metadata;
-    metadata.vmo_count = vmo_index + 1;
+    metadata.vmo_count = 1;
 
     FX_DCHECK(properties.has_width());
     metadata.image_constraints.min_coded_width = properties.width();
@@ -227,12 +227,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
     metadata.image_constraints.min_coded_height = properties.height();
     metadata.image_constraints.max_coded_height = properties.height();
 
-    EXPECT_CALL(*mock_renderer_, Validate(_)).WillOnce(Return(metadata));
+    EXPECT_CALL(*mock_renderer_, Validate(global_collection_id)).WillOnce(Return(metadata));
 
-    flatland->CreateImage(image_id, collection_id, vmo_index, std::move(properties));
+    flatland->CreateImage(image_id, collection_id, 0, std::move(properties));
     PRESENT((*flatland), true);
 
-    return renderer_collection_id;
+    return global_collection_id;
   }
 
  protected:
@@ -243,7 +243,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
-  std::atomic<BufferCollectionId> next_collection_id_ = 1;
+  std::atomic<BufferCollectionId> next_global_collection_id_ = 1;
 };
 
 }  // namespace
@@ -419,6 +419,7 @@ TEST_F(FlatlandTest, AddAndRemoveChildErrorCases) {
   PRESENT(flatland, false);
 }
 
+// Test that Transforms can be children to multiple different parents.
 TEST_F(FlatlandTest, MultichildUsecase) {
   Flatland flatland = CreateFlatland();
 
@@ -449,6 +450,7 @@ TEST_F(FlatlandTest, MultichildUsecase) {
   PRESENT(flatland, true);
 }
 
+// Test that Present() fails if it detects a graph cycle.
 TEST_F(FlatlandTest, CycleDetector) {
   Flatland flatland = CreateFlatland();
 
@@ -591,6 +593,7 @@ TEST_F(FlatlandTest, SetScaleErrorCases) {
   PRESENT(flatland, false);
 }
 
+// Test that changing geometric transform properties affects the global matrix of child Transforms.
 TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   Flatland parent = CreateFlatland();
   Flatland child = CreateFlatland();
@@ -982,7 +985,7 @@ TEST_F(FlatlandTest, ContentLinkIdCollision) {
   PRESENT(flatland, false);
 }
 
-// This code doesn't use the helper function to create a link, because it tests intermediate steps
+// This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ValidParentToChildFlow) {
   Flatland parent = CreateFlatland();
@@ -1015,7 +1018,7 @@ TEST_F(FlatlandTest, ValidParentToChildFlow) {
   EXPECT_TRUE(layout_updated);
 }
 
-// This code doesn't use the helper function to create a link, because it tests intermediate steps
+// This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ValidChildToParentFlow) {
   Flatland parent = CreateFlatland();
@@ -2233,7 +2236,6 @@ TEST_F(FlatlandTest, SetImageOnTransformErrorCases) {
   // Setup a valid image.
   const ImageId kImageId = 1;
   const BufferCollectionId kBufferCollectionId = 1;
-  const uint32_t kVmoIndex = 0;
   const uint32_t kWidth = 100;
   const uint32_t kHeight = 200;
 
@@ -2241,7 +2243,7 @@ TEST_F(FlatlandTest, SetImageOnTransformErrorCases) {
   properties.set_width(kWidth);
   properties.set_height(kHeight);
 
-  CreateImage(&flatland, kImageId, kBufferCollectionId, kVmoIndex, std::move(properties));
+  CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
 
   // Create a transform.
   const TransformId kTransformId = 1;
@@ -2268,16 +2270,13 @@ TEST_F(FlatlandTest, ClearImageOnTransform) {
   // Setup a valid image.
   const ImageId kImageId = 1;
   const BufferCollectionId kBufferCollectionId = 1;
-  const uint32_t kVmoIndex = 0;
-  const uint32_t kWidth = 100;
-  const uint32_t kHeight = 200;
 
   ImageProperties properties;
-  properties.set_width(kWidth);
-  properties.set_height(kHeight);
+  properties.set_width(100);
+  properties.set_height(200);
 
   const GlobalBufferCollectionId global_collection_id =
-      CreateImage(&flatland, kImageId, kBufferCollectionId, kVmoIndex, std::move(properties));
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties));
 
   // Create a transform, make it the root transform, and attach the image.
   const TransformId kTransformId = 1;
@@ -2293,9 +2292,6 @@ TEST_F(FlatlandTest, ClearImageOnTransform) {
 
   const auto& image_data = data.image_vector[0];
   EXPECT_EQ(image_data.collection_id, global_collection_id);
-  EXPECT_EQ(image_data.vmo_idx, kVmoIndex);
-  EXPECT_EQ(image_data.width, kWidth);
-  EXPECT_EQ(image_data.height, kHeight);
 
   // An ImageId of 0 indicates to remove any image on the specified transform.
   flatland.SetImageOnTransform(0, kTransformId);
@@ -2310,22 +2306,24 @@ TEST_F(FlatlandTest, ImagesAppearInTopologicalOrder) {
 
   // Setup two valid images.
   const ImageId kImageId1 = 1;
+  const BufferCollectionId kBufferCollectionId1 = 1;
 
   ImageProperties properties1;
   properties1.set_width(100);
   properties1.set_height(200);
 
   const GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, kImageId1, 1, 1, std::move(properties1));
+      CreateImage(&flatland, kImageId1, kBufferCollectionId1, std::move(properties1));
 
   const ImageId kImageId2 = 2;
+  const BufferCollectionId kBufferCollectionId2 = 2;
 
   ImageProperties properties2;
   properties2.set_width(300);
   properties2.set_height(400);
 
   const GlobalBufferCollectionId global_collection_id2 =
-      CreateImage(&flatland, kImageId2, 2, 2, std::move(properties2));
+      CreateImage(&flatland, kImageId2, kBufferCollectionId2, std::move(properties2));
 
   // Create a root transform with two children.
   const TransformId kTransformId1 = 3;
@@ -2366,6 +2364,149 @@ TEST_F(FlatlandTest, ImagesAppearInTopologicalOrder) {
   EXPECT_EQ(data.image_vector.size(), 2ul);
   EXPECT_EQ(data.image_vector[0].collection_id, global_collection_id2);
   EXPECT_EQ(data.image_vector[1].collection_id, global_collection_id1);
+}
+
+TEST_F(FlatlandTest, ReleaseImageErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  // Zero is not a valid image ID.
+  flatland.ReleaseImage(0);
+  PRESENT(flatland, false);
+
+  // The image must exist.
+  flatland.ReleaseImage(1);
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
+  Flatland flatland = CreateFlatland();
+
+  // Setup a valid image.
+  const ImageId kImageId = 1;
+  const BufferCollectionId kBufferCollectionId = 1;
+
+  ImageProperties properties1;
+  properties1.set_width(100);
+  properties1.set_height(200);
+
+  const GlobalBufferCollectionId global_collection_id1 =
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1));
+
+  // Create a transform, make it the root transform, and attach the image.
+  const TransformId kTransformId = 2;
+
+  flatland.CreateTransform(kTransformId);
+  flatland.SetRootTransform(kTransformId);
+  flatland.SetImageOnTransform(kImageId, kTransformId);
+  PRESENT(flatland, true);
+
+  // The image should appear in the global image vector.
+  auto data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.image_vector.size(), 1ul);
+  EXPECT_EQ(data.image_vector[0].collection_id, global_collection_id1);
+
+  // Releasing the image succeeds, but the image remains in the global image vector.
+  flatland.ReleaseImage(kImageId);
+  PRESENT(flatland, true);
+
+  data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.image_vector.size(), 1ul);
+  EXPECT_EQ(data.image_vector[0].collection_id, global_collection_id1);
+
+  // Clearing the Transform of its Image removes it from the global image vector.
+  flatland.SetImageOnTransform(0, kTransformId);
+  PRESENT(flatland, true);
+
+  data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.image_vector.size(), 0ul);
+}
+
+TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
+  Flatland flatland = CreateFlatland();
+
+  // Setup a valid image.
+  const ImageId kImageId = 1;
+  const BufferCollectionId kBufferCollectionId = 1;
+
+  ImageProperties properties1;
+  properties1.set_width(100);
+  properties1.set_height(200);
+
+  const GlobalBufferCollectionId global_collection_id1 =
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1));
+
+  // Create a transform, make it the root transform, attach the image, then release it.
+  const TransformId kTransformId1 = 2;
+
+  flatland.CreateTransform(kTransformId1);
+  flatland.SetRootTransform(kTransformId1);
+  flatland.SetImageOnTransform(kImageId, kTransformId1);
+  flatland.ReleaseImage(kImageId);
+  PRESENT(flatland, true);
+
+  // The ImageId can be re-used even though the old image is still present. Add a second transform
+  // so that both images show up in the global image vector.
+  ImageProperties properties2;
+  properties2.set_width(300);
+  properties2.set_height(400);
+
+  const GlobalBufferCollectionId global_collection_id2 =
+      CreateImage(&flatland, kImageId, 2, std::move(properties2));
+
+  const TransformId kTransformId2 = 3;
+
+  flatland.CreateTransform(kTransformId2);
+  flatland.AddChild(kTransformId1, kTransformId2);
+  flatland.SetImageOnTransform(kImageId, kTransformId2);
+  PRESENT(flatland, true);
+
+  // The images appear in topological order.
+  auto data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.image_vector.size(), 2ul);
+  EXPECT_EQ(data.image_vector[0].collection_id, global_collection_id1);
+  EXPECT_EQ(data.image_vector[1].collection_id, global_collection_id2);
+}
+
+// Test that released Images, when attached to a Transform, are not garbage collected even if
+// the Transform is not part of the most recently presented global topology.
+TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
+  Flatland flatland = CreateFlatland();
+
+  // Setup a valid image.
+  const ImageId kImageId = 1;
+  const BufferCollectionId kBufferCollectionId = 1;
+
+  ImageProperties properties1;
+  properties1.set_width(100);
+  properties1.set_height(200);
+
+  const GlobalBufferCollectionId global_collection_id1 =
+      CreateImage(&flatland, kImageId, kBufferCollectionId, std::move(properties1));
+
+  // Create a transform, make it the root transform, attach the image, then release it.
+  const TransformId kTransformId = 2;
+
+  flatland.CreateTransform(kTransformId);
+  flatland.SetRootTransform(kTransformId);
+  flatland.SetImageOnTransform(kImageId, kTransformId);
+  flatland.ReleaseImage(kImageId);
+  PRESENT(flatland, true);
+
+  // Remove the entire hierarchy, then verify that no images are present.
+  flatland.SetRootTransform(0);
+  PRESENT(flatland, true);
+
+  auto data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.image_vector.size(), 0ul);
+
+  // Reintroduce the hierarchy and confirm the Image is still present, even though it was
+  // temporarily not reachable from the root transform.
+  flatland.SetRootTransform(kTransformId);
+  PRESENT(flatland, true);
+
+  data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.image_vector.size(), 1ul);
+  EXPECT_EQ(data.image_vector[0].collection_id, global_collection_id1);
 }
 
 #undef EXPECT_MATRIX

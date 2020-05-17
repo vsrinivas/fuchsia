@@ -100,15 +100,17 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetImageOnTransform(ImageId image_id, TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkProperties(LinkId id,
+  void SetLinkProperties(LinkId link_id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkSize(LinkId id, fuchsia::ui::scenic::internal::Vec2 size) override;
+  void SetLinkSize(LinkId link_id, fuchsia::ui::scenic::internal::Vec2 size) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseLink(LinkId link_id,
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void ReleaseImage(ImageId image_id) override;
 
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
@@ -225,15 +227,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A mapping from user-generated ID to BufferCollectionData.
   std::unordered_map<BufferCollectionId, BufferCollectionData> buffer_collections_;
 
-  // The transform an image is associated with and the image metadata necessary to render that
-  // image.
-  struct ImageData {
-    TransformHandle handle;
-    ImageMetadata metadata;
-  };
+  // A mapping from user-generated ID to the TransformHandle representing that Image.
+  std::unordered_map<ImageId, TransformHandle> image_handles_;
 
-  // A mapping from user-generated ID to ImageData.
-  std::unordered_map<ImageId, ImageData> images_;
+  // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
+  std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;
 };
 
 }  // namespace flatland

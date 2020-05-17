@@ -70,6 +70,8 @@ void Flatland::Present(PresentCallback callback) {
     // Cleanup released resources.
     for (const auto& dead_handle : data.dead_transforms) {
       matrices_.erase(dead_handle);
+      // TODO(52052): clean up the Renderer's image resources as well.
+      image_metadatas_.erase(dead_handle);
     }
 
     auto uber_struct = std::make_unique<UberStruct>();
@@ -85,9 +87,7 @@ void Flatland::Present(PresentCallback callback) {
       uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
     }
 
-    for (const auto& [image_id, image_data] : images_) {
-      uber_struct->images[image_data.handle] = image_data.metadata;
-    }
+    uber_struct->images = image_metadatas_;
 
     uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
     // TODO(36161): Once present operations can be pipelined, this variable will change state based
@@ -460,7 +460,7 @@ void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, u
       return false;
     }
 
-    if (images_.count(image_id)) {
+    if (image_handles_.count(image_id)) {
       FX_LOGS(ERROR) << "CreateImage called with pre-existing image_id " << image_id;
       return false;
     }
@@ -522,12 +522,15 @@ void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, u
       return false;
     }
 
-    auto& image_data = images_[image_id];
-    image_data.handle = transform_graph_.CreateTransform();
-    image_data.metadata.collection_id = buffer_data.collection_id;
-    image_data.metadata.vmo_idx = vmo_index;
-    image_data.metadata.width = width;
-    image_data.metadata.height = height;
+    auto handle = transform_graph_.CreateTransform();
+
+    image_handles_[image_id] = handle;
+
+    auto& metadata = image_metadatas_[handle];
+    metadata.collection_id = buffer_data.collection_id;
+    metadata.vmo_idx = vmo_index;
+    metadata.width = width;
+    metadata.height = height;
 
     return true;
   });
@@ -583,27 +586,29 @@ void Flatland::SetImageOnTransform(ImageId image_id, TransformId transform_id) {
       return true;
     }
 
-    auto image_kv = images_.find(image_id);
+    auto image_handle_kv = image_handles_.find(image_id);
 
-    if (image_kv == images_.end()) {
+    if (image_handle_kv == image_handles_.end()) {
       FX_LOGS(ERROR) << "SetImageOnTransform failed, image_id " << image_id << " not found";
       return false;
     }
 
-    transform_graph_.SetPriorityChild(transform_kv->second, image_kv->second.handle);
+    transform_graph_.SetPriorityChild(transform_kv->second, image_handle_kv->second);
     return true;
   });
 }
 
-void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
+void Flatland::SetLinkProperties(LinkId link_id, LinkProperties properties) {
   pending_operations_.push_back([=, properties = std::move(properties)]() mutable {
-    if (id == 0) {
+    if (link_id == 0) {
+      FX_LOGS(ERROR) << "SetLinkProperties called with link_id zero.";
       return false;
     }
 
-    auto link_kv = child_links_.find(id);
+    auto link_kv = child_links_.find(link_id);
 
     if (link_kv == child_links_.end()) {
+      FX_LOGS(ERROR) << "SetLinkProperties failed, link_id " << link_id << " not found";
       return false;
     }
 
@@ -612,6 +617,8 @@ void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
     if (properties.has_logical_size()) {
       auto logical_size = properties.logical_size();
       if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
+        FX_LOGS(ERROR) << "SetLinkProperties failed, logical_size components must be positive, "
+                       << "given (" << logical_size.x << ", " << logical_size.y << ")";
         return false;
       }
     } else {
@@ -630,19 +637,23 @@ void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
   });
 }
 
-void Flatland::SetLinkSize(LinkId id, Vec2 size) {
+void Flatland::SetLinkSize(LinkId link_id, Vec2 size) {
   pending_operations_.push_back([=, size = std::move(size)]() {
-    if (id == 0) {
+    if (link_id == 0) {
+      FX_LOGS(ERROR) << "SetLinkSize called with link_id zero.";
       return false;
     }
 
     if (size.x <= 0.f || size.y <= 0.f) {
+      FX_LOGS(ERROR) << "SetLinkSize failed, size components must be positive, given (" << size.x
+                     << ", " << size.y << ")";
       return false;
     }
 
-    auto link_kv = child_links_.find(id);
+    auto link_kv = child_links_.find(link_id);
 
     if (link_kv == child_links_.end()) {
+      FX_LOGS(ERROR) << "SetLinkSize failed, link_id " << link_id << " not found";
       return false;
     }
 
@@ -715,6 +726,31 @@ void Flatland::ReleaseLink(LinkId link_id,
     child_links_.erase(link_id);
 
     callback(std::move(return_token));
+
+    return true;
+  });
+}
+
+void Flatland::ReleaseImage(ImageId image_id) {
+  pending_operations_.push_back([=]() {
+    if (image_id == kInvalidId) {
+      FX_LOGS(ERROR) << "ReleaseImage called with image_id zero";
+      return false;
+    }
+
+    auto image_handle_kv = image_handles_.find(image_id);
+
+    if (image_handle_kv == image_handles_.end()) {
+      FX_LOGS(ERROR) << "ReleaseImage failed, image_id " << image_id << " not found";
+      return false;
+    }
+
+    bool erased_from_graph = transform_graph_.ReleaseTransform(image_handle_kv->second);
+    FX_DCHECK(erased_from_graph);
+
+    // Even though the handle is released, it may still be referenced by client Transforms. The
+    // image_metadatas_ map preserves the entry until it shows up in the dead_transforms list.
+    image_handles_.erase(image_id);
 
     return true;
   });
