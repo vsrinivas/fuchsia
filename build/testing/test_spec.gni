@@ -265,6 +265,7 @@ template("test_spec") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
     metadata = {
       tests = [ test_spec ]
     }
