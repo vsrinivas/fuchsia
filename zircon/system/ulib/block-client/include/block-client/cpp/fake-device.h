@@ -93,7 +93,6 @@ class FakeBlockDevice : public BlockDevice {
   void ResizeDeviceToAtLeast(uint64_t new_size);
 
  private:
-  bool IsRegisteredLocked(vmoid_t) const __TA_REQUIRES(lock_);
   void AdjustBlockDeviceSizeLocked(uint64_t new_size) __TA_REQUIRES(lock_);
   void UpdateStats(bool success, zx::ticks start_tick, const block_fifo_request_t& op)
       __TA_REQUIRES(lock_);
@@ -116,7 +115,6 @@ class FakeBlockDevice : public BlockDevice {
   uint64_t block_count_ __TA_GUARDED(lock_) = 0;
   uint32_t block_size_ __TA_GUARDED(lock_) = 0;
   uint32_t block_info_flags_ __TA_GUARDED(lock_) = 0;
-  vmoid_t next_vmoid_ __TA_GUARDED(lock_) = 1;
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(lock_);
   zx::vmo block_device_ __TA_GUARDED(lock_);
   mutable storage_metrics::BlockDeviceMetrics stats_ __TA_GUARDED(lock_) = {};

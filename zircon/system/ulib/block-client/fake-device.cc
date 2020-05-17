@@ -68,10 +68,6 @@ void FakeBlockDevice::SetBlockSize(uint32_t block_size) {
 
 bool FakeBlockDevice::IsRegistered(vmoid_t vmoid) const {
   fbl::AutoLock lock(&lock_);
-  return IsRegisteredLocked(vmoid);
-}
-
-bool FakeBlockDevice::IsRegisteredLocked(vmoid_t vmoid) const {
   return vmos_.find(vmoid) != vmos_.end();
 }
 
@@ -129,23 +125,29 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
     switch (requests[i].opcode & BLOCKIO_OP_MASK) {
       case BLOCKIO_READ: {
         vmoid_t vmoid = requests[i].vmoid;
-        auto& target_vmoid = vmos_[vmoid];
+        zx::vmo& target_vmoid = vmos_.at(vmoid);
         uint8_t buffer[block_size];
         memset(buffer, 0, block_size);
         for (size_t j = 0; j < requests[i].length; j++) {
           uint64_t offset = (requests[i].dev_offset + j) * block_size;
-          EXPECT_OK(block_device_.read(buffer, offset, block_size), "offset: %lu, block_size: %u",
-                    offset, block_size);
+          zx_status_t status = block_device_.read(buffer, offset, block_size);
+          if (status != ZX_OK) {
+            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            return status;
+          }
           offset = (requests[i].vmo_offset + j) * block_size;
-          EXPECT_OK(target_vmoid.write(buffer, offset, block_size), "offset: %lu, block_size: %u",
-                                       offset, block_size);
+          status = target_vmoid.write(buffer, offset, block_size);
+          if (status != ZX_OK) {
+            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            return status;
+          }
         }
         UpdateStats(true, start_tick, requests[i]);
         break;
       }
       case BLOCKIO_WRITE: {
         vmoid_t vmoid = requests[i].vmoid;
-        auto& target_vmoid = vmos_[vmoid];
+        zx::vmo& target_vmoid = vmos_.at(vmoid);
         uint8_t buffer[block_size];
         memset(buffer, 0, block_size);
         for (size_t j = 0; j < requests[i].length; j++) {
@@ -155,11 +157,17 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
             }
           }
           uint64_t offset = (requests[i].vmo_offset + j) * block_size;
-          EXPECT_OK(target_vmoid.read(buffer, offset, block_size),
-                    "offset: %lu, block_size: %u", offset, block_size);
+          zx_status_t status = target_vmoid.read(buffer, offset, block_size);
+          if (status != ZX_OK) {
+            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            return status;
+          }
           offset = (requests[i].dev_offset + j) * block_size;
-          EXPECT_OK(block_device_.write(buffer, offset, block_size),
-                    "offset: %lu, block_size: %u", offset, block_size);
+          status = block_device_.write(buffer, offset, block_size);
+          if (status != ZX_OK) {
+            EXPECT_OK(status, "offset=%lu, block_size=%u", offset, block_size);
+            return status;
+          }
           write_block_count_++;
         }
         UpdateStats(true, start_tick, requests[i]);
@@ -172,8 +180,7 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
         UpdateStats(true, start_tick, requests[i]);
         continue;
       case BLOCKIO_CLOSE_VMO:
-        EXPECT_TRUE(IsRegisteredLocked(requests[i].vmoid), "Closing unregistered VMO");
-        vmos_.erase(requests[i].vmoid);
+        EXPECT_EQ(1, vmos_.erase(requests[i].vmoid));
         break;
       default:
         UpdateStats(false, start_tick, requests[i]);
@@ -199,8 +206,17 @@ zx_status_t FakeBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* 
   }
 
   fbl::AutoLock lock(&lock_);
-  vmos_.insert(std::make_pair(next_vmoid_, std::move(xfer_vmo)));
-  *out_vmoid = storage::Vmoid(next_vmoid_++);
+  // Find a free vmoid.
+  vmoid_t vmoid = 1;
+  for (const auto &[used_vmoid, vmo] : vmos_) {
+    if (used_vmoid > vmoid)
+      break;
+    if (used_vmoid == std::numeric_limits<vmoid_t>::max())
+      return ZX_ERR_NO_RESOURCES;
+    vmoid = used_vmoid + 1;
+  }
+  vmos_.insert(std::make_pair(vmoid, std::move(xfer_vmo)));
+  *out_vmoid = storage::Vmoid(vmoid);
   return ZX_OK;
 }
 
