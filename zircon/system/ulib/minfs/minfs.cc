@@ -561,18 +561,12 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   if (!data_operations.is_empty() && !metadata_operations.is_empty()) {
     journal_->schedule_task(
         journal_->WriteData(std::move(data_operations))
-        .and_then(journal_->WriteMetadata(std::move(metadata_operations),
-                                          [this](zx_status_t status){
-                                            MaybeFsckAtEndOfTransaction(status);
-                                          })
+        .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
         .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations()))));
+        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!metadata_operations.is_empty()) {
     journal_->schedule_task(
-        journal_->WriteMetadata(std::move(metadata_operations),
-                                [this](zx_status_t status){
-                                  MaybeFsckAtEndOfTransaction(status);
-                                })
+        journal_->WriteMetadata(std::move(metadata_operations))
         .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
         .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!data_operations.is_empty()) {
@@ -586,9 +580,9 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
 #endif
 }
 
-void Minfs::MaybeFsckAtEndOfTransaction(zx_status_t status) {
+void Minfs::FsckAtEndOfTransaction(zx_status_t status) {
 #ifdef __Fuchsia__
-  if (status == ZX_OK && mount_options_.fsck_after_every_transaction) {
+  if (status == ZX_OK) {
     bc_->Pause();
     {
       std::unique_ptr<Bcache> bcache;
@@ -1159,7 +1153,6 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   }
 
   if (options.repair_filesystem) {
-#ifdef __Fuchsia__
     if (info.flags & kMinfsFlagFVM) {
       // After replaying the journal, it's now safe to repair the FVM slices.
       const size_t kBlocksPerSlice = info.slice_size / kMinfsBlockSize;
@@ -1169,7 +1162,6 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
         return status;
       }
     }
-#endif
 
     // On a read-write filesystem we unset the kMinfsFlagClean flag to indicate that the filesystem
     // may begin receiving modifications.
@@ -1200,11 +1192,14 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       .repair_filesystem = options.repair_filesystem,
       .use_journal = options.use_journal,
   };
-#endif
 
-  if (options.fsck_after_every_transaction) {
+  if (options.fsck_after_every_transaction && fs->journal_) {
     FS_TRACE_ERROR("minfs: Will fsck after every transaction\n");
+    fs->journal_->set_write_metadata_callback(
+        fit::bind_member(fs.get(), &Minfs::FsckAtEndOfTransaction));
   }
+#endif  // defined(__Fuchsia__)
+
   *out = std::move(fs);
   return ZX_OK;
 }

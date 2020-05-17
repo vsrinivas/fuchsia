@@ -262,7 +262,9 @@ class Minfs :
   // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
   void CommitTransaction(std::unique_ptr<Transaction> transaction) final;
 
-  void MaybeFsckAtEndOfTransaction(zx_status_t status);
+  // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
+  // to be sure that all transactions leave the file system in a good state.
+  void FsckAtEndOfTransaction(zx_status_t status);
 
 #ifdef __Fuchsia__
   // Returns the capacity of the writeback buffer, in blocks.
