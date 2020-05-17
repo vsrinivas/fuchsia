@@ -11,6 +11,13 @@
 
 namespace ktl {
 
+using std::is_array;
+using std::is_array_v;
+using std::is_bounded_array;
+using std::is_bounded_array_v;
+using std::is_unbounded_array;
+using std::is_unbounded_array_v;
+
 using std::conjunction;
 using std::conjunction_v;
 
@@ -76,8 +83,14 @@ using std::is_trivially_move_constructible_v;
 using std::is_void;
 using std::is_void_v;
 
+using std::remove_all_extents;
+using std::remove_all_extents_t;
+
 using std::remove_const;
 using std::remove_const_t;
+
+using std::remove_extent;
+using std::remove_extent_t;
 
 using std::remove_reference;
 using std::remove_reference_t;

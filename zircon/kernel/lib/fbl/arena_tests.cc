@@ -123,7 +123,7 @@ static bool out_of_memory() {
 
   // Allocate all of the data objects.
   fbl::AllocChecker ac;
-  ktl::unique_ptr<void*[]> objs = ktl::unique_ptr<void*[]>(new (&ac) void*[num_slots]);
+  ktl::unique_ptr<void*[]> objs = ktl::make_unique<void*[]>(&ac, num_slots);
   EXPECT_TRUE(ac.check());
   void** top = &objs[0];
   for (size_t i = 0; i < num_slots; i++) {
@@ -296,7 +296,7 @@ static bool uncommitting_tests() {
   // Allocate all of the data objects. Hold onto the pointers so we can free
   // them.
   fbl::AllocChecker ac;
-  ktl::unique_ptr<void*[]> objs = ktl::unique_ptr<void*[]>(new (&ac) void*[num_slots]);
+  ktl::unique_ptr<void*[]> objs = ktl::make_unique<void*[]>(&ac, num_slots);
   EXPECT_TRUE(ac.check());
   void** top = &objs[0];
   for (size_t i = 0; i < num_slots; i++) {

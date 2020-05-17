@@ -238,7 +238,7 @@ static bool parallel_grow_memory() {
   constexpr int count = PAGE_SIZE * 64 / 8;
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<void*[]> allocs = ktl::unique_ptr<void*[]>(new (&ac) void*[count]);
+  ktl::unique_ptr<void*[]> allocs = ktl::make_unique<void*[]>(&ac, count);
   EXPECT_TRUE(ac.check());
 
   ASSERT_EQ(arena.Init("test", count), ZX_OK);
