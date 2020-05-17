@@ -83,8 +83,6 @@ template("rustc_test") {
   package_name = target_name
   if (defined(invoker.name)) {
     package_name = invoker.name
-  } else {
-    package_name = "${target_name}"
   }
 
   # built-in gn rules do not support dashes
