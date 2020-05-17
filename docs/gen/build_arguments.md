@@ -800,7 +800,7 @@ file under the git worktree folder.
 
 **Current value (from the default):** `"//third_party/dart//.git"`
 
-From //third_party/dart/sdk_args.gni:25
+From //third_party/dart/sdk_args.gni:27
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -809,6 +809,16 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 **Current value (from the default):** `[]`
 
 From //build/images/args.gni:18
+
+### dont_use_nnbd
+Whether to build a Legacy SDK using Legacy core libraries.
+TODO(38701): Remove dont_use_nnbd once the NNBD SDK is stable/performant
+and there is no need to build a legacy version of the SDK for comparison
+purposes.
+
+**Current value (from the default):** `false`
+
+From //third_party/dart/sdk_args.gni:12
 
 ### enable_api_diff
 Detect dart API changes
@@ -2463,14 +2473,6 @@ From //build/config/lto/config.gni:7
 **Current value (from the default):** `false`
 
 From //src/connectivity/network/BUILD.gn:6
-
-### use_nnbd
-Whether to use the NNBD fork of the SDK core libraries.
-TODO(#38701): Remove this when the fork has been merged back in.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/sdk_args.gni:10
 
 ### use_prebuilt_dart_sdk
 Whether to use the prebuilt Dart SDK for everything.
