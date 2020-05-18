@@ -1214,6 +1214,54 @@ async fn test_writes_recovery() {
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
+// TODO(52356): drop this duplicate test
+#[fasync::run_singlethreaded(test)]
+async fn test_writes_recovery_named_recovery() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("recovery", "new recovery");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+        skip_recovery: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::Kernel,
+                payload: b"new recovery".to_vec(),
+            },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush
+        ]
+    );
+
+    assert_eq!(*env.cache_service.called.lock(), 1);
+    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_recovery_vbmeta() {
     let mut env = TestEnv::new();

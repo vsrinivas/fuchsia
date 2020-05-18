@@ -79,7 +79,7 @@ fn classify_image(
             asset: Asset::VerifiedBootMetadata,
             configuration: inactive_config.to_target_configuration(),
         },
-        "zedboot" | "zedboot.signed" => ImageTarget::Asset {
+        "zedboot" | "zedboot.signed" | "recovery" => ImageTarget::Asset {
             asset: Asset::Kernel,
             configuration: TargetConfiguration::Single(Configuration::Recovery),
         },
@@ -581,6 +581,7 @@ mod tests {
             "fuchsia.vbmeta",
             "zedboot",
             "zedboot.signed",
+            "recovery",
             "recovery.vbmeta",
         ] {
             write_image_buffer(
@@ -628,6 +629,11 @@ mod tests {
                     configuration: Configuration::Recovery,
                     asset: Asset::Kernel,
                     payload: b"zedboot.signed buffer".to_vec()
+                },
+                PaverEvent::WriteAsset {
+                    configuration: Configuration::Recovery,
+                    asset: Asset::Kernel,
+                    payload: b"recovery buffer".to_vec()
                 },
                 PaverEvent::WriteAsset {
                     configuration: Configuration::Recovery,

@@ -726,7 +726,8 @@ func writeImg(svc *paver.DataSinkWithCtxInterface, img Image, updatePkg *UpdateP
 				return writeAsset(svc, *targetConfig, paver.AssetVerifiedBootMetadata, buffer2)
 			}
 		}
-	case "zedboot", "zedboot.signed":
+	// TODO(52356): drop "zedboot" names.
+	case "zedboot", "zedboot.signed", "recovery":
 		if skipRecovery {
 			return nil
 		} else {
