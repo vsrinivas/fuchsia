@@ -235,3 +235,28 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
   // a chance to run.
   return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(vmop, guard), page, page_offset};
 }
+
+ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest_queue) const {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  vm_page_t* page = nullptr;
+  for (size_t i = kNumPagerBacked; i > lowest_queue; i--) {
+    page = list_peek_tail_type(&pager_backed_[i - 1], vm_page_t, queue_node);
+    if (page) {
+      break;
+    }
+  }
+  if (!page) {
+    return ktl::nullopt;
+  }
+
+  VmObjectPaged* vmop = reinterpret_cast<VmObjectPaged*>(page->object.get_object());
+  uint64_t page_offset = page->object.get_page_offset();
+  DEBUG_ASSERT(vmop);
+
+  // We may be racing with destruction of VMO. As we currently hold our lock we know that our
+  // back pointer is correct in so far as the VmObjectPaged has not yet had completed running its
+  // destructor, so we know it is safe to attempt to upgrade it to a RefPtr. If upgrading fails
+  // we assume the page is about to be removed from the page queue once the VMO destructor gets
+  // a chance to run.
+  return VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(vmop, guard), page, page_offset};
+}

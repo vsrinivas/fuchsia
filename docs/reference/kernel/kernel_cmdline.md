@@ -453,6 +453,12 @@ zero page scanning will occur.
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 
+## kernel.page-scanner.enable-user-pager-eviction=\<bool>
+
+This option, false by default, allows for the scanner to evict user pager backed
+pages. Eviction can reduce memory usage, but removes predictability from system
+behavior.
+
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
 If set, disable all speculative execution information leak mitigations.

@@ -23,4 +23,15 @@ void scanner_pop_disable_count();
 // debugging and other code to use.
 uint64_t scanner_do_zero_scan(uint64_t limit);
 
+// Instructs the scanner to reclaim memory until free memory equals the target. Reclamation will
+// happen asynchronously and this function returns immediately. Once the target is reached, or
+// there is no more memory that can be reclaimed, this process will stop and the free memory target
+// will be cleared. When print=true the results of the eviction will get sent to the debuglog.
+void scanner_trigger_reclaim(uint64_t free_mem_target, bool print = false);
+
+// Performs a synchronous request to evict the requested number of pages. Evicted pages are placed
+// in the passed |free_list| and become owned by the caller, with the return value being the number
+// of free pages. This may acquire arbitrary vmo and aspace locks.
+uint64_t scanner_evict_pager_backed(uint64_t max_pages, list_node_t *free_list);
+
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_

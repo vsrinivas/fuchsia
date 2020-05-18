@@ -3449,3 +3449,35 @@ VmObjectPaged* VmObjectPaged::PagedParentOfSliceLocked(uint64_t* offset) {
   *offset = off;
   return cur;
 }
+
+bool VmObjectPaged::EvictPage(vm_page_t* page, uint64_t offset) {
+  // Without a page source to bring the page back in we cannot even think about eviction.
+  if (!page_source_) {
+    return false;
+  }
+
+  Guard<Mutex> guard{&lock_};
+
+  // Check this page is still a part of this VMO.
+  VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+  if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page) {
+    return false;
+  }
+
+  // Pinned pages could be in use by DMA so we cannot safely evict them.
+  if (page->object.pin_count != 0) {
+    return false;
+  }
+
+  // Remove any mappings to this page before we remove it.
+  RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
+
+  // Use RemovePage over just writing to page_or_marker so that the page list has the opportunity
+  // to release any now empty intermediate nodes.
+  vm_page_t* p = page_list_.RemovePage(offset).ReleasePage();
+  DEBUG_ASSERT(p == page);
+  pmm_page_queues()->Remove(page);
+
+  // |page| is now owned by the caller.
+  return true;
+}

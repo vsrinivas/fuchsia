@@ -324,6 +324,15 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
   // period of time.
   virtual uint32_t ScanForZeroPages(bool reclaim) { return 0; }
 
+  // Asks the VMO to attempt to evict the specified page. This returns true if the page was
+  // actually from this VMO and was successfully evicted, at which point the caller now has
+  // ownership of the page. Otherwise eviction is allowed to fail for any reason, specifically
+  // if the page is considered in use, or the VMO has no way to recreate the page then eviction
+  // will fail. Although eviction may fail for any reason, if it does the caller is able to assume
+  // that either the page was not from this vmo, or that the page is not in any evictable page queue
+  // (such as the pager_backed_ queue).
+  virtual bool EvictPage(vm_page_t* page, uint64_t offset) { return false; }
+
  protected:
   explicit VmObject(fbl::RefPtr<vm_lock_t> root_lock);
 

@@ -1793,6 +1793,44 @@ class StubPageSource : public PageSource {
   zx_status_t WaitOnEvent(Event* event) { panic("Not implemented\n"); }
 };
 
+static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<VmObject>* out_vmo) {
+  // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
+  // actually take any page faults.
+  fbl::AllocChecker ac;
+  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, PAGE_SIZE, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  VmPageList pl;
+  pl.InitializeSkew(0, 0);
+  vm_page_t* page;
+  status = pmm_alloc_page(0, &page);
+  if (status != ZX_OK) {
+    return status;
+  }
+  page->set_state(VM_PAGE_STATE_OBJECT);
+  VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
+  if (!page_or_marker) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  *page_or_marker = VmPageOrMarker::Page(page);
+  VmPageSpliceList splice_list = pl.TakePages(0, PAGE_SIZE);
+  status = vmo->SupplyPages(0, PAGE_SIZE, &splice_list);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_page = page;
+  *out_vmo = ktl::move(vmo);
+  return ZX_OK;
+}
+
 static bool vmo_move_pages_on_access_test() {
   BEGIN_TEST;
 
@@ -1801,27 +1839,9 @@ static bool vmo_move_pages_on_access_test() {
   scanner_push_disable_count();
   auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
 
-  // Create a pager backed VMO and jump through some hoops to pre-fill a page for it so we do not
-  // actually take any page faults.
-  fbl::AllocChecker ac;
-  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
-  ASSERT_TRUE(ac.check());
-
   fbl::RefPtr<VmObject> vmo;
-  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, PAGE_SIZE, &vmo);
-  ASSERT_EQ(ZX_OK, status);
-
-  VmPageList pl;
-  pl.InitializeSkew(0, 0);
   vm_page_t* page;
-  status = pmm_alloc_page(0, &page);
-  ASSERT_EQ(ZX_OK, status);
-  page->set_state(VM_PAGE_STATE_OBJECT);
-  VmPageOrMarker* page_or_marker = pl.LookupOrAllocate(0);
-  ASSERT_NONNULL(page_or_marker);
-  *page_or_marker = VmPageOrMarker::Page(page);
-  VmPageSpliceList splice_list = pl.TakePages(0, PAGE_SIZE);
-  status = vmo->SupplyPages(0, PAGE_SIZE, &splice_list);
+  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Our page should now be in a pager backed page queue.
@@ -1921,6 +1941,41 @@ static bool vmo_dedupe_zero_page() {
   EXPECT_TRUE(result);
 
   EXPECT_EQ(0u, vmo->AttributedPages());
+
+  END_TEST;
+}
+
+static bool vmo_eviction_test() {
+  BEGIN_TEST;
+  // Disable the page scanner as this test would be flaky if our pages get evicted by someone else.
+  scanner_push_disable_count();
+  auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
+
+  // Make two pager backed vmos
+  fbl::RefPtr<VmObject> vmo;
+  fbl::RefPtr<VmObject> vmo2;
+  vm_page_t* page;
+  vm_page_t* page2;
+  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  status = make_committed_pager_vmo(&page2, &vmo2);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Shouldn't be able to evict pages from the wrong VMO.
+  EXPECT_FALSE(vmo->EvictPage(page2, 0));
+  EXPECT_FALSE(vmo2->EvictPage(page, 0));
+
+  // Eviction should actually drop the number of committed pages.
+  EXPECT_EQ(1u, vmo2->AttributedPages());
+  EXPECT_TRUE(vmo2->EvictPage(page2, 0));
+  EXPECT_EQ(0u, vmo2->AttributedPages());
+  pmm_free_page(page2);
+
+  // Pinned pages should not be evictable.
+  status = vmo->Pin(0, PAGE_SIZE);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_FALSE(vmo->EvictPage(page, 0));
+  vmo->Unpin(0, PAGE_SIZE);
 
   END_TEST;
 }
@@ -3165,6 +3220,7 @@ VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(vmo_dedupe_zero_page)
+VM_UNITTEST(vmo_eviction_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
 VM_UNITTEST(region_list_get_alloc_spot_test)

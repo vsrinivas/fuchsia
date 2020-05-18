@@ -109,6 +109,13 @@ class PageQueues {
   // (see VmoBacklink for more details).
   ktl::optional<VmoBacklink> PopUnswappableZeroFork();
 
+  // Looks at the pager_backed queues from highest down to |lowest_queue| and returns backlink
+  // information of the first page found. If no page was found a nullopt is returned, otherwise if
+  // it has_value the vmo field may be null to indicate that the vmo is running its destructor (see
+  // VmoBacklink for more details). If a page is returned its location in the pager_backed queue is
+  // not modified.
+  ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue) const;
+
   // Helper struct to group queue length counts returned by DebugQueueCounts.
   struct Counts {
     ktl::array<size_t, kNumPagerBacked> pager_backed = {0};

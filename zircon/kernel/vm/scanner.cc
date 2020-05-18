@@ -22,22 +22,33 @@
 
 namespace {
 
-static constexpr uint32_t kScannerFlagPrint = 1u << 0;
-static constexpr uint32_t kScannerOpDisable = 1u << 1;
-static constexpr uint32_t kScannerOpEnable = 1u << 2;
-static constexpr uint32_t kScannerOpDump = 1u << 3;
-static constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
-static constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
+constexpr uint32_t kScannerFlagPrint = 1u << 0;
+constexpr uint32_t kScannerOpDisable = 1u << 1;
+constexpr uint32_t kScannerOpEnable = 1u << 2;
+constexpr uint32_t kScannerOpDump = 1u << 3;
+constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
+constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
+constexpr uint32_t kScannerOpReclaim = 1u << 6;
 
 // Amount of time between pager queue rotations.
-static constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
+constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
+
+const char *kEvictionCmdLineFlag = "kernel.page-scanner.enable-user-pager-eviction";
 
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
-static uint64_t zero_page_scans_per_second = 0;
+uint64_t zero_page_scans_per_second = 0;
+
+// Eviction is globally enabled/disabled on startup through the kernel cmdline.
+bool eviction_enabled = false;
 
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
+
+// Eviction uses a free memory target to prevent races between multiple requests to evict and
+// eviction actually happening. This a target minimum amount of bytes to have free, with the
+// default 0 resulting in no attempts at eviction, as there is always >=0 bytes free by definition.
+ktl::atomic<uint64_t> scanner_eviction_free_mem_target = 0;
 
 // Event to signal the scanner thread to wake up and perform work.
 AutounsignalEvent scanner_request_event;
@@ -52,6 +63,8 @@ KCOUNTER(zero_scan_requests, "vm.scanner.zero_scan.requests")
 KCOUNTER(zero_scan_ends_empty, "vm.scanner.zero_scan.queue_emptied")
 KCOUNTER(zero_scan_pages_scanned, "vm.scanner.zero_scan.total_pages_considered")
 KCOUNTER(zero_scan_pages_deduped, "vm.scanner.zero_scan.pages_deduped")
+
+KCOUNTER(eviction_pages_evicted, "vm.scanner.eviction.pages_evicted")
 
 void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
@@ -68,6 +81,48 @@ void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
 zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
   return zero_page_scans_per_second > 0 ? zx_time_add_duration(current, ZX_SEC(1))
                                         : ZX_TIME_INFINITE;
+}
+
+uint64_t scanner_do_reclaim() {
+  uint64_t total_pages_freed = 0;
+  // Run a loop repeatedly evicting pages until we reached the target free memory level and are
+  // certain that we aren't racing with additional eviction requests, or we run out of candidate
+  // pages. Races could come due to a low memory event that wants to reclaim memory, potentially
+  // whilst a previous low memory reclamation was still in progress, as well as 'k' command
+  // requests.
+  uint64_t target_mem = scanner_eviction_free_mem_target.load();
+  do {
+    const uint64_t free_mem = pmm_count_free_pages() * PAGE_SIZE;
+    if (free_mem >= target_mem) {
+      // To indicate we are 'done' reclaiming and that all requests to achieve a target have
+      // completed we want to reset the target free memory to 0. If the compare and swap fails then
+      // someone may have set a new (higher) target and so we will retry the loop. In this case
+      // compare_exchange_strong loads |target_mem| with the current value.
+      if (scanner_eviction_free_mem_target.compare_exchange_strong(target_mem, 0)) {
+        break;
+      }
+      // Explicitly restart the loop here in case target_mem is now less than free_mem, which would
+      // violate the assumption we want to make at the conclusion of this if statement.
+      continue;
+    }
+
+    // Calculate the current pages we would need to free to reach our target, and attempt that.
+    const uint64_t pages_to_free = (target_mem - free_mem) / PAGE_SIZE;
+    list_node_t free_list;
+    list_initialize(&free_list);
+    const uint64_t pages_freed = scanner_evict_pager_backed(pages_to_free, &free_list);
+    pmm_free(&free_list);
+    total_pages_freed += pages_freed;
+
+    // Should we fail to free any pages then we give up and stop trying and consider any eviction
+    // requests to be completed by clearing the target memory.
+    if (pages_freed == 0) {
+      scanner_eviction_free_mem_target.store(0);
+      break;
+    }
+  } while (1);
+
+  return total_pages_freed;
 }
 
 int scanner_request_thread(void *) {
@@ -118,6 +173,14 @@ int scanner_request_thread(void *) {
     if (op & kScannerOpReclaimAll) {
       op &= ~kScannerOpReclaimAll;
       reclaim_all = true;
+      scanner_eviction_free_mem_target.store(UINT64_MAX);
+    }
+    if ((op & kScannerOpReclaim) || reclaim_all) {
+      op &= ~kScannerOpReclaim;
+      const uint64_t pages = scanner_do_reclaim();
+      if (print) {
+        printf("[SCAN]: Evicted %lu user pager backed pages\n", pages);
+      }
     }
     if (op & kScannerOpDump) {
       op &= ~kScannerOpDump;
@@ -125,7 +188,7 @@ int scanner_request_thread(void *) {
     }
     if (current >= next_zero_scan_deadline || reclaim_all) {
       const uint64_t scan_limit = reclaim_all ? UINT64_MAX : zero_page_scans_per_second;
-      uint64_t pages = scanner_do_zero_scan(scan_limit);
+      const uint64_t pages = scanner_do_zero_scan(scan_limit);
       if (print) {
         printf("[SCAN]: De-duped %lu pages that were recently forked from the zero page\n", pages);
       }
@@ -149,6 +212,19 @@ void scanner_dump_info() {
 
 }  // namespace
 
+void scanner_trigger_reclaim(uint64_t reclaim_target, bool print) {
+  // Want to see our target free memory to the max of its current value and reclaim_target so we
+  // need to compare_exchange in a loop until we don't race with someone else.
+  uint64_t old_target = scanner_eviction_free_mem_target.load();
+  while (old_target < reclaim_target &&
+         !scanner_eviction_free_mem_target.compare_exchange_strong(old_target, reclaim_target))
+    ;
+
+  const uint32_t op = kScannerOpReclaim | (print ? kScannerFlagPrint : 0);
+  scanner_operation.fetch_or(op);
+  scanner_request_event.Signal();
+}
+
 uint64_t scanner_do_zero_scan(uint64_t limit) {
   uint64_t deduped = 0;
   uint64_t considered;
@@ -171,6 +247,34 @@ uint64_t scanner_do_zero_scan(uint64_t limit) {
   zero_scan_pages_scanned.Add(considered);
   zero_scan_pages_deduped.Add(deduped);
   return deduped;
+}
+
+uint64_t scanner_evict_pager_backed(uint64_t max_pages, list_node_t *free_list) {
+  if (!eviction_enabled) {
+    return 0;
+  }
+
+  uint64_t count = 0;
+
+  while (count < max_pages) {
+    // Currently we only evict from the oldest page queue.
+    constexpr size_t lowest_evict_queue = PageQueues::kNumPagerBacked - 1;
+    if (ktl::optional<PageQueues::VmoBacklink> backlink =
+            pmm_page_queues()->PeekPagerBacked(lowest_evict_queue)) {
+      if (!backlink->vmo) {
+        continue;
+      }
+      if (backlink->vmo->EvictPage(backlink->page, backlink->offset)) {
+        list_add_tail(free_list, &backlink->page->queue_node);
+        count++;
+      }
+    } else {
+      break;
+    }
+  }
+
+  eviction_pages_evicted.Add(count);
+  return count;
 }
 
 void scanner_push_disable_count() {
@@ -198,6 +302,7 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
+  eviction_enabled = gCmdline.GetBool(kEvictionCmdLineFlag, false);
   zero_page_scans_per_second =
       gCmdline.GetUInt64("kernel.page-scanner.zero-page-scans-per-second", 0);
   if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", false)) {
@@ -221,6 +326,7 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     printf("%s pop_disable  : decrease scanner disable count\n", argv[0].str);
     printf("%s reclaim_all  : attempt to reclaim all possible memory\n", argv[0].str);
     printf("%s rotate_queue : immediately rotate the page queues\n", argv[0].str);
+    printf("%s reclaim <MB> : attempt to reclaim requested MB of memory.\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
   if (!strcmp(argv[1].str, "dump")) {
@@ -235,6 +341,21 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
   } else if (!strcmp(argv[1].str, "rotate_queue")) {
     scanner_operation.fetch_or(kScannerOpRotateQueues);
     scanner_request_event.Signal();
+  } else if (!strcmp(argv[1].str, "reclaim")) {
+    if (argc < 3) {
+      goto usage;
+    }
+    if (!eviction_enabled) {
+      printf(
+          "%s is false, reclamation request will have "
+          "no effect\n",
+          kEvictionCmdLineFlag);
+    }
+    // To free the requested memory we set our target free memory level to current free memory +
+    // desired amount to free.
+    const uint64_t bytes = argv[2].u * MB;
+    const uint64_t target = pmm_count_free_pages() * PAGE_SIZE + bytes;
+    scanner_trigger_reclaim(target, true);
   } else {
     printf("unknown command\n");
     goto usage;
