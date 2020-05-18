@@ -9,7 +9,7 @@ use {
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
-        fmt::Display,
+        fmt::{self, Display},
         fs::File,
         hash::Hash,
         io::Read,
@@ -312,9 +312,10 @@ impl<'a> ValidationContext<'a> {
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
 
         // Validate "children".
+        let mut strong_dependencies = DirectedGraph::new();
         if let Some(children) = &self.document.children {
             for child in children {
-                self.validate_child(&child)?;
+                self.validate_child(&child, &mut strong_dependencies)?;
             }
         }
 
@@ -337,17 +338,8 @@ impl<'a> ValidationContext<'a> {
         // Validate "offer".
         if let Some(offers) = self.document.offer.as_ref() {
             let mut used_ids = HashMap::new();
-            let mut strong_dependencies = DirectedGraph::new();
             for offer in offers.iter() {
                 self.validate_offer(&offer, &mut used_ids, &mut strong_dependencies)?;
-            }
-            match strong_dependencies.topological_sort() {
-                Ok(_) => {}
-                Err(e) => {
-                    return Err(Error::validate(format!(
-                        "Strong dependency cycles were found between offer declarations. Break the \
-                        cycle or mark one of the dependencies as weak. Cycles: {}", e.format_cycle())));
-                }
             }
         }
 
@@ -375,14 +367,27 @@ impl<'a> ValidationContext<'a> {
         // Validate "environments".
         if let Some(environments) = &self.document.environments {
             for env in environments {
-                self.validate_environment(&env)?;
+                self.validate_environment(&env, &mut strong_dependencies)?;
+            }
+        }
+
+        // Check for dependency cycles
+        match strong_dependencies.topological_sort() {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(Error::validate(format!(
+                    "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {}", e.format_cycle())));
             }
         }
 
         Ok(())
     }
 
-    fn validate_child(&self, child: &'a cml::Child) -> Result<(), Error> {
+    fn validate_child(
+        &self,
+        child: &'a cml::Child,
+        strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
+    ) -> Result<(), Error> {
         if let Some(environment_ref) = &child.environment {
             match environment_ref {
                 cml::Ref::Named(environment_name) => {
@@ -392,6 +397,9 @@ impl<'a> ValidationContext<'a> {
                             &environment_name
                         )));
                     }
+                    let source = DependencyNode::Environment(environment_name.as_str());
+                    let target = DependencyNode::Child(child.name.as_str());
+                    strong_dependencies.add_edge(source, target);
                 }
                 _ => {
                     return Err(Error::validate(
@@ -577,7 +585,7 @@ impl<'a> ValidationContext<'a> {
         &self,
         offer: &'a cml::Offer,
         used_ids: &mut HashMap<&'a cml::Name, HashMap<&'a str, CapabilityId<'a>>>,
-        strong_dependencies: &mut DirectedGraph<&'a cml::Name>,
+        strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
         self.validate_from_clause("offer", offer)?;
 
@@ -702,7 +710,9 @@ impl<'a> ValidationContext<'a> {
                 if is_strong {
                     if let cml::Ref::Named(from) = from {
                         if let cml::Ref::Named(to) = to {
-                            strong_dependencies.add_edge(from, to);
+                            let source = DependencyNode::Child(from.as_str());
+                            let target = DependencyNode::Child(to.as_str());
+                            strong_dependencies.add_edge(source, target);
                         }
                     }
                 }
@@ -858,7 +868,11 @@ impl<'a> ValidationContext<'a> {
         Ok(())
     }
 
-    fn validate_environment(&self, environment: &cml::Environment) -> Result<(), Error> {
+    fn validate_environment(
+        &self,
+        environment: &'a cml::Environment,
+        strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
+    ) -> Result<(), Error> {
         match &environment.extends {
             Some(cml::EnvironmentExtends::None) => {
                 if environment.stop_timeout_ms.is_none() {
@@ -892,26 +906,12 @@ impl<'a> ValidationContext<'a> {
                     &format!("\"{}\" resolver source", &registration.resolver),
                     &registration.from,
                 )?;
-                match &registration.from {
-                    cml::Ref::Named(child_name) => {
-                        // Ensure there are no cycles between environments and resolvers.
-                        // Eg: an environment, assigned to a child, contains a resolver provided
-                        // by the same child.
-                        if let Some(child) = self.all_children.get(&child_name) {
-                            match &child.environment {
-                                Some(cml::Ref::Named(env_name))
-                                    if *env_name == environment.name =>
-                                {
-                                    return Err(Error::validate(format!(
-                                        "cycle detected between environment \"{}\" and child \"{}\"; \
-                                        environment is assigned to and depends on child for resolver \"{}\".",
-                                        &environment.name, &child.name, &registration.resolver)));
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                    _ => {}
+                // Ensure there are no cycles, such as a resolver in an environment being assigned
+                // to a child which the resolver depends on.
+                if let cml::Ref::Named(child_name) = &registration.from {
+                    let source = DependencyNode::Child(child_name.as_str());
+                    let target = DependencyNode::Environment(environment.name.as_str());
+                    strong_dependencies.add_edge(source, target);
                 }
             }
         }
@@ -950,6 +950,22 @@ where
         }
     }
     Ok(())
+}
+
+/// A node in the DependencyGraph. This enum is used to differentiate between node types.
+#[derive(Copy, Clone, Hash, Ord, Debug, PartialOrd, PartialEq, Eq)]
+enum DependencyNode<'a> {
+    Child(&'a str),
+    Environment(&'a str),
+}
+
+impl<'a> fmt::Display for DependencyNode<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DependencyNode::Child(name) => write!(f, "child {}", name),
+            DependencyNode::Environment(name) => write!(f, "environment {}", name),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -2094,52 +2110,52 @@ mod tests {
                     "offer": [
                         {
                             "protocol": "/svc/fuchsia.logger.Log",
-                            "from": "#child_a",
-                            "to": [ "#child_b" ],
+                            "from": "#a",
+                            "to": [ "#b" ],
                             "dependency": "strong"
                         },
                         {
                             "directory": "/data",
-                            "from": "#child_b",
-                            "to": [ "#child_c" ],
+                            "from": "#b",
+                            "to": [ "#c" ],
                         },
                         {
                             "service": "/dev/ethernet",
-                            "from": "#child_c",
-                            "to": [ "#child_a" ],
+                            "from": "#c",
+                            "to": [ "#a" ],
                         },
                         {
                             "runner": "elf",
-                            "from": "#child_b",
-                            "to": [ "#child_d" ],
+                            "from": "#b",
+                            "to": [ "#d" ],
                         },
                         {
                             "resolver": "http",
-                            "from": "#child_d",
-                            "to": [ "#child_b" ],
+                            "from": "#d",
+                            "to": [ "#b" ],
                         },
                     ],
                     "children": [
                         {
-                            "name": "child_a",
-                            "url": "fuchsia-pkg://fuchsia.com/child_a#meta/child_a.cm"
+                            "name": "a",
+                            "url": "fuchsia-pkg://fuchsia.com/a#meta/a.cm"
                         },
                         {
-                            "name": "child_b",
-                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_b.cm"
+                            "name": "b",
+                            "url": "fuchsia-pkg://fuchsia.com/b#meta/b.cm"
                         },
                         {
-                            "name": "child_c",
-                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_c.cm"
+                            "name": "c",
+                            "url": "fuchsia-pkg://fuchsia.com/b#meta/c.cm"
                         },
                         {
-                            "name": "child_d",
-                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_d.cm"
+                            "name": "d",
+                            "url": "fuchsia-pkg://fuchsia.com/b#meta/d.cm"
                         },
                     ]
                 }),
             result = Err(Error::validate(
-                "Strong dependency cycles were found between offer declarations. Break the cycle or mark one of the dependencies as weak. Cycles: {{child_a -> child_b -> child_c -> child_a}, {child_b -> child_d -> child_b}}")),
+                "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {{child a -> child b -> child c -> child a}, {child b -> child d -> child b}}")),
         },
         test_cml_offer_weak_dependency_cycle => {
             input = json!({
@@ -2656,8 +2672,46 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate(concat!(
-                "cycle detected between environment \"my_env\" and child \"child\"; ",
-                "environment is assigned to and depends on child for resolver \"pkg_resolver\"."
+                "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {{child child -> environment my_env -> child child}}"
+            ))),
+        },
+        test_cml_environment_with_resolver_cycle_multiple_components => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "#b",
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "a",
+                        "url": "fuchsia-pkg://a",
+                        "environment": "#my_env",
+                    },
+                    {
+                        "name": "b",
+                        "url": "fuchsia-pkg://b",
+                    }
+                ],
+                "offer": [
+                    {
+                        "protocol": "/svc/fuchsia.logger.Log",
+                        "from": "#a",
+                        "to": [ "#b" ],
+                        "dependency": "strong"
+                    },
+                ]
+            }),
+            result = Err(Error::validate(concat!(
+                "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {{child a -> child b -> environment my_env -> child a}}"
             ))),
         },
 
