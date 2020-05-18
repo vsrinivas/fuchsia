@@ -47,7 +47,6 @@ source_set("src") {
   ]
 
   deps = [
-    "//garnet/lib/process",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",

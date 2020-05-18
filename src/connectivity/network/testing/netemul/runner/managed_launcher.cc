@@ -10,7 +10,6 @@
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 
-#include "garnet/lib/process/process_builder.h"
 #include "managed_environment.h"
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/files/unique_fd.h"
@@ -20,7 +19,6 @@
 namespace netemul {
 
 using fuchsia::sys::TerminationReason;
-using process::ProcessBuilder;
 
 // Helper function to respond with a failure termination reason
 // to component controller requests.
