@@ -12,3 +12,5 @@ toc:
   path: /docs/concepts/components/capabilities/directory.md
 - title: "Storage capabilities"
   path: /docs/concepts/components/capabilities/storage.md
+- title: "Event capabilities"
+  path: /docs/concepts/components/capabilities/event.md

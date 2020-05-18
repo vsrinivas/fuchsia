@@ -185,8 +185,9 @@ event.resume().await?;
 ### Scoping of events
 
 The `EventSource` can be requested by any component instance within the
-component topology served by the component manager. The component manager only
-delivers system events within the realm of the requesting component instance.
+component topology served by the component manager if its available to the component.
+Events are capailities themselves so they have to be requested as well. Refer
+to [event capabilities][event-capabilities] for more details on this.
 
 A component instance can request a scoped `BlockingEventSource` in its manifest
 file as follows:
@@ -203,6 +204,10 @@ file as follows:
             ],
             "from": "framework"
         },
+        {
+          event: [ "started", "stopped" ],
+          from: "framework",
+        }
     ],
 }
 ```
@@ -469,3 +474,5 @@ When component manager is in debug mode, it does the following:
 1. Waits to be unblocked by the `BlockingEventSource` FIDL service.
 
 1. Starts up the root component (including any eager children).
+
+[event-capabilities]: capabilities/event.md

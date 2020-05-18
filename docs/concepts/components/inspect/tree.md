@@ -167,11 +167,35 @@ find only their own diagnostics data, helping to make tests hermitic.
 
 #### Collection under component\_manager
 
-When running under component manager, diagnostics data will be made
-available to the Archivist through a new event system. This mechanism
-is still a work in progress.
+When running under component manager, diagnostics data is made available to the
+Archivist through [event capabilities][events].
 
-TODO(47865): Update details when done.
+The Archivist is offered events by the root realm. Therefore, it sees events from
+the whole system. The events it is allowed to see and is subscribed to are the
+following:
+
+- **Started**: sent to the Archivist when a component is started.
+- **Running**: sent to the Archivist when subscribing for components that were
+  already running.
+- **Capability ready**: with a filter for `/diagnostics`. Sent to the Archivist
+  when a component exposes a `/diagnostics` directory to the framework.
+- **Stopped**: sent to the Archivist when a component is stopped.
+
+A component that wishes to expose Inspect needs to expose a `/diagnostics`
+directory to the framework. This typically looks as follows:
+
+```
+{
+    expose: [
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+    ]
+}
+```
 
 #### Reading Inspect from the Archivist
 
@@ -181,6 +205,7 @@ method to obtain Inspect data from running components.
 
 [archive]: /sdk/fidl/fuchsia.diagnostics/reader.fidl
 [archivist]: /src/diagnostics/archivist
+[events]: /docs/concepts/components/capabilities/event.md
 [fidl-event-provider]: /sdk/fidl/fuchsia.sys.internal/component_event_provider.fidl
 [inspect]: /docs/development/inspect/README.md
 [iquery]: /docs/development/inspect/iquery.md
