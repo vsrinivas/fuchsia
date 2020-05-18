@@ -38,7 +38,7 @@
 #include <arch/arm64.h>
 #define IFRAME_PC(frame) ((frame)->elr)
 
-static spin_lock_t gicd_lock;
+static SpinLock gicd_lock;
 #define GICD_LOCK_FLAGS SPIN_LOCK_FLAG_INTERRUPTS
 
 // values read from zbi
@@ -120,7 +120,7 @@ static void gic_init_percpu_early() {
   spin_lock_saved_state_t state;
   bool resume_gicd = false;
 
-  spin_lock_save(&gicd_lock, &state, GICD_LOCK_FLAGS);
+  gicd_lock.AcquireIrqSave(state, GICD_LOCK_FLAGS);
   if (!(GICREG(0, GICD_CTLR) & 1)) {
     dprintf(SPEW, "%s: distributor is off, calling arm_gic_init instead\n", __func__);
     arm_gic_init();
@@ -128,7 +128,7 @@ static void gic_init_percpu_early() {
   } else {
     gic_init_percpu_early();
   }
-  spin_unlock_restore(&gicd_lock, state, GICD_LOCK_FLAGS);
+  gicd_lock.ReleaseIrqRestore(state, GICD_LOCK_FLAGS);
   suspend_resume_fiq(true, resume_gicd);
 }
 
