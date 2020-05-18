@@ -247,13 +247,34 @@ pub trait InspectType: Send + Sync {}
 /// Trait implemented by all inspect types. It provides constructor functions that are not
 /// intended for use outside the crate.
 trait InspectTypeInternal {
-    type Inner;
-
     fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self;
     fn new_no_op() -> Self;
     fn is_valid(&self) -> bool;
-    fn unwrap_ref(&self) -> &Self::Inner;
 }
+
+/// A type that is owned by inspect nodes and properties, sharing ownership of
+/// the inspect VMO heap, and with numerical pointers to the location in the
+/// heap in which it resides.
+#[derive(Debug)]
+struct InnerRef {
+    /// Index of the block in the VMO.
+    block_index: u32,
+
+    /// Reference to the VMO heap.
+    state: Arc<Mutex<State>>,
+}
+
+/// Inspect API types implement Eq,PartialEq returning true all the time so that
+/// structs embedding inspect types can derive these traits as well.
+/// IMPORTANT: Do not rely on these traits implementations for real comparisons
+/// or validation tests, instead leverage the reader.
+impl PartialEq for InnerRef {
+    fn eq(&self, _other: &InnerRef) -> bool {
+        true
+    }
+}
+
+impl Eq for InnerRef {}
 
 /// Utility for generating the implementation of all inspect types (including the struct):
 ///  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
@@ -270,7 +291,7 @@ macro_rules! inspect_type_impl {
             /// NOTE: Operations on a Default value are no-ops.
             #[derive(Debug, PartialEq, Eq, Default)]
             pub struct $name {
-                inner: Option<[<Inner $name>]>,
+                inner: Option<InnerRef>,
                 $($field: $field_type,)*
             }
 
@@ -292,11 +313,9 @@ macro_rules! inspect_type_impl {
             impl InspectType for $name {}
 
             impl InspectTypeInternal for $name {
-                type Inner = [<Inner $name>];
-
                 fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
                     Self {
-                        inner: Some([<Inner $name>] {
+                        inner: Some(InnerRef {
                             state, block_index,
                         }),
                         $($field: $field_init,)*
@@ -310,32 +329,7 @@ macro_rules! inspect_type_impl {
                 fn new_no_op() -> Self {
                     Self { inner: None, $($field: $field_init,)* }
                 }
-
-                fn unwrap_ref(&self) -> &Self::Inner {
-                    self.inner.as_ref().unwrap()
-                }
             }
-
-            #[derive(Debug)]
-            struct [<Inner $name>] {
-                /// Index of the block in the VMO.
-                block_index: u32,
-
-                /// Reference to the VMO heap.
-                state: Arc<Mutex<State>>,
-            }
-
-            /// Inspect API types implement Eq,PartialEq returning true all the time so that
-            /// structs embedding inspect types can derive these traits as well.
-            /// IMPORTANT: Do not rely on these traits implementations for real comparisons
-            /// or validation tests, instead leverage the reader.
-            impl PartialEq for [<Inner $name>] {
-                fn eq(&self, _other: &[<Inner $name>]) -> bool {
-                    true
-                }
-            }
-
-            impl Eq for [<Inner $name>] {}
         }
     }
 }
