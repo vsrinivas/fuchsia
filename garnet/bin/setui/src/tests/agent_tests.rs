@@ -4,7 +4,7 @@
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
 #[cfg(test)]
-use crate::internal::agent::{create_message_hub, Payload, Receptor};
+use crate::internal::agent::{message, Payload};
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
@@ -87,7 +87,7 @@ impl TestAgent {
         }));
 
         let agent_clone = agent.clone();
-        let generate = Arc::new(move |mut receptor: Receptor| {
+        let generate = Arc::new(move |mut receptor: message::Receptor| {
             let agent = agent_clone.clone();
             fasync::spawn(async move {
                 while let Ok((payload, client)) = receptor.next_payload().await {
@@ -199,7 +199,7 @@ async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
+    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
 
     // Create a number of agents.
@@ -247,7 +247,7 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
+    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
     let agent_ids =
         create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
@@ -292,7 +292,7 @@ async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
+    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 
@@ -350,7 +350,7 @@ async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(create_message_hub()).await.unwrap();
+    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 

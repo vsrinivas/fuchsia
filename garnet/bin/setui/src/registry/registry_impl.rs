@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::core::{Address, MessageClient, MessengerClient, MessengerFactory, Payload};
-use crate::internal::handler::{
-    Address as ControllerAddress, MessengerClient as ControllerMessengerClient,
-    MessengerFactory as ControllerMessengerFactory, Payload as ControllerPayload, Signature,
-};
+use crate::internal::core;
+use crate::internal::handler;
 use crate::message::base::{Audience, DeliveryStatus, MessageEvent, MessengerType};
 use crate::registry::base::{Command, SettingHandlerFactory, State};
 use crate::switchboard::base::{
@@ -20,16 +17,16 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct RegistryImpl {
-    messenger_client: MessengerClient,
-    active_controllers: HashMap<SettingType, Signature>,
+    messenger_client: core::message::Messenger,
+    active_controllers: HashMap<SettingType, handler::message::Signature>,
     /// The current types being listened in on.
     active_listeners: Vec<SettingType>,
     /// handler factory
     handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
     /// Factory for creating messengers to communicate with handlers
-    controller_messenger_factory: ControllerMessengerFactory,
+    controller_messenger_factory: handler::message::Factory,
     /// Client for communicating with handlers
-    controller_messenger_client: ControllerMessengerClient,
+    controller_messenger_client: handler::message::Messenger,
 }
 
 impl RegistryImpl {
@@ -37,18 +34,18 @@ impl RegistryImpl {
     /// provided receiver and will send responses/updates on the given sender.
     pub async fn create(
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-        messenger_factory: MessengerFactory,
-        controller_messenger_factory: ControllerMessengerFactory,
+        messenger_factory: core::message::Factory,
+        controller_messenger_factory: handler::message::Factory,
     ) -> Result<Arc<Mutex<RegistryImpl>>, Error> {
         let messenger_result =
-            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await;
+            messenger_factory.create(MessengerType::Addressable(core::Address::Registry)).await;
         if let Err(error) = messenger_result {
             return Err(Error::new(error));
         }
         let (messenger_client, mut receptor) = messenger_result.unwrap();
 
         let controller_messenger_result = controller_messenger_factory
-            .create(MessengerType::Addressable(ControllerAddress::Registry))
+            .create(MessengerType::Addressable(handler::Address::Registry))
             .await;
         if let Err(error) = controller_messenger_result {
             return Err(Error::new(error));
@@ -73,7 +70,7 @@ impl RegistryImpl {
             fasync::spawn(async move {
                 while let Ok(event) = controller_receptor.watch().await {
                     match event {
-                        MessageEvent::Message(ControllerPayload::Changed(setting), _) => {
+                        MessageEvent::Message(handler::Payload::Changed(setting), _) => {
                             registry.lock().await.notify(setting);
                         }
                         _ => {}
@@ -88,7 +85,7 @@ impl RegistryImpl {
             fasync::spawn(async move {
                 while let Ok(event) = receptor.watch().await {
                     match event {
-                        MessageEvent::Message(Payload::Action(action), client) => {
+                        MessageEvent::Message(core::Payload::Action(action), client) => {
                             registry_clone.lock().await.process_action(action, client).await;
                         }
                         _ => {}
@@ -101,7 +98,11 @@ impl RegistryImpl {
     }
 
     /// Interpret action from switchboard into registry actions.
-    async fn process_action(&mut self, action: SettingAction, message_client: MessageClient) {
+    async fn process_action(
+        &mut self,
+        action: SettingAction,
+        message_client: core::message::Client,
+    ) {
         match action.data {
             SettingActionData::Request(request) => {
                 self.process_request(action.id, action.setting_type, request, message_client).await;
@@ -112,7 +113,10 @@ impl RegistryImpl {
         }
     }
 
-    async fn get_handler_signature(&mut self, setting_type: SettingType) -> Option<Signature> {
+    async fn get_handler_signature(
+        &mut self,
+        setting_type: SettingType,
+    ) -> Option<handler::message::Signature> {
         if !self.active_controllers.contains_key(&setting_type) {
             if let Some(signature) = self
                 .handler_factory
@@ -163,7 +167,7 @@ impl RegistryImpl {
         if let Some(state) = new_state {
             self.controller_messenger_client
                 .message(
-                    ControllerPayload::Command(Command::ChangeState(state)),
+                    handler::Payload::Command(Command::ChangeState(state)),
                     Audience::Messenger(handler_signature),
                 )
                 .send()
@@ -178,8 +182,8 @@ impl RegistryImpl {
         if self.active_listeners.contains(&setting_type) {
             self.messenger_client
                 .message(
-                    Payload::Event(SettingEvent::Changed(setting_type)),
-                    Audience::Address(Address::Switchboard),
+                    core::Payload::Event(SettingEvent::Changed(setting_type)),
+                    Audience::Address(core::Address::Switchboard),
                 )
                 .send();
         }
@@ -193,12 +197,12 @@ impl RegistryImpl {
         id: u64,
         setting_type: SettingType,
         request: SettingRequest,
-        client: MessageClient,
+        client: core::message::Client,
     ) {
         match self.get_handler_signature(setting_type).await {
             None => {
                 client
-                    .reply(Payload::Event(SettingEvent::Response(
+                    .reply(core::Payload::Event(SettingEvent::Response(
                         id,
                         Err(SwitchboardError::UnhandledType { setting_type: setting_type }),
                     )))
@@ -208,7 +212,7 @@ impl RegistryImpl {
                 let mut receptor = self
                     .controller_messenger_client
                     .message(
-                        ControllerPayload::Command(Command::HandleRequest(request.clone())),
+                        handler::Payload::Command(Command::HandleRequest(request.clone())),
                         Audience::Messenger(signature),
                     )
                     .send();
@@ -216,15 +220,15 @@ impl RegistryImpl {
                 fasync::spawn(async move {
                     while let Ok(message_event) = receptor.watch().await {
                         match message_event {
-                            MessageEvent::Message(ControllerPayload::Result(result), _) => {
+                            MessageEvent::Message(handler::Payload::Result(result), _) => {
                                 client
-                                    .reply(Payload::Event(SettingEvent::Response(id, result)))
+                                    .reply(core::Payload::Event(SettingEvent::Response(id, result)))
                                     .send();
                                 return;
                             }
                             MessageEvent::Status(DeliveryStatus::Undeliverable) => {
                                 client
-                                    .reply(Payload::Event(SettingEvent::Response(
+                                    .reply(core::Payload::Event(SettingEvent::Response(
                                         id,
                                         Err(SwitchboardError::UndeliverableError {
                                             setting_type: setting_type,

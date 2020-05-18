@@ -4,9 +4,7 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent::RestoreAgent,
-    crate::internal::handler::{
-        create_message_hub as create_setting_handler_message_hub, Address, Payload,
-    },
+    crate::internal::handler::{message, Address, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::registry::base::{Command, ContextBuilder, State},
     crate::registry::device_storage::testing::*,
@@ -182,7 +180,7 @@ impl controller::Handle for StateController {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_event_propagation() {
-    let factory = create_setting_handler_message_hub();
+    let factory = message::create_hub();
     let setting_type = SettingType::Unknown;
 
     let (messenger, _) =
@@ -246,7 +244,7 @@ impl controller::Handle for StubController {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
-        let factory = create_setting_handler_message_hub();
+        let factory = message::create_hub();
 
         let (messenger, _) =
             factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();

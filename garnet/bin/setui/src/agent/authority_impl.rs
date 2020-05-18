@@ -4,9 +4,8 @@
 
 use crate::agent::base::*;
 
-use crate::internal::agent::{Address, MessengerClient, MessengerFactory, Payload};
-use crate::message::base::{Audience, MessengerType, Signature};
-use crate::message::message_client::MessageClient;
+use crate::internal::agent::{message, Payload};
+use crate::message::base::{Audience, MessengerType};
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -16,15 +15,15 @@ use async_trait::async_trait;
 /// given stage.
 pub struct AuthorityImpl {
     // A mapping of agent addresses
-    agent_signatures: Vec<Signature<Address>>,
+    agent_signatures: Vec<message::Signature>,
     // Factory to generate messengers to comunicate with the agent
-    messenger_factory: MessengerFactory,
+    messenger_factory: message::Factory,
     // Messenger
-    messenger: MessengerClient,
+    messenger: message::Messenger,
 }
 
 impl AuthorityImpl {
-    pub async fn create(messenger_factory: MessengerFactory) -> Result<AuthorityImpl, Error> {
+    pub async fn create(messenger_factory: message::Factory) -> Result<AuthorityImpl, Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
 
         if messenger_result.is_err() {
@@ -79,7 +78,7 @@ impl AuthorityImpl {
         // this case wait for each to complete.
         for mut receptor in pending_receptors {
             let result = process_payload(receptor.next_payload().await);
-            if result.is_err()  {
+            if result.is_err() {
                 return result;
             }
         }
@@ -88,9 +87,7 @@ impl AuthorityImpl {
     }
 }
 
-fn process_payload(
-    payload: Result<(Payload, MessageClient<Payload, Address>), Error>,
-) -> Result<(), Error> {
+fn process_payload(payload: Result<(Payload, message::Client), Error>) -> Result<(), Error> {
     match payload {
         Ok((Payload::Complete(Ok(_)), _)) => Ok(()),
         Ok((Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),

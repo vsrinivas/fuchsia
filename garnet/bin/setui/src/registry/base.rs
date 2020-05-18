@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::handler::{MessengerClient, MessengerFactory, Receptor, Signature};
+use crate::internal::handler::message;
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::{ServiceContext, ServiceContextHandle};
 use crate::switchboard::base::{SettingRequest, SettingType};
@@ -39,8 +39,8 @@ pub trait SettingHandlerFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: MessengerFactory,
-    ) -> Option<Signature>;
+        messenger_factory: message::Factory,
+    ) -> Option<message::Signature>;
 }
 
 pub struct Environment<T: DeviceStorageFactory> {
@@ -77,16 +77,16 @@ impl<T: DeviceStorageFactory> Environment<T> {
 /// settings service environment.
 pub struct Context<T: DeviceStorageFactory> {
     pub setting_type: SettingType,
-    pub messenger: MessengerClient,
-    pub receptor: Receptor,
+    pub messenger: message::Messenger,
+    pub receptor: message::Receptor,
     pub environment: Environment<T>,
 }
 
 impl<T: DeviceStorageFactory> Context<T> {
     pub fn new(
         setting_type: SettingType,
-        messenger: MessengerClient,
-        receptor: Receptor,
+        messenger: message::Messenger,
+        receptor: message::Receptor,
         environment: Environment<T>,
     ) -> Context<T> {
         return Context {
@@ -114,16 +114,16 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
     storage_factory: Arc<Mutex<T>>,
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
-    messenger: MessengerClient,
-    receptor: Receptor,
+    messenger: message::Messenger,
+    receptor: message::Receptor,
 }
 
 impl<T: DeviceStorageFactory> ContextBuilder<T> {
     pub fn new(
         setting_type: SettingType,
         storage_factory: Arc<Mutex<T>>,
-        messenger: MessengerClient,
-        receptor: Receptor,
+        messenger: message::Messenger,
+        receptor: message::Receptor,
     ) -> Self {
         Self {
             setting_type: setting_type,

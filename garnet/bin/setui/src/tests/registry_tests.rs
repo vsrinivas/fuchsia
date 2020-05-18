@@ -1,11 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::core::{create_message_hub, Address, Payload};
-use crate::internal::handler::{
-    create_message_hub as create_handler_message_hub, reply, Address as HandlerAddress,
-    MessengerClient, MessengerFactory, Payload as HandlerPayload, Receptor, Signature,
-};
+use crate::internal::core::{message::create_hub, Address, Payload};
+use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
 use crate::registry::base::{Command, SettingHandlerFactory, State};
@@ -27,7 +24,7 @@ pub type SwitchboardReceptor = BaseReceptor<Payload, Address>;
 
 struct SettingHandler {
     setting_type: SettingType,
-    messenger: MessengerClient,
+    messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
     next_response: Option<(SettingRequest, SettingResponseResult)>,
 }
@@ -44,8 +41,8 @@ impl SettingHandler {
     pub fn notify(&self) {
         self.messenger
             .message(
-                HandlerPayload::Changed(self.setting_type),
-                Audience::Address(HandlerAddress::Registry),
+                handler::Payload::Changed(self.setting_type),
+                Audience::Address(handler::Address::Registry),
             )
             .send()
             .ack();
@@ -65,8 +62,8 @@ impl SettingHandler {
     }
 
     fn create(
-        messenger: MessengerClient,
-        mut receptor: Receptor,
+        messenger: handler::message::Messenger,
+        mut receptor: handler::message::Receptor,
         setting_type: SettingType,
         state_tx: UnboundedSender<State>,
     ) -> Arc<Mutex<Self>> {
@@ -82,13 +79,13 @@ impl SettingHandler {
             while let Ok(event) = receptor.watch().await {
                 match event {
                     MessageEvent::Message(
-                        HandlerPayload::Command(Command::HandleRequest(request)),
+                        handler::Payload::Command(Command::HandleRequest(request)),
                         client,
                     ) => {
-                        reply(client, handler_clone.lock().await.process_request(request));
+                        handler::reply(client, handler_clone.lock().await.process_request(request));
                     }
                     MessageEvent::Message(
-                        HandlerPayload::Command(Command::ChangeState(state)),
+                        handler::Payload::Command(Command::ChangeState(state)),
                         _,
                     ) => {
                         handler_clone.lock().await.process_state(state);
@@ -103,13 +100,13 @@ impl SettingHandler {
 }
 
 struct FakeFactory {
-    handlers: HashMap<SettingType, Signature>,
+    handlers: HashMap<SettingType, handler::message::Signature>,
     request_counts: HashMap<SettingType, u64>,
-    messenger_factory: MessengerFactory,
+    messenger_factory: handler::message::Factory,
 }
 
 impl FakeFactory {
-    pub fn new(messenger_factory: MessengerFactory) -> Self {
+    pub fn new(messenger_factory: handler::message::Factory) -> Self {
         FakeFactory {
             handlers: HashMap::new(),
             request_counts: HashMap::new(),
@@ -117,7 +114,10 @@ impl FakeFactory {
         }
     }
 
-    pub async fn create(&mut self, setting_type: SettingType) -> (MessengerClient, Receptor) {
+    pub async fn create(
+        &mut self,
+        setting_type: SettingType,
+    ) -> (handler::message::Messenger, handler::message::Receptor) {
         let (client, receptor) =
             self.messenger_factory.create(MessengerType::Unbound).await.unwrap();
         self.handlers.insert(setting_type, client.get_signature());
@@ -139,8 +139,8 @@ impl SettingHandlerFactory for FakeFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        _: MessengerFactory,
-    ) -> Option<Signature> {
+        _: handler::message::Factory,
+    ) -> Option<handler::message::Signature> {
         let existing_count = self.get_request_count(setting_type);
 
         if let Some(signature) = self.handlers.get(&setting_type) {
@@ -154,8 +154,8 @@ impl SettingHandlerFactory for FakeFactory {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_notify() {
-    let messenger_factory = create_message_hub();
-    let handler_messenger_factory = create_handler_message_hub();
+    let messenger_factory = create_hub();
+    let handler_messenger_factory = handler::message::create_hub();
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
     let _registry = RegistryImpl::create(
@@ -230,8 +230,8 @@ async fn test_notify() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_request() {
-    let messenger_factory = create_message_hub();
-    let handler_messenger_factory = create_handler_message_hub();
+    let messenger_factory = create_hub();
+    let handler_messenger_factory = handler::message::create_hub();
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
     let _registry = RegistryImpl::create(
@@ -282,8 +282,8 @@ async fn test_request() {
 /// Ensures setting handler is only generated once.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_generation() {
-    let messenger_factory = create_message_hub();
-    let handler_messenger_factory = create_handler_message_hub();
+    let messenger_factory = create_hub();
+    let handler_messenger_factory = handler::message::create_hub();
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
     let (messenger_client, _) =

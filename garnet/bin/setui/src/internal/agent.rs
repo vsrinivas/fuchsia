@@ -2,18 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::agent::base::{Invocation, InvocationResult};
-use crate::message::message_hub::MessageHub;
-use crate::message::messenger::{
-    MessengerClient as BaseMessengerClient, MessengerFactory as BaseFactory,
-};
-use crate::message::receptor::Receptor as BaseReceptor;
-
-pub type MessengerFactory = BaseFactory<Payload, Address>;
-pub type MessengerClient = BaseMessengerClient<Payload, Address>;
-pub type Receptor = BaseReceptor<Payload, Address>;
-
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
-pub enum Address {}
+use crate::anonymous_message_hub_definition;
 
 #[derive(Clone, Debug)]
 pub enum Payload {
@@ -21,6 +10,4 @@ pub enum Payload {
     Complete(InvocationResult),
 }
 
-pub fn create_message_hub() -> MessengerFactory {
-    MessageHub::<Payload, Address>::create()
-}
+anonymous_message_hub_definition!(crate::internal::agent::Payload);

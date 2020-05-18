@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::agent::Receptor;
+use crate::internal::agent::message::Receptor;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingType, SwitchboardClient};
 use anyhow::Error;

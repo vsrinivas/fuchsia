@@ -17,8 +17,9 @@ use {
     crate::display::spawn_display_fidl_handler,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
-    crate::internal::core::create_message_hub as create_registry_message_hub,
-    crate::internal::handler::create_message_hub as create_setting_handler_message_hub,
+    crate::internal::agent as internal_agent,
+    crate::internal::core as internal_core,
+    crate::internal::handler as internal_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
     crate::night_mode::night_mode_controller::NightModeController,
@@ -352,8 +353,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
-    let registry_messenger_factory = create_registry_message_hub();
-    let setting_handler_messenger_factory = create_setting_handler_message_hub();
+    let registry_messenger_factory = internal_core::message::create_hub();
+    let setting_handler_messenger_factory = internal_handler::message::create_hub();
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
@@ -363,8 +364,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create switchboard");
 
-    let mut agent_authority =
-        AuthorityImpl::create(crate::internal::agent::create_message_hub()).await?;
+    let mut agent_authority = AuthorityImpl::create(internal_agent::message::create_hub()).await?;
 
     // Creates registry, used to register handlers for setting types.
     let _ = RegistryImpl::create(

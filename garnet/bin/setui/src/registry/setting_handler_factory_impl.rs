@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::handler::{MessengerFactory, Signature};
+use crate::internal::handler::message;
 use crate::message::base::MessengerType;
 use crate::registry::base::{Context, Environment, GenerateHandler, SettingHandlerFactory};
 use crate::registry::device_storage::DeviceStorageFactory;
@@ -25,8 +25,8 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
     async fn generate(
         &mut self,
         setting_type: SettingType,
-        messenger_factory: MessengerFactory,
-    ) -> Option<Signature> {
+        messenger_factory: message::Factory,
+    ) -> Option<message::Signature> {
         if !self.environment.settings.contains(&setting_type) {
             return None;
         }

@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::handler::{reply, Address, MessengerClient, Payload};
+use crate::internal::handler::{message, reply, Address, Payload};
 use crate::message::base::{Audience, MessageEvent};
 use crate::registry::base::{Command, Context, SettingHandlerResult, State};
 use crate::registry::device_storage::DeviceStorageFactory;
@@ -72,7 +72,7 @@ impl ClientProxy {
 
 pub struct ClientImpl {
     notify: bool,
-    messenger: MessengerClient,
+    messenger: message::Messenger,
     service_context: ServiceContextHandle,
     setting_type: SettingType,
 }

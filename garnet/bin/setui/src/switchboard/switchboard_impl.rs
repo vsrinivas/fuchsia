@@ -1,10 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::core::{
-    create_message_hub as create_registry_hub, Address, MessengerClient as RegistryMessengerClient,
-    MessengerFactory as RegistryMessengerFactory, Payload,
-};
+use crate::internal::core;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::*;
 use crate::switchboard::clock;
@@ -107,7 +104,7 @@ impl Drop for ListenSessionImpl {
 }
 
 pub struct SwitchboardBuilder {
-    registry_messenger_factory: Option<RegistryMessengerFactory>,
+    registry_messenger_factory: Option<core::message::Factory>,
     inspect_node: Option<inspect::Node>,
 }
 
@@ -116,7 +113,7 @@ impl SwitchboardBuilder {
         SwitchboardBuilder { registry_messenger_factory: None, inspect_node: None }
     }
 
-    pub fn registry_messenger_factory(mut self, factory: RegistryMessengerFactory) -> Self {
+    pub fn registry_messenger_factory(mut self, factory: core::message::Factory) -> Self {
         self.registry_messenger_factory = Some(factory);
         self
     }
@@ -130,7 +127,7 @@ impl SwitchboardBuilder {
         let registry_messenger_factory = if let Some(factory) = self.registry_messenger_factory {
             factory
         } else {
-            create_registry_hub()
+            core::message::create_hub()
         };
         let inspect_node = if let Some(node) = self.inspect_node {
             node
@@ -153,7 +150,7 @@ pub struct SwitchboardImpl {
     /// mapping of listeners for changes
     listeners: ListenerMap,
     /// registry messenger
-    registry_messenger_client: RegistryMessengerClient,
+    registry_messenger: core::message::Messenger,
     /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
     last_requests: VecDeque<RequestInfo>,
     /// Inspect node to record last requests to.
@@ -166,27 +163,27 @@ impl SwitchboardImpl {
     ///
     /// Requests will be recorded to the given inspect node.
     async fn create(
-        registry_messenger_factory: RegistryMessengerFactory,
+        registry_messenger_factory: core::message::Factory,
         inspect_node: inspect::Node,
     ) -> Result<SwitchboardClient, Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
         let messenger_result = registry_messenger_factory
-            .create(MessengerType::Addressable(Address::Switchboard))
+            .create(MessengerType::Addressable(core::Address::Switchboard))
             .await;
 
         if let Err(error) = messenger_result {
             return Err(Error::new(error));
         }
 
-        let (registry_messenger_client, mut receptor) = messenger_result.unwrap();
+        let (registry_messenger, mut receptor) = messenger_result.unwrap();
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
             listen_cancellation_sender: cancel_listen_tx,
             listeners: HashMap::new(),
-            registry_messenger_client: registry_messenger_client,
+            registry_messenger: registry_messenger,
             last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
             inspect_node: inspect_node,
         }));
@@ -196,7 +193,7 @@ impl SwitchboardImpl {
             fasync::spawn(async move {
                 while let Ok(message_event) = receptor.watch().await {
                     // Wait for response
-                    if let MessageEvent::Message(Payload::Event(event), _) = message_event {
+                    if let MessageEvent::Message(core::Payload::Event(event), _) = message_event {
                         switchboard_clone.lock().await.process_event(event);
                     }
                 }
@@ -241,14 +238,14 @@ impl SwitchboardImpl {
                 session_infos.remove(i);
 
                 let _ = self
-                    .registry_messenger_client
+                    .registry_messenger
                     .message(
-                        Payload::Action(SettingAction {
+                        core::Payload::Action(SettingAction {
                             id: action_id,
                             setting_type: session_info.setting_type,
                             data: SettingActionData::Listen(session_infos.len() as u64),
                         }),
-                        Audience::Address(Address::Registry),
+                        Audience::Address(core::Address::Registry),
                     )
                     .send();
             }
@@ -299,7 +296,7 @@ impl Switchboard for SwitchboardImpl {
         request: SettingRequest,
         callback: SettingRequestResponder,
     ) -> Result<(), Error> {
-        let messenger = self.registry_messenger_client.clone();
+        let messenger = self.registry_messenger.clone();
         let action_id = self.get_next_action_id();
 
         self.record_request(setting_type.clone(), request.clone());
@@ -307,19 +304,19 @@ impl Switchboard for SwitchboardImpl {
         fasync::spawn(async move {
             let mut receptor = messenger
                 .message(
-                    Payload::Action(SettingAction {
+                    core::Payload::Action(SettingAction {
                         id: action_id,
                         setting_type,
                         data: SettingActionData::Request(request),
                     }),
-                    Audience::Address(Address::Registry),
+                    Audience::Address(core::Address::Registry),
                 )
                 .send();
 
             while let Ok(message_event) = receptor.watch().await {
                 // Wait for response
                 if let MessageEvent::Message(
-                    Payload::Event(SettingEvent::Response(_id, response)),
+                    core::Payload::Event(SettingEvent::Response(_id, response)),
                     _,
                 ) = message_event
                 {
@@ -355,14 +352,14 @@ impl Switchboard for SwitchboardImpl {
             listeners.push(info.clone());
 
             let _ = self
-                .registry_messenger_client
+                .registry_messenger
                 .message(
-                    Payload::Action(SettingAction {
+                    core::Payload::Action(SettingAction {
                         id: action_id,
                         setting_type,
                         data: SettingActionData::Listen(listeners.len() as u64),
                     }),
-                    Audience::Address(Address::Registry),
+                    Audience::Address(core::Address::Registry),
                 )
                 .send();
 
@@ -379,22 +376,20 @@ impl Switchboard for SwitchboardImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::internal::core::{
-        create_message_hub as create_registry_hub, Address, MessageClient, Payload,
-    };
+    use crate::internal::core;
     use crate::message::base::Audience;
     use crate::message::receptor::Receptor;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
     use fuchsia_inspect::assert_inspect_tree;
 
     async fn retrieve_and_verify_action(
-        receptor: &mut Receptor<Payload, Address>,
+        receptor: &mut Receptor<core::Payload, core::Address>,
         setting_type: SettingType,
         setting_data: SettingActionData,
-    ) -> (MessageClient, SettingAction) {
+    ) -> (core::message::Client, SettingAction) {
         while let Ok(event) = receptor.watch().await {
             match event {
-                MessageEvent::Message(Payload::Action(action), client) => {
+                MessageEvent::Message(core::Payload::Action(action), client) => {
                     assert_eq!(setting_type, action.setting_type);
                     assert_eq!(setting_data, action.data);
                     return (client, action);
@@ -432,15 +427,17 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
-        let messenger_factory = create_registry_hub();
+        let messenger_factory = core::message::create_hub();
         let switchboard_client = SwitchboardBuilder::create()
             .registry_messenger_factory(messenger_factory.clone())
             .build()
             .await
             .unwrap();
         // Create registry endpoint.
-        let (_, mut receptor) =
-            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (_, mut receptor) = messenger_factory
+            .create(MessengerType::Addressable(core::Address::Registry))
+            .await
+            .unwrap();
 
         // Send request.
         let result = switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await;
@@ -455,7 +452,7 @@ mod tests {
         )
         .await;
 
-        client.reply(Payload::Event(SettingEvent::Response(action.id, Ok(None)))).send();
+        client.reply(core::Payload::Event(SettingEvent::Response(action.id, Ok(None)))).send();
 
         // Ensure response is received.
         let response = response_rx.await.unwrap();
@@ -464,7 +461,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
-        let messenger_factory = create_registry_hub();
+        let messenger_factory = core::message::create_hub();
         let switchboard_client = SwitchboardBuilder::create()
             .registry_messenger_factory(messenger_factory.clone())
             .build()
@@ -473,8 +470,10 @@ mod tests {
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint.
-        let (_, mut receptor) =
-            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (_, mut receptor) = messenger_factory
+            .create(MessengerType::Addressable(core::Address::Registry))
+            .await
+            .unwrap();
 
         // Register first listener and verify count.
         let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
@@ -506,7 +505,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
-        let messenger_factory = create_registry_hub();
+        let messenger_factory = core::message::create_hub();
         let switchboard_client = SwitchboardBuilder::create()
             .registry_messenger_factory(messenger_factory.clone())
             .build()
@@ -515,8 +514,10 @@ mod tests {
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint.
-        let (messenger, mut receptor) =
-            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (messenger, mut receptor) = messenger_factory
+            .create(MessengerType::Addressable(core::Address::Registry))
+            .await
+            .unwrap();
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
@@ -552,8 +553,8 @@ mod tests {
 
         messenger
             .message(
-                Payload::Event(SettingEvent::Changed(setting_type)),
-                Audience::Address(Address::Switchboard),
+                core::Payload::Event(SettingEvent::Changed(setting_type)),
+                Audience::Address(core::Address::Switchboard),
             )
             .send();
 

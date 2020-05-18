@@ -7,7 +7,7 @@ use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
 use crate::agent::volume_change_earcons_handler::{
     listen_to_audio_events, watch_background_usage, VolumeChangeEarconsHandler,
 };
-use crate::internal::agent::{Payload, Receptor};
+use crate::internal::agent::{message, Payload};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::ListenSession;
 
@@ -59,7 +59,7 @@ impl SwitchboardListenSessionHolder {
 }
 
 impl EarconsAgent {
-    pub fn create(mut receptor: Receptor) {
+    pub fn create(mut receptor: message::Receptor) {
         let mut agent = Self {
             priority_stream_playing: Arc::new(AtomicBool::new(false)),
             sound_player_connection: Arc::new(Mutex::new(None)),
