@@ -1073,6 +1073,7 @@ void UsbXhci::ControlRequestDataPhase(UsbRequestState* state) {
             .set_INTERRUPTER(0)
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(state->packet_count))
+            .set_ISP(true)
             .set_NO_SNOOP(!has_coherent_cache_);
       } else {
         type = Control::Normal;
@@ -1081,6 +1082,7 @@ void UsbXhci::ControlRequestDataPhase(UsbRequestState* state) {
             .set_INTERRUPTER(0)
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(state->packet_count))
+            .set_ISP(true)
             .set_NO_SNOOP(!has_coherent_cache_);
       }
       current->ptr = paddr;

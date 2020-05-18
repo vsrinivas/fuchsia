@@ -721,7 +721,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
 
   std::optional<TestRequest> request;
   bool invoked = false;
-  AllocateRequest(&request, 0, sizeof(void*), 0, [&](TestRequest request) {
+  AllocateRequest(&request, 0, ZX_PAGE_SIZE * 2, 0, [&](TestRequest request) {
     invoked = true;
     void** parameters;
     request.Mmap(reinterpret_cast<void**>(&parameters));
@@ -730,7 +730,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
   request->request()->setup.bmRequestType = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
   request->request()->setup.bRequest = USB_REQ_GET_DESCRIPTOR;
   request->request()->setup.wValue = USB_DT_DEVICE << 8;
-  request->request()->setup.wLength = sizeof(void*);
+  request->request()->setup.wLength = ZX_PAGE_SIZE * 2;
   RequestQueue(std::move(*request));
   ASSERT_TRUE(rang);
   // Find slot context pointer in address device command
@@ -756,11 +756,20 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
   auto data_trb = static_cast<ControlData*>(static_cast<TRB*>(trb));
   ASSERT_EQ(data_trb->DIRECTION(), 1);
   ASSERT_EQ(data_trb->INTERRUPTER(), 0);
-  ASSERT_EQ(data_trb->LENGTH(), sizeof(void*));
-  ASSERT_EQ(data_trb->SIZE(), 0);
+  ASSERT_EQ(data_trb->LENGTH(), ZX_PAGE_SIZE);
+  ASSERT_EQ(data_trb->SIZE(), 1);
+  ASSERT_TRUE(data_trb->ISP());
   ASSERT_TRUE(data_trb->NO_SNOOP());
   void** virt = reinterpret_cast<void**>(FakeTRB::get(static_cast<zx_paddr_t>(data_trb->ptr))->ptr);
   *virt = virt;
+  // Normal
+  trb = FakeTRB::get(trb->next);
+  auto normal_trb = static_cast<Normal*>(static_cast<TRB*>(trb));
+  ASSERT_EQ(normal_trb->INTERRUPTER(), 0);
+  ASSERT_EQ(normal_trb->LENGTH(), ZX_PAGE_SIZE);
+  ASSERT_EQ(normal_trb->SIZE(), 0);
+  ASSERT_TRUE(normal_trb->ISP());
+  ASSERT_TRUE(normal_trb->NO_SNOOP());
   // Status
   trb = FakeTRB::get(trb->next);
   auto status_trb = static_cast<Status*>(static_cast<TRB*>(trb));
