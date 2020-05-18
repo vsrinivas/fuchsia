@@ -492,8 +492,8 @@ static void join_test() {
 }
 
 struct lock_pair_t {
-  spin_lock_t first = SPIN_LOCK_INITIAL_VALUE;
-  spin_lock_t second = SPIN_LOCK_INITIAL_VALUE;
+  SpinLock first;
+  SpinLock second;
 };
 
 // Acquires lock on "second" and holds it until it sees that "first" is released.
@@ -501,30 +501,28 @@ static int hold_and_release(void* arg) {
   lock_pair_t* pair = reinterpret_cast<lock_pair_t*>(arg);
   ASSERT(pair != nullptr);
   spin_lock_saved_state_t state;
-  spin_lock_irqsave(&pair->second, state);
-  while (spin_lock_holder_cpu(&pair->first) != UINT_MAX) {
+  pair->second.AcquireIrqSave(state);
+  while (pair->first.HolderCpu() != UINT_MAX) {
     arch::Yield();
   }
-  spin_unlock_irqrestore(&pair->second, state);
+  pair->second.ReleaseIrqRestore(state);
   return 0;
 }
 
 static void spinlock_test() {
   spin_lock_saved_state_t state;
-  spin_lock_t lock;
-
-  spin_lock_init(&lock);
+  SpinLock lock;
 
   // Verify basic functionality (single core).
   printf("testing spinlock:\n");
-  ASSERT(!spin_lock_held(&lock));
+  ASSERT(!lock.IsHeld());
   ASSERT(!arch_ints_disabled());
-  spin_lock_irqsave(&lock, state);
+  lock.AcquireIrqSave(state);
   ASSERT(arch_ints_disabled());
-  ASSERT(spin_lock_held(&lock));
-  ASSERT(spin_lock_holder_cpu(&lock) == arch_curr_cpu_num());
-  spin_unlock_irqrestore(&lock, state);
-  ASSERT(!spin_lock_held(&lock));
+  ASSERT(lock.IsHeld());
+  ASSERT(lock.HolderCpu() == arch_curr_cpu_num());
+  lock.ReleaseIrqRestore(state);
+  ASSERT(!lock.IsHeld());
   ASSERT(!arch_ints_disabled());
 
   // Verify slightly more advanced functionality that requires multiple cores.
@@ -536,7 +534,7 @@ static void spinlock_test() {
 
   // Hold the first lock, then create a thread and wait for it to acquire the lock.
   lock_pair_t pair;
-  spin_lock_irqsave(&pair.first, state);
+  pair.first.AcquireIrqSave(state);
   Thread* holder_thread =
       Thread::Create("hold_and_release", &hold_and_release, &pair, DEFAULT_PRIORITY);
   ASSERT(holder_thread != nullptr);
@@ -545,13 +543,13 @@ static void spinlock_test() {
   // holder_thread to not include our cpu.
   holder_thread->SetCpuAffinity(active ^ cpu_num_to_mask(arch_curr_cpu_num()));
   holder_thread->Resume();
-  while (spin_lock_holder_cpu(&pair.second) == UINT_MAX) {
+  while (pair.second.HolderCpu() == UINT_MAX) {
     arch::Yield();
   }
 
   // See that from our perspective "second" is not held.
-  ASSERT(!spin_lock_held(&pair.second));
-  spin_unlock_irqrestore(&pair.first, state);
+  ASSERT(!pair.second.IsHeld());
+  pair.first.ReleaseIrqRestore(state);
   holder_thread->Join(NULL, ZX_TIME_INFINITE);
 
   printf("seems to work\n");
