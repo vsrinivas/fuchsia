@@ -53,6 +53,20 @@ TEST_F(ModularConfigReaderTest, OverrideConfigDir) {
   EXPECT_EQ(kSessionShellForTest, config.session_shell_map().at(0).config().app_config().url());
 }
 
+// Test that ModularConfigReader uses default values if it fails to read the config data from file.
+TEST_F(ModularConfigReaderTest, FailToReadConfigDir) {
+  constexpr char kDefaultSessionShell[] =
+      "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
+      "ermine_session_shell.cmx";
+
+  // Create a root directory without a config file.
+  modular::PseudoDirServer server(std::make_unique<vfs::PseudoDir>());
+  modular::ModularConfigReader reader(server.OpenAt("."));
+
+  auto config = reader.GetBasemgrConfig();
+  EXPECT_EQ(kDefaultSessionShell, config.session_shell_map().at(0).config().app_config().url());
+}
+
 // Test that ModularConfigReader finds and reads the AgentServiceIndex.
 TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
   const std::string kServiceNameForTest = "fuchsia.modular.ModularConfigReaderTest";

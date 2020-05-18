@@ -44,8 +44,9 @@ int main(int argc, const char** argv) {
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
+  bool enable_cobalt = config.has_enable_cobalt() ? config.enable_cobalt() : false;
   auto cobalt_cleanup =
-      SetupCobalt((config.enable_cobalt()), std::move(loop.dispatcher()), component_context.get());
+      SetupCobalt(enable_cobalt, std::move(loop.dispatcher()), component_context.get());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       component_context->outgoing(),

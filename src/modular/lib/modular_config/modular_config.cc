@@ -63,6 +63,7 @@ ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
   std::string config;
   if (!files::ReadFileToStringAt(dir_fd.get(), config_path, &config)) {
     FX_LOGS(ERROR) << "Failed to read file: " << config_path;
+    UseDefaults();
     return;
   }
 
@@ -84,29 +85,31 @@ ModularConfigReader ModularConfigReader::CreateFromNamespace() {
 void ModularConfigReader::ParseConfig(const std::string& config, const std::string& config_path) {
   rapidjson::Document doc;
 
-  rapidjson::Document basemgr_doc;
-  rapidjson::Document sessionmgr_doc;
-
   doc.Parse<kModularConfigParseFlags>(config);
   if (doc.HasParseError()) {
     FX_LOGS(ERROR) << "Failed to parse " << config_path << ": "
                    << rapidjson::GetParseError_En(doc.GetParseError()) << " ("
                    << doc.GetErrorOffset() << ")";
-    // Initialze |sessionmgr_config_| and |sessionmgr_config_| with defaults.
-    basemgr_doc.SetObject();
-    sessionmgr_doc.SetObject();
-  } else {
-    // Parse the `basemgr` and `sessionmgr` sections out of the config.
-    basemgr_doc = GetSectionAsDoc(doc, modular_config::kBasemgrConfigName);
-    sessionmgr_doc = GetSectionAsDoc(doc, modular_config::kSessionmgrConfigName);
+    UseDefaults();
+    return;
   }
 
+  // Parse the `basemgr` and `sessionmgr` sections out of the config.
+  rapidjson::Document basemgr_doc = GetSectionAsDoc(doc, modular_config::kBasemgrConfigName);
+  rapidjson::Document sessionmgr_doc = GetSectionAsDoc(doc, modular_config::kSessionmgrConfigName);
   if (!XdrRead(&basemgr_doc, &basemgr_config_, XdrBasemgrConfig)) {
     FX_LOGS(ERROR) << "Unable to parse 'basemgr' from " << config_path;
   }
   if (!XdrRead(&sessionmgr_doc, &sessionmgr_config_, XdrSessionmgrConfig)) {
     FX_LOGS(ERROR) << "Unable to parse 'sessionmgr' from " << config_path;
   }
+}
+
+void ModularConfigReader::UseDefaults() {
+  rapidjson::Document doc;
+  doc.SetObject();
+  XdrRead(&doc, &basemgr_config_, XdrBasemgrConfig);
+  XdrRead(&doc, &sessionmgr_config_, XdrSessionmgrConfig);
 }
 
 fuchsia::modular::session::BasemgrConfig ModularConfigReader::GetBasemgrConfig() const {

@@ -64,6 +64,9 @@ class ModularConfigReader {
   //    This is only used for logging error messages.
   void ParseConfig(const std::string& config, const std::string& config_path);
 
+  // Sets |basemgr_config_| and |sessionmgr_config_| to default values.
+  void UseDefaults();
+
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config_;
   fuchsia::modular::session::BasemgrConfig basemgr_config_;
 };
