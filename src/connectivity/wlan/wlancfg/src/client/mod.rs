@@ -24,12 +24,12 @@ use {
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{
         channel::mpsc,
+        lock::Mutex,
         prelude::*,
         select,
         stream::{FuturesOrdered, FuturesUnordered},
     },
     log::{error, info},
-    parking_lot::Mutex,
     scan::handle_scan,
     std::{convert::TryFrom, sync::Arc},
 };
@@ -46,13 +46,14 @@ const MAX_CONFIGS_PER_RESPONSE: usize = 100;
 #[derive(Debug)]
 pub struct Client {
     proxy: Option<fidl_sme::ClientSmeProxy>,
+    current_connection: Option<(NetworkIdentifier, Credential)>,
 }
 
 impl Client {
     /// Creates a new, empty Client. The returned Client effectively represents the state in which
     /// no client interface is available.
     pub fn new_empty() -> Self {
-        Self { proxy: None }
+        Self { proxy: None, current_connection: None }
     }
 
     pub fn set_sme(&mut self, proxy: fidl_sme::ClientSmeProxy) {
@@ -64,11 +65,41 @@ impl Client {
     fn access_sme(&self) -> Option<&fidl_sme::ClientSmeProxy> {
         self.proxy.as_ref()
     }
+
+    /// Disconnect from the specified network if we are currently connected to it.
+    async fn disconnect_from(
+        &mut self,
+        network: (NetworkIdentifier, Credential),
+        update_sender: listener::ClientMessageSender,
+    ) {
+        if self.current_connection.as_ref() != Some(&network) {
+            return;
+        }
+        if let Some(client_sme) = self.access_sme() {
+            client_sme.disconnect().await.unwrap_or_else(|e| {
+                info!("Error disconnecting from network: {}", e);
+                return;
+            });
+            self.current_connection = None;
+            let update = listener::ClientStateUpdate {
+                state: None,
+                networks: vec![listener::ClientNetworkState {
+                    id: network.0.into(),
+                    state: fidl_policy::ConnectionState::Disconnected,
+                    status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
+                }],
+            };
+            if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update))
+            {
+                error!("failed to send disconnect update to listener: {:?}", e);
+            };
+        }
+    }
 }
 
 impl From<fidl_sme::ClientSmeProxy> for Client {
     fn from(proxy: fidl_sme::ClientSmeProxy) -> Self {
-        Self { proxy: Some(proxy) }
+        Self { proxy: Some(proxy), current_connection: None }
     }
 }
 
@@ -104,7 +135,7 @@ enum InternalMsg {
     /// Sent when a new scan request was issued. Holds the output iterator through which the
     /// scan results will be reported.
     NewPendingScanRequest(fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>),
-    NewDisconnectWatcher(NetworkIdentifier),
+    NewDisconnectWatcher(NetworkIdentifier, Credential),
 }
 type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
 
@@ -182,8 +213,8 @@ async fn serve_provider_requests(
                         Arc::clone(&client),
                         output_iterator));
                 }
-                InternalMsg::NewDisconnectWatcher(network_id) => {
-                    pending_disconnect_monitors.push(wait_for_disconnection(Arc::clone(&client), update_sender.clone(), network_id));
+                InternalMsg::NewDisconnectWatcher(network_id, credential) => {
+                    pending_disconnect_monitors.push(wait_for_disconnection(Arc::clone(&client), update_sender.clone(), network_id, credential));
                 }
             },
             // Progress scans.
@@ -192,7 +223,15 @@ async fn serve_provider_requests(
             () = pending_disconnect_monitors.select_next_some() => (),
             // Pending connect request finished.
             resp = pending_con_reqs.select_next_some() => if let (id, cred, Some(Ok(txn))) = resp {
-                handle_sme_connect_response(update_sender.clone(), internal_messages_sink.clone(), id.into(), cred, txn, Arc::clone(&saved_networks)).await;
+                handle_sme_connect_response(
+                    update_sender.clone(),
+                    internal_messages_sink.clone(),
+                    id.into(),
+                    cred,
+                    txn,
+                    Arc::clone(&saved_networks),
+                    Arc::clone(&client)
+                ).await;
             },
         }
     }
@@ -223,9 +262,9 @@ async fn handle_provider_request(
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
             register_listener(update_sender.clone(), updates.into_proxy()?);
             handle_client_requests(
-                update_sender,
                 client,
                 internal_msg_sink,
+                update_sender,
                 saved_networks,
                 requests,
             )
@@ -255,9 +294,9 @@ fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
 
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
-    update_sender: listener::ClientMessageSender,
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
+    update_sender: listener::ClientMessageSender,
     saved_networks: SavedNetworksPtr,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
@@ -311,10 +350,18 @@ async fn handle_client_requests(
                 responder.send(&mut response)?;
             }
             fidl_policy::ClientControllerRequest::RemoveNetwork { config, responder } => {
-                let mut err =
-                    handle_client_request_remove_network(Arc::clone(&saved_networks), config)
-                        .map_err(|_| SaveError::GeneralError);
-                responder.send(&mut err)?;
+                let mut response = handle_client_request_remove_network(
+                    Arc::clone(&saved_networks),
+                    config,
+                    Arc::clone(&client),
+                    update_sender.clone(),
+                )
+                .await
+                .map_err(|e| {
+                    error!("Error removing network: {:?}", e);
+                    SaveError::GeneralError
+                });
+                responder.send(&mut response)?;
             }
             fidl_policy::ClientControllerRequest::GetSavedNetworks { iterator, .. } => {
                 handle_client_request_get_networks(Arc::clone(&saved_networks), iterator).await?;
@@ -329,12 +376,21 @@ async fn wait_for_disconnection(
     client: ClientPtr,
     update_sender: listener::ClientMessageSender,
     network: NetworkIdentifier,
+    credential: Credential,
 ) {
     // Loop until we're no longer connected to the network
     loop {
         fuchsia_async::Timer::new(DISCONNECTION_MONITOR_SECONDS.seconds().after_now()).await;
+        let client = client.lock().await;
 
-        let status_fut = match client.lock().access_sme().map(|sme| sme.status()) {
+        // Stop watching for a disconnect if a disconnect or change has already been triggered from
+        // the policy layer. current_connection is changed by anything that changes connection
+        // state in this layer.
+        if client.current_connection != Some((network.clone(), credential.clone())) {
+            return;
+        }
+
+        let status_fut = match client.access_sme().map(|sme| sme.status()) {
             Some(status_fut) => status_fut,
             _ => break,
         };
@@ -370,6 +426,7 @@ async fn handle_sme_connect_response(
     credential: Credential,
     txn_event: fidl_sme::ConnectTransactionEvent,
     saved_networks: SavedNetworksPtr,
+    client: ClientPtr,
 ) {
     match txn_event {
         fidl_sme::ConnectTransactionEvent::OnFinished { code } => {
@@ -380,8 +437,9 @@ async fn handle_sme_connect_response(
             if code == sme_code::Success {
                 info!("connection request successful to: {:?}", String::from_utf8_lossy(&id.ssid));
                 saved_networks.record_connect_success(id.clone(), &credential);
-                if let Err(e) =
-                    internal_msg_sink.unbounded_send(InternalMsg::NewDisconnectWatcher(id.clone()))
+                client.lock().await.current_connection = Some((id.clone(), credential.clone()));
+                if let Err(e) = internal_msg_sink
+                    .unbounded_send(InternalMsg::NewDisconnectWatcher(id.clone(), credential))
                 {
                     error!("failed to queue disconnect watcher: {:?}", e);
                 };
@@ -435,7 +493,7 @@ async fn handle_client_request_connect(
     // whether that should be handled by either, closing the currently active controller if a
     // client interface is brought down and not supporting controller requests if no client
     // interface is active.
-    let client = client.lock();
+    let client = client.lock().await;
     let client_sme = client
         .access_sme()
         .ok_or_else(|| RequestError::new().with_cause(format_err!("no active client interface")))?;
@@ -493,7 +551,7 @@ fn handle_client_request_save_network(
     saved_networks: SavedNetworksPtr,
     network_config: fidl_policy::NetworkConfig,
 ) -> Result<(), NetworkConfigError> {
-    // The FIDL network config fields are defined as options, and we consider it an error if either
+    // The FIDL network config fields are defined as Options, and we consider it an error if either
     // field is missing (ie None) here.
     let net_id = network_config.id.ok_or_else(|| NetworkConfigError::ConfigMissingId)?;
     let credential = Credential::try_from(
@@ -504,13 +562,27 @@ fn handle_client_request_save_network(
 }
 
 /// Will remove the specified network and respond to the remove network request with a network
-/// config change error if an error occurs while trying to remove the network.
-fn handle_client_request_remove_network(
-    mut _saved_networks: SavedNetworksPtr,
-    _config: fidl_policy::NetworkConfig,
-) -> Result<(), Error> {
-    // method is not yet implemented, respond with a general network config error
-    Err(format_err!("Remove network is not yet implemented"))
+/// config change error if an error occurs while trying to remove the network. If the network
+/// config is successfully removed and currently connected, we will disconnect.
+async fn handle_client_request_remove_network(
+    saved_networks: SavedNetworksPtr,
+    network_config: fidl_policy::NetworkConfig,
+    client: ClientPtr,
+    update_sender: listener::ClientMessageSender,
+) -> Result<(), NetworkConfigError> {
+    // The FIDL network config fields are defined as Options, and we consider it an error if either
+    // field is missing (ie None) here.
+    let net_id = NetworkIdentifier::from(
+        network_config.id.ok_or_else(|| NetworkConfigError::ConfigMissingId)?,
+    );
+    let credential = Credential::try_from(
+        network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
+    )?;
+    saved_networks.remove(net_id.clone(), credential.clone())?;
+
+    // If we are currently connected to this network, disconnect from it
+    client.lock().await.disconnect_from((net_id, credential), update_sender).await;
+    Ok(())
 }
 
 /// For now, instead of giving actual results simply give nothing.
@@ -652,11 +724,10 @@ mod tests {
     }
 
     /// Creates a Client wrapper.
-    fn create_client() -> (ClientPtr, fidl_sme::ClientSmeRequestStream) {
+    async fn create_client() -> (ClientPtr, fidl_sme::ClientSmeRequestStream) {
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
-        let client = Arc::new(Mutex::new(Client::new_empty()));
-        client.lock().set_sme(client_sme);
+        let client = Arc::new(Mutex::new(Client::from(client_sme)));
         (client, remote.into_stream().expect("failed to create stream"))
     }
 
@@ -678,7 +749,7 @@ mod tests {
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
-        let (client, sme_stream) = create_client();
+        let (client, sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, listener_updates) = mpsc::unbounded();
         set_logger_for_test();
         TestValues {
@@ -873,7 +944,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup("connect_request_success", &mut exec);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            Arc::clone(&test_values.client),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             test_values.requests,
@@ -955,13 +1026,19 @@ mod tests {
         assert_eq!(summary, expected_summary);
 
         // saved network config should reflect that it has connected successfully
+        let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
+        let credential = Credential::None;
         let cfg = get_config(
             Arc::clone(&test_values.saved_networks),
-            NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None),
-            Credential::None,
+            network_id.clone(),
+            credential.clone(),
         );
         assert_variant!(cfg, Some(cfg) => {
             assert!(cfg.has_ever_connected)
+        });
+        // Verify current_connection of the client is set when we connect.
+        assert_variant!(exec.run_until_stalled(&mut test_values.client.lock()), Poll::Ready(client) => {
+            assert_eq!(client.current_connection, Some((network_id, credential)));
         });
     }
 
@@ -970,7 +1047,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup("connect_request_failure", &mut exec);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            Arc::clone(&test_values.client),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             test_values.requests,
@@ -1067,7 +1144,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = test_setup("connect_request_bad_password", &mut exec);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            Arc::clone(&test_values.client),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             test_values.requests,
@@ -1156,6 +1233,11 @@ mod tests {
         );
         assert_variant!(cfg, Some(cfg) => {
             assert_eq!(false, cfg.has_ever_connected);
+        });
+
+        // Current connection shouldn't change if we didn't connect
+        assert_variant!(exec.run_until_stalled(&mut test_values.client.lock()), Poll::Ready(client) => {
+            assert!(client.current_connection.is_none());
         });
     }
 
@@ -1787,7 +1869,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = create_client();
+        let (client, _sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut =
             serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
@@ -1850,7 +1932,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = create_client();
+        let (client, _sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut =
             serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
@@ -1893,14 +1975,44 @@ mod tests {
     }
 
     #[test]
-    fn remove_network_should_fail() {
+    fn test_remove_not_connected() {
+        let is_connected = false;
+        let stash_id = line!().to_string();
+        test_remove_a_network(is_connected, stash_id);
+    }
+
+    #[test]
+    fn test_remove_connected() {
+        let is_connected = true;
+        let stash_id = line!().to_string();
+        test_remove_a_network(is_connected, stash_id);
+    }
+
+    fn test_remove_a_network(is_connected: bool, stash_id: impl AsRef<str>) {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("remove_network_should_fail", &mut exec);
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+
+        // Need to create this here so that the temp files will be in scope here.
+        let saved_networks_fut =
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
+        pin_mut!(saved_networks_fut);
+        let saved_networks = Arc::new(
+            exec.run_singlethreaded(&mut saved_networks_fut)
+                .expect("Failed to create a KnownEssStore"),
+        );
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
-            test_values.client,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            test_values.requests,
+            Arc::clone(&client),
+            update_sender,
+            Arc::clone(&saved_networks),
+            requests,
         );
         pin_mut!(serve_fut);
 
@@ -1908,31 +2020,110 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
+        let (controller, _update_stream) = request_controller(&provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+
+        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let credential = Credential::None;
+        saved_networks.store(network_id.clone(), credential.clone()).expect("failed to store");
+
+        // If testing a connected network, first connect to it in order to test that we will
+        // disconnect and that disconnect watcher will stop checking for disconnects.
+        if is_connected {
+            let connect_fut =
+                controller.connect(&mut fidl_policy::NetworkIdentifier::from(network_id.clone()));
+            pin_mut!(connect_fut);
+
+            // Process connect request and verify connect response.
+            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+            assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
+            process_connect(&mut exec, &mut sme_stream);
+            // Process SME result.
+            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+            // Get listener update (for connecting and connect) so it isn't in front of the disconnect update later.
+            assert_variant!(
+                exec.run_until_stalled(&mut listener_updates.next()),
+                Poll::Ready(Some(listener::Message::NotifyListeners(_)))
+            );
+            assert_variant!(
+                exec.run_until_stalled(&mut listener_updates.next()),
+                Poll::Ready(Some(listener::Message::NotifyListeners(_)))
+            );
+        }
 
         // Request to remove some network
-        let network_id = fidl_policy::NetworkIdentifier {
-            ssid: b"foo".to_vec(),
-            type_: fidl_policy::SecurityType::None,
-        };
         let network_config = fidl_policy::NetworkConfig {
-            id: Some(network_id),
-            credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
+            id: Some(fidl_policy::NetworkIdentifier::from(network_id.clone())),
+            credential: Some(fidl_policy::Credential::from(credential.clone())),
         };
         let mut remove_fut = controller.remove_network(network_config);
 
-        // Run server_provider forward so that it will process the save network request
+        // Run server_provider forward so that it will process the remove request
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(result) => {
-            let error = result.expect("Failed to get save network response");
-            assert_eq!(error, Err(SaveError::GeneralError));
-        });
+        // If we have connected to a network, we expect a disconnect request and must proccess it.
+        if is_connected {
+            assert_variant!(
+                exec.run_until_stalled(&mut sme_stream.next()),
+                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Disconnect{responder}))) => {
+                    responder.send().expect("Failed to send disconnect completion");
+                }
+            );
+            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+            assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
+            assert_variant!(
+                exec.run_until_stalled(&mut listener_updates.next()),
+                Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => {
+                    assert_eq!(summary, listener::ClientStateUpdate{state: None, networks: vec![
+                        listener::ClientNetworkState {
+                            id: network_id.clone().into(),
+                            state: fidl_policy::ConnectionState::Disconnected,
+                            status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
+                        }
+                    ]});
+                }
+            );
+
+            // Check that the disconnect watcher exits without checking for disconnects
+            exec.wake_next_timer();
+            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+            assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+
+            // Check that we don't try to disconnect again if we save and remove again.
+            saved_networks
+                .store(network_id.clone(), credential.clone())
+                .expect("Failed to save network");
+            let network_config = fidl_policy::NetworkConfig {
+                id: Some(fidl_policy::NetworkIdentifier::from(network_id.clone())),
+                credential: Some(fidl_policy::Credential::from(credential)),
+            };
+            remove_fut = controller.remove_network(network_config);
+            // Run server_provider forward so that it will process the remove request
+            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+            assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+        }
+
+        assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
+        assert!(saved_networks.lookup(network_id).is_empty());
+    }
+
+    fn process_connect(
+        exec: &mut fasync::Executor,
+        sme_stream: &mut fidl_sme::ClientSmeRequestStream,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                txn, ..
+            }))) => {
+                // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
     }
 
     #[test]
@@ -2032,7 +2223,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = create_client();
+        let (client, _sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, _listener_updates) = mpsc::unbounded();
 
         let serve_fut =

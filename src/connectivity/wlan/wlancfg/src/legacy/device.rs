@@ -120,7 +120,7 @@ async fn on_iface_added(
             fasync::spawn(fut);
             let lc = shim::Client { service, client: c, sme: sme.clone(), iface_id };
             legacy_client.set_if_empty(lc);
-            client.lock().set_sme(sme);
+            client.lock().await.set_sme(sme);
         }
         // The AP service make direct use of the PhyManager to get interfaces.
         wlan::MacRole::Ap => {}

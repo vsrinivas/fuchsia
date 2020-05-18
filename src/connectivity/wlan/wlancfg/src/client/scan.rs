@@ -216,7 +216,7 @@ async fn send_scan_error(
 
 /// Attempts to issue a new scan request to the currently active SME.
 async fn request_sme_scan(client: ClientPtr) -> Result<fidl_sme::ScanTransactionProxy, Error> {
-    let client = client.lock();
+    let client = client.lock().await;
     let client_sme =
         client.access_sme().ok_or_else(|| format_err!("no active client interface"))?;
 

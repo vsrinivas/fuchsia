@@ -93,6 +93,19 @@ impl KnownEssStore {
         self.write(guard)
     }
 
+    // Remove the network from persistent storage - only used by SavedNetworksManager to support
+    // legacy storage temporarily.
+    pub fn remove(&self, ssid: Vec<u8>, ess: Vec<u8>) -> Result<(), anyhow::Error> {
+        let mut guard = self.ess_by_ssid.lock();
+        if let Some(known_ess) = guard.get(&ssid) {
+            if known_ess.password == ess {
+                guard.remove(&ssid);
+                self.write(guard)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn clear(&self) -> Result<(), anyhow::Error> {
         let mut guard = self.ess_by_ssid.lock();
         guard.clear();

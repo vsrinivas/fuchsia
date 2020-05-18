@@ -42,7 +42,8 @@ impl Stash {
         Ok(Stash { root })
     }
 
-    /// Add or update network configs of a given network identifier to persistent storage.
+    /// Update the network configs of a given network identifier to persistent storage, deleting
+    /// the key entirely if the new list of configs is empty.
     pub fn write(
         &self,
         id: &NetworkIdentifier,
@@ -52,14 +53,19 @@ impl Stash {
         // will be STASH_PREFIX#<net_id>#<index>
         let id_key = Self::serialize_key(id)
             .map_err(|_| format_err!("failed to serialize network identifier"))?;
-
-        // use a different number to separate each child network config
-        let mut config_index = 0;
         let mut id_node = self.root.child(&id_key);
-        for network_config in network_configs {
-            let mut config_node = id_node.child(&config_index.to_string());
-            write_config(&mut config_node, network_config)?;
-            config_index += 1;
+
+        // If configs to update is empty, we essentially delete the network ID's configs.
+        if network_configs.is_empty() {
+            id_node.delete();
+        } else {
+            // use a different number to separate each child network config
+            let mut config_index = 0;
+            for network_config in network_configs {
+                let mut config_node = id_node.child(&config_index.to_string());
+                write_config(&mut config_node, network_config)?;
+                config_index += 1;
+            }
         }
         id_node.commit()
     }

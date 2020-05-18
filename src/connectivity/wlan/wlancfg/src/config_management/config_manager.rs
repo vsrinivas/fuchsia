@@ -155,6 +155,34 @@ impl SavedNetworksManager {
         Ok(saved_networks)
     }
 
+    /// Attempt to remove the NetworkConfig described by the specified NetworkIdentifier and
+    /// Credential. Return true if a NetworkConfig is remove and false otherwise.
+    pub fn remove(
+        &self,
+        network_id: NetworkIdentifier,
+        credential: Credential,
+    ) -> Result<bool, NetworkConfigError> {
+        // Find any matching NetworkConfig and remove it.
+        let mut guard = self.saved_networks.lock();
+        if let Some(network_configs) = guard.get_mut(&network_id) {
+            let original_len = network_configs.len();
+            // Keep the configs that don't match provided NetworkIdentifier and Credential.
+            network_configs.retain(|cfg| cfg.credential != credential);
+            // Update stash and legacy storage if there was a change
+            if original_len != network_configs.len() {
+                self.stash
+                    .lock()
+                    .write(&network_id, &network_configs)
+                    .map_err(|_| NetworkConfigError::StashWriteError)?;
+                self.legacy_store
+                    .remove(network_id.ssid, credential.into_bytes())
+                    .map_err(|_| NetworkConfigError::LegacyWriteError)?;
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
     pub fn clear(&self) -> Result<(), anyhow::Error> {
         self.saved_networks.lock().clear();
@@ -390,6 +418,61 @@ mod tests {
 
         // since none have been connected to yet, we don't care which config was removed
         assert_eq!(MAX_CONFIGS_PER_SSID, saved_networks.lookup(network_id).len());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn store_and_remove() {
+        let stash_id = "store_and_remove";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+
+        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let credential = Credential::Password(b"qwertyuio".to_vec());
+        assert!(saved_networks.lookup(network_id.clone()).is_empty());
+        assert_eq!(0, saved_networks.known_network_count());
+
+        // Store a network and verify it was stored.
+        saved_networks.store(network_id.clone(), credential.clone()).expect("storing 'foo' failed");
+        assert_eq!(
+            vec![network_config("foo", "qwertyuio")],
+            saved_networks.lookup(network_id.clone())
+        );
+        assert_eq!(1, saved_networks.known_network_count());
+
+        // Remove a network with the same NetworkIdentifier but differenct credential and verify
+        // that the saved network is unaffected.
+        assert_eq!(
+            false,
+            saved_networks
+                .remove(network_id.clone(), Credential::Password(b"diff-password".to_vec()))
+                .expect("removing 'foo' failed")
+        );
+        assert_eq!(1, saved_networks.known_network_count());
+
+        // Remove the network and check it is gone
+        assert_eq!(
+            true,
+            saved_networks
+                .remove(network_id.clone(), credential.clone())
+                .expect("removing 'foo' failed")
+        );
+        assert_eq!(0, saved_networks.known_network_count());
+
+        // If we try to remove the network again, we won't get an error and nothing happens
+        assert_eq!(
+            false,
+            saved_networks.remove(network_id.clone(), credential).expect("removing 'foo' failed")
+        );
+
+        // Check that removal persists.
+        let saved_networks =
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
+                .await
+                .expect("Failed to create SavedNetworksManager");
+        assert_eq!(0, saved_networks.known_network_count());
+        assert!(saved_networks.lookup(network_id.clone()).is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]

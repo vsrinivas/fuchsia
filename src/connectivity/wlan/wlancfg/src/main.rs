@@ -17,9 +17,8 @@ use {
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    futures::{self, channel::mpsc, future::try_join, prelude::*, select, TryFutureExt},
+    futures::{channel::mpsc, future::try_join, lock::Mutex, prelude::*, select, TryFutureExt},
     log::error,
-    parking_lot::Mutex,
     pin_utils::pin_mut,
     std::sync::Arc,
     void::Void,
@@ -104,7 +103,7 @@ fn main() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
-    let phy_manager = Arc::new(futures::lock::Mutex::new(PhyManager::new(wlan_svc.clone())));
+    let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let legacy_client = legacy::shim::ClientRef::new();
     let client = Arc::new(Mutex::new(client::Client::new_empty()));
