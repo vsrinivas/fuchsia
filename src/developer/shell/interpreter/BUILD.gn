@@ -41,10 +41,10 @@ static_library("shell_server_lib") {
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 
@@ -108,11 +108,11 @@ executable("shell_server_test_bin") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 

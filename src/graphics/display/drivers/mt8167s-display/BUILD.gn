@@ -81,10 +81,10 @@ test("dsi-host") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
 }

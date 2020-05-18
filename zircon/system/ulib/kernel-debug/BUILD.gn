@@ -22,9 +22,9 @@ zx_library("kernel-debug") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fidl-async",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 }

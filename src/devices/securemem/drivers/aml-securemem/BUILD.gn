@@ -34,13 +34,13 @@ driver_module("aml-securemem") {
     "//src/lib/ddk",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
 }
@@ -76,13 +76,13 @@ test("aml-securemem-test") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/tee-client-api:tee-client-api-static",
   ]
 

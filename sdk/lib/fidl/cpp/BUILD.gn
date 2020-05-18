@@ -57,9 +57,9 @@ sdk_source_set("cpp") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fidl-async",
   ]
 
   public_configs = [ "//sdk/config" ]
@@ -87,9 +87,9 @@ sdk_source_set("cpp_sync") {
   public_deps = [
     ":cpp_base",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fidl-async",
   ]
 }
 
@@ -127,8 +127,8 @@ sdk_source_set("cpp_base") {
 
   if (is_fuchsia) {
     public_deps += [
-      "//zircon/public/lib/fidl-async",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fidl-async",
     ]
   }
 }

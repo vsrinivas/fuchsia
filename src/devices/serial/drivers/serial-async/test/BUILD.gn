@@ -18,9 +18,9 @@ test("serial-async-unittest") {
   deps = [
     "..:common",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fidl-async",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 

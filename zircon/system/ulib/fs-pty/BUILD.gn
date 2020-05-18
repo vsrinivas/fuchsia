@@ -38,8 +38,8 @@ zx_library("fs-pty") {
   ]
 
   deps = [
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
   ]
 }

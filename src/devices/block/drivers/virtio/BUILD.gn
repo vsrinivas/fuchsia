@@ -79,11 +79,11 @@ test("virtio-block-test") {
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 
@@ -103,11 +103,11 @@ test("virtio-scsi-test") {
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 

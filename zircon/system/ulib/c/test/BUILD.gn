@@ -98,8 +98,6 @@ test("debugdata") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-async",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -107,6 +105,8 @@ test("debugdata") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
   ]
   output_dir = "$root_out_dir/zircon-migrated"

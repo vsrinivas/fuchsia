@@ -38,7 +38,7 @@ executable("integration_tests") {
     "//src/ui/input/testing/fake_input_report_device",
     "//src/ui/lib/input_report_reader",
     "//src/ui/testing:mock_input_device",
-    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]

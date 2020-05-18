@@ -31,10 +31,10 @@ test("sdio-test") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.sdio:llcpp",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 

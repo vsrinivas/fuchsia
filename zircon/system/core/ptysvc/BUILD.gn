@@ -30,8 +30,8 @@ executable("ptysvc") {
     ":common",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 
@@ -64,8 +64,8 @@ source_set("common") {
 
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 

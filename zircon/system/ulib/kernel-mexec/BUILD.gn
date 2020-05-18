@@ -24,12 +24,12 @@ zx_library("kernel-mexec") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/ulib/fidl-async",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 }
