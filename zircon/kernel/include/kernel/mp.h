@@ -101,7 +101,7 @@ struct mp_state {
   cpu_mask_t idle_cpus TA_GUARDED(thread_lock);
   cpu_mask_t realtime_cpus TA_GUARDED(thread_lock);
 
-  spin_lock_t ipi_task_lock;
+  SpinLock ipi_task_lock;
   // list of outstanding tasks for CPUs to execute.  Should only be
   // accessed with the ipi_task_lock held
   struct list_node ipi_task_list[SMP_MAX_CPUS];

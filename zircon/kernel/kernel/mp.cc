@@ -44,7 +44,6 @@ struct mp_sync_context;
 static void mp_sync_task(void* context);
 
 void mp_init(void) {
-  mp.ipi_task_lock = SPIN_LOCK_INITIAL_VALUE;
   for (uint i = 0; i < fbl::count_of(mp.ipi_task_list); ++i) {
     list_initialize(&mp.ipi_task_list[i]);
   }
@@ -151,7 +150,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   }
 
   // enqueue tasks
-  spin_lock(&mp.ipi_task_lock);
+  mp.ipi_task_lock.Acquire();
   cpu_mask_t remaining = mask;
   uint cpu_id = 0;
   while (remaining && cpu_id < num_cpus) {
@@ -161,7 +160,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     remaining >>= 1;
     cpu_id++;
   }
-  spin_unlock(&mp.ipi_task_lock);
+  mp.ipi_task_lock.Release();
 
   // let CPUs know to begin executing
   arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
@@ -208,14 +207,14 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
 
   // make sure the sync_tasks aren't in lists anymore, since they're
   // stack allocated
-  spin_lock_irqsave(&mp.ipi_task_lock, irqstate);
+  mp.ipi_task_lock.AcquireIrqSave(irqstate);
   for (uint i = 0; i < num_cpus; ++i) {
     // If a task is still around, it's because the CPU went offline.
     if (list_in_list(&sync_tasks[i].node)) {
       list_delete(&sync_tasks[i].node);
     }
   }
-  spin_unlock_irqrestore(&mp.ipi_task_lock, irqstate);
+  mp.ipi_task_lock.ReleaseIrqRestore(irqstate);
 }
 
 static void mp_unplug_trampoline(void) TA_REQ(thread_lock) __NO_RETURN;
@@ -398,9 +397,9 @@ interrupt_eoi mp_mbx_generic_irq(void*) {
 
   while (1) {
     struct mp_ipi_task* task;
-    spin_lock(&mp.ipi_task_lock);
+    mp.ipi_task_lock.Acquire();
     task = list_remove_head_type(&mp.ipi_task_list[local_cpu], struct mp_ipi_task, node);
-    spin_unlock(&mp.ipi_task_lock);
+    mp.ipi_task_lock.Release();
     if (task == NULL) {
       break;
     }
