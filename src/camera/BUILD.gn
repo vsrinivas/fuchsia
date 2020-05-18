@@ -54,7 +54,6 @@ test_package("camera_tests") {
     "//src/camera/drivers/hw_accel/ge2d/test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
-    "//src/camera/drivers/virtual_camera/test",
     "//src/camera/examples/camera_display/stream_provider/test",
     "//src/camera/lib/fake_camera/test",
     "//src/camera/lib/fake_legacy_stream/test",
@@ -101,12 +100,6 @@ test_package("camera_tests") {
       environments = basic_envs
     },
     {
-      name = "virtual_camera_driver_test"
-      manifest =
-          "drivers/virtual_camera/test/meta/virtual_camera_driver_test.cmx"
-      environments = basic_envs
-    },
-    {
       name = "image_writer_test"
       manifest = "lib/image_writer/test/meta/image_writer_test.cmx"
       environments = basic_envs
@@ -141,6 +134,7 @@ test_package("camera_tests") {
       manifest = "//src/camera/bin/device_watcher/test/device_watcher_test.cmx"
       environments = [ sherlock_env ]
     },
+
     # TODO(51861): Fix flake in device_test.
     # {
     #   name = "device_test"
