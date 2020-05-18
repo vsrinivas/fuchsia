@@ -5,15 +5,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:fxtest/fxtest.dart';
+
 import 'package:meta/meta.dart';
+
+import './fxtest.dart';
+import './start_process.dart';
 
 /// Disposable runner which executes a single test and presents its output in
 /// realtime (via streams) and aggregates for the end (via a [StringBuffer]).
 class TestRunner {
   final StreamController<String> _stdoutController;
+  final StartProcess _startProcess;
 
-  TestRunner() : _stdoutController = StreamController<String>();
+  TestRunner({StartProcess startProcess})
+      : _stdoutController = StreamController<String>(),
+        _startProcess = startProcess ?? Process.start;
 
   Stream<String> get output => _stdoutController.stream;
   void addOutput(String content) => _stdoutController.sink.add(content);
@@ -34,30 +40,37 @@ class TestRunner {
     @required String workingDirectory,
   }) async {
     var processArgs = _buildProcessArgs(command, args);
-    Process process = await Process.start(
+    Process process = await _startProcess(
       processArgs.command,
       processArgs.args,
       workingDirectory: workingDirectory,
     );
 
     var _stdOut = StringBuffer();
-    process.stdout.transform(utf8.decoder).transform(LineSplitter()).listen(
-      (String val) {
+    var stdOutFinish = Future(() async {
+      var lines =
+          process.stdout.transform(utf8.decoder).transform(LineSplitter());
+      await for (var val in lines) {
         _stdOut.writeln(val);
         addOutput(val);
-      },
-    );
+      }
+    });
 
     var _stdErr = StringBuffer();
-    process.stderr.transform(utf8.decoder).transform(LineSplitter()).listen(
-      (String val) {
+    var stdErrFinish = Future(() async {
+      var lines =
+          process.stderr.transform(utf8.decoder).transform(LineSplitter());
+      await for (var val in lines) {
         _stdErr.writeln(val);
         addOutput(val);
-      },
-    );
+      }
+    });
 
-    // Wait for test to actually end.
-    int _exitCode = await process.exitCode;
+    // Wait for test to actually end. This means waiting for the test process
+    // to terminate and for the output streams to be flushed.
+    var results =
+        await Future.wait([process.exitCode, stdOutFinish, stdErrFinish]);
+    var _exitCode = results[0];
 
     await close();
 
