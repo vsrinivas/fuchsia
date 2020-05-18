@@ -6,10 +6,10 @@ use thiserror::Error;
 
 #[derive(Clone, Eq, PartialEq, Debug, Error)]
 pub enum Error {
-    #[error("error reading /system/meta")]
+    #[error("error reading /pkgfs/system/meta")]
     ReadSystemMeta,
 
-    #[error("error parsing /system/meta merkle")]
+    #[error("error parsing /pkgfs/system/meta merkle")]
     ParseSystemMeta,
 
     #[error("error reading update package merkle")]
@@ -66,6 +66,6 @@ pub enum Error {
     #[error("system_updater component exited with success, it should have rebooted the system")]
     SystemUpdaterFinished,
 
-    #[error("error reading /system/data/static_packages")]
+    #[error("error reading /pkgfs/system/data/static_packages")]
     ReadStaticPackages,
 }

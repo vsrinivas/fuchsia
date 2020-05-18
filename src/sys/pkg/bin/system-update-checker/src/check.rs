@@ -90,7 +90,7 @@ fn current_system_image_merkle(
     file_system: &impl FileSystem,
 ) -> Result<Hash, crate::errors::Error> {
     Ok(file_system
-        .read_to_string("/system/meta")
+        .read_to_string("/pkgfs/system/meta")
         .map_err(|_| ErrorKind::ReadSystemMeta)?
         .parse::<Hash>()
         .map_err(|_| ErrorKind::ParseSystemMeta)?)
@@ -207,7 +207,7 @@ pub mod test_check_for_system_update_impl {
         fn new_with_valid_system_meta() -> FakeFileSystem {
             FakeFileSystem {
                 contents: hashmap![
-                    "/system/meta".to_string() => ACTIVE_SYSTEM_IMAGE_MERKLE.to_string()
+                    "/pkgfs/system/meta".to_string() => ACTIVE_SYSTEM_IMAGE_MERKLE.to_string()
                 ],
             }
         }
@@ -313,7 +313,7 @@ pub mod test_check_for_system_update_impl {
     async fn test_malformatted_system_meta_file() {
         let mut file_system = FakeFileSystem {
             contents: hashmap![
-                "/system/meta".to_string() => "not-a-merkle".to_string()
+                "/pkgfs/system/meta".to_string() => "not-a-merkle".to_string()
             ],
         };
         let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();

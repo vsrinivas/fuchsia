@@ -10,12 +10,12 @@
         "features": [
             "config-data",
             "deprecated-misc-storage",
-            "deprecated-shell",
             "isolated-persistent-storage"
         ],
         "pkgfs": [
             "ctl",
-            "packages"
+            "packages",
+            "system"
         ],
         "services": [
             "fuchsia.cobalt.SystemDataUpdater",

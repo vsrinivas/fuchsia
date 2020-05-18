@@ -126,7 +126,7 @@ fn get_system_updater_resource_url(
 ) -> Result<String, crate::errors::Error> {
     // Attempt to find pinned version.
     let file = file_system
-        .read_to_string("/system/data/static_packages")
+        .read_to_string("/pkgfs/system/data/static_packages")
         .map_err(|_| ErrorKind::ReadStaticPackages)?;
 
     for line in file.lines() {
@@ -254,7 +254,7 @@ mod test_apply_system_update_impl {
 
     impl FileSystem for FakeFileSystem {
         fn read_to_string(&self, path: &str) -> std::io::Result<String> {
-            if path != "/system/data/static_packages" {
+            if path != "/pkgfs/system/data/static_packages" {
                 return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "invalid path"));
             }
             if self.has_amber {
