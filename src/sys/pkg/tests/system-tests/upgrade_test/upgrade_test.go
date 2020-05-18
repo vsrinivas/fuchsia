@@ -286,7 +286,11 @@ func systemOTA(
 	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
-	u := updater.NewSystemUpdateChecker(repo)
+	u, err := c.installerConfig.Updater(repo)
+	if err != nil {
+		return fmt.Errorf("Configuration error: %s", err)
+	}
+
 	if err := u.Update(ctx, device); err != nil {
 		return fmt.Errorf("OTA failed: %s", err)
 	}

@@ -18,6 +18,7 @@ import (
 
 type config struct {
 	archiveConfig            *systemTestConfig.ArchiveConfig
+	installerConfig          *systemTestConfig.InstallerConfig
 	deviceConfig             *systemTestConfig.DeviceConfig
 	otaToRecovery            bool
 	downgradeBuilderName     string
@@ -35,9 +36,15 @@ type config struct {
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
+	installerConfig, err := systemTestConfig.NewInstallerConfig(fs)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &config{
-		archiveConfig: systemTestConfig.NewArchiveConfig(fs),
-		deviceConfig:  systemTestConfig.NewDeviceConfig(fs),
+		archiveConfig:   systemTestConfig.NewArchiveConfig(fs),
+		installerConfig: installerConfig,
+		deviceConfig:    systemTestConfig.NewDeviceConfig(fs),
 	}
 
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
