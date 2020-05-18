@@ -20,9 +20,6 @@ emu_env = {
   }
 }
 
-# TODO(fxbug.dev/52133): Remove once all references updated to emu_env.
-qemu_env = emu_env
-
 astro_env = {
   dimensions = {
     device_type = "Astro"
