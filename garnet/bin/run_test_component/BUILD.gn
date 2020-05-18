@@ -37,6 +37,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.sysmem",

@@ -32,6 +32,8 @@ source_set("lib") {
     "hub/hub_info.h",
     "hub/realm_hub.cc",
     "hub/realm_hub.h",
+    "introspector.cc",
+    "introspector.h",
     "job_provider_impl.cc",
     "job_provider_impl.h",
     "log_connector_impl.cc",
@@ -76,6 +78,7 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/system/fidl/fuchsia-process",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -83,6 +86,7 @@ source_set("lib") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/loader-service",
+    "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 

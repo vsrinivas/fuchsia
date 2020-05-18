@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -10,6 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -19,7 +21,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/process.h>
 #include <zircon/rights.h>
+#include <zircon/status.h>
 
 #include <fstream>
 #include <memory>
@@ -33,6 +38,7 @@
 #include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
+#include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/sys/appmgr/component_controller_impl.h"
@@ -349,6 +355,181 @@ TEST_F(RealmTest, KillWorks) {
   // make sure realm was really killed
   files::Glob glob2(hub_path);
   ASSERT_EQ(0u, glob2.size());
+}
+
+class RealmIntrospectTest : public RealmTest {
+ public:
+  using Introspect_FindComponentByProcessKoid_Result =
+      fuchsia::sys::internal::Introspect_FindComponentByProcessKoid_Result;
+
+  void SetUp() override {
+    RealmTest::SetUp();
+    real_services()->Connect(introspect_.NewRequest());
+    ASSERT_TRUE(files::ReadFileToString("hub/name", &current_realm_name_));
+  }
+
+  Introspect_FindComponentByProcessKoid_Result FindComponent(zx_koid_t process_koid) {
+    Introspect_FindComponentByProcessKoid_Result result;
+    ZX_ASSERT(ZX_OK == introspect_->FindComponentByProcessKoid(process_koid, &result));
+    return result;
+  }
+  static zx_koid_t GetKoid(const zx::object_base& obj) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = obj.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
+  }
+
+  static zx_koid_t GetCurrentProcessKoid() {
+    auto koid = GetKoid(*zx::process::self());
+    ZX_DEBUG_ASSERT(koid != ZX_KOID_INVALID);
+    return koid;
+  }
+
+  const std::string& current_realm_name() const { return current_realm_name_; }
+
+ private:
+  fuchsia::sys::internal::IntrospectSyncPtr introspect_;
+  std::string current_realm_name_;
+};
+
+// This tests that the service is not available in environment which do not explicity include it
+// from parent environment.
+// This test's cmx file does that so we are able to indirectly test that inheriting this service
+// works.
+TEST_F(RealmIntrospectTest, ServiceNotAvailableInAllEnvironments) {
+  auto env_services = CreateServices();
+  auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
+
+  fuchsia::sys::internal::IntrospectPtr introspect;
+  enclosing_environment->ConnectToService(introspect.NewRequest());
+  bool done = false;
+  introspect.set_error_handler([&](zx_status_t status) {
+    done = true;
+    ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
+  });
+  RunLoopUntil([&]() { return done; });
+}
+
+TEST_F(RealmIntrospectTest, ComponentUrlForCurrentProcess) {
+  auto svc = sys::ServiceDirectory::CreateFromNamespace();
+  fuchsia::sys::internal::IntrospectSyncPtr introspect;
+  svc->Connect(introspect.NewRequest());
+  auto process_koid = GetCurrentProcessKoid();
+  auto result = FindComponent(process_koid);
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(response.component_url(),
+            "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
+            "appmgr_realm_integration_tests.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name()};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), std::to_string(process_koid));
+}
+
+// pass job's koid so that we can test ZX_ERR_NOT_FOUND.
+TEST_F(RealmIntrospectTest, InvalidProcessId) {
+  auto job = zx::job::default_job();
+  auto koid = GetKoid(*job);
+  auto result = FindComponent(koid);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
+}
+
+TEST_F(RealmIntrospectTest, ComponentUrlForNewComponentInEnclosingEnv) {
+  auto env_services = CreateServices();
+  std::string realm_label = "RealmIntrospectTest";
+  auto enclosing_environment = CreateNewEnclosingEnvironment(realm_label, std::move(env_services));
+  WaitForEnclosingEnvToStart(enclosing_environment.get());
+  zx::channel request;
+  auto echo_svc = sys::ServiceDirectory::CreateWithRequest(&request);
+  auto controller = RunComponent(
+      enclosing_environment.get(),
+      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx", std::move(request));
+
+  // wait for echo to start
+  fidl::examples::echo::EchoPtr echo;
+  echo_svc->Connect(echo.NewRequest());
+  const fidl::StringPtr message = "message";
+  fidl::StringPtr ret_msg;
+  echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = std::move(retval); });
+  RunLoopUntil([&] { return ret_msg.has_value(); });
+  ASSERT_EQ(ret_msg, message);
+
+  files::Glob glob(std::string("/hub/r/") + realm_label + "/*/c/echo_server_cpp.cmx/*/process-id");
+  ASSERT_EQ(1u, glob.size());
+
+  std::string process_koid;
+  ASSERT_TRUE(files::ReadFileToString(*glob.begin(), &process_koid));
+
+  auto result = FindComponent(std::stoi(process_koid));
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(response.component_url(),
+            "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name(), std::move(realm_label)};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), process_koid);
+  EXPECT_EQ(response.component_name(), "echo_server_cpp.cmx");
+}
+
+TEST_F(RealmIntrospectTest, ComponentUrlForNewComponentInCurrentEnv) {
+  zx::channel request;
+  auto echo_svc = sys::ServiceDirectory::CreateWithRequest(&request);
+  auto launch_info = CreateLaunchInfo(
+      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx", std::move(request));
+  fuchsia::sys::ComponentControllerPtr controller;
+  launcher_ptr()->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  // wait for echo to start
+  fidl::examples::echo::EchoPtr echo;
+  echo_svc->Connect(echo.NewRequest());
+  const fidl::StringPtr message = "message";
+  fidl::StringPtr ret_msg;
+  echo->EchoString(message, [&](::fidl::StringPtr retval) { ret_msg = std::move(retval); });
+  RunLoopUntil([&] { return ret_msg.has_value(); });
+  ASSERT_EQ(ret_msg, message);
+
+  files::Glob glob("/hub/c/echo_server_cpp.cmx/*/process-id");
+  ASSERT_EQ(1u, glob.size());
+
+  std::string process_koid;
+  ASSERT_TRUE(files::ReadFileToString(*glob.begin(), &process_koid));
+
+  auto result = FindComponent(std::stoi(process_koid));
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(response.component_url(),
+            "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name()};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), process_koid);
+}
+
+TEST_F(RealmIntrospectTest, ComponentUrlForNewProcess) {
+  const char* command_argv[] = {"/pkg/bin/echo_server_for_test", nullptr};
+
+  auto job = zx::job::default_job();
+
+  zx::process process;
+
+  ASSERT_EQ(ZX_OK, fdio_spawn(job->get(), FDIO_SPAWN_CLONE_ALL,
+                              command_argv[0],  // path
+                              command_argv, process.reset_and_get_address()));
+  auto result = FindComponent(GetKoid(process));
+  process.kill();
+  ASSERT_FALSE(result.is_err()) << zx_status_get_string(result.err());
+  auto& response = result.response().component_info;
+
+  EXPECT_EQ(response.component_url(),
+            "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
+            "appmgr_realm_integration_tests.cmx");
+  std::vector<std::string> expected = {"app", "sys", current_realm_name()};
+  EXPECT_EQ(response.realm_path(), expected);
+  EXPECT_EQ(response.instance_id(), std::to_string(GetCurrentProcessKoid()));
 }
 
 class EnvironmentOptionsTest : public RealmTest,

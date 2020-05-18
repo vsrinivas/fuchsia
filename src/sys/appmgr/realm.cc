@@ -15,13 +15,16 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
+#include <lib/zx/status.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/rights.h>
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include <trace/event.h>
@@ -44,6 +47,7 @@
 #include "src/lib/pkg_url/url_resolver.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
+#include "src/sys/appmgr/introspector.h"
 #include "src/sys/appmgr/namespace_builder.h"
 #include "src/sys/appmgr/policy_checker.h"
 #include "src/sys/appmgr/scheme_map.h"
@@ -348,6 +352,15 @@ Realm::Realm(RealmArgs args, zx::job job)
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           cache_control_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::test::CacheControl>(std::move(channel)));
+          return ZX_OK;
+        })));
+
+    introspector_ = std::make_unique<IntrospectImpl>(this);
+    default_namespace_->services()->AddService(
+        fuchsia::sys::internal::Introspect::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          introspector_->AddBinding(
+              fidl::InterfaceRequest<fuchsia::sys::internal::Introspect>(std::move(channel)));
           return ZX_OK;
         })));
   }
@@ -1161,6 +1174,45 @@ zx_status_t Realm::BindComponentEventProvider(
 
 bool Realm::HasComponentEventListenerBound() {
   return component_event_provider_ && component_event_provider_->listener_bound();
+}
+
+zx::status<fuchsia::sys::internal::SourceIdentity> Realm::FindComponent(zx_koid_t process_koid) {
+  auto result = FindComponentInternal(process_koid);
+  if (result.is_ok()) {
+    // reverse realm segments.
+    auto* path = result.value().mutable_realm_path();
+    std::reverse(path->begin(), path->end());
+  }
+  return result;
+}
+
+zx::status<fuchsia::sys::internal::SourceIdentity> Realm::FindComponentInternal(
+    zx_koid_t process_koid) {
+  for (auto& app : applications_) {
+    auto result = app.second->ContainsProcess(process_koid);
+    if (result.is_ok() && result.value()) {
+      fuchsia::sys::internal::SourceIdentity identity;
+      identity.set_component_name(app.second->label());
+      identity.set_component_url(app.second->url());
+      identity.set_instance_id(app.second->hub_instance_id());
+      identity.set_realm_path({label_});
+      return zx::ok(std::move(identity));
+    }
+    if (result.is_error()) {
+      return result.take_error();
+    }
+  }
+  for (auto& realm : children_) {
+    auto result = realm.first->FindComponentInternal(process_koid);
+    if (result.is_ok()) {
+      result.value().mutable_realm_path()->push_back(label_);
+      return result;
+    }
+    if (result.error_value() != ZX_ERR_NOT_FOUND) {
+      return result;
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace component

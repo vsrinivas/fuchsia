@@ -4,27 +4,22 @@
 
 library fuchsia.sys.internal;
 
-const uint16 MAXIMUM_REALM_PATH_SEGMENTS = 25;
-const uint16 COMPONENT_NAME_MAX_LENGTH = 255;
-const uint16 STRING_MAX_LENGTH = 100;
-const uint16 MAX_URL_LENGTH = 4096;
-
 /// Identifies a component uniquely within the observing realm.
 /// Example: hub/r/sys/4566/c/http.cmx/19226
-///   moniker: [root, sys, http.cmx]
+///   realm_path: [root, sys]
 ///   component_url: "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
 ///   component_name: "http.cmx"
 ///   instance_id: 19226
 table SourceIdentity {
     /// The path to the component from the observing realm.
-    1: vector<string:STRING_MAX_LENGTH>:MAXIMUM_REALM_PATH_SEGMENTS realm_path;
+    1: realm_segments realm_path;
 
     /// The URL from which the component was loaded.
-    2: string:MAX_URL_LENGTH component_url;
+    2: component_url component_url;
 
     /// The name of the component.
     3: string:COMPONENT_NAME_MAX_LENGTH component_name;
 
     /// The ID of the component.
-    4: string:STRING_MAX_LENGTH instance_id;
+    4: string:LABEL_MAX_LENGTH instance_id;
 };

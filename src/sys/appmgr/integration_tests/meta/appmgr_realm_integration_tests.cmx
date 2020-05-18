@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sys.internal.Introspect"
+            ]
+        }
+    },
     "program": {
         "binary": "test/appmgr_realm_integration_tests"
     },
@@ -8,8 +15,10 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.internal.Introspect"
         ]
     }
 }

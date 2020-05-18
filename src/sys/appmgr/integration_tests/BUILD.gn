@@ -48,6 +48,7 @@ executable("realm_tests") {
     "//garnet//examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

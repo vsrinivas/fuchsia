@@ -13,6 +13,9 @@
 #include <lib/fit/function.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/job.h>
+#include <lib/zx/status.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <cinttypes>
@@ -22,6 +25,7 @@
 #include <fs/pseudo_file.h>
 #include <fs/remote_dir.h>
 #include <fs/service.h>
+#include <task-utils/walker.h>
 #include <trace/event.h>
 
 #include "fbl/ref_ptr.h"
@@ -52,6 +56,42 @@ zx::process DuplicateProcess(const zx::process& process) {
 // Watch. A solution using a watcher is implemented in fxr/366977 pending watch support.
 const uint32_t MAX_RETRIES_OUT_DIAGNOSTICS = 30;
 const uint32_t OUT_DIAGNOSTICS_RETRY_DELAY_MS = 500;
+
+// Helper class used to parse process tree and find the process.
+class ProcessFinder {
+ public:
+  static zx::status<bool> contains_process(const zx::job& job, zx_koid_t process_koid) {
+    auto finder = ProcessFinder(process_koid);
+    return finder.Contains(job);
+  }
+
+ private:
+  explicit ProcessFinder(zx_koid_t process_koid) : process_koid_(process_koid) {}
+
+  zx::status<bool> Contains(const zx::job& job) {
+    auto status = walk_job_tree(job.get(), nullptr, process_callback, nullptr, this);
+    if (found_) {
+      return zx::ok(found_);
+    }
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(false);
+  }
+
+  static zx_status_t process_callback(void* process_finder_ptr, int /* unused */,
+                                      zx_handle_t /* unused */, zx_koid_t koid,
+                                      zx_koid_t /* unused */) {
+    auto* process_finder = static_cast<ProcessFinder*>(process_finder_ptr);
+    if (process_finder->process_koid_ == koid) {
+      process_finder->found_ = true;
+      return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+  }
+  zx_koid_t process_koid_;
+  bool found_ = false;
+};
 
 }  // namespace
 
@@ -355,6 +395,10 @@ void ComponentControllerImpl::Handler(async_dispatcher_t* dispatcher, async::Wai
   container_->ExtractComponent(this);
   // The destructor of the temporary returned by ExtractComponent destroys
   // |this| at the end of the previous statement.
+}
+
+zx::status<bool> ComponentControllerImpl::ContainsProcess(zx_koid_t process_koid) {
+  return ProcessFinder::contains_process(job_, process_koid);
 }
 
 ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,

@@ -10,7 +10,9 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/process.h>
+#include <lib/zx/status.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #include <vector>
 
@@ -169,6 +171,9 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   zx_status_t AddSubComponentHub(const component::HubInfo& hub_info);
   zx_status_t RemoveSubComponentHub(const component::HubInfo& hub_info);
+
+  // Returns true if component or any processes started by this component has `process_koid`.
+  zx::status<bool> ContainsProcess(zx_koid_t process_koid);
 
   // |fuchsia::sys::ComponentController| implementation:
   void Kill() override;
