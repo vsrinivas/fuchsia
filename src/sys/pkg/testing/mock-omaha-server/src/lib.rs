@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
+    fuchsia_merkle::Hash,
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
         prelude::*,
@@ -12,7 +13,10 @@ use {
     },
     hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     serde_json::json,
-    std::net::{Ipv4Addr, SocketAddr},
+    std::{
+        net::{Ipv4Addr, SocketAddr},
+        str::FromStr,
+    },
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -26,11 +30,19 @@ pub enum OmahaResponse {
 /// A mock Omaha server.
 pub struct OmahaServer {
     response: OmahaResponse,
+    merkle: Hash,
 }
 
 impl OmahaServer {
     pub fn new(response: OmahaResponse) -> Self {
-        OmahaServer { response }
+        let merkle =
+            Hash::from_str("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+                .unwrap();
+        OmahaServer::new_with_hash(response, merkle)
+    }
+
+    pub fn new_with_hash(response: OmahaResponse, merkle: Hash) -> Self {
+        OmahaServer { response, merkle }
     }
 
     /// Spawn the server on the current executor, returning the address of the server.
@@ -44,8 +56,12 @@ impl OmahaServer {
         };
 
         let response = self.response;
-        let service =
-            move || service_fn(move |req| handle_omaha_request(req, response).boxed().compat());
+        let merkle = self.merkle;
+        let service = move || {
+            service_fn(move |req| {
+                handle_omaha_request(req, response, merkle.to_string()).boxed().compat()
+            })
+        };
 
         let server = Server::builder(connections.compat())
             .executor(EHandle::local().compat())
@@ -62,6 +78,7 @@ impl OmahaServer {
 async fn handle_omaha_request(
     req: Request<Body>,
     response: OmahaResponse,
+    merkle: String,
 ) -> Result<Response<Body>, Error> {
     assert_eq!(req.method(), Method::POST);
     assert_eq!(req.uri().query(), None);
@@ -78,6 +95,7 @@ async fn handle_omaha_request(
     let version = app.get("version").unwrap();
     assert_eq!(version, "0.1.2.3");
 
+    let package_name = format!("update?hash={}", merkle);
     let is_update_check = app.get("updatecheck").is_some();
     let app = if is_update_check {
         let updatecheck = match response {
@@ -95,7 +113,7 @@ async fn handle_omaha_request(
                     "actions": {
                         "action": [
                             {
-                                "run": "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                "run": &package_name,
                                 "event": "install"
                             },
                             {
@@ -106,7 +124,7 @@ async fn handle_omaha_request(
                     "packages": {
                         "package": [
                             {
-                                "name": "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                "name": &package_name,
                                 "fp": "2.0.1.2.3",
                                 "required": true
                             }
@@ -134,7 +152,7 @@ async fn handle_omaha_request(
                     "actions": {
                         "action": [
                             {
-                                "run": "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                "run": &package_name,
                                 "event": "install"
                             },
                             {
@@ -145,7 +163,7 @@ async fn handle_omaha_request(
                     "packages": {
                         "package": [
                             {
-                                "name": "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                "name": &package_name,
                                 "fp": "2.0.1.2.3",
                                 "required": true
                             }
