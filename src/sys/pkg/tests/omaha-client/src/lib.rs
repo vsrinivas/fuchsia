@@ -31,6 +31,7 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::mpsc, prelude::*},
     matches::assert_matches,
+    mock_omaha_server::{OmahaResponse, OmahaServer},
     parking_lot::Mutex,
     std::{
         collections::HashMap,
@@ -40,9 +41,6 @@ use {
     },
     tempfile::TempDir,
 };
-
-mod server;
-use server::OmahaResponse;
 
 const OMAHA_CLIENT_CMX: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
@@ -123,7 +121,7 @@ impl TestEnvBuilder {
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>();
 
-        let server = server::OmahaServer::new(self.response);
+        let server = OmahaServer::new(self.response);
         let url = server.start().expect("start server");
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
