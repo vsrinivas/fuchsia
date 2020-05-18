@@ -14,19 +14,19 @@ pub type OldUChar = ::std::os::raw::c_ushort;
 pub type UChar32 = i32;
 pub type UVersionInfo = [u8; 4usize];
 extern "C" {
-    pub fn u_versionFromString_65(
+    pub fn u_versionFromString_66(
         versionArray: *mut u8,
         versionString: *const ::std::os::raw::c_char,
     );
 }
 extern "C" {
-    pub fn u_versionFromUString_65(versionArray: *mut u8, versionString: *const UChar);
+    pub fn u_versionFromUString_66(versionArray: *mut u8, versionString: *const UChar);
 }
 extern "C" {
-    pub fn u_versionToString_65(versionArray: *mut u8, versionString: *mut ::std::os::raw::c_char);
+    pub fn u_versionToString_66(versionArray: *mut u8, versionString: *mut ::std::os::raw::c_char);
 }
 extern "C" {
-    pub fn u_getVersion_65(versionArray: *mut u8);
+    pub fn u_getVersion_66(versionArray: *mut u8);
 }
 pub type UDate = f64;
 impl UErrorCode {
@@ -220,7 +220,7 @@ pub enum UErrorCode {
     U_PLUGIN_ERROR_LIMIT = 66818,
 }
 extern "C" {
-    pub fn u_errorName_65(code: UErrorCode) -> *const ::std::os::raw::c_char;
+    pub fn u_errorName_66(code: UErrorCode) -> *const ::std::os::raw::c_char;
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -228,37 +228,37 @@ pub struct UEnumeration {
     _unused: [u8; 0],
 }
 extern "C" {
-    pub fn uenum_close_65(en: *mut UEnumeration);
+    pub fn uenum_close_66(en: *mut UEnumeration);
 }
 extern "C" {
-    pub fn uenum_count_65(en: *mut UEnumeration, status: *mut UErrorCode) -> i32;
+    pub fn uenum_count_66(en: *mut UEnumeration, status: *mut UErrorCode) -> i32;
 }
 extern "C" {
-    pub fn uenum_unext_65(
+    pub fn uenum_unext_66(
         en: *mut UEnumeration,
         resultLength: *mut i32,
         status: *mut UErrorCode,
     ) -> *const UChar;
 }
 extern "C" {
-    pub fn uenum_next_65(
+    pub fn uenum_next_66(
         en: *mut UEnumeration,
         resultLength: *mut i32,
         status: *mut UErrorCode,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uenum_reset_65(en: *mut UEnumeration, status: *mut UErrorCode);
+    pub fn uenum_reset_66(en: *mut UEnumeration, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn uenum_openUCharStringsEnumeration_65(
+    pub fn uenum_openUCharStringsEnumeration_66(
         strings: *const *const UChar,
         count: i32,
         ec: *mut UErrorCode,
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn uenum_openCharStringsEnumeration_65(
+    pub fn uenum_openCharStringsEnumeration_66(
         strings: *const *const ::std::os::raw::c_char,
         count: i32,
         ec: *mut UErrorCode,
@@ -273,13 +273,13 @@ pub enum ULocDataLocaleType {
     ULOC_DATA_LOCALE_TYPE_LIMIT = 3,
 }
 extern "C" {
-    pub fn uloc_getDefault_65() -> *const ::std::os::raw::c_char;
+    pub fn uloc_getDefault_66() -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_setDefault_65(localeID: *const ::std::os::raw::c_char, status: *mut UErrorCode);
+    pub fn uloc_setDefault_66(localeID: *const ::std::os::raw::c_char, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn uloc_getLanguage_65(
+    pub fn uloc_getLanguage_66(
         localeID: *const ::std::os::raw::c_char,
         language: *mut ::std::os::raw::c_char,
         languageCapacity: i32,
@@ -287,7 +287,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getScript_65(
+    pub fn uloc_getScript_66(
         localeID: *const ::std::os::raw::c_char,
         script: *mut ::std::os::raw::c_char,
         scriptCapacity: i32,
@@ -295,7 +295,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getCountry_65(
+    pub fn uloc_getCountry_66(
         localeID: *const ::std::os::raw::c_char,
         country: *mut ::std::os::raw::c_char,
         countryCapacity: i32,
@@ -303,7 +303,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getVariant_65(
+    pub fn uloc_getVariant_66(
         localeID: *const ::std::os::raw::c_char,
         variant: *mut ::std::os::raw::c_char,
         variantCapacity: i32,
@@ -311,7 +311,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getName_65(
+    pub fn uloc_getName_66(
         localeID: *const ::std::os::raw::c_char,
         name: *mut ::std::os::raw::c_char,
         nameCapacity: i32,
@@ -319,7 +319,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_canonicalize_65(
+    pub fn uloc_canonicalize_66(
         localeID: *const ::std::os::raw::c_char,
         name: *mut ::std::os::raw::c_char,
         nameCapacity: i32,
@@ -327,20 +327,20 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getISO3Language_65(
+    pub fn uloc_getISO3Language_66(
         localeID: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_getISO3Country_65(
+    pub fn uloc_getISO3Country_66(
         localeID: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_getLCID_65(localeID: *const ::std::os::raw::c_char) -> u32;
+    pub fn uloc_getLCID_66(localeID: *const ::std::os::raw::c_char) -> u32;
 }
 extern "C" {
-    pub fn uloc_getDisplayLanguage_65(
+    pub fn uloc_getDisplayLanguage_66(
         locale: *const ::std::os::raw::c_char,
         displayLocale: *const ::std::os::raw::c_char,
         language: *mut UChar,
@@ -349,7 +349,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getDisplayScript_65(
+    pub fn uloc_getDisplayScript_66(
         locale: *const ::std::os::raw::c_char,
         displayLocale: *const ::std::os::raw::c_char,
         script: *mut UChar,
@@ -358,7 +358,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getDisplayCountry_65(
+    pub fn uloc_getDisplayCountry_66(
         locale: *const ::std::os::raw::c_char,
         displayLocale: *const ::std::os::raw::c_char,
         country: *mut UChar,
@@ -367,7 +367,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getDisplayVariant_65(
+    pub fn uloc_getDisplayVariant_66(
         locale: *const ::std::os::raw::c_char,
         displayLocale: *const ::std::os::raw::c_char,
         variant: *mut UChar,
@@ -376,7 +376,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getDisplayKeyword_65(
+    pub fn uloc_getDisplayKeyword_66(
         keyword: *const ::std::os::raw::c_char,
         displayLocale: *const ::std::os::raw::c_char,
         dest: *mut UChar,
@@ -385,7 +385,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getDisplayKeywordValue_65(
+    pub fn uloc_getDisplayKeywordValue_66(
         locale: *const ::std::os::raw::c_char,
         keyword: *const ::std::os::raw::c_char,
         displayLocale: *const ::std::os::raw::c_char,
@@ -395,7 +395,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getDisplayName_65(
+    pub fn uloc_getDisplayName_66(
         localeID: *const ::std::os::raw::c_char,
         inLocaleID: *const ::std::os::raw::c_char,
         result: *mut UChar,
@@ -404,10 +404,10 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getAvailable_65(n: i32) -> *const ::std::os::raw::c_char;
+    pub fn uloc_getAvailable_66(n: i32) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_countAvailable_65() -> i32;
+    pub fn uloc_countAvailable_66() -> i32;
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -418,19 +418,19 @@ pub enum ULocAvailableType {
     ULOC_AVAILABLE_COUNT = 3,
 }
 extern "C" {
-    pub fn uloc_openAvailableByType_65(
+    pub fn uloc_openAvailableByType_66(
         type_: ULocAvailableType,
         status: *mut UErrorCode,
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn uloc_getISOLanguages_65() -> *const *const ::std::os::raw::c_char;
+    pub fn uloc_getISOLanguages_66() -> *const *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_getISOCountries_65() -> *const *const ::std::os::raw::c_char;
+    pub fn uloc_getISOCountries_66() -> *const *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_getParent_65(
+    pub fn uloc_getParent_66(
         localeID: *const ::std::os::raw::c_char,
         parent: *mut ::std::os::raw::c_char,
         parentCapacity: i32,
@@ -438,7 +438,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getBaseName_65(
+    pub fn uloc_getBaseName_66(
         localeID: *const ::std::os::raw::c_char,
         name: *mut ::std::os::raw::c_char,
         nameCapacity: i32,
@@ -446,13 +446,13 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_openKeywords_65(
+    pub fn uloc_openKeywords_66(
         localeID: *const ::std::os::raw::c_char,
         status: *mut UErrorCode,
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn uloc_getKeywordValue_65(
+    pub fn uloc_getKeywordValue_66(
         localeID: *const ::std::os::raw::c_char,
         keywordName: *const ::std::os::raw::c_char,
         buffer: *mut ::std::os::raw::c_char,
@@ -461,7 +461,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_setKeywordValue_65(
+    pub fn uloc_setKeywordValue_66(
         keywordName: *const ::std::os::raw::c_char,
         keywordValue: *const ::std::os::raw::c_char,
         buffer: *mut ::std::os::raw::c_char,
@@ -470,7 +470,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_isRightToLeft_65(locale: *const ::std::os::raw::c_char) -> UBool;
+    pub fn uloc_isRightToLeft_66(locale: *const ::std::os::raw::c_char) -> UBool;
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -482,13 +482,13 @@ pub enum ULayoutType {
     ULOC_LAYOUT_UNKNOWN = 4,
 }
 extern "C" {
-    pub fn uloc_getCharacterOrientation_65(
+    pub fn uloc_getCharacterOrientation_66(
         localeId: *const ::std::os::raw::c_char,
         status: *mut UErrorCode,
     ) -> ULayoutType;
 }
 extern "C" {
-    pub fn uloc_getLineOrientation_65(
+    pub fn uloc_getLineOrientation_66(
         localeId: *const ::std::os::raw::c_char,
         status: *mut UErrorCode,
     ) -> ULayoutType;
@@ -501,7 +501,7 @@ pub enum UAcceptResult {
     ULOC_ACCEPT_FALLBACK = 2,
 }
 extern "C" {
-    pub fn uloc_acceptLanguageFromHTTP_65(
+    pub fn uloc_acceptLanguageFromHTTP_66(
         result: *mut ::std::os::raw::c_char,
         resultAvailable: i32,
         outResult: *mut UAcceptResult,
@@ -511,7 +511,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_acceptLanguage_65(
+    pub fn uloc_acceptLanguage_66(
         result: *mut ::std::os::raw::c_char,
         resultAvailable: i32,
         outResult: *mut UAcceptResult,
@@ -522,7 +522,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_getLocaleForLCID_65(
+    pub fn uloc_getLocaleForLCID_66(
         hostID: u32,
         locale: *mut ::std::os::raw::c_char,
         localeCapacity: i32,
@@ -530,7 +530,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_addLikelySubtags_65(
+    pub fn uloc_addLikelySubtags_66(
         localeID: *const ::std::os::raw::c_char,
         maximizedLocaleID: *mut ::std::os::raw::c_char,
         maximizedLocaleIDCapacity: i32,
@@ -538,7 +538,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_minimizeSubtags_65(
+    pub fn uloc_minimizeSubtags_66(
         localeID: *const ::std::os::raw::c_char,
         minimizedLocaleID: *mut ::std::os::raw::c_char,
         minimizedLocaleIDCapacity: i32,
@@ -546,7 +546,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_forLanguageTag_65(
+    pub fn uloc_forLanguageTag_66(
         langtag: *const ::std::os::raw::c_char,
         localeID: *mut ::std::os::raw::c_char,
         localeIDCapacity: i32,
@@ -555,7 +555,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_toLanguageTag_65(
+    pub fn uloc_toLanguageTag_66(
         localeID: *const ::std::os::raw::c_char,
         langtag: *mut ::std::os::raw::c_char,
         langtagCapacity: i32,
@@ -564,23 +564,23 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn uloc_toUnicodeLocaleKey_65(
+    pub fn uloc_toUnicodeLocaleKey_66(
         keyword: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_toUnicodeLocaleType_65(
+    pub fn uloc_toUnicodeLocaleType_66(
         keyword: *const ::std::os::raw::c_char,
         value: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_toLegacyKey_65(
+    pub fn uloc_toLegacyKey_66(
         keyword: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn uloc_toLegacyType_65(
+    pub fn uloc_toLegacyType_66(
         keyword: *const ::std::os::raw::c_char,
         value: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
@@ -668,7 +668,7 @@ pub enum USystemTimeZoneType {
     UCAL_ZONE_TYPE_CANONICAL_LOCATION = 2,
 }
 extern "C" {
-    pub fn ucal_openTimeZoneIDEnumeration_65(
+    pub fn ucal_openTimeZoneIDEnumeration_66(
         zoneType: USystemTimeZoneType,
         region: *const ::std::os::raw::c_char,
         rawOffset: *const i32,
@@ -676,39 +676,39 @@ extern "C" {
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucal_openTimeZones_65(ec: *mut UErrorCode) -> *mut UEnumeration;
+    pub fn ucal_openTimeZones_66(ec: *mut UErrorCode) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucal_openCountryTimeZones_65(
+    pub fn ucal_openCountryTimeZones_66(
         country: *const ::std::os::raw::c_char,
         ec: *mut UErrorCode,
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucal_getDefaultTimeZone_65(
+    pub fn ucal_getDefaultTimeZone_66(
         result: *mut UChar,
         resultCapacity: i32,
         ec: *mut UErrorCode,
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_setDefaultTimeZone_65(zoneID: *const UChar, ec: *mut UErrorCode);
+    pub fn ucal_setDefaultTimeZone_66(zoneID: *const UChar, ec: *mut UErrorCode);
 }
 extern "C" {
-    pub fn ucal_getHostTimeZone_65(
+    pub fn ucal_getHostTimeZone_66(
         result: *mut UChar,
         resultCapacity: i32,
         ec: *mut UErrorCode,
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_getDSTSavings_65(zoneID: *const UChar, ec: *mut UErrorCode) -> i32;
+    pub fn ucal_getDSTSavings_66(zoneID: *const UChar, ec: *mut UErrorCode) -> i32;
 }
 extern "C" {
-    pub fn ucal_getNow_65() -> UDate;
+    pub fn ucal_getNow_66() -> UDate;
 }
 extern "C" {
-    pub fn ucal_open_65(
+    pub fn ucal_open_66(
         zoneID: *const UChar,
         len: i32,
         locale: *const ::std::os::raw::c_char,
@@ -717,13 +717,13 @@ extern "C" {
     ) -> *mut UCalendar;
 }
 extern "C" {
-    pub fn ucal_close_65(cal: *mut UCalendar);
+    pub fn ucal_close_66(cal: *mut UCalendar);
 }
 extern "C" {
-    pub fn ucal_clone_65(cal: *const UCalendar, status: *mut UErrorCode) -> *mut UCalendar;
+    pub fn ucal_clone_66(cal: *const UCalendar, status: *mut UErrorCode) -> *mut UCalendar;
 }
 extern "C" {
-    pub fn ucal_setTimeZone_65(
+    pub fn ucal_setTimeZone_66(
         cal: *mut UCalendar,
         zoneID: *const UChar,
         len: i32,
@@ -731,7 +731,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucal_getTimeZoneID_65(
+    pub fn ucal_getTimeZoneID_66(
         cal: *const UCalendar,
         result: *mut UChar,
         resultLength: i32,
@@ -747,7 +747,7 @@ pub enum UCalendarDisplayNameType {
     UCAL_SHORT_DST = 3,
 }
 extern "C" {
-    pub fn ucal_getTimeZoneDisplayName_65(
+    pub fn ucal_getTimeZoneDisplayName_66(
         cal: *const UCalendar,
         type_: UCalendarDisplayNameType,
         locale: *const ::std::os::raw::c_char,
@@ -757,17 +757,17 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_inDaylightTime_65(cal: *const UCalendar, status: *mut UErrorCode) -> UBool;
+    pub fn ucal_inDaylightTime_66(cal: *const UCalendar, status: *mut UErrorCode) -> UBool;
 }
 extern "C" {
-    pub fn ucal_setGregorianChange_65(
+    pub fn ucal_setGregorianChange_66(
         cal: *mut UCalendar,
         date: UDate,
         pErrorCode: *mut UErrorCode,
     );
 }
 extern "C" {
-    pub fn ucal_getGregorianChange_65(cal: *const UCalendar, pErrorCode: *mut UErrorCode) -> UDate;
+    pub fn ucal_getGregorianChange_66(cal: *const UCalendar, pErrorCode: *mut UErrorCode) -> UDate;
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -786,25 +786,25 @@ pub enum UCalendarWallTimeOption {
     UCAL_WALLTIME_NEXT_VALID = 2,
 }
 extern "C" {
-    pub fn ucal_getAttribute_65(cal: *const UCalendar, attr: UCalendarAttribute) -> i32;
+    pub fn ucal_getAttribute_66(cal: *const UCalendar, attr: UCalendarAttribute) -> i32;
 }
 extern "C" {
-    pub fn ucal_setAttribute_65(cal: *mut UCalendar, attr: UCalendarAttribute, newValue: i32);
+    pub fn ucal_setAttribute_66(cal: *mut UCalendar, attr: UCalendarAttribute, newValue: i32);
 }
 extern "C" {
-    pub fn ucal_getAvailable_65(localeIndex: i32) -> *const ::std::os::raw::c_char;
+    pub fn ucal_getAvailable_66(localeIndex: i32) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucal_countAvailable_65() -> i32;
+    pub fn ucal_countAvailable_66() -> i32;
 }
 extern "C" {
-    pub fn ucal_getMillis_65(cal: *const UCalendar, status: *mut UErrorCode) -> UDate;
+    pub fn ucal_getMillis_66(cal: *const UCalendar, status: *mut UErrorCode) -> UDate;
 }
 extern "C" {
-    pub fn ucal_setMillis_65(cal: *mut UCalendar, dateTime: UDate, status: *mut UErrorCode);
+    pub fn ucal_setMillis_66(cal: *mut UCalendar, dateTime: UDate, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn ucal_setDate_65(
+    pub fn ucal_setDate_66(
         cal: *mut UCalendar,
         year: i32,
         month: i32,
@@ -813,7 +813,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucal_setDateTime_65(
+    pub fn ucal_setDateTime_66(
         cal: *mut UCalendar,
         year: i32,
         month: i32,
@@ -825,10 +825,10 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucal_equivalentTo_65(cal1: *const UCalendar, cal2: *const UCalendar) -> UBool;
+    pub fn ucal_equivalentTo_66(cal1: *const UCalendar, cal2: *const UCalendar) -> UBool;
 }
 extern "C" {
-    pub fn ucal_add_65(
+    pub fn ucal_add_66(
         cal: *mut UCalendar,
         field: UCalendarDateFields,
         amount: i32,
@@ -836,7 +836,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucal_roll_65(
+    pub fn ucal_roll_66(
         cal: *mut UCalendar,
         field: UCalendarDateFields,
         amount: i32,
@@ -844,23 +844,23 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucal_get_65(
+    pub fn ucal_get_66(
         cal: *const UCalendar,
         field: UCalendarDateFields,
         status: *mut UErrorCode,
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_set_65(cal: *mut UCalendar, field: UCalendarDateFields, value: i32);
+    pub fn ucal_set_66(cal: *mut UCalendar, field: UCalendarDateFields, value: i32);
 }
 extern "C" {
-    pub fn ucal_isSet_65(cal: *const UCalendar, field: UCalendarDateFields) -> UBool;
+    pub fn ucal_isSet_66(cal: *const UCalendar, field: UCalendarDateFields) -> UBool;
 }
 extern "C" {
-    pub fn ucal_clearField_65(cal: *mut UCalendar, field: UCalendarDateFields);
+    pub fn ucal_clearField_66(cal: *mut UCalendar, field: UCalendarDateFields);
 }
 extern "C" {
-    pub fn ucal_clear_65(calendar: *mut UCalendar);
+    pub fn ucal_clear_66(calendar: *mut UCalendar);
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -873,7 +873,7 @@ pub enum UCalendarLimitType {
     UCAL_ACTUAL_MAXIMUM = 5,
 }
 extern "C" {
-    pub fn ucal_getLimit_65(
+    pub fn ucal_getLimit_66(
         cal: *const UCalendar,
         field: UCalendarDateFields,
         type_: UCalendarLimitType,
@@ -881,17 +881,17 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_getLocaleByType_65(
+    pub fn ucal_getLocaleByType_66(
         cal: *const UCalendar,
         type_: ULocDataLocaleType,
         status: *mut UErrorCode,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucal_getTZDataVersion_65(status: *mut UErrorCode) -> *const ::std::os::raw::c_char;
+    pub fn ucal_getTZDataVersion_66(status: *mut UErrorCode) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucal_getCanonicalTimeZoneID_65(
+    pub fn ucal_getCanonicalTimeZoneID_66(
         id: *const UChar,
         len: i32,
         result: *mut UChar,
@@ -901,13 +901,13 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_getType_65(
+    pub fn ucal_getType_66(
         cal: *const UCalendar,
         status: *mut UErrorCode,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucal_getKeywordValuesForLocale_65(
+    pub fn ucal_getKeywordValuesForLocale_66(
         key: *const ::std::os::raw::c_char,
         locale: *const ::std::os::raw::c_char,
         commonlyUsed: UBool,
@@ -923,24 +923,24 @@ pub enum UCalendarWeekdayType {
     UCAL_WEEKEND_CEASE = 3,
 }
 extern "C" {
-    pub fn ucal_getDayOfWeekType_65(
+    pub fn ucal_getDayOfWeekType_66(
         cal: *const UCalendar,
         dayOfWeek: UCalendarDaysOfWeek,
         status: *mut UErrorCode,
     ) -> UCalendarWeekdayType;
 }
 extern "C" {
-    pub fn ucal_getWeekendTransition_65(
+    pub fn ucal_getWeekendTransition_66(
         cal: *const UCalendar,
         dayOfWeek: UCalendarDaysOfWeek,
         status: *mut UErrorCode,
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_isWeekend_65(cal: *const UCalendar, date: UDate, status: *mut UErrorCode) -> UBool;
+    pub fn ucal_isWeekend_66(cal: *const UCalendar, date: UDate, status: *mut UErrorCode) -> UBool;
 }
 extern "C" {
-    pub fn ucal_getFieldDifference_65(
+    pub fn ucal_getFieldDifference_66(
         cal: *mut UCalendar,
         target: UDate,
         field: UCalendarDateFields,
@@ -956,7 +956,7 @@ pub enum UTimeZoneTransitionType {
     UCAL_TZ_TRANSITION_PREVIOUS_INCLUSIVE = 3,
 }
 extern "C" {
-    pub fn ucal_getTimeZoneTransitionDate_65(
+    pub fn ucal_getTimeZoneTransitionDate_66(
         cal: *const UCalendar,
         type_: UTimeZoneTransitionType,
         transition: *mut UDate,
@@ -964,7 +964,7 @@ extern "C" {
     ) -> UBool;
 }
 extern "C" {
-    pub fn ucal_getWindowsTimeZoneID_65(
+    pub fn ucal_getWindowsTimeZoneID_66(
         id: *const UChar,
         len: i32,
         winid: *mut UChar,
@@ -973,7 +973,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucal_getTimeZoneIDForWindowsID_65(
+    pub fn ucal_getTimeZoneIDForWindowsID_66(
         winid: *const UChar,
         len: i32,
         region: *const ::std::os::raw::c_char,
@@ -1190,10 +1190,10 @@ pub enum UDateFormatField {
     UDAT_FIELD_COUNT = 38,
 }
 extern "C" {
-    pub fn udat_toCalendarDateField_65(field: UDateFormatField) -> UCalendarDateFields;
+    pub fn udat_toCalendarDateField_66(field: UDateFormatField) -> UCalendarDateFields;
 }
 extern "C" {
-    pub fn udat_open_65(
+    pub fn udat_open_66(
         timeStyle: UDateFormatStyle,
         dateStyle: UDateFormatStyle,
         locale: *const ::std::os::raw::c_char,
@@ -1205,7 +1205,7 @@ extern "C" {
     ) -> *mut UDateFormat;
 }
 extern "C" {
-    pub fn udat_close_65(format: *mut UDateFormat);
+    pub fn udat_close_66(format: *mut UDateFormat);
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -1217,14 +1217,14 @@ pub enum UDateFormatBooleanAttribute {
     UDAT_BOOLEAN_ATTRIBUTE_COUNT = 4,
 }
 extern "C" {
-    pub fn udat_getBooleanAttribute_65(
+    pub fn udat_getBooleanAttribute_66(
         fmt: *const UDateFormat,
         attr: UDateFormatBooleanAttribute,
         status: *mut UErrorCode,
     ) -> UBool;
 }
 extern "C" {
-    pub fn udat_setBooleanAttribute_65(
+    pub fn udat_setBooleanAttribute_66(
         fmt: *mut UDateFormat,
         attr: UDateFormatBooleanAttribute,
         newValue: UBool,
@@ -1232,10 +1232,10 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn udat_clone_65(fmt: *const UDateFormat, status: *mut UErrorCode) -> *mut UDateFormat;
+    pub fn udat_clone_66(fmt: *const UDateFormat, status: *mut UErrorCode) -> *mut UDateFormat;
 }
 extern "C" {
-    pub fn udat_format_65(
+    pub fn udat_format_66(
         format: *const UDateFormat,
         dateToFormat: UDate,
         result: *mut UChar,
@@ -1245,7 +1245,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_formatCalendar_65(
+    pub fn udat_formatCalendar_66(
         format: *const UDateFormat,
         calendar: *mut UCalendar,
         result: *mut UChar,
@@ -1255,7 +1255,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_formatForFields_65(
+    pub fn udat_formatForFields_66(
         format: *const UDateFormat,
         dateToFormat: UDate,
         result: *mut UChar,
@@ -1265,7 +1265,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_formatCalendarForFields_65(
+    pub fn udat_formatCalendarForFields_66(
         format: *const UDateFormat,
         calendar: *mut UCalendar,
         result: *mut UChar,
@@ -1275,7 +1275,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_parse_65(
+    pub fn udat_parse_66(
         format: *const UDateFormat,
         text: *const UChar,
         textLength: i32,
@@ -1284,7 +1284,7 @@ extern "C" {
     ) -> UDate;
 }
 extern "C" {
-    pub fn udat_parseCalendar_65(
+    pub fn udat_parseCalendar_66(
         format: *const UDateFormat,
         calendar: *mut UCalendar,
         text: *const UChar,
@@ -1294,28 +1294,28 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn udat_isLenient_65(fmt: *const UDateFormat) -> UBool;
+    pub fn udat_isLenient_66(fmt: *const UDateFormat) -> UBool;
 }
 extern "C" {
-    pub fn udat_setLenient_65(fmt: *mut UDateFormat, isLenient: UBool);
+    pub fn udat_setLenient_66(fmt: *mut UDateFormat, isLenient: UBool);
 }
 extern "C" {
-    pub fn udat_getCalendar_65(fmt: *const UDateFormat) -> *const UCalendar;
+    pub fn udat_getCalendar_66(fmt: *const UDateFormat) -> *const UCalendar;
 }
 extern "C" {
-    pub fn udat_setCalendar_65(fmt: *mut UDateFormat, calendarToSet: *const UCalendar);
+    pub fn udat_setCalendar_66(fmt: *mut UDateFormat, calendarToSet: *const UCalendar);
 }
 extern "C" {
-    pub fn udat_getNumberFormat_65(fmt: *const UDateFormat) -> *const UNumberFormat;
+    pub fn udat_getNumberFormat_66(fmt: *const UDateFormat) -> *const UNumberFormat;
 }
 extern "C" {
-    pub fn udat_getNumberFormatForField_65(
+    pub fn udat_getNumberFormatForField_66(
         fmt: *const UDateFormat,
         field: UChar,
     ) -> *const UNumberFormat;
 }
 extern "C" {
-    pub fn udat_adoptNumberFormatForFields_65(
+    pub fn udat_adoptNumberFormatForFields_66(
         fmt: *mut UDateFormat,
         fields: *const UChar,
         numberFormatToSet: *mut UNumberFormat,
@@ -1323,28 +1323,28 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn udat_setNumberFormat_65(fmt: *mut UDateFormat, numberFormatToSet: *const UNumberFormat);
+    pub fn udat_setNumberFormat_66(fmt: *mut UDateFormat, numberFormatToSet: *const UNumberFormat);
 }
 extern "C" {
-    pub fn udat_adoptNumberFormat_65(
+    pub fn udat_adoptNumberFormat_66(
         fmt: *mut UDateFormat,
         numberFormatToAdopt: *mut UNumberFormat,
     );
 }
 extern "C" {
-    pub fn udat_getAvailable_65(localeIndex: i32) -> *const ::std::os::raw::c_char;
+    pub fn udat_getAvailable_66(localeIndex: i32) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn udat_countAvailable_65() -> i32;
+    pub fn udat_countAvailable_66() -> i32;
 }
 extern "C" {
-    pub fn udat_get2DigitYearStart_65(fmt: *const UDateFormat, status: *mut UErrorCode) -> UDate;
+    pub fn udat_get2DigitYearStart_66(fmt: *const UDateFormat, status: *mut UErrorCode) -> UDate;
 }
 extern "C" {
-    pub fn udat_set2DigitYearStart_65(fmt: *mut UDateFormat, d: UDate, status: *mut UErrorCode);
+    pub fn udat_set2DigitYearStart_66(fmt: *mut UDateFormat, d: UDate, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn udat_toPattern_65(
+    pub fn udat_toPattern_66(
         fmt: *const UDateFormat,
         localized: UBool,
         result: *mut UChar,
@@ -1353,7 +1353,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_applyPattern_65(
+    pub fn udat_applyPattern_66(
         format: *mut UDateFormat,
         localized: UBool,
         pattern: *const UChar,
@@ -1398,7 +1398,7 @@ pub struct UDateFormatSymbols {
     _unused: [u8; 0],
 }
 extern "C" {
-    pub fn udat_getSymbols_65(
+    pub fn udat_getSymbols_66(
         fmt: *const UDateFormat,
         type_: UDateFormatSymbolType,
         symbolIndex: i32,
@@ -1408,10 +1408,10 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_countSymbols_65(fmt: *const UDateFormat, type_: UDateFormatSymbolType) -> i32;
+    pub fn udat_countSymbols_66(fmt: *const UDateFormat, type_: UDateFormatSymbolType) -> i32;
 }
 extern "C" {
-    pub fn udat_setSymbols_65(
+    pub fn udat_setSymbols_66(
         format: *mut UDateFormat,
         type_: UDateFormatSymbolType,
         symbolIndex: i32,
@@ -1421,28 +1421,28 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn udat_getLocaleByType_65(
+    pub fn udat_getLocaleByType_66(
         fmt: *const UDateFormat,
         type_: ULocDataLocaleType,
         status: *mut UErrorCode,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn udat_setContext_65(
+    pub fn udat_setContext_66(
         fmt: *mut UDateFormat,
         value: UDisplayContext,
         status: *mut UErrorCode,
     );
 }
 extern "C" {
-    pub fn udat_getContext_65(
+    pub fn udat_getContext_66(
         fmt: *const UDateFormat,
         type_: UDisplayContextType,
         status: *mut UErrorCode,
     ) -> UDisplayContext;
 }
 extern "C" {
-    pub fn udat_toPatternRelativeDate_65(
+    pub fn udat_toPatternRelativeDate_66(
         fmt: *const UDateFormat,
         result: *mut UChar,
         resultLength: i32,
@@ -1450,7 +1450,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_toPatternRelativeTime_65(
+    pub fn udat_toPatternRelativeTime_66(
         fmt: *const UDateFormat,
         result: *mut UChar,
         resultLength: i32,
@@ -1458,7 +1458,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn udat_applyPatternRelative_65(
+    pub fn udat_applyPatternRelative_66(
         format: *mut UDateFormat,
         datePattern: *const UChar,
         datePatternLength: i32,
@@ -1480,10 +1480,10 @@ pub type UDateFormatOpener = ::std::option::Option<
     ) -> *mut UDateFormat,
 >;
 extern "C" {
-    pub fn udat_registerOpener_65(opener: UDateFormatOpener, status: *mut UErrorCode);
+    pub fn udat_registerOpener_66(opener: UDateFormatOpener, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn udat_unregisterOpener_65(
+    pub fn udat_unregisterOpener_66(
         opener: UDateFormatOpener,
         status: *mut UErrorCode,
     ) -> UDateFormatOpener;
@@ -1618,7 +1618,7 @@ pub type UDataMemoryIsAcceptable = ::std::option::Option<
     ) -> UBool,
 >;
 extern "C" {
-    pub fn udata_open_65(
+    pub fn udata_open_66(
         path: *const ::std::os::raw::c_char,
         type_: *const ::std::os::raw::c_char,
         name: *const ::std::os::raw::c_char,
@@ -1626,7 +1626,7 @@ extern "C" {
     ) -> *mut UDataMemory;
 }
 extern "C" {
-    pub fn udata_openChoice_65(
+    pub fn udata_openChoice_66(
         path: *const ::std::os::raw::c_char,
         type_: *const ::std::os::raw::c_char,
         name: *const ::std::os::raw::c_char,
@@ -1636,19 +1636,19 @@ extern "C" {
     ) -> *mut UDataMemory;
 }
 extern "C" {
-    pub fn udata_close_65(pData: *mut UDataMemory);
+    pub fn udata_close_66(pData: *mut UDataMemory);
 }
 extern "C" {
-    pub fn udata_getMemory_65(pData: *mut UDataMemory) -> *const ::std::os::raw::c_void;
+    pub fn udata_getMemory_66(pData: *mut UDataMemory) -> *const ::std::os::raw::c_void;
 }
 extern "C" {
-    pub fn udata_getInfo_65(pData: *mut UDataMemory, pInfo: *mut UDataInfo);
+    pub fn udata_getInfo_66(pData: *mut UDataMemory, pInfo: *mut UDataInfo);
 }
 extern "C" {
-    pub fn udata_setCommonData_65(data: *const ::std::os::raw::c_void, err: *mut UErrorCode);
+    pub fn udata_setCommonData_66(data: *const ::std::os::raw::c_void, err: *mut UErrorCode);
 }
 extern "C" {
-    pub fn udata_setAppData_65(
+    pub fn udata_setAppData_66(
         packageName: *const ::std::os::raw::c_char,
         data: *const ::std::os::raw::c_void,
         err: *mut UErrorCode,
@@ -1667,29 +1667,29 @@ pub enum UDataFileAccess {
     UDATA_FILE_ACCESS_COUNT = 4,
 }
 extern "C" {
-    pub fn udata_setFileAccess_65(access: UDataFileAccess, status: *mut UErrorCode);
+    pub fn udata_setFileAccess_66(access: UDataFileAccess, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn u_getDataDirectory_65() -> *const ::std::os::raw::c_char;
+    pub fn u_getDataDirectory_66() -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_setDataDirectory_65(directory: *const ::std::os::raw::c_char);
+    pub fn u_setDataDirectory_66(directory: *const ::std::os::raw::c_char);
 }
 extern "C" {
-    pub fn u_getTimeZoneFilesDirectory_65(status: *mut UErrorCode)
+    pub fn u_getTimeZoneFilesDirectory_66(status: *mut UErrorCode)
         -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_setTimeZoneFilesDirectory_65(
+    pub fn u_setTimeZoneFilesDirectory_66(
         path: *const ::std::os::raw::c_char,
         status: *mut UErrorCode,
     );
 }
 extern "C" {
-    pub fn u_charsToUChars_65(cs: *const ::std::os::raw::c_char, us: *mut UChar, length: i32);
+    pub fn u_charsToUChars_66(cs: *const ::std::os::raw::c_char, us: *mut UChar, length: i32);
 }
 extern "C" {
-    pub fn u_UCharsToChars_65(us: *const UChar, cs: *mut ::std::os::raw::c_char, length: i32);
+    pub fn u_UCharsToChars_66(us: *const UChar, cs: *mut ::std::os::raw::c_char, length: i32);
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
@@ -1927,25 +1927,25 @@ pub struct UBreakIterator {
     _unused: [u8; 0],
 }
 extern "C" {
-    pub fn u_strlen_65(s: *const UChar) -> i32;
+    pub fn u_strlen_66(s: *const UChar) -> i32;
 }
 extern "C" {
-    pub fn u_countChar32_65(s: *const UChar, length: i32) -> i32;
+    pub fn u_countChar32_66(s: *const UChar, length: i32) -> i32;
 }
 extern "C" {
-    pub fn u_strHasMoreChar32Than_65(s: *const UChar, length: i32, number: i32) -> UBool;
+    pub fn u_strHasMoreChar32Than_66(s: *const UChar, length: i32, number: i32) -> UBool;
 }
 extern "C" {
-    pub fn u_strcat_65(dst: *mut UChar, src: *const UChar) -> *mut UChar;
+    pub fn u_strcat_66(dst: *mut UChar, src: *const UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strncat_65(dst: *mut UChar, src: *const UChar, n: i32) -> *mut UChar;
+    pub fn u_strncat_66(dst: *mut UChar, src: *const UChar, n: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strstr_65(s: *const UChar, substring: *const UChar) -> *mut UChar;
+    pub fn u_strstr_66(s: *const UChar, substring: *const UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strFindFirst_65(
+    pub fn u_strFindFirst_66(
         s: *const UChar,
         length: i32,
         substring: *const UChar,
@@ -1953,16 +1953,16 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strchr_65(s: *const UChar, c: UChar) -> *mut UChar;
+    pub fn u_strchr_66(s: *const UChar, c: UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strchr32_65(s: *const UChar, c: UChar32) -> *mut UChar;
+    pub fn u_strchr32_66(s: *const UChar, c: UChar32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strrstr_65(s: *const UChar, substring: *const UChar) -> *mut UChar;
+    pub fn u_strrstr_66(s: *const UChar, substring: *const UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strFindLast_65(
+    pub fn u_strFindLast_66(
         s: *const UChar,
         length: i32,
         substring: *const UChar,
@@ -1970,35 +1970,35 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strrchr_65(s: *const UChar, c: UChar) -> *mut UChar;
+    pub fn u_strrchr_66(s: *const UChar, c: UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strrchr32_65(s: *const UChar, c: UChar32) -> *mut UChar;
+    pub fn u_strrchr32_66(s: *const UChar, c: UChar32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strpbrk_65(string: *const UChar, matchSet: *const UChar) -> *mut UChar;
+    pub fn u_strpbrk_66(string: *const UChar, matchSet: *const UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strcspn_65(string: *const UChar, matchSet: *const UChar) -> i32;
+    pub fn u_strcspn_66(string: *const UChar, matchSet: *const UChar) -> i32;
 }
 extern "C" {
-    pub fn u_strspn_65(string: *const UChar, matchSet: *const UChar) -> i32;
+    pub fn u_strspn_66(string: *const UChar, matchSet: *const UChar) -> i32;
 }
 extern "C" {
-    pub fn u_strtok_r_65(
+    pub fn u_strtok_r_66(
         src: *mut UChar,
         delim: *const UChar,
         saveState: *mut *mut UChar,
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strcmp_65(s1: *const UChar, s2: *const UChar) -> i32;
+    pub fn u_strcmp_66(s1: *const UChar, s2: *const UChar) -> i32;
 }
 extern "C" {
-    pub fn u_strcmpCodePointOrder_65(s1: *const UChar, s2: *const UChar) -> i32;
+    pub fn u_strcmpCodePointOrder_66(s1: *const UChar, s2: *const UChar) -> i32;
 }
 extern "C" {
-    pub fn u_strCompare_65(
+    pub fn u_strCompare_66(
         s1: *const UChar,
         length1: i32,
         s2: *const UChar,
@@ -2007,14 +2007,14 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strCompareIter_65(
+    pub fn u_strCompareIter_66(
         iter1: *mut UCharIterator,
         iter2: *mut UCharIterator,
         codePointOrder: UBool,
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strCaseCompare_65(
+    pub fn u_strCaseCompare_66(
         s1: *const UChar,
         length1: i32,
         s2: *const UChar,
@@ -2024,78 +2024,78 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strncmp_65(ucs1: *const UChar, ucs2: *const UChar, n: i32) -> i32;
+    pub fn u_strncmp_66(ucs1: *const UChar, ucs2: *const UChar, n: i32) -> i32;
 }
 extern "C" {
-    pub fn u_strncmpCodePointOrder_65(s1: *const UChar, s2: *const UChar, n: i32) -> i32;
+    pub fn u_strncmpCodePointOrder_66(s1: *const UChar, s2: *const UChar, n: i32) -> i32;
 }
 extern "C" {
-    pub fn u_strcasecmp_65(s1: *const UChar, s2: *const UChar, options: u32) -> i32;
+    pub fn u_strcasecmp_66(s1: *const UChar, s2: *const UChar, options: u32) -> i32;
 }
 extern "C" {
-    pub fn u_strncasecmp_65(s1: *const UChar, s2: *const UChar, n: i32, options: u32) -> i32;
+    pub fn u_strncasecmp_66(s1: *const UChar, s2: *const UChar, n: i32, options: u32) -> i32;
 }
 extern "C" {
-    pub fn u_memcasecmp_65(s1: *const UChar, s2: *const UChar, length: i32, options: u32) -> i32;
+    pub fn u_memcasecmp_66(s1: *const UChar, s2: *const UChar, length: i32, options: u32) -> i32;
 }
 extern "C" {
-    pub fn u_strcpy_65(dst: *mut UChar, src: *const UChar) -> *mut UChar;
+    pub fn u_strcpy_66(dst: *mut UChar, src: *const UChar) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strncpy_65(dst: *mut UChar, src: *const UChar, n: i32) -> *mut UChar;
+    pub fn u_strncpy_66(dst: *mut UChar, src: *const UChar, n: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_uastrcpy_65(dst: *mut UChar, src: *const ::std::os::raw::c_char) -> *mut UChar;
+    pub fn u_uastrcpy_66(dst: *mut UChar, src: *const ::std::os::raw::c_char) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_uastrncpy_65(
+    pub fn u_uastrncpy_66(
         dst: *mut UChar,
         src: *const ::std::os::raw::c_char,
         n: i32,
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_austrcpy_65(
+    pub fn u_austrcpy_66(
         dst: *mut ::std::os::raw::c_char,
         src: *const UChar,
     ) -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_austrncpy_65(
+    pub fn u_austrncpy_66(
         dst: *mut ::std::os::raw::c_char,
         src: *const UChar,
         n: i32,
     ) -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_memcpy_65(dest: *mut UChar, src: *const UChar, count: i32) -> *mut UChar;
+    pub fn u_memcpy_66(dest: *mut UChar, src: *const UChar, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_memmove_65(dest: *mut UChar, src: *const UChar, count: i32) -> *mut UChar;
+    pub fn u_memmove_66(dest: *mut UChar, src: *const UChar, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_memset_65(dest: *mut UChar, c: UChar, count: i32) -> *mut UChar;
+    pub fn u_memset_66(dest: *mut UChar, c: UChar, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_memcmp_65(buf1: *const UChar, buf2: *const UChar, count: i32) -> i32;
+    pub fn u_memcmp_66(buf1: *const UChar, buf2: *const UChar, count: i32) -> i32;
 }
 extern "C" {
-    pub fn u_memcmpCodePointOrder_65(s1: *const UChar, s2: *const UChar, count: i32) -> i32;
+    pub fn u_memcmpCodePointOrder_66(s1: *const UChar, s2: *const UChar, count: i32) -> i32;
 }
 extern "C" {
-    pub fn u_memchr_65(s: *const UChar, c: UChar, count: i32) -> *mut UChar;
+    pub fn u_memchr_66(s: *const UChar, c: UChar, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_memchr32_65(s: *const UChar, c: UChar32, count: i32) -> *mut UChar;
+    pub fn u_memchr32_66(s: *const UChar, c: UChar32, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_memrchr_65(s: *const UChar, c: UChar, count: i32) -> *mut UChar;
+    pub fn u_memrchr_66(s: *const UChar, c: UChar, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_memrchr32_65(s: *const UChar, c: UChar32, count: i32) -> *mut UChar;
+    pub fn u_memrchr32_66(s: *const UChar, c: UChar32, count: i32) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_unescape_65(
+    pub fn u_unescape_66(
         src: *const ::std::os::raw::c_char,
         dest: *mut UChar,
         destCapacity: i32,
@@ -2105,7 +2105,7 @@ pub type UNESCAPE_CHAR_AT = ::std::option::Option<
     unsafe extern "C" fn(offset: i32, context: *mut ::std::os::raw::c_void) -> UChar,
 >;
 extern "C" {
-    pub fn u_unescapeAt_65(
+    pub fn u_unescapeAt_66(
         charAt: UNESCAPE_CHAR_AT,
         offset: *mut i32,
         length: i32,
@@ -2113,7 +2113,7 @@ extern "C" {
     ) -> UChar32;
 }
 extern "C" {
-    pub fn u_strToUpper_65(
+    pub fn u_strToUpper_66(
         dest: *mut UChar,
         destCapacity: i32,
         src: *const UChar,
@@ -2123,7 +2123,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strToLower_65(
+    pub fn u_strToLower_66(
         dest: *mut UChar,
         destCapacity: i32,
         src: *const UChar,
@@ -2133,7 +2133,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strToTitle_65(
+    pub fn u_strToTitle_66(
         dest: *mut UChar,
         destCapacity: i32,
         src: *const UChar,
@@ -2144,7 +2144,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strFoldCase_65(
+    pub fn u_strFoldCase_66(
         dest: *mut UChar,
         destCapacity: i32,
         src: *const UChar,
@@ -2154,7 +2154,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_strToWCS_65(
+    pub fn u_strToWCS_66(
         dest: *mut wchar_t,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2164,7 +2164,7 @@ extern "C" {
     ) -> *mut wchar_t;
 }
 extern "C" {
-    pub fn u_strFromWCS_65(
+    pub fn u_strFromWCS_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2174,7 +2174,7 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strToUTF8_65(
+    pub fn u_strToUTF8_66(
         dest: *mut ::std::os::raw::c_char,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2184,7 +2184,7 @@ extern "C" {
     ) -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_strFromUTF8_65(
+    pub fn u_strFromUTF8_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2194,7 +2194,7 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strToUTF8WithSub_65(
+    pub fn u_strToUTF8WithSub_66(
         dest: *mut ::std::os::raw::c_char,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2206,7 +2206,7 @@ extern "C" {
     ) -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_strFromUTF8WithSub_65(
+    pub fn u_strFromUTF8WithSub_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2218,7 +2218,7 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strFromUTF8Lenient_65(
+    pub fn u_strFromUTF8Lenient_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2228,7 +2228,7 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strToUTF32_65(
+    pub fn u_strToUTF32_66(
         dest: *mut UChar32,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2238,7 +2238,7 @@ extern "C" {
     ) -> *mut UChar32;
 }
 extern "C" {
-    pub fn u_strFromUTF32_65(
+    pub fn u_strFromUTF32_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2248,7 +2248,7 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strToUTF32WithSub_65(
+    pub fn u_strToUTF32WithSub_66(
         dest: *mut UChar32,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2260,7 +2260,7 @@ extern "C" {
     ) -> *mut UChar32;
 }
 extern "C" {
-    pub fn u_strFromUTF32WithSub_65(
+    pub fn u_strFromUTF32WithSub_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2272,7 +2272,7 @@ extern "C" {
     ) -> *mut UChar;
 }
 extern "C" {
-    pub fn u_strToJavaModifiedUTF8_65(
+    pub fn u_strToJavaModifiedUTF8_66(
         dest: *mut ::std::os::raw::c_char,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2282,7 +2282,7 @@ extern "C" {
     ) -> *mut ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_strFromJavaModifiedUTF8WithSub_65(
+    pub fn u_strFromJavaModifiedUTF8WithSub_66(
         dest: *mut UChar,
         destCapacity: i32,
         pDestLength: *mut i32,
@@ -2522,112 +2522,112 @@ pub enum UPropertyNameChoice {
     U_PROPERTY_NAME_CHOICE_COUNT = 2,
 }
 extern "C" {
-    pub fn u_hasBinaryProperty_65(c: UChar32, which: UProperty) -> UBool;
+    pub fn u_hasBinaryProperty_66(c: UChar32, which: UProperty) -> UBool;
 }
 extern "C" {
-    pub fn u_getBinaryPropertySet_65(
+    pub fn u_getBinaryPropertySet_66(
         property: UProperty,
         pErrorCode: *mut UErrorCode,
     ) -> *const USet;
 }
 extern "C" {
-    pub fn u_isUAlphabetic_65(c: UChar32) -> UBool;
+    pub fn u_isUAlphabetic_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isULowercase_65(c: UChar32) -> UBool;
+    pub fn u_isULowercase_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isUUppercase_65(c: UChar32) -> UBool;
+    pub fn u_isUUppercase_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isUWhiteSpace_65(c: UChar32) -> UBool;
+    pub fn u_isUWhiteSpace_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_getIntPropertyValue_65(c: UChar32, which: UProperty) -> i32;
+    pub fn u_getIntPropertyValue_66(c: UChar32, which: UProperty) -> i32;
 }
 extern "C" {
-    pub fn u_getIntPropertyMinValue_65(which: UProperty) -> i32;
+    pub fn u_getIntPropertyMinValue_66(which: UProperty) -> i32;
 }
 extern "C" {
-    pub fn u_getIntPropertyMaxValue_65(which: UProperty) -> i32;
+    pub fn u_getIntPropertyMaxValue_66(which: UProperty) -> i32;
 }
 extern "C" {
-    pub fn u_getIntPropertyMap_65(
+    pub fn u_getIntPropertyMap_66(
         property: UProperty,
         pErrorCode: *mut UErrorCode,
     ) -> *const UCPMap;
 }
 extern "C" {
-    pub fn u_getNumericValue_65(c: UChar32) -> f64;
+    pub fn u_getNumericValue_66(c: UChar32) -> f64;
 }
 extern "C" {
-    pub fn u_islower_65(c: UChar32) -> UBool;
+    pub fn u_islower_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isupper_65(c: UChar32) -> UBool;
+    pub fn u_isupper_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_istitle_65(c: UChar32) -> UBool;
+    pub fn u_istitle_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isdigit_65(c: UChar32) -> UBool;
+    pub fn u_isdigit_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isalpha_65(c: UChar32) -> UBool;
+    pub fn u_isalpha_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isalnum_65(c: UChar32) -> UBool;
+    pub fn u_isalnum_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isxdigit_65(c: UChar32) -> UBool;
+    pub fn u_isxdigit_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_ispunct_65(c: UChar32) -> UBool;
+    pub fn u_ispunct_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isgraph_65(c: UChar32) -> UBool;
+    pub fn u_isgraph_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isblank_65(c: UChar32) -> UBool;
+    pub fn u_isblank_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isdefined_65(c: UChar32) -> UBool;
+    pub fn u_isdefined_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isspace_65(c: UChar32) -> UBool;
+    pub fn u_isspace_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isJavaSpaceChar_65(c: UChar32) -> UBool;
+    pub fn u_isJavaSpaceChar_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isWhitespace_65(c: UChar32) -> UBool;
+    pub fn u_isWhitespace_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_iscntrl_65(c: UChar32) -> UBool;
+    pub fn u_iscntrl_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isISOControl_65(c: UChar32) -> UBool;
+    pub fn u_isISOControl_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isprint_65(c: UChar32) -> UBool;
+    pub fn u_isprint_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isbase_65(c: UChar32) -> UBool;
+    pub fn u_isbase_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_charDirection_65(c: UChar32) -> UCharDirection;
+    pub fn u_charDirection_66(c: UChar32) -> UCharDirection;
 }
 extern "C" {
-    pub fn u_isMirrored_65(c: UChar32) -> UBool;
+    pub fn u_isMirrored_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_charMirror_65(c: UChar32) -> UChar32;
+    pub fn u_charMirror_66(c: UChar32) -> UChar32;
 }
 extern "C" {
-    pub fn u_getBidiPairedBracket_65(c: UChar32) -> UChar32;
+    pub fn u_getBidiPairedBracket_66(c: UChar32) -> UChar32;
 }
 extern "C" {
-    pub fn u_charType_65(c: UChar32) -> i8;
+    pub fn u_charType_66(c: UChar32) -> i8;
 }
 pub type UCharEnumTypeRange = ::std::option::Option<
     unsafe extern "C" fn(
@@ -2638,19 +2638,19 @@ pub type UCharEnumTypeRange = ::std::option::Option<
     ) -> UBool,
 >;
 extern "C" {
-    pub fn u_enumCharTypes_65(
+    pub fn u_enumCharTypes_66(
         enumRange: UCharEnumTypeRange,
         context: *const ::std::os::raw::c_void,
     );
 }
 extern "C" {
-    pub fn u_getCombiningClass_65(c: UChar32) -> u8;
+    pub fn u_getCombiningClass_66(c: UChar32) -> u8;
 }
 extern "C" {
-    pub fn u_charDigitValue_65(c: UChar32) -> i32;
+    pub fn u_charDigitValue_66(c: UChar32) -> i32;
 }
 extern "C" {
-    pub fn u_charName_65(
+    pub fn u_charName_66(
         code: UChar32,
         nameChoice: UCharNameChoice,
         buffer: *mut ::std::os::raw::c_char,
@@ -2659,7 +2659,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_getISOComment_65(
+    pub fn u_getISOComment_66(
         c: UChar32,
         dest: *mut ::std::os::raw::c_char,
         destCapacity: i32,
@@ -2667,7 +2667,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_charFromName_65(
+    pub fn u_charFromName_66(
         nameChoice: UCharNameChoice,
         name: *const ::std::os::raw::c_char,
         pErrorCode: *mut UErrorCode,
@@ -2683,7 +2683,7 @@ pub type UEnumCharNamesFn = ::std::option::Option<
     ) -> UBool,
 >;
 extern "C" {
-    pub fn u_enumCharNames_65(
+    pub fn u_enumCharNames_66(
         start: UChar32,
         limit: UChar32,
         fn_: UEnumCharNamesFn,
@@ -2693,68 +2693,68 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn u_getPropertyName_65(
+    pub fn u_getPropertyName_66(
         property: UProperty,
         nameChoice: UPropertyNameChoice,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_getPropertyEnum_65(alias: *const ::std::os::raw::c_char) -> UProperty;
+    pub fn u_getPropertyEnum_66(alias: *const ::std::os::raw::c_char) -> UProperty;
 }
 extern "C" {
-    pub fn u_getPropertyValueName_65(
+    pub fn u_getPropertyValueName_66(
         property: UProperty,
         value: i32,
         nameChoice: UPropertyNameChoice,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn u_getPropertyValueEnum_65(
+    pub fn u_getPropertyValueEnum_66(
         property: UProperty,
         alias: *const ::std::os::raw::c_char,
     ) -> i32;
 }
 extern "C" {
-    pub fn u_isIDStart_65(c: UChar32) -> UBool;
+    pub fn u_isIDStart_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isIDPart_65(c: UChar32) -> UBool;
+    pub fn u_isIDPart_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isIDIgnorable_65(c: UChar32) -> UBool;
+    pub fn u_isIDIgnorable_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isJavaIDStart_65(c: UChar32) -> UBool;
+    pub fn u_isJavaIDStart_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_isJavaIDPart_65(c: UChar32) -> UBool;
+    pub fn u_isJavaIDPart_66(c: UChar32) -> UBool;
 }
 extern "C" {
-    pub fn u_tolower_65(c: UChar32) -> UChar32;
+    pub fn u_tolower_66(c: UChar32) -> UChar32;
 }
 extern "C" {
-    pub fn u_toupper_65(c: UChar32) -> UChar32;
+    pub fn u_toupper_66(c: UChar32) -> UChar32;
 }
 extern "C" {
-    pub fn u_totitle_65(c: UChar32) -> UChar32;
+    pub fn u_totitle_66(c: UChar32) -> UChar32;
 }
 extern "C" {
-    pub fn u_foldCase_65(c: UChar32, options: u32) -> UChar32;
+    pub fn u_foldCase_66(c: UChar32, options: u32) -> UChar32;
 }
 extern "C" {
-    pub fn u_digit_65(ch: UChar32, radix: i8) -> i32;
+    pub fn u_digit_66(ch: UChar32, radix: i8) -> i32;
 }
 extern "C" {
-    pub fn u_forDigit_65(digit: i32, radix: i8) -> UChar32;
+    pub fn u_forDigit_66(digit: i32, radix: i8) -> UChar32;
 }
 extern "C" {
-    pub fn u_charAge_65(c: UChar32, versionArray: *mut u8);
+    pub fn u_charAge_66(c: UChar32, versionArray: *mut u8);
 }
 extern "C" {
-    pub fn u_getUnicodeVersion_65(versionArray: *mut u8);
+    pub fn u_getUnicodeVersion_66(versionArray: *mut u8);
 }
 extern "C" {
-    pub fn u_getFC_NFKC_Closure_65(
+    pub fn u_getFC_NFKC_Closure_66(
         c: UChar32,
         dest: *mut UChar,
         destCapacity: i32,
@@ -2762,10 +2762,10 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn utext_close_65(ut: *mut UText) -> *mut UText;
+    pub fn utext_close_66(ut: *mut UText) -> *mut UText;
 }
 extern "C" {
-    pub fn utext_openUTF8_65(
+    pub fn utext_openUTF8_66(
         ut: *mut UText,
         s: *const ::std::os::raw::c_char,
         length: i64,
@@ -2773,7 +2773,7 @@ extern "C" {
     ) -> *mut UText;
 }
 extern "C" {
-    pub fn utext_openUChars_65(
+    pub fn utext_openUChars_66(
         ut: *mut UText,
         s: *const UChar,
         length: i64,
@@ -2781,7 +2781,7 @@ extern "C" {
     ) -> *mut UText;
 }
 extern "C" {
-    pub fn utext_clone_65(
+    pub fn utext_clone_66(
         dest: *mut UText,
         src: *const UText,
         deep: UBool,
@@ -2790,46 +2790,46 @@ extern "C" {
     ) -> *mut UText;
 }
 extern "C" {
-    pub fn utext_equals_65(a: *const UText, b: *const UText) -> UBool;
+    pub fn utext_equals_66(a: *const UText, b: *const UText) -> UBool;
 }
 extern "C" {
-    pub fn utext_nativeLength_65(ut: *mut UText) -> i64;
+    pub fn utext_nativeLength_66(ut: *mut UText) -> i64;
 }
 extern "C" {
-    pub fn utext_isLengthExpensive_65(ut: *const UText) -> UBool;
+    pub fn utext_isLengthExpensive_66(ut: *const UText) -> UBool;
 }
 extern "C" {
-    pub fn utext_char32At_65(ut: *mut UText, nativeIndex: i64) -> UChar32;
+    pub fn utext_char32At_66(ut: *mut UText, nativeIndex: i64) -> UChar32;
 }
 extern "C" {
-    pub fn utext_current32_65(ut: *mut UText) -> UChar32;
+    pub fn utext_current32_66(ut: *mut UText) -> UChar32;
 }
 extern "C" {
-    pub fn utext_next32_65(ut: *mut UText) -> UChar32;
+    pub fn utext_next32_66(ut: *mut UText) -> UChar32;
 }
 extern "C" {
-    pub fn utext_previous32_65(ut: *mut UText) -> UChar32;
+    pub fn utext_previous32_66(ut: *mut UText) -> UChar32;
 }
 extern "C" {
-    pub fn utext_next32From_65(ut: *mut UText, nativeIndex: i64) -> UChar32;
+    pub fn utext_next32From_66(ut: *mut UText, nativeIndex: i64) -> UChar32;
 }
 extern "C" {
-    pub fn utext_previous32From_65(ut: *mut UText, nativeIndex: i64) -> UChar32;
+    pub fn utext_previous32From_66(ut: *mut UText, nativeIndex: i64) -> UChar32;
 }
 extern "C" {
-    pub fn utext_getNativeIndex_65(ut: *const UText) -> i64;
+    pub fn utext_getNativeIndex_66(ut: *const UText) -> i64;
 }
 extern "C" {
-    pub fn utext_setNativeIndex_65(ut: *mut UText, nativeIndex: i64);
+    pub fn utext_setNativeIndex_66(ut: *mut UText, nativeIndex: i64);
 }
 extern "C" {
-    pub fn utext_moveIndex32_65(ut: *mut UText, delta: i32) -> UBool;
+    pub fn utext_moveIndex32_66(ut: *mut UText, delta: i32) -> UBool;
 }
 extern "C" {
-    pub fn utext_getPreviousNativeIndex_65(ut: *mut UText) -> i64;
+    pub fn utext_getPreviousNativeIndex_66(ut: *mut UText) -> i64;
 }
 extern "C" {
-    pub fn utext_extract_65(
+    pub fn utext_extract_66(
         ut: *mut UText,
         nativeStart: i64,
         nativeLimit: i64,
@@ -2839,13 +2839,13 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn utext_isWritable_65(ut: *const UText) -> UBool;
+    pub fn utext_isWritable_66(ut: *const UText) -> UBool;
 }
 extern "C" {
-    pub fn utext_hasMetaData_65(ut: *const UText) -> UBool;
+    pub fn utext_hasMetaData_66(ut: *const UText) -> UBool;
 }
 extern "C" {
-    pub fn utext_replace_65(
+    pub fn utext_replace_66(
         ut: *mut UText,
         nativeStart: i64,
         nativeLimit: i64,
@@ -2855,7 +2855,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn utext_copy_65(
+    pub fn utext_copy_66(
         ut: *mut UText,
         nativeStart: i64,
         nativeLimit: i64,
@@ -2865,7 +2865,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn utext_freeze_65(ut: *mut UText);
+    pub fn utext_freeze_66(ut: *mut UText);
 }
 pub type UTextClone = ::std::option::Option<
     unsafe extern "C" fn(
@@ -3366,13 +3366,13 @@ impl Default for UText {
     }
 }
 extern "C" {
-    pub fn utext_setup_65(ut: *mut UText, extraSpace: i32, status: *mut UErrorCode) -> *mut UText;
+    pub fn utext_setup_66(ut: *mut UText, extraSpace: i32, status: *mut UErrorCode) -> *mut UText;
 }
 extern "C" {
-    pub fn u_init_65(status: *mut UErrorCode);
+    pub fn u_init_66(status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn u_cleanup_65();
+    pub fn u_cleanup_66();
 }
 pub type UMemAllocFn = ::std::option::Option<
     unsafe extern "C" fn(
@@ -3391,7 +3391,7 @@ pub type UMemFreeFn = ::std::option::Option<
     unsafe extern "C" fn(context: *const ::std::os::raw::c_void, mem: *mut ::std::os::raw::c_void),
 >;
 extern "C" {
-    pub fn u_setMemoryFunctions_65(
+    pub fn u_setMemoryFunctions_66(
         context: *const ::std::os::raw::c_void,
         a: UMemAllocFn,
         r: UMemReallocFn,
@@ -3411,7 +3411,7 @@ pub type UMtxFn = ::std::option::Option<
     unsafe extern "C" fn(context: *const ::std::os::raw::c_void, mutex: *mut UMTX),
 >;
 extern "C" {
-    pub fn u_setMutexFunctions_65(
+    pub fn u_setMutexFunctions_66(
         context: *const ::std::os::raw::c_void,
         init: UMtxInitFn,
         destroy: UMtxFn,
@@ -3424,7 +3424,7 @@ pub type UMtxAtomicFn = ::std::option::Option<
     unsafe extern "C" fn(context: *const ::std::os::raw::c_void, p: *mut i32) -> i32,
 >;
 extern "C" {
-    pub fn u_setAtomicIncDecFunctions_65(
+    pub fn u_setAtomicIncDecFunctions_66(
         context: *const ::std::os::raw::c_void,
         inc: UMtxAtomicFn,
         dec: UMtxAtomicFn,
@@ -3433,7 +3433,7 @@ extern "C" {
 }
 pub type va_list = __builtin_va_list;
 extern "C" {
-    pub fn u_formatMessage_65(
+    pub fn u_formatMessage_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3444,7 +3444,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_vformatMessage_65(
+    pub fn u_vformatMessage_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3455,7 +3455,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_parseMessage_65(
+    pub fn u_parseMessage_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3466,7 +3466,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn u_vparseMessage_65(
+    pub fn u_vparseMessage_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3477,7 +3477,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn u_formatMessageWithError_65(
+    pub fn u_formatMessageWithError_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3489,7 +3489,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_vformatMessageWithError_65(
+    pub fn u_vformatMessageWithError_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3501,7 +3501,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn u_parseMessageWithError_65(
+    pub fn u_parseMessageWithError_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3513,7 +3513,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn u_vparseMessageWithError_65(
+    pub fn u_vparseMessageWithError_66(
         locale: *const ::std::os::raw::c_char,
         pattern: *const UChar,
         patternLength: i32,
@@ -3526,7 +3526,7 @@ extern "C" {
 }
 pub type UMessageFormat = *mut ::std::os::raw::c_void;
 extern "C" {
-    pub fn umsg_open_65(
+    pub fn umsg_open_66(
         pattern: *const UChar,
         patternLength: i32,
         locale: *const ::std::os::raw::c_char,
@@ -3535,19 +3535,19 @@ extern "C" {
     ) -> *mut UMessageFormat;
 }
 extern "C" {
-    pub fn umsg_close_65(format: *mut UMessageFormat);
+    pub fn umsg_close_66(format: *mut UMessageFormat);
 }
 extern "C" {
-    pub fn umsg_clone_65(fmt: *const UMessageFormat, status: *mut UErrorCode) -> UMessageFormat;
+    pub fn umsg_clone_66(fmt: *const UMessageFormat, status: *mut UErrorCode) -> UMessageFormat;
 }
 extern "C" {
-    pub fn umsg_setLocale_65(fmt: *mut UMessageFormat, locale: *const ::std::os::raw::c_char);
+    pub fn umsg_setLocale_66(fmt: *mut UMessageFormat, locale: *const ::std::os::raw::c_char);
 }
 extern "C" {
-    pub fn umsg_getLocale_65(fmt: *const UMessageFormat) -> *const ::std::os::raw::c_char;
+    pub fn umsg_getLocale_66(fmt: *const UMessageFormat) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn umsg_applyPattern_65(
+    pub fn umsg_applyPattern_66(
         fmt: *mut UMessageFormat,
         pattern: *const UChar,
         patternLength: i32,
@@ -3556,7 +3556,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn umsg_toPattern_65(
+    pub fn umsg_toPattern_66(
         fmt: *const UMessageFormat,
         result: *mut UChar,
         resultLength: i32,
@@ -3564,7 +3564,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn umsg_format_65(
+    pub fn umsg_format_66(
         fmt: *const UMessageFormat,
         result: *mut UChar,
         resultLength: i32,
@@ -3573,7 +3573,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn umsg_vformat_65(
+    pub fn umsg_vformat_66(
         fmt: *const UMessageFormat,
         result: *mut UChar,
         resultLength: i32,
@@ -3582,7 +3582,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn umsg_parse_65(
+    pub fn umsg_parse_66(
         fmt: *const UMessageFormat,
         source: *const UChar,
         sourceLength: i32,
@@ -3592,7 +3592,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn umsg_vparse_65(
+    pub fn umsg_vparse_66(
         fmt: *const UMessageFormat,
         source: *const UChar,
         sourceLength: i32,
@@ -3602,7 +3602,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn umsg_autoQuoteApostrophe_65(
+    pub fn umsg_autoQuoteApostrophe_66(
         pattern: *const UChar,
         patternLength: i32,
         dest: *mut UChar,
@@ -3698,13 +3698,13 @@ pub enum UColRuleOption {
     UCOL_FULL_RULES = 1,
 }
 extern "C" {
-    pub fn ucol_open_65(
+    pub fn ucol_open_66(
         loc: *const ::std::os::raw::c_char,
         status: *mut UErrorCode,
     ) -> *mut UCollator;
 }
 extern "C" {
-    pub fn ucol_openRules_65(
+    pub fn ucol_openRules_66(
         rules: *const UChar,
         rulesLength: i32,
         normalizationMode: UColAttributeValue,
@@ -3714,7 +3714,7 @@ extern "C" {
     ) -> *mut UCollator;
 }
 extern "C" {
-    pub fn ucol_openFromShortString_65(
+    pub fn ucol_openFromShortString_66(
         definition: *const ::std::os::raw::c_char,
         forceDefaults: UBool,
         parseError: *mut UParseError,
@@ -3722,14 +3722,14 @@ extern "C" {
     ) -> *mut UCollator;
 }
 extern "C" {
-    pub fn ucol_getContractions_65(
+    pub fn ucol_getContractions_66(
         coll: *const UCollator,
         conts: *mut USet,
         status: *mut UErrorCode,
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getContractionsAndExpansions_65(
+    pub fn ucol_getContractionsAndExpansions_66(
         coll: *const UCollator,
         contractions: *mut USet,
         expansions: *mut USet,
@@ -3738,10 +3738,10 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucol_close_65(coll: *mut UCollator);
+    pub fn ucol_close_66(coll: *mut UCollator);
 }
 extern "C" {
-    pub fn ucol_strcoll_65(
+    pub fn ucol_strcoll_66(
         coll: *const UCollator,
         source: *const UChar,
         sourceLength: i32,
@@ -3750,7 +3750,7 @@ extern "C" {
     ) -> UCollationResult;
 }
 extern "C" {
-    pub fn ucol_strcollUTF8_65(
+    pub fn ucol_strcollUTF8_66(
         coll: *const UCollator,
         source: *const ::std::os::raw::c_char,
         sourceLength: i32,
@@ -3760,7 +3760,7 @@ extern "C" {
     ) -> UCollationResult;
 }
 extern "C" {
-    pub fn ucol_greater_65(
+    pub fn ucol_greater_66(
         coll: *const UCollator,
         source: *const UChar,
         sourceLength: i32,
@@ -3769,7 +3769,7 @@ extern "C" {
     ) -> UBool;
 }
 extern "C" {
-    pub fn ucol_greaterOrEqual_65(
+    pub fn ucol_greaterOrEqual_66(
         coll: *const UCollator,
         source: *const UChar,
         sourceLength: i32,
@@ -3778,7 +3778,7 @@ extern "C" {
     ) -> UBool;
 }
 extern "C" {
-    pub fn ucol_equal_65(
+    pub fn ucol_equal_66(
         coll: *const UCollator,
         source: *const UChar,
         sourceLength: i32,
@@ -3787,7 +3787,7 @@ extern "C" {
     ) -> UBool;
 }
 extern "C" {
-    pub fn ucol_strcollIter_65(
+    pub fn ucol_strcollIter_66(
         coll: *const UCollator,
         sIter: *mut UCharIterator,
         tIter: *mut UCharIterator,
@@ -3795,13 +3795,13 @@ extern "C" {
     ) -> UCollationResult;
 }
 extern "C" {
-    pub fn ucol_getStrength_65(coll: *const UCollator) -> UCollationStrength;
+    pub fn ucol_getStrength_66(coll: *const UCollator) -> UCollationStrength;
 }
 extern "C" {
-    pub fn ucol_setStrength_65(coll: *mut UCollator, strength: UCollationStrength);
+    pub fn ucol_setStrength_66(coll: *mut UCollator, strength: UCollationStrength);
 }
 extern "C" {
-    pub fn ucol_getReorderCodes_65(
+    pub fn ucol_getReorderCodes_66(
         coll: *const UCollator,
         dest: *mut i32,
         destCapacity: i32,
@@ -3809,7 +3809,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_setReorderCodes_65(
+    pub fn ucol_setReorderCodes_66(
         coll: *mut UCollator,
         reorderCodes: *const i32,
         reorderCodesLength: i32,
@@ -3817,7 +3817,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucol_getEquivalentReorderCodes_65(
+    pub fn ucol_getEquivalentReorderCodes_66(
         reorderCode: i32,
         dest: *mut i32,
         destCapacity: i32,
@@ -3825,7 +3825,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getDisplayName_65(
+    pub fn ucol_getDisplayName_66(
         objLoc: *const ::std::os::raw::c_char,
         dispLoc: *const ::std::os::raw::c_char,
         result: *mut UChar,
@@ -3834,25 +3834,25 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getAvailable_65(localeIndex: i32) -> *const ::std::os::raw::c_char;
+    pub fn ucol_getAvailable_66(localeIndex: i32) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucol_countAvailable_65() -> i32;
+    pub fn ucol_countAvailable_66() -> i32;
 }
 extern "C" {
-    pub fn ucol_openAvailableLocales_65(status: *mut UErrorCode) -> *mut UEnumeration;
+    pub fn ucol_openAvailableLocales_66(status: *mut UErrorCode) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucol_getKeywords_65(status: *mut UErrorCode) -> *mut UEnumeration;
+    pub fn ucol_getKeywords_66(status: *mut UErrorCode) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucol_getKeywordValues_65(
+    pub fn ucol_getKeywordValues_66(
         keyword: *const ::std::os::raw::c_char,
         status: *mut UErrorCode,
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucol_getKeywordValuesForLocale_65(
+    pub fn ucol_getKeywordValuesForLocale_66(
         key: *const ::std::os::raw::c_char,
         locale: *const ::std::os::raw::c_char,
         commonlyUsed: UBool,
@@ -3860,7 +3860,7 @@ extern "C" {
     ) -> *mut UEnumeration;
 }
 extern "C" {
-    pub fn ucol_getFunctionalEquivalent_65(
+    pub fn ucol_getFunctionalEquivalent_66(
         result: *mut ::std::os::raw::c_char,
         resultCapacity: i32,
         keyword: *const ::std::os::raw::c_char,
@@ -3870,10 +3870,10 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getRules_65(coll: *const UCollator, length: *mut i32) -> *const UChar;
+    pub fn ucol_getRules_66(coll: *const UCollator, length: *mut i32) -> *const UChar;
 }
 extern "C" {
-    pub fn ucol_getShortDefinitionString_65(
+    pub fn ucol_getShortDefinitionString_66(
         coll: *const UCollator,
         locale: *const ::std::os::raw::c_char,
         buffer: *mut ::std::os::raw::c_char,
@@ -3882,7 +3882,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_normalizeShortDefinitionString_65(
+    pub fn ucol_normalizeShortDefinitionString_66(
         source: *const ::std::os::raw::c_char,
         destination: *mut ::std::os::raw::c_char,
         capacity: i32,
@@ -3891,7 +3891,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getSortKey_65(
+    pub fn ucol_getSortKey_66(
         coll: *const UCollator,
         source: *const UChar,
         sourceLength: i32,
@@ -3900,7 +3900,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_nextSortKeyPart_65(
+    pub fn ucol_nextSortKeyPart_66(
         coll: *const UCollator,
         iter: *mut UCharIterator,
         state: *mut u32,
@@ -3918,7 +3918,7 @@ pub enum UColBoundMode {
     UCOL_BOUND_VALUE_COUNT = 3,
 }
 extern "C" {
-    pub fn ucol_getBound_65(
+    pub fn ucol_getBound_66(
         source: *const u8,
         sourceLength: i32,
         boundType: UColBoundMode,
@@ -3929,13 +3929,13 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getVersion_65(coll: *const UCollator, info: *mut u8);
+    pub fn ucol_getVersion_66(coll: *const UCollator, info: *mut u8);
 }
 extern "C" {
-    pub fn ucol_getUCAVersion_65(coll: *const UCollator, info: *mut u8);
+    pub fn ucol_getUCAVersion_66(coll: *const UCollator, info: *mut u8);
 }
 extern "C" {
-    pub fn ucol_mergeSortkeys_65(
+    pub fn ucol_mergeSortkeys_66(
         src1: *const u8,
         src1Length: i32,
         src2: *const u8,
@@ -3945,7 +3945,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_setAttribute_65(
+    pub fn ucol_setAttribute_66(
         coll: *mut UCollator,
         attr: UColAttribute,
         value: UColAttributeValue,
@@ -3953,24 +3953,24 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucol_getAttribute_65(
+    pub fn ucol_getAttribute_66(
         coll: *const UCollator,
         attr: UColAttribute,
         status: *mut UErrorCode,
     ) -> UColAttributeValue;
 }
 extern "C" {
-    pub fn ucol_setMaxVariable_65(
+    pub fn ucol_setMaxVariable_66(
         coll: *mut UCollator,
         group: UColReorderCode,
         pErrorCode: *mut UErrorCode,
     );
 }
 extern "C" {
-    pub fn ucol_getMaxVariable_65(coll: *const UCollator) -> UColReorderCode;
+    pub fn ucol_getMaxVariable_66(coll: *const UCollator) -> UColReorderCode;
 }
 extern "C" {
-    pub fn ucol_setVariableTop_65(
+    pub fn ucol_setVariableTop_66(
         coll: *mut UCollator,
         varTop: *const UChar,
         len: i32,
@@ -3978,13 +3978,13 @@ extern "C" {
     ) -> u32;
 }
 extern "C" {
-    pub fn ucol_getVariableTop_65(coll: *const UCollator, status: *mut UErrorCode) -> u32;
+    pub fn ucol_getVariableTop_66(coll: *const UCollator, status: *mut UErrorCode) -> u32;
 }
 extern "C" {
-    pub fn ucol_restoreVariableTop_65(coll: *mut UCollator, varTop: u32, status: *mut UErrorCode);
+    pub fn ucol_restoreVariableTop_66(coll: *mut UCollator, varTop: u32, status: *mut UErrorCode);
 }
 extern "C" {
-    pub fn ucol_safeClone_65(
+    pub fn ucol_safeClone_66(
         coll: *const UCollator,
         stackBuffer: *mut ::std::os::raw::c_void,
         pBufferSize: *mut i32,
@@ -3992,7 +3992,7 @@ extern "C" {
     ) -> *mut UCollator;
 }
 extern "C" {
-    pub fn ucol_getRulesEx_65(
+    pub fn ucol_getRulesEx_66(
         coll: *const UCollator,
         delta: UColRuleOption,
         buffer: *mut UChar,
@@ -4000,31 +4000,31 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_getLocale_65(
+    pub fn ucol_getLocale_66(
         coll: *const UCollator,
         type_: ULocDataLocaleType,
         status: *mut UErrorCode,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucol_getLocaleByType_65(
+    pub fn ucol_getLocaleByType_66(
         coll: *const UCollator,
         type_: ULocDataLocaleType,
         status: *mut UErrorCode,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
-    pub fn ucol_getTailoredSet_65(coll: *const UCollator, status: *mut UErrorCode) -> *mut USet;
+    pub fn ucol_getTailoredSet_66(coll: *const UCollator, status: *mut UErrorCode) -> *mut USet;
 }
 extern "C" {
-    pub fn ucol_getUnsafeSet_65(
+    pub fn ucol_getUnsafeSet_66(
         coll: *const UCollator,
         unsafe_: *mut USet,
         status: *mut UErrorCode,
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_prepareShortStringOpen_65(
+    pub fn ucol_prepareShortStringOpen_66(
         definition: *const ::std::os::raw::c_char,
         forceDefaults: UBool,
         parseError: *mut UParseError,
@@ -4032,7 +4032,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn ucol_cloneBinary_65(
+    pub fn ucol_cloneBinary_66(
         coll: *const UCollator,
         buffer: *mut u8,
         capacity: i32,
@@ -4040,7 +4040,7 @@ extern "C" {
     ) -> i32;
 }
 extern "C" {
-    pub fn ucol_openBinary_65(
+    pub fn ucol_openBinary_66(
         bin: *const u8,
         length: i32,
         base: *const UCollator,

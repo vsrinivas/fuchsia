@@ -14,8 +14,10 @@
 
 use {
     rust_icu_common as common,
+    rust_icu_common::buffered_string_method_with_retry,
     rust_icu_sys::versioned_function,
     rust_icu_sys::*,
+    rust_icu_sys as sys,
     rust_icu_uenum::Enumeration,
     std::{
         cmp::Ordering,
@@ -62,114 +64,6 @@ impl TryFrom<&ffi::CStr> for ULoc {
             repr: String::from(repr),
         }
         .canonicalize()
-    }
-}
-
-/// Generates a method to wrap ICU4C `uloc` methods that require a resizable output string buffer.
-///
-/// The various `uloc` methods of this type have inconsistent signature patterns, with some putting
-/// all their input arguments _before_ the `buffer` and its `capacity`, and some splitting the input
-/// arguments.
-///
-/// Therefore, the macro supports input arguments in both positions.
-///
-/// For an invocation of the form
-/// ```
-/// buffered_string_method_with_retry!(
-///     my_method,
-///     BUFFER_CAPACITY,
-///     [before_arg_a: before_type_a, before_arg_b: before_type_b,],
-///     [after_arg_a: after_type_a, after_arg_b: after_type_b,]
-/// );   
-/// ```
-/// the generated method has a signature of the form
-/// ```
-/// fn my_method(
-///     uloc_method: unsafe extern "C" fn(
-///         before_type_a,
-///         before_type_b,
-///         *mut raw::c_char,
-///         i32,
-///         after_type_a,
-///         after_type_b,
-///         *mut UErrorCode,
-///     ) -> i32,
-///     before_arg_a: before_type_a,
-///     before_arg_b: before_type_b,
-///     after_arg_a: after_type_a,
-///     after_arg_b: after_type_b
-/// ) -> Result<String, common::Error> {}
-/// ```
-macro_rules! buffered_string_method_with_retry {
-
-    ($method_name:ident, $buffer_capacity:expr,
-     [$($before_arg:ident: $before_arg_type:ty,)*],
-     [$($after_arg:ident: $after_arg_type:ty,)*]) => {
-        fn $method_name(
-            uloc_method: unsafe extern "C" fn(
-                $($before_arg_type,)*
-                *mut raw::c_char,
-                i32,
-                $($after_arg_type,)*
-                *mut UErrorCode,
-            ) -> i32,
-            $($before_arg: $before_arg_type,)*
-            $($after_arg: $after_arg_type,)*
-        ) -> Result<String, common::Error> {
-            let mut status = common::Error::OK_CODE;
-            let mut buf: Vec<u8> = vec![0; $buffer_capacity];
-
-            // Requires that any pointers that are passed in are valid.
-            let full_len: i32 = unsafe {
-                assert!(common::Error::is_ok(status));
-                uloc_method(
-                    $($before_arg,)*
-                    buf.as_mut_ptr() as *mut raw::c_char,
-                    $buffer_capacity as i32,
-                    $($after_arg,)*
-                    &mut status,
-                )
-            };
-
-            // `uloc` methods are inconsistent in whether they silently truncate the output or treat
-            // the overflow as an error, so we need to check both cases.
-            if status == UErrorCode::U_BUFFER_OVERFLOW_ERROR ||
-               (common::Error::is_ok(status) &&
-                    full_len > $buffer_capacity
-                        .try_into()
-                        .map_err(|e| common::Error::wrapper(e))?) {
-
-                assert!(full_len > 0);
-                let full_len: usize = full_len
-                    .try_into()
-                    .map_err(|e| common::Error::wrapper(e))?;
-                buf.resize(full_len, 0);
-
-                // Same unsafe requirements as above, plus full_len must be exactly the output
-                // buffer size.
-                unsafe {
-                    assert!(common::Error::is_ok(status));
-                    uloc_method(
-                        $($before_arg,)*
-                        buf.as_mut_ptr() as *mut raw::c_char,
-                        full_len as i32,
-                        $($after_arg,)*
-                        &mut status,
-                    )
-                };
-            }
-
-            common::Error::ok_or_warning(status)?;
-
-            // Adjust the size of the buffer here.
-            if (full_len >= 0) {
-                let full_len: usize = full_len
-                    .try_into()
-                    .map_err(|e| common::Error::wrapper(e))?;
-                buf.resize(full_len, 0);
-            }
-            String::from_utf8(buf).map_err(|e| e.utf8_error().into())
-        }
     }
 }
 
@@ -585,10 +479,18 @@ mod tests {
         Ok(())
     }
 
+    // This test yields a different result in ICU versions prior to 64:
+    // "zh-Latn@collation=pinyin".
+    #[cfg(features = "icu_version_64_plus")]
     #[test]
     fn test_variant() -> Result<(), Error> {
         let loc = ULoc::try_from("zh-Latn-pinyin")?;
-        assert_eq!(loc.variant(), Some("PINYIN".to_string()));
+        assert_eq!(
+            loc.variant(),
+            Some("PINYIN".to_string()),
+            "locale was: {:?}",
+            loc
+        );
         Ok(())
     }
 
@@ -756,6 +658,8 @@ mod tests {
         );
     }
 
+    // This tests verifies buggy behavior which is fixed since ICU version 67.1
+    #[cfg(not(features = "icu_version_67_plus"))]
     #[test]
     fn test_accept_language_exact_match() {
         let accept_list: Result<Vec<_>, _> = vec!["es_ES", "ar_EG", "fr_FR"]
@@ -774,8 +678,34 @@ mod tests {
         assert_eq!(
             actual,
             (
+                // "es_MX" should be preferred as a fallback over exact match "ar_EG".
                 ULoc::try_from("ar_EG").ok(),
                 UAcceptResult::ULOC_ACCEPT_VALID
+            )
+        );
+    }
+
+    #[cfg(features = "icu_version_67_plus")]
+    #[test]
+    fn test_accept_language_exact_match() {
+        let accept_list: Result<Vec<_>, _> = vec!["es_ES", "ar_EG", "fr_FR"]
+            .into_iter()
+            .map(ULoc::try_from)
+            .collect();
+        let accept_list = accept_list.expect("make accept_list");
+
+        let available_locales: Result<Vec<_>, _> = vec!["de_DE", "en_US", "es_MX", "ar_EG"]
+            .into_iter()
+            .map(ULoc::try_from)
+            .collect();
+        let available_locales = available_locales.expect("make available_locales");
+
+        let actual = accept_language(accept_list, available_locales).expect("call accept_language");
+        assert_eq!(
+            actual,
+            (
+                ULoc::try_from("es_MX").ok(),
+                UAcceptResult::ULOC_ACCEPT_FALLBACK,
             )
         );
     }

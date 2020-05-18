@@ -15,8 +15,9 @@
 //! # Rust implementation of the `uenum.h` C API header for ICU.
 
 use {
-    rust_icu_common as common, rust_icu_sys as sys, rust_icu_sys::*, std::convert::TryFrom,
-    std::ffi, std::str,
+    rust_icu_common as common, rust_icu_sys as sys,
+    rust_icu_sys::*,
+    std::{convert::TryFrom, ffi, str},
 };
 
 /// Rust wrapper for the UEnumeration iterator.
@@ -121,10 +122,11 @@ impl Iterator for Enumeration {
     }
 }
 
+#[doc(hidden)]
 /// Implements `ucal_openCountryTimeZones`.
 // This should be in the `ucal` crate, but not possible because of the raw enum initialization.
-// Tested in uenum.
-pub fn open_country_time_zones(country: &str) -> Result<Enumeration, common::Error> {
+// Tested in `ucal`.
+pub fn ucal_open_country_time_zones(country: &str) -> Result<Enumeration, common::Error> {
     let mut status = common::Error::OK_CODE;
     let asciiz_country = ffi::CString::new(country)?;
     // Requires that the asciiz country be a pointer to a valid C string.
@@ -139,16 +141,20 @@ pub fn open_country_time_zones(country: &str) -> Result<Enumeration, common::Err
     })
 }
 
-/// Implements `ucal_openTimeZoneIDENumeration`
+#[doc(hidden)]
+/// Implements `ucal_openTimeZoneIDEnumeration`
 // This should be in the `ucal` crate, but not possible because of the raw enum initialization.
-// Tested in uenum.
-pub fn open_time_zone_id_enumeration(
+// Tested in `ucal`.
+pub fn ucal_open_time_zone_id_enumeration(
     zone_type: sys::USystemTimeZoneType,
-    region: &str,
+    region: Option<&str>,
     raw_offset: Option<i32>,
 ) -> Result<Enumeration, common::Error> {
     let mut status = common::Error::OK_CODE;
-    let asciiz_region = ffi::CString::new(region)?;
+    let asciiz_region = match region {
+        None => None,
+        Some(region) => Some(ffi::CString::new(region)?),
+    };
     let mut repr_raw_offset: i32 = raw_offset.unwrap_or_default();
 
     // asciiz_region should be a valid asciiz pointer. raw_offset is an encoding
@@ -157,10 +163,15 @@ pub fn open_time_zone_id_enumeration(
         assert!(common::Error::is_ok(status));
         versioned_function!(ucal_openTimeZoneIDEnumeration)(
             zone_type,
-            asciiz_region.as_ptr(),
+            // Note that for the string pointer to remain valid, we must borrow the CString from
+            // asciiz_region, not move the CString out.
+            match &asciiz_region {
+                Some(asciiz_region) => asciiz_region.as_ptr(),
+                None => std::ptr::null(),
+            },
             match raw_offset {
                 Some(_) => &mut repr_raw_offset,
-                None => 0 as *mut i32,
+                None => std::ptr::null_mut(),
             },
             &mut status,
         )
@@ -172,11 +183,12 @@ pub fn open_time_zone_id_enumeration(
     })
 }
 
+#[doc(hidden)]
 /// Opens a list of available time zones.
 ///
 /// Implements `ucal_openTimeZones`
 // This should be in the `ucal` crate, but not possible because of the raw enum initialization.
-// Tested in uenum.
+// Tested in `ucal`.
 pub fn open_time_zones() -> Result<Enumeration, common::Error> {
     let mut status = common::Error::OK_CODE;
     let raw_enum = unsafe {
@@ -190,6 +202,7 @@ pub fn open_time_zones() -> Result<Enumeration, common::Error> {
     })
 }
 
+#[doc(hidden)]
 /// Implements `uloc_openKeywords`.
 // This should be in the `uloc` crate, but this is not possible because of the raw enum
 // initialization. Tested in `uloc`.

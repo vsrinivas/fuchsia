@@ -2,14 +2,17 @@
 
 | Item | Description |
 | ---- | ----------- |
-| ICU 64/65/66 | [![Build Status `master`](https://travis-ci.org/google/rust_icu.svg?branch=master)](https://travis-ci.org/google/rust_icu) |
+| ICU 64..67 | [![Build Status `master`](https://travis-ci.org/google/rust_icu.svg?branch=master)](https://travis-ci.org/google/rust_icu) |
 | Source | https://github.com/google/rust_icu |
 | README | https://github.com/google/rust_icu/blob/master/README.md |
 | Coverage | [View report](/coverage/report.md)
-| Docs | https://github.com/google/rust_icu/blob/master/docs/README.md |
+| Docs | https://docs.rs/crate/rust_icu |
 
 This is a library of low level native rust language bindings for the
 International Components for Unicode (ICU) library for C (a.k.a. ICU4C).
+
+If you just want quick instructions to contribute, see the [quickstart
+guide](https://github.com/google/rust_icu#icu-installation-instructions).
 
 See: http://icu-project.org for details about the ICU library.  The library
 source can be viewed on Github at https://github.com/unicode-org/icu.
@@ -18,43 +21,43 @@ The latest version of this file is available at https://github.com/google/rust_i
 
 > This is not an officially supported Google product.
 
-
 ## Why wrap ICU (vs. doing anything else)?
 
 * The rust language
   [Internationalisation](https://www.arewewebyet.org/topics/i18n/) page
-  confirms that ICU support in rust is spotty.
+  confirms that ICU support in rust is spotty, so having a functional wrapper
+  helps advance the state of the art.
 
 * Projects such as [Fuchsia OS](https://fuchsia.dev) already depend on ICU,
   and having rust bindings allow for an easy way to use Unicode algorithms
   without taking on more dependencies.
 
 * Cooperation on the interface with projects such as the [I18N
-  concept](https://github.com/i18n-concept/rust-discuss) could allow seamless
+  concept](https://github.com/unicode-org/rust-discuss) could allow seamless
   transition to an all-rust implementation in the future.
 
 # Structure of the repository
 
 The repository is organized as a cargo workspace of rust crates.  Each crate
-corresponds to the respective header in the ICU4C library's C API.  For
-example, `rust_icu_uenum` implements the functionality that one would find in
-the [uenum.h](http://www.icu-project.org/apiref/icu4c/uenum_8h.html) header
-file.
-
-Please consult the [coverage report](/coverage/report.md) for details about
-function coverage in the headers given above.
+corresponds to the respective header in the ICU4C library's C API.  Please
+consult the [coverage report](/coverage/report.md) for details about function
+coverage in the headers.
 
 | Crate | Description |
 | ----- | ----------- |
-| [rust_icu_sys](https://crates.io/crates/rust_icu_sys)| Low-level bindings code |
+| [rust_icu](https://crates.io/crates/rust_icu)| Top-level crate.  Include this if you just want to have all the functionality available for use. |
 | [rust_icu_common](https://crates.io/crates/rust_icu_common)| Commonly used low-level wrappings of the bindings. |
-| [rust_icu_ucal](https://crates.io/crates/rust_icu_ucal)| Implements `ucal.h` C API header from the ICU library. |
-| [rust_icu_udat](https://crates.io/crates/rust_icu_udat)| Implements `udat.h` C API header from the ICU library. |
-| [rust_icu_udata](https://crates.io/crates/rust_icu_udata)| Implements `udata.h` C API header from the ICU library. |
-| [rust_icu_uenum](https://crates.io/crates/rust_icu_uenum)| Implements `uenum.h` C API header from the ICU library. Mainly `UEnumeration` and friends. |
-| [rust_icu_uloc](https://crates.io/crates/rust_icu_uloc)| Implements `uloc.h` C API header from the ICU library. |
-| [rust_icu_ustring](https://crates.io/crates/rust_icu_ustring)| Implements `ustring.h` C API header from the ICU library. |
-| [rust_icu_utext](https://crates.io/crates/rust_icu_utext)| Implements `utext.h` C API header from the ICU library. |
+| [rust_icu_intl](https://crates.io/crates/rust_icu_intl)| Implements ECMA 402 recommendation APIs. |
+| [rust_icu_sys](https://crates.io/crates/rust_icu_sys)| Low-level bindings code |
+| [rust_icu_ucal](https://crates.io/crates/rust_icu_ucal)| ICU Calendar. Implements [`ucal.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ucal_8h.html) C API header from the ICU library. |
+| [rust_icu_ucol](https://crates.io/crates/rust_icu_ucol)| Collation support. Implements [`ucol.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/ucol_8h.html) C API header from the ICU library. |
+| [rust_icu_udat](https://crates.io/crates/rust_icu_udat)| ICU date and time. Implements [`udat.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/udat_8h.html) C API header from the ICU library. |
+| [rust_icu_udata](https://crates.io/crates/rust_icu_udata)| ICU binary data. Implements [`udata.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/udata_8h.html) C API header from the ICU library. |
+| [rust_icu_uenum](https://crates.io/crates/rust_icu_uenum)| ICU enumerations. Implements [`uenum.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uenum_8h.html) C API header from the ICU library. Mainly `UEnumeration` and friends. |
+| [rust_icu_uloc](https://crates.io/crates/rust_icu_uloc)| Locale support. Implements [`uloc.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/uloc_8h.html) C API header from the ICU library. |
+| [rust_icu_umsg](https://crates.io/crates/rust_icu_umsg)| MessageFormat support. Implements [`umsg.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/umsg_8h.html) C API header from the ICU library. |
+| [rust_icu_ustring](https://crates.io/crates/rust_icu_ustring)| ICU strings. Implements [`ustring.h`]() C API header from the ICU library. |
+| [rust_icu_utext](https://crates.io/crates/rust_icu_utext)| Text operations. Implements [`utext.h`](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/utext_8h.html) C API header from the ICU library. |
 
 # Limitations
 
@@ -89,25 +92,29 @@ The limitations we know of today are as follows:
 # Compatibility
 
 The table below shows the support matrix that has been verified so far. Any
-versions not mentioned explicitly have not been tested.  Feel free to test a
-version and send a pull request to add to this matrix once you confirm the
-functionality.  Each row is for a particular ICU library version.  The column
-headers of columns 2 and onwards are features set combos.  The coverage
-reflects the feature set and version points that we needed up to this point.
-The version semver in each cell denotes the version point that was tested.
+versions not mentioned explicitly have not been tested. No guarantees are made
+for those versions.
 
-| ICU version | `default` | `renaming` | `renaming`, `icu_version_in_env`|
-| ----------- | ------------------- | ---------------------- | ----- |
-| 63.x        | ???                   | ???                      | ??? |
-| 64.2        | 0.1.0                 | ???                      | ??? |
-| 65.1        | 0.1.0                 | 0.1.0                    | 0.1.0 |
-| 66.0.1      | 0.1.0                 | ???                      | ??? |
+## Feature sets
 
-> API versions that differ in the minor version number only should be
-> compatible; but since it is time consuming to test all versions and
-> relatively easy to keep only the last major edition of the library around, we
-> keep only one minor version per library in the table, until need arises to do
-> something else.
+* 1: default
+* 2: "renaming"
+* 3: "icu_version_in_env"
+
+## Compatibility matrix
+
+Each cell in the table shows which feature set combination has been tested for
+this particular ICU library and `rust_icu` version combination.
+
+| `rust_icu` version | ICU 63.x | ICU 64.2 | ICU 65.1  | ICU 66.0.1 | ICU 67.1 |
+| ------------------ | -------- | -------- | --------- | ---------- | -------- |
+| 0.1                | ☟        | ☟        | ☟         | ☟          | ☟        |
+| 0.1.3              | 1        | 1        | 1; 2; 2+3 | 1          | 1        |
+| 0.2                | ☟        | ☟        | ☟         | ☟          | ☟        |
+| 0.2.2              | 1        | 1        | 1; 2; 2+3 | 1          | 1        |
+
+> Prior to a 1.0.0 release, API versions that only differ in the patch version
+> number (0.x.**y**) only should be compatible.
 
 # Features
 
@@ -220,17 +227,36 @@ There are a few options to run the test for `rust_icu`.
 
 ## Cargo
 
-Building and testing using `cargo` is the 
+Building and testing using `cargo` is the canonical way of building and testing
+rust code.
+
+In the case of the `rust_icu` library you may find that your
+system's default ICU development package is ancient, in which case you will
+need to build your own ICU4C library (see below for that). That will make
+it necessary to pass in `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` environment
+variables to help the bulid code locate and use the library you built, instead
+of the system default.
 
 The following tests should all build and pass.  Note that because the libraries
 needed are in a custom location, we need to set `LD_LIBRARY_PATH` when running
-the tests.
+the tests, as well as `PKG_CONFIG_PATH`.
+
+If you find that you are able to use your system's default ICU installation,
+you can safely omit the two libraries.
 
 ```bash
-env LD_LIBRARY_PATH="$(icu-config --libdir)" cargo test
+env PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig" \
+    LD_LIBRARY_PATH="$HOME/local/lib" \
+        bash -c 'cargo test'
 ```
 
+If you think that the above approach is too much of a hassle, consider trying
+out the [Docker-based approach](#docker-based).
+
 ## GNU Make
+
+If you happen to like the GNU way of doing things, you may appreciate 
+the GNU Make approach.
 
 The easiest way is to use GNU Make and run:
 
@@ -398,14 +424,20 @@ linking or running your programs.
 The following is a tested example.
 
 ```bash
-env LD_LIBRARY_PATH=$HOME/local/lib RUST_ICU_MAJOR_VERSION_NUMBER=65 bash -c `cargo test`
+env PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig" \
+    LD_LIBRARY_PATH="$HOME/local/lib" \
+    RUST_ICU_MAJOR_VERSION_NUMBER=65 \
+	    bash -c 'cargo test'
 ```
 
 The following would be an as of yet *untested* example of compiling `rust_icu` against
 a preexisting ICU version 66.
 
 ```bash
-env LD_LIBRARY_PATH=$HOME/local/lib RUST_ICU_MAJOR_VERSION_NUMBER=66 bash -c `cargo test`
+env PKG_CONFIG_PATH="$HOME/local/lib/pkgconfig" \
+    LD_LIBRARY_PATH="$HOME/local/lib" \
+    RUST_ICU_MAJOR_VERSION_NUMBER=66 \
+	    bash -c 'cargo test'
 ```
 
 ## Adding support for a new version of ICU.
@@ -437,4 +469,41 @@ When adding more ICU wrappers, make sure to do the following:
 
 * Check `build.rs` to add appropriate lines into `bindgen_source_modules`, then
   `whitelist_types_regexes` and `whitelist_functions_regexes`.
+
+## Testing with a specific feature set turned on
+
+Here's an example of running a docker test on ICU 67, with features
+`icu_version_in_env` and `renaming` turned on instead of the default.  Note that
+the parameters are mostly passed into the container that runs `docker-test` via
+environment variables.
+
+```bash
+make DOCKER_TEST_ENV=rust_icu_testenv-67 \
+  RUST_ICU_MAJOR_VERSION_NUMBER=67 \
+  DOCKER_TEST_CARGO_TEST_ARGS='--no-default-features --features icu_version_in_env renaming' \
+  docker-test
+```
+
+Some clarification:
+
+* The environment variable `RUST_ICU_MAJOR_VERSION_NUMBER` is used for the
+ feature `icu_version_in_env` to instruct `cargo` to use the file
+ `rust_icu_sys/bindgen/lib_67.rs` as a prebuilt bindgen source file instead of
+ trying to generate one on the fly.
+* The environment variable `DOCKER_TEST_CARGO_TEST_ARGS` is used to pass the
+  command line arguments to the `cargo test` which is used in the docker container.
+  The environment is passed in verbatim to `cargo test` without quoting, so separate
+  words in the environment end up being separate args to `cargo test`.
+* The environment variable `DOCKER_TEST_ENV` is the base name of the Docker container
+  used to run the test in.  The container `rust_icu_testenv-67` is a container image
+  that contains preinstalled environment with a compiled version of ICU 67.
+
+## Refreshing static bindgen files
+
+Requires docker.
+
+Run `make static-bindgen` periodically, to refresh the static bindgen files.
+
+For more information on why this is needed, see the [bindgen
+README.md](rust_icu_sys/bindgen/README.md).
 

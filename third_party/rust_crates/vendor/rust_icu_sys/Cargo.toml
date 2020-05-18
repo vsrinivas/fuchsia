@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_sys"
-version = "0.1.1"
+version = "0.2.2"
 authors = ["Google Inc."]
 build = "build.rs"
 links = "icuuc"
@@ -26,16 +26,35 @@ repository = "https://github.com/google/rust_icu"
 [lib]
 doctest = false
 [dependencies.libc]
-version = "0.2.14"
+version = "0.2.24"
 
 [dependencies.paste]
 version = "0.1.5"
 [build-dependencies.anyhow]
 version = "1.0"
 
+[build-dependencies.bindgen]
+version = "0.53.2"
+optional = true
+
+[build-dependencies.lazy_static]
+version = "1.4"
+
 [features]
-bindgen = []
-default = ["bindgen", "renaming", "icu_config"]
+default = ["use-bindgen", "renaming", "icu_config"]
 icu_config = []
 icu_version_in_env = []
 renaming = []
+use-bindgen = ["bindgen"]
+[badges.is-it-maintained-issue-resolution]
+repository = "google/rust_icu"
+
+[badges.is-it-maintained-open-issues]
+repository = "google/rust_icu"
+
+[badges.maintenance]
+status = "actively-developed"
+
+[badges.travis-ci]
+branch = "master"
+repository = "google/rust_icu"
