@@ -36,9 +36,9 @@ executable("fx_bin") {
     "//src/lib/fsl",
     "//src/media/audio/lib/wav",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-utils",
+    "//zircon/system/ulib/fzl",
   ]
 }

@@ -18,9 +18,9 @@ ddk_source_split("mac") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fzl",
   ]
 
   # TODO(44349): UBSan has found an instance of undefined behavior in this target.

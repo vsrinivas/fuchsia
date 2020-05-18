@@ -13,7 +13,7 @@ source_set("stream_utils_lib") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

@@ -250,7 +250,7 @@ source_set("gfx") {
     "//sdk/fidl/fuchsia.sysmem",
     "//src/ui/scenic/lib/scheduling:timings",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]
 }

@@ -13,7 +13,7 @@ source_set("source") {
 
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 
   public_deps = [

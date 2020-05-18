@@ -36,9 +36,9 @@ zx_library("as370") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
   ]
   public_deps = [ "//zircon/system/ulib/hwreg-i2c" ]
 }

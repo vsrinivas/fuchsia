@@ -44,8 +44,8 @@ test("zbi-bootfs-test") {
   }
   sources = [ "zbi-bootfs-test.cc" ]
   deps = [
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zbi-bootfs",
   ]
   data_deps = [

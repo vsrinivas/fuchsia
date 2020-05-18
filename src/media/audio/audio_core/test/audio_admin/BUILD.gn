@@ -20,7 +20,7 @@ executable("audio_admin_test_bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/test",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

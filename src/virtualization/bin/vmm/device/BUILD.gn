@@ -351,7 +351,7 @@ executable("device_tests") {
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/virtio",
   ]

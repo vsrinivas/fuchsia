@@ -21,6 +21,6 @@ source_set("fake_logical_buffer_collection") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 }

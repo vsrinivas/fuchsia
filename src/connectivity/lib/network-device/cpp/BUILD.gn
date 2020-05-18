@@ -17,8 +17,8 @@ source_set("client") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
@@ -36,8 +36,8 @@ executable("cpp-test") {
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

@@ -12,7 +12,7 @@ source_set("format_conversion") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]
 }

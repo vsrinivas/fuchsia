@@ -36,9 +36,9 @@ source_set("smbios") {
   deps = [
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/smbios",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
@@ -53,8 +53,8 @@ source_set("iommu") {
     "//src/lib/ddk",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

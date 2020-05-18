@@ -2,10 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("fzl") {
   sdk = "source"
   sdk_headers = [
-    "lib/fzl/fdio.h",
     "lib/fzl/fifo.h",
     "lib/fzl/memory-probe.h",
     "lib/fzl/owned-vmo-mapper.h",
@@ -27,14 +38,14 @@ zx_library("fzl") {
     "vmo-pool.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
   public_deps = [
     # Many public headers here use various fbl headers.
-    "$zx/system/ulib/fbl:headers",
+    "//zircon/public/lib/fbl",
 
     # Many public headers here use various zx headers.
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/zx",
   ]
 }

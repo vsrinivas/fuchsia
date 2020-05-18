@@ -32,7 +32,7 @@ zx_library("sysconfig-sync-client") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
@@ -40,9 +40,9 @@ zx_library("sysconfig-sync-client") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

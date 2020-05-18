@@ -30,9 +30,9 @@ executable("pwrbtn-monitor") {
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid-parser",
   ]
 }

@@ -16,6 +16,6 @@ executable("test") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 }

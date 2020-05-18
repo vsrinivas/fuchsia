@@ -30,11 +30,11 @@ driver_module("astro-tdm-output") {
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

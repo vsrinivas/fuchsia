@@ -15,8 +15,8 @@ executable("bin") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/framebuffer",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

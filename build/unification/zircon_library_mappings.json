@@ -20,6 +20,11 @@
     "sdk": true
   },
   {
+    "label": "//zircon/system/ulib/fzl:fzl",
+    "name": "fzl",
+    "sdk": false
+  },
+  {
     "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client",
     "name": "ramdevice-client",
     "sdk": false

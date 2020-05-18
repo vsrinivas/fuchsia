@@ -44,14 +44,14 @@ zx_library("metrics-inspect") {
   sources = [ "histograms.cc" ]
   public_deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
   configs += [ "//build/config:Wno-unused-function" ]

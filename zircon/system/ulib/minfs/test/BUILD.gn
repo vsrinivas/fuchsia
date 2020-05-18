@@ -96,10 +96,10 @@ source_set("integration-fixtures") {
   ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/minfs",
   ]
 }

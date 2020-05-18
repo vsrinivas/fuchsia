@@ -28,9 +28,9 @@ executable("nand-util") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
@@ -46,9 +46,9 @@ source_set("common") {
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/ulib/fzl",
   ]
 
   # TODO(41887): UBSan has found an instance of undefined behavior in this target.

@@ -34,9 +34,9 @@ executable("bin") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
   ]
 
   defines = [ camera_debug_define ]

@@ -43,8 +43,8 @@ source_set("fidl") {
     "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/render",
     "//src/media/playback/mediaplayer/util",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

@@ -25,7 +25,6 @@ source_set("common") {
     "//src/media/audio/lib/simple-audio-stream",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -33,6 +32,7 @@ source_set("common") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/digest",
     "//zircon/system/ulib/dispatcher-pool",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]
 }

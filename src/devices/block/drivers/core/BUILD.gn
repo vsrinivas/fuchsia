@@ -41,11 +41,11 @@ test("core-unittest") {
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
   ]
 }
@@ -72,11 +72,11 @@ source_set("shared") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage-metrics",
   ]
 }

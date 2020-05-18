@@ -23,10 +23,10 @@ driver_module("ethernet") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
@@ -44,11 +44,11 @@ test("ethernet-unittest") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fzl",
   ]
 
   # TODO(46872): Fix the leaks and remove this.

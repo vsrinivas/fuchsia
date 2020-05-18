@@ -35,8 +35,8 @@ source_set("display") {
     # TODO(fxb/23686): Remove this when we externalize Displays.
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]
 }

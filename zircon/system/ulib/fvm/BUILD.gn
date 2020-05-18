@@ -52,10 +52,10 @@ zx_library("fvm") {
 
     deps += [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
-      "//zircon/public/lib/fzl",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/block-client",
+      "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/gpt",
     ]
   } else {

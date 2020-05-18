@@ -21,7 +21,7 @@ driver_module("crash-device") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 
   # TODO(46921): UBSan has found an instance of undefined behavior in this target.

@@ -38,7 +38,6 @@ source_set("shared") {
     "//src/lib/ddktl",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -46,6 +45,7 @@ source_set("shared") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
   ]
 }

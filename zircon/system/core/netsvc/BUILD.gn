@@ -118,10 +118,10 @@ source_set("netsvc_common") {
   public_deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/tftp",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inet6",
   ]
 

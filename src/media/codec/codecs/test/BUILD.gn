@@ -69,7 +69,7 @@ source_set("test_codec_packets") {
   public_deps = [
     "//sdk/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

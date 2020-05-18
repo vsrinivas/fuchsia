@@ -41,8 +41,8 @@ source_set("display") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.display",

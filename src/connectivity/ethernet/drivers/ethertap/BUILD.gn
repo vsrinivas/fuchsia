@@ -44,11 +44,11 @@ test("ethertap-unittest") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

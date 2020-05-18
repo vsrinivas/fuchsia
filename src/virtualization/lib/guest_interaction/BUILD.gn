@@ -231,8 +231,8 @@ executable("server_daemon_test") {
     "//src/virtualization/tests:guest_console",
     "//third_party/grpc:grpc++",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/ulib/fzl",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
@@ -314,8 +314,8 @@ executable("guest_interaction_service_test") {
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/ulib/fzl",
   ]
 }
 

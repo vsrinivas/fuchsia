@@ -28,9 +28,9 @@ source_set("lib") {
   deps = [
     ":impl_header",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
   ]
 
   public_deps = [

@@ -42,7 +42,6 @@ test("block-client-unit") {
     "remote-block-device-test.cc",
   ]
   deps = [
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/async-loop",
@@ -52,6 +51,7 @@ test("block-client-unit") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
   ]

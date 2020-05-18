@@ -41,9 +41,9 @@ test("inspect") {
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
 }

@@ -175,8 +175,8 @@ source_set("audio_core_lib") {
     "//sdk/lib/syslog/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/ffl",
-    "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-cobalt",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]
 
@@ -284,10 +284,10 @@ executable("unittest_bin") {
     "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:null_renderer_capturer",
-    "//zircon/public/lib/fzl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fzl",
   ]
 }
 
