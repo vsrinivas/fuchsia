@@ -214,3 +214,48 @@ async fn handle_omaha_request(
         .body(Body::from(data))
         .unwrap())
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        anyhow::Context,
+        hyper::{Body, StatusCode},
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_server_replies() -> Result<(), Error> {
+        let server =
+            OmahaServer::new(OmahaResponse::NoUpdate).start().context("starting server")?;
+
+        let client = fuchsia_hyper::new_client();
+        let body = json!({
+            "request": {
+                "app": [
+                    {
+                        "appid": "integration-test-appid",
+                        "version": "0.1.2.3",
+                        "updatecheck": { "updatedisabled": false }
+                    }
+                ]
+            }
+        });
+        let request = Request::post(server).body(Body::from(body.to_string())).unwrap();
+
+        let response = client.request(request).compat().await?;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body =
+            response.into_body().compat().try_concat().await.context("reading response body")?;
+        let obj: serde_json::Value =
+            serde_json::from_slice(&body).context("parsing response json")?;
+
+        let response = obj.get("response").unwrap();
+        let apps = response.get("app").unwrap().as_array().unwrap();
+        assert_eq!(apps.len(), 1);
+        let app = &apps[0];
+        let status = app.get("updatecheck").unwrap().get("status").unwrap();
+        assert_eq!(status, "noupdate");
+        Ok(())
+    }
+}

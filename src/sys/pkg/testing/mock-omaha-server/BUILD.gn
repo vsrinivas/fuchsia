@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("mock-omaha-server") {
   edition = "2018"
+  with_unit_tests = true
 
   deps = [
     "//src/lib/fuchsia-async",
@@ -16,4 +18,22 @@ rustc_library("mock-omaha-server") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  test_deps = [ "//garnet/public/rust/fuchsia-hyper" ]
+}
+
+test_package("mock-omaha-server-tests") {
+  deps = [ ":mock-omaha-server_test" ]
+
+  tests = [
+    {
+      name = "mock_omaha_server_lib_test"
+      dest = "mock-omaha-server-lib-test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":mock-omaha-server-tests" ]
 }

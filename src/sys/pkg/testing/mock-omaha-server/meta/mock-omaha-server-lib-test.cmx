@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.NameLookup",
+                "fuchsia.posix.socket.Provider"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/mock-omaha-server-lib-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}
