@@ -132,11 +132,10 @@ impl EventSourceFactory {
 
     /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
     /// corresponds to the realm in which it will receive events.
-    async fn on_scoped_framework_capability_routed_async(
+    async fn on_capability_routed_async(
         self: Arc<Self>,
         capability_decl: &InternalCapability,
         target_moniker: AbsoluteMoniker,
-        _scope_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
@@ -149,10 +148,10 @@ impl EventSourceFactory {
                     Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
                 } else {
                     // Evidently the component was destroyed.
-                    return Err(ModelError::instance_not_found(target_moniker.clone()));
+                    Err(ModelError::instance_not_found(target_moniker.clone()))
                 }
             }
-            (c, _) => return Ok(c),
+            (c, _) => Ok(c),
         }
     }
 
@@ -166,9 +165,13 @@ impl EventSourceFactory {
         target_moniker: &AbsoluteMoniker,
         decl: &ComponentDecl,
     ) -> Result<(), ModelError> {
-        let sync_mode = if decl.uses_protocol_from_framework(&EVENT_SOURCE_SERVICE_PATH) {
+        // TODO(miguelfrde): we have a problem here. The protocol is now routed and not always used
+        // from framework. This now needs to be done on CapabilityRouted as the protocol name that
+        // we have in the component decl might not match the source name after all the routing and
+        // potential renames.
+        let sync_mode = if decl.uses_protocol(&EVENT_SOURCE_SERVICE_PATH) {
             SyncMode::Async
-        } else if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE_PATH) {
+        } else if decl.uses_protocol(&EVENT_SOURCE_SYNC_SERVICE_PATH) {
             SyncMode::Sync
         } else {
             return Ok(());
@@ -203,15 +206,14 @@ impl Hook for EventSourceFactory {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Framework { capability, scope_moniker },
+                source: CapabilitySource::AboveRoot { capability },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_scoped_framework_capability_routed_async(
+                    .on_capability_routed_async(
                         &capability,
                         event.target_moniker.clone(),
-                        scope_moniker.clone(),
                         capability_provider.take(),
                     )
                     .await?;
@@ -237,6 +239,7 @@ mod tests {
             testing::test_helpers::ComponentDeclBuilder,
         },
         cm_rust::{UseDecl, UseProtocolDecl, UseSource},
+        matches::assert_matches,
     };
 
     async fn dispatch_resolved_event(
@@ -286,5 +289,39 @@ mod tests {
         // Verify that destroying the component destroys the EventSource.
         dispatch_destroyed_event(&hooks, &root).await.unwrap();
         assert!(!event_source_factory.has_event_source(&root).await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn passes_on_capability_routed_from_framework_not_on_root() {
+        let model = {
+            let registry = ResolverRegistry::new();
+            Arc::new(Model::new(ModelParams {
+                root_component_url: "test:///root".to_string(),
+                root_resolver_registry: registry,
+            }))
+        };
+        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
+
+        let target: AbsoluteMoniker = vec!["a:0"].into();
+        let scope: AbsoluteMoniker = vec!["b:0"].into();
+        let capability_provider = Arc::new(Mutex::new(None));
+        let result = event_source_factory
+            .on(&Event::new(
+                target.clone(),
+                Ok(EventPayload::CapabilityRouted {
+                    capability_provider: capability_provider.clone(),
+                    source: CapabilitySource::Framework {
+                        capability: InternalCapability::Protocol(CapabilityPath {
+                            dirname: "/svc".to_string(),
+                            basename: "fuchsia.sys2.EventSource".to_string(),
+                        }),
+                        scope_moniker: scope.clone(),
+                    },
+                }),
+            ))
+            .await;
+
+        assert!(capability_provider.lock().await.is_none());
+        assert_matches!(result, Ok(()));
     }
 }

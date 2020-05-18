@@ -59,6 +59,14 @@
             ],
         },
         {
+            protocol: [
+                "/svc/fuchsia.sys2.BlockingEventSource",
+                "/svc/fuchsia.sys2.EventSource",
+            ],
+            from: "realm",
+            to: [ "#tests" ],
+        },
+        {
             protocol: "/svc/fuchsia.process.Launcher",
             from: "realm",
             to: [

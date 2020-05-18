@@ -10,10 +10,10 @@
     ],
     use: [
         { runner: "elf" },
+        { protocol: "/svc/fuchsia.sys2.EventSource" },
         {
             protocol: [
                 "/svc/fidl.examples.routing.echo.Echo",
-                "/svc/fuchsia.sys2.EventSource",
                 "/svc/fuchsia.sys2.Realm",
             ],
             from: "framework",

@@ -56,6 +56,7 @@
                 "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.scheduler.ProfileProvider",
+                "/svc/fuchsia.sys2.EventSource",
                 "/svc/fuchsia.sysinfo.SysInfo",
                 "/svc/fuchsia.virtualconsole.SessionManager",
             ],
@@ -67,6 +68,14 @@
             from: "#appmgr",
             to: [ "#test_manager" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.sys2.BlockingEventSource",
+                "/svc/fuchsia.sys2.EventSource",
+            ],
+            from: "realm",
+            to: [ "#test_manager" ],
         },
         {
             protocol: [

@@ -35,6 +35,11 @@
             to: [ "#driver" ],
         },
         {
+            protocol: "/svc/fuchsia.sys2.EventSource",
+            from: "realm",
+            to: [ "#archivist" ],
+        },
+        {
             event: [
                 "running",
                 "started",

@@ -16,13 +16,13 @@
             rights: [ "r*" ],
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys2.BlockingEventSource",
+            ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.sys2.BlockingEventSource",
-                "/svc/fuchsia.sys2.Realm",
-            ],
+            protocol: [ "/svc/fuchsia.sys2.Realm" ],
             from: "framework",
         },
         {

@@ -39,6 +39,14 @@
             to: [ "#test_manager" ],
             rights: [ "r*" ],
         },
+        {
+            protocol: [
+                "/svc/fuchsia.sys2.BlockingEventSource",
+                "/svc/fuchsia.sys2.EventSource",
+            ],
+            from: "realm",
+            to: [ "#test_manager" ],
+        },
     ],
     expose: [
         {

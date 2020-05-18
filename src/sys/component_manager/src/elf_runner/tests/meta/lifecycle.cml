@@ -11,16 +11,14 @@
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: [
-                "/svc/fuchsia.sys2.BlockingEventSource",
-                "/svc/fuchsia.sys2.Realm",
-            ],
+            protocol: [ "/svc/fuchsia.sys2.Realm" ],
             from: "framework",
         },
         {
             protocol: [
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys2.BlockingEventSource",
             ],
         },
         {

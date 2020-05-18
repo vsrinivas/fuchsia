@@ -129,7 +129,6 @@
         },
         {
             protocol: "/svc/fuchsia.sys2.EventSource",
-            from: "framework",
             as: "/svc_for_sys/fuchsia.sys2.EventSource",
         },
         {

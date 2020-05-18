@@ -46,6 +46,11 @@
             ],
         },
         {
+            protocol: "/svc/fuchsia.sys2.BlockingEventSource",
+            from: "realm",
+            to: [ "#reporter" ],
+        },
+        {
             protocol: "/svc/fidl.test.components.Trigger",
             from: "self",
             to: [ "#reporter" ],

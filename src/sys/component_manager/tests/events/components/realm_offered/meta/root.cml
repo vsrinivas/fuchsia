@@ -16,5 +16,10 @@
             from: "realm",
             to: [ "#nested_realm" ],
         },
+        {
+            protocol: "/svc/fuchsia.sys2.BlockingEventSource",
+            from: "realm",
+            to: [ "#nested_realm" ],
+        },
     ],
 }

@@ -10,9 +10,9 @@
     ],
     use: [
         { runner: "elf" },
+        { protocol: "/svc/fuchsia.sys2.BlockingEventSource" },
         {
             protocol: [
-                "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.Realm",
                 "/svc/fuchsia.test.hub.HubReport",
             ],

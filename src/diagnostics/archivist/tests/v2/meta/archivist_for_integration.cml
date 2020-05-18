@@ -9,10 +9,7 @@
     },
     use: [
         { runner: "elf" },
-        {
-            protocol: "/svc/fuchsia.sys2.EventSource",
-            from: "framework",
-        },
+        { protocol: "/svc/fuchsia.sys2.EventSource" },
         {
             directory: "/config/data",
             rights: [ "r*" ],

@@ -2323,6 +2323,13 @@ async fn use_event_from_framework() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -2331,7 +2338,7 @@ async fn use_event_from_framework() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
+                    source: UseSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                     target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                 }))
@@ -2371,6 +2378,13 @@ async fn use_event_from_parent() {
                     target: OfferTarget::Child("b".to_string()),
                     filter: None,
                 }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -2379,7 +2393,7 @@ async fn use_event_from_parent() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
+                    source: UseSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                     target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                 }))
@@ -2426,6 +2440,13 @@ async fn use_event_from_grandparent() {
                     target: OfferTarget::Child("b".to_string()),
                     filter: None,
                 }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Framework,
                     source_name: "stopped".into(),
@@ -2447,6 +2468,13 @@ async fn use_event_from_grandparent() {
                     target: OfferTarget::Child("c".to_string()),
                     filter: None,
                 }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Framework,
                     source_name: "destroyed".into(),
@@ -2462,7 +2490,7 @@ async fn use_event_from_grandparent() {
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
+                    source: UseSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                     target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                 }))
@@ -2531,6 +2559,13 @@ async fn event_filter_routing() {
                         ])
                     }),
                 }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -2539,7 +2574,7 @@ async fn event_filter_routing() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
+                    source: UseSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                     target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                 }))
@@ -2550,6 +2585,20 @@ async fn event_filter_routing() {
                     filter: Some(hashmap! {
                         "path".to_string() => DictionaryValue::Str("/foo".into()),
                     }),
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                    target: OfferTarget::Child("d".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Event(OfferEventDecl {
                     source: OfferEventSource::Realm,
@@ -2582,7 +2631,7 @@ async fn event_filter_routing() {
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
+                    source: UseSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                     target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                 }))
@@ -2602,7 +2651,7 @@ async fn event_filter_routing() {
             "d",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Framework,
+                    source: UseSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                     target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
                 }))

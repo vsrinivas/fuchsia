@@ -26,6 +26,11 @@
             ],
         },
         {
+            protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
+            from: "realm",
+            to: [ "#echo_reporter" ],
+        },
+        {
             protocol: "/svc/fidl.examples.routing.echo.Echo",
             from: "#echo_reporter",
             to: [ "#echo_client" ],
