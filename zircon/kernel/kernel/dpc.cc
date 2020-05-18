@@ -19,7 +19,7 @@
 
 #define DPC_THREAD_PRIORITY HIGH_PRIORITY
 
-static spin_lock_t dpc_lock = SPIN_LOCK_INITIAL_VALUE;
+static SpinLock dpc_lock;
 
 zx_status_t Dpc::Queue(bool reschedule) {
   DEBUG_ASSERT(func_);
@@ -141,10 +141,10 @@ int DpcSystem::WorkerThread(void* arg) {
     __UNUSED zx_status_t err = event->Wait();
     DEBUG_ASSERT(err == ZX_OK);
 
-    spin_lock_irqsave(&dpc_lock, state);
+    dpc_lock.AcquireIrqSave(state);
 
     if (cpu->dpc_stop) {
-      spin_unlock_irqrestore(&dpc_lock, state);
+      dpc_lock.ReleaseIrqRestore(state);
       return 0;
     }
 
@@ -154,14 +154,14 @@ int DpcSystem::WorkerThread(void* arg) {
     // if the list is now empty, unsignal the event so we block until it is
     if (!dpc) {
       event->Unsignal();
-      spin_unlock_irqrestore(&dpc_lock, state);
+      dpc_lock.ReleaseIrqRestore(state);
       continue;
     }
 
     // Copy the dpc to the stack.
     Dpc dpc_local = *dpc;
 
-    spin_unlock_irqrestore(&dpc_lock, state);
+    dpc_lock.ReleaseIrqRestore(state);
 
     // Call the dpc.
     dpc_local.Invoke();
