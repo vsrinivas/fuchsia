@@ -8,6 +8,7 @@
 .classpath
 .config
 .envrc
+.flutter_tool_state
 .fx-build-dir
 .fx-metrics-config
 .fx-multi-list
