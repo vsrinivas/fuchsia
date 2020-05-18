@@ -7,7 +7,9 @@
             "system-services": [
                 "fuchsia.net.NameLookup",
                 "fuchsia.netstack.Netstack",
-                "fuchsia.posix.socket.Provider"
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
             ]
         }
     },
