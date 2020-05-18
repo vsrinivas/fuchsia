@@ -4,7 +4,8 @@
 
 use crate::agent::base::*;
 
-use crate::internal::agent::{message, Payload};
+use crate::internal::agent;
+use crate::internal::agent::message;
 use crate::message::base::{Audience, MessengerType};
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
@@ -15,11 +16,11 @@ use async_trait::async_trait;
 /// given stage.
 pub struct AuthorityImpl {
     // A mapping of agent addresses
-    agent_signatures: Vec<message::Signature>,
+    agent_signatures: Vec<agent::message::Signature>,
     // Factory to generate messengers to comunicate with the agent
-    messenger_factory: message::Factory,
+    messenger_factory: agent::message::Factory,
     // Messenger
-    messenger: message::Messenger,
+    messenger: agent::message::Messenger,
 }
 
 impl AuthorityImpl {
@@ -56,7 +57,7 @@ impl AuthorityImpl {
             let mut receptor = self
                 .messenger
                 .message(
-                    Payload::Invocation(Invocation {
+                    agent::Payload::Invocation(Invocation {
                         lifespan: lifespan.clone(),
                         service_context: service_context.clone(),
                     }),
@@ -87,10 +88,12 @@ impl AuthorityImpl {
     }
 }
 
-fn process_payload(payload: Result<(Payload, message::Client), Error>) -> Result<(), Error> {
+fn process_payload(
+    payload: Result<(agent::Payload, agent::message::Client), Error>,
+) -> Result<(), Error> {
     match payload {
-        Ok((Payload::Complete(Ok(_)), _)) => Ok(()),
-        Ok((Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),
+        Ok((agent::Payload::Complete(Ok(_)), _)) => Ok(()),
+        Ok((agent::Payload::Complete(Err(AgentError::UnhandledLifespan)), _)) => Ok(()),
         _ => Err(format_err!("invocation failed")),
     }
 }
@@ -107,7 +110,7 @@ impl Authority for AuthorityImpl {
         let (messenger, receptor) = create_result?;
         let signature = messenger.get_signature();
 
-        generate(receptor);
+        generate(Context { receptor: receptor });
 
         self.agent_signatures.push(signature);
 

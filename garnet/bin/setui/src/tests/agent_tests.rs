@@ -1,10 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
-#[cfg(test)]
-use crate::internal::agent::{message, Payload};
+use crate::internal::agent;
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
@@ -87,13 +88,15 @@ impl TestAgent {
         }));
 
         let agent_clone = agent.clone();
-        let generate = Arc::new(move |mut receptor: message::Receptor| {
+        let generate = Arc::new(move |mut context: Context| {
             let agent = agent_clone.clone();
             fasync::spawn(async move {
-                while let Ok((payload, client)) = receptor.next_payload().await {
-                    if let Payload::Invocation(invocation) = payload {
+                while let Ok((payload, client)) = context.receptor.next_payload().await {
+                    if let agent::Payload::Invocation(invocation) = payload {
                         client
-                            .reply(Payload::Complete(agent.lock().await.handle(invocation).await))
+                            .reply(agent::Payload::Complete(
+                                agent.lock().await.handle(invocation).await,
+                            ))
                             .send()
                             .ack();
                     }
@@ -192,6 +195,10 @@ async fn test_environment_startup() {
         .is_ok());
 }
 
+async fn create_authority() -> AuthorityImpl {
+    AuthorityImpl::create(agent::message::create_hub()).await.unwrap()
+}
+
 /// Ensures that agents are executed in sequential order and the
 /// completion ack only is sent when all agents have completed.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -199,7 +206,7 @@ async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
+    let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
 
     // Create a number of agents.
@@ -247,7 +254,7 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
+    let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
     let agent_ids =
         create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
@@ -292,7 +299,7 @@ async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
+    let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 
@@ -350,7 +357,7 @@ async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
 
     let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
-    let mut authority = AuthorityImpl::create(message::create_hub()).await.unwrap();
+    let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 

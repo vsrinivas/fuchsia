@@ -4,8 +4,8 @@
 
 /// The Restore Agent is responsible for signaling to all components to restore
 /// external sources to the last known value. It is invoked during startup.
-use crate::agent::base::{AgentError, Invocation, InvocationResult, Lifespan};
-use crate::internal::agent::{message, Payload};
+use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Lifespan};
+use crate::internal::agent::Payload;
 use crate::message::base::MessageEvent;
 use crate::switchboard::base::{SettingRequest, SwitchboardError};
 use fuchsia_async as fasync;
@@ -19,11 +19,11 @@ impl RestoreAgent {
         RestoreAgent {}
     }
 
-    pub fn create(mut receptor: message::Receptor) {
+    pub fn create(mut context: Context) {
         let mut agent = RestoreAgent::new();
 
         fasync::spawn(async move {
-            while let Ok(event) = receptor.watch().await {
+            while let Ok(event) = context.receptor.watch().await {
                 if let MessageEvent::Message(Payload::Invocation(invocation), client) = event {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }

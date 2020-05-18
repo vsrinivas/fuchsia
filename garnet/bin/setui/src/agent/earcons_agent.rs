@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::base::{AgentError, Invocation, InvocationResult, Lifespan};
+use crate::agent::base::{
+    AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
+};
 use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
 use crate::agent::volume_change_earcons_handler::{
     listen_to_audio_events, watch_background_usage, VolumeChangeEarconsHandler,
 };
-use crate::internal::agent::{message, Payload};
+use crate::internal::agent::Payload;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::ListenSession;
 
@@ -59,14 +61,14 @@ impl SwitchboardListenSessionHolder {
 }
 
 impl EarconsAgent {
-    pub fn create(mut receptor: message::Receptor) {
+    pub fn create(mut context: AgentContext) {
         let mut agent = Self {
             priority_stream_playing: Arc::new(AtomicBool::new(false)),
             sound_player_connection: Arc::new(Mutex::new(None)),
         };
 
         fasync::spawn(async move {
-            while let Ok((payload, client)) = receptor.next_payload().await {
+            while let Ok((payload, client)) = context.receptor.next_payload().await {
                 if let Payload::Invocation(invocation) = payload {
                     client.reply(Payload::Complete(agent.handle(invocation))).send().ack();
                 }

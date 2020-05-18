@@ -14,7 +14,7 @@ use thiserror::Error;
 
 pub type AgentId = usize;
 
-pub type GenerateAgent = Arc<dyn Fn(Receptor) + Send + Sync>;
+pub type GenerateAgent = Arc<dyn Fn(Context) + Send + Sync>;
 
 pub type InvocationResult = Result<(), AgentError>;
 pub type InvocationSender = UnboundedSender<Invocation>;
@@ -25,6 +25,18 @@ pub enum AgentError {
     UnhandledLifespan,
     #[error("Unexpected Error")]
     UnexpectedError,
+}
+
+/// TODO(b/52428): Move lifecycle stage context contents here.
+#[derive(Clone)]
+pub struct Context {
+    pub receptor: Receptor,
+}
+
+impl Context {
+    pub fn new(receptor: Receptor) -> Self {
+        Self { receptor: receptor }
+    }
 }
 
 /// The scope of an agent's life. Initialization components should
