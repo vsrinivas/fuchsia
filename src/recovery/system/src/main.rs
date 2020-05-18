@@ -6,18 +6,16 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{FontFace, GlyphMap, Text},
-    make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear,
         RenderExt, Style,
     },
-    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Message,
-    Point, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Point,
+    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use fuchsia_async as fasync;
 use fuchsia_zircon::{AsHandleRef, Event, Signals};
-use futures::StreamExt;
 
+#[cfg(feature = "http_setup_server")]
 mod setup;
 
 // TODO(33662): Remove this when storage reinitialization is used.
@@ -27,6 +25,7 @@ mod storage;
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
+#[cfg(feature = "http_setup_server")]
 enum RecoveryMessages {
     EventReceived,
 }
@@ -74,17 +73,7 @@ impl<'a> RecoveryViewAssistant<'a> {
         heading: &str,
         body: &str,
     ) -> Result<RecoveryViewAssistant<'a>, Error> {
-        let mut receiver = setup::start_server()?;
-        let local_app_context = app_context.clone();
-        let f = async move {
-            while let Some(_event) = receiver.next().await {
-                println!("recovery: received request");
-                local_app_context
-                    .queue_message(view_key, make_message(RecoveryMessages::EventReceived));
-            }
-        };
-
-        fasync::spawn_local(f);
+        RecoveryViewAssistant::setup(app_context, view_key)?;
 
         let bg_color = Color { r: 255, g: 0, b: 255, a: 255 };
         let composition = Composition::new(bg_color);
@@ -100,6 +89,32 @@ impl<'a> RecoveryViewAssistant<'a> {
             body: body.to_string(),
             body_label: None,
         })
+    }
+
+    #[cfg(not(feature = "http_setup_server"))]
+    fn setup(_: &AppContext, _: ViewKey) -> Result<(), Error> {
+        Ok(())
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    fn setup(app_context: &AppContext, view_key: ViewKey) -> Result<(), Error> {
+        use carnelian::make_message;
+        use fuchsia_async as fasync;
+        use futures::StreamExt;
+
+        let mut receiver = setup::start_server()?;
+        let local_app_context = app_context.clone();
+        let f = async move {
+            while let Some(_event) = receiver.next().await {
+                println!("recovery: received request");
+                local_app_context
+                    .queue_message(view_key, make_message(RecoveryMessages::EventReceived));
+            }
+        };
+
+        fasync::spawn_local(f);
+
+        Ok(())
     }
 }
 
@@ -185,7 +200,8 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         Ok(())
     }
 
-    fn handle_message(&mut self, message: Message) {
+    #[cfg(feature = "http_setup_server")]
+    fn handle_message(&mut self, message: carnelian::Message) {
         if let Some(message) = message.downcast_ref::<RecoveryMessages>() {
             match message {
                 RecoveryMessages::EventReceived => {

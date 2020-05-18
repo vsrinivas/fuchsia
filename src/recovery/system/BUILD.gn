@@ -47,6 +47,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
+
+  features = [ "http_setup_server" ]
 }
 
 config_data("config") {
