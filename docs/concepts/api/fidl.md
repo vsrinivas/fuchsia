@@ -698,11 +698,6 @@ Instead, well-designed protocols should throttle the production of messages to
 match the rate at which those messages are consumed, a property known as _flow
 control_.
 
-The kernel provides some amount of flow control in the form of back pressure on
-channels.  However, most protocols should have protocol-level flow control and
-use channel back pressure as a backstop to protect the rest of the system when
-the protocol fails to work as designed.
-
 Flow control is a broad, complex topic, and there are a number of effective
 design patterns.  This section discusses some of the more popular flow control
 patterns but is not exhaustive. The patterns are listed in descending order of
