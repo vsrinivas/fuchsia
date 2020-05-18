@@ -19,6 +19,9 @@ const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kMadeupClient({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
 const uint16_t kDefaultApDisassocReason = 1;
 const uint16_t kDefaultApDeauthReason = 0;
+// Sim firmware returns these values for SNR and RSSI.
+const uint8_t kDefaultSimFwSnr = 40;
+const int8_t kDefaultSimFwRssi = -20;
 
 class AssocTest : public SimTest {
  public:
@@ -83,6 +86,10 @@ class AssocTest : public SimTest {
     size_t deauth_conf_count = 0;
     // Number of signal report indications (once client is assoc'd)
     size_t signal_ind_count = 0;
+    // SNR seen in the signal report indication.
+    int16_t signal_ind_snr = 0;
+    // RSSI seen in the signal report indication.
+    int16_t signal_ind_rssi = 0;
   };
 
   struct AssocRespInfo {
@@ -225,6 +232,9 @@ void AssocTest::Init() {
   context_.assoc_resp_count = 0;
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;
+  context_.signal_ind_count = 0;
+  context_.signal_ind_rssi = 0;
+  context_.signal_ind_snr = 0;
   ScheduleCall(&AssocTest::Finish, kTestDuration);
 }
 
@@ -290,6 +300,8 @@ void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { context_.de
 
 void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
   context_.signal_ind_count++;
+  context_.signal_ind_rssi = ind->rssi_dbm;
+  context_.signal_ind_snr = ind->snr_db;
 }
 
 void AssocTest::StartAssoc() {
@@ -300,6 +312,28 @@ void AssocTest::StartAssoc() {
   memcpy(join_req.selected_bss.ssid.data, context_.ssid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = context_.tx_info.channel;
   client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+}
+
+// Verify that we get a signal report when associated.
+TEST_F(AssocTest, SignalReportTest) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+
+  env_->Run();
+
+  EXPECT_EQ(context_.signal_ind_count, 1U);
+  // Verify the plumbing between the firmware and the signal report.
+  EXPECT_EQ(context_.signal_ind_snr, kDefaultSimFwSnr);
+  EXPECT_EQ(context_.signal_ind_rssi, kDefaultSimFwRssi);
 }
 
 void AssocTest::ScheduleCall(void (AssocTest::*fn)(), zx::duration when) {
