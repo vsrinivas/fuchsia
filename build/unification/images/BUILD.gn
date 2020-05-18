@@ -320,7 +320,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/usb/drivers/usb-virtual-bus:usb-virtual-bus-manifest",
     "//src/devices/usb/drivers/virtual-bus-tester:virtual-bus-tester-function-manifest",
     "//src/devices/usb/drivers/virtual-bus-tester:virtual-bus-tester-manifest",
-    "//src/devices/usb/drivers/xhci-rewrite:xhci-manifest",
+    "//src/devices/usb/drivers/xhci:xhci-manifest",
     "//src/graphics/display/drivers/aml-canvas:aml-canvas-manifest",
     "//src/graphics/display/drivers/amlogic-display:amlogic-display-manifest",
     "//src/graphics/display/drivers/display:display-manifest",
