@@ -28,7 +28,10 @@ sdk_shared_library("svc") {
 
   public_configs = [ "//sdk/config" ]
 
-  runtime_deps = [ "//zircon/public/lib/fdio:fdio_sdk" ]
+  runtime_deps = [
+    "//zircon/public/lib/fdio:fdio_sdk",
+    "//zircon/system/ulib/async-default:async-default_sdk",
+  ]
 }
 
 test("svc_unittests") {

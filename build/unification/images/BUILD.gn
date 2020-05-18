@@ -94,7 +94,6 @@ aggregate_manifest("legacy-aux") {
 
   lib_names = [
 #------------------
-    "async-default",
 #------------------
 #------------------
 #------------------

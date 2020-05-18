@@ -14,9 +14,9 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
-    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

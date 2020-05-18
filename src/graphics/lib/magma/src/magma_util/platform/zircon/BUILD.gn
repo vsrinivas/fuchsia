@@ -139,7 +139,7 @@ source_set("connection_client") {
   ]
 
   # Fidl bindings should not introduce a dep on libasync-default.so
-  assert_no_deps = [ "//zircon/public/lib/async-default" ]
+  assert_no_deps = [ "//zircon/system/ulib/async-default" ]
 }
 
 source_set("connection") {
@@ -161,7 +161,7 @@ source_set("connection") {
   ]
 
   # Fidl bindings should not introduce a dep on libasync-default.so
-  assert_no_deps = [ "//zircon/public/lib/async-default" ]
+  assert_no_deps = [ "//zircon/system/ulib/async-default" ]
 }
 
 source_set("device_client") {
@@ -192,7 +192,7 @@ source_set("sysmem_connection") {
   ]
 
   # Fidl bindings should not introduce a dep on libasync-default.so
-  assert_no_deps = [ "//zircon/public/lib/async-default" ]
+  assert_no_deps = [ "//zircon/system/ulib/async-default" ]
 }
 
 source_set("thread") {

@@ -54,7 +54,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-default",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

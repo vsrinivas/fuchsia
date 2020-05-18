@@ -79,6 +79,6 @@ source_set("enclosing_environment") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
     "//sdk/lib/vfs/cpp",
-    "//zircon/public/lib/async-default",
+    "//zircon/system/ulib/async-default",
   ]
 }

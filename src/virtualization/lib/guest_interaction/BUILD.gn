@@ -269,8 +269,8 @@ executable("guest_discovery_service_bin") {
     "//src/virtualization/lib/grpc:grpc",
     "//third_party/grpc:grpc++",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

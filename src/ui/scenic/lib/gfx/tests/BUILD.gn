@@ -279,7 +279,7 @@ executable("mock_pose_buffer_provider_cc") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ui/lib/glm_workaround",
-    "//zircon/public/lib/async-default",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

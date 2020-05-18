@@ -49,9 +49,10 @@ zx_library("async-loop-default") {
   sdk_headers = [ "lib/async-loop/default.h" ]
   shared = false
   sources = [ "default.c" ]
-  deps = [ "//zircon/public/lib/async-default" ]
+  deps = [ "//zircon/system/ulib/async-default" ]
   public_deps = [
     # <lib/async-loop/default.h> has #include <lib/async-loop/loop.h>.
     ":async-loop",
   ]
+  runtime_deps = [ "//zircon/system/ulib/async-default:async-default_sdk" ]
 }

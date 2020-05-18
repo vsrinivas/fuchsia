@@ -15,7 +15,7 @@ source_set("cpp") {
   deps = [
     "//src/lib/fsl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-default",
+    "//zircon/system/ulib/async-default",
   ]
 
   public_deps = [

@@ -1,5 +1,10 @@
 [
   {
+    "label": "//zircon/system/ulib/async-default:async-default",
+    "name": "async-default",
+    "sdk": true
+  },
+  {
     "label": "//zircon/system/ulib/async-loop:async-loop",
     "name": "async-loop",
     "sdk": true
@@ -25,13 +30,13 @@
     "sdk": false
   },
   {
-    "label": "//zircon/system/ulib/trace-engine:trace-engine",
-    "name": "trace-engine",
-    "sdk": false
-  },
-  {
     "label": "//zircon/system/ulib/trace:trace",
     "name": "trace",
     "sdk": true
+  },
+  {
+    "label": "//zircon/system/ulib/trace-engine:trace-engine",
+    "name": "trace-engine",
+    "sdk": false
   }
 ]

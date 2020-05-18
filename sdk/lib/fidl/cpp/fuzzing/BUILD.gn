@@ -17,8 +17,8 @@ source_set("fuzzing") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fuzzing/cpp",
     "//sdk/lib/fuzzing/cpp:traits",
-    "//zircon/public/lib/async-default",
     "//zircon/system/public",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

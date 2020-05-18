@@ -31,7 +31,7 @@ executable("intl_wisdom_client") {
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
     "//third_party/icu:icu",
-    "//zircon/public/lib/async-default",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

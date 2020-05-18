@@ -23,7 +23,7 @@ source_set("future") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-default",
+    "//zircon/system/ulib/async-default",
   ]
 }
 

@@ -19,9 +19,9 @@ source_set("callback") {
 
   public_deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/trace",
   ]
 

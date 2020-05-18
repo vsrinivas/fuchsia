@@ -14,8 +14,8 @@ source_set("input_report_reader") {
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.input.report",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/trace",
   ]
 
