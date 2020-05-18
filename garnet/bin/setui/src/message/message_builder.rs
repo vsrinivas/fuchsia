@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::internal::common::now;
 use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
 use crate::message::base::{Address, MessageAction, MessageType, Payload};
 use crate::message::beacon::BeaconBuilder;
@@ -46,7 +47,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
     /// Consumes the MessageBuilder and sends the message to the MessageHub.
     pub fn send(self) -> Receptor<P, A> {
         let (beacon, receptor) = BeaconBuilder::new(self.messenger.clone()).build();
-        self.messenger.transmit(MessageAction::Send(self.payload, self.message_type), Some(beacon));
+        self.messenger
+            .transmit(MessageAction::Send(self.payload, self.message_type, now()), Some(beacon));
 
         if let Some(forwarder) = self.forwarder {
             ActionFuse::defuse(forwarder.clone());

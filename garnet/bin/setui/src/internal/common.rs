@@ -1,6 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+use chrono::{DateTime, Utc};
+
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
 pub enum Address {}
 
@@ -40,4 +43,11 @@ macro_rules! message_hub_definition {
             }
         }
     };
+}
+
+/// Representation of time used for logging.
+pub type Timestamp = DateTime<Utc>;
+
+pub fn now() -> Timestamp {
+    Utc::now()
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::internal::common::Timestamp;
 use crate::message::beacon::Beacon;
 use crate::message::message_client::MessageClient;
 use crate::message::messenger::{Messenger, MessengerClient};
@@ -112,6 +113,7 @@ pub enum MessageType<P: Payload + 'static, A: Address + 'static> {
 #[derive(Clone, Debug)]
 pub struct Message<P: Payload + 'static, A: Address + 'static> {
     author: Fingerprint<A>,
+    timestamp: Timestamp,
     payload: P,
     message_type: MessageType<P, A>,
     // The return path is generated while the message is passed from messenger
@@ -126,11 +128,13 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
     /// Returns a new Message instance. Only the MessageHub can mint new messages.
     pub(super) fn new(
         author: Fingerprint<A>,
+        timestamp: Timestamp,
         payload: P,
         message_type: MessageType<P, A>,
     ) -> Message<P, A> {
         Message {
             author: author,
+            timestamp: timestamp,
             payload: payload,
             message_type: message_type,
             return_path: vec![],
@@ -140,6 +144,10 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
     /// Adds an entity to be notified on any replies.
     pub(super) fn add_participant(&mut self, participant: Beacon<P, A>) {
         self.return_path.insert(0, participant);
+    }
+
+    pub fn get_timestamp(&self) -> Timestamp {
+        self.timestamp.clone()
     }
 
     pub fn get_author(&self) -> Signature<A> {
@@ -199,7 +207,7 @@ pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
 #[derive(Debug)]
 pub(super) enum MessageAction<P: Payload + 'static, A: Address + 'static> {
     // A new message sent to the specified audience.
-    Send(P, MessageType<P, A>),
+    Send(P, MessageType<P, A>, Timestamp),
     // The message has been forwarded by the current holder.
     Forward(Message<P, A>),
 }

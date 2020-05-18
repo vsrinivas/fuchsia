@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::*;
 use crate::message::message_client::MessageClient;
@@ -458,4 +459,36 @@ async fn test_chained_action_fuse() {
 
     // Then chain reaction
     assert!(!rx2.next().await.is_none());
+}
+
+/// Exercises timestamp value.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_message_timestamp() {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+
+    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (_, mut receptor) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    let init_time = now();
+    messenger.message(ORIGINAL, Audience::Broadcast).send().ack();
+    let post_send_time = now();
+
+    while let Ok(message_event) = receptor.watch().await {
+        if let MessageEvent::Message(incoming_payload, client) = message_event {
+            assert_eq!(ORIGINAL, incoming_payload);
+            let current_time = now();
+            let send_time = client.get_timestamp();
+            // Ensures the event timestamp was not taken before the event
+            assert!(init_time < send_time);
+            // Compared against time right after message was sent to ensure that
+            // timestamp was from the actual send time and not from when the
+            // message was posted in the message hub.
+            assert!(send_time < post_send_time);
+            // Make sure the time stamp was captured before the request for it.
+            assert!(post_send_time < current_time);
+            return;
+        } else {
+            panic!("Should have received the broadcast first");
+        }
+    }
 }

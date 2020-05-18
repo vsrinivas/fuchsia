@@ -339,8 +339,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         let message;
 
         match action {
-            MessageAction::Send(payload, message_type) => {
-                message = Some(Message::new(fingerprint.clone(), payload, message_type));
+            MessageAction::Send(payload, message_type, timestamp) => {
+                message = Some(Message::new(fingerprint.clone(), timestamp, payload, message_type));
             }
             MessageAction::Forward(mut forwarded_message) => {
                 message = Some(forwarded_message.clone());
