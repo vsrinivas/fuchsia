@@ -88,14 +88,17 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
     loggers_ = std::make_unique<ManagedLoggerCollection>(options.name(), nullptr);
   }
 
-  // add network context service:
+  // Add network context service.
   services->AddService(sandbox_env_->network_context().GetHandler());
-
-  // add Bus service:
+  // Add Bus service.
   services->AddService(sandbox_env_->sync_manager().GetHandler());
-
-  // add managed environment itself as a handler
+  // Add managed environment itself as a handler.
   services->AddService(bindings_.GetHandler(this));
+  // Add shared tun service.
+  services->AddService(fidl::InterfaceRequestHandler<fuchsia::net::tun::Control>(
+      [this](fidl::InterfaceRequest<fuchsia::net::tun::Control> request) {
+        sandbox_env_->ConnectNetworkTun(std::move(request));
+      }));
 
   bool disable_klog = !LogListener::IsKlogsEnabled(options);
 

@@ -10,6 +10,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.net.tun.Control",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.sync.SyncManager",

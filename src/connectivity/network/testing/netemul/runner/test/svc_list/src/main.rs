@@ -217,10 +217,11 @@ async fn launch_grandchild() -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    // make sure all services exist!
-    check_service(NetworkContextMarker::NAME)?;
-    check_service(ManagedEnvironmentMarker::NAME)?;
-    check_service(SyncManagerMarker::NAME)?;
+    // Make sure all services exist.
+    let () = check_service(NetworkContextMarker::NAME)?;
+    let () = check_service(ManagedEnvironmentMarker::NAME)?;
+    let () = check_service(SyncManagerMarker::NAME)?;
+    let () = check_service(fidl_fuchsia_net_tun::ControlMarker::NAME)?;
 
     #[derive(StructOpt, Debug)]
     struct Opt {

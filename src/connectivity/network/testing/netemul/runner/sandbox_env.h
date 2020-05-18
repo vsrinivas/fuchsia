@@ -56,9 +56,10 @@ class SandboxEnv {
 
   std::weak_ptr<ManagedEnvironment> guest_env_;
 
+  void ConnectNetworkTun(fidl::InterfaceRequest<fuchsia::net::tun::Control> req);
+
  private:
   void ConnectDevfs(zx::channel req);
-  void ConnectNetworkTun(fidl::InterfaceRequest<fuchsia::net::tun::Control> req);
   std::string default_name_;
   std::shared_ptr<sys::ServiceDirectory> env_services_;
   std::unique_ptr<ServiceHolder> devfs_;
