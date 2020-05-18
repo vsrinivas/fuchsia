@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/json/validate_json.gni")
+import("//build/sdk/sdk_data.gni")
 
 declare_args() {
   # Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -42,6 +43,10 @@ template("modular_config_validate") {
 #   config (required)
 #     This is a file containing configuration for the modular framework.
 #     It will be schema-validated.
+#
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
 template("modular_config") {
   modular_config_validate(target_name + "_validate") {
     forward_variables_from(invoker,
@@ -74,5 +79,14 @@ template("modular_config") {
     outputs = [ "startup.config" ]
 
     deps = config_data_deps
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    sdk_data("${invoker.target_name}_sdk") {
+      category = invoker.sdk_category
+      name = invoker.target_name
+      type = "config"
+      file = invoker.config
+    }
   }
 }
