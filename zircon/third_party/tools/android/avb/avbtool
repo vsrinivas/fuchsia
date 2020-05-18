@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2016, The Android Open Source Project
 #
@@ -23,8 +23,6 @@
 # SOFTWARE.
 #
 """Command-line tool for working with Android Verified Boot images."""
-
-from __future__ import print_function
 
 import argparse
 import binascii
@@ -734,11 +732,12 @@ class ImageHandler(object):
   NUM_CHUNKS_AND_BLOCKS_FORMAT = '<II'
   NUM_CHUNKS_AND_BLOCKS_OFFSET = 16
 
-  def __init__(self, image_filename):
+  def __init__(self, image_filename, read_only=False):
     """Initializes an image handler.
 
     Arguments:
       image_filename: The name of the file to operate on.
+      read_only: True if file is only opened for read-only operations.
 
     Raises:
       ValueError: If data in the file is invalid.
@@ -747,6 +746,7 @@ class ImageHandler(object):
     self._num_total_blocks = 0
     self._num_total_chunks = 0
     self._file_pos = 0
+    self._read_only = read_only
     self._read_header()
 
   def _read_header(self):
@@ -761,7 +761,10 @@ class ImageHandler(object):
     self.is_sparse = False
     self.block_size = 4096
     self._file_pos = 0
-    self._image = open(self.filename, 'r+b')
+    if self._read_only:
+      self._image = open(self.filename, 'rb')
+    else:
+      self._image = open(self.filename, 'r+b')
     self._image.seek(0, os.SEEK_END)
     self.image_size = self._image.tell()
 
@@ -887,8 +890,14 @@ class ImageHandler(object):
 
     Arguments:
       num_bytes: Size in number of bytes of the DONT_CARE chunk.
+
+    Raises
+      OSError: If ImageHandler was initialized in read-only mode.
     """
     assert num_bytes % self.block_size == 0
+
+    if self._read_only:
+      raise OSError('ImageHandler is in read-only mode.')
 
     if not self.is_sparse:
       self._image.seek(0, os.SEEK_END)
@@ -918,8 +927,14 @@ class ImageHandler(object):
 
     Arguments:
       data: Data to append as bytes.
+
+    Raises
+      OSError: If ImageHandler was initialized in read-only mode.
     """
     assert len(data) % self.block_size == 0
+
+    if self._read_only:
+      raise OSError('ImageHandler is in read-only mode.')
 
     if not self.is_sparse:
       self._image.seek(0, os.SEEK_END)
@@ -949,10 +964,16 @@ class ImageHandler(object):
     Arguments:
       fill_data: Fill data to append - must be four bytes.
       size: Number of chunk - must be a multiple of four and the block size.
+
+    Raises
+      OSError: If ImageHandler was initialized in read-only mode.
     """
     assert len(fill_data) == 4
     assert size % 4 == 0
     assert size % self.block_size == 0
+
+    if self._read_only:
+      raise OSError('ImageHandler is in read-only mode.')
 
     if not self.is_sparse:
       self._image.seek(0, os.SEEK_END)
@@ -1053,7 +1074,11 @@ class ImageHandler(object):
 
     Raises:
       ValueError: If desired size isn't a multiple of the block size.
+      OSError: If ImageHandler was initialized in read-only mode.
     """
+    if self._read_only:
+      raise OSError('ImageHandler is in read-only mode.')
+
     if not self.is_sparse:
       self._image.truncate(size)
       self._read_header()
@@ -1421,10 +1446,8 @@ class AvbHashtreeDescriptor(AvbDescriptor):
     o.write('      FEC size:              {} bytes\n'.format(self.fec_size))
     o.write('      Hash Algorithm:        {}\n'.format(self.hash_algorithm))
     o.write('      Partition Name:        {}\n'.format(self.partition_name))
-    o.write('      Salt:                  {}\n'.format(
-        binascii.hexlify(self.salt).decode('ascii')))
-    o.write('      Root Digest:           {}\n'.format(
-        binascii.hexlify(self.root_digest).decode('ascii')))
+    o.write('      Salt:                  {}\n'.format(self.salt.hex()))
+    o.write('      Root Digest:           {}\n'.format(self.root_digest.hex()))
     o.write('      Flags:                 {}\n'.format(self.flags))
 
   def encode(self):
@@ -1471,7 +1494,7 @@ class AvbHashtreeDescriptor(AvbDescriptor):
       image = image_containing_descriptor
     else:
       image_filename = os.path.join(image_dir, self.partition_name + image_ext)
-      image = ImageHandler(image_filename)
+      image = ImageHandler(image_filename, read_only=True)
     # Generate the hashtree and checks that it matches what's in the file.
     digest_size = len(hashlib.new(self.hash_algorithm).digest())
     digest_padding = round_to_pow2(digest_size) - digest_size
@@ -1594,10 +1617,8 @@ class AvbHashDescriptor(AvbDescriptor):
     o.write('      Image Size:            {} bytes\n'.format(self.image_size))
     o.write('      Hash Algorithm:        {}\n'.format(self.hash_algorithm))
     o.write('      Partition Name:        {}\n'.format(self.partition_name))
-    o.write('      Salt:                  {}\n'.format(
-        binascii.hexlify(self.salt).decode('ascii')))
-    o.write('      Digest:                {}\n'.format(
-        binascii.hexlify(self.digest).decode('ascii')))
+    o.write('      Salt:                  {}\n'.format(self.salt.hex()))
+    o.write('      Digest:                {}\n'.format(self.digest.hex()))
     o.write('      Flags:                 {}\n'.format(self.flags))
 
   def encode(self):
@@ -1641,7 +1662,7 @@ class AvbHashDescriptor(AvbDescriptor):
       image = image_containing_descriptor
     else:
       image_filename = os.path.join(image_dir, self.partition_name + image_ext)
-      image = ImageHandler(image_filename)
+      image = ImageHandler(image_filename, read_only=True)
     data = image.read(self.image_size)
     ha = hashlib.new(self.hash_algorithm)
     ha.update(self.salt)
@@ -2175,7 +2196,7 @@ class Avb(object):
     Raises:
       AvbError: If there's no footer in the image.
     """
-    image = ImageHandler(image_filename)
+    image = ImageHandler(image_filename, read_only=True)
     (footer, _, _, _) = self._parse_image(image)
     if not footer:
       raise AvbError('Given image does not have a footer.')
@@ -2371,7 +2392,7 @@ class Avb(object):
       image_filename: Image file to get information from (file object).
       output: Output file to write human-readable information to (file object).
     """
-    image = ImageHandler(image_filename)
+    image = ImageHandler(image_filename, read_only=True)
     o = output
     (footer, header, descriptors, image_size) = self._parse_image(image)
 
@@ -2409,7 +2430,8 @@ class Avb(object):
     o.write('Algorithm:                {}\n'.format(alg_name))
     o.write('Rollback Index:           {}\n'.format(header.rollback_index))
     o.write('Flags:                    {}\n'.format(header.flags))
-    o.write('Rollback Index Location:  {}\n'.format(header.rollback_index_location))
+    o.write('Rollback Index Location:  {}\n'.format(
+        header.rollback_index_location))
     o.write('Release String:           \'{}\'\n'.format(header.release_string))
 
     # Print descriptors.
@@ -2465,7 +2487,7 @@ class Avb(object):
       print('Verifying image {} using embedded public key'.format(
           image_filename))
 
-    image = ImageHandler(image_filename)
+    image = ImageHandler(image_filename, read_only=True)
     (footer, header, descriptors, _) = self._parse_image(image)
     offset = 0
     if footer:
@@ -2558,19 +2580,19 @@ class Avb(object):
     Raises:
       AvbError: If getting the partition digests from the image fails.
     """
-    image = ImageHandler(image_filename)
+    image = ImageHandler(image_filename, read_only=True)
     (_, _, descriptors, _) = self._parse_image(image)
 
     for desc in descriptors:
       if isinstance(desc, AvbHashDescriptor):
-        digest = binascii.hexlify(desc.digest).decode('ascii')
+        digest = desc.digest.hex()
         if json_partitions is not None:
           json_partitions.append({'name': desc.partition_name,
                                   'digest': digest})
         else:
           output.write('{}: {}\n'.format(desc.partition_name, digest))
       elif isinstance(desc, AvbHashtreeDescriptor):
-        digest = binascii.hexlify(desc.root_digest).decode('ascii')
+        digest = desc.root_digest.hex()
         if json_partitions is not None:
           json_partitions.append({'name': desc.partition_name,
                                   'digest': digest})
@@ -2595,7 +2617,7 @@ class Avb(object):
     image_dir = os.path.dirname(image_filename)
     image_ext = os.path.splitext(image_filename)[1]
 
-    image = ImageHandler(image_filename)
+    image = ImageHandler(image_filename, read_only=True)
     (footer, header, descriptors, _) = self._parse_image(image)
     offset = 0
     if footer:
@@ -2612,7 +2634,7 @@ class Avb(object):
       if isinstance(desc, AvbChainPartitionDescriptor):
         ch_image_filename = os.path.join(image_dir,
                                          desc.partition_name + image_ext)
-        ch_image = ImageHandler(ch_image_filename)
+        ch_image = ImageHandler(ch_image_filename, read_only=True)
         (ch_footer, ch_header, _, _) = self._parse_image(ch_image)
         ch_offset = 0
         ch_size = (ch_header.SIZE + ch_header.authentication_data_block_size +
@@ -2624,7 +2646,7 @@ class Avb(object):
         hasher.update(ch_vbmeta_blob)
 
     digest = hasher.digest()
-    output.write('{}\n'.format(binascii.hexlify(digest).decode('ascii')))
+    output.write('{}\n'.format(digest.hex()))
 
   def calculate_kernel_cmdline(self, image_filename, hashtree_disabled, output):
     """Implements the 'calculate_kernel_cmdline' command.
@@ -2635,7 +2657,7 @@ class Avb(object):
       output: Output file to write human-readable information to (file object).
     """
 
-    image = ImageHandler(image_filename)
+    image = ImageHandler(image_filename, read_only=True)
     _, _, descriptors, _ = self._parse_image(image)
 
     image_dir = os.path.dirname(image_filename)
@@ -2646,7 +2668,7 @@ class Avb(object):
       if isinstance(desc, AvbChainPartitionDescriptor):
         ch_image_filename = os.path.join(image_dir,
                                          desc.partition_name + image_ext)
-        ch_image = ImageHandler(ch_image_filename)
+        ch_image = ImageHandler(ch_image_filename, read_only=True)
         _, _, ch_descriptors, _ = self._parse_image(ch_image)
         for ch_desc in ch_descriptors:
           if isinstance(ch_desc, AvbKernelCmdlineDescriptor):
@@ -2758,19 +2780,18 @@ class Avb(object):
 
     """
     c = 'dm="1 vroot none ro 1,'
-    c += '0'  # start
-    c += ' {}'.format((ht.image_size // 512))  # size (# sectors)
-    c += ' verity {}'.format(ht.dm_verity_version)  # type and version
-    c += ' PARTUUID=$(ANDROID_SYSTEM_PARTUUID)'  # data_dev
-    c += ' PARTUUID=$(ANDROID_SYSTEM_PARTUUID)'  # hash_dev
-    c += ' {}'.format(ht.data_block_size)  # data_block
-    c += ' {}'.format(ht.hash_block_size)  # hash_block
+    c += '0'                                                # start
+    c += ' {}'.format((ht.image_size // 512))               # size (# sectors)
+    c += ' verity {}'.format(ht.dm_verity_version)          # type and version
+    c += ' PARTUUID=$(ANDROID_SYSTEM_PARTUUID)'             # data_dev
+    c += ' PARTUUID=$(ANDROID_SYSTEM_PARTUUID)'             # hash_dev
+    c += ' {}'.format(ht.data_block_size)                   # data_block
+    c += ' {}'.format(ht.hash_block_size)                   # hash_block
     c += ' {}'.format(ht.image_size // ht.data_block_size)  # #blocks
     c += ' {}'.format(ht.image_size // ht.data_block_size)  # hash_offset
-    c += ' {}'.format(ht.hash_algorithm)  # hash_alg
-    c += ' {}'.format(
-        binascii.hexlify(ht.root_digest).decode('ascii'))  # root_digest
-    c += ' {}'.format(binascii.hexlify(ht.salt).decode('ascii'))  # salt
+    c += ' {}'.format(ht.hash_algorithm)                    # hash_alg
+    c += ' {}'.format(ht.root_digest.hex())                 # root_digest
+    c += ' {}'.format(ht.salt.hex())                        # salt
     if ht.fec_num_roots > 0:
       c += ' 10'  # number of optional args
       c += ' $(ANDROID_VERITY_MODE)'
@@ -2877,7 +2898,8 @@ class Avb(object):
       # Use the bump logic in AvbVBMetaHeader to calculate the max required
       # version of all included descriptors.
       for image in include_descriptors_from_image:
-        (_, image_header, _, _) = self._parse_image(ImageHandler(image.name))
+        (_, image_header, _, _) = self._parse_image(ImageHandler(
+            image.name, read_only=True))
         tmp_header.bump_required_libavb_version_minor(
             image_header.required_libavb_version_minor)
 
@@ -3053,7 +3075,7 @@ class Avb(object):
     if include_descriptors_from_image:
       descriptors_dict = dict()
       for image in include_descriptors_from_image:
-        image_handler = ImageHandler(image.name)
+        image_handler = ImageHandler(image.name, read_only=True)
         (_, image_vbmeta_header, image_descriptors, _) = self._parse_image(
             image_handler)
         # Bump the required libavb version to support all included descriptors.
@@ -3147,7 +3169,7 @@ class Avb(object):
 
       # Calculate the signature.
       rsa_key = RSAPublicKey(key_path)
-      data_to_sign = header_data_blob + aux_data_blob
+      data_to_sign = header_data_blob + bytes(aux_data_blob)
       binary_signature = rsa_key.sign(algorithm_name, data_to_sign,
                                       signing_helper, signing_helper_with_files)
 
@@ -3609,7 +3631,7 @@ class Avb(object):
         # size as the hash size. Don't populate a random salt if this
         # descriptor is being created to use a persistent digest on device.
         hash_size = digest_size
-        with open('/dev/urandom') as f:
+        with open('/dev/urandom', 'rb') as f:
           salt = f.read(hash_size)
       else:
         salt = b''
