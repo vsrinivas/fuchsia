@@ -4,9 +4,33 @@
 
 #include <zircon/types.h>
 
-#include <unittest/unittest.h>
-
 #include "threads_impl.h"
+
+#define BEGIN_TEST
+
+#define END_TEST return true
+
+#define ASSERT_EQ(lhs, rhs, msg) \
+  if ((lhs) != (rhs)) {          \
+    return false;                \
+  }                              \
+
+#define ASSERT_GE(lhs, rhs, msg) \
+  if ((lhs) < (rhs)) {           \
+    return false;                \
+  }                              \
+
+#define BEGIN_TEST_CASE(name)
+
+#define END_TEST_CASE(name)
+
+#define RUN_TEST(function_name)     \
+  int main(int argc, char** argv) { \
+    if (!function_name()) {         \
+      return 1;                     \
+    }                               \
+    return 0;                       \
+  }                                 \
 
 static bool stdio_handle_to_tid_mapping(void) {
   BEGIN_TEST;
