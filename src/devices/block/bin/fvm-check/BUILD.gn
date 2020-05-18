@@ -14,7 +14,7 @@ executable("fvm-check") {
   }
   sources = [ "main.cc" ]
   deps = [
-    "//zircon/public/lib/boringssl",
+    "//third_party/boringssl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

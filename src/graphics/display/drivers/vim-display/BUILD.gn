@@ -23,7 +23,7 @@ source_set("common") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
-    "//zircon/public/lib/boringssl",
+    "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
