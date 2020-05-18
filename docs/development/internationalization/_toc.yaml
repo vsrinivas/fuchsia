@@ -1,6 +1,3 @@
-# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
-# before making changes to this file, and add a member of the fuchsia.dev
-# team as reviewer.
 toc:
 - title: "Internationalization"
   path: /docs/development/internationalization/README.md
@@ -15,3 +12,6 @@ toc:
 - title: "Fonts"
   section:
   - include: /docs/development/internationalization/fonts/_toc.yaml
+- title: "Localization"
+  section:
+  - include: /docs/development/internationalization/localization/_toc.yaml
