@@ -16,37 +16,39 @@ import (
 func Parse(stdout []byte) []TestCaseResult {
 	lines := bytes.Split(stdout, []byte{'\n'})
 	res := []*regexp.Regexp{
+		dartSystemTestPreamblePattern,
 		ftfTestPreamblePattern,
 		googleTestPreamblePattern,
 		goTestPreamblePattern,
 		rustTestPreamblePattern,
 		zirconUtestPreamblePattern,
 	}
-	match := firstMatch(lines, res)
+	remaining_lines, match := firstMatch(lines, res)
 	switch match {
+	case dartSystemTestPreamblePattern:
+		return parseDartSystemTest(remaining_lines)
 	case ftfTestPreamblePattern:
 		return parseFtfTest(lines)
 	case googleTestPreamblePattern:
-		return parseGoogleTest(lines)
+		return parseGoogleTest(remaining_lines)
 	case goTestPreamblePattern:
-		return parseGoTest(lines)
+		return parseGoTest(remaining_lines)
 	case rustTestPreamblePattern:
-		return parseRustTest(lines)
+		return parseRustTest(remaining_lines)
 	case zirconUtestPreamblePattern:
-		return parseZirconUtest(lines)
-	// TODO(shayba): add support for more test frameworks
+		return parseZirconUtest(remaining_lines)
 	default:
 		return []TestCaseResult{}
 	}
 }
 
-func firstMatch(lines [][]byte, res []*regexp.Regexp) *regexp.Regexp {
-	for _, line := range lines {
+func firstMatch(lines [][]byte, res []*regexp.Regexp) ([][]byte, *regexp.Regexp) {
+	for num, line := range lines {
 		for _, re := range res {
 			if re.Match(line) {
-				return re
+				return lines[num:], re
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }

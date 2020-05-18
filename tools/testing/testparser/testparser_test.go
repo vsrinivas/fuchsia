@@ -28,7 +28,7 @@ func testCase(t *testing.T, stdout string, want string) {
 	if !bytes.Equal(actual, compactJson([]byte(want))) {
 		actualIndented := string(indentJson(actual))
 		wantIndented := string(indentJson([]byte(want)))
-		t.Errorf("Parse(stdout) = `\n%v\n`; want `\n%v\n``", actualIndented, wantIndented)
+		t.Errorf("Parse(stdout) = `\n%v\n`; want `\n%v\n`", actualIndented, wantIndented)
 	}
 }
 
@@ -766,6 +766,108 @@ ok 61 fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logs_integratio
                         "format": "Rust"
                 }
         ]
+`
+	testCase(t, stdout, want)
+}
+
+func TestParseDartSystemTest(t *testing.T) {
+	stdout := `
+[----------] Test results JSON:
+{
+  "bqTableName": "e2etest",
+  "bqDatasetName": "e2e_test_data",
+  "bqProjectName": "fuchsia-infra",
+  "buildID": "8880180380045754528",
+  "startTime": "2020-05-16 02:44:33.519488",
+  "buildBucketInfo": {
+    "user": null,
+    "botID": "fuchsia-internal-try-n1-1-ssd0-us-central1-c-37-za5b",
+    "builderName": "foo",
+    "buildID": "8880180380045754528",
+    "changeNumber": null,
+    "gcsBucket": "paper-crank-rogue-raft",
+    "reason": "",
+    "repository": "foo",
+    "startTime": "2020-05-16 02:44:33.519488"
+  },
+  "testGroups": [
+    {
+      "name": "foo_test/group1",
+      "result": "PASSED",
+      "startTime": "2020-05-16 03:17:20.987638",
+      "loginMode": "NOT_RUN",
+      "retries": 0,
+      "durationInSeconds": 87,
+      "testCases": [
+        {
+          "name": "test1",
+          "result": "PASSED",
+          "startTime": "2020-05-16 03:17:25.745931",
+          "loginMode": "NOT_RUN",
+          "retries": 0,
+          "durationInSeconds": 52,
+          "customFields": [
+            {
+              "key": "device_name",
+              "value": "paper-crank-rogue-raft"
+            },
+            {
+              "key": "transcript",
+              "value": "foo"
+            }
+          ]
+        },
+        {
+          "name": "test2",
+          "result": "FAILED",
+          "startTime": "2020-05-16 03:18:18.197664",
+          "loginMode": "NOT_RUN",
+          "retries": 0,
+          "durationInSeconds": 30,
+          "customFields": [
+            {
+              "key": "device_name",
+              "value": "paper-crank-rogue-raft"
+            },
+            {
+              "key": "transcript",
+              "value": "foo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "foo_test/group2",
+      "result": "PASSED",
+      "startTime": "2020-05-16 03:17:18.291768",
+      "loginMode": "UNKNOWN",
+      "retries": 0,
+      "durationInSeconds": 90,
+      "testCases": []
+    }
+  ]
+}
+`
+	want := `
+[
+	{
+		"display_name": "foo_test/group1.test1",
+		"suite_name": "foo_test/group1",
+		"case_name": "test1",
+		"status": "Pass",
+		"duration_nanos": 52000000000,
+		"format": "dart_system_test"
+	},
+	{
+		"display_name": "foo_test/group1.test2",
+		"suite_name": "foo_test/group1",
+		"case_name": "test2",
+		"status": "Fail",
+		"duration_nanos": 30000000000,
+		"format": "dart_system_test"
+	}
+]
 `
 	testCase(t, stdout, want)
 }
