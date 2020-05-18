@@ -15,10 +15,8 @@ import("//build/sdk/sdk_atom.gni")
 #   name (required)
 #     Name of the data set in the SDK.
 #
-#   files (required)
-#     List of scopes describing the data files to add to SDKs.
-#     See "File scopes" in //build/sdk/sdk_atom.gni for a description of the
-#     scope format.
+#   file (required)
+#     Path to the data file to add to the SDK.
 #
 #   type (required)
 #     Type of the data set in the SDK.
@@ -27,30 +25,49 @@ import("//build/sdk/sdk_atom.gni")
 template("sdk_data") {
   assert(defined(invoker.category), "Must define an SDK category")
   assert(defined(invoker.name), "Must define an SDK name")
-  assert(defined(invoker.files), "Must add documentation files")
+  assert(defined(invoker.file), "Must add data file path")
   assert(defined(invoker.type), "Must define a data type")
+  assert(invoker.type == "config" || invoker.type == "license",
+         "Type must be one of [config, license]")
 
-  sdk_files = []
-  foreach(file, invoker.files) {
-    sdk_files += [ file.dest ]
+  # The directory structure will look as follows:
+  # > data/
+  #   > config/
+  #     > ${invoker.name}/
+  #       > config.json
+  #       > meta.json
+  #   > license/
+  #     > ${invoker.name}/
+  #       > LICENSE
+  #       > meta.json
+  file_base = "data/${invoker.type}/${invoker.name}/"
+  file_dest = ""
+  if (invoker.type == "config") {
+    file_dest = file_base + "config.json"
+  } else if (invoker.type == "license") {
+    file_dest = file_base + "LICENSE"
   }
+  meta_dest = file_base + "meta.json"
 
   sdk_atom(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "category",
-                             "files",
-                           ])
+    forward_variables_from(invoker, [ "category" ])
 
     id = "sdk://data/${invoker.name}"
 
+    files = [
+      {
+        source = invoker.file
+        dest = file_dest
+      },
+    ]
+
     meta = {
       schema = "data"
-      dest = "data/${invoker.type}/${invoker.name}.json"
+      dest = meta_dest
       value = {
         type = "${invoker.type}"
         name = invoker.name
-        data = sdk_files
+        data = [ file_dest ]
       }
     }
   }
