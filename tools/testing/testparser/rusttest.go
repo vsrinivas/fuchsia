@@ -11,7 +11,7 @@ import (
 
 var (
 	rustTestPreamblePattern = regexp.MustCompile(`^running \d* tests?$`)
-	rustTestCasePattern     = regexp.MustCompile(`^test (.*?)::(.*?) \.\.\. (\w*)$`)
+	rustTestCasePattern     = regexp.MustCompile(`^test (?:(.*?)::)?(.*?) \.\.\. (\w*)$`)
 )
 
 func parseRustTest(lines [][]byte) []TestCaseResult {
@@ -24,7 +24,10 @@ func parseRustTest(lines [][]byte) []TestCaseResult {
 		}
 		suiteName := m[1]
 		caseName := m[2]
-		displayName := fmt.Sprintf("%s::%s", suiteName, caseName)
+		displayName := caseName
+		if suiteName != "" {
+			displayName = fmt.Sprintf("%s::%s", suiteName, caseName)
+		}
 		var status TestCaseStatus
 		switch m[3] {
 		case "ok":

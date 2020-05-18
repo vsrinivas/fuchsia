@@ -695,3 +695,54 @@ ok 9 fuchsia-pkg://fuchsia.com/audio_pipeline_tests#meta/audio_pipeline_tests.cm
 `
 	testCase(t, stdout, want)
 }
+
+// Regression test for fxb/52363
+func TestFxb52363(t *testing.T) {
+	stdout := `
+Running test in realm: test_env_25300c08
+running 4 tests
+test listen_for_klog ... ok
+test listen_for_syslog ... ok
+test listen_for_klog_routed_stdio ... ok
+test test_observer_stop_api ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+ok 61 fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logs_integration_rust_tests.cmx (1.04732004s)
+`
+	want := `
+        [
+                {
+                        "display_name": "listen_for_klog",
+                        "suite_name": "",
+                        "case_name": "listen_for_klog",
+                        "status": "Pass",
+                        "duration_nanos": 0,
+                        "format": "Rust"
+                },
+                {
+                        "display_name": "listen_for_syslog",
+                        "suite_name": "",
+                        "case_name": "listen_for_syslog",
+                        "status": "Pass",
+                        "duration_nanos": 0,
+                        "format": "Rust"
+                },
+                {
+                        "display_name": "listen_for_klog_routed_stdio",
+                        "suite_name": "",
+                        "case_name": "listen_for_klog_routed_stdio",
+                        "status": "Pass",
+                        "duration_nanos": 0,
+                        "format": "Rust"
+                },
+                {
+                        "display_name": "test_observer_stop_api",
+                        "suite_name": "",
+                        "case_name": "test_observer_stop_api",
+                        "status": "Pass",
+                        "duration_nanos": 0,
+                        "format": "Rust"
+                }
+        ]
+`
+	testCase(t, stdout, want)
+}
