@@ -21,18 +21,20 @@ use std::str::from_utf8;
 
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
-    const BAD_IN_EXTENSION: &str = "Input file does not have the component manifest language \
-                                    extension (.cml)";
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
-        _ => Err(Error::invalid_args(BAD_IN_EXTENSION)),
+        _ => Err(Error::invalid_args(format!(
+            "Input file {:?} does not have the component manifest language extension (.cml)",
+            file
+        ))),
     }?;
-    const BAD_OUT_EXTENSION: &str =
-        "Output file does not have the component manifest extension (.cm)";
     if let Some(ref path) = output {
         match path.extension().and_then(|e| e.to_str()) {
             Some("cm") => Ok(()),
-            _ => Err(Error::invalid_args(BAD_OUT_EXTENSION)),
+            _ => Err(Error::invalid_args(format!(
+                "Output file {:?} does not have the component manifest language extension (.cml)",
+                path
+            ))),
         }?;
     }
 
