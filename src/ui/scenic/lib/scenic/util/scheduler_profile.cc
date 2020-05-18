@@ -36,7 +36,7 @@ zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx
 
   fuchsia::scheduler::ProfileProvider_SyncProxy provider{std::move(channel1)};
 
-  zx_status_t fidl_status;
+  zx_status_t fidl_status = ZX_OK;
   zx::profile profile;
   status = provider.GetDeadlineProfile(capacity.get(), deadline.get(), period.get(), "scenic/main",
                                        &fidl_status, &profile);
