@@ -105,6 +105,8 @@ class PrimaryLayer : public VirtualLayer {
  public:
   explicit PrimaryLayer(Display* display);
   explicit PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors = false);
+  explicit PrimaryLayer(const fbl::Vector<Display>& displays, uint32_t fgcolor, uint32_t bgcolor,
+                        bool mirrors = false);
 
   // Set* methods to configure the layer.
   void SetImageDimens(uint32_t width, uint32_t height) {
@@ -163,6 +165,10 @@ class PrimaryLayer : public VirtualLayer {
   uint32_t image_width_ = 0;
   uint32_t image_height_ = 0;
   uint32_t image_format_ = 0;
+  bool override_colors_ = false;
+  uint32_t fgcolor_;
+  uint32_t bgcolor_;
+
   ::llcpp::fuchsia::hardware::display::Frame src_frame_ = {};
   ::llcpp::fuchsia::hardware::display::Frame dest_frame_ = {};
   typedef ::llcpp::fuchsia::hardware::display::Transform Transform;

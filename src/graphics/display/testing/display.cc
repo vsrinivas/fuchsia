@@ -71,7 +71,7 @@ void Display::Dump() {
   printf("\n");
 }
 
-void Display::Init(fhd::Controller::SyncClient* dc) {
+void Display::Init(fhd::Controller::SyncClient* dc, ColorCorrectionArgs color_correction_args) {
   if (mode_idx_ != 0) {
     ZX_ASSERT(dc->SetDisplayMode(id_, modes_[mode_idx_]).ok());
   }
@@ -82,6 +82,11 @@ void Display::Init(fhd::Controller::SyncClient* dc) {
     ::fidl::Array<float, 9> grayscale = {
         .2126f, .7152f, .0722f, .2126f, .7152f, .0722f, .2126f, .7152f, .0722f,
     };
+    ZX_ASSERT(dc->SetDisplayColorConversion(id_, preoffsets, grayscale, postoffsets).ok());
+  } else if (apply_color_correction_) {
+    ::fidl::Array<float, 3> preoffsets = color_correction_args.preoffsets;
+    ::fidl::Array<float, 3> postoffsets = color_correction_args.postoffsets;
+    ::fidl::Array<float, 9> grayscale = color_correction_args.coeff;
     ZX_ASSERT(dc->SetDisplayColorConversion(id_, preoffsets, grayscale, postoffsets).ok());
   }
 }

@@ -6,6 +6,9 @@
 
 #include <float.h>
 #include <math.h>
+#include <stdint.h>
+
+#include <algorithm>
 
 #include <ddk/debug.h>
 #include <ddktl/device.h>
@@ -41,6 +44,16 @@ unsigned int osd_filter_coefs_bicubic[] = {
     0xf87218fe, 0xf8701afe, 0xf76f1dfd, 0xf76d1ffd, 0xf76b21fd, 0xf76824fd, 0xf76627fc,
     0xf76429fc, 0xf7612cfc, 0xf75f2ffb, 0xf75d31fb, 0xf75a34fb, 0xf75837fa, 0xf7553afa,
     0xf8523cfa, 0xf8503ff9, 0xf84d42f9, 0xf84a45f9, 0xf84848f8};
+
+constexpr uint32_t kFloatToFixed3_10ScaleFactor = 1024;
+constexpr int32_t kMaxFloatToFixed3_10 = (4 * kFloatToFixed3_10ScaleFactor) - 1;
+constexpr int32_t kMinFloatToFixed3_10 = -4 * kFloatToFixed3_10ScaleFactor;
+constexpr uint32_t kFloatToFixed3_10Mask = 0x1FFF;
+
+constexpr uint32_t kFloatToFixed2_10ScaleFactor = 1024;
+constexpr int32_t kMaxFloatToFixed2_10 = (2 * kFloatToFixed2_10ScaleFactor) - 1;
+constexpr int32_t kMinFloatToFixed2_10 = -2 * kFloatToFixed2_10ScaleFactor;
+constexpr uint32_t kFloatToFixed2_10Mask = 0xFFF;
 
 }  // namespace
 
@@ -145,32 +158,22 @@ zx_status_t Osd::Configure() {
   return ZX_OK;
 }
 
-// TODO(payamm): Vendor spec does not indicate range. However (-1024 1024) seems
-// to be the correct range based on experimentation.
-uint32_t Osd::FloatToOffset(float f) {
-  uint32_t offset_val = 0;
-  if (f < 0) {
-    offset_val |= (1 << 11);
-    f *= -1;
-  }
-  ZX_DEBUG_ASSERT(0 <= f && f < 1.0f);
+uint32_t Osd::FloatToFixed2_10(float f) {
+  auto fixed_num = static_cast<int32_t>(round(f * kFloatToFixed2_10ScaleFactor));
 
-  // convert [0 1) --> [0 1024)
-  f *= 1024;
-  offset_val |= static_cast<uint32_t>(f);
-  return offset_val;
+  // Amlogic hardware accepts values [-2 2). Let's make sure the result is within this range.
+  // If not, clamp it
+  fixed_num = std::clamp(fixed_num, kMinFloatToFixed2_10, kMaxFloatToFixed2_10);
+  return fixed_num & kFloatToFixed2_10Mask;
 }
 
-// TODO(payamm): Improve performance and accuracy if needed
 uint32_t Osd::FloatToFixed3_10(float f) {
-  uint32_t fixed_num = 0;
-  if (f < 0) {
-    f *= -1;
-    fixed_num |= (1 << 12);
-  }
-  fixed_num |= static_cast<uint32_t>((round(f * (1 << 10))));
-  fixed_num &= 0x1fff;
-  return fixed_num;
+  auto fixed_num = static_cast<int32_t>(round(f * kFloatToFixed3_10ScaleFactor));
+
+  // Amlogic hardware accepts values [-4 4). Let's make sure the result is within this range.
+  // If not, clamp it
+  fixed_num = std::clamp(fixed_num, kMinFloatToFixed3_10, kMaxFloatToFixed3_10);
+  return fixed_num & kFloatToFixed3_10Mask;
 }
 
 void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
@@ -208,23 +211,23 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     // Load PreOffset values (or 0 if none entered)
     SetRdmaTableValue(rdma_channel, IDX_MATRIX_PRE_OFFSET0_1,
                       config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                          ? (FloatToOffset(config->cc_preoffsets[0]) << 16 |
-                             FloatToOffset(config->cc_preoffsets[1]) << 0)
+                          ? (FloatToFixed2_10(config->cc_preoffsets[0]) << 16 |
+                             FloatToFixed2_10(config->cc_preoffsets[1]) << 0)
                           : 0);
     SetRdmaTableValue(rdma_channel, IDX_MATRIX_PRE_OFFSET2,
                       config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                          ? (FloatToOffset(config->cc_preoffsets[2]) << 0)
+                          ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
                           : 0);
 
     // Load PostOffset values (or 0 if none entered)
     SetRdmaTableValue(rdma_channel, IDX_MATRIX_OFFSET0_1,
                       config->cc_flags & COLOR_CONVERSION_POSTOFFSET
-                          ? (FloatToOffset(config->cc_postoffsets[0]) << 16 |
-                             FloatToOffset(config->cc_postoffsets[1]) << 0)
+                          ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
+                             FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
                           : 0);
     SetRdmaTableValue(rdma_channel, IDX_MATRIX_OFFSET2,
                       config->cc_flags & COLOR_CONVERSION_POSTOFFSET
-                          ? (FloatToOffset(config->cc_postoffsets[2]) << 0)
+                          ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
                           : 0);
 
     float identity[3][3] = {

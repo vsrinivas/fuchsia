@@ -296,9 +296,21 @@ protocol Controller {
     //
     // where pixel is a column vector consisting of the pixel's 3 components.
     //
-    // `coefficients` is passed in row-major order. If the first entry of an
-    // array is NaN, the array is treated as the identity element for the relevant
-    // operation.
+    // `coefficients` is passed in row-major order. If the first entry of an array is NaN, the
+    // array is treated as the identity element for the relevant operation.
+    // Hardware that support color correction generally accept a limited range of coefficient
+    // values. Coefficients in the range of [-2, 2] inclusive will be accepted by most
+    // hardware. The hardware driver will clamp values that are outside its accetable range.
+    //
+    // `preoffsets`, `postoffsets`: Clients are encourged to produce color correction values that
+    // do not depend on pre and post offsets since some hardware do not have support for that.
+    // For cases where pre and post offset values need to be used, the range should be limited to
+    // (-1, 1) exclusive as confirmed by CheckConfig API. Values outside this range will be
+    // rejected.
+    //
+    // Clients are encouraged to use the CheckConfig API to confirm support for correction
+    // corection and to validate their color correction input values.
+    //
     SetDisplayColorConversion(uint64 display_id,
                               array<float32>:3 preoffsets,
                               array<float32>:9 coefficients,

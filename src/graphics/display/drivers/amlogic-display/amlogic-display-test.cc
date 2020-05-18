@@ -9,6 +9,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
+#include "osd.h"
 #include "zxtest/zxtest.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
@@ -55,4 +56,32 @@ TEST(AmlogicDisplay, SysmemRequirements) {
   loop.RunUntilIdle();
   EXPECT_TRUE(collection.set_constraints_called());
   EXPECT_TRUE(collection.set_name_called());
+}
+
+TEST(AmlogicDisplay, FloatToFix3_10) {
+  amlogic_display::Osd osd = amlogic_display::Osd(100, 100, 100, 100);
+  EXPECT_EQ(0x0000, osd.FloatToFixed3_10(0.0f));
+  EXPECT_EQ(0x0066, osd.FloatToFixed3_10(0.1f));
+  EXPECT_EQ(0x1f9a, osd.FloatToFixed3_10(-0.1f));
+  // Test for maximum positive (<4)
+  EXPECT_EQ(0x0FFF, osd.FloatToFixed3_10(4.0f));
+  EXPECT_EQ(0x0FFF, osd.FloatToFixed3_10(40.0f));
+  EXPECT_EQ(0x0FFF, osd.FloatToFixed3_10(3.9999f));
+  // Test for minimum negative (>= -4)
+  EXPECT_EQ(0x1000, osd.FloatToFixed3_10(-4.0f));
+  EXPECT_EQ(0x1000, osd.FloatToFixed3_10(-14.0f));
+}
+
+TEST(AmlogicDisplay, FloatToFixed2_10) {
+  amlogic_display::Osd osd = amlogic_display::Osd(100, 100, 100, 100);
+  EXPECT_EQ(0x0000, osd.FloatToFixed2_10(0.0f));
+  EXPECT_EQ(0x0066, osd.FloatToFixed2_10(0.1f));
+  EXPECT_EQ(0x0f9a, osd.FloatToFixed2_10(-0.1f));
+  // Test for maximum positive (<2)
+  EXPECT_EQ(0x07FF, osd.FloatToFixed2_10(2.0f));
+  EXPECT_EQ(0x07FF, osd.FloatToFixed2_10(20.0f));
+  EXPECT_EQ(0x07FF, osd.FloatToFixed2_10(1.9999f));
+  // Test for minimum negative (>= -2)
+  EXPECT_EQ(0x0800, osd.FloatToFixed2_10(-2.0f));
+  EXPECT_EQ(0x0800, osd.FloatToFixed2_10(-14.0f));
 }

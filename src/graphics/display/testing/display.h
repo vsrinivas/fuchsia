@@ -15,11 +15,19 @@
 namespace testing {
 namespace display {
 
+struct ColorCorrectionArgs {
+  ::fidl::Array<float, 3> preoffsets = {nanf("pre"), 0.0, 0.0};
+  ::fidl::Array<float, 3> postoffsets = {nanf("post"), 0.0, 0.0};
+  ::fidl::Array<float, 9> coeff = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+};
+
 class Display {
  public:
   Display(const ::llcpp::fuchsia::hardware::display::Info& info);
 
   void Init(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc);
+  void Init(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc,
+            ColorCorrectionArgs color_correction_args = ColorCorrectionArgs());
 
   zx_pixel_format_t format() const { return pixel_formats_[format_idx_]; }
   ::llcpp::fuchsia::hardware::display::Mode mode() const { return modes_[mode_idx_]; }
@@ -36,13 +44,15 @@ class Display {
     return mode_idx_ < modes_.size();
   }
 
-  void set_grayscale(bool grayscale) { grayscale_ = grayscale; }
+  void set_grayscale(bool grayscale) { apply_color_correction_ = grayscale_ = grayscale; }
+  void apply_color_correction(bool apply) { apply_color_correction_ = apply; }
 
   void Dump();
 
  private:
   uint32_t format_idx_ = 0;
   uint32_t mode_idx_ = 0;
+  bool apply_color_correction_ = false;
   bool grayscale_ = false;
 
   uint64_t id_;

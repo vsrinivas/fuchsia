@@ -74,6 +74,13 @@ class Osd {
   void Dump();
   void Release();
 
+  // This function converts a float into Signed fixed point 3.10 format
+  // [12][11:10][9:0] = [sign][integer][fraction]
+  static uint32_t FloatToFixed3_10(float f);
+  // This function converts a float into Signed fixed point 2.10 format
+  // [11][10][9:0] = [sign][integer][fraction]
+  static uint32_t FloatToFixed2_10(float f);
+
  private:
   void DefaultSetup();
   // this function sets up scaling based on framebuffer and actual display
@@ -86,9 +93,6 @@ class Osd {
   void FlushRdmaTable(uint32_t channel);
   int GetNextAvailableRdmaChannel();
   int RdmaThread();
-  // This function converts a float into Fixed Point 3.10 format
-  uint32_t FloatToFixed3_10(float f);
-  uint32_t FloatToOffset(float f);
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   pdev_protocol_t pdev_ = {nullptr, nullptr};
   zx::bti bti_;

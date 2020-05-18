@@ -568,14 +568,20 @@ void capture_release() {
 void usage(void) {
   printf(
       "Usage: display-test [OPTIONS]\n\n"
-      "--controller N   : open controller N [/dev/class/display-controller/N]\n"
-      "--dump           : print properties of attached display\n"
-      "--mode-set D N   : Set Display D to mode N (use dump option for choices)\n"
-      "--format-set D N : Set Display D to format N (use dump option for choices)\n"
-      "--grayscale      : Display images in grayscale mode (default off)\n"
-      "--num-frames N   : Run test in N number of frames (default 120)\n"
-      "--delay N        : Add delay (ms) between Vsync complete and next configuration\n"
-      "--capture        : Capture each display frame and verify\n"
+      "--controller N           : open controller N [/dev/class/display-controller/N]\n"
+      "--dump                   : print properties of attached display\n"
+      "--mode-set D N           : Set Display D to mode N (use dump option for choices)\n"
+      "--format-set D N         : Set Display D to format N (use dump option for choices)\n"
+      "--grayscale              : Display images in grayscale mode (default off)\n"
+      "--num-frames N           : Run test in N number of frames (default 120)\n"
+      "--delay N                : Add delay (ms) between Vsync complete and next configuration\n"
+      "--capture                : Capture each display frame and verify\n"
+      "--fgcolor 0xaarrggbb     : Set foreground color\n"
+      "--bgcolor 0xaarrggbb     : Set background color\n"
+      "--preoffsets x,y,z       : set preoffsets for color correction\n"
+      "--postoffsets x,y,z      : set postoffsets for color correction\n"
+      "--coeff c00,c01,...,,c22 : 3x3 coefficient matrix for color correction\n"
+
       "\nTest Modes:\n\n"
       "--bundle N       : Run test from test bundle N as described below\n\n"
       "                   bundle %d: Display a single pattern using single buffer\n"
@@ -689,13 +695,19 @@ int main(int argc, const char* argv[]) {
   argc--;
   argv++;
 
+  uint32_t fgcolor_rgba = 0xffff0000;  // red (default)
+  uint32_t bgcolor_rgba = 0xffffffff;  // white (default)
+  bool use_color_correction = false;
+  testing::display::ColorCorrectionArgs color_correction_args;
+
   while (argc) {
     if (strcmp(argv[0], "--dump") == 0) {
       for (auto& display : displays) {
         display.Dump();
       }
       return 0;
-    } else if (strcmp(argv[0], "--mode-set") == 0 || strcmp(argv[0], "--format-set") == 0) {
+    }
+    if (strcmp(argv[0], "--mode-set") == 0 || strcmp(argv[0], "--format-set") == 0) {
       Display* display = find_display(displays, argv[1]);
       if (!display) {
         printf("Invalid display \"%s\" for %s\n", argv[1], argv[0]);
@@ -746,6 +758,35 @@ int main(int argc, const char* argv[]) {
       verify_capture = true;
       argv += 1;
       argc -= 1;
+    } else if (strcmp(argv[0], "--fgcolor") == 0) {
+      fgcolor_rgba = static_cast<uint32_t>(strtoul(argv[1], nullptr, 16));
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--bgcolor") == 0) {
+      bgcolor_rgba = static_cast<uint32_t>(strtoul(argv[1], nullptr, 16));
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--preoffsets") == 0) {
+      sscanf(argv[1], "%f,%f,%f", &color_correction_args.preoffsets[0],
+             &color_correction_args.preoffsets[1], &color_correction_args.preoffsets[2]);
+      use_color_correction = true;
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--postoffsets") == 0) {
+      sscanf(argv[1], "%f,%f,%f", &color_correction_args.postoffsets[0],
+             &color_correction_args.postoffsets[1], &color_correction_args.postoffsets[2]);
+      use_color_correction = true;
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--coeff") == 0) {
+      sscanf(argv[1], "%f,%f,%f,%f,%f,%f,%f,%f,%f", &color_correction_args.coeff[0],
+             &color_correction_args.coeff[1], &color_correction_args.coeff[2],
+             &color_correction_args.coeff[3], &color_correction_args.coeff[4],
+             &color_correction_args.coeff[5], &color_correction_args.coeff[6],
+             &color_correction_args.coeff[7], &color_correction_args.coeff[8]);
+      use_color_correction = true;
+      argv += 2;
+      argc -= 2;
     } else if (strcmp(argv[0], "--help") == 0) {
       usage();
       return 0;
@@ -753,6 +794,12 @@ int main(int argc, const char* argv[]) {
       printf("Unrecognized argument \"%s\"\n", argv[0]);
       usage();
       return -1;
+    }
+  }
+
+  if (use_color_correction) {
+    for (auto& d : displays) {
+      d.apply_color_correction(true);
     }
   }
 
@@ -869,7 +916,8 @@ int main(int argc, const char* argv[]) {
     layers.push_back(std::move(layer4));
   } else if (testbundle == FLIP) {
     // Amlogic display test
-    std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
+    std::unique_ptr<PrimaryLayer> layer1 =
+        fbl::make_unique_checked<PrimaryLayer>(&ac, displays, fgcolor_rgba, bgcolor_rgba);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -879,7 +927,7 @@ int main(int argc, const char* argv[]) {
     // Simple display test
     bool mirrors = true;
     std::unique_ptr<PrimaryLayer> layer1 =
-        fbl::make_unique_checked<PrimaryLayer>(&ac, displays, mirrors);
+        fbl::make_unique_checked<PrimaryLayer>(&ac, displays, fgcolor_rgba, bgcolor_rgba, mirrors);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -896,7 +944,7 @@ int main(int argc, const char* argv[]) {
   }
 
   for (auto& display : displays) {
-    display.Init(dc.get());
+    display.Init(dc.get(), color_correction_args);
   }
 
   if (capture && layers.size() > 1) {

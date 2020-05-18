@@ -104,13 +104,24 @@ PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, bool mirrors)
   SetImageDimens(width_, height_);
 }
 
+PrimaryLayer::PrimaryLayer(const fbl::Vector<Display>& displays, uint32_t fgcolor, uint32_t bgcolor,
+                           bool mirrors)
+    : VirtualLayer(displays, !mirrors), fgcolor_(fgcolor), bgcolor_(bgcolor), mirrors_(mirrors) {
+  override_colors_ = true;
+  image_format_ = displays_[0]->format();
+  SetImageDimens(width_, height_);
+}
+
 bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
   if ((displays_.size() > 1 || rotates_) && scaling_) {
     printf("Unsupported config\n");
     return false;
   }
-  uint32_t fg_color = get_fg_color();
+  uint32_t fg_color = override_colors_ ? fgcolor_ : get_fg_color();
   uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
+  if (override_colors_) {
+    bg_color = alpha_enable_ ? (0x3f000000 | (bgcolor_ & 0x00ffffff)) : bgcolor_;
+  }
 
   images_[0] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
                              intel_y_tiling_);
