@@ -46,14 +46,6 @@ enum IncomingService {
 #[derive(Debug, FromArgs)]
 #[argh(name = "dhcpd")]
 pub struct Args {
-    /// the identifier used to access fuchsia.stash.Store. dhcpd will attempt to access its
-    /// configuration parameters, saved DHCP option values, and saved leases from the
-    /// fuchsia.stash.Store instance specified by this identifier. If there are no configuration
-    /// parameters etc. at the specified fuchsia.stash.Store instance, then dhcpd will fallback to
-    /// parameters stored in the default configuration file.
-    #[argh(option, default = "DEFAULT_STASH_ID.to_string()")]
-    pub stash: String,
-
     /// the path to the default configuration file consumed by dhcpd if it was unable to access a
     /// fuchsia.stash.Store instance.
     #[argh(option, default = "DEFAULT_CONFIG_PATH.to_string()")]
@@ -64,8 +56,8 @@ pub struct Args {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["dhcpd"])?;
 
-    let Args { config, stash } = argh::from_env();
-    let stash = dhcp::stash::Stash::new(&stash, DEFAULT_STASH_PREFIX)
+    let Args { config } = argh::from_env();
+    let stash = dhcp::stash::Stash::new(DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX)
         .context("failed to instantiate stash")?;
     let default_params = configuration::load_server_params_from_file(&config)
         .context("failed to load default server parameters from configuration file")?;

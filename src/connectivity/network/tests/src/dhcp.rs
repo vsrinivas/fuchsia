@@ -168,7 +168,10 @@ async fn test_dhcp(
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
 
     let server_environment = sandbox
-        .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
+        .create_netstack_environment_with::<Netstack2, _, _>(
+            format!("{}_server", name),
+            &[KnownServices::SecureStash],
+        )
         .context("failed to create server environment")?;
     let server_env_ref = &server_environment;
 
@@ -331,14 +334,17 @@ async fn test_discovered_dns() -> Result {
     let server_environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
             format!("{}_server", name),
-            vec![KnownServices::DhcpServer.into_launch_service_with_arguments(vec![
-                // TODO: Once DHCP server supports dynamic configuration
-                // (fxbug.dev/45830), stop using the config file and configure
-                // it programatically. For now, the constants defined in this
-                // test reflect the ones defined in test_config.json.
-                "--config",
-                "/pkg/data/test_config.json",
-            ])],
+            vec![
+                KnownServices::DhcpServer.into_launch_service_with_arguments(vec![
+                    // TODO: Once DHCP server supports dynamic configuration
+                    // (fxbug.dev/45830), stop using the config file and configure
+                    // it programatically. For now, the constants defined in this
+                    // test reflect the ones defined in test_config.json.
+                    "--config",
+                    "/pkg/data/test_config.json",
+                ]),
+                KnownServices::SecureStash.into_launch_service(),
+            ],
         )
         .context("failed to create server environment")?;
 

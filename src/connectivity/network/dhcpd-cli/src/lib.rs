@@ -4,8 +4,12 @@
 
 #![cfg(test)]
 
-use futures::{FutureExt, StreamExt};
-use rand::Rng;
+use {
+    fuchsia_component::{
+        client::AppBuilder, fuchsia_single_component_package_url, server::ServiceFs,
+    },
+    futures::{FutureExt, StreamExt},
+};
 
 struct Command<'a> {
     args: Vec<&'a str>,
@@ -14,35 +18,48 @@ struct Command<'a> {
 }
 
 async fn test_cli_with_config(config: &'static str, commands: Vec<Command<'_>>) {
-    let mut fs = fuchsia_component::server::ServiceFs::new_local();
-    //TODO(atait): Why can't two component proxies establish a connection with one another? It would be
-    // preferable to have both fuchsia.net.dhcp.Server and fuchsia.stash.Store added as component
-    // proxies, ensuring new component instances per test case for both services. However, when both
-    // are added as component proxies, dhcpd return ZX_ERR_PEER_CLOSED when it connects to stash. As
-    // a work around, a random stash identifier is generated per test case, ensuring that one test
-    // case does not pollute another.
-    fs.add_proxy_service::<fidl_fuchsia_stash::StoreMarker, _>()
-        .add_component_proxy_service::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
-        fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing").to_string(),
-        Some(vec![
-            "--stash".to_string(),
-            rand::thread_rng().sample_iter(&rand::distributions::Alphanumeric).take(8).collect(),
-            "--config".to_string(),
-            format!("/pkg/data/{}.json", config),
-        ]),
+    let mut fs = ServiceFs::new_local();
+
+    let mut netstack_builder = AppBuilder::new(fuchsia_single_component_package_url!("netstack"));
+    let mut stash_builder =
+        AppBuilder::new("fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx");
+    let mut dhcpd_builder = AppBuilder::new(fuchsia_single_component_package_url!("dhcpd-testing"))
+        .args(vec!["--config".to_string(), format!("/pkg/data/{}.json", config)]);
+
+    fs.add_proxy_service_to::<fidl_fuchsia_stash::SecureStoreMarker, _>(
+        stash_builder
+            .directory_request()
+            .expect("failed to get test stash directory request")
+            .clone(),
+    )
+    .add_proxy_service_to::<fidl_fuchsia_posix_socket::ProviderMarker, _>(
+        netstack_builder
+            .directory_request()
+            .expect("failed to get test netstack directory request")
+            .clone(),
+    )
+    .add_proxy_service_to::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
+        dhcpd_builder
+            .directory_request()
+            .expect("failed to get test dhcpd directory request")
+            .clone(),
     );
+
     let env =
         fs.create_salted_nested_environment("test_cli").expect("failed to create environment");
+
     let fs = fs.for_each_concurrent(None, |()| async move {});
     futures::pin_mut!(fs);
 
+    let _stash = stash_builder.spawn(env.launcher()).expect("failed to launch test stash");
+    let _dhcpd = dhcpd_builder.spawn(env.launcher()).expect("failed to launch test dhcpd");
+    let _netstack = netstack_builder.spawn(env.launcher()).expect("failed to launch test netstack");
+
     for Command { args, expected_stdout, expected_stderr } in commands {
-        let output = fuchsia_component::client::AppBuilder::new(
-            fuchsia_component::fuchsia_single_component_package_url!("dhcpd-cli"),
-        )
-        .args(args)
-        .output(env.launcher())
-        .expect("failed to launch dhcpd-cli");
+        let output = AppBuilder::new(fuchsia_single_component_package_url!("dhcpd-cli"))
+            .args(args)
+            .output(env.launcher())
+            .expect("failed to launch dhcpd-cli");
 
         let output = futures::select! {
             () = fs => panic!("request stream terminated"),

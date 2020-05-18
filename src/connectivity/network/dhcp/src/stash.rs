@@ -32,9 +32,10 @@ impl Stash {
     /// The newly instantiated value will use `id` to identify itself with the `fuchsia.stash`
     /// service and `prefix` as the prefix for key strings in persistent storage.
     pub fn new(id: &str, prefix: &str) -> Result<Self, Error> {
-        let store_client =
-            fuchsia_component::client::connect_to_service::<fidl_fuchsia_stash::StoreMarker>()
-                .context("failed to connect to store")?;
+        let store_client = fuchsia_component::client::connect_to_service::<
+            fidl_fuchsia_stash::SecureStoreMarker,
+        >()
+        .context("failed to connect to store")?;
         let () = store_client.identify(id).context("failed to identify client to store")?;
         let (proxy, accessor_server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::StoreAccessorMarker>()
