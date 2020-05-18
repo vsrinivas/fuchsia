@@ -44,11 +44,11 @@ Initializing without any tags will default to using the process name.
 ```golang
 import (
     "fuchsia.googlesource.com/component"
-    "syslog"
+    "fuchsia.googlesource.com/syslog"
 )
 
 func main() {
-  ctx := context.CreateFromStartupInfo()
+  ctx := component.NewContextFromStartupInfo()
   {
     // Global tags, max 4 tags can be passed. Every log message is tagged with these.
     l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "my_tag")
