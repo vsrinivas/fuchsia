@@ -12,20 +12,26 @@ import("//build/testing/host_test_data.gni")
 import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 
 if (is_host) {
-  host_test_data("test_data") {
+  host_test_data("test_tools") {
     sources = [
       "$host_tools_dir/device-finder",
       "//prebuilt/tools/artifacts/artifacts",
       "//prebuilt/tools/lkgb/lkgb",
     ]
-    if (use_vbmeta) {
-      sources += [
-        avb_atx_metadata,
-        avb_key,
-      ]
-    }
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
     public_deps = [ "//tools/net/dev_finder:host($host_toolchain)" ]
+  }
+
+  if (use_vbmeta) {
+    host_test_data("test_avb_atx_metadata") {
+      sources = [ avb_atx_metadata ]
+      outputs = [ "$root_out_dir/test_data/system-tests/avb_atx_metadata.bin" ]
+    }
+
+    host_test_data("test_avb_key") {
+      sources = [ avb_key ]
+      outputs = [ "$root_out_dir/test_data/system-tests/atx_psk.pem" ]
+    }
   }
 
   go_library("system_tests_lib") {
@@ -36,7 +42,13 @@ if (is_host) {
       "//tools/lib/color",
       "//tools/lib/logger",
     ]
-    non_go_deps = [ ":test_data" ]
+    non_go_deps = [ ":test_tools" ]
+    if (use_vbmeta) {
+      non_go_deps += [
+        ":test_avb_atx_metadata",
+        ":test_avb_key",
+      ]
+    }
   }
 
   go_test("system_tests_reboot") {

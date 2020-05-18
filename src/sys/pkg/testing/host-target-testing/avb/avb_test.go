@@ -65,8 +65,23 @@ func TestNoProperties(t *testing.T) {
 	}
 	defer os.Remove(avbtoolScript)
 
+	avbKey, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatalf("Failed to create key file: %s", err)
+	}
+	defer os.Remove(avbKey.Name())
+
+	avbMetadata, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatalf("Failed to create metadata file: %s", err)
+	}
+	defer os.Remove(avbMetadata.Name())
+
 	var output bytes.Buffer
-	avbTool := newAVBToolWithStdout(avbtoolScript, "key/path", "key/metadata/path", &output)
+	avbTool, err := newAVBToolWithStdout(avbtoolScript, avbKey.Name(), avbMetadata.Name(), &output)
+	if err != nil {
+		t.Fatalf("Failed to create AVBTool: %s", err)
+	}
 
 	err = avbTool.MakeVBMetaImage(context.Background(), "destination/path", "source/path", map[string]string{})
 	if err != nil {
@@ -110,8 +125,8 @@ func TestNoProperties(t *testing.T) {
 
 	checkEq(t, "source path", srcPath, "source/path")
 	checkEq(t, "destination path", destPath, "destination/path")
-	checkEq(t, "key path", keyPath, "key/path")
-	checkEq(t, "key metadata path", keyMetadataPath, "key/metadata/path")
+	checkEq(t, "key path", keyPath, avbKey.Name())
+	checkEq(t, "key metadata path", keyMetadataPath, avbMetadata.Name())
 	checkEq(t, "algorithm", algorithm, "SHA512_RSA4096")
 }
 
@@ -122,8 +137,23 @@ func TestProperties(t *testing.T) {
 	}
 	defer os.Remove(avbtoolScript)
 
+	avbKey, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatalf("Failed to create key file: %s", err)
+	}
+	defer os.Remove(avbKey.Name())
+
+	avbMetadata, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatalf("Failed to create metadata file: %s", err)
+	}
+	defer os.Remove(avbMetadata.Name())
+
 	var output bytes.Buffer
-	avbTool := newAVBToolWithStdout(avbtoolScript, "key/path", "key/metadata/path", &output)
+	avbTool, err := newAVBToolWithStdout(avbtoolScript, avbKey.Name(), avbMetadata.Name(), &output)
+	if err != nil {
+		t.Fatalf("Failed to create AVBTool: %s", err)
+	}
 
 	err = avbTool.MakeVBMetaImage(context.Background(), "destination/path", "source/path", map[string]string{
 		"key1": "value1",

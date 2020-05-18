@@ -40,18 +40,22 @@ func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
 	fs.StringVar(&c.installerMode, "installer", SystemUpdateChecker, "the installation mode (default: system-update-checker)")
 	fs.StringVar(&c.avbToolPath, "avbtool-path", filepath.Join(testDataPath, "avbtool"),
 		"path to the avbtool binary")
-	fs.StringVar(&c.keyPath, "vbmeta-key", "", "path to the vbmeta private key")
-	fs.StringVar(&c.keyMetadataPath, "vbmeta-key-metadata", "", "path to the vbmeta public key metadata")
+	fs.StringVar(&c.keyPath, "vbmeta-key", filepath.Join(testDataPath, "atx_psk.pem"), "path to the vbmeta private key")
+	fs.StringVar(&c.keyMetadataPath, "vbmeta-key-metadata", filepath.Join(testDataPath, "avb_atx_metadata.bin"), "path to the vbmeta public key metadata")
 
 	return c, nil
 }
 
-func (c *InstallerConfig) AVBTool() *avb.AVBTool {
+func (c *InstallerConfig) AVBTool() (*avb.AVBTool, error) {
 	if c.avbTool == nil {
-		c.avbTool = avb.NewAVBTool(c.avbToolPath, c.keyPath, c.keyMetadataPath)
+		avbTool, err := avb.NewAVBTool(c.avbToolPath, c.keyPath, c.keyMetadataPath)
+		if err != nil {
+			return nil, err
+		}
+		c.avbTool = avbTool
 	}
 
-	return c.avbTool
+	return c.avbTool, nil
 }
 
 func (c *InstallerConfig) ConfigureBuild(ctx context.Context, build artifacts.Build) (artifacts.Build, error) {

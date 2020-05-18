@@ -21,17 +21,23 @@ type AVBTool struct {
 	stdout          io.Writer
 }
 
-func NewAVBTool(avbToolPath string, keyPath string, keyMetadataPath string) *AVBTool {
+func NewAVBTool(avbToolPath string, keyPath string, keyMetadataPath string) (*AVBTool, error) {
 	return newAVBToolWithStdout(avbToolPath, keyPath, keyMetadataPath, nil)
 }
 
-func newAVBToolWithStdout(avbToolPath string, keyPath string, keyMetadataPath string, stdout io.Writer) *AVBTool {
+func newAVBToolWithStdout(avbToolPath string, keyPath string, keyMetadataPath string, stdout io.Writer) (*AVBTool, error) {
+	if _, err := os.Stat(keyPath); err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(keyMetadataPath); err != nil {
+		return nil, err
+	}
 	return &AVBTool{
 		avbToolPath:     avbToolPath,
 		keyPath:         keyPath,
 		keyMetadataPath: keyMetadataPath,
 		stdout:          stdout,
-	}
+	}, nil
 }
 
 func (a *AVBTool) MakeVBMetaImage(ctx context.Context, destPath string, srcPath string, props map[string]string) error {
