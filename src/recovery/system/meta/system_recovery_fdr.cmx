@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/system_recovery_fdr"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller",
+            "class/input",
+            "sys/platform"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}
