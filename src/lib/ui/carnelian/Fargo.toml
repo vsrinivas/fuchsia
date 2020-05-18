@@ -21,6 +21,6 @@ data_files = [
     { src = "src/render/shaders/copy.comp.spv", dst = "data/shaders/copy.comp.spv"},
     { src = "src/render/shaders/motioncopy-unorm.comp.spv", dst = "data/shaders/motioncopy-unorm.comp.spv"},
     { src = "src/render/shaders/motioncopy-srgb.comp.spv", dst = "data/shaders/motioncopy-srgb.comp.spv"},
-    { src = "examples/images/lenna.png", dst = "data/images/lenna.png"},
-    { src = "examples/images/baboon.png", dst = "data/images/baboon.png"},
+    { src = "examples/static/lenna.png", dst = "data/static/lenna.png"},
+    { src = "examples/static/baboon.png", dst = "data/static/baboon.png"},
 ]
