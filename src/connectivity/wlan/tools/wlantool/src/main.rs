@@ -24,7 +24,7 @@ use structopt::StructOpt;
 use wlan_common::{
     channel::{Cbw, Phy},
     ie::SSID_MAX_LEN,
-    RadioConfig,
+    RadioConfig, StationMode,
 };
 use wlan_rsn::psk;
 
@@ -234,14 +234,7 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
             return Ok(());
         }
     };
-    let sme = get_client_sme(wlan_svc, iface_id).await.map_err(|e| {
-        format_err!(
-            "error accessing client SME for iface {}: {};\
-             please ensure the selected iface supports client mode",
-            iface_id,
-            e
-        )
-    })?;
+    let sme = get_client_sme(wlan_svc, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.as_bytes().to_vec(),
@@ -347,14 +340,7 @@ async fn do_status(cmd: opts::IfaceStatusCmd, wlan_svc: WlanSvc) -> Result<(), E
 async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::ApCmd::Start { iface_id, ssid, password, channel } => {
-            let sme = get_ap_sme(wlan_svc, iface_id).await.map_err(|e| {
-                format_err!(
-                    "error accessing client SME for iface {}: {};\
-                     please ensure the selected iface supports AP mode",
-                    iface_id,
-                    e
-                )
-            })?;
+            let sme = get_ap_sme(wlan_svc, iface_id).await?;
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
@@ -388,14 +374,7 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::MeshCmd::Join { iface_id, mesh_id, channel } => {
-            let sme = get_mesh_sme(wlan_svc, iface_id).await.map_err(|e| {
-                format_err!(
-                    "error accessing client SME for iface {}: {};\
-                     please ensure the selected iface supports Mesh mode",
-                    iface_id,
-                    e
-                )
-            })?;
+            let sme = get_mesh_sme(wlan_svc, iface_id).await?;
             let mut config = fidl_sme::MeshConfig { mesh_id: mesh_id.as_bytes().to_vec(), channel };
             let r = sme.join(&mut config).await?;
             match r {
@@ -623,44 +602,64 @@ async fn handle_connect_transaction(
     Ok(())
 }
 
+/// Constructs a `Result<(), Error>` from a `zx::zx_status_t` returned
+/// from one of the `get_client_sme`, `get_ap_sme`, or `get_mesh_sme`
+/// functions. In particular, when `zx::Status::from_raw(raw_status)` does
+/// not match `zx::Status::OK`, this function will attach the appropriate
+/// error message to the returned `Result`. When `zx::Status::from_raw(raw_status)`
+/// does match `zx::Status::OK`, this function returns `Ok()`.
+///
+/// If this function returns an `Err`, it includes both a cause and a context.
+/// The cause is a readable conversion of `raw_status` based on `station_mode`
+/// and `iface_id`. The context notes the failed operation and suggests the
+/// interface be checked for support of the given `station_mode`.
+fn result_from_sme_raw_status(
+    raw_status: zx::zx_status_t,
+    station_mode: StationMode,
+    iface_id: u16,
+) -> Result<(), Error> {
+    match zx::Status::from_raw(raw_status) {
+        zx::Status::OK => Ok(()),
+        zx::Status::NOT_FOUND => Err(Error::msg("invalid interface id")),
+        zx::Status::NOT_SUPPORTED => Err(Error::msg("operation not supported on SME interface")),
+        zx::Status::INTERNAL => {
+            Err(Error::msg("internal server error sending endpoint to the SME server future"))
+        }
+        _ => Err(Error::msg("unrecognized error associated with SME interface")),
+    }
+    .context(format!(
+        "Failed to access {} for interface id {}. \
+                      Please ensure the selected iface supports {} mode.",
+        station_mode, iface_id, station_mode,
+    ))
+}
+
 async fn get_client_sme(
     wlan_svc: WlanSvc,
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status = wlan_svc
+    let raw_status = wlan_svc
         .get_client_sme(iface_id, remote)
         .await
         .context("error sending GetClientSme request")?;
-    if status == zx::sys::ZX_OK {
-        Ok(proxy)
-    } else {
-        Err(format_err!("Invalid interface id {}", iface_id))
-    }
+    result_from_sme_raw_status(raw_status, StationMode::Client, iface_id).map(|_| proxy)
 }
 
 async fn get_ap_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status =
+    let raw_status =
         wlan_svc.get_ap_sme(iface_id, remote).await.context("error sending GetApSme request")?;
-    if status == zx::sys::ZX_OK {
-        Ok(proxy)
-    } else {
-        Err(format_err!("Invalid interface id {}", iface_id))
-    }
+    result_from_sme_raw_status(raw_status, StationMode::Ap, iface_id).map(|_| proxy)
 }
 
 async fn get_mesh_sme(wlan_svc: WlanSvc, iface_id: u16) -> Result<fidl_sme::MeshSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let status = wlan_svc
+    let raw_status = wlan_svc
         .get_mesh_sme(iface_id, remote)
         .await
         .context("error sending GetMeshSme request")?;
-    if status == zx::sys::ZX_OK {
-        Ok(proxy)
-    } else {
-        Err(format_err!("Invalid interface id {}", iface_id))
-    }
+    result_from_sme_raw_status(raw_status, StationMode::Mesh, iface_id).map(|_| proxy)
 }
 
 async fn get_iface_ids(wlan_svc: WlanSvc, iface_id: Option<u16>) -> Result<Vec<u16>, Error> {
@@ -783,6 +782,7 @@ mod tests {
     use {
         super::*, fidl::endpoints::create_proxy, futures::task::Poll, pin_utils::pin_mut,
         wlan_common::assert_variant,
+        matches::assert_matches,
     };
 
     #[test]
@@ -942,6 +942,41 @@ mod tests {
             "1ec9ee30fdff1961a9abd083f571464cc0fe27f62f9f59992bd39f8e625e9f52"
         );
         assert!(generate_psk("short", "coolnet").is_err());
+    }
+
+    fn has_expected_cause(result: Result<(), Error>, message: &str) -> bool {
+        match result {
+            Err(e) => e.chain().any(|cause| cause.to_string() == message),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn test_result_from_sme_raw_status() {
+        let ok = result_from_sme_raw_status(zx::Status::OK.into_raw(), StationMode::Client, 0);
+        let not_found =
+            result_from_sme_raw_status(zx::Status::NOT_FOUND.into_raw(), StationMode::Mesh, 1);
+        let not_supported =
+            result_from_sme_raw_status(zx::Status::NOT_SUPPORTED.into_raw(), StationMode::Ap, 2);
+        let internal_error =
+            result_from_sme_raw_status(zx::Status::INTERNAL.into_raw(), StationMode::Client, 3);
+        let unrecognized_error = result_from_sme_raw_status(
+            zx::Status::INTERRUPTED_RETRY.into_raw(),
+            StationMode::Mesh,
+            4,
+        );
+
+        assert_matches!(ok, Ok(()));
+        assert!(has_expected_cause(not_found, "invalid interface id"));
+        assert!(has_expected_cause(not_supported, "operation not supported on SME interface"));
+        assert!(has_expected_cause(
+            internal_error,
+            "internal server error sending endpoint to the SME server future"
+        ));
+        assert!(has_expected_cause(
+            unrecognized_error,
+            "unrecognized error associated with SME interface"
+        ));
     }
 
     #[test]
