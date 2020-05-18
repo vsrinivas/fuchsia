@@ -21,6 +21,7 @@ import (
 	"netstack/dhcp"
 	"netstack/dns"
 	"netstack/fidlconv"
+	"netstack/link/fifo/testutil"
 	"netstack/routes"
 	"netstack/util"
 
@@ -774,13 +775,25 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 		},
 		NDPDisp: ndpDisp,
 	})
-	return &Netstack{
+	ns := &Netstack{
 		stack: stk,
 		// We need to initialize the DNS client, since adding/removing interfaces
 		// sets the DNS servers on that interface, which requires that dnsClient
 		// exist.
 		dnsClient: dns.NewClient(stk),
 	}
+	t.Cleanup(func() {
+		nicInfos := ns.stack.NICInfo()
+		for id, nic := range nicInfos {
+			if ifs, ok := nic.Context.(*ifState); ok {
+				if err := ifs.controller.Close(); err != nil {
+					t.Errorf("failed to close controller for NIC %d: %s", id, err)
+				}
+				ifs.endpoint.Wait()
+			}
+		}
+	})
+	return ns
 }
 
 func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
@@ -1233,8 +1246,14 @@ func deviceForAddEth(info ethernet.Info, t *testing.T) ethernetext.Device {
 			return ethernet.DeviceStatusOnline, nil
 		},
 		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
+			const depth = 1
+			tx, _ := testutil.MakeEntryFifo(t, depth)
+			rx, _ := testutil.MakeEntryFifo(t, depth)
 			return int32(zx.ErrOk), &ethernet.Fifos{
-				TxDepth: 1,
+				Rx:      rx,
+				Tx:      tx,
+				RxDepth: depth,
+				TxDepth: depth,
 			}, nil
 		},
 		SetIoBufferImpl: func(zx.VMO) (int32, error) {
@@ -1245,6 +1264,9 @@ func deviceForAddEth(info ethernet.Info, t *testing.T) ethernetext.Device {
 		},
 		ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
 			return int32(zx.ErrOk), nil
+		},
+		StopImpl: func() error {
+			return nil
 		},
 	}
 }

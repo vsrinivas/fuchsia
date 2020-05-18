@@ -16,6 +16,7 @@ import (
 
 	"netstack/link/eth"
 	"netstack/link/fifo"
+	"netstack/link/fifo/testutil"
 	eth_gen "netstack_gen/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -115,22 +116,8 @@ func TestEndpoint(t *testing.T) {
 	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
-			var clientTxFifo, deviceTxFifo zx.Handle
-			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth_gen.FifoEntry{})), 0, &clientTxFifo, &deviceTxFifo); status != zx.ErrOk {
-				t.Fatal(status)
-			}
-			defer func() {
-				_ = clientTxFifo.Close()
-				_ = deviceTxFifo.Close()
-			}()
-			var clientRxFifo, deviceRxFifo zx.Handle
-			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth_gen.FifoEntry{})), 0, &clientRxFifo, &deviceRxFifo); status != zx.ErrOk {
-				t.Fatal(status)
-			}
-			defer func() {
-				_ = clientRxFifo.Close()
-				_ = deviceRxFifo.Close()
-			}()
+			clientTxFifo, deviceTxFifo := testutil.MakeEntryFifo(t, uint(depth))
+			clientRxFifo, deviceRxFifo := testutil.MakeEntryFifo(t, uint(depth))
 
 			var device struct {
 				iob       eth.IOBuffer

@@ -88,7 +88,9 @@ func TestRouteTableTransactions(t *testing.T) {
 		// New table should contain the one route we just added.
 		actualTable2, err := netstackServiceImpl.GetRouteTable2(context.Background())
 		AssertNoError(t, err)
-		if diff := cmp.Diff(actualTable2[0], newRouteTableEntry2, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		if len(actualTable2) == 0 {
+			t.Errorf("got empty table, expected first entry equal to %+v", newRouteTableEntry2)
+		} else if diff := cmp.Diff(actualTable2[0], newRouteTableEntry2, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
 		}
 
@@ -102,7 +104,9 @@ func TestRouteTableTransactions(t *testing.T) {
 		}
 		actualTable, err := netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
-		if diff := cmp.Diff(actualTable[0], expectedRouteTableEntry, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		if len(actualTable) == 0 {
+			t.Errorf("got empty table, expected first entry equal to %+v", expectedRouteTableEntry)
+		} else if diff := cmp.Diff(actualTable[0], expectedRouteTableEntry, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
 		}
 

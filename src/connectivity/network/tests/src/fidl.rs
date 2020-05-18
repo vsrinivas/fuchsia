@@ -9,6 +9,7 @@ use anyhow::Context as _;
 
 use crate::environments::*;
 use crate::Result;
+use futures::TryStreamExt as _;
 
 /// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
 /// if given an invalid interface id.
@@ -318,4 +319,134 @@ async fn disable_interface_loopback() -> Result {
         fidl_fuchsia_net_stack::AdministrativeStatus::Disabled
     );
     Ok(())
+}
+
+/// Tests fuchsia.net.stack/Stack.del_ethernet_interface.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_remove_interface() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (_env, stack, device) = sandbox
+        .new_netstack_and_device::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(
+            "test_remove_interface",
+        )
+        .await
+        .context("failed to create netstack environment")?;
+
+    let id = device.add_to_stack(&stack).await.context("failed to add device")?;
+
+    let () = stack
+        .del_ethernet_interface(id)
+        .await
+        .squash_result()
+        .context("failed to delete device")?;
+
+    let ifs = stack.list_interfaces().await.context("failed to list interfaces")?;
+
+    assert_eq!(ifs.into_iter().find(|info| info.id == id), None);
+
+    Ok(())
+}
+
+/// Tests that adding an interface causes an interface changed event.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_add_interface_causes_interfaces_changed() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (env, stack, device) = sandbox
+        .new_netstack_and_device::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(
+            "test_remove_interface",
+        )
+        .await
+        .context("failed to create netstack environment")?;
+
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack")?;
+
+    // Ensure we're connected to Netstack so we don't miss any events.
+    // Since we do it, assert that only loopback exists.
+    let ifs = netstack.get_interfaces2().await.context("failed to get interfaces")?;
+    assert_eq!(ifs.len(), 1);
+
+    let id = device.add_to_stack(&stack).await.context("failed to add device")?;
+
+    // Wait for interfaces changed event with the new ID.
+    let _ifaces = netstack
+        .take_event_stream()
+        .try_filter(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            futures::future::ready(interfaces.into_iter().any(|iface| iface.id == id as u32))
+        })
+        .try_next()
+        .await
+        .context("failed to observe interface addition")?
+        .ok_or_else(|| anyhow::anyhow!("netstack stream ended unexpectedly"))?;
+
+    Ok(())
+}
+
+/// Tests that if a device closes (is removed from the system), the
+/// corresponding Netstack interface is deleted.
+/// if `enabled` is `true`, enables the interface before closing the device.
+async fn test_close_interface(enabled: bool) -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let (env, stack, device) = sandbox
+        .new_netstack_and_device::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(
+            "test_remove_interface",
+        )
+        .await
+        .context("failed to create netstack environment")?;
+
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack")?;
+
+    // Ensure we're connected to Netstack so we don't miss any events.
+    // Since we do it, assert that only loopback exists.
+    let ifs = netstack.get_interfaces2().await.context("failed to get interfaces")?;
+    assert_eq!(ifs.len(), 1);
+
+    let id = device.add_to_stack(&stack).await.context("failed to add device")?;
+    if enabled {
+        let () = stack
+            .enable_interface(id)
+            .await
+            .squash_result()
+            .context("failed to enable interface")?;
+    }
+
+    let _ifaces = netstack
+        .take_event_stream()
+        .try_filter(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            futures::future::ready(interfaces.into_iter().any(|iface| iface.id == id as u32))
+        })
+        .try_next()
+        .await
+        .context("failed to observe interface addition")?
+        .ok_or_else(|| anyhow::anyhow!("netstack stream ended unexpectedly"))?;
+
+    // Drop the device, that should cause the interface to be deleted.
+    std::mem::drop(device);
+
+    // Wait until we observe an event where the removed interface is missing.
+    let _ifaces = netstack
+        .take_event_stream()
+        .try_filter(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            println!("interfaces changed: {:?}", interfaces);
+            futures::future::ready(!interfaces.into_iter().any(|iface| iface.id == id as u32))
+        })
+        .try_next()
+        .await
+        .context("failed to observe interface addition")?
+        .ok_or_else(|| anyhow::anyhow!("netstack stream ended unexpectedly"))?;
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_close_disabled_interface() -> Result {
+    test_close_interface(false).await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_close_enabled_interface() -> Result {
+    test_close_interface(true).await
 }

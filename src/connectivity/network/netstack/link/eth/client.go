@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sync"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 	"unsafe"
 
 	"fuchsia.googlesource.com/syslog"
@@ -204,7 +205,39 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	c.handler.Stats.Tx = fifo.MakeFifoStats(fifos.TxDepth)
 	c.handler.Stats.Rx = fifo.MakeFifoStats(fifos.RxDepth)
 
+	// Spawn a goroutine observing PEER_CLOSED on the channel, so we can be
+	// notified of device removal even when not attached to a dispatcher (i.e.
+	// disabled).
+	if deviceInterface, ok := c.device.(*ethernet.DeviceWithCtxInterface); ok {
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			obs, err := zxwait.Wait(*deviceInterface.Handle(), zx.SignalChannelPeerClosed, zx.TimensecInfinite)
+			if err != nil {
+				_ = syslog.ErrorTf(tag, "error observing device channel close: %s", err)
+				return
+			}
+			c.detachWithError(fmt.Errorf("device channel observed close signals: %b", obs))
+		}()
+	} else {
+		_ = syslog.WarnTf(tag, "failed to get interface for device (%T), channel closure will not be observed", c.device)
+	}
+
 	return c, nil
+}
+
+func (c *Client) detachWithError(cause error) {
+	c.mu.Lock()
+	closed := c.mu.closed
+	c.mu.Unlock()
+	if closed {
+		return
+	}
+	if err := c.Close(); err != nil {
+		_ = syslog.WarnTf(tag, "error closing device on detach (caused by %s): %s", cause, err)
+	} else {
+		_ = syslog.WarnTf(tag, "closed device due to %s", cause)
+	}
 }
 
 func (c *Client) MTU() uint32 { return c.Info.Mtu }
@@ -266,13 +299,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := c.handler.TxReceiverLoop(); err != nil {
-			c.mu.Lock()
-			closed := c.mu.closed
-			c.mu.Unlock()
-			if !closed {
-				_ = syslog.WarnTf(tag, "TX read loop: %s", err)
-			}
-			c.handler.DetachTx()
+			c.detachWithError(fmt.Errorf("TX read loop error: %w", err))
 		}
 	}()
 
@@ -280,13 +307,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := c.handler.TxSenderLoop(); err != nil {
-			c.mu.Lock()
-			closed := c.mu.closed
-			c.mu.Unlock()
-			if !closed {
-				_ = syslog.WarnTf(tag, "TX write loop: %s", err)
-			}
-			c.handler.DetachTx()
+			c.detachWithError(fmt.Errorf("TX write loop error: %w", err))
 		}
 	}()
 
@@ -310,12 +331,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				_ = syslog.WarnTf(tag, "status error: %s", err)
 			}
 		}); err != nil {
-			c.mu.Lock()
-			closed := c.mu.closed
-			c.mu.Unlock()
-			if !closed {
-				_ = syslog.WarnTf(tag, "RX loop: %s", err)
-			}
+			c.detachWithError(fmt.Errorf("RX loop error: %w", err))
 		}
 	}()
 }
@@ -402,10 +418,18 @@ func (c *Client) Close() error {
 	if closed {
 		return nil
 	}
+	c.handler.DetachTx()
 	return c.changeState(func() (link.State, error) {
-		err := c.device.Stop(context.Background())
-		if err != nil {
-			err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
+		if err := c.device.Stop(context.Background()); err != nil {
+			_ = syslog.WarnTf(tag, "fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
+		}
+
+		if iface, ok := c.device.(*ethernet.DeviceWithCtxInterface); ok {
+			if err := iface.Close(); err != nil {
+				_ = syslog.WarnTf(tag, "failed to close device handle: %s", err)
+			}
+		} else {
+			_ = syslog.WarnTf(tag, "can't close device interface of type %T", c.device)
 		}
 
 		if err := c.handler.TxFifo.Close(); err != nil {
@@ -418,7 +442,7 @@ func (c *Client) Close() error {
 			_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
 		}
 
-		return link.StateClosed, err
+		return link.StateClosed, nil
 	})
 }
 

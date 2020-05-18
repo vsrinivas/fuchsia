@@ -149,7 +149,7 @@ func (c *Client) Stats() *Stats {
 	return &c.stats
 }
 
-// Run starts the DHCP client.
+// Run runs the DHCP client.
 //
 // The function periodically searches for a new IP address.
 func (c *Client) Run(ctx context.Context) {
@@ -160,165 +160,163 @@ func (c *Client) Run(ctx context.Context) {
 	// https://tools.ietf.org/html/rfc2131#section-4.4
 	info.State = initSelecting
 
-	go func() {
-		c.sem <- struct{}{}
-		defer func() { <-c.sem }()
-		defer func() {
-			syslog.WarnTf(tag, "client is stopping, cleaning up")
-			c.cleanup(&info)
-			// cleanup mutates info.
-			c.info.Store(info)
-		}()
-
-		var leaseExpirationTime, renewTime, rebindTime time.Time
-		var timer *time.Timer
-
-		for {
-			if err := func() error {
-				acquisitionTimeout := info.Acquisition
-
-				// Adjust the timeout to make sure client is not stuck in retransmission
-				// when it should transition to the next state. This can only happen for
-				// two time-driven transitions: RENEW->REBIND, REBIND->INIT.
-				//
-				// Another time-driven transition BOUND->RENEW is not handled here because
-				// the client does not have to send out any request during BOUND.
-				switch s := info.State; s {
-				case initSelecting:
-					// Nothing to do. The client is initializing, no leases have been acquired.
-					// Thus no times are set for renew, rebind, and lease expiration.
-					c.stats.InitAcquire.Increment()
-				case renewing:
-					c.stats.RenewAcquire.Increment()
-					if tilRebind := time.Until(rebindTime); tilRebind < acquisitionTimeout {
-						acquisitionTimeout = tilRebind
-					}
-				case rebinding:
-					c.stats.RebindAcquire.Increment()
-					if tilLeaseExpire := time.Until(leaseExpirationTime); tilLeaseExpire < acquisitionTimeout {
-						acquisitionTimeout = tilLeaseExpire
-					}
-				default:
-					panic(fmt.Sprintf("unexpected state before acquire: %s", s))
-				}
-
-				ctx, cancel := context.WithTimeout(ctx, acquisitionTimeout)
-				defer cancel()
-
-				cfg, err := c.acquire(ctx, &info)
-				if err != nil {
-					return err
-				}
-
-				{
-					leaseLength, renewTime, rebindTime := cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime
-					if cfg.LeaseLength == 0 {
-						syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseLength)
-						leaseLength = defaultLeaseLength
-					}
-					switch {
-					case cfg.LeaseLength != 0 && cfg.RenewTime >= cfg.LeaseLength:
-						syslog.WarnTf(tag, "invalid renewal time: renewing=%s, lease=%s", cfg.RenewTime, cfg.LeaseLength)
-						fallthrough
-					case cfg.RenewTime == 0:
-						// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
-						renewTime = leaseLength / 2
-					}
-					switch {
-					case cfg.RenewTime != 0 && cfg.RebindTime <= cfg.RenewTime:
-						syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s, renewing=%s", cfg.RebindTime, cfg.RenewTime)
-						fallthrough
-					case cfg.RebindTime == 0:
-						// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
-						rebindTime = leaseLength * 875 / 1000
-					}
-					cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime = leaseLength, renewTime, rebindTime
-				}
-
-				now := time.Now()
-				leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
-				renewTime = now.Add(cfg.RenewTime.Duration())
-				rebindTime = now.Add(cfg.RebindTime.Duration())
-
-				if fn := c.acquiredFunc; fn != nil {
-					fn(info.OldAddr, info.Addr, cfg)
-				}
-				info.OldAddr = info.Addr
-				info.State = bound
-
-				return nil
-			}(); err != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
-			}
-
-			// Synchronize info after attempt to acquire is complete.
-			c.info.Store(info)
-
-			// RFC 2131 Section 4.4.5
-			// https://tools.ietf.org/html/rfc2131#section-4.4.5
-			//
-			//   T1 MUST be earlier than T2, which, in turn, MUST be earlier than
-			//   the time at which the client's lease will expire.
-			var next dhcpClientState
-			var waitDuration time.Duration
-			switch now := time.Now(); {
-			case !now.Before(leaseExpirationTime):
-				next = initSelecting
-			case !now.Before(rebindTime):
-				next = rebinding
-			case !now.Before(renewTime):
-				next = renewing
-			default:
-				switch s := info.State; s {
-				case renewing, rebinding:
-					// This means the client is stuck in a bad state, because if
-					// the timers are correctly set, previous cases should have matched.
-					panic(fmt.Sprintf("invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s", s, now, leaseExpirationTime, renewTime, rebindTime))
-				}
-				waitDuration = renewTime.Sub(now)
-				next = renewing
-			}
-
-			// No state transition occurred, the client is retrying.
-			if info.State == next {
-				waitDuration = info.Backoff
-			}
-
-			if waitDuration != 0 {
-				if timer == nil {
-					timer = time.NewTimer(waitDuration)
-				} else {
-					timer.Reset(waitDuration)
-				}
-			}
-
-			if info.State != next && next != renewing {
-				// Transition immediately for RENEW->REBIND, REBIND->INIT.
-				if ctx.Err() != nil {
-					return
-				}
-			} else {
-				select {
-				case <-ctx.Done():
-					return
-				case <-timer.C:
-				}
-			}
-
-			if info.State != initSelecting && next == initSelecting {
-				syslog.WarnTf(tag, "lease time expired, cleaning up")
-				c.cleanup(&info)
-			}
-
-			info.State = next
-
-			// Synchronize info after any state updates.
-			c.info.Store(info)
-		}
+	c.sem <- struct{}{}
+	defer func() { <-c.sem }()
+	defer func() {
+		syslog.WarnTf(tag, "client is stopping, cleaning up")
+		c.cleanup(&info)
+		// cleanup mutates info.
+		c.info.Store(info)
 	}()
+
+	var leaseExpirationTime, renewTime, rebindTime time.Time
+	var timer *time.Timer
+
+	for {
+		if err := func() error {
+			acquisitionTimeout := info.Acquisition
+
+			// Adjust the timeout to make sure client is not stuck in retransmission
+			// when it should transition to the next state. This can only happen for
+			// two time-driven transitions: RENEW->REBIND, REBIND->INIT.
+			//
+			// Another time-driven transition BOUND->RENEW is not handled here because
+			// the client does not have to send out any request during BOUND.
+			switch s := info.State; s {
+			case initSelecting:
+				// Nothing to do. The client is initializing, no leases have been acquired.
+				// Thus no times are set for renew, rebind, and lease expiration.
+				c.stats.InitAcquire.Increment()
+			case renewing:
+				c.stats.RenewAcquire.Increment()
+				if tilRebind := time.Until(rebindTime); tilRebind < acquisitionTimeout {
+					acquisitionTimeout = tilRebind
+				}
+			case rebinding:
+				c.stats.RebindAcquire.Increment()
+				if tilLeaseExpire := time.Until(leaseExpirationTime); tilLeaseExpire < acquisitionTimeout {
+					acquisitionTimeout = tilLeaseExpire
+				}
+			default:
+				panic(fmt.Sprintf("unexpected state before acquire: %s", s))
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, acquisitionTimeout)
+			defer cancel()
+
+			cfg, err := c.acquire(ctx, &info)
+			if err != nil {
+				return err
+			}
+
+			{
+				leaseLength, renewTime, rebindTime := cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime
+				if cfg.LeaseLength == 0 {
+					syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseLength)
+					leaseLength = defaultLeaseLength
+				}
+				switch {
+				case cfg.LeaseLength != 0 && cfg.RenewTime >= cfg.LeaseLength:
+					syslog.WarnTf(tag, "invalid renewal time: renewing=%s, lease=%s", cfg.RenewTime, cfg.LeaseLength)
+					fallthrough
+				case cfg.RenewTime == 0:
+					// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
+					renewTime = leaseLength / 2
+				}
+				switch {
+				case cfg.RenewTime != 0 && cfg.RebindTime <= cfg.RenewTime:
+					syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s, renewing=%s", cfg.RebindTime, cfg.RenewTime)
+					fallthrough
+				case cfg.RebindTime == 0:
+					// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
+					rebindTime = leaseLength * 875 / 1000
+				}
+				cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime = leaseLength, renewTime, rebindTime
+			}
+
+			now := time.Now()
+			leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
+			renewTime = now.Add(cfg.RenewTime.Duration())
+			rebindTime = now.Add(cfg.RebindTime.Duration())
+
+			if fn := c.acquiredFunc; fn != nil {
+				fn(info.OldAddr, info.Addr, cfg)
+			}
+			info.OldAddr = info.Addr
+			info.State = bound
+
+			return nil
+		}(); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
+		}
+
+		// Synchronize info after attempt to acquire is complete.
+		c.info.Store(info)
+
+		// RFC 2131 Section 4.4.5
+		// https://tools.ietf.org/html/rfc2131#section-4.4.5
+		//
+		//   T1 MUST be earlier than T2, which, in turn, MUST be earlier than
+		//   the time at which the client's lease will expire.
+		var next dhcpClientState
+		var waitDuration time.Duration
+		switch now := time.Now(); {
+		case !now.Before(leaseExpirationTime):
+			next = initSelecting
+		case !now.Before(rebindTime):
+			next = rebinding
+		case !now.Before(renewTime):
+			next = renewing
+		default:
+			switch s := info.State; s {
+			case renewing, rebinding:
+				// This means the client is stuck in a bad state, because if
+				// the timers are correctly set, previous cases should have matched.
+				panic(fmt.Sprintf("invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s", s, now, leaseExpirationTime, renewTime, rebindTime))
+			}
+			waitDuration = renewTime.Sub(now)
+			next = renewing
+		}
+
+		// No state transition occurred, the client is retrying.
+		if info.State == next {
+			waitDuration = info.Backoff
+		}
+
+		if waitDuration != 0 {
+			if timer == nil {
+				timer = time.NewTimer(waitDuration)
+			} else {
+				timer.Reset(waitDuration)
+			}
+		}
+
+		if info.State != next && next != renewing {
+			// Transition immediately for RENEW->REBIND, REBIND->INIT.
+			if ctx.Err() != nil {
+				return
+			}
+		} else {
+			select {
+			case <-ctx.Done():
+				return
+			case <-timer.C:
+			}
+		}
+
+		if info.State != initSelecting && next == initSelecting {
+			syslog.WarnTf(tag, "lease time expired, cleaning up")
+			c.cleanup(&info)
+		}
+
+		info.State = next
+
+		// Synchronize info after any state updates.
+		c.info.Store(info)
+	}
 }
 
 func (c *Client) cleanup(info *Info) {
