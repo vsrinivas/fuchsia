@@ -10,7 +10,6 @@ rustc_binary("enclosed_runner") {
   testonly = true
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.net.icmp:fuchsia.net.icmp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
@@ -18,6 +17,7 @@ rustc_binary("enclosed_runner") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

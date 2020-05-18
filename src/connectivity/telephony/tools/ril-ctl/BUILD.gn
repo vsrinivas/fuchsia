@@ -10,7 +10,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -20,6 +19,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

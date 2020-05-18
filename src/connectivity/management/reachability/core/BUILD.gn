@@ -13,8 +13,6 @@ rustc_library("lib") {
   non_rust_deps = [ ":ext_ping" ]
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_net_ext",
-    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
@@ -26,6 +24,8 @@ rustc_library("lib") {
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

@@ -25,8 +25,6 @@ rustc_test("netstack_integration_test") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_net_ext",
-    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
@@ -44,6 +42,8 @@ rustc_test("netstack_integration_test") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/network/packet",
     "//src/lib/network/packet-formats",
     "//src/lib/zerocopy",

@@ -22,7 +22,6 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/lib/rust/connectivity-testing",
-    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
@@ -78,6 +77,7 @@ rustc_library("lib") {
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//src/lib/mapped-vmo",
+    "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/storage/pseudo-fs",
     "//src/lib/syslog/rust:syslog",

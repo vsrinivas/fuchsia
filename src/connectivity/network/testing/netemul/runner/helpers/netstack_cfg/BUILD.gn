@@ -9,9 +9,6 @@ rustc_binary("netstack_cfg") {
   name = "netstack_cfg"
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_net_ext",
-    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
-    "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -20,6 +17,9 @@ rustc_binary("netstack_cfg") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/network/fidl_fuchsia_net_stack_ext",
+    "//src/lib/network/fidl_fuchsia_netstack_ext",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
