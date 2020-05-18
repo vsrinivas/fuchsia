@@ -30,7 +30,7 @@ unittest_package("lib-component-go-unittests") {
   tests = [
     {
       name = "component_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

@@ -55,7 +55,7 @@ test_package("packet-formats-test") {
   tests = [
     {
       name = "packet_formats_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

@@ -46,7 +46,7 @@ test_package("inspect-validator-test-go") {
   tests = [
     {
       name = "validator"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

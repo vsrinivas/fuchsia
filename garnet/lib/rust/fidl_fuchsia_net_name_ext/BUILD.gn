@@ -18,7 +18,7 @@ unittest_package("fidl-fuchsia-net-name-ext-tests") {
   tests = [
     {
       name = "fidl_fuchsia_net_name_ext_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

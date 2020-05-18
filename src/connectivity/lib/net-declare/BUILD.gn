@@ -35,7 +35,7 @@ unittest_package("net-declare-tests") {
   tests = [
     {
       name = "net_declare_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }

@@ -34,7 +34,7 @@ test_package("packet-test") {
   tests = [
     {
       name = "packet_lib_test"
-      environments = [ qemu_env ]
+      environments = [ emu_env ]
     },
   ]
 }
