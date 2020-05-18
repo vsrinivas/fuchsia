@@ -20,6 +20,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_buffer.h>
 #include <pretty/sizes.h>
 
 #include "bus.h"
@@ -53,14 +54,14 @@ zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cf
   fbl::AllocChecker ac;
   auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bli);
   if (!ac.check()) {
-    pci_errorf("Out of memory attemping to create PCIe device %s.\n", cfg->addr());
+    zxlogf(ERROR, "Out of memory attemping to create PCIe device %s.", cfg->addr());
     return ZX_ERR_NO_MEMORY;
   }
 
   auto dev = fbl::AdoptRef(static_cast<Device*>(raw_dev));
   zx_status_t status = raw_dev->Init();
   if (status != ZX_OK) {
-    pci_errorf("Failed to initialize PCIe device (res %d)\n", status);
+    zxlogf(ERROR, "Failed to initialize PCIe device (res %d)", status);
     return status;
   }
 
@@ -83,7 +84,7 @@ Device::~Device() {
   caps_.list.clear();
   caps_.ext_list.clear();
   // TODO(cja/ZX-3147): Remove this after porting is finished.
-  pci_tracef("%s [%s] dtor finished\n", is_bridge() ? "bridge" : "device", cfg_->addr());
+  zxlogf(TRACE, "%s [%s] dtor finished", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
 
 zx_status_t Device::CreateProxy() {
@@ -118,7 +119,7 @@ zx_status_t Device::Init() {
 
   zx_status_t status = InitLocked();
   if (status != ZX_OK) {
-    pci_errorf("failed to initialize device %s: %d\n", cfg_->addr(), status);
+    zxlogf(ERROR, "failed to initialize device %s: %d", cfg_->addr(), status);
     return status;
   }
 
@@ -149,7 +150,7 @@ zx_status_t Device::InitLocked() {
   // if they exist
   zx_status_t st = ProbeCapabilities();
   if (st != ZX_OK) {
-    pci_errorf("device %s encountered an error parsing capabilities: %d\n", cfg_->addr(), st);
+    zxlogf(ERROR, "device %s encountered an error parsing capabilities: %d", cfg_->addr(), st);
     return st;
   }
 
@@ -159,7 +160,7 @@ zx_status_t Device::InitLocked() {
 
   st = CreateProxy();
   if (st != ZX_OK) {
-    pci_errorf("device %s couldn't spawn its proxy driver_host: %d\n", cfg_->addr(), st);
+    zxlogf(ERROR, "device %s couldn't spawn its proxy driver_host: %d", cfg_->addr(), st);
     return st;
   }
 
@@ -200,7 +201,7 @@ void Device::DisableLocked() {
   // Disable a device because we cannot allocate space for all of its BARs (or
   // forwarding windows, in the case of a bridge).  Flag the device as
   // disabled from here on out.
-  pci_tracef("[%s]%s %s\n", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
+  zxlogf(TRACE, "[%s]%s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
 
   // Flag the device as disabled.  Close the device's MMIO/PIO windows, shut
   // off device initiated accesses to the bus, disable legacy interrupts.
@@ -248,12 +249,12 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
 
   // Sanity check the read-only configuration of the BAR
   if (bar_info.is_64bit && (bar_info.bar_id == bar_count_ - 1)) {
-    pci_errorf("%s has a 64bit bar in invalid position %u!\n", cfg_->addr(), bar_info.bar_id);
+    zxlogf(ERROR, "%s has a 64bit bar in invalid position %u!", cfg_->addr(), bar_info.bar_id);
     return ZX_ERR_BAD_STATE;
   }
 
   if (bar_info.is_64bit && !bar_info.is_mmio) {
-    pci_errorf("%s bar %u is 64bit but not mmio!\n", cfg_->addr(), bar_info.bar_id);
+    zxlogf(ERROR, "%s bar %u is 64bit but not mmio!", cfg_->addr(), bar_info.bar_id);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -320,10 +321,10 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
   }
 
   std::array<char, 8> pretty_size = {};
-  pci_tracef("%s Region %u: probed %s (%s%sprefetchable) [size=%s]\n", cfg_->addr(), bar_id,
-             (bar_info.is_mmio) ? "Memory" : "I/O ports", (bar_info.is_64bit) ? "64-bit, " : "",
-             (bar_info.is_prefetchable) ? "" : "non-",
-             format_size(pretty_size.data(), pretty_size.max_size(), bar_info.size));
+  zxlogf(TRACE, "%s Region %u: probed %s (%s%sprefetchable) [size=%s]", cfg_->addr(), bar_id,
+         (bar_info.is_mmio) ? "Memory" : "I/O ports", (bar_info.is_64bit) ? "64-bit, " : "",
+         (bar_info.is_prefetchable) ? "" : "non-",
+         format_size(pretty_size.data(), pretty_size.max_size(), bar_info.size));
 
   // All done, re-enable IO/MMIO access that was disabled prior.
   AssignCmdLocked(cmd_backup);
@@ -360,11 +361,11 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     if (status == ZX_OK) {
       // If we successfully grabbed the allocation then we're finished because
       // our metadata already matches what we requested from the allocator.
-      pci_tracef("%s preserved BAR %u's existing allocation.\n", cfg_->addr(), bar_info.bar_id);
+      zxlogf(TRACE, "%s preserved BAR %u's existing allocation.", cfg_->addr(), bar_info.bar_id);
       return ZX_OK;
     } else {
-      pci_tracef("%s failed to preserve BAR %u address %lx, reallocating: %d\n", cfg_->addr(),
-                 bar_info.bar_id, bar_info.address, status);
+      zxlogf(TRACE, "%s failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
+             bar_info.bar_id, bar_info.address, status);
       bar_info.address = 0;
     }
   }
@@ -376,8 +377,8 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     // Request a base address of zero to signal we'll take any location in
     // the window.
     if (status != ZX_OK) {
-      pci_errorf("%s couldn't allocate %#zx for bar %u: %d\n", cfg_->addr(), bar_info.size,
-                 bar_info.bar_id, status);
+      zxlogf(ERROR, "%s couldn't allocate %#zx for bar %u: %d", cfg_->addr(), bar_info.size,
+             bar_info.bar_id, status);
       return status;
     }
   }
@@ -408,7 +409,7 @@ zx_status_t Device::ConfigureBars() {
   for (uint32_t bar_id = 0; bar_id < bar_count_; bar_id++) {
     status = ProbeBar(bar_id);
     if (status != ZX_OK) {
-      pci_errorf("%s error probing bar %u: %d. Skipping it.\n", cfg_->addr(), bar_id, status);
+      zxlogf(ERROR, "%s error probing bar %u: %d. Skipping it.", cfg_->addr(), bar_id, status);
       continue;
     }
 
@@ -416,7 +417,7 @@ zx_status_t Device::ConfigureBars() {
     if (bars_[bar_id].size) {
       status = AllocateBar(bar_id);
       if (status != ZX_OK) {
-        pci_errorf("%s failed to allocate bar %u: %d\n", cfg_->addr(), bar_id, status);
+        zxlogf(ERROR, "%s failed to allocate bar %u: %d", cfg_->addr(), bar_id, status);
       }
     }
 
@@ -431,7 +432,7 @@ zx_status_t Device::ConfigureBars() {
 }
 
 void Device::Unplug() {
-  pci_tracef("[%s]%s %s\n", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
+  zxlogf(TRACE, "[%s]%s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
   // Begin by completely nerfing this device, and preventing an new API
   // operations on it.  We need to be inside the dev lock to do this.  Note:
   // it is assumed that we will not disappear during any of this function,
@@ -443,40 +444,47 @@ void Device::Unplug() {
   upstream_->UnlinkDevice(this);
   bli_->UnlinkDevice(this);
   plugged_in_ = false;
-  pci_tracef("device [%s] unplugged\n", cfg_->addr());
+  zxlogf(TRACE, "device [%s] unplugged", cfg_->addr());
 }
 
 void Device::Dump() const {
-  pci_infof("%s at %s vid:did %04x:%04x\n", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
-            vendor_id(), device_id());
+  fbl::StringBuffer<256> log;
+  zxlogf(TRACE, "%s at %s vid:did %04x:%04x", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
+         vendor_id(), device_id());
   for (size_t i = 0; i < bar_count_; i++) {
     auto& bar = bars_[i];
     if (bar.size) {
-      pci_infof("    bar %zu: %s, %s, addr %#lx, size %#zx [raw: ", i,
-                (bar.is_mmio) ? ((bar.is_64bit) ? "64bit mmio" : "32bit mmio") : "io",
-                (bar.is_prefetchable) ? "pf" : "no-pf", bar.address, bar.size);
+      log.AppendPrintf("    bar %zu: %s, %s, addr %#lx, size %#zx [raw: ", i,
+                       (bar.is_mmio) ? ((bar.is_64bit) ? "64bit mmio" : "32bit mmio") : "io",
+                       (bar.is_prefetchable) ? "pf" : "no-pf", bar.address, bar.size);
       if (bar.is_64bit) {
-        zxlogf(INFO, "%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
+        log.AppendPrintf("%08x ", cfg_->Read(Config::kBar(bar.bar_id + 1)));
       }
-      zxlogf(INFO, "%08x ]", cfg_->Read(Config::kBar(bar.bar_id)));
-    }
-  }
-  if (!caps_.list.is_empty()) {
-    pci_infof("    capabilities: ");
-    for (auto& cap : caps_.list) {
-      auto id = static_cast<Capability::Id>(cap.id());
-      zxlogf(INFO, "%s (%#x)%s", CapabilityIdToName(id), cap.id(),
-             (&cap == &caps_.list.back()) ? "\n" : ", ");
+      log.AppendPrintf("%08x ]", cfg_->Read(Config::kBar(bar.bar_id)));
+      zxlogf(TRACE, "%s", log.c_str());
+      log.Clear();
     }
   }
 
+  if (!caps_.list.is_empty()) {
+    log.AppendPrintf("    capabilities: ");
+    for (auto& cap : caps_.list) {
+      auto id = static_cast<Capability::Id>(cap.id());
+      bool end = &cap == &caps_.list.back();
+      log.AppendPrintf("%s (%#x)%s", CapabilityIdToName(id), cap.id(), (!end) ? "," : " ");
+    }
+    zxlogf(TRACE, "%s", log.c_str());
+    log.Clear();
+  }
+
   if (!caps_.ext_list.is_empty()) {
-    pci_infof("    extended capabilities: ");
+    log.AppendPrintf("    extended capabilities: ");
     for (auto& cap : caps_.ext_list) {
       auto id = static_cast<ExtCapability::Id>(cap.id());
-      zxlogf(INFO, "%s (%#x)%s", ExtCapabilityIdToName(id), cap.id(),
-             (&cap == &caps_.ext_list.back()) ? "\n" : ", ");
+      bool end = &cap == &caps_.ext_list.back();
+      log.AppendPrintf("%s (%#x)%s", ExtCapabilityIdToName(id), cap.id(), (!end) ? "," : " ");
     }
+    zxlogf(TRACE, "%s", log.c_str());
   }
 }
 

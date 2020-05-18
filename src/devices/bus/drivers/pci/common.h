@@ -4,23 +4,13 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_COMMON_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_COMMON_H_
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <zircon/hw/pci.h>
 
-#include <ddk/debug.h>
+#include <array>
 
-// Switch for easy enabling of output during unit tests where we
-// won't have driver log values set.
-#if 1
-#define pci_infof(...) zxlogf(INFO, "pci: " __VA_ARGS__)
-#define pci_errorf(...) zxlogf(ERROR, "pci: " __VA_ARGS__)
-#define pci_tracef(...) zxlogf(DEBUG, "pci: " __VA_ARGS__)
-#define pci_spewf(...) zxlogf(TRACE, "pci: " __VA_ARGS__)
-#else
-#define pci_infof(...) printf("pci: " __VA_ARGS__)
-#define pci_errorf(...) printf("pci: " __VA_ARGS__)
-#define pci_tracef(...) printf("pci: " __VA_ARGS__)
-#define pci_spewf(...) printtf("pci: " __VA_ARGS__)
-#endif
+#include <ddk/debug.h>
 
 /*
  * PCI access return codes

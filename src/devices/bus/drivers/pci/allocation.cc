@@ -22,7 +22,7 @@
 namespace pci {
 
 zx_status_t PciAllocation::CreateVmObject(zx::vmo* out_vmo) const {
-  pci_tracef("Creating vmo for allocation [base = %#lx, size = %#zx]\n", base(), size());
+  zxlogf(TRACE, "Creating vmo for allocation [base = %#lx, size = %#zx]", base(), size());
   return zx::vmo::create_physical(resource(), base(), size(), out_vmo);
 }
 
@@ -32,8 +32,8 @@ zx_status_t PciRootAllocator::AllocateWindow(zx_paddr_t in_base, size_t size,
   zx::resource res;
   zx_status_t status = pciroot_.GetAddressSpace(size, in_base, type_, low_, &out_base, &res);
   if (status != ZX_OK) {
-    pci_errorf("failed to allocate [%#8lx, %#8lx, %s] from root: %d\n", in_base, size,
-               (type_ == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", status);
+    zxlogf(ERROR, "failed to allocate [%#8lx, %#8lx, %s] from root: %d", in_base, size,
+           (type_ == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", status);
     return status;
   }
 
@@ -82,8 +82,8 @@ zx_status_t PciRegionAllocator::AllocateWindow(zx_paddr_t base, size_t size,
     return status;
   }
 
-  pci_tracef("bridge: assigned [ %#lx-%#lx ] to downstream\n", region_uptr->base,
-             region_uptr->base + size);
+  zxlogf(TRACE, "bridge: assigned [ %#lx-%#lx ] to downstream", region_uptr->base,
+         region_uptr->base + size);
 
   *out_alloc =
       std::make_unique<PciRegionAllocation>(std::move(out_resource), std::move(region_uptr));

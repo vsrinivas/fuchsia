@@ -10,7 +10,7 @@
 // TODO(ZX-3927): Stop depending on the types in this file.
 #include <zircon/syscalls/pci.h>
 
-#define RPC_ENTRY pci_tracef("[%s] %s: entry\n", cfg_->addr(), __func__)
+#define RPC_ENTRY zxlogf(TRACE, "[%s] %s: entry", cfg_->addr(), __func__)
 
 #define RPC_UNIMPLEMENTED \
   RPC_ENTRY;              \
@@ -127,8 +127,8 @@ zx_status_t Device::RpcConfigRead(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  pci_spewf("%s Read%u[%#x] = %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
-            response_.cfg.value);
+  zxlogf(TRACE, "%s Read%u[%#x] = %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+         response_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
 
@@ -160,8 +160,8 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  pci_spewf("%s Write%u[%#x] <- %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
-            request_.cfg.value);
+  zxlogf(TRACE, "%s Write%u[%#x] <- %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+         request_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
 

@@ -74,26 +74,26 @@ zx_status_t Bridge::Init() {
   uint8_t secondary_id = cfg_->Read(Config::kSecondaryBusId);
 
   if (primary_id == secondary_id) {
-    pci_errorf(
-        "PCI-to-PCI bridge detected at %s claims to be bridged to itsef "
-        "(primary %02x == secondary %02x)... skipping scan.\n",
-        cfg_->addr(), primary_id, secondary_id);
+    zxlogf(ERROR,
+           "PCI-to-PCI bridge detected at %s claims to be bridged to itsef "
+           "(primary %02x == secondary %02x)... skipping scan.\n",
+           cfg_->addr(), primary_id, secondary_id);
     return ZX_ERR_BAD_STATE;
   }
 
   if (primary_id != cfg_->bdf().bus_id) {
-    pci_errorf(
-        "PCI-to-PCI bridge detected at %s has invalid primary bus id "
-        "(%02x)... skipping scan.\n",
-        cfg_->addr(), primary_id);
+    zxlogf(ERROR,
+           "PCI-to-PCI bridge detected at %s has invalid primary bus id "
+           "(%02x)... skipping scan.\n",
+           cfg_->addr(), primary_id);
     return ZX_ERR_BAD_STATE;
   }
 
   if (secondary_id != managed_bus_id()) {
-    pci_errorf(
-        "PCI-to-PCI bridge detected at %s has invalid secondary bus id "
-        "(%02x)... skipping scan.\n",
-        cfg_->addr(), secondary_id);
+    zxlogf(ERROR,
+           "PCI-to-PCI bridge detected at %s has invalid secondary bus id "
+           "(%02x)... skipping scan.\n",
+           cfg_->addr(), secondary_id);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -173,22 +173,22 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
 void Bridge::Dump() const {
   pci::Device::Dump();
 
-  pci_infof("  managed bus id: %#02x\n", managed_bus_id());
+  zxlogf(INFO, "  managed bus id: %#02x", managed_bus_id());
   if (io_limit() > io_base()) {
-    pci_infof("       io window: [%#04x-%#04x]\n", io_base(), io_limit());
+    zxlogf(INFO, "       io window: [%#04x-%#04x]", io_base(), io_limit());
   }
   if (mem_limit() > mem_base()) {
-    pci_infof("     mmio window: [%#08x-%#08x]\n", mem_base(), mem_limit());
+    zxlogf(INFO, "     mmio window: [%#08x-%#08x]", mem_base(), mem_limit());
   }
   if (pf_mem_limit() > pf_mem_base()) {
-    pci_infof("  pf-mmio window: [%#" PRIx64 "-%#" PRIx64 "]\n", pf_mem_base(), pf_mem_limit());
+    zxlogf(INFO, "  pf-mmio window: [%#" PRIx64 "-%#" PRIx64 "]", pf_mem_base(), pf_mem_limit());
   }
 }
 
 void Bridge::Unplug() {
   UnplugDownstream();
   pci::Device::Unplug();
-  pci_infof("bridge [%s] unplugged\n", cfg_->addr());
+  zxlogf(INFO, "bridge [%s] unplugged", cfg_->addr());
 }
 
 zx_status_t Bridge::ConfigureBars() {
@@ -237,8 +237,8 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
       status = upstream_alloc.AllocateWindow(base, size, &alloc);
 
       if (status != ZX_OK) {
-        pci_errorf("[%s] Failed to allocate bridge %s window [%016lx-%016lx]\n", cfg_->addr(),
-                   label, static_cast<uint64_t>(base), static_cast<uint64_t>(limit));
+        zxlogf(ERROR, "[%s] Failed to allocate bridge %s window [%016lx-%016lx]", cfg_->addr(),
+               label, static_cast<uint64_t>(base), static_cast<uint64_t>(limit));
         return status;
       }
 
@@ -251,19 +251,22 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   // Configure the three windows
   status = configure_window(upstream_->pio_regions(), pio_regions_, io_base_, io_limit_, "io");
   if (status != ZX_OK) {
-    pci_tracef("%s Error configuring I/O window (%d), I/O bars downstream will be unavailable!\n",
-               cfg_->addr(), status);
+    zxlogf(TRACE,
+           "%s Error configuring I/O window (%d), I/O bars downstream will be unavailable!\n",
+           cfg_->addr(), status);
   }
   status =
       configure_window(upstream_->mmio_regions(), mmio_regions_, mem_base_, mem_limit_, "mmio");
   if (status != ZX_OK) {
-    pci_tracef("%s Error configuring MMIO window (%d), MMIO bars downstream will be unavailable!\n",
-               cfg_->addr(), status);
+    zxlogf(TRACE,
+           "%s Error configuring MMIO window (%d), MMIO bars downstream will be unavailable!\n",
+           cfg_->addr(), status);
   }
   status = configure_window(upstream_->pf_mmio_regions(), pf_mmio_regions_, pf_mem_base_,
                             pf_mem_limit_, "pf_mmio");
   if (status != ZX_OK) {
-    pci_tracef(
+    zxlogf(
+        TRACE,
         "%s Error configuring PF-MMIO window (%d), PF-MMIO bars downstream will be unavailable!\n",
         cfg_->addr(), status);
   }

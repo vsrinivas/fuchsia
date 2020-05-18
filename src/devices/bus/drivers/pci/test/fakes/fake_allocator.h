@@ -20,7 +20,7 @@ class FakeAllocation : public PciAllocation {
  public:
   FakeAllocation(zx_paddr_t base, size_t size)
       : PciAllocation(zx::resource(ZX_HANDLE_INVALID)), base_(base), size_(size) {
-    pci_infof("fake allocation created %#lx - %#lx\n", base, base + size);
+    zxlogf(INFO, "fake allocation created %#lx - %#lx", base, base + size);
   }
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }

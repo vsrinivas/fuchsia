@@ -26,13 +26,13 @@ zx_status_t Bus::Create(zx_device_t* parent) {
   zx_status_t status;
   pciroot_protocol_t pciroot;
   if ((status = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &pciroot)) != ZX_OK) {
-    pci_errorf("failed to obtain pciroot protocol: %d!\n", status);
+    zxlogf(ERROR, "failed to obtain pciroot protocol: %d!", status);
     return status;
   }
 
   Bus* bus = new Bus(parent, &pciroot);
   if (!bus) {
-    pci_errorf("failed to allocate bus object.\n");
+    zxlogf(ERROR, "failed to allocate bus object.");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -41,7 +41,7 @@ zx_status_t Bus::Create(zx_device_t* parent) {
   pci_platform_info_t info;
   status = bus->pciroot().GetPciPlatformInfo(&info);
   if (status != ZX_OK) {
-    pci_errorf("failed to obtain platform information: %d!\n", status);
+    zxlogf(ERROR, "failed to obtain platform information: %d!", status);
     return status;
   }
 
@@ -51,12 +51,12 @@ zx_status_t Bus::Create(zx_device_t* parent) {
   snprintf(name, sizeof(name), "pci[%u][%u:%u]", info.segment_group, info.start_bus_num,
            info.end_bus_num);
   if ((status = bus->DdkAdd(name)) != ZX_OK) {
-    pci_errorf("failed to add bus driver: %d\n", status);
+    zxlogf(ERROR, "failed to add bus driver: %d", status);
     return status;
   }
 
   if ((status = bus->Initialize()) != ZX_OK) {
-    pci_errorf("failed to initialize bus driver: %d!\n", status);
+    zxlogf(ERROR, "failed to initialize bus driver: %d!", status);
     bus->DdkAsyncRemove();
     return status;
   }
@@ -67,13 +67,13 @@ zx_status_t Bus::Create(zx_device_t* parent) {
 zx_status_t Bus::Initialize() {
   zx_status_t status = pciroot_.GetPciPlatformInfo(&info_);
   if (status != ZX_OK) {
-    pci_errorf("failed to obtain platform information: %d!\n", status);
+    zxlogf(ERROR, "failed to obtain platform information: %d!", status);
     return status;
   }
 
   if (info_.ecam_vmo != ZX_HANDLE_INVALID) {
     if ((status = MapEcam()) != ZX_OK) {
-      pci_errorf("failed to map ecam: %d!\n", status);
+      zxlogf(ERROR, "failed to map ecam: %d!", status);
       return status;
     }
   }
@@ -87,7 +87,7 @@ zx_status_t Bus::Initialize() {
   // Begin our bus scan starting at our root
   ScanDownstream();
   root_->ConfigureDownstreamDevices();
-  pci_infof("AllDevicesList:\n");
+  zxlogf(TRACE, "AllDevicesList:");
   {
     fbl::AutoLock devices_lock(&devices_lock_);
     for (auto& dev : devices_) {
@@ -95,7 +95,7 @@ zx_status_t Bus::Initialize() {
     }
   }
 
-  pci_infof("%s init done.\n", info_.name);
+  zxlogf(INFO, "%s init done.", info_.name);
   return ZX_OK;
 }
 
@@ -107,19 +107,19 @@ zx_status_t Bus::MapEcam(void) {
   size_t size;
   zx_status_t status = zx_vmo_get_size(info_.ecam_vmo, &size);
   if (status != ZX_OK) {
-    pci_errorf("couldn't get ecam vmo size: %d!\n", status);
+    zxlogf(ERROR, "couldn't get ecam vmo size: %d!", status);
     return status;
   }
 
   status =
       ddk::MmioBuffer::Create(0, size, zx::vmo(info_.ecam_vmo), ZX_CACHE_POLICY_UNCACHED, &ecam_);
   if (status != ZX_OK) {
-    pci_errorf("couldn't map ecam vmo: %d!\n", status);
+    zxlogf(ERROR, "couldn't map ecam vmo: %d!", status);
     return status;
   }
 
-  pci_infof("ecam for segment %u mapped at %p (size: %#zx)\n", info_.segment_group, ecam_->get(),
-            ecam_->get_size());
+  zxlogf(INFO, "ecam for segment %u mapped at %p (size: %#zx)", info_.segment_group, ecam_->get(),
+         ecam_->get_size());
   return ZX_OK;
 }
 
@@ -132,8 +132,8 @@ zx_status_t Bus::MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* out_config) 
   }
 
   if (status != ZX_OK) {
-    pci_errorf("failed to create config for %02x:%02x:%1x: %d!\n", bdf.bus_id, bdf.device_id,
-               bdf.function_id, status);
+    zxlogf(ERROR, "failed to create config for %02x:%02x:%1x: %d!", bdf.bus_id, bdf.device_id,
+           bdf.function_id, status);
   }
 
   return status;
@@ -156,11 +156,11 @@ zx_status_t Bus::ScanDownstream(void) {
   // scheme of the bus topology.
   while (!scan_list.empty()) {
     auto entry = scan_list.back();
-    pci_tracef("scanning from %02x:%02x.%01x upstream: %s\n", entry.bdf.bus_id, entry.bdf.device_id,
-               entry.bdf.function_id,
-               (entry.upstream->type() == UpstreamNode::Type::ROOT)
-                   ? "root"
-                   : static_cast<Bridge*>(entry.upstream)->config()->addr());
+    zxlogf(TRACE, "scanning from %02x:%02x.%01x upstream: %s", entry.bdf.bus_id,
+           entry.bdf.device_id, entry.bdf.function_id,
+           (entry.upstream->type() == UpstreamNode::Type::ROOT)
+               ? "root"
+               : static_cast<Bridge*>(entry.upstream)->config()->addr());
     // Remove this entry, otherwise we'll pop the wrong child off if the scan
     // adds any new bridges / resume points.
     scan_list.pop_back();
@@ -191,8 +191,8 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
 
       bool is_bridge =
           ((config->Read(Config::kHeaderType) & PCI_HEADER_TYPE_MASK) == PCI_HEADER_TYPE_BRIDGE);
-      pci_tracef("\tfound %s at %02x:%02x.%1x\n", (is_bridge) ? "bridge" : "device", bus_id, dev_id,
-                 func_id);
+      zxlogf(TRACE, "\tfound %s at %02x:%02x.%1x", (is_bridge) ? "bridge" : "device", bus_id,
+             dev_id, func_id);
 
       // If we found a bridge, add it to our bridge list and initialize /
       // enumerate it after we finish scanning this bus

@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
-#define ZIRCON_SYSTEM_DEV_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
+#ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
+#define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
 
 #include <zircon/compiler.h>
 
@@ -147,4 +147,4 @@ class PciRootHost {
 };
 
 #endif  // ifndef __cplusplus
-#endif  // ZIRCON_SYSTEM_DEV_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
+#endif  // SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_

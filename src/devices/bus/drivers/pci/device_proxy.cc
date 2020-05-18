@@ -11,9 +11,9 @@
 
 #include "common.h"
 
-#define RPC_ENTRY pci_tracef("[%s] %s: entry\n", cfg_->addr(), __func__)
+#define RPC_ENTRY zxlogf(TRACE, "[%s] %s: entry", cfg_->addr(), __func__)
 
-#define DEVICE_PROXY_UNIMPLEMENTED                     \
+#define DEVICE_PROXY_UNIMPLEMENTED                   \
   zxlogf(INFO, "[DeviceProxy] called %s", __func__); \
   return ZX_ERR_NOT_SUPPORTED
 
