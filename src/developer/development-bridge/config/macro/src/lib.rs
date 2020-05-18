@@ -25,22 +25,43 @@ macro_rules! ffx_cmd {
 }
 
 #[macro_export]
+macro_rules! ffx_env {
+    () => {{
+        #[cfg(test)]
+        {
+            // Prevent any File I/O in unit tests.
+            Err(anyhow::anyhow!("test - no environment"))
+        }
+        #[cfg(not(test))]
+        {
+            ffx_config::find_env_file()
+        }
+    }};
+}
+
+#[macro_export]
 macro_rules! get {
     (str, $key:expr, $default:expr) => {{
-        ffx_config::get_config_str($key, $default, ffx_config::ffx_cmd!())
+        ffx_config::get_config_str($key, $default, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};
     (bool, $key:expr, $default:expr) => {{
-        ffx_config::get_config_bool($key, $default, ffx_config::ffx_cmd!())
+        ffx_config::get_config_bool($key, $default, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};
     ($key:expr) => {
-        ffx_config::get_config($key, ffx_config::ffx_cmd!())
+        ffx_config::get_config($key, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     };
 }
 
 #[macro_export]
 macro_rules! remove {
     ($level:expr, $key:expr, $build_dir:expr) => {{
-        ffx_config::remove_config_with_build_dir($level, $key, $build_dir, ffx_config::ffx_cmd!())
+        ffx_config::remove_config_with_build_dir(
+            $level,
+            $key,
+            $build_dir,
+            ffx_config::ffx_cmd!(),
+            ffx_config::ffx_env!(),
+        )
     }};
 }
 
@@ -53,6 +74,7 @@ macro_rules! set {
             $value,
             $build_dir,
             ffx_config::ffx_cmd!(),
+            ffx_config::ffx_env!(),
         )
     }};
 }

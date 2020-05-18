@@ -20,9 +20,6 @@ use crate::linux::imp::{env_vars, heuristics};
 #[cfg(not(target_os = "linux"))]
 use crate::not_linux::imp::{env_vars, heuristics};
 
-#[cfg(not(test))]
-use crate::find_env_file;
-
 struct CacheItem<'a> {
     created: Instant,
     config: Arc<RwLock<Config<'a>>>,
@@ -55,8 +52,9 @@ async fn read_cache(
 pub(crate) async fn load_config(
     build_dir: &Option<String>,
     ffx: Ffx,
+    env: &Result<String, Error>,
 ) -> Result<Arc<RwLock<Config<'static>>>, Error> {
-    load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx).await
+    load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx, env).await
 }
 
 async fn load_config_with_instant(
@@ -64,6 +62,7 @@ async fn load_config_with_instant(
     now: Instant,
     cache: &Cache,
     ffx: Ffx,
+    env: &Result<String, Error>,
 ) -> Result<Arc<RwLock<Config<'static>>>, Error> {
     let cache_hit = read_cache(build_dir, now, cache).await;
     match cache_hit {
@@ -81,7 +80,7 @@ async fn load_config_with_instant(
                         CacheItem {
                             created: now,
                             config: Arc::new(RwLock::new(Config::new(
-                                &Environment::try_load(find_env_file().ok()),
+                                &Environment::try_load(env.as_ref().ok()),
                                 build_dir,
                                 &ENV_VARS,
                                 &HEURISTICS,
@@ -101,12 +100,6 @@ async fn load_config_with_instant(
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 #[cfg(test)]
-fn find_env_file() -> Result<String, Error> {
-    // Prevent any File I/O in unit tests.
-    Err(anyhow!("test no environment"))
-}
-
-#[cfg(test)]
 mod test {
     use super::*;
     use ffx_args::DaemonCommand;
@@ -114,15 +107,21 @@ mod test {
     use futures::future::join_all;
     use std::time::Duration;
 
+    fn env() -> Result<String, Error> {
+        // Prevent any File I/O in unit tests.
+        Err(anyhow!("test no environment"))
+    }
+
     fn cli() -> Ffx {
         Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) }
     }
 
     async fn load(now: Instant, key: &Option<String>, cache: &Cache) {
         let tests = 25;
+        let env = env();
         let mut futures = Vec::new();
         for _x in 0..tests {
-            futures.push(load_config_with_instant(key, now, cache, cli()));
+            futures.push(load_config_with_instant(key, now, cache, cli(), &env));
         }
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
@@ -212,7 +211,7 @@ mod test {
         let item = CacheItem {
             created: later,
             config: Arc::new(RwLock::new(Config::new(
-                &Environment::try_load(find_env_file().ok()),
+                &Environment::try_load(env().as_ref().ok()),
                 &build_dirs[0],
                 &ENV_VARS,
                 &HEURISTICS,

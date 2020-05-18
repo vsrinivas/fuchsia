@@ -12,6 +12,7 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       "proc_macro:config-proc-macros",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:proc-macro-hack",
     ]
   }

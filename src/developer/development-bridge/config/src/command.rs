@@ -29,7 +29,7 @@ pub async fn exec_config<W: Write + Sync>(config: ConfigCommand, writer: W) -> R
 }
 
 async fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(), Error> {
-    match get_config(&get.name, argh::from_env()).await? {
+    match get_config(&get.name, argh::from_env(), find_env_file()).await? {
         Some(v) => writeln!(writer, "{}: {}", get.name, v)?,
         None => writeln!(writer, "{}: none", get.name)?,
     };
@@ -37,12 +37,19 @@ async fn exec_get<W: Write + Sync>(get: GetCommand, mut writer: W) -> Result<(),
 }
 
 async fn exec_set(set: SetCommand) -> Result<(), Error> {
-    set_config(set.level, &set.name, Value::String(set.value), set.build_dir, argh::from_env())
-        .await
+    set_config(
+        set.level,
+        &set.name,
+        Value::String(set.value),
+        set.build_dir,
+        argh::from_env(),
+        find_env_file(),
+    )
+    .await
 }
 
 async fn exec_remove(set: RemoveCommand) -> Result<(), Error> {
-    remove_config(set.level, &set.name, set.build_dir, argh::from_env()).await
+    remove_config(set.level, &set.name, set.build_dir, argh::from_env(), find_env_file()).await
 }
 
 fn exec_env_set(env: &mut Environment, s: EnvSetCommand, file: String) -> Result<(), Error> {

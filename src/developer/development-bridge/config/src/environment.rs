@@ -36,10 +36,10 @@ impl Environment {
         }
     }
 
-    pub(crate) fn try_load(file: Option<String>) -> Self {
+    pub(crate) fn try_load(file: Option<&String>) -> Self {
         match file {
             Some(f) => {
-                let reader = Environment::reader(&f);
+                let reader = Environment::reader(f);
                 if reader.is_err() {
                     Self { user: None, build: None, global: None }
                 } else {
