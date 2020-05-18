@@ -15,6 +15,7 @@
 
 #include <arch/x86.h>
 #include <fbl/algorithm.h>
+#include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <platform/pc.h>
@@ -136,6 +137,7 @@ zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mod
 }
 
 void platform_irq(x86_iframe_t* frame) {
+  CPU_STATS_INC(interrupts);
   // get the current vector
   uint64_t x86_vector = frame->vector;
   DEBUG_ASSERT(x86_vector >= X86_INT_PLATFORM_BASE && x86_vector <= X86_INT_PLATFORM_MAX);
