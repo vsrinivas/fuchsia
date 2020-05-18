@@ -1,0 +1,54 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "hello_world_integration_test"
+  edition = "2018"
+  source_root = "src/hello_world_integration_test.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog-listener",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("hello-world-integration-test") {
+  deps = [
+    ":bin",
+    "..:hello_world_bin",
+    "//src/diagnostics/archivist:observer",
+  ]
+  v2_tests = [
+    {
+      name = "hello_world_integration_test"
+      environments = basic_envs
+    },
+  ]
+  binaries = [
+    {
+      name = "hello_world"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("../meta/hello_world.cml")
+      dest = "hello_world.cm"
+    },
+    {
+      path = rebase_path("meta/hello_world_integration_test_driver.cml")
+      dest = "hello_world_integration_test_driver.cm"
+    },
+  ]
+}

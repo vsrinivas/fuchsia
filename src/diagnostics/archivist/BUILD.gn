@@ -113,6 +113,30 @@ package("archivist") {
   ]
 }
 
+package("observer") {
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "archivist"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/observer.cml")
+      dest = "observer.cm"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("configs/observer_config.json")
+      dest = "observer_config.json"
+    },
+  ]
+}
+
 config_data("archivist_config") {
   for_pkg = "archivist"
   outputs = [ "archivist_config.json" ]
@@ -139,6 +163,7 @@ group("with_default_config") {
     ":archivist",
     ":archivist_config",
     ":archivist_startup",
+    ":observer",
     ":observer_config",
   ]
 }

@@ -1,0 +1,28 @@
+{
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--disable-klog",
+            "--disable-log-connector",
+            "--config-path",
+            "/pkg/data/observer_config.json",
+        ],
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "/svc/fuchsia.sys2.EventSource",
+            from: "framework",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.logger.Log",
+            from: "self",
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "self",
+        },
+    ],
+}

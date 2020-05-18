@@ -1,0 +1,37 @@
+{
+    program: {
+        binary: "test/hello_world_integration_test",
+    },
+    children: [
+        {
+            name: "hello_world",
+            url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello_world.cm",
+        },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        { protocol: "/svc/fuchsia.logger.Log" },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#hello_world" ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [ "#hello_world" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

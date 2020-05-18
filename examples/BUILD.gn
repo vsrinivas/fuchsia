@@ -17,7 +17,7 @@ group("examples") {
     "rust",
     "speech",
     "//examples/components/basic:components_basic_example",
-    "//examples/components/basic:hello-world-tests",
+    "//examples/components/basic:tests",
     "//examples/components/routing:components-routing-example",
     "//examples/components/routing_failed:components-routing-failed-example",
   ]

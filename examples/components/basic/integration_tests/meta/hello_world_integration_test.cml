@@ -1,0 +1,41 @@
+{
+    children: [
+        {
+            name: "observer",
+            url: "fuchsia-pkg://fuchsia.com/observer#meta/observer.cm",
+        },
+        {
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello_world_integration_test_driver.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#driver",
+                "#observer",
+            ],
+        },
+        {
+            runner: "rust_test_runner",
+            from: "realm",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            from: "#observer",
+            to: [ "#driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#driver",
+        },
+    ],
+}
