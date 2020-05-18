@@ -16,6 +16,7 @@ import (
 func Parse(stdout []byte) []TestCaseResult {
 	lines := bytes.Split(stdout, []byte{'\n'})
 	res := []*regexp.Regexp{
+		ftfTestPreamblePattern,
 		googleTestPreamblePattern,
 		goTestPreamblePattern,
 		rustTestPreamblePattern,
@@ -23,6 +24,8 @@ func Parse(stdout []byte) []TestCaseResult {
 	}
 	match := firstMatch(lines, res)
 	switch match {
+	case ftfTestPreamblePattern:
+		return parseFtfTest(lines)
 	case googleTestPreamblePattern:
 		return parseGoogleTest(lines)
 	case goTestPreamblePattern:

@@ -46,6 +46,29 @@ The lamb was sure to go
 	testCase(t, stdout, "[]")
 }
 
+func TestParseFtfTest(t *testing.T) {
+	stdout := `
+Running test 'fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm'
+[RUNNING]	tests::two_plus_two
+[PASSED]	tests::two_plus_two
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm completed with result: PASSED
+ok 23 fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm (1.05014413s)`
+	want := `
+        [
+                {
+                        "display_name": "tests::two_plus_two",
+                        "suite_name": "",
+                        "case_name": "tests::two_plus_two",
+                        "status": "Pass",
+                        "duration_nanos": 0,
+                        "format": "FTF"
+                }
+        ]
+`
+	testCase(t, stdout, want)
+}
+
 func TestParseGoogleTest(t *testing.T) {
 	stdout := `
 Some times there is weird stuff in stdout.
