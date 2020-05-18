@@ -57,7 +57,7 @@ void FrameStats::RecordFrame(FrameTimings::Timestamps timestamps,
   if (timestamps.actual_presentation_time == FrameTimings::kTimeDropped) {
     RecordDroppedFrame(timestamps);
     cobalt_dropped_frame_times_histogram_[latch_to_actual_presentation_bucket_index]++;
-  } else if (timestamps.actual_presentation_time - display_vsync_interval >=
+  } else if (timestamps.actual_presentation_time - (display_vsync_interval / 2) >=
              timestamps.target_presentation_time) {
     RecordDelayedFrame(timestamps);
     cobalt_delayed_frame_times_histogram_[latch_to_actual_presentation_bucket_index]++;
