@@ -60,7 +60,7 @@ func (p *pools) useOnce() {
 	p.handleDispositions.Put(p.handleDispositions.Get().([]zx.HandleDisposition))
 }
 
-{{ range .EncodeBenchmarks }}
+{{ range .Benchmarks }}
 func BenchmarkEncode{{ .Name }}(b *testing.B) {
 	pools := newPools()
 	pools.useOnce()
@@ -85,9 +85,7 @@ func EncodeCount{{ .Name }}() (int, int, error) {
 	input := {{ .Value }}
 	return fidl.Marshal(&input, bytes, handles)
 }
-{{ end }}
 
-{{ range .DecodeBenchmarks }}
 func BenchmarkDecode{{ .Name }}(b *testing.B) {
 	data := make([]byte, 65536)
 	input := {{ .Value }}
@@ -114,13 +112,11 @@ type Benchmark struct {
 
 // Benchmarks is read by go_fidl_benchmarks_lib.
 var Benchmarks = []Benchmark{
-{{ range .EncodeBenchmarks }}
+{{ range .Benchmarks }}
 	{
 		Label: "Encode/{{ .ChromeperfPath }}",
 		BenchFunc: BenchmarkEncode{{ .Name }},
 	},
-{{ end }}
-{{ range .DecodeBenchmarks }}
 	{
 		Label: "Decode/{{ .ChromeperfPath }}",
 		BenchFunc: BenchmarkDecode{{ .Name }},
@@ -135,7 +131,7 @@ type EncodeCount struct {
 
 // EncodeCounts is read by go_fidl_benchmarks_lib.
 var EncodeCounts = []EncodeCount{
-	{{ range .EncodeBenchmarks }}
+	{{ range .Benchmarks }}
 	{
 		Label: "{{ .ChromeperfPath }}",
 		Func: EncodeCount{{ .Name }},
@@ -145,69 +141,33 @@ var EncodeCounts = []EncodeCount{
 `))
 
 type benchmarkTmplInput struct {
-	EncodeBenchmarks []goEncodeBenchmark
-	DecodeBenchmarks []goDecodeBenchmark
+	Benchmarks []benchmark
 }
-
-type goEncodeBenchmark struct {
-	Name, ChromeperfPath, Value string
-}
-
-type goDecodeBenchmark struct {
+type benchmark struct {
 	Name, ChromeperfPath, Value, ValueType string
 }
 
 // GenerateBenchmarks generates Go benchmarks.
 func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	schema := gidlmixer.BuildSchema(fidl)
-	encodeBenchmarks, err := goEncodeBenchmarks(gidl.EncodeBenchmark, schema)
-	if err != nil {
-		return err
-	}
-	decodeBenchmarks, err := goDecodeBenchmarks(gidl.DecodeBenchmark, schema)
-	if err != nil {
-		return err
-	}
-	input := benchmarkTmplInput{
-		EncodeBenchmarks: encodeBenchmarks,
-		DecodeBenchmarks: decodeBenchmarks,
-	}
-	return withGoFmt{benchmarkTmpl}.Execute(wr, input)
-}
-
-func goEncodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gidlmixer.Schema) ([]goEncodeBenchmark, error) {
-	var goEncodeBenchmarks []goEncodeBenchmark
-	for _, encodeBenchmark := range gidlEncodeBenchmarks {
-		decl, err := schema.ExtractDeclaration(encodeBenchmark.Value)
+	var benchmarks []benchmark
+	for _, gidlBenchmark := range gidl.Benchmark {
+		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return nil, fmt.Errorf("encode benchmark %s: %s", encodeBenchmark.Name, err)
+			return fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
-		value := visit(encodeBenchmark.Value, decl)
-		goEncodeBenchmarks = append(goEncodeBenchmarks, goEncodeBenchmark{
-			Name:           goBenchmarkName(encodeBenchmark.Name),
-			ChromeperfPath: encodeBenchmark.Name,
-			Value:          value,
-		})
-	}
-	return goEncodeBenchmarks, nil
-}
-
-func goDecodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gidlmixer.Schema) ([]goDecodeBenchmark, error) {
-	var goDecodeBenchmarks []goDecodeBenchmark
-	for _, decodeBenchmark := range gidlDecodeBenchmarks {
-		decl, err := schema.ExtractDeclaration(decodeBenchmark.Value)
-		if err != nil {
-			return nil, fmt.Errorf("decode benchmark %s: %s", decodeBenchmark.Name, err)
-		}
-		value := visit(decodeBenchmark.Value, decl)
-		goDecodeBenchmarks = append(goDecodeBenchmarks, goDecodeBenchmark{
-			Name:           goBenchmarkName(decodeBenchmark.Name),
-			ChromeperfPath: decodeBenchmark.Name,
+		value := visit(gidlBenchmark.Value, decl)
+		benchmarks = append(benchmarks, benchmark{
+			Name:           goBenchmarkName(gidlBenchmark.Name),
+			ChromeperfPath: gidlBenchmark.Name,
 			Value:          value,
 			ValueType:      declName(decl),
 		})
 	}
-	return goDecodeBenchmarks, nil
+	input := benchmarkTmplInput{
+		Benchmarks: benchmarks,
+	}
+	return withGoFmt{benchmarkTmpl}.Execute(wr, input)
 }
 
 func goBenchmarkName(gidlName string) string {

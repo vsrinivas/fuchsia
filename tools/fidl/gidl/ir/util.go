@@ -21,11 +21,8 @@ func Merge(input []All) All {
 		for _, decodeFailure := range elem.DecodeFailure {
 			output.DecodeFailure = append(output.DecodeFailure, decodeFailure)
 		}
-		for _, encodeBenchmark := range elem.EncodeBenchmark {
-			output.EncodeBenchmark = append(output.EncodeBenchmark, encodeBenchmark)
-		}
-		for _, decodeBenchmark := range elem.DecodeBenchmark {
-			output.DecodeBenchmark = append(output.DecodeBenchmark, decodeBenchmark)
+		for _, benchmark := range elem.Benchmark {
+			output.Benchmark = append(output.Benchmark, benchmark)
 		}
 	}
 	return output
@@ -62,14 +59,9 @@ func FilterByBinding(input All, binding string) All {
 			output.DecodeFailure = append(output.DecodeFailure, def)
 		}
 	}
-	for _, def := range input.EncodeBenchmark {
+	for _, def := range input.Benchmark {
 		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.EncodeBenchmark = append(output.EncodeBenchmark, def)
-		}
-	}
-	for _, def := range input.DecodeBenchmark {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.DecodeBenchmark = append(output.DecodeBenchmark, def)
+			output.Benchmark = append(output.Benchmark, def)
 		}
 	}
 	return output
@@ -85,7 +77,7 @@ func ValidateAllType(input All, generatorType string) {
 	}
 	switch generatorType {
 	case "conformance":
-		forbid(input.EncodeBenchmark, input.DecodeBenchmark)
+		forbid(input.Benchmark)
 	case "benchmark":
 		forbid(input.EncodeSuccess, input.DecodeSuccess, input.EncodeFailure, input.DecodeFailure)
 	default:

@@ -585,75 +585,7 @@ func TestParseBenchmarkCase(t *testing.T) {
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
-		DecodeBenchmark: []ir.DecodeBenchmark{{
-			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Record{
-				Name: "OneStringOfMaxLengthFive",
-				Fields: []ir.Field{
-					{
-						Key: ir.FieldKey{
-							Name: "first",
-						},
-						Value: "four",
-					},
-				},
-			},
-		}},
-		EncodeBenchmark: []ir.EncodeBenchmark{{
-			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Record{
-				Name: "OneStringOfMaxLengthFive",
-				Fields: []ir.Field{
-					{
-						Key: ir.FieldKey{
-							Name: "first",
-						},
-						Value: "four",
-					},
-				},
-			},
-		}},
-	}
-	checkMatch(t, all, expectedAll, err)
-}
-
-func TestParseEncodeBenchmarkCase(t *testing.T) {
-	gidl := `
-	encode_benchmark("OneStringOfMaxLengthFive-empty") {
-		value = OneStringOfMaxLengthFive {
-			first: "four",
-		},
-	}`
-	all, err := parse(gidl)
-	expectedAll := ir.All{
-		EncodeBenchmark: []ir.EncodeBenchmark{{
-			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Record{
-				Name: "OneStringOfMaxLengthFive",
-				Fields: []ir.Field{
-					{
-						Key: ir.FieldKey{
-							Name: "first",
-						},
-						Value: "four",
-					},
-				},
-			},
-		}},
-	}
-	checkMatch(t, all, expectedAll, err)
-}
-
-func TestParseDecodeBenchmarkCase(t *testing.T) {
-	gidl := `
-	decode_benchmark("OneStringOfMaxLengthFive-empty") {
-		value = OneStringOfMaxLengthFive {
-			first: "four",
-		},
-	}`
-	all, err := parse(gidl)
-	expectedAll := ir.All{
-		DecodeBenchmark: []ir.DecodeBenchmark{{
+		Benchmark: []ir.Benchmark{{
 			Name: "OneStringOfMaxLengthFive-empty",
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",

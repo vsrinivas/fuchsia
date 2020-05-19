@@ -27,7 +27,7 @@ var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
-{{ range .BuilderBenchmarks }}
+{{ range .Benchmarks }}
 {{ .Type }} Build{{ .Name }}Heap() {
 	{{ .ValueBuildHeap }}
 	auto obj = {{ .ValueVarHeap }};
@@ -54,41 +54,28 @@ bool BenchmarkBuilder{{ .Name }}Allocator(perftest::RepeatState* state) {
 bool BenchmarkBuilder{{ .Name }}Unowned(perftest::RepeatState* state) {
 	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Unowned);
 }
-{{ end }}
-
-{{ range .EncodeBenchmarks }}
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }}Heap);
 }
-
 bool BenchmarkMemcpy{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::MemcpyBenchmark(state, Build{{ .Name }}Heap);
 }
-{{ end }}
-
-{{ range .DecodeBenchmarks }}
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }}Heap);
 }
 {{ end }}
 
 void RegisterTests() {
-	{{ range .BuilderBenchmarks }}
+	{{ range .Benchmarks }}
 	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Heap/WallTime",
 						   BenchmarkBuilder{{ .Name }}Heap);
 	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Allocator/WallTime",
 						   BenchmarkBuilder{{ .Name }}Allocator);
 	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Unowned/WallTime",
 						   BenchmarkBuilder{{ .Name }}Unowned);
-	{{ end }}
-
-	{{ range .EncodeBenchmarks }}
 	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
-	perftest::RegisterTest("Memcpy/{{ .Path }}", BenchmarkMemcpy{{ .Name }});
-	{{ end }}
-
-	{{ range .DecodeBenchmarks }}
 	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
+	perftest::RegisterTest("Memcpy/{{ .Path }}", BenchmarkMemcpy{{ .Name }});
 	{{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
@@ -97,65 +84,35 @@ PERFTEST_CTOR(RegisterTests)
 `))
 
 type benchmarksTmplInput struct {
-	BuilderBenchmarks []builderBenchmark
-	EncodeBenchmarks  []encodeBenchmark
-	DecodeBenchmarks  []decodeBenchmark
+	Benchmarks []benchmark
 }
 
-type builderBenchmark struct {
+type benchmark struct {
 	Path, Name, Type                       string
 	ValueBuildHeap, ValueVarHeap           string
 	ValueBuildAllocator, ValueVarAllocator string
 	ValueBuildUnowned, ValueVarUnowned     string
 }
 
-type encodeBenchmark struct {
-	Path, Name, Type string
-}
-
-type decodeBenchmark struct {
-	Path, Name, Type string
-}
-
 // Generate generates Low-Level C++ benchmarks.
 func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	schema := gidlmixer.BuildSchema(fidl)
-	builderBenchmarks, err := builderBenchmarks(gidl.EncodeBenchmark, schema)
-	if err != nil {
-		return err
-	}
-	encodeBenchmarks, err := encodeBenchmarks(gidl.EncodeBenchmark, schema)
-	if err != nil {
-		return err
-	}
-	decodeBenchmarks, err := decodeBenchmarks(gidl.DecodeBenchmark, schema)
-	if err != nil {
-		return err
-	}
-	return benchmarksTmpl.Execute(wr, benchmarksTmplInput{
-		BuilderBenchmarks: builderBenchmarks,
-		EncodeBenchmarks:  encodeBenchmarks,
-		DecodeBenchmarks:  decodeBenchmarks,
-	})
-}
-
-func builderBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gidlmixer.Schema) ([]builderBenchmark, error) {
-	var builderBenchmarks []builderBenchmark
-	for _, gidlEncodeBenchmark := range gidlEncodeBenchmarks {
-		decl, err := schema.ExtractDeclaration(gidlEncodeBenchmark.Value)
+	var benchmarks []benchmark
+	for _, gidlBenchmark := range gidl.Benchmark {
+		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return nil, fmt.Errorf("builder benchmark %s: %s", gidlEncodeBenchmark.Name, err)
+			return fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
-		if gidlir.ContainsUnknownField(gidlEncodeBenchmark.Value) {
+		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuildUnowned, valVarUnowned := libllcpp.BuildValueUnowned(gidlEncodeBenchmark.Value, decl)
-		valBuildHeap, valVarHeap := libllcpp.BuildValueHeap(gidlEncodeBenchmark.Value, decl)
-		valBuildAllocator, valVarAllocator := libllcpp.BuildValueAllocator("allocator", gidlEncodeBenchmark.Value, decl)
-		builderBenchmarks = append(builderBenchmarks, builderBenchmark{
-			Path:                gidlEncodeBenchmark.Name,
-			Name:                benchmarkName(gidlEncodeBenchmark.Name),
-			Type:                benchmarkTypeFromValue(gidlEncodeBenchmark.Value),
+		valBuildUnowned, valVarUnowned := libllcpp.BuildValueUnowned(gidlBenchmark.Value, decl)
+		valBuildHeap, valVarHeap := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
+		valBuildAllocator, valVarAllocator := libllcpp.BuildValueAllocator("allocator", gidlBenchmark.Value, decl)
+		benchmarks = append(benchmarks, benchmark{
+			Path:                gidlBenchmark.Name,
+			Name:                benchmarkName(gidlBenchmark.Name),
+			Type:                benchmarkTypeFromValue(gidlBenchmark.Value),
 			ValueBuildUnowned:   valBuildUnowned,
 			ValueVarUnowned:     valVarUnowned,
 			ValueBuildHeap:      valBuildHeap,
@@ -164,31 +121,9 @@ func builderBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gid
 			ValueVarAllocator:   valVarAllocator,
 		})
 	}
-	return builderBenchmarks, nil
-}
-
-func encodeBenchmarks(gidlEncodeBenchmarks []gidlir.EncodeBenchmark, schema gidlmixer.Schema) ([]encodeBenchmark, error) {
-	var encodeBenchmarks []encodeBenchmark
-	for _, gidlEncodeBenchmark := range gidlEncodeBenchmarks {
-		encodeBenchmarks = append(encodeBenchmarks, encodeBenchmark{
-			Path: gidlEncodeBenchmark.Name,
-			Name: benchmarkName(gidlEncodeBenchmark.Name),
-			Type: benchmarkTypeFromValue(gidlEncodeBenchmark.Value),
-		})
-	}
-	return encodeBenchmarks, nil
-}
-
-func decodeBenchmarks(gidlDecodeBenchmarks []gidlir.DecodeBenchmark, schema gidlmixer.Schema) ([]decodeBenchmark, error) {
-	var decodeBenchmarks []decodeBenchmark
-	for _, gidlDecodeBenchmark := range gidlDecodeBenchmarks {
-		decodeBenchmarks = append(decodeBenchmarks, decodeBenchmark{
-			Path: gidlDecodeBenchmark.Name,
-			Name: benchmarkName(gidlDecodeBenchmark.Name),
-			Type: benchmarkTypeFromValue(gidlDecodeBenchmark.Value),
-		})
-	}
-	return decodeBenchmarks, nil
+	return benchmarksTmpl.Execute(wr, benchmarksTmplInput{
+		Benchmarks: benchmarks,
+	})
 }
 
 func benchmarkTypeFromValue(value gidlir.Value) string {

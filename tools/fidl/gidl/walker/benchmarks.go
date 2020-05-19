@@ -58,19 +58,19 @@ type walkerBenchmark struct {
 func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	schema := gidlmixer.BuildSchema(fidl)
 	var tmplInput benchmarksTmplInput
-	for _, gidlEncodeBenchmark := range gidl.EncodeBenchmark {
-		decl, err := schema.ExtractDeclaration(gidlEncodeBenchmark.Value)
+	for _, gidlBenchmark := range gidl.Benchmark {
+		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return fmt.Errorf("walker benchmark %s: %s", gidlEncodeBenchmark.Name, err)
+			return fmt.Errorf("walker benchmark %s: %s", gidlBenchmark.Name, err)
 		}
-		if gidlir.ContainsUnknownField(gidlEncodeBenchmark.Value) {
+		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuild, valVar := libllcpp.BuildValueHeap(gidlEncodeBenchmark.Value, decl)
+		valBuild, valVar := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
 		tmplInput.Benchmarks = append(tmplInput.Benchmarks, walkerBenchmark{
-			Path:       gidlEncodeBenchmark.Name,
-			Name:       benchmarkName(gidlEncodeBenchmark.Name),
-			Type:       llcppBenchmarkType(gidlEncodeBenchmark.Value),
+			Path:       gidlBenchmark.Name,
+			Name:       benchmarkName(gidlBenchmark.Name),
+			Type:       llcppBenchmarkType(gidlBenchmark.Value),
 			ValueBuild: valBuild,
 			ValueVar:   valVar,
 		})
