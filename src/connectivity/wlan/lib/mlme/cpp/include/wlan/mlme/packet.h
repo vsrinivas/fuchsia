@@ -162,11 +162,11 @@ constexpr size_t kSlabOverhead = 16;  // overhead for the slab allocator as a wh
 template <size_t NumBuffers, size_t BufferSize>
 class SlabBuffer;
 template <size_t NumBuffers, size_t BufferSize>
-using SlabBufferTraits =
-    fbl::StaticSlabAllocatorTraits<std::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
-                                   sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers +
-                                       kSlabOverhead,
-                                   ::fbl::Mutex, kBufferDebugEnabled>;
+using SlabBufferTraits = fbl::StaticSlabAllocatorTraits<
+    std::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
+    sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers + kSlabOverhead, ::fbl::Mutex,
+    kBufferDebugEnabled ? fbl::SlabAllocatorOptions::EnableObjectCount
+                        : fbl::SlabAllocatorOptions::None>;
 
 // A SlabBuffer is an implementation of a Buffer that comes from a
 // fbl::SlabAllocator. The size of the internal::FixedBuffer and the number of

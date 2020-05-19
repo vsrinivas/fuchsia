@@ -24,7 +24,8 @@ class Packet;
 namespace internal {
 using PacketAllocatorTraits =
     ::fbl::SlabAllocatorTraits<fbl::RefPtr<Packet>, fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-                               ::fbl::Mutex, fbl::SlabAllocatorFlavor::INSTANCED, true>;
+                               fbl::Mutex, fbl::SlabAllocatorFlavor::INSTANCED,
+                               fbl::SlabAllocatorOptions::EnableObjectCount>;
 }
 
 class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,

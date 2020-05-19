@@ -60,7 +60,7 @@ struct ReleaseHelper<SATraits,
                                               fbl::SlabAllocatorFlavor::INSTANCED)>::type> {
   static void ReleasePtr(fbl::SlabAllocator<SATraits>& allocator, typename SATraits::PtrType& ptr) {
     // Instanced slab allocators should static_assert if you attempt to
-    // expand their delete method.
+    // expand their Delete method.
 #if TEST_WILL_NOT_COMPILE || 0
     allocator.Delete(ptr);
 #else
@@ -112,12 +112,11 @@ struct ReleaseHelper<SATraits, typename std::enable_if<(SATraits::PtrTraits::IsM
 // Traits which define the various test flavors.
 template <typename LockType,
           fbl::SlabAllocatorFlavor AllocatorFlavor = fbl::SlabAllocatorFlavor::INSTANCED,
-          bool ENABLE_OBJ_COUNT = false>
+          fbl::SlabAllocatorOptions Options = fbl::SlabAllocatorOptions::None>
 struct UnmanagedTestTraits {
   class ObjType;
   using PtrType = ObjType*;
-  using AllocTraits =
-      fbl::SlabAllocatorTraits<PtrType, 1024, LockType, AllocatorFlavor, ENABLE_OBJ_COUNT>;
+  using AllocTraits = fbl::SlabAllocatorTraits<PtrType, 1024, LockType, AllocatorFlavor, Options>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;
 
@@ -136,13 +135,12 @@ struct UnmanagedTestTraits {
   static constexpr size_t MaxAllocs(size_t slabs) { return AllocatorType::AllocsPerSlab * slabs; }
 };
 
-template <typename LockType, bool ENABLE_OBJ_COUNT = false>
+template <typename LockType, fbl::SlabAllocatorOptions Options = fbl::SlabAllocatorOptions::None>
 struct UniquePtrTestTraits {
   class ObjType;
   using PtrType = std::unique_ptr<ObjType>;
-  using AllocTraits =
-      fbl::SlabAllocatorTraits<PtrType, 1024, LockType, fbl::SlabAllocatorFlavor::INSTANCED,
-                               ENABLE_OBJ_COUNT>;
+  using AllocTraits = fbl::SlabAllocatorTraits<PtrType, 1024, LockType,
+                                               fbl::SlabAllocatorFlavor::INSTANCED, Options>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;
 
@@ -161,13 +159,12 @@ struct UniquePtrTestTraits {
   static constexpr size_t MaxAllocs(size_t slabs) { return AllocatorType::AllocsPerSlab * slabs; }
 };
 
-template <typename LockType, bool ENABLE_OBJ_COUNT = false>
+template <typename LockType, fbl::SlabAllocatorOptions Options = fbl::SlabAllocatorOptions::None>
 struct RefPtrTestTraits {
   class ObjType;
   using PtrType = fbl::RefPtr<ObjType>;
-  using AllocTraits =
-      fbl::SlabAllocatorTraits<PtrType, 1024, LockType, fbl::SlabAllocatorFlavor::INSTANCED,
-                               ENABLE_OBJ_COUNT>;
+  using AllocTraits = fbl::SlabAllocatorTraits<PtrType, 1024, LockType,
+                                               fbl::SlabAllocatorFlavor::INSTANCED, Options>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;
 
@@ -218,7 +215,8 @@ template <typename Traits>
 void do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs) {
   const size_t MAX_ALLOCS = Traits::MaxAllocs(allocator.max_slabs());
   typename Traits::RefList ref_list;
-  const bool ENB_OBJ_COUNT = Traits::AllocTraits::ENABLE_OBJ_COUNT;
+  const bool ENB_OBJ_COUNT =
+      Traits::AllocTraits::Options & fbl::SlabAllocatorOptions::EnableObjectCount;
   using AllocatorType = typename Traits::AllocatorType;
 
   ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::ResetMaxObjCount(&allocator);
@@ -355,11 +353,11 @@ void slab_test() {
   }
 }
 
-template <typename LockType, bool ENABLE_OBJ_COUNT = false>
+template <typename LockType, fbl::SlabAllocatorOptions Options = fbl::SlabAllocatorOptions::None>
 struct StaticUnmanagedTestTraits {
   class ObjType;
   using PtrType = ObjType*;
-  using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
+  using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, Options>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;
 
@@ -379,13 +377,14 @@ struct StaticUnmanagedTestTraits {
   static constexpr bool IsManaged = false;
 };
 template <typename LockType>
-using StaticCountedUnmanagedTestTraits = StaticUnmanagedTestTraits<LockType, true>;
+using StaticCountedUnmanagedTestTraits =
+    StaticUnmanagedTestTraits<LockType, fbl::SlabAllocatorOptions::EnableObjectCount>;
 
-template <typename LockType, bool ENABLE_OBJ_COUNT = false>
+template <typename LockType, fbl::SlabAllocatorOptions Options = fbl::SlabAllocatorOptions::None>
 struct StaticUniquePtrTestTraits {
   class ObjType;
   using PtrType = std::unique_ptr<ObjType>;
-  using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
+  using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, Options>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;
 
@@ -406,13 +405,14 @@ struct StaticUniquePtrTestTraits {
 };
 
 template <typename LockType>
-using StaticCountedUniquePtrTestTraits = StaticUniquePtrTestTraits<LockType, true>;
+using StaticCountedUniquePtrTestTraits =
+    StaticUniquePtrTestTraits<LockType, fbl::SlabAllocatorOptions::EnableObjectCount>;
 
-template <typename LockType, bool ENABLE_OBJ_COUNT = false>
+template <typename LockType, fbl::SlabAllocatorOptions Options = fbl::SlabAllocatorOptions::None>
 struct StaticRefPtrTestTraits {
   class ObjType;
   using PtrType = fbl::RefPtr<ObjType>;
-  using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, ENABLE_OBJ_COUNT>;
+  using AllocTraits = fbl::StaticSlabAllocatorTraits<PtrType, 1024, LockType, Options>;
   using AllocatorType = fbl::SlabAllocator<AllocTraits>;
   using RefList = fbl::DoublyLinkedList<PtrType>;
 
@@ -434,11 +434,13 @@ struct StaticRefPtrTestTraits {
 };
 
 template <typename LockType>
-using StaticCountedRefPtrTestTraits = StaticRefPtrTestTraits<LockType, true>;
+using StaticCountedRefPtrTestTraits =
+    StaticRefPtrTestTraits<LockType, fbl::SlabAllocatorOptions::EnableObjectCount>;
 
 template <typename Traits>
 void do_static_slab_test(size_t test_allocs) {
-  const bool ENB_OBJ_COUNT = Traits::AllocTraits::ENABLE_OBJ_COUNT;
+  const bool ENB_OBJ_COUNT =
+      Traits::AllocTraits::Options & fbl::SlabAllocatorOptions::EnableObjectCount;
   using AllocatorType = typename Traits::AllocatorType;
 
   const size_t MAX_ALLOCS = Traits::MaxAllocs();
@@ -613,30 +615,122 @@ MAKE_TEST(StaticUnmanagedMutex, static_slab_test<StaticUnmanagedTestTraits<Mutex
 MAKE_TEST(StaticUniquePtrMutex, static_slab_test<StaticUniquePtrTestTraits<MutexLock>>)
 MAKE_TEST(StaticRefPtrMutex, static_slab_test<StaticRefPtrTestTraits<MutexLock>>)
 MAKE_TEST(CountedUnmanagedSingleSlabMutex,
-          slab_test<UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>)
+          slab_test<UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED,
+                                        fbl::SlabAllocatorOptions::EnableObjectCount>,
+                    1>)
 MAKE_TEST(CountedUnmanagedMultiSlabMutex,
-          slab_test<UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>)
-MAKE_TEST(CountedUniquePtrSingleSlabMutex, slab_test<UniquePtrTestTraits<MutexLock, true>, 1>)
-MAKE_TEST(CountedUniquePtrMultiSlabMutex, slab_test<UniquePtrTestTraits<MutexLock, true>>)
-MAKE_TEST(CountedRefPtrSingleSlabMutex, slab_test<RefPtrTestTraits<MutexLock, true>, 1>)
-MAKE_TEST(CountedRefPtrMultiSlabMutex, slab_test<RefPtrTestTraits<MutexLock, true>>)
+          slab_test<UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::INSTANCED,
+                                        fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(
+    CountedUniquePtrSingleSlabMutex,
+    slab_test<UniquePtrTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>, 1>)
+MAKE_TEST(CountedUniquePtrMultiSlabMutex,
+          slab_test<UniquePtrTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedRefPtrSingleSlabMutex,
+          slab_test<RefPtrTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>, 1>)
+MAKE_TEST(CountedRefPtrMultiSlabMutex,
+          slab_test<RefPtrTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
 MAKE_TEST(CountedUnmanagedSingleSlabUnlock,
-          slab_test<UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>, 1>)
+          slab_test<UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED,
+                                        fbl::SlabAllocatorOptions::EnableObjectCount>,
+                    1>)
 MAKE_TEST(CountedUnmanagedMultiSlabUnlock,
-          slab_test<UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED, true>>)
-MAKE_TEST(CountedUniquePtrSingleSlabUnlock, slab_test<UniquePtrTestTraits<NullLock, true>, 1>)
-MAKE_TEST(CountedUniquePtrMultiSlabUnlock, slab_test<UniquePtrTestTraits<NullLock, true>>)
-MAKE_TEST(CountedRefPtrSingleSlabUnlock, slab_test<RefPtrTestTraits<NullLock, true>, 1>)
-MAKE_TEST(CountedRefPtrMultiSlabUnlock, slab_test<RefPtrTestTraits<NullLock, true>>)
+          slab_test<UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::INSTANCED,
+                                        fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedUniquePtrSingleSlabUnlock,
+          slab_test<UniquePtrTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>, 1>)
+MAKE_TEST(CountedUniquePtrMultiSlabUnlock,
+          slab_test<UniquePtrTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedRefPtrSingleSlabUnlock,
+          slab_test<RefPtrTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>, 1>)
+MAKE_TEST(CountedRefPtrMultiSlabUnlock,
+          slab_test<RefPtrTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
 MAKE_TEST(CountedManualDeleteUnmanagedMutex,
-          slab_test<UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>)
+          slab_test<UnmanagedTestTraits<MutexLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE,
+                                        fbl::SlabAllocatorOptions::EnableObjectCount>>)
 MAKE_TEST(CountedManualDeleteUnmanagedUnlock,
-          slab_test<UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE, true>>)
-MAKE_TEST(CountedStaticUnmanagedMutex, static_slab_test<StaticUnmanagedTestTraits<MutexLock, true>>)
-MAKE_TEST(CountedStaticUniquePtrMutex, static_slab_test<StaticUniquePtrTestTraits<MutexLock, true>>)
-MAKE_TEST(CountedStaticRefPtrMutex, static_slab_test<StaticRefPtrTestTraits<MutexLock, true>>)
-MAKE_TEST(CountedStaticUnmanagedUnlock, static_slab_test<StaticUnmanagedTestTraits<NullLock, true>>)
-MAKE_TEST(CountedStaticUniquePtrUnlock, static_slab_test<StaticUniquePtrTestTraits<NullLock, true>>)
-MAKE_TEST(CountedStaticRefPtrUnlock, static_slab_test<StaticRefPtrTestTraits<NullLock, true>>)
+          slab_test<UnmanagedTestTraits<NullLock, fbl::SlabAllocatorFlavor::MANUAL_DELETE,
+                                        fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedStaticUnmanagedMutex,
+          static_slab_test<
+              StaticUnmanagedTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedStaticUniquePtrMutex,
+          static_slab_test<
+              StaticUniquePtrTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedStaticRefPtrMutex,
+          static_slab_test<
+              StaticRefPtrTestTraits<MutexLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedStaticUnmanagedUnlock,
+          static_slab_test<
+              StaticUnmanagedTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedStaticUniquePtrUnlock,
+          static_slab_test<
+              StaticUniquePtrTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
+MAKE_TEST(CountedStaticRefPtrUnlock,
+          static_slab_test<
+              StaticRefPtrTestTraits<NullLock, fbl::SlabAllocatorOptions::EnableObjectCount>>)
 
 #undef MAKE_TEST
+
+TEST(SlabAllocatorTest, AllowManualDeleteOperator) {
+#if TEST_WILL_NOT_COMPILE || 0
+  {
+    struct Obj;
+    using Traits =
+        fbl::StaticSlabAllocatorTraits<std::unique_ptr<Obj>, 4096, fbl::Mutex,
+                                       fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
+    struct Obj : public fbl::SlabAllocated<Traits> {};
+    [[maybe_unused]] fbl::SlabAllocator<Traits> allocator(1);
+  }
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+  {
+    struct Obj;
+    using Traits = fbl::UnlockedStaticSlabAllocatorTraits<
+        std::unique_ptr<Obj>, 4096, fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
+    struct Obj : public fbl::SlabAllocated<Traits> {};
+    [[maybe_unused]] fbl::SlabAllocator<Traits> allocator(1);
+  }
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+  {
+    struct Obj;
+    using Traits =
+        fbl::InstancedSlabAllocatorTraits<std::unique_ptr<Obj>, 4096, fbl::Mutex,
+                                          fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
+    struct Obj : public fbl::SlabAllocated<Traits> {};
+    [[maybe_unused]] fbl::SlabAllocator<Traits> allocator(1);
+  }
+#endif
+#if TEST_WILL_NOT_COMPILE || 0
+  {
+    struct Obj;
+    using Traits = fbl::UnlockedInstancedSlabAllocatorTraits<
+        std::unique_ptr<Obj>, 4096, fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
+    struct Obj : public fbl::SlabAllocated<Traits> {};
+    [[maybe_unused]] fbl::SlabAllocator<Traits> allocator(1);
+  }
+#endif
+  {
+    struct Obj;
+    struct DeleteFriend;
+    using Traits = fbl::UnlockedManualDeleteSlabAllocatorTraits<
+        Obj*, 4096, fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
+    struct Obj : public fbl::SlabAllocated<Traits> {
+      friend struct DeleteFriend;
+    };
+
+    struct DeleteFriend {
+      static void Delete(Obj* obj) { delete obj; }
+    };
+
+    [[maybe_unused]] fbl::SlabAllocator<Traits> allocator(1);
+
+    // Heap allocate and then delete an object.  This should never ASSERT
+    // because of the option flag that we passed.  Note that we still need to be
+    // a friend of the object in order to even attempt to do this.
+    Obj* the_obj = new Obj();
+    ASSERT_NOT_NULL(the_obj);
+    DeleteFriend::Delete(the_obj);
+  }
+}

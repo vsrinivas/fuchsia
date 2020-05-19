@@ -282,9 +282,43 @@ enum class SlabAllocatorFlavor {
   MANUAL_DELETE,
 };
 
+// Flags passed as a template argument to SlabAllocatorTraits which may be used
+// to control optional behaviors of the SlabAllocator and its objects.
+enum class SlabAllocatorOptions : uint64_t {
+  None = 0,
+  // When set, causes the slab allocator to track how many objects are allocated
+  // at any point in time, as well as the maximum number of currently allocated
+  // objects over the life of the allocator.
+  EnableObjectCount = (1 << 0),
+
+  // When set, MANUAL slab allocator objects will not assert when their delete
+  // operator is invoked.  This allows objects to exist either as manual slab
+  // allocated objects, or as objects directly allocated from the heap.
+  AllowManualDeleteOperator = (1 << 1),
+};
+
+// Helper operators which allow us to easily combine and test slab allocator
+// option bitfields using a standard bitwise operator syntax.  For example:
+//
+// Options = SlabAllocatorOptions::OptA | SlabAllocatorOptions::OptB
+//
+// if constexpr (Options & SlabAllocatorOptions::OptA) { ... }
+//
+constexpr fbl::SlabAllocatorOptions operator|(fbl::SlabAllocatorOptions A,
+                                              fbl::SlabAllocatorOptions B) {
+  return static_cast<fbl::SlabAllocatorOptions>(
+      static_cast<std::underlying_type<fbl::SlabAllocatorOptions>::type>(A) |
+      static_cast<std::underlying_type<fbl::SlabAllocatorOptions>::type>(B));
+}
+
+constexpr bool operator&(fbl::SlabAllocatorOptions A, fbl::SlabAllocatorOptions B) {
+  return (static_cast<std::underlying_type<fbl::SlabAllocatorOptions>::type>(A) &
+          static_cast<std::underlying_type<fbl::SlabAllocatorOptions>::type>(B)) != 0;
+}
+
 // fwd decls
 template <typename T, size_t SLAB_SIZE, typename LockType, SlabAllocatorFlavor AllocatorFlavor,
-          bool ENABLE_OBJ_COUNT>
+          SlabAllocatorOptions Options>
 struct SlabAllocatorTraits;
 template <typename SATraits, typename = void>
 class SlabAllocator;
@@ -587,17 +621,17 @@ class SlabAllocator : public SlabAllocatorBase {
   }
 
   size_t obj_count() const {
-    static_assert(SATraits::ENABLE_OBJ_COUNT,
+    static_assert(SATraits::Options & SlabAllocatorOptions::EnableObjectCount,
                   "Error accessing obj_count: Object counter not enabled in SATraits.");
     return sa_obj_counter_.obj_count();
   }
   size_t max_obj_count() const {
-    static_assert(SATraits::ENABLE_OBJ_COUNT,
+    static_assert(SATraits::Options & SlabAllocatorOptions::EnableObjectCount,
                   "Error accessing max_obj_count: Object counter not enabled in SATraits.");
     return sa_obj_counter_.max_obj_count();
   }
   void ResetMaxObjCount() {
-    static_assert(SATraits::ENABLE_OBJ_COUNT,
+    static_assert(SATraits::Options & SlabAllocatorOptions::EnableObjectCount,
                   "Error performing ResetMaxObjCount: Object counter not enabled in SATraits.");
     AutoLock alloc_lock(&alloc_lock_);
     sa_obj_counter_.ResetMaxObjCount();
@@ -624,7 +658,7 @@ class SlabAllocator : public SlabAllocatorBase {
   }
 
   typename SATraits::LockType alloc_lock_;
-  SAObjCounter<SATraits::ENABLE_OBJ_COUNT> sa_obj_counter_;
+  SAObjCounter<SATraits::Options & SlabAllocatorOptions::EnableObjectCount> sa_obj_counter_;
 };
 }  // namespace internal
 
@@ -660,17 +694,17 @@ class SlabAllocator : public SlabAllocatorBase {
 //     the delete operator is applied to them.
 //  ++ MANUAL_DELETE - A type of INSTANCED allocator where objects have no
 //     pointer overhead.  The delete operator of the object is hidden in the
-//     SlabAllocated<> class preventing users from delete'ing these objects.
-//     Users must be aware of where their allocations came from and are
-//     responsible for calling allocator.Delete in order to destruct and return
-//     the object to the allocator it came from.  MANUAL_DELETE allocators are
-//     only permitted for unmanaged pointer types.
+//     SlabAllocated<> class preventing users from delete'ing these objects, and
+//     will also trigger a static_assert if invoked.  Users must be aware of
+//     where their allocations came from and are responsible for calling
+//     allocator.Delete in order to destruct and return the object to the
+//     allocator it came from.
 //
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T, size_t _SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
           typename _LockType = ::fbl::Mutex,
           SlabAllocatorFlavor _AllocatorFlavor = SlabAllocatorFlavor::INSTANCED,
-          bool _ENABLE_OBJ_COUNT = false>
+          SlabAllocatorOptions _Options = SlabAllocatorOptions::None>
 struct SlabAllocatorTraits {
   using PtrTraits = internal::SlabAllocatorPtrTraits<T>;
   using PtrType = typename PtrTraits::PtrType;
@@ -679,7 +713,7 @@ struct SlabAllocatorTraits {
 
   static constexpr size_t SLAB_SIZE = _SLAB_SIZE;
   static constexpr SlabAllocatorFlavor AllocatorFlavor = _AllocatorFlavor;
-  static constexpr bool ENABLE_OBJ_COUNT = _ENABLE_OBJ_COUNT;
+  static constexpr SlabAllocatorOptions Options = _Options;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -693,6 +727,10 @@ class SlabAllocator<
                                (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)>>
     : public internal::SlabAllocator<SATraits> {
  public:
+  static_assert((SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE) ||
+                    !(SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator),
+                "AllowManualDeleteOperator may only be used with MANUAL_DELETE slab allocators");
+
   using PtrTraits = typename SATraits::PtrTraits;
   using PtrType = typename SATraits::PtrType;
   using ObjType = typename SATraits::ObjType;
@@ -725,6 +763,9 @@ template <typename SATraits>
 class SlabAllocated<
     SATraits, std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED)>> {
  public:
+  static_assert(!(SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator),
+                "AllowManualDeleteOperator may only be used with MANUAL_DELETE slab allocators");
+
   using AllocatorType = internal::SlabAllocator<SATraits>;
   using ObjType = typename SATraits::ObjType;
 
@@ -762,51 +803,48 @@ class SlabAllocated<
   DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
 
  protected:
-  // Object which come from a MANUAL_DELETE slab allocator may not be
-  // destroyed using the delete operator.  Instead, users must return the
-  // object to its allocator using the Delete method of the allocator
-  // instance.
+  // Object which come from a MANUAL_DELETE slab allocator may not be destroyed
+  // using the delete operator unless the user has explicitly allowed it by
+  // passing the AllowManualDeleteOperator in their Options.  Instead, users
+  // must return the object to its allocator using the Delete method of the
+  // allocator instance.
   //
   // Hide the delete operator, and halt-and-catch-fire if some Bad Person ever
-  // manages to generate a call to this operator.
-  //
-  // Note: it would be nice to either = delete this operator, or at least make
-  // it private, but we cannot.  To do so would prevent the implemementer of
-  // the slab allocated object from defining a destructor.
-  void operator delete(void*) { ZX_DEBUG_ASSERT(false); }
+  // manages to generate a call to this operator without passing the option.
+  void operator delete(void*) {
+    ZX_DEBUG_ASSERT(SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator);
+  }
 };
 
 // Shorthand for declaring the properties of an instanced allocator (somewhat
 // superfluous as the default is instanced)
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType = ::fbl::Mutex, bool ENABLE_OBJ_COUNT = false>
+          typename LockType = ::fbl::Mutex,
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using InstancedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::INSTANCED, ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::INSTANCED, Options>;
 
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool ENABLE_OBJ_COUNT = false>
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using UnlockedInstancedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED,
-                        ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED, Options>;
 
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool ENABLE_OBJ_COUNT = false>
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using UnlockedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED,
-                        ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::INSTANCED, Options>;
 
 // Shorthand for declaring the properties of a MANUAL_DELETE slab allocator.
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType = ::fbl::Mutex, bool ENABLE_OBJ_COUNT = false>
+          typename LockType = ::fbl::Mutex,
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using ManualDeleteSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::MANUAL_DELETE,
-                        ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::MANUAL_DELETE, Options>;
 
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool ENABLE_OBJ_COUNT = false>
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using UnlockedManualDeleteSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::MANUAL_DELETE,
-                        ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::MANUAL_DELETE, Options>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -817,6 +855,9 @@ template <typename SATraits>
 class SlabAllocator<SATraits,
                     std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)>> {
  public:
+  static_assert(!(SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator),
+                "AllowManualDeleteOperator may only be used with MANUAL_DELETE slab allocators");
+
   using PtrTraits = typename SATraits::PtrTraits;
   using PtrType = typename SATraits::PtrType;
   using ObjType = typename SATraits::ObjType;
@@ -855,6 +896,9 @@ template <typename SATraits>
 class SlabAllocated<SATraits,
                     std::enable_if_t<(SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)>> {
  public:
+  static_assert(!(SATraits::Options & SlabAllocatorOptions::AllowManualDeleteOperator),
+                "AllowManualDeleteOperator may only be used with MANUAL_DELETE slab allocators");
+
   SlabAllocated() {}
   DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
 
@@ -869,15 +913,15 @@ class SlabAllocated<SATraits,
 
 // Shorthand for declaring the properties of a static allocator
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename LockType = ::fbl::Mutex, bool ENABLE_OBJ_COUNT = false>
+          typename LockType = ::fbl::Mutex,
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using StaticSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::STATIC, ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::STATIC, Options>;
 
 template <typename T, size_t SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          bool ENABLE_OBJ_COUNT = false>
+          SlabAllocatorOptions Options = SlabAllocatorOptions::None>
 using UnlockedStaticSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::STATIC,
-                        ENABLE_OBJ_COUNT>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::fbl::NullLock, SlabAllocatorFlavor::STATIC, Options>;
 
 // Shorthand for declaring the global storage required for a static allocator
 #define DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(ALLOC_TRAITS, ...) \
