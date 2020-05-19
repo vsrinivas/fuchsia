@@ -28,7 +28,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 # ```
 # You can then find the path to the generated manifest:
 # ```
-# $ fx outputs out/default path/to/project:my_package_manifest
+# $ fx gn outputs out/default path/to/project:my_package_manifest
 # ```
 #
 # The package name is defined by the target name.
