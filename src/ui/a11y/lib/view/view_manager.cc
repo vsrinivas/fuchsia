@@ -24,10 +24,13 @@ std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
 }
 
 ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
-                         std::unique_ptr<ViewWrapperFactory> view_wrapper_factory,
-                         vfs::PseudoDir* debug_dir)
+                         std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
+                         std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
+                         sys::ComponentContext* context, vfs::PseudoDir* debug_dir)
     : factory_(std::move(factory)),
-      view_wrapper_factory_(std::move(view_wrapper_factory)),
+      view_semantics_factory_(std::move(view_semantics_factory)),
+      annotation_view_factory_(std::move(annotation_view_factory)),
+      context_(context),
       debug_dir_(debug_dir) {}
 
 ViewManager::~ViewManager() {
@@ -73,8 +76,16 @@ void ViewManager::RegisterViewForSemantics(
       this, view_ref.reference.get(), ZX_EVENTPAIR_PEER_CLOSED);
   FX_CHECK(wait_ptr->Begin(async_get_default_dispatcher()) == ZX_OK);
   wait_map_[koid] = std::move(wait_ptr);
-  view_wrapper_map_[koid] = view_wrapper_factory_->CreateViewWrapper(
-      std::move(view_ref), std::move(service), std::move(semantic_tree_request));
+  auto view_semantics = view_semantics_factory_->CreateViewSemantics(
+      std::move(service), std::move(semantic_tree_request));
+  auto annotation_view = annotation_view_factory_->CreateAndInitAnnotationView(
+      fidl::Clone(view_ref), context_,
+      // TODO: add callbacks
+      []() {},
+      []() {},
+      []() {});
+  view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(
+      std::move(view_ref), std::move(view_semantics), std::move(annotation_view));
 }
 
 const fxl::WeakPtr<::a11y::SemanticTree> ViewManager::GetTreeByKoid(const zx_koid_t koid) const {
@@ -147,33 +158,49 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
 }
 
 void ViewManager::ClearHighlight() {
+  if (RemoveHighlight()) {
+    highlighted_node_ = std::nullopt;
+  }
+}
+
+bool ViewManager::RemoveHighlight() {
   if (!highlighted_node_.has_value()) {
-    return;
+    return false;
   }
 
   auto it = view_wrapper_map_.find(highlighted_node_->koid);
   if (it == view_wrapper_map_.end()) {
     FX_LOGS(ERROR) << "ViewManager::UpdateHighlights: Invalid previously highlighted view koid: "
                    << highlighted_node_->koid;
-  } else {
-    FX_DCHECK(it->second);
-    it->second->ClearHighlights();
+    return false;
   }
 
-  highlighted_node_ = std::nullopt;
+  FX_DCHECK(it->second);
+  it->second->ClearHighlights();
+
+  return true;
 }
+
 void ViewManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) {
   ClearHighlight();
 
+  if (DrawHighlight(newly_highlighted_node)) {
+    highlighted_node_ = std::make_optional<SemanticNodeIdentifier>(newly_highlighted_node);
+  }
+}
+
+bool ViewManager::DrawHighlight(SemanticNodeIdentifier newly_highlighted_node) {
   auto it = view_wrapper_map_.find(newly_highlighted_node.koid);
   if (it == view_wrapper_map_.end()) {
     FX_LOGS(ERROR) << "ViewManager::UpdateHighlights: Invalid newly highlighted view koid: "
                    << newly_highlighted_node.koid;
-  } else {
-    FX_DCHECK(it->second);
-    it->second->HighlightNode(newly_highlighted_node.node_id);
-    highlighted_node_ = std::make_optional<SemanticNodeIdentifier>(newly_highlighted_node);
+    return false;
   }
+
+  FX_DCHECK(it->second);
+  it->second->HighlightNode(newly_highlighted_node.node_id);
+
+  return true;
 }
 
 void ViewManager::ExecuteHitTesting(

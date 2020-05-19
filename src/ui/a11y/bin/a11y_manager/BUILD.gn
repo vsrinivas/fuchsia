@@ -34,6 +34,8 @@ executable("bin") {
     ":lib",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/ui/a11y/lib/annotation",
+    "//src/ui/a11y/lib/view",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",

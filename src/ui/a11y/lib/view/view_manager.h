@@ -40,8 +40,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                     public FocusHighlightManager {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
-                       std::unique_ptr<ViewWrapperFactory> view_wrapper_factory,
-                       vfs::PseudoDir* debug_dir);
+                       std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
+                       std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
+                       sys::ComponentContext* context, vfs::PseudoDir* debug_dir);
   ~ViewManager() override;
 
   // Function to Enable/Disable Semantics Manager.
@@ -86,6 +87,14 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // Returns nullptr if no such tree is found.
   const fxl::WeakPtr<::a11y::SemanticTree> GetTreeByKoid(const zx_koid_t koid) const;
 
+  // Helper function to draw an annotation.
+  // Returns true on success, false on failure.
+  bool DrawHighlight(SemanticNodeIdentifier newly_highlighted_node);
+
+  // Helper function to clear an existing annotation.
+  // Returns true on success, false on failure.
+  bool RemoveHighlight();
+
   // |fuchsia::accessibility::semantics::ViewManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
@@ -114,7 +123,11 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
 
   std::unique_ptr<SemanticTreeServiceFactory> factory_;
 
-  std::unique_ptr<ViewWrapperFactory> view_wrapper_factory_;
+  std::unique_ptr<ViewSemanticsFactory> view_semantics_factory_;
+
+  std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory_;
+
+  sys::ComponentContext* context_;
 
   vfs::PseudoDir* const debug_dir_;
 };

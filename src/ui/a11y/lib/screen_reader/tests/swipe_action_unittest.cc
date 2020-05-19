@@ -11,6 +11,7 @@
 
 #include "lib/sys/cpp/testing/component_context_provider.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
@@ -19,6 +20,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
 namespace {
@@ -65,7 +67,8 @@ class SwipeActionTest : public gtest::TestLoopFixture {
   SwipeActionTest()
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
-        view_manager_(std::move(factory_), std::make_unique<a11y::ViewWrapperFactory>(),
+        view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
+                      std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
         tts_manager_(context_provider_.context()),
         semantic_provider_(&view_manager_) {

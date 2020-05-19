@@ -20,7 +20,7 @@ void MockAnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_
 }
 
 void MockAnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) {
-  current_highlight_ = bounding_box;
+  current_highlight_ = std::make_optional<fuchsia::ui::gfx::BoundingBox>(bounding_box);
 }
 
 void MockAnnotationView::DetachViewContents() { current_highlight_ = std::nullopt; }

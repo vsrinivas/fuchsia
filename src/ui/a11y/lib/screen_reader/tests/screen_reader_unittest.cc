@@ -10,6 +10,7 @@
 
 #include "fuchsia/accessibility/gesture/cpp/fidl.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_listener_registry.h"
@@ -25,6 +26,7 @@
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace accessibility_test {
@@ -75,7 +77,8 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         factory_ptr_(factory_.get()),
         context_provider_(),
         tts_manager_(context_provider_.context()),
-        view_manager_(std::move(factory_), std::make_unique<a11y::ViewWrapperFactory>(),
+        view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
+                      std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
         a11y_focus_manager_(std::make_unique<MockA11yFocusManager>()),
         a11y_focus_manager_ptr_(a11y_focus_manager_.get()),

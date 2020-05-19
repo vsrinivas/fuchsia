@@ -14,12 +14,14 @@
 #include <src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
-namespace accesibility_test {
+namespace accessibility_test {
 namespace {
 
 using fuchsia::accessibility::semantics::Attributes;
@@ -34,7 +36,8 @@ class ExploreActionTest : public gtest::TestLoopFixture {
   ExploreActionTest()
       : context_provider_(),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<a11y::ViewWrapperFactory>(),
+                      std::make_unique<MockViewSemanticsFactory>(),
+                      std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_provider_.context()->outgoing()->debug_dir()),
         tts_manager_(context_provider_.context()),
         semantic_provider_(&view_manager_) {
@@ -339,4 +342,4 @@ TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
 }
 
 }  // namespace
-}  // namespace accesibility_test
+}  // namespace accessibility_test

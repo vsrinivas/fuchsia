@@ -16,6 +16,9 @@
 
 #include <vector>
 
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+
 namespace accessibility_test {
 
 namespace {
@@ -88,7 +91,8 @@ SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environmen
     : environment_label_(environment_label),
       component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                    std::make_unique<a11y::ViewWrapperFactory>(),
+                    std::make_unique<MockViewSemanticsFactory>(),
+                    std::make_unique<MockAnnotationViewFactory>(), component_context_.get(),
                     component_context_->outgoing()->debug_dir()),
       scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()) {
   scenic_.set_error_handler([](zx_status_t status) {

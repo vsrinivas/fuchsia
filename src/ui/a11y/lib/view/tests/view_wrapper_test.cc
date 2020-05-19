@@ -23,6 +23,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace accessibility_test {
@@ -76,23 +77,18 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
         context_provider_.context()->outgoing()->debug_dir(), [] {});
     tree_service_ = tree_service.get();
 
-    auto mock_annotation_view_factory = std::make_unique<MockAnnotationViewFactory>();
-    mock_annotation_view_factory_ = mock_annotation_view_factory.get();
+    auto view_semantics =
+        std::make_unique<a11y::A11yViewSemantics>(std::move(tree_service), tree_ptr_.NewRequest());
+    auto annotation_view = std::make_unique<MockAnnotationView>([]() {}, []() {}, []() {});
+    annotation_view->InitializeView(fuchsia::ui::views::ViewRef() /*unused*/);
+    annotation_view_ = annotation_view.get();
+    ASSERT_TRUE(annotation_view_);
+    EXPECT_TRUE(annotation_view_->IsInitialized());
 
     view_wrapper_ = std::make_unique<a11y::ViewWrapper>(
-        std::move(view_ref_), std::move(tree_service), tree_ptr_.NewRequest(), nullptr /*context*/,
-        std::move(mock_annotation_view_factory));
+        std::move(view_ref_), std::move(view_semantics), std::move(annotation_view));
 
     view_wrapper_->EnableSemanticUpdates(true);
-
-    // Verify that semantics are enabled.
-    EXPECT_TRUE(semantic_tree_service_factory_->service());
-    EXPECT_TRUE(semantic_tree_service_factory_->service()->UpdatesEnabled());
-
-    // Verify that annotation view is initialized.
-    auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
-    ASSERT_TRUE(annotation_view_ptr);
-    EXPECT_TRUE(annotation_view_ptr->IsInitialized());
   }
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
@@ -119,7 +115,7 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
   std::unique_ptr<fidl::Binding<fuchsia::accessibility::semantics::SemanticListener>>
       semantic_listener_binding_;
   std::unique_ptr<a11y::ViewWrapper> view_wrapper_;
-  MockAnnotationViewFactory* mock_annotation_view_factory_;
+  MockAnnotationView* annotation_view_;
   a11y::SemanticTreeService* tree_service_;
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
   fuchsia::ui::views::ViewRef view_ref_;
@@ -135,12 +131,9 @@ TEST_F(ViewWrapperTest, HighlightAndClear) {
   // Highlight node 0.
   view_wrapper_->HighlightNode(0u);
 
-  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
-  ASSERT_TRUE(annotation_view_ptr);
-
   // Verify that annotation view received bounding_box (defined above) as parameter to
   // DrawHighlight().
-  const auto& highlight_bounding_box = annotation_view_ptr->GetCurrentHighlight();
+  const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
   EXPECT_TRUE(highlight_bounding_box.has_value());
   EXPECT_EQ(highlight_bounding_box->min.x, 0.0f);
   EXPECT_EQ(highlight_bounding_box->min.y, 0.0f);
@@ -153,84 +146,8 @@ TEST_F(ViewWrapperTest, HighlightAndClear) {
   view_wrapper_->ClearHighlights();
 
   // Verify that DetachViewContents() was called.
-  const auto& updated_highlight_bounding_box = annotation_view_ptr->GetCurrentHighlight();
+  const auto& updated_highlight_bounding_box = annotation_view_->GetCurrentHighlight();
   EXPECT_FALSE(updated_highlight_bounding_box.has_value());
-}
-
-TEST_F(ViewWrapperTest, ViewPropretiesChanged) {
-  // Create test node.
-  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
-                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  CreateTestNode(0u, std::move(bounding_box));
-
-  // Highlight node 0.
-  view_wrapper_->HighlightNode(0u);
-
-  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
-  ASSERT_TRUE(annotation_view_ptr);
-
-  // Verify that annotation view received bounding_box (defined above) as parameter to
-  // DrawHighlight().
-  const auto& highlight_bounding_box = annotation_view_ptr->GetCurrentHighlight();
-  EXPECT_TRUE(highlight_bounding_box.has_value());
-  EXPECT_EQ(highlight_bounding_box->min.x, 0.0f);
-  EXPECT_EQ(highlight_bounding_box->min.y, 0.0f);
-  EXPECT_EQ(highlight_bounding_box->min.z, 0.0f);
-  EXPECT_EQ(highlight_bounding_box->max.x, 1.0f);
-  EXPECT_EQ(highlight_bounding_box->max.y, 2.0f);
-  EXPECT_EQ(highlight_bounding_box->max.z, 3.0f);
-
-  // Update bounding box of node 0.
-  bounding_box = {.min = {.x = 1.0, .y = 1.0, .z = 1.0}, .max = {.x = 2.0, .y = 3.0, .z = 4.0}};
-  CreateTestNode(0u, std::move(bounding_box));
-
-  // Simulate view property change event.
-  annotation_view_ptr->SimulateViewPropertyChange();
-
-  // Verify that annotation view received updated bounding_box (defined above) as parameter to
-  // DrawHighlight().
-  const auto& updated_highlight_bounding_box = annotation_view_ptr->GetCurrentHighlight();
-  EXPECT_TRUE(updated_highlight_bounding_box.has_value());
-  EXPECT_EQ(updated_highlight_bounding_box->min.x, 1.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->min.y, 1.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->min.z, 1.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->max.x, 2.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->max.y, 3.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->max.z, 4.0f);
-}
-
-TEST_F(ViewWrapperTest, ViewDetachedAndAttached) {
-  // Create test node.
-  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
-                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  CreateTestNode(0u, std::move(bounding_box));
-
-  // Highlight node 0.
-  view_wrapper_->HighlightNode(0u);
-
-  auto annotation_view_ptr = mock_annotation_view_factory_->GetAnnotationView(koid_);
-  ASSERT_TRUE(annotation_view_ptr);
-
-  // Simulate view detachment event.
-  annotation_view_ptr->SimulateViewDetachment();
-
-  // Verify that DetachViewContents() was called.
-  const auto& highlight_bounding_box = annotation_view_ptr->GetCurrentHighlight();
-  EXPECT_FALSE(highlight_bounding_box.has_value());
-
-  // Simulate view re-attachment event.
-  annotation_view_ptr->SimulateViewAttachment();
-
-  // Verify that annotation view received bounding_box (defined above) as parameter to
-  // DrawHighlight().
-  const auto& updated_highlight_bounding_box = annotation_view_ptr->GetCurrentHighlight();
-  EXPECT_TRUE(updated_highlight_bounding_box.has_value());
-  EXPECT_EQ(updated_highlight_bounding_box->min.x, 0.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->min.y, 0.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->min.z, 0.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->max.x, 1.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->max.y, 2.0f);
-  EXPECT_EQ(updated_highlight_bounding_box->max.z, 3.0f);
 }
 
 }  // namespace accessibility_test

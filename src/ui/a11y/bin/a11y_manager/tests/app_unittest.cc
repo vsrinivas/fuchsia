@@ -20,10 +20,12 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
 namespace {
@@ -44,7 +46,8 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_setui_(&context_provider_),
         mock_focus_chain_(&context_provider_),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<a11y::ViewWrapperFactory>(),
+                      std::make_unique<MockViewSemanticsFactory>(),
+                      std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
                       context_->outgoing()->debug_dir()),
         tts_manager_(context_),
         color_transform_manager_(context_),
