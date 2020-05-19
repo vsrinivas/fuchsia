@@ -13,7 +13,7 @@
 #include <memory>
 
 #include <blobfs/common.h>
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>

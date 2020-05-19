@@ -22,7 +22,7 @@
 #include <memory>
 
 #include <blobfs/common.h>
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
@@ -58,8 +58,9 @@ void CanaryBlobSrcFunction(char* data, size_t length) { memset(data, kCanaryInt,
 class ZSTDSeekableBlobTest : public zxtest::Test {
  public:
   void SetUp() {
-    MountOptions options;
-    options.write_compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
+    MountOptions options = {
+        .compression_settings = { .compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE, }
+    };
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
     ASSERT_OK(FormatFilesystem(device.get()));
@@ -148,8 +149,9 @@ class ZSTDSeekableBlobTest : public zxtest::Test {
 class ZSTDSeekableBlobWrongAlgorithmTest : public ZSTDSeekableBlobTest {
  public:
   void SetUp() {
-    MountOptions options;
-    options.write_compression_algorithm = CompressionAlgorithm::ZSTD;
+    MountOptions options = {
+        .compression_settings = { .compression_algorithm = CompressionAlgorithm::ZSTD, }
+    };
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);
     ASSERT_OK(FormatFilesystem(device.get()));
@@ -170,8 +172,9 @@ class ZSTDSeekAndReadTest : public ZSTDSeekableBlobTest {
  public:
   void SetUp() {
     // Write uncompressed to test block device-level seek and read.
-    MountOptions options;
-    options.write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
+    MountOptions options = {
+        .compression_settings = { .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED, }
+    };
 
     // Use a blob size that will have a "leftover byte" in an extra block to test block read edge
     // case.

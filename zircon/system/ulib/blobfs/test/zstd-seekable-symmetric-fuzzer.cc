@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <vector>
 
+#include <blobfs/compression-settings.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "compression/zstd-seekable.h"
@@ -30,10 +31,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   // Compress data.
   std::unique_ptr<blobfs::ZSTDSeekableCompressor> compressor;
-  assert(blobfs::ZSTDSeekableCompressor::Create(data_size, compressed_buf.data(),
-                                                max_compressed_size, &compressor) == ZX_OK);
-  assert(compressor->Update(data, data_size) == ZX_OK);
-  assert(compressor->End() == ZX_OK);
+  blobfs::CompressionSettings settings = {.compression_algorithm =
+                                              blobfs::CompressionAlgorithm::ZSTD_SEEKABLE};
+  ZX_ASSERT(blobfs::ZSTDSeekableCompressor::Create(settings, data_size, compressed_buf.data(),
+                                                   max_compressed_size, &compressor) == ZX_OK);
+  ZX_ASSERT(compressor->Update(data, data_size) == ZX_OK);
+  ZX_ASSERT(compressor->End() == ZX_OK);
 
   // Select size and offset for decompression.
   uncompressed_size %= data_size + 1;
@@ -46,14 +49,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // `uncompressed_buf`.
   std::vector<uint8_t> uncompressed_buf(initial_uncompressed_size);
   blobfs::ZSTDSeekableDecompressor decompressor;
-  assert(decompressor.DecompressRange(uncompressed_buf.data(), &uncompressed_size,
-                                      compressed_buf.data(), compressor->Size(), offset) == 0);
+  ZX_ASSERT(decompressor.DecompressRange(uncompressed_buf.data(), &uncompressed_size,
+                                         compressed_buf.data(), compressor->Size(), offset) == 0);
 
   // Verify correctness of read.
-  assert(std::memcmp(data + offset, uncompressed_buf.data(), uncompressed_size) == 0);
+  ZX_ASSERT(std::memcmp(data + offset, uncompressed_buf.data(), uncompressed_size) == 0);
 
   // Verify size of read.
-  assert(initial_uncompressed_size == uncompressed_size);
+  ZX_ASSERT(initial_uncompressed_size == uncompressed_size);
 
   return 0;
 }

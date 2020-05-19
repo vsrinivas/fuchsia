@@ -61,7 +61,8 @@ std::unique_ptr<char[]> GenerateInput(DataType data_type, unsigned seed, size_t 
 
 void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t size, size_t step,
                        std::optional<BlobCompressor>* out) {
-  auto compressor = BlobCompressor::Create(algorithm, size);
+  CompressionSettings settings { .compression_algorithm = algorithm };
+  auto compressor = BlobCompressor::Create(settings, size);
   ASSERT_TRUE(compressor);
 
   size_t offset = 0;
@@ -243,7 +244,8 @@ TEST(CompressorTests, CompressDecompressChunkCompressible4) {
 
 void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
   const size_t input_size = 1024;
-  auto compressor = BlobCompressor::Create(algorithm, input_size);
+  CompressionSettings settings { .compression_algorithm = algorithm };
+  auto compressor = BlobCompressor::Create(settings, input_size);
   ASSERT_TRUE(compressor);
 
   std::unique_ptr<char[]> input(new char[input_size]);

@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <zstd/zstd.h>
 
@@ -25,8 +26,9 @@ class ZSTDCompressor : public Compressor {
   // in order to compress data of size |input_length|.
   static size_t BufferMax(size_t input_length);
 
-  static zx_status_t Create(size_t input_size, void* compression_buffer,
-                            size_t compression_buffer_length, std::unique_ptr<ZSTDCompressor>* out);
+  static zx_status_t Create(CompressionSettings settings, size_t input_size,
+                            void* compression_buffer, size_t compression_buffer_length,
+                            std::unique_ptr<ZSTDCompressor>* out);
   ~ZSTDCompressor();
 
   ////////////////////////////////////////

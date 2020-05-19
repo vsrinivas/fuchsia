@@ -15,6 +15,7 @@ static_assert(false, "Fuchsia only header");
 #include <memory>
 #include <optional>
 
+#include <blobfs/compression-settings.h>
 #include <fbl/macros.h>
 #include <lz4/lz4frame.h>
 #include <zstd/zstd.h>
@@ -28,8 +29,8 @@ namespace blobfs {
 // differences between compression algorithms.
 class BlobCompressor {
  public:
-  // Initializes a compression object given the requested |algorithm| and input |blob_size|.
-  static std::optional<BlobCompressor> Create(CompressionAlgorithm algorithm, size_t blob_size);
+  // Initializes a compression object given the requested |settings| and input |blob_size|.
+  static std::optional<BlobCompressor> Create(CompressionSettings settings, size_t blob_size);
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlobCompressor);
   ~BlobCompressor();

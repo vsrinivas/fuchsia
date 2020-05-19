@@ -53,7 +53,8 @@ std::unique_ptr<char[]> GenerateInput(DataType data_type, unsigned* seed, size_t
 
 void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t size, size_t step,
                        std::optional<BlobCompressor>* out) {
-  auto compressor = BlobCompressor::Create(algorithm, size);
+  CompressionSettings settings = { .compression_algorithm = algorithm, };
+  auto compressor = BlobCompressor::Create(settings, size);
   ASSERT_TRUE(compressor);
 
   size_t offset = 0;

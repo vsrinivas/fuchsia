@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_COMPRESSION_ALGORITHM_H_
-#define BLOBFS_COMPRESSION_ALGORITHM_H_
+#ifndef BLOBFS_COMPRESSION_SETTINGS_H_
+#define BLOBFS_COMPRESSION_SETTINGS_H_
 
 #include <stdint.h>
+
+#include <optional>
 
 #include <blobfs/format.h>
 
@@ -29,6 +31,20 @@ CompressionAlgorithm AlgorithmForInode(const Inode& inode);
 // set, and all other flags are unset.
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm);
 
+// Settings to configure compression behavior.
+struct CompressionSettings {
+  // Compression algorithm to use when storing blobs.
+  // Blobs that are already stored on disk using another compression algorithm from disk are not
+  // affected by this flag.
+  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
+  // Write compression aggressiveness. Currently only used for ZSTD* and CHUNKED algorithms.
+  // If set to std::nullopt, an implementation-defined default is used.
+  std::optional<int> compression_level;
+
+  // Returns true if the configured settings are valid.
+  bool IsValid() const;
+};
+
 }  // namespace blobfs
 
-#endif  // BLOBFS_COMPRESSION_ALGORITHM_H_
+#endif  // BLOBFS_COMPRESSION_SETTINGS_H_

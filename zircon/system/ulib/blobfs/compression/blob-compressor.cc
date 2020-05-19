@@ -21,9 +21,9 @@
 
 namespace blobfs {
 
-std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algorithm,
+std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings settings,
                                                      size_t blob_size) {
-  switch (algorithm) {
+  switch (settings.compression_algorithm) {
     case CompressionAlgorithm::LZ4: {
       fzl::OwnedVmoMapper compressed_blob;
       size_t max = LZ4Compressor::BufferMax(blob_size);
@@ -48,8 +48,8 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
         return std::nullopt;
       }
       std::unique_ptr<ZSTDCompressor> compressor;
-      status = ZSTDCompressor::Create(blob_size, compressed_blob.start(), compressed_blob.size(),
-                                      &compressor);
+      status = ZSTDCompressor::Create(settings, blob_size, compressed_blob.start(),
+                                      compressed_blob.size(), &compressor);
       if (status != ZX_OK) {
         return std::nullopt;
       }
@@ -64,7 +64,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
         return std::nullopt;
       }
       std::unique_ptr<ZSTDSeekableCompressor> compressor;
-      status = ZSTDSeekableCompressor::Create(blob_size, compressed_blob.start(),
+      status = ZSTDSeekableCompressor::Create(settings, blob_size, compressed_blob.start(),
                                               compressed_blob.size(), &compressor);
       if (status != ZX_OK) {
         return std::nullopt;
@@ -75,7 +75,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
     case CompressionAlgorithm::CHUNKED: {
       std::unique_ptr<ChunkedCompressor> compressor;
       size_t max;
-      zx_status_t status = ChunkedCompressor::Create(blob_size, &max, &compressor);
+      zx_status_t status = ChunkedCompressor::Create(settings, blob_size, &max, &compressor);
       if (status != ZX_OK) {
         FS_TRACE_ERROR("[blobfs] Failed to create compressor: %s\n", zx_status_get_string(status));
         return std::nullopt;

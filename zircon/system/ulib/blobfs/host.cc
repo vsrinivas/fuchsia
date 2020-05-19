@@ -16,6 +16,7 @@
 #include <optional>
 #include <utility>
 
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/host.h>
 #include <blobfs/host/fsck.h>
@@ -48,6 +49,10 @@ namespace {
 // not use |BlobCompressor| the same way.
 using HostCompressor = ZSTDSeekableCompressor;
 using HostDecompressor = ZSTDSeekableDecompressor;
+
+constexpr CompressionSettings kCompressionSettings = {
+    .compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE,
+};
 
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
   off_t off = offset + bno * kBlobfsBlockSize;
@@ -95,8 +100,9 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
 
   zx_status_t status;
   std::unique_ptr<HostCompressor> compressor;
-  if ((status = HostCompressor::Create(mapping.length(), out_info->compressed_data.get(), max,
-                                       &compressor)) != ZX_OK) {
+  if ((status = HostCompressor::Create(kCompressionSettings, mapping.length(),
+                                       out_info->compressed_data.get(), max, &compressor))
+      != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
     return status;
   }

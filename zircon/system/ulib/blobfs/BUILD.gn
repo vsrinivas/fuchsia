@@ -76,7 +76,7 @@ zx_library("blobfs") {
     "allocator/node-reserver.cc",
     "blobfs-checker.cc",
     "common.cc",
-    "compression-algorithm.cc",
+    "compression-settings.cc",
     "compression/chunked.cc",
     "compression/decompressor.cc",
     "compression/lz4.cc",

@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <fbl/macros.h>
 
 namespace blobfs {

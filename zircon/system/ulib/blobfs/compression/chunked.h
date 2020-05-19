@@ -5,13 +5,14 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_CHUNKED_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_CHUNKED_H_
 
+#include <lib/zx/status.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <optional>
 
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
-#include <lib/zx/status.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
@@ -31,8 +32,8 @@ class ChunkedCompressor : public Compressor {
 
   static uint32_t InodeHeaderCompressionFlags() { return kBlobFlagChunkCompressed; }
 
-  static zx_status_t Create(size_t input_size, size_t* output_limit_out,
-                            std::unique_ptr<ChunkedCompressor>* out);
+  static zx_status_t Create(CompressionSettings settings, size_t input_size,
+                            size_t* output_limit_out, std::unique_ptr<ChunkedCompressor>* out);
 
   // Registers |dst| as the output for compression.
   // Must be called before |Update()| or |End()| are called.

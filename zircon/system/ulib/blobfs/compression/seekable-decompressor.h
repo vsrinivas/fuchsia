@@ -5,16 +5,14 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_SEEKABLE_DECOMPRESSOR_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_SEEKABLE_DECOMPRESSOR_H_
 
+#include <lib/zx/status.h>
+#include <stddef.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <optional>
 
-#include <stddef.h>
-
-#include <blobfs/compression-algorithm.h>
 #include <fbl/macros.h>
-#include <lib/zx/status.h>
 
 namespace blobfs {
 
@@ -50,8 +48,7 @@ class SeekableDecompressor {
   //
   // The concrete implementation is free to return an arbitrarily large range of bytes, but
   // [offset, offset+len) will always be contained in the mapping.
-  virtual zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset,
-                                                                     size_t len) = 0;
+  virtual zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len) = 0;
 };
 
 }  // namespace blobfs

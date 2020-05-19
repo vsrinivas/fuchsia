@@ -5,15 +5,13 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_DECOMPRESSOR_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_DECOMPRESSOR_H_
 
+#include <stddef.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <stddef.h>
-
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <fbl/macros.h>
-
 
 namespace blobfs {
 

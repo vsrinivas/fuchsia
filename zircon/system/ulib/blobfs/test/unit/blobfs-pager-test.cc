@@ -14,7 +14,7 @@
 #include <random>
 #include <thread>
 
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -142,7 +142,8 @@ class MockBlobFactory {
       memcpy(out.data(), input, len);
       return out;
     }
-    std::optional<BlobCompressor> compressor = BlobCompressor::Create(algorithm, len);
+    CompressionSettings settings { .compression_algorithm = algorithm, };
+    std::optional<BlobCompressor> compressor = BlobCompressor::Create(settings, len);
     EXPECT_TRUE(compressor);
     EXPECT_OK(compressor->Update(input, len));
     EXPECT_OK(compressor->End());

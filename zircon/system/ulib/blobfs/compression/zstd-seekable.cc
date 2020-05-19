@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -21,7 +22,7 @@
 
 namespace blobfs {
 
-constexpr int kSeekableCompressionLevel = 5;
+constexpr int kDefaultCompressionLevel = 5;
 
 // TODO(49551): Consider disabling checksums if cryptographic verification suffices.
 constexpr int kSeekableChecksumFlag = 1;
@@ -39,9 +40,11 @@ ZSTDSeekableCompressor::ZSTDSeekableCompressor(ZSTD_seekable_CStream* stream,
 
 ZSTDSeekableCompressor::~ZSTDSeekableCompressor() { ZSTD_seekable_freeCStream(stream_); }
 
-zx_status_t ZSTDSeekableCompressor::Create(size_t input_size, void* compression_buffer,
+zx_status_t ZSTDSeekableCompressor::Create(CompressionSettings settings, size_t input_size,
+                                           void* compression_buffer,
                                            size_t compression_buffer_length,
                                            std::unique_ptr<ZSTDSeekableCompressor>* out) {
+  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::ZSTD_SEEKABLE);
   if (BufferMax(input_size) > compression_buffer_length)
     return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -52,8 +55,9 @@ zx_status_t ZSTDSeekableCompressor::Create(size_t input_size, void* compression_
   auto compressor = std::unique_ptr<ZSTDSeekableCompressor>(
       new ZSTDSeekableCompressor(std::move(stream), compression_buffer, compression_buffer_length));
 
-  size_t r = ZSTD_seekable_initCStream(compressor->stream_, kSeekableCompressionLevel,
-                                       kSeekableChecksumFlag, kZSTDSeekableMaxFrameSize);
+  int level = settings.compression_level ? *(settings.compression_level) : kDefaultCompressionLevel;
+  size_t r = ZSTD_seekable_initCStream(compressor->stream_, level, kSeekableChecksumFlag,
+                                       kZSTDSeekableMaxFrameSize);
   if (ZSTD_isError(r)) {
     FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seekable cstream: %s\n",
                    ZSTD_getErrorName(r));
@@ -174,8 +178,7 @@ zx_status_t ZSTDSeekableDecompressor::Decompress(void* uncompressed_buf, size_t*
 zx_status_t ZSTDSeekableDecompressor::DecompressRange(void* uncompressed_buf,
                                                       size_t* uncompressed_size,
                                                       const void* compressed_buf,
-                                                      size_t max_compressed_size,
-                                                      size_t offset) {
+                                                      size_t max_compressed_size, size_t offset) {
   TRACE_DURATION("blobfs", "ZSTDSeekableDecompressor::DecompressRange", "uncompressed_size",
                  *uncompressed_size, "max_compressed_size", max_compressed_size);
 

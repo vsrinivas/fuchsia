@@ -5,14 +5,15 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_SEEKABLE_H_
 
+#include <lib/zx/status.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <optional>
 
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
-#include <lib/zx/status.h>
 #include <zstd/zstd.h>
 #include <zstd/zstd_seekable.h>
 
@@ -42,8 +43,8 @@ class ZSTDSeekableCompressor : public Compressor {
   // representation of a blob of size `input_length`.
   static size_t BufferMax(size_t input_length);
 
-  static zx_status_t Create(size_t input_size, void* compression_buffer,
-                            size_t compression_buffer_length,
+  static zx_status_t Create(CompressionSettings settings, size_t input_size,
+                            void* compression_buffer, size_t compression_buffer_length,
                             std::unique_ptr<ZSTDSeekableCompressor>* out);
   ~ZSTDSeekableCompressor();
 

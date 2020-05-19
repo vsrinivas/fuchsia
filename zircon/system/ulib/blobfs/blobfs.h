@@ -22,7 +22,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <blobfs/common.h>
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
@@ -138,7 +138,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Returns the dispatcher for the current thread that blobfs uses.
   async_dispatcher_t* dispatcher() { return dispatcher_; }
 
-  const CompressionAlgorithm& write_compression_algorithm() { return write_compression_algorithm_; }
+  const CompressionSettings& write_compression_settings() { return write_compression_settings_; }
 
   bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                             uint64_t* first_unset = nullptr) const {
@@ -188,7 +188,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   bool PagingEnabled() const { return paging_enabled_; }
 
   bool ShouldCompress() const {
-    return write_compression_algorithm_ != CompressionAlgorithm::UNCOMPRESSED;
+    return write_compression_settings_.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED;
   }
 
   const zx::resource& vmex_resource() const { return vmex_resource_; }
@@ -217,7 +217,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
-         CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource);
+         CompressionSettings write_compression_settings, zx::resource vmex_resource);
 
   // Terminates all internal connections, updates the "clean bit" (if writable),
   // flushes writeback buffers, empties caches, and returns the underlying
@@ -279,7 +279,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   std::unique_ptr<BlockDevice> block_device_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   Writability writability_;
-  CompressionAlgorithm write_compression_algorithm_;
+  CompressionSettings write_compression_settings_;
   zx::resource vmex_resource_;
 
   std::unique_ptr<Allocator> allocator_;

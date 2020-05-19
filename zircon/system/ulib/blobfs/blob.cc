@@ -21,7 +21,7 @@
 #include <vector>
 
 #include <blobfs/common.h>
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
@@ -180,7 +180,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
   if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionSizeThresholdBytes) {
     write_info->compressor =
-        BlobCompressor::Create(blobfs_->write_compression_algorithm(), inode_.blob_size);
+        BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
     if (!write_info->compressor) {
       FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
       return status;
@@ -444,7 +444,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
     inode_.block_count = blocks;
     uint16_t compression_inode_header_flags =
-        CompressionInodeHeaderFlags(blobfs_->write_compression_algorithm());
+        CompressionInodeHeaderFlags(blobfs_->write_compression_settings().compression_algorithm);
     inode_.header.flags |= compression_inode_header_flags;
   } else {
     // This shouldn't be necessary because it should already be zeroed, but just in case:

@@ -116,7 +116,7 @@ TEST_F(BlobTest, SyncBehavior) {
 TEST_F(BlobTest, ReadingBlobVerifiesTail) {
   // Remount without compression so that we can manipulate the data that is loaded.
   MountOptions options = {
-      .write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+      .compression_settings = { .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED, }
   };
   ASSERT_OK(Blobfs::Create(loop_.dispatcher(), Blobfs::Destroy(std::move(fs_)), &options,
                            zx::resource(), &fs_));

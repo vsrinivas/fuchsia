@@ -25,7 +25,7 @@
 #include <memory>
 #include <utility>
 
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/fsck.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
@@ -153,7 +153,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(
       new Blobfs(dispatcher, std::move(device), superblock, options->writability,
-                 options->write_compression_algorithm, std::move(vmex_resource)));
+                 options->compression_settings, std::move(vmex_resource)));
   fs->block_info_ = std::move(block_info);
 
   if (options->pager) {
@@ -288,8 +288,13 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
   }
 
-  FS_TRACE_INFO("blobfs: Using compression %s\n",
-                CompressionAlgorithmToString(fs->write_compression_algorithm_));
+  FS_TRACE_INFO(
+      "blobfs: Using compression %s\n",
+      CompressionAlgorithmToString(fs->write_compression_settings_.compression_algorithm));
+  if (fs->write_compression_settings_.compression_level) {
+    FS_TRACE_INFO("blobfs: Using overridden compression level %d\n",
+                  *(fs->write_compression_settings_.compression_level));
+  }
 
   auto* fs_ptr = fs.get();
   zx::status<BlobLoader> loader =
@@ -683,12 +688,12 @@ void Blobfs::Sync(SyncCallback cb) {
 
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                const Superblock* info, Writability writable,
-               CompressionAlgorithm write_compression_algorithm, zx::resource vmex_resource)
+               CompressionSettings write_compression_settings, zx::resource vmex_resource)
     : info_(*info),
       dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
-      write_compression_algorithm_(write_compression_algorithm),
+      write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)) {}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {

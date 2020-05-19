@@ -4,12 +4,13 @@
 
 #include "chunked.h"
 
+#include <lib/zx/status.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <blobfs/compression-settings.h>
 #include <fs/trace.h>
-#include <lib/zx/status.h>
 #include <src/lib/chunked-compression/chunked-archive.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/status.h>
@@ -32,10 +33,13 @@ ChunkedCompressor::ChunkedCompressor(chunked_compression::StreamingChunkedCompre
                                      size_t input_len)
     : compressor_(std::move(compressor)), input_len_(input_len) {}
 
-zx_status_t ChunkedCompressor::Create(size_t input_size, size_t* output_limit_out,
+zx_status_t ChunkedCompressor::Create(CompressionSettings settings, size_t input_size,
+                                      size_t* output_limit_out,
                                       std::unique_ptr<ChunkedCompressor>* out) {
+  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::CHUNKED);
   chunked_compression::CompressionParams params;
-  params.compression_level = kDefaultLevel;
+  params.compression_level =
+      settings.compression_level ? *(settings.compression_level) : kDefaultLevel;
   params.chunk_size = chunked_compression::CompressionParams::ChunkSizeForInputSize(input_size);
 
   chunked_compression::StreamingChunkedCompressor compressor(params);
@@ -175,15 +179,15 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
   const chunked_compression::SeekTableEntry& last_entry = seek_table_.Entries()[*last_idx];
   size_t compressed_end = last_entry.compressed_offset + last_entry.compressed_size;
   size_t decompressed_end = last_entry.decompressed_offset + last_entry.decompressed_size;
-  if (compressed_end < first_entry.compressed_offset
-      || decompressed_end < first_entry.decompressed_offset) {
+  if (compressed_end < first_entry.compressed_offset ||
+      decompressed_end < first_entry.decompressed_offset) {
     // This likely indicates that the seek table was tampered. (Benign corruption would be caught by
     // the header checksum, which is verified during header parsing.)
     // Note that this condition is also checked by the underlying compression library during
     // parsing, but we defensively check it here as well to prevent underflow.
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
-  return zx::ok(CompressionMapping {
+  return zx::ok(CompressionMapping{
       .compressed_offset = first_entry.compressed_offset,
       .compressed_length = compressed_end - first_entry.compressed_offset,
       .decompressed_offset = first_entry.decompressed_offset,

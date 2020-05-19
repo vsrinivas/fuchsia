@@ -21,7 +21,7 @@
 #include <optional>
 #include <utility>
 
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/fsck.h>
 #include <blobfs/mkfs.h>
 #include <blobfs/mount.h>
@@ -132,6 +132,17 @@ std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
   return std::nullopt;
 }
 
+std::optional<int> ParseInt(const char* str) {
+  char* pend;
+  long ret = strtol(str, &pend, 10);
+  if (*pend != '\0') {
+    return std::nullopt;
+  } else if (ret < std::numeric_limits<int>::min() || ret > std::numeric_limits<int>::max()) {
+    return std::nullopt;
+  }
+  return static_cast<int>(ret);
+}
+
 int usage() {
   fprintf(
       stderr,
@@ -147,6 +158,9 @@ int usage() {
       "                                    Does not affect any blobs already stored on-disk.\n"
       "                                    'alg' can be one of ZSTD, ZSTD_SEEKABLE, ZSTD_CHUNKED,\n"
       "                                    or UNCOMPRESSED.\n"
+      "         -l|--compression-level n   Aggressiveness of compression to apply to newly stored\n"
+      "                                    blobs. Only used if -c is one of ZSTD*, in which case\n"
+      "                                    the level is the zstd compression level.\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -166,14 +180,19 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
   while (1) {
     static struct option opts[] = {
 
-        {"verbose", no_argument, nullptr, 'v'}, {"readonly", no_argument, nullptr, 'r'},
-        {"metrics", no_argument, nullptr, 'm'}, {"journal", no_argument, nullptr, 'j'},
-        {"pager", no_argument, nullptr, 'p'},   {"write-uncompressed", no_argument, nullptr, 'u'},
-        {"compression", required_argument, nullptr, 'c'}, {"help", no_argument, nullptr, 'h'},
+        {"verbose", no_argument, nullptr, 'v'},
+        {"readonly", no_argument, nullptr, 'r'},
+        {"metrics", no_argument, nullptr, 'm'},
+        {"journal", no_argument, nullptr, 'j'},
+        {"pager", no_argument, nullptr, 'p'},
+        {"write-uncompressed", no_argument, nullptr, 'u'},
+        {"compression", required_argument, nullptr, 'c'},
+        {"compression-level", required_argument, nullptr, 'l'},
+        {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmjpuc:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmjpuc:l:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -193,7 +212,8 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         break;
       case 'u':
         // TODO(jfsulliv): Remove legacy parameter.
-        options->write_compression_algorithm = blobfs::CompressionAlgorithm::UNCOMPRESSED;
+        options->compression_settings.compression_algorithm =
+            blobfs::CompressionAlgorithm::UNCOMPRESSED;
         break;
       case 'c': {
         std::optional<blobfs::CompressionAlgorithm> algorithm = ParseAlgorithm(optarg);
@@ -201,8 +221,16 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
           fprintf(stderr, "Invalid compression algorithm: %s\n", optarg);
           return usage();
         }
-        options->write_compression_algorithm = *algorithm;
+        options->compression_settings.compression_algorithm = *algorithm;
         break;
+      }
+      case 'l': {
+        std::optional<int> level = ParseInt(optarg);
+        if (!level || level < 0) {
+          fprintf(stderr, "Invalid argument for --compression-level: %s\n", optarg);
+          return usage();
+        }
+        options->compression_settings.compression_level = level;
       }
       case 'v':
         options->verbose = true;
@@ -211,6 +239,11 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
       default:
         return usage();
     }
+  }
+
+  if (!options->compression_settings.IsValid()) {
+    fprintf(stderr, "Invalid compression settings.\n");
+    return usage();
   }
 
   argc -= optind;

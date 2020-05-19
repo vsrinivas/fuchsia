@@ -134,8 +134,9 @@ class BlobLoaderTest : public zxtest::Test {
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    MountOptions options;
-    options.write_compression_algorithm = algorithm;
+    MountOptions options = {
+        .compression_settings = { .compression_algorithm = algorithm, }
+    };
     ASSERT_OK(
         Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 

@@ -10,7 +10,7 @@
 #include <lib/zx/resource.h>
 
 #include <blobfs/cache-policy.h>
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <block-client/cpp/block-device.h>
 #include <fbl/function.h>
 
@@ -48,10 +48,7 @@ struct MountOptions {
   bool journal = false;
   bool pager = false;
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
-  // Compression algorithm to use when storing blobs.
-  // Blobs that are already stored on disk using another compression algorithm from disk are not
-  // affected by this flag.
-  CompressionAlgorithm write_compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
+  CompressionSettings compression_settings{};
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|. If

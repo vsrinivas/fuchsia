@@ -35,11 +35,11 @@ const uint32_t kNumFilesystemBlocks = 400;
 class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
  public:
   void SetUp() final {
-    MountOptions options;
-
     // Write API used to put desired bytes on block device (uncompressed), not exercise compression
     // code paths.
-    options.write_compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
+    MountOptions options = {
+        .compression_settings = { .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED, }
+    };
 
     auto device =
         std::make_unique<block_client::FakeBlockDevice>(kNumFilesystemBlocks, kBlobfsBlockSize);

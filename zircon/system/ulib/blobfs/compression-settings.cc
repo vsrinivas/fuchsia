@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include <stdint.h>
 #include <zircon/assert.h>
 
-#include <blobfs/compression-algorithm.h>
+#include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
+#include <src/lib/chunked-compression/compression-params.h>
+#include <zstd/zstd.h>
 
 namespace blobfs {
 
@@ -55,6 +56,27 @@ uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
     default:
       ZX_ASSERT(false);
       return kBlobFlagZSTDCompressed;
+  }
+}
+
+bool CompressionSettings::IsValid() const {
+  if (compression_level == std::nullopt) {
+    return true;
+  }
+  switch (compression_algorithm) {
+    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::UNCOMPRESSED:
+      // compression_level shouldn't be set in these cases.
+      return false;
+    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      return *compression_level >= ZSTD_minCLevel() && *compression_level <= ZSTD_maxCLevel();
+    case CompressionAlgorithm::CHUNKED:
+      return *compression_level >= chunked_compression::CompressionParams::MinCompressionLevel() &&
+             *compression_level <= chunked_compression::CompressionParams::MaxCompressionLevel();
+    default:
+      ZX_ASSERT(false);
+      return false;
   }
 }
 

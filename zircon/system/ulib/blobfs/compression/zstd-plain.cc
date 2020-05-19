@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include <blobfs/compression-settings.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
@@ -19,7 +20,7 @@
 
 namespace blobfs {
 
-constexpr int kCompressionLevel = 3;
+constexpr int kDefaultCompressionLevel = 3;
 
 zx_status_t AbstractZSTDDecompressor::Decompress(void* uncompressed_buf, size_t* uncompressed_size,
                                                  const void* compressed_buf,
@@ -78,9 +79,10 @@ ZSTDCompressor::ZSTDCompressor(ZSTD_CCtx* stream, void* compressed_buffer,
 
 ZSTDCompressor::~ZSTDCompressor() { ZSTD_freeCStream(stream_); }
 
-zx_status_t ZSTDCompressor::Create(size_t input_size, void* compression_buffer,
-                                   size_t compression_buffer_length,
+zx_status_t ZSTDCompressor::Create(CompressionSettings settings, size_t input_size,
+                                   void* compression_buffer, size_t compression_buffer_length,
                                    std::unique_ptr<ZSTDCompressor>* out) {
+  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::ZSTD);
   if (BufferMax(input_size) > compression_buffer_length) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -93,7 +95,8 @@ zx_status_t ZSTDCompressor::Create(size_t input_size, void* compression_buffer,
   auto compressor = std::unique_ptr<ZSTDCompressor>(
       new ZSTDCompressor(stream, compression_buffer, compression_buffer_length));
 
-  ssize_t r = ZSTD_initCStream(compressor->stream_, kCompressionLevel);
+  int level = settings.compression_level ? *(settings.compression_level) : kDefaultCompressionLevel;
+  ssize_t r = ZSTD_initCStream(compressor->stream_, level);
   if (ZSTD_isError(r)) {
     FS_TRACE_ERROR("[blobfs][zstd] Failed to initialize cstream: %s\n", ZSTD_getErrorName(r));
     return ZX_ERR_INTERNAL;
