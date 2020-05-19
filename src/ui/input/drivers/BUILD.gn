@@ -14,7 +14,6 @@ group("drivers") {
     "hid-input-report",
     "hidctl",
     "i2c-hid",
-    "input-report-inject",
     "usb-hid",
   ]
   if (current_cpu == "x64") {
@@ -33,7 +32,6 @@ group("tests") {
     "hid-buttons:tests",
     "hid-input-report:hid-input-report-test",
     "i2c-hid:tests",
-    "input-report-inject/test",
     "virtio:tests",
   ]
 }
