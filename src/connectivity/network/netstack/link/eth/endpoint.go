@@ -42,14 +42,18 @@ func (e *endpoint) makeEthernetFields(r *stack.Route, protocol tcpip.NetworkProt
 
 func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
 	fields := e.makeEthernetFields(r, protocol)
-	header.Ethernet(pkt.Header.Prepend(header.EthernetMinimumSize)).Encode(&fields)
+	h := pkt.Header.Prepend(header.EthernetMinimumSize)
+	header.Ethernet(h).Encode(&fields)
+	pkt.LinkHeader = h
 	return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 }
 
 func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	fields := e.makeEthernetFields(r, protocol)
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
-		header.Ethernet(pkt.Header.Prepend(header.EthernetMinimumSize)).Encode(&fields)
+		h := pkt.Header.Prepend(header.EthernetMinimumSize)
+		header.Ethernet(h).Encode(&fields)
+		pkt.LinkHeader = h
 	}
 	return e.LinkEndpoint.WritePackets(r, gso, pkts, protocol)
 }

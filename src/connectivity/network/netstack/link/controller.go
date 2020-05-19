@@ -6,6 +6,7 @@ package link
 
 type State int
 
+// TODO(fxbug.dev/52383): distinguish between enabled and link up.
 const (
 	StateUnknown State = iota
 	StateStarted

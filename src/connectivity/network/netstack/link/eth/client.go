@@ -43,37 +43,15 @@ const bufferSize = 2048
 type Buffer []byte
 
 type IOBuffer struct {
-	vaddr zx.Vaddr
-	size  uint64
-}
-
-// MakeIOBuffer maps the given VMO into the root VMAR. It does not take
-// ownership of the given VMO.
-func MakeIOBuffer(vmo zx.VMO) (IOBuffer, error) {
-	size, err := vmo.Size()
-	if err != nil {
-		return IOBuffer{}, err
-	}
-	vaddr, err := zx.VMARRoot.Map(0 /* vmarOffset */, vmo, 0 /* vmoOffset */, size, zx.VMFlagPermRead|zx.VMFlagPermWrite)
-	if err != nil {
-		return IOBuffer{}, err
-	}
-	return IOBuffer{
-		vaddr: vaddr,
-		size:  size,
-	}, nil
+	fifo.MappedVMO
 }
 
 func (iob *IOBuffer) buffer(i int32) Buffer {
-	return *(*Buffer)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(iob.vaddr + zx.Vaddr(i)*bufferSize),
-		Len:  bufferSize,
-		Cap:  bufferSize,
-	}))
+	return iob.GetData(uint64(i*bufferSize), bufferSize)
 }
 
 func (iob *IOBuffer) index(b Buffer) int {
-	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-uintptr(iob.vaddr)) / bufferSize
+	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-iob.GetPointer(0)) / bufferSize
 }
 
 func (iob *IOBuffer) entry(b Buffer) FifoEntry {
@@ -84,10 +62,6 @@ func (iob *IOBuffer) entry(b Buffer) FifoEntry {
 
 func (iob *IOBuffer) BufferFromEntry(e FifoEntry) Buffer {
 	return iob.buffer(e.Index())[:e.Length()]
-}
-
-func (iob *IOBuffer) Close() error {
-	return zx.VMARRoot.Unmap(iob.vaddr, iob.size)
 }
 
 var _ link.Controller = (*Client)(nil)
@@ -164,23 +138,12 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	txStorage := int(c.handler.InitTx(uint16(fifos.TxDepth * 2)))
 
 	{
-		vmo, err := zx.NewVMO(bufferSize*uint64(rxStorage+txStorage), 0)
+		mappedVmo, vmo, err := fifo.NewMappedVMO(bufferSize*uint64(rxStorage+txStorage), fmt.Sprintf("ethernet.Device.IoBuffer: %s", topopath))
 		if err != nil {
 			_ = c.Close()
-			return nil, fmt.Errorf("eth: cannot allocate VMO: %w", err)
+			return nil, fmt.Errorf("eth: NewMappedVMO: %w", err)
 		}
-		if err := vmo.Handle().SetProperty(zx.PropName, []byte(fmt.Sprintf("ethernet.Device.IoBuffer: %s", topopath))); err != nil {
-			_ = vmo.Close()
-			_ = c.Close()
-			return nil, err
-		}
-		iob, err := MakeIOBuffer(vmo)
-		if err != nil {
-			_ = vmo.Close()
-			_ = c.Close()
-			return nil, fmt.Errorf("eth: make IO buffer: %w", err)
-		}
-		c.iob = iob
+		c.iob = IOBuffer{MappedVMO: mappedVmo}
 		if status, err := device.SetIoBuffer(context.Background(), vmo); err != nil {
 			_ = c.Close()
 			return nil, fmt.Errorf("eth: cannot set IO VMO: %w", err)

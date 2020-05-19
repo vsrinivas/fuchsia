@@ -37,7 +37,7 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
-	// TODO(tkilbourn): distinguish between enabled and link up
+	// TODO(fxbug.dev/52383): distinguish between enabled and link up.
 	administrativeStatus := stack.AdministrativeStatusDisabled
 	physicalStatus := stack.PhysicalStatusDown
 	if ifs.mu.state == link.StateStarted {

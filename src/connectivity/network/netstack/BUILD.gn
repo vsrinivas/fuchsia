@@ -63,6 +63,7 @@ test_package("netstack_gotests") {
     ":netstack_filter_test",
     ":netstack_link_eth_test",
     ":netstack_link_fifo_test",
+    ":netstack_link_netdevice_test",
     ":netstack_test",
     "ifconfig:netstack_ifconfig_test",
     "netstack_service_test",
@@ -97,6 +98,10 @@ test_package("netstack_gotests") {
       environments = [ emu_env ]
     },
     {
+      name = "netstack_link_netdevice_test"
+      environments = [ emu_env ]
+    },
+    {
       name = "netstack_link_fifo_test"
       environments = [ emu_env ]
     },
@@ -128,6 +133,16 @@ generated_go("netstack_gen") {
       package = "link/eth"
       template = "link/fifo/gen/entries.tmpl"
     },
+    {
+      src = "link/netdevice/handler.json"
+      package = "link/netdevice"
+      template = "link/fifo/gen/handler.tmpl"
+    },
+    {
+      src = "link/netdevice/entries.json"
+      package = "link/netdevice"
+      template = "link/fifo/gen/entries.tmpl"
+    },
   ]
 }
 
@@ -139,6 +154,7 @@ go_library("netstack_lib") {
     ":networking_metrics_golib",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//sdk/fidl/fuchsia.inspect.deprecated($go_toolchain)",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
@@ -148,6 +164,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.stash($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/connectivity/network/tun/fidl($go_toolchain)",
     "//src/lib/component/go",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/btree",
@@ -205,6 +222,11 @@ go_test("netstack_link_fifo_test") {
   ]
 }
 
+go_test("netstack_link_netdevice_test") {
+  gopackages = [ "netstack/link/netdevice" ]
+  deps = [ ":netstack_lib" ]
+}
+
 go_test("netstack_test") {
   gopackages = [ "netstack" ]
   deps = [ ":netstack_lib" ]
@@ -221,5 +243,6 @@ group("tests") {
     "routes:netstack_routes_gotests",
     "tests",
     "util:netstack_util_test($host_toolchain)",
+    "//src/connectivity/network/tun/network-tun",
   ]
 }

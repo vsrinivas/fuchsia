@@ -141,14 +141,14 @@ func TestEndpoint(t *testing.T) {
 					}, nil
 				},
 				SetIoBufferImpl: func(vmo zx.VMO) (int32, error) {
-					iob, err := eth.MakeIOBuffer(vmo)
+					mappedVmo, err := fifo.MapVMO(vmo)
 					if err != nil {
 						t.Fatal(err)
 					}
 					if err := vmo.Close(); err != nil {
 						t.Fatal(err)
 					}
-					device.iob = iob
+					device.iob = eth.IOBuffer{MappedVMO: mappedVmo}
 					return int32(zx.ErrOk), nil
 				},
 				StartImpl: func() (int32, error) {
