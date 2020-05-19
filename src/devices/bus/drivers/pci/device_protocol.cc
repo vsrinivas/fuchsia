@@ -53,9 +53,6 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
     case PCI_OP_CONFIG_WRITE:
       return RpcConfigWrite(ch);
       break;
-    case PCI_OP_CONNECT_SYSMEM:
-      return RpcConfigWrite(ch);
-      break;
     case PCI_OP_ENABLE_BUS_MASTER:
       return RpcEnableBusMaster(ch);
       break;
@@ -86,6 +83,7 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
     case PCI_OP_SET_IRQ_MODE:
       return RpcSetIrqMode(ch);
       break;
+    case PCI_OP_CONNECT_SYSMEM:
     case PCI_OP_MAX:
     case PCI_OP_INVALID: {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
@@ -160,7 +158,7 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  zxlogf(TRACE, "%s Write%u[%#x] <- %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+  zxlogf(DEBUG, "%s Write%u[%#x] <- %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
          request_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
