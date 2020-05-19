@@ -208,7 +208,7 @@ func keepalive(ctx context.Context, conn net.Conn, client *ssh.Client) {
 			// Try to close the client. It's possible the keepalive failed
 			// because the client has already been closed, which is fine – this
 			// close will just silently fail.
-			logger.Errorf(ctx, "ssh keepalive failed, closing client")
+			logger.Errorf(ctx, "ssh keepalive failed, closing client: %v", err)
 			client.Close()
 			return
 		}
