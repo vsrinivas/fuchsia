@@ -8,6 +8,7 @@ ffx_plugin("ffx_test") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
+  args_source_root = "src/cmd.rs"
   deps = [
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",

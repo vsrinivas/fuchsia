@@ -6,6 +6,65 @@ import("//build/rust/rustc_library.gni")
 
 # Defines a FFX plugin
 #
+# Parameters
+#
+#   name
+#     Name of the crate as defined in its manifest file. If not specified, it is
+#     assumed to be the same as the target name. All dashes will be replaced
+#     with underscores in the library name: <name_underscored>. This
+#     target creates two libraries: one for the plugin callback method
+#     and one for the argh command struct needed for CLI params. The
+#     libraries creates will be <target>_lib and <target>_args_lib.
+#     If the `with_unit_tests` flag is used, additional test libraries
+#     will be created for a total of four libraries: <target>_lib,
+#     <target>_lib_test, <target>_args_lib, <target>_args_lib_test.
+#
+#   version
+#     Semver version of the crate as seen on crates.io.
+#
+#   edition (optional)
+#     Edition of the Rust language to be used.
+#     Options are "2015" and "2018". Defaults to "2018".
+#
+#   configs (optional)
+#     A list of config labels applying to this target.
+#
+#   deps (optional)
+#     List of rust_library GN targets on which this crate depends.
+#     Third party crates can be included through paths like
+#     "//third_party/rust_crates:<cratename>",
+#
+#   test_deps (optional)
+#     List of rust_library GN targets on which this crate's tests depend.
+#
+#   with_unit_tests (optional)
+#     Builds unit tests associated with the binary. This will create a
+#     `<name>_lib_test` test file in the output directory. Equivalent
+#     to adding a `rustc_test` target with that name and the same source_root.
+#
+#   test_environments (optional)
+#     What environments unit tests, if provided, should target. Only used here
+#     for linux and mac tests, with a default value of a general linux/mac
+#     environment (as a function of $current_os).
+#     See environments parameter on //build/testing/test_spec.gni for more
+#     details.
+#
+#   source_root (optional)
+#     Location of the plugin root (e.g. `src/lib.rs`). This defaults to `./src/lib.rs`
+#     This should be the location of the method marked with the
+#     ffx_plugin attribute.
+#
+#   args_source_root (optional)
+#     Location of the plugin's argh command root (e.g. `src/args.rs`). This defaults
+#     to `./src/args.rs`. This should be the location of the struct marked with the
+#     ffx_command attribute. Due to internal dependencies this cannot
+#     be the same file as the source_root.
+#
+#   features (optional)
+#     A list of conditional compilation flags to enable. This can be used to set features for crates
+#     built in-tree which are also published to crates.io. This would be passed to rustc as
+#     '--cfg feature=XXX'
+#
 template("ffx_plugin") {
   if (host_toolchain == current_toolchain) {
     output_name = target_name
@@ -14,9 +73,13 @@ template("ffx_plugin") {
     }
 
     args = output_name + "_args"
+    args_source_root = "src/args.rs"
+    if (defined(invoker.args_source_root)) {
+      args_source_root = invoker.args_source_root
+    }
 
     rustc_library(args) {
-      source_root = "./src/args.rs"
+      source_root = args_source_root
       deps = [
         "//src/developer/development-bridge/core:lib",
         "//third_party/rust_crates:argh",
