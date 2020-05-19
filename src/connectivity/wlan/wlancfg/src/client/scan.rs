@@ -227,3 +227,343 @@ async fn request_sme_scan(client: ClientPtr) -> Result<fidl_sme::ScanTransaction
     client_sme.scan(&mut request, remote).context(format!("failed to connect to sme"))?;
     Ok(local)
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::{super::Client, *},
+        crate::util::logger::set_logger_for_test,
+        fidl::endpoints::create_proxy,
+        fuchsia_async as fasync,
+        futures::{lock::Mutex, task::Poll},
+        pin_utils::pin_mut,
+        std::sync::Arc,
+        wlan_common::assert_variant,
+    };
+
+    /// Creates a Client wrapper.
+    async fn create_client() -> (ClientPtr, fidl_sme::ClientSmeRequestStream) {
+        set_logger_for_test();
+        let (client_sme, remote) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
+        let client = Arc::new(Mutex::new(Client::from(client_sme)));
+        (client, remote.into_stream().expect("failed to create stream"))
+    }
+
+    fn send_sme_scan_result(
+        exec: &mut fasync::Executor,
+        sme_stream: &mut fidl_sme::ClientSmeRequestStream,
+        scan_results: &[fidl_sme::BssInfo],
+    ) {
+        // Check that a scan request was sent to the sme and send back results
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut scan_results.to_vec().iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+    }
+
+    // Creates test data for the scan functions.
+    fn create_scan_ap_data() -> (Vec<fidl_sme::BssInfo>, Vec<fidl_policy::ScanResult>) {
+        let input_aps = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 0,
+                snr_db: 0,
+                channel: 0,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [1, 2, 3, 4, 5, 6],
+                ssid: "unique ssid".as_bytes().to_vec(),
+                rx_dbm: 7,
+                snr_db: 0,
+                channel: 8,
+                protection: fidl_sme::Protection::Wpa2Personal,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [7, 8, 9, 10, 11, 12],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 13,
+                snr_db: 0,
+                channel: 14,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: false,
+            },
+        ];
+        // input_aps contains some duplicate SSIDs, which should be
+        // grouped in the output.
+        let output_aps = vec![
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "duplicated ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa3,
+                }),
+                entries: Some(vec![
+                    fidl_policy::Bss {
+                        bssid: Some([0, 0, 0, 0, 0, 0]),
+                        rssi: Some(0),
+                        frequency: Some(0),
+                        timestamp_nanos: Some(0),
+                    },
+                    fidl_policy::Bss {
+                        bssid: Some([7, 8, 9, 10, 11, 12]),
+                        rssi: Some(13),
+                        frequency: Some(0),
+                        timestamp_nanos: Some(0),
+                    },
+                ]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "unique ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                }),
+                entries: Some(vec![fidl_policy::Bss {
+                    bssid: Some([1, 2, 3, 4, 5, 6]),
+                    rssi: Some(7),
+                    frequency: Some(0),
+                    timestamp_nanos: Some(0),
+                }]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+        ];
+        (input_aps, output_aps)
+    }
+
+    #[test]
+    fn basic_scan() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut = handle_scan(client, iter_server);
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
+        let (input_aps, output_aps) = create_scan_ap_data();
+        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, output_aps);
+        });
+
+        // Request the next chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+
+        // Process scan handler
+        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
+        // scan results.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, vec![]);
+        });
+    }
+
+    #[test]
+    fn scan_iterator_never_polled() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+
+        // Issue request to scan.
+        let (_iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut = handle_scan(client.clone(), iter_server);
+        pin_mut!(scan_fut);
+
+        // Progress scan side forward without ever calling getNext() on the scan result iterator
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
+        let (input_aps, output_aps) = create_scan_ap_data();
+        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+
+        // Progress scan side forward without progressing the scan result iterator
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Issue a second request to scan, to make sure that everything is still
+        // moving along even though the first scan result iterator was never progressed.
+        let (iter2, iter_server2) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut2 = handle_scan(client, iter_server2);
+        pin_mut!(scan_fut2);
+
+        // Progress scan side forward
+        assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
+        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+
+        // Request the results on the second iterator
+        let mut output_iter_fut2 = iter2.get_next();
+
+        // Progress scan side forward
+        assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Pending);
+
+        // Ensure results are present on the iterator
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut2), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, output_aps);
+        });
+    }
+
+    #[test]
+    fn scan_error() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut = handle_scan(client, iter_server);
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back an error
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
+
+        // Process SME result.
+        // Note: this will be Poll::Ready, since the scan handler will quit after sending the error
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+
+        // the iterator should have an error on it
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results");
+            assert_eq!(results, Err(fidl_policy::ScanErrorCode::GeneralError));
+        });
+    }
+
+    #[test]
+    fn overlapping_scans() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (input_aps, output_aps) = create_scan_ap_data();
+
+        // Create two sets of endpoints
+        let (iter0, iter_server0) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let (iter1, iter_server1) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+
+        // Issue request to scan on both iterator.
+        let scan_fut0 = handle_scan(client.clone(), iter_server0);
+        pin_mut!(scan_fut0);
+        let scan_fut1 = handle_scan(client, iter_server1);
+        pin_mut!(scan_fut1);
+
+        // Request a chunk of scan results on both iterators. Progress until waiting on
+        // response from server side of the iterator.
+        let mut output_iter_fut0 = iter0.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
+        let mut output_iter_fut1 = iter1.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Pending);
+
+        // Progress first scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back results
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send the first AP
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                let mut aps = [input_aps[0].clone()];
+                ctrl.send_on_result(&mut aps.iter_mut())
+                    .expect("failed to send scan data");
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
+                // The iterator should not have any data yet, until the sme is done
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
+
+                // Progress second scan handler forward so that it will respond to the iterator get next request.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
+                // Check that the second scan request was sent to the sme and send back results
+                send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps); // for output_iter_fut1
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
+                // The second iterator should have all its data
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
+                    let results = result.expect("Failed to get next scan results").unwrap();
+                    assert_eq!(results.len(), output_aps.len());
+                    assert_eq!(results, output_aps);
+                });
+
+                // Send the remaining APs for the first iterator
+                let mut aps = input_aps[1..].to_vec();
+                ctrl.send_on_result(&mut aps.iter_mut())
+                    .expect("failed to send scan data");
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut0), Poll::Pending);
+
+        // The first iterator should have all its data
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), output_aps.len());
+            assert_eq!(results, output_aps);
+        });
+    }
+}
