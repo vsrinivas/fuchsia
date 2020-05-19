@@ -11,7 +11,6 @@
 #include <zxtest/zxtest.h>
 
 #include "keyboard-vt100.h"
-#include "src/ui/input/lib/hid-input-report/fidl.h"
 #include "src/ui/input/lib/hid-input-report/keyboard.h"
 #include "src/ui/lib/key_util/key_util.h"
 
@@ -19,6 +18,8 @@
 port_t port;
 
 namespace {
+
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
 // State reported to keypress_handler().
 uint8_t g_keycode;
@@ -56,20 +57,23 @@ class KeyboardInputHelper {
   ~KeyboardInputHelper() {}
 
   void WriteReportBuf(std::vector<uint32_t> keys) {
-    hid_input_report::KeyboardInputReport keyboard_report;
-    size_t i = 0;
-    for (auto& key : keys) {
-      fuchsia::ui::input2::Key fidl_key =
-          *key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
-      keyboard_report.pressed_keys[i++] = static_cast<llcpp::fuchsia::ui::input2::Key>(fidl_key);
-    }
-    keyboard_report.num_pressed_keys = i;
-    hid_input_report::InputReport report;
-    report.report = keyboard_report;
+    auto report_builder = fuchsia_input_report::InputReport::Builder(
+        std::make_unique<fuchsia_input_report::InputReport::Frame>());
+    auto keyboard_builder = fuchsia_input_report::KeyboardInputReport::Builder(
+        std::make_unique<fuchsia_input_report::KeyboardInputReport::Frame>());
 
-    hid_input_report::FidlInputReport fidl;
-    hid_input_report::SetFidlInputReport(report, &fidl);
-    keyboard_.ProcessInput(fidl.builder.build());
+    std::vector<llcpp::fuchsia::ui::input2::Key> fidl_keys;
+    for (auto& key : keys) {
+      auto fidl_key =
+          *key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
+      fidl_keys.push_back(static_cast<::llcpp::fuchsia::ui::input2::Key>(fidl_key));
+    }
+    keyboard_builder.set_pressed_keys(
+        std::make_unique<fidl::VectorView<::llcpp::fuchsia::ui::input2::Key>>(
+            fidl::unowned_ptr(fidl_keys.data()), fidl_keys.size()));
+    report_builder.set_keyboard(
+        std::make_unique<fuchsia_input_report::KeyboardInputReport>(keyboard_builder.build()));
+    keyboard_.ProcessInput(report_builder.build());
   }
 
   // Byte 0 contains one bit per modifier key.
