@@ -5,14 +5,16 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_H_
 
 #include <assert.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 
+#include <limits>
+
 #include <ddktl/device.h>
+#include <ddktl/protocol/pci.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -110,6 +112,9 @@ class Device : public PciDeviceType,
   // Trigger a function level reset (if possible)
   // TODO(cja): port zx_status_t DoFunctionLevelReset() when we have a way to test it
 
+  // The methods here are locking versions that are used primarily by the PCI
+  // protocol implementation in device_protocol.cc.
+
   // Modify bits in the device's command register (in the device config space),
   // clearing the bits specified by clr_bits and setting the bits specified by set
   // bits.  Specifically, the operation will be applied as...
@@ -119,35 +124,35 @@ class Device : public PciDeviceType,
   // @param clr_bits The mask of bits to be cleared.
   // @param clr_bits The mask of bits to be set.
   // @return A zx_status_t indicating success or failure of the operation.
-  zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits) TA_EXCL(dev_lock_);
+  zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits) __TA_EXCLUDES(dev_lock_);
 
   // Enable or disable bus mastering in a device's configuration.
   //
   // @param enable If true, allow the device to access main system memory as a bus
   // master.
   // @return A zx_status_t indicating success or failure of the operation.
-  zx_status_t EnableBusMaster(bool enabled) TA_EXCL(dev_lock_);
+  zx_status_t EnableBusMaster(bool enabled) __TA_EXCLUDES(dev_lock_);
 
   // Enable or disable PIO access in a device's configuration.
   //
   // @param enable If true, allow the device to access its PIO mapped registers.
   // @return A zx_status_t indicating success or failure of the operation.
-  zx_status_t EnablePio(bool enabled) TA_EXCL(dev_lock_);
+  zx_status_t EnablePio(bool enabled) __TA_EXCLUDES(dev_lock_);
 
   // Enable or disable MMIO access in a device's configuration.
   //
   // @param enable If true, allow the device to access its MMIO mapped registers.
   // @return A zx_status_t indicating success or failure of the operation.
-  zx_status_t EnableMmio(bool enabled) TA_EXCL(dev_lock_);
+  zx_status_t EnableMmio(bool enabled) __TA_EXCLUDES(dev_lock_);
 
   // Requests a device unplug itself from its UpstreamNode and the Bus list.
-  virtual void Unplug() TA_EXCL(dev_lock_);
-  // TODO(cja): port void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
+  virtual void Unplug() __TA_EXCLUDES(dev_lock_);
+  // TODO(cja): port void SetQuirksDone() __TA_REQUIRES(dev_lock_) { quirks_done_ = true; }
   const std::unique_ptr<Config>& config() const { return cfg_; }
 
-  bool plugged_in() const { return plugged_in_; }
-  bool disabled() const { return disabled_; }
-  bool quirks_done() const { return quirks_done_; }
+  bool plugged_in() const __TA_REQUIRES(dev_lock_) { return plugged_in_; }
+  bool disabled() const __TA_REQUIRES(dev_lock_) { return disabled_; }
+  bool quirks_done() const __TA_REQUIRES(dev_lock_) { return quirks_done_; }
   bool is_bridge() const { return is_bridge_; }
   uint16_t vendor_id() const { return vendor_id_; }
   uint16_t device_id() const { return device_id_; }
@@ -160,12 +165,12 @@ class Device : public PciDeviceType,
   uint8_t func_id() const { return cfg_->bdf().function_id; }
   uint32_t bar_count() const { return bar_count_; }
   const Capabilities& capabilities() const { return caps_; }
-  const BarInfo& GetBar(uint8_t bar_id) {
+  const BarInfo& GetBar(uint8_t bar_id) const __TA_REQUIRES(dev_lock_) {
     ZX_DEBUG_ASSERT(bar_id < bar_count_);
     return bars_[bar_id];
   }
   // Dump some information about the device
-  virtual void Dump() const;
+  virtual void Dump() const __TA_EXCLUDES(dev_lock_);
 
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These
@@ -174,64 +179,46 @@ class Device : public PciDeviceType,
   Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
          BusLinkInterface* bli, bool is_bridge)
       : PciDeviceType(parent),
-        is_bridge_(is_bridge),
         cfg_(std::move(config)),
-        bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
         upstream_(upstream),
-        bli_(bli) {}
+        bli_(bli),
+        bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
+        is_bridge_(is_bridge) {}
 
-  zx_status_t Init() TA_EXCL(dev_lock_);
-  zx_status_t InitLocked() TA_REQ(dev_lock_);
+  zx_status_t Init() __TA_EXCLUDES(dev_lock_);
+  zx_status_t InitLocked() __TA_REQUIRES(dev_lock_);
   fbl::Mutex* dev_lock() { return &dev_lock_; }
 
   // Read the value of the Command register, requires the dev_lock.
-  uint16_t ReadCmdLocked() TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_) {
+  uint16_t ReadCmdLocked() __TA_REQUIRES(dev_lock_) __TA_EXCLUDES(cmd_reg_lock_) {
     fbl::AutoLock cmd_lock(&cmd_reg_lock_);
     return cfg_->Read(Config::kCommand);
   }
-  void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) TA_REQ(dev_lock_)
-      TA_EXCL(cmd_reg_lock_);
-  void AssignCmdLocked(uint16_t value) TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_) {
-    ModifyCmdLocked(0xFFFF, value);
+  void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) __TA_REQUIRES(dev_lock_)
+      __TA_EXCLUDES(cmd_reg_lock_);
+  void AssignCmdLocked(uint16_t value) __TA_REQUIRES(dev_lock_) __TA_EXCLUDES(cmd_reg_lock_) {
+    ModifyCmdLocked(UINT16_MAX, value);
   }
 
-  bool IoEnabled() TA_REQ(dev_lock_) { return ReadCmdLocked() & PCI_COMMAND_IO_EN; }
+  bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_COMMAND_IO_EN; }
 
-  bool MmioEnabled() TA_REQ(dev_lock_) { return ReadCmdLocked() & PCI_COMMAND_MEM_EN; }
+  bool MmioEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_COMMAND_MEM_EN; }
 
-  zx_status_t ProbeCapabilities() TA_REQ(dev_lock_);
-  zx_status_t ParseCapabilities() TA_REQ(dev_lock_);
-  zx_status_t ParseExtendedCapabilities() TA_REQ(dev_lock_);
-  // TODO(cja) port zx_status_t ParseExtendedCapabilities() TA_REQ(dev_lock_);
-
-  fbl::Mutex cmd_reg_lock_;            // Protection for access to the command register.
-  const bool is_bridge_;               // True if this device is also a bridge
-  const std::unique_ptr<Config> cfg_;  // Pointer to the device's config interface.
-  uint16_t vendor_id_;                 // The device's vendor ID, as read from config
-  uint16_t device_id_;                 // The device's device ID, as read from config
-  uint8_t class_id_;                   // The device's class ID, as read from config.
-  uint8_t subclass_;                   // The device's subclass, as read from config.
-  uint8_t prog_if_;                    // The device's programming interface (from cfg)
-  uint8_t rev_id_;                     // The device's revision ID (from cfg)
-
-  // State related to lifetime management.
-  bool plugged_in_ = false;
-  bool disabled_ = false;
-  bool quirks_done_ = false;
-  fbl::Mutex dev_lock_;
+  zx_status_t ProbeCapabilities() __TA_REQUIRES(dev_lock_);
+  zx_status_t ParseCapabilities() __TA_REQUIRES(dev_lock_);
+  zx_status_t ParseExtendedCapabilities() __TA_REQUIRES(dev_lock_);
+  // TODO(cja) port zx_status_t ParseExtendedCapabilities() __TA_REQUIRES(dev_lock_);
 
   // Info about the BARs computed and cached during the initial setup/probe,
   // indexed by starting BAR register index.
-  BarInfo bars_[PCI_MAX_BAR_REGS];
-  const uint32_t bar_count_;
-
+  std::array<BarInfo, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
+  UpstreamNode* upstream() __TA_REQUIRES(dev_lock_) { return upstream_; }
+  BusLinkInterface* bli() __TA_REQUIRES(dev_lock_) { return bli_; }
   // An upstream node will outlive its downstream devices
-  UpstreamNode* upstream_;  // The upstream node in the device graph.
-  BusLinkInterface* const bli_;
 
  private:
   zx_status_t RpcReply(const zx::unowned_channel& ch, zx_status_t st,
-                       zx_handle_t* handles = nullptr, const uint32_t handle_cnt = 0);
+                       zx_handle_t* handles = nullptr, uint32_t handle_cnt = 0);
   // Allow UpstreamNode implementations to Probe/Allocate/Configure/Disable.
   friend class UpstreamNode;
   friend class Bridge;
@@ -239,28 +226,46 @@ class Device : public PciDeviceType,
   // Probes a BAR's configuration. If it is already allocated it will try to
   // reserve the existing address window for it so that devices configured by system
   // firmware can be maintained as much as possible.
-  zx_status_t ProbeBar(uint32_t bar_id) TA_REQ(dev_lock_);
+  zx_status_t ProbeBar(uint32_t bar_id) __TA_REQUIRES(dev_lock_);
   // Allocates address space for a BAR if it does not already exist.
-  zx_status_t AllocateBar(uint32_t bar_id) TA_REQ(dev_lock_);
+  zx_status_t AllocateBar(uint32_t bar_id) __TA_REQUIRES(dev_lock_);
   // Called a device to configure (probe/allocate) its BARs
-  zx_status_t ConfigureBarsLocked() TA_REQ(dev_lock_);
+  zx_status_t ConfigureBarsLocked() __TA_REQUIRES(dev_lock_);
   // Called by an UpstreamNode to configure the BARs of a device downstream.
   // Bridge implements it so it can allocate its bridge windows and own BARs before
   // configuring downstream BARs..
-  virtual zx_status_t ConfigureBars() TA_EXCL(dev_lock_);
-  zx_status_t ConfigureCapabilities() TA_EXCL(dev_lock_);
+  virtual zx_status_t ConfigureBars() __TA_EXCLUDES(dev_lock_);
+  zx_status_t ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
 
   // Disable a device, and anything downstream of it.  The device will
   // continue to enumerate, but users will only be able to access config (and
   // only in a read only fashion).  BAR windows, bus mastering, and interrupts
   // will all be disabled.
-  virtual void Disable() TA_EXCL(dev_lock_);
-  void DisableLocked() TA_REQ(dev_lock_);
+  virtual void Disable() __TA_EXCLUDES(dev_lock_);
+  void DisableLocked() __TA_REQUIRES(dev_lock_);
 
-  Capabilities caps_ = {};
+  mutable fbl::Mutex dev_lock_;
+  mutable fbl::Mutex cmd_reg_lock_;    // Protection for access to the command register.
+  const std::unique_ptr<Config> cfg_;  // Pointer to the device's config interface.
+  UpstreamNode* upstream_ __TA_GUARDED(dev_lock_);  // The upstream node in the device graph.
+  BusLinkInterface* const bli_ __TA_GUARDED(dev_lock_);
+  std::array<BarInfo, PCI_MAX_BAR_REGS> bars_ __TA_GUARDED(dev_lock_) = {};
+  const uint32_t bar_count_;
 
-  // IRQ structures
-  // TODO(cja): Port over the IRQ support from kernel pci.
+  const bool is_bridge_;  // True if this device is also a bridge
+  uint16_t vendor_id_;    // The device's vendor ID, as read from config
+  uint16_t device_id_;    // The device's device ID, as read from config
+  uint8_t class_id_;      // The device's class ID, as read from config.
+  uint8_t subclass_;      // The device's subclass, as read from config.
+  uint8_t prog_if_;       // The device's programming interface (from cfg)
+  uint8_t rev_id_;        // The device's revision ID (from cfg)
+
+  // State related to lifetime management.
+  bool plugged_in_ __TA_GUARDED(dev_lock_) = false;
+  bool disabled_ __TA_GUARDED(dev_lock_) = false;
+  bool quirks_done_ __TA_GUARDED(dev_lock_) = false;
+
+  Capabilities caps_ __TA_GUARDED(dev_lock_){};
 
   // Used for Rxrpc / RpcReply for protocol buffers.
   PciRpcMsg request_;

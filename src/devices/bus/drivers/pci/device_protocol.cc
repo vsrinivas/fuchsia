@@ -42,8 +42,11 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (disabled_) {
-    return RpcReply(ch, ZX_ERR_BAD_STATE);
+  {
+    fbl::AutoLock dev_lock(&dev_lock_);
+    if (disabled_) {
+      return RpcReply(ch, ZX_ERR_BAD_STATE);
+    }
   }
 
   switch (request_.op) {
@@ -170,6 +173,7 @@ zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {
 zx_status_t Device::RpcGetAuxdata(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
 
 zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
+  fbl::AutoLock dev_lock(&dev_lock_);
   auto bar_id = request_.bar.id;
   if (bar_id >= bar_count_) {
     return RpcReply(ch, ZX_ERR_INVALID_ARGS);

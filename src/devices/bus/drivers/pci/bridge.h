@@ -51,20 +51,20 @@ class Bridge : public pci::Device, public UpstreamNode {
 
   // Device overrides
   void Dump() const final;
-  void Unplug() final TA_EXCL(dev_lock_);
+  void Unplug() final __TA_EXCLUDES(dev_lock_);
 
  protected:
-  zx_status_t ConfigureBars() final TA_EXCL(dev_lock_);
-  zx_status_t AllocateBridgeWindowsLocked() TA_REQ(dev_lock_);
+  zx_status_t ConfigureBars() final __TA_EXCLUDES(dev_lock_);
+  zx_status_t AllocateBridgeWindowsLocked() __TA_REQUIRES(dev_lock_);
   zx_status_t EnableBusMasterUpstream(bool enabled) override;
-  void Disable() final TA_EXCL(dev_lock_);
+  void Disable() final __TA_EXCLUDES(dev_lock_);
 
  private:
   Bridge(zx_device_t* parent, std::unique_ptr<Config>&&, UpstreamNode* upstream,
          BusLinkInterface* bli, uint8_t managed_bus_id);
-  zx_status_t Init() TA_EXCL(dev_lock_);
+  zx_status_t Init() __TA_EXCLUDES(dev_lock_);
 
-  zx_status_t ParseBusWindowsLocked() TA_REQ(dev_lock_);
+  zx_status_t ParseBusWindowsLocked() __TA_REQUIRES(dev_lock_);
 
   PciRegionAllocator mmio_regions_;
   PciRegionAllocator pf_mmio_regions_;

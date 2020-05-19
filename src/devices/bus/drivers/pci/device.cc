@@ -144,7 +144,7 @@ zx_status_t Device::InitLocked() {
   // Disable the device in event of a failure initializing. TA is disabled
   // because it cannot track the scope of AutoCalls and their associated
   // locking semantics. The lock is grabbed by |Init| and held at this point.
-  auto disable = fbl::MakeAutoCall([this]() TA_NO_THREAD_SAFETY_ANALYSIS { DisableLocked(); });
+  auto disable = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS { DisableLocked(); });
 
   // Parse and sanity check the capabilities and extended capabilities lists
   // if they exist
@@ -216,16 +216,12 @@ void Device::DisableLocked() {
 }
 
 zx_status_t Device::EnableBusMaster(bool enabled) {
+  fbl::AutoLock dev_lock(&dev_lock_);
   if (enabled && disabled_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx_status_t st =
-      ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
-  if (st != ZX_OK) {
-    return st;
-  }
-
+  ModifyCmdLocked(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
   return upstream_->EnableBusMasterUpstream(enabled);
 }
 
@@ -400,7 +396,7 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
 zx_status_t Device::ConfigureBars() {
   fbl::AutoLock dev_lock(&dev_lock_);
   ZX_DEBUG_ASSERT(plugged_in_);
-  ZX_DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
+  ZX_DEBUG_ASSERT(bar_count_ <= bars_.max_size());
 
   // Allocate BARs for the device
   zx_status_t status;
@@ -448,6 +444,7 @@ void Device::Unplug() {
 }
 
 void Device::Dump() const {
+  fbl::AutoLock dev_lock(&dev_lock_);
   fbl::StringBuffer<256> log;
   zxlogf(TRACE, "%s at %s vid:did %04x:%04x", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
          vendor_id(), device_id());
