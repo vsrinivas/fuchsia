@@ -19,7 +19,8 @@ use {
     std::sync::Arc,
 };
 
-const UPDATER_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system_updater-isolated.cmx";
+pub const UPDATER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/isolated-swd#meta/system_updater-isolated.cmx";
 
 pub struct Updater {}
 
@@ -27,9 +28,10 @@ impl Updater {
     pub async fn launch(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
-        cache: &Cache,
-        resolver: &Resolver,
+        cache: Arc<Cache>,
+        resolver: Arc<Resolver>,
         board_name: &str,
+        update_package: Option<String>,
     ) -> Result<(), Error> {
         let output = Updater::launch_with_components(
             blobfs,
@@ -37,6 +39,7 @@ impl Updater {
             cache,
             resolver,
             board_name,
+            update_package,
             UPDATER_URL,
         )
         .await?;
@@ -44,12 +47,13 @@ impl Updater {
         Ok(())
     }
 
-    async fn launch_with_components(
+    pub async fn launch_with_components(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
-        cache: &Cache,
-        resolver: &Resolver,
+        cache: Arc<Cache>,
+        resolver: Arc<Resolver>,
         board_name: &str,
+        update_package: Option<String>,
         updater_url: &str,
     ) -> Result<Output, Error> {
         let board_info_dir = tempfile::tempdir()?;
@@ -59,8 +63,15 @@ impl Updater {
         file.write(board_name.as_bytes())?;
         drop(file);
 
+        let update_package_ref = update_package.as_ref();
+        let mut args = vec!["--skip-recovery", "true", "--reboot", "false"];
+        if let Some(pkg) = update_package_ref {
+            args.push("--update");
+            args.push(pkg);
+        }
+
         let updater = AppBuilder::new(updater_url)
-            .args(vec!["--skip-recovery", "true", "--reboot", "false"])
+            .args(args)
             .add_handle_to_namespace("/blob".to_owned(), blobfs.into_handle())
             .add_dir_to_namespace(
                 "/config/build-info".to_owned(),
@@ -125,26 +136,29 @@ impl Updater {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use {
         super::*,
         crate::resolver::tests::{ResolverForTest, EMPTY_REPO_PATH},
         fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
         fidl_fuchsia_sys::TerminationReason,
-        fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
+        fuchsia_merkle::Hash,
+        fuchsia_pkg_testing::{
+            Package, PackageBuilder, Repository, RepositoryBuilder, SystemImageBuilder,
+        },
         fuchsia_zircon as zx,
         itertools::Itertools,
-        mock_paver::{MockPaverServiceBuilder, PaverEvent},
+        mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
         pkgfs,
         std::collections::HashMap,
     };
 
-    const TEST_UPDATER_URL: &str =
+    pub const TEST_UPDATER_URL: &str =
         "fuchsia-pkg://fuchsia.com/isolated-ota-tests#meta/system_updater.cmx";
     const TEST_CHANNEL: &str = "test";
     const TEST_REPO_URL: &str = "fuchsia-pkg://fuchsia.com";
 
-    struct UpdaterBuilder {
+    pub struct UpdaterBuilder {
         paver_builder: MockPaverServiceBuilder,
         packages: Vec<Package>,
         images: HashMap<String, Vec<u8>>,
@@ -189,7 +203,7 @@ mod tests {
             )
         }
 
-        pub async fn build_and_run(self) -> UpdaterResult {
+        pub async fn build(self) -> UpdaterForTest {
             let mut update = PackageBuilder::new("update")
                 .add_resource_at("packages", self.generate_packages().as_bytes());
             for (name, data) in self.images.iter() {
@@ -211,8 +225,30 @@ mod tests {
             );
             let paver = Arc::new(self.paver_builder.build());
 
+            UpdaterForTest {
+                repo,
+                paver,
+                packages: self.packages,
+                update_merkle_root: *update.meta_far_merkle_root(),
+            }
+        }
+
+        pub async fn build_and_run(self) -> UpdaterResult {
+            self.build().await.run().await
+        }
+    }
+
+    pub struct UpdaterForTest {
+        pub repo: Arc<Repository>,
+        pub paver: Arc<MockPaverService>,
+        pub packages: Vec<Package>,
+        pub update_merkle_root: Hash,
+    }
+
+    impl UpdaterForTest {
+        pub async fn run(self) -> UpdaterResult {
             let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
-            let paver_clone = Arc::clone(&paver);
+            let paver_clone = Arc::clone(&self.paver);
             fs.add_fidl_service(move |stream: PaverRequestStream| {
                 fasync::spawn(
                     Arc::clone(&paver_clone)
@@ -221,10 +257,10 @@ mod tests {
                 );
             });
 
-            let resolver = ResolverForTest::new(repo, TEST_REPO_URL, Some(TEST_CHANNEL.to_owned()))
-                .await
-                .expect("Creating resolver");
-
+            let resolver =
+                ResolverForTest::new(self.repo, TEST_REPO_URL, Some(TEST_CHANNEL.to_owned()))
+                    .await
+                    .expect("Creating resolver");
             let (client, server) = zx::Channel::create().expect("creating channel");
             fs.serve_connection(server).expect("Failed to start mock paver");
             fasync::spawn(fs.collect());
@@ -232,28 +268,29 @@ mod tests {
             let output = Updater::launch_with_components(
                 resolver.cache.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),
                 ClientEnd::from(client),
-                &resolver.cache.cache,
-                &resolver.resolver,
+                Arc::clone(&resolver.cache.cache),
+                Arc::clone(&resolver.resolver),
                 "test",
+                None,
                 TEST_UPDATER_URL,
             )
             .await
             .expect("launching updater");
 
             UpdaterResult {
-                paver_events: paver.take_events(),
+                paver_events: self.paver.take_events(),
                 resolver,
-                output,
+                output: Some(output),
                 packages: self.packages,
             }
         }
     }
 
-    struct UpdaterResult {
+    pub struct UpdaterResult {
         pub paver_events: Vec<PaverEvent>,
-        resolver: ResolverForTest,
-        pub output: Output,
-        packages: Vec<Package>,
+        pub resolver: ResolverForTest,
+        pub output: Option<Output>,
+        pub packages: Vec<Package>,
     }
 
     impl UpdaterResult {
@@ -302,21 +339,16 @@ mod tests {
             .add_image("recovery.vbmeta", &data);
         let result = updater.build_and_run().await;
 
-        if !result.output.stdout.is_empty() {
-            eprintln!(
-                "TEST: system updater stdout:\n{}",
-                String::from_utf8_lossy(&result.output.stdout)
-            );
+        let output = result.output.as_ref().unwrap();
+        if !output.stdout.is_empty() {
+            eprintln!("TEST: system updater stdout:\n{}", String::from_utf8_lossy(&output.stdout));
         }
-        if !result.output.stderr.is_empty() {
-            eprintln!(
-                "TEST: system updater stderr:\n{}",
-                String::from_utf8_lossy(&result.output.stderr)
-            );
+        if !output.stderr.is_empty() {
+            eprintln!("TEST: system updater stderr:\n{}", String::from_utf8_lossy(&output.stderr));
         }
 
-        assert_eq!(result.output.exit_status.reason(), TerminationReason::Exited);
-        result.output.ok().context("System updater exited with error")?;
+        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
+        output.ok().context("System updater exited with error")?;
 
         assert_eq!(
             result.paver_events,

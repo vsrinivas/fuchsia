@@ -55,7 +55,7 @@ pub struct Resolver {
 impl Resolver {
     pub fn launch(
         pkgfs: &Pkgfs,
-        cache: &Cache,
+        cache: Arc<Cache>,
         repo_config: std::fs::File,
         channel: &str,
     ) -> Result<Self, Error> {
@@ -71,7 +71,7 @@ impl Resolver {
 
     fn launch_with_components(
         pkgfs: &Pkgfs,
-        cache: &Cache,
+        cache: Arc<Cache>,
         repo_config: std::fs::File,
         channel: Option<String>,
         ssl_dir: std::fs::File,
@@ -127,7 +127,7 @@ pub mod tests {
 
     pub struct ResolverForTest {
         pub cache: CacheForTest,
-        pub resolver: Resolver,
+        pub resolver: Arc<Resolver>,
         _served_repo: ServedRepository,
     }
 
@@ -166,7 +166,7 @@ pub mod tests {
                 std::fs::File::open(SSL_TEST_CERTS_PATH).context("opening ssl certificates dir")?;
             let resolver = Resolver::launch_with_components(
                 &cache.pkgfs.pkgfs,
-                &cache.cache,
+                Arc::clone(&cache.cache),
                 repo_dir,
                 channel,
                 ssl_certs,
@@ -174,7 +174,7 @@ pub mod tests {
             )
             .context("launching resolver")?;
 
-            Ok(ResolverForTest { cache, resolver, _served_repo: served_repo })
+            Ok(ResolverForTest { cache, resolver: Arc::new(resolver), _served_repo: served_repo })
         }
 
         pub async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Error> {

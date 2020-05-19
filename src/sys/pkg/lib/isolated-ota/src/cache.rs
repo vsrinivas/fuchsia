@@ -59,7 +59,7 @@ pub mod tests {
 
     pub struct CacheForTest {
         pub pkgfs: PkgfsForTest,
-        pub cache: Cache,
+        pub cache: Arc<Cache>,
     }
 
     impl CacheForTest {
@@ -71,7 +71,7 @@ pub mod tests {
             )
             .context("launching cache")?;
 
-            Ok(CacheForTest { pkgfs, cache })
+            Ok(CacheForTest { pkgfs, cache: Arc::new(cache) })
         }
     }
 
