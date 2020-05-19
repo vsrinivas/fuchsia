@@ -14,9 +14,9 @@ rustc_binary_sdk("cmc") {
   category = "partner"
 
   deps = [
-    "//garnet/lib/rust/cm_json",
-    "//garnet/lib/rust/cm_types",
     "//src/lib/directed_graph",
+    "//src/sys/lib/cm_json",
+    "//src/sys/lib/cm_types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:json5format",
@@ -48,9 +48,9 @@ rustc_binary("cmc_integration_test_bin") {
   edition = "2018"
   source_root = "tests/integration_test.rs"
   deps = [
-    "//garnet/lib/rust/cm_fidl_translator",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/lib/cm_fidl_translator",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",

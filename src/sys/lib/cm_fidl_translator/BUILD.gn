@@ -6,40 +6,37 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-source_set("cm_schema_json") {
-  inputs = [
-    "cml_schema.json",
-    "cmx_schema.json",
-  ]
-}
-
-rustc_library("cm_json") {
+rustc_library("cm_fidl_translator") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/cm_types",
-    "//third_party/rust_crates:anyhow",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/lib/cm_fidl_validator",
+    "//src/sys/lib/cm_json",
     "//third_party/rust_crates:json5",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:url",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
-
-  non_rust_deps = [ ":cm_schema_json" ]
 
   test_deps = [ "//src/lib/test_util" ]
 }
 
-test_package("cm_json_tests") {
-  deps = [ ":cm_json_test" ]
+test_package("cm_fidl_translator_tests") {
+  deps = [ ":cm_fidl_translator_test" ]
 
   tests = [
     {
-      name = "cm_json_lib_test"
-      dest = "cm_json_tests"
+      name = "cm_fidl_translator_lib_test"
+      dest = "cm_fidl_translator_tests"
       environments = basic_envs
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":cm_fidl_translator_tests" ]
 }

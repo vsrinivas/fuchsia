@@ -9,10 +9,10 @@ rustc_library("cm_fidl_validator") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/cm_types",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/directed_graph",
+    "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
@@ -33,4 +33,10 @@ test_package("cm_fidl_validator_tests") {
       dest = "cm_fidl_validator_tests"
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":cm_fidl_validator_tests" ]
 }

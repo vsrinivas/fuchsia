@@ -29,3 +29,9 @@ test_package("cm_types_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":cm_types_tests" ]
+}

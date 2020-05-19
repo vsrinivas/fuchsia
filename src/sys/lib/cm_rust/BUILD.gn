@@ -10,10 +10,10 @@ rustc_library("cm_rust") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/cm_fidl_validator",
-    "//garnet/lib/rust/cm_types",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/lib/cm_fidl_validator",
+    "//src/sys/lib/cm_types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
@@ -32,4 +32,10 @@ test_package("cm_rust_tests") {
       environments = basic_envs
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":cm_rust_tests" ]
 }

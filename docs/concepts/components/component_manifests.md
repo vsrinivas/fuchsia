@@ -596,4 +596,4 @@ This section may be omitted.
 [fidl-io2-rights]: /zircon/system/fidl/fuchsia-io2/rights-abilities.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
 [src-cmc]: /src/sys/cmc
-[src-cml-schema]: /garnet/lib/rust/cm_json/cml_schema.json
+[src-cml-schema]: /src/sys/lib/cm_json/cml_schema.json

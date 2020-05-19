@@ -6,6 +6,11 @@ group("tests") {
   testonly = true
 
   deps = [
+    "cm_fidl_translator:tests",
+    "cm_fidl_validator:tests",
+    "cm_json:tests",
+    "cm_rust:tests",
+    "cm_types:tests",
     "fidl-fuchsia-pkg-ext:tests",
     "fidl-fuchsia-pkg-rewrite-ext:tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
