@@ -21,8 +21,6 @@
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
 
-constexpr char kFakeBaseShellUrl[] =
-    "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";
 constexpr char kFakeSessionShellUrl[] =
     "fuchsia-pkg://example.com/FAKE_SESSION_SHELL_PKG/fake_session_shell.cmx";
 constexpr char kFakeStoryShellUrl[] =
@@ -183,31 +181,6 @@ TEST_F(TestHarnessImplTest, ComponentProvidedService) {
 
   RunLoopUntil([&] { return intercepted_componentctx; });
 }
-
-TEST_F(TestHarnessImplTest, InterceptBaseShell) {
-  // Setup base shell interception.
-  fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
-  shell_intercept_spec.set_component_url(kFakeBaseShellUrl);
-
-  fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(
-      kFakeBaseShellUrl);
-  spec.mutable_components_to_intercept()->push_back(std::move(shell_intercept_spec));
-
-  // Listen for base shell interception.
-  bool intercepted = false;
-
-  test_harness().events().OnNewComponent =
-      [&](fuchsia::sys::StartupInfo startup_info,
-          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-        ASSERT_EQ(kFakeBaseShellUrl, startup_info.launch_info.url);
-        intercepted = true;
-      };
-
-  test_harness()->Run(std::move(spec));
-
-  RunLoopUntil([&] { return intercepted; });
-};
 
 TEST_F(TestHarnessImplTest, InterceptSessionShell) {
   fuchsia::modular::testing::TestHarnessSpec spec;

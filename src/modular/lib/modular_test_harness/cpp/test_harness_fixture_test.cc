@@ -18,21 +18,21 @@
 class TestHarnessFixtureTest : public modular_testing::TestHarnessFixture {};
 
 // Test that the TestHarnessFixture is able to launch the modular runtime by
-// asserting that we can intercept a base shell.
+// asserting that we can intercept a session shell.
 TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
-  constexpr char kFakeBaseShellUrl[] =
-      "fuchsia-pkg://example.com/FAKE_BASE_SHELL_PKG/fake_base_shell.cmx";
+  constexpr char kFakeSessionShellUrl[] =
+      "fuchsia-pkg://example.com/FAKE_SESSION_SHELL_PKG/fake_session_shell.cmx";
 
-  // Setup base shell interception.
+  // Setup session shell interception.
   modular_testing::TestHarnessBuilder builder;
 
   bool intercepted = false;
-  builder.InterceptBaseShell(
-      {.url = kFakeBaseShellUrl,
+  builder.InterceptSessionShell(
+      {.url = kFakeSessionShellUrl,
        .launch_handler =
            [&](fuchsia::sys::StartupInfo startup_info,
                fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
-             ASSERT_EQ(kFakeBaseShellUrl, startup_info.launch_info.url);
+             ASSERT_EQ(kFakeSessionShellUrl, startup_info.launch_info.url);
              intercepted = true;
            }});
   builder.BuildAndRun(test_harness());
@@ -55,16 +55,16 @@ TEST_F(TestHarnessFixtureTest, AddModToStory) {
 
 class TestFixtureForTestingCleanup : public modular_testing::TestHarnessFixture {
  public:
-  // Runs the test harness and calls |on_running| once the base shell starts
+  // Runs the test harness and calls |on_running| once the session shell starts
   // running.
-  void RunUntilBaseShell(fit::function<void()> on_running) {
+  void RunUntilSessionShell(fit::function<void()> on_running) {
     modular_testing::TestHarnessBuilder builder;
-    modular_testing::FakeComponent base_shell(
+    modular_testing::FakeComponent session_shell(
         {.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
-    builder.InterceptBaseShell(base_shell.BuildInterceptOptions());
+    builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
     builder.BuildAndRun(test_harness());
 
-    RunLoopUntil([&] { return base_shell.is_running(); });
+    RunLoopUntil([&] { return session_shell.is_running(); });
     on_running();
   };
 
@@ -88,7 +88,7 @@ TEST(TestHarnessFixtureCleanupTest, CleanupInDestructor) {
   // Test that TestHarnessFixture will run modular_test_harness.cmx
   {
     TestFixtureForTestingCleanup t;
-    t.RunUntilBaseShell([&] {
+    t.RunUntilSessionShell([&] {
       // check that modular_test_harness.cmx is running.
       bool exists = files::Glob(kTestHarnessHubGlob).size() == 1;
       EXPECT_TRUE(exists);

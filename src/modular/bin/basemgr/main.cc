@@ -71,7 +71,6 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
   // |auto_login_to_guest|.
   if (kAutoLoginToGuest) {
     fuchsia::modular::session::AppConfig override_base_shell;
-    override_base_shell.set_url(kAutoLoginBaseShellUrl);
     override_base_shell.mutable_args()->push_back("--persist_user");
     config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
   }
@@ -82,7 +81,6 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
     // a persistent guest user. The framework expects this package to be
     // available in all product configurations.
     fuchsia::modular::session::AppConfig override_base_shell;
-    override_base_shell.set_url(kAutoLoginBaseShellUrl);
     override_base_shell.mutable_args()->push_back("--persist_user");
     config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
   } else {
@@ -94,7 +92,7 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
     }
 
     // Determine the default login mode by looking at which base shell is being
-    // used for this product configuration.
+    // requested for this product configuration.
     fuchsia::setui::AccountMutation account_mutation;
     account_mutation.set_operation(fuchsia::setui::AccountOperation::SET_LOGIN_OVERRIDE);
     if (config.base_shell().app_config().url() == kAutoLoginBaseShellUrl) {

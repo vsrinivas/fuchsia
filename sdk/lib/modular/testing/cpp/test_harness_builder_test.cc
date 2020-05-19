@@ -128,9 +128,6 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
       {.url = "generic",
        .sandbox_services = {"library.Protocol"},
        .launch_handler = [&](auto launch_info, auto handle) { called = "generic"; }});
-  builder.InterceptBaseShell(
-      {.url = "base_shell",
-       .launch_handler = [&](auto launch_info, auto handle) { called = "base_shell"; }});
   builder.InterceptSessionShell(
       {.url = "session_shell",
        .launch_handler = [&](auto launch_info, auto handle) { called = "session_shell"; }});
@@ -146,11 +143,9 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
   ASSERT_TRUE(
       fsl::StringFromVmo(spec.components_to_intercept().at(0).extra_cmx_contents(), &cmx_str));
   EXPECT_TRUE(JsonEq(R"({"sandbox":{"services":["library.Protocol"]}})", cmx_str));
-  EXPECT_EQ("base_shell", spec.components_to_intercept().at(1).component_url());
-  EXPECT_EQ("session_shell", spec.components_to_intercept().at(2).component_url());
-  EXPECT_EQ("story_shell", spec.components_to_intercept().at(3).component_url());
+  EXPECT_EQ("session_shell", spec.components_to_intercept().at(1).component_url());
+  EXPECT_EQ("story_shell", spec.components_to_intercept().at(2).component_url());
 
-  EXPECT_EQ("base_shell", spec.basemgr_config().base_shell().app_config().url());
   EXPECT_EQ("session_shell",
             spec.basemgr_config().session_shell_map().at(0).config().app_config().url());
   EXPECT_EQ("story_shell", spec.basemgr_config().story_shell().app_config().url());
@@ -160,12 +155,6 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
     startup_info.launch_info.url = "generic";
     new_component_handler(std::move(startup_info), nullptr);
     EXPECT_EQ("generic", called);
-  }
-  {
-    fuchsia::sys::StartupInfo startup_info;
-    startup_info.launch_info.url = "base_shell";
-    new_component_handler(std::move(startup_info), nullptr);
-    EXPECT_EQ("base_shell", called);
   }
   {
     fuchsia::sys::StartupInfo startup_info;

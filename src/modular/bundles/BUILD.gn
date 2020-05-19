@@ -23,7 +23,6 @@ group("framework") {
   public_deps = [
     "//src/identity/bin:modular",
     "//src/modular/bin/basemgr",
-    "//src/modular/bin/basemgr:auto_login_base_shell",
     "//src/modular/bin/sessionmgr",
   ]
 }
@@ -44,8 +43,6 @@ group("integration_testing") {
     ":framework",
     ":testing",
     "//garnet/packages/prod:test_runner",
-    "//src/modular/bin/basemgr:auto_login_base_shell",
-    "//src/modular/bin/basemgr:dev_base_shell",
     "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
   ]

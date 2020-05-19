@@ -127,7 +127,6 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -139,94 +138,6 @@ source_set("lib") {
   if (auto_login_to_guest) {
     public_configs += [ ":auto_login_to_guest" ]
   }
-}
-
-executable_package("dev_base_shell") {
-  meta = [
-    {
-      path = "meta/dev_base_shell.cmx"
-      dest = "dev_base_shell.cmx"
-    },
-  ]
-
-  sources = [ "dev_base_shell.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.identity.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//src/lib/callback",
-    "//src/modular/lib/app_driver/cpp",
-    "//src/modular/lib/fidl:single_service_app",
-    "//src/modular/lib/integration_testing/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-executable("auto_login_base_shell_bin") {
-  output_name = "auto_login_base_shell"
-
-  sources = [ "auto_login_base_shell.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.identity.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//src/lib/callback",
-    "//src/modular/lib/app_driver/cpp",
-    "//src/modular/lib/fidl:single_service_app",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-package("auto_login_base_shell") {
-  deps = [ ":auto_login_base_shell_bin" ]
-
-  binaries = [
-    {
-      name = "auto_login_base_shell"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/auto_login_base_shell.cmx"
-      dest = "auto_login_base_shell.cmx"
-    },
-  ]
-}
-
-executable("auto_login_base_shell_test_bin") {
-  testonly = true
-
-  output_name = "auto_login_base_shell_test"
-
-  sources = [ "auto_login_base_shell_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-  ]
-}
-
-test_package("auto_login_base_shell_test") {
-  deps = [
-    ":auto_login_base_shell_bin",
-    ":auto_login_base_shell_test_bin",
-  ]
-
-  tests = [
-    {
-      name = "auto_login_base_shell_test"
-      environments = basic_envs
-    },
-  ]
 }
 
 executable("session_context_impl_unittest") {

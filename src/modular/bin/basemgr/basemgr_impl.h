@@ -36,7 +36,6 @@ namespace modular {
 // 2) Sets up the interactive flow for user authentication and login.
 // 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : public fuchsia::modular::Lifecycle,
-                    fuchsia::modular::BaseShellContext,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
  public:
@@ -68,12 +67,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void Terminate() override;
 
  private:
-  void StartBaseShell();
-
-  FuturePtr<> StopBaseShell();
-
-  FuturePtr<> StopTokenManagerFactoryApp();
-
   FuturePtr<> StopScenic();
 
   // Starts the basemgr functionalities in the following order:
@@ -86,9 +79,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // framework the ability to add/remove/list users and control their
   // participation in sessions.
   void InitializeUserProvider();
-
-  // |fuchsia::modular::BaseShellContext|
-  void GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) override;
 
   void Shutdown() override;
 
@@ -119,7 +109,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |SessionProvider::Delegate|
   void LogoutUsers(fit::function<void()> callback) override;
 
-  // |SessionProvider::Delegate| and |fuchsia::modular::BaseShellContext|
+  // |SessionProvider::Delegate|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
   fuchsia::modular::session::ModularConfig config_;
@@ -157,13 +147,10 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   std::unique_ptr<SessionUserProviderImpl> session_user_provider_impl_;
 
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
-  fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
 
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
-  bool base_shell_running_{};
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> base_shell_app_;
-  fuchsia::modular::BaseShellPtr base_shell_;
+  bool is_ephemeral_account_{true};
 
   AsyncHolder<SessionProvider> session_provider_;
 

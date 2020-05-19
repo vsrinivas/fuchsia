@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "bin/auto_login_base_shell"
-    },
-    "sandbox": {
-        "services": []
-    }
-}

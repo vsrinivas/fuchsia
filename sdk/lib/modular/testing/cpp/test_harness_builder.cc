@@ -109,8 +109,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(InterceptOptions opti
 }
 
 TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(InterceptOptions options) {
-  spec_.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_url(options.url);
-  InterceptComponent(std::move(options));
+  ZX_ASSERT_MSG(false, "BaseShells no longer exist, please intercept SessionShell instead");
   return *this;
 }
 

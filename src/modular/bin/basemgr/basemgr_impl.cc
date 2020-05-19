@@ -72,7 +72,6 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
       wlan_(std::move(wlan)),
       device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
-      base_shell_context_binding_(this),
       session_provider_("SessionProvider") {
   UpdateSessionShellConfig();
 
@@ -84,55 +83,6 @@ BasemgrImpl::~BasemgrImpl() = default;
 void BasemgrImpl::Connect(
     fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
   basemgr_debug_bindings_.AddBinding(this, std::move(request));
-}
-
-void BasemgrImpl::StartBaseShell() {
-  if (base_shell_running_) {
-    FX_DLOGS(INFO) << "StartBaseShell() called when already running";
-    return;
-  }
-
-  auto base_shell_config =
-      fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().base_shell().app_config());
-
-  base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_.get(), std::move(base_shell_config));
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-  fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;
-  base_shell_app_->services().ConnectToService(base_shell_view_provider.NewRequest());
-  base_shell_view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
-
-  presentation_container_ =
-      std::make_unique<PresentationContainer>(presenter_.get(), std::move(view_holder_token),
-                                              /* shell_config= */ GetActiveSessionShellConfig());
-
-  // TODO(alexmin): Remove BaseShellParams.
-  fuchsia::modular::BaseShellParams params;
-  base_shell_app_->services().ConnectToService(base_shell_.NewRequest());
-  base_shell_->Initialize(base_shell_context_binding_.NewBinding(),
-                          /* base_shell_params= */ std::move(params));
-
-  base_shell_running_ = true;
-}
-
-FuturePtr<> BasemgrImpl::StopBaseShell() {
-  if (!base_shell_running_) {
-    FX_DLOGS(INFO) << "StopBaseShell() called when already stopped";
-
-    return Future<>::CreateCompleted("StopBaseShell::Completed");
-  }
-
-  auto did_stop = Future<>::Create("StopBaseShell");
-
-  base_shell_app_->Teardown(kBasicTimeout, [did_stop, this] {
-    FX_DLOGS(INFO) << "- fuchsia::modular::BaseShell down";
-
-    base_shell_running_ = false;
-    did_stop->Complete();
-  });
-
-  return did_stop;
 }
 
 FuturePtr<> BasemgrImpl::StopScenic() {
@@ -162,6 +112,18 @@ void BasemgrImpl::Start() {
     WaitForMinfs();
   }
 
+  // Use the default of an ephemeral account unless the configuration requested persistence.
+  // TODO(fxb/51752): Change base manager config to use a more direct declaration of persistence
+  // and remove the base shell configuration entirely.
+  if (config_.basemgr_config().base_shell().app_config().has_args()) {
+    for (const auto& arg : config_.basemgr_config().base_shell().app_config().args()) {
+      if (arg == "--persist_user") {
+        is_ephemeral_account_ = false;
+        break;
+      }
+    }
+  }
+
   auto sessionmgr_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().sessionmgr());
   auto story_shell_config =
@@ -179,16 +141,6 @@ void BasemgrImpl::Start() {
         if (state_ == State::SHUTTING_DOWN) {
           return;
         }
-        if (config_.basemgr_config().base_shell().keep_alive_after_login()) {
-          // TODO(MI4-1117): Integration tests currently
-          // expect base shell to always be running. So, if
-          // we're running under a test, DidLogin() will not
-          // shut down the base shell after login; thus this
-          // method doesn't need to re-start the base shell
-          // after a logout.
-          return;
-        }
-
         FX_DLOGS(INFO) << "Re-starting due to logout";
         ShowSetupOrLogin();
       }));
@@ -205,10 +157,6 @@ void BasemgrImpl::InitializeUserProvider() {
   ShowSetupOrLogin();
 }
 
-void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
-  session_user_provider_impl_->Connect(std::move(request));
-}
-
 void BasemgrImpl::Shutdown() {
   FX_LOGS(INFO) << "BASEMGR SHUTDOWN";
   // Prevent the shutdown sequence from running twice.
@@ -221,15 +169,12 @@ void BasemgrImpl::Shutdown() {
   // |session_provider_| teardown is asynchronous because it holds the
   // sessionmgr processes.
   session_provider_.Teardown(kSessionProviderTimeout, [this] {
-    StopBaseShell()->Then([this] {
-      FX_DLOGS(INFO) << "- fuchsia::modular::BaseShell down";
-      session_user_provider_impl_.reset();
-      FX_DLOGS(INFO) << "- fuchsia::modular::UserProvider down";
-      StopScenic()->Then([this] {
-        FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
-        basemgr_debug_bindings_.CloseAll(ZX_OK);
-        on_shutdown_();
-      });
+    session_user_provider_impl_.reset();
+    FX_DLOGS(INFO) << "- fuchsia::modular::UserProvider down";
+    StopScenic()->Then([this] {
+      FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
+      basemgr_debug_bindings_.CloseAll(ZX_OK);
+      on_shutdown_();
     });
   });
 }
@@ -248,14 +193,6 @@ void BasemgrImpl::OnLogin(bool is_ephemeral_account) {
     FX_LOGS(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";
     return;
-  }
-
-  // TODO(MI4-1117): Integration tests currently expect base shell to always be
-  // running. So, if we're running under a test, do not shut down the base shell
-  // after login.
-  if (!config_.basemgr_config().base_shell().keep_alive_after_login()) {
-    FX_DLOGS(INFO) << "Stopping base shell due to login";
-    StopBaseShell();
   }
 
   // Ownership of the Presenter should be moved to the session shell.
@@ -313,9 +250,8 @@ void BasemgrImpl::UpdateSessionShellConfig() {
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
     // We no longer maintain a set of accounts within the account system,
-    // and so launch the BaseShell in all circumstances. A BaseShell may login
-    // as its first and only action (e.g. auto_login_base_shell).
-    StartBaseShell();
+    // and so automatically login in all circumstances.
+    session_user_provider_impl_->Login3(is_ephemeral_account_);
   };
 
   // TODO(MF-347): Handle scenario where device settings manager channel is
@@ -338,7 +274,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
           });
 
           session_user_provider_impl_->RemoveAllUsers(
-              [this] { wlan_->ClearSavedNetworks([this] { StartBaseShell(); }); });
+              [this, show_setup_or_login] { wlan_->ClearSavedNetworks(show_setup_or_login); });
         } else {
           show_setup_or_login();
         }
