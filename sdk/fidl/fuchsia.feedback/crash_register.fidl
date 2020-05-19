@@ -12,6 +12,7 @@ using fuchsia.sys;
 /// By default, all crashes detected by the platform are filed under a single product on the crash
 /// server. This API allows components to choose their own product while still benefiting from the
 /// platform's exception handling and crash reporting.
+[Discoverable]
 protocol CrashReportingProductRegister {
     /// Updates or inserts a crash reporting product for a given component URL.
     ///
