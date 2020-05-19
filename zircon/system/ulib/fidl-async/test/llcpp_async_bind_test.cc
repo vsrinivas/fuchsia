@@ -355,21 +355,14 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
-      // Launches a thread so we can hold the transaction.
-      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync(), this,
-                                              worker = worker_.get()]() mutable {
-        sync_completion_signal(worker_start_);
-        sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-        completer.Reply(request);
-        worker->Quit();
-      });
-      ASSERT_OK(worker_->StartThread());
+      sync_completion_signal(worker_start_);
+      sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
+      // The zx_channel_write() within Reply() should fail with ZX_ERR_PEER_CLOSED.
+      completer.Reply(request);
     }
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
-    std::unique_ptr<async::Loop> worker_;
   };
   sync_completion_t worker_start, worker_done;
 
@@ -391,8 +384,7 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
         sync_completion_signal(&closed);
       };
 
-  fidl::AsyncBind<WorkingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                 std::move(on_unbound));
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -420,9 +412,6 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   // Close(). We make sure the channel error by the client happens first and the in-flight
   // transaction tries to Reply() second.
   sync_completion_signal(&worker_done);
-
-  // Wait until after the worker issues its Close().
-  server->worker_->JoinThreads();
 
   // Wait for the closed callback to be called.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));

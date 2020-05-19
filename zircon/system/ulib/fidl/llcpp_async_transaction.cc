@@ -43,6 +43,11 @@ void AsyncTransaction::Reply(fidl::Message msg) {
 
   if (msg.bytes().actual() < sizeof(fidl_message_header_t)) {
     // TODO(42086): Propagate this error back up to the user.
+    // If owned_binding_, Close() will not be able to cancel the wait. Restore keep_alive_.
+    if (owned_binding_) {
+      *resume_status_ = ZX_ERR_CANCELED;  // OnUnbind() will run after Dispatch() returns.
+      owned_binding_->keep_alive_ = owned_binding_;
+    }
     binding->Close(std::move(binding), ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -50,8 +55,15 @@ void AsyncTransaction::Reply(fidl::Message msg) {
   hdr->txid = txid;
   auto status = binding->channel()->write(0, msg.bytes().data(), msg.bytes().actual(),
                                           msg.handles().data(), msg.handles().actual());
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
+    // TODO(42086): Propagate this error back up to the user.
+    // If owned_binding_, Close() will not be able to cancel the wait. Restore keep_alive_.
+    if (owned_binding_) {
+      *resume_status_ = ZX_ERR_CANCELED;  // OnUnbind() will run after Dispatch() returns.
+      owned_binding_->keep_alive_ = owned_binding_;
+    }
     binding->Close(std::move(binding), status);
+  }
   // release ownership on handles, which have been consumed by channel write.
   msg.ClearHandlesUnsafe();
 }

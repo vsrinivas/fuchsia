@@ -27,19 +27,19 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, 
       on_unbound_fn_(std::move(on_unbound_fn)),
       dispatch_fn_(std::move(dispatch_fn)),
       is_server_(is_server) {
-  ZX_DEBUG_ASSERT(dispatcher);
-  ZX_DEBUG_ASSERT(channel_);
-  ZX_DEBUG_ASSERT(dispatch_fn_);
+  ZX_ASSERT(dispatcher);
+  ZX_ASSERT(channel_);
+  ZX_ASSERT(dispatch_fn_);
 }
 
 AsyncBinding::~AsyncBinding() {
-  ZX_DEBUG_ASSERT(channel_);
+  ZX_ASSERT(channel_);
   std::scoped_lock lock(lock_);
 
   // If the channel wasn't ever bound, just exit.
   if (!begun_)
     return;
-  ZX_DEBUG_ASSERT(unbind_);
+  ZX_ASSERT(unbind_);
 
   // Send the epitaph if required.
   if (unbind_info_.reason == UnboundReason::kClose)
@@ -58,11 +58,11 @@ AsyncBinding::~AsyncBinding() {
       .reason = unbind_info_.reason};
   auto status = async_post_task(dispatcher_, &unbound_task->task);
   // The dispatcher must not be shutdown while there are any pending unbound hooks.
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+  ZX_ASSERT(status == ZX_OK);
 }
 
 void AsyncBinding::OnUnbind(zx_status_t status, UnboundReason reason) {
-  ZX_DEBUG_ASSERT(keep_alive_);
+  ZX_ASSERT(keep_alive_);
 
   {
     std::scoped_lock lock(lock_);
@@ -82,7 +82,7 @@ void AsyncBinding::OnUnbind(zx_status_t status, UnboundReason reason) {
 }
 
 void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) {
-  ZX_DEBUG_ASSERT(keep_alive_);
+  ZX_ASSERT(keep_alive_);
 
   if (status != ZX_OK)
     return OnUnbind(status, UnboundReason::kInternalError);
@@ -114,7 +114,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
       // read messages on this binding.
       if (binding_released)
         return;
-      ZX_DEBUG_ASSERT(keep_alive_);
+      ZX_ASSERT(keep_alive_);
 
       // If there was any error enabling dispatch, destroy the binding.
       if (status != ZX_OK)
@@ -125,14 +125,14 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
     if ((status = EnableNextDispatch()) != ZX_OK)
       return OnDispatchError(status);
   } else {
-    ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+    ZX_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
     OnUnbind(ZX_ERR_PEER_CLOSED, UnboundReason::kPeerClosed);
   }
 }
 
 zx_status_t AsyncBinding::BeginWait() {
   std::scoped_lock lock(lock_);
-  ZX_DEBUG_ASSERT(!begun_);
+  ZX_ASSERT(!begun_);
   auto status = async_begin_wait(dispatcher_, this);
   // On error, release the internal reference so it can be destroyed.
   if (status != ZX_OK) {
@@ -149,7 +149,7 @@ zx_status_t AsyncBinding::EnableNextDispatch() {
     return ZX_ERR_CANCELED;
   auto status = async_begin_wait(dispatcher_, this);
   // The dispatcher must not be shutdown while there are any active bindings.
-  ZX_DEBUG_ASSERT(status != ZX_ERR_BAD_STATE);
+  ZX_ASSERT(status != ZX_ERR_BAD_STATE);
   if (status != ZX_OK && unbind_info_.status == ZX_OK)
     unbind_info_ = {UnboundReason::kInternalError, status};
   return status;
@@ -157,7 +157,7 @@ zx_status_t AsyncBinding::EnableNextDispatch() {
 
 void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
                                   zx_status_t* epitaph) {
-  ZX_DEBUG_ASSERT(calling_ref);
+  ZX_ASSERT(calling_ref);
   // Move the calling reference into this scope.
   auto binding = std::move(calling_ref);
 
@@ -183,7 +183,7 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
     auto status = async_cancel_wait(dispatcher_, this);
     if (status != ZX_OK) {
       // Must only fail due to the wait not being found.
-      ZX_DEBUG_ASSERT(status == ZX_ERR_NOT_FOUND);
+      ZX_ASSERT(status == ZX_ERR_NOT_FOUND);
       return;
     }
   }
@@ -194,7 +194,7 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
 }
 
 void AsyncBinding::OnDispatchError(zx_status_t error) {
-  ZX_DEBUG_ASSERT(error != ZX_OK);
+  ZX_ASSERT(error != ZX_OK);
   if (error == ZX_ERR_CANCELED) {
     OnUnbind(ZX_OK, UnboundReason::kUnbind);
     return;
