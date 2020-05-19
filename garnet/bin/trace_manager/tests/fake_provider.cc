@@ -5,9 +5,8 @@
 #include "garnet/bin/trace_manager/tests/fake_provider.h"
 
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace-engine/buffer_internal.h>
-#include <trace-engine/fields.h>
+#include <lib/trace-engine/buffer_internal.h>
+#include <lib/trace-engine/fields.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
 

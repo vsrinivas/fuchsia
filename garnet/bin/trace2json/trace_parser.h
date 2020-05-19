@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_TRACE2JSON_TRACE_PARSER_H_
 #define GARNET_BIN_TRACE2JSON_TRACE_PARSER_H_
 
+#include <lib/trace-engine/fields.h>
 #include <stdint.h>
 
 #include <array>
 #include <ostream>
 #include <vector>
 
-#include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 #include "garnet/lib/trace_converters/chromium_exporter.h"

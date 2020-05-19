@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/trace-engine/handler.h>
 #include <lib/zx/event.h>
 #include <threads.h>
 
@@ -12,7 +13,6 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <trace-engine/handler.h>
 #include <trace-test-utils/fixture.h>
 #include <trace-test-utils/squelch.h>
 #include <trace/event.h>

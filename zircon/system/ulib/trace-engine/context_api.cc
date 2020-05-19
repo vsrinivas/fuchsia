@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/trace-engine/fields.h>
+#include <lib/trace-engine/handler.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <string.h>
@@ -11,9 +13,6 @@
 #include <algorithm>
 #include <atomic>
 #include <memory>
-
-#include <trace-engine/fields.h>
-#include <trace-engine/handler.h>
 
 #include "context_impl.h"
 #include "hash_table.h"

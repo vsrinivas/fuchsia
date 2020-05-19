@@ -7,13 +7,12 @@
 
 #include <assert.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-engine/context.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <unordered_map>
-
-#include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/events.h"

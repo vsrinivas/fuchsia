@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/trace-engine/instrumentation.h>
 #include <zircon/syscalls.h>
 
 #include <array>
@@ -11,7 +12,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <trace-engine/instrumentation.h>
 #include <trace-test-utils/fixture.h>
 #include <trace/event.h>
 

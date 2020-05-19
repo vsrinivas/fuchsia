@@ -5,6 +5,8 @@
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-engine/context.h>
+#include <lib/trace-engine/instrumentation.h>
 #include <pthread.h>
 #include <regex.h>
 #include <zircon/assert.h>
@@ -19,8 +21,6 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <perftest/runner.h>
-#include <trace-engine/context.h>
-#include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-engine/fields.h>
+#include <lib/trace-engine/fields.h>
+
 #include <unittest/unittest.h>
 
 namespace {

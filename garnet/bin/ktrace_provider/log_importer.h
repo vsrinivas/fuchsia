@@ -6,9 +6,8 @@
 #define GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/trace-engine/types.h>
 #include <lib/zx/debuglog.h>
-
-#include <trace-engine/types.h>
 
 namespace ktrace_provider {
 

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/trace-engine/fields.h>
 
 #include <utility>
 
 #include <fbl/string_printf.h>
-#include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 namespace trace {

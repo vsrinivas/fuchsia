@@ -8,12 +8,12 @@
 #include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <lib/trace-engine/fields.h>
 #include <lib/zx/socket.h>
 
 #include <array>
 #include <string>
 
-#include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 namespace tracing {

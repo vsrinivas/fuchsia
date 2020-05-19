@@ -9,10 +9,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-engine/fields.h>
 
 #include <utility>
 
-#include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 namespace tracing {

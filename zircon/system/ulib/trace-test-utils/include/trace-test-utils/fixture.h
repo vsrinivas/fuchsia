@@ -13,18 +13,18 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
+#include <lib/trace-engine/buffer_internal.h>
+
 // TODO(dje): Conversion to std string, vector.
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <trace-engine/buffer_internal.h>
 #include <trace-reader/records.h>
 #endif
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/trace-engine/types.h>
 #include <zircon/compiler.h>
-
-#include <trace-engine/types.h>
 
 // Specifies whether the trace engine async loop uses the same thread as the
 // app or a different thread.

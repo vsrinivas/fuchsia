@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_IMPORTER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_IMPORTER_H_
 
+#include <lib/trace-engine/context.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,7 +16,6 @@
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <trace-engine/context.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 #include "garnet/bin/ktrace_provider/tags.h"

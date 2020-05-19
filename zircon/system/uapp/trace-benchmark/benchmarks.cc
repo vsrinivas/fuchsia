@@ -6,12 +6,12 @@
 
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
+#include <lib/trace-engine/buffer_internal.h>
+#include <lib/trace-engine/instrumentation.h>
 #include <stdarg.h>
 #include <stdio.h>
 
 #include <fbl/function.h>
-#include <trace-engine/buffer_internal.h>
-#include <trace-engine/instrumentation.h>
 #include <trace-vthread/event_vthread.h>
 #include <trace/event.h>
 

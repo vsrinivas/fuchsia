@@ -6,10 +6,10 @@
 
 #include <inttypes.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-engine/types.h>
 
 #include <utility>
 
-#include <trace-engine/types.h>
 #include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"

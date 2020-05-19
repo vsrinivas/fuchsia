@@ -4,14 +4,14 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-engine/context.h>
+#include <lib/trace-engine/handler.h>
+#include <lib/trace-engine/types.h>
 #include <stddef.h>
 
 #include <array>
 #include <memory>
 
-#include <trace-engine/context.h>
-#include <trace-engine/handler.h>
-#include <trace-engine/types.h>
 #include <trace-provider/handler.h>
 #include <trace-test-utils/compare_records.h>
 #include <trace-test-utils/read_records.h>

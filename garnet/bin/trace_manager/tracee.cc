@@ -6,11 +6,11 @@
 
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-engine/fields.h>
 
 #include <memory>
 
 #include <fbl/algorithm.h>
-#include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/trace_manager/trace_session.h"

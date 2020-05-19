@@ -9,12 +9,12 @@
 #include <lib/async/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-engine/instrumentation.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
-#include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/ktrace_provider/device_reader.h"

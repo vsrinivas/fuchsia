@@ -5,7 +5,8 @@
 #ifndef TRACE_VTHREAD_INTERNAL_EVENT_VTHREAD_H_
 #define TRACE_VTHREAD_INTERNAL_EVENT_VTHREAD_H_
 
-#include <trace-engine/instrumentation.h>
+#include <lib/trace-engine/instrumentation.h>
+
 #include <trace/event_args.h>
 
 #ifndef NTRACE

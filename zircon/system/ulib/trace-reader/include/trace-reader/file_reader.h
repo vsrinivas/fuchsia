@@ -5,12 +5,12 @@
 #ifndef TRACE_READER_FILE_READER_H_
 #define TRACE_READER_FILE_READER_H_
 
+#include <lib/trace-engine/fields.h>
 #include <stdio.h>
 
 #include <array>
 #include <memory>
 
-#include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 namespace trace {

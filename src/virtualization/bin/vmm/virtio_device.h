@@ -6,10 +6,10 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+#include <lib/trace-engine/types.h>
 
 #include <atomic>
 
-#include <trace-engine/types.h>
 #include <trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"

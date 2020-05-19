@@ -8,11 +8,10 @@
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-engine/instrumentation.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
-
-#include <trace-engine/instrumentation.h>
 
 namespace ktrace_provider {
 

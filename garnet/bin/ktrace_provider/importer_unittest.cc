@@ -4,9 +4,10 @@
 
 #include "garnet/bin/ktrace_provider/importer.h"
 
+#include <lib/trace-engine/instrumentation.h>
+
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
-#include <trace-engine/instrumentation.h>
 #include <trace-test-utils/fixture.h>
 
 #include "garnet/bin/ktrace_provider/test_reader.h"
