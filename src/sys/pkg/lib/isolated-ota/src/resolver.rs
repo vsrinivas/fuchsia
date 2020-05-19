@@ -58,13 +58,14 @@ impl Resolver {
         cache: Arc<Cache>,
         repo_config: std::fs::File,
         channel: &str,
+        ssl_dir: std::fs::File,
     ) -> Result<Self, Error> {
         Resolver::launch_with_components(
             pkgfs,
             cache,
             repo_config,
             Some(channel.to_owned()),
-            std::fs::File::open(SSL_CERTS_PATH).context("opening ssl directory")?,
+            ssl_dir,
             RESOLVER_URL,
         )
     }

@@ -55,6 +55,7 @@ pub struct OmahaConfig {
 ///     corrupt blobs is ok)
 /// * `paver_connector` - a directory which contains a service file named fuchsia.paver.Paver
 /// * `repository_config_file` - A folder containing a json-serialized fidl_fuchsia_pkg_ext::RepositoryConfigs file
+/// * `ssl_cert_dir` - A folder containg the root SSL certificates for use by the package resolver.
 /// * `channel_name` - The channel to update from.
 /// * `board_name` - Board name to pass to the system updater.
 /// * `version` - Current version installed
@@ -64,6 +65,7 @@ pub async fn download_and_apply_update(
     blobfs: ClientEnd<DirectoryMarker>,
     paver_connector: ClientEnd<DirectoryMarker>,
     repository_config_file: std::fs::File,
+    ssl_cert_dir: std::fs::File,
     channel_name: &str,
     board_name: &str,
     version: &str,
@@ -81,8 +83,14 @@ pub async fn download_and_apply_update(
     let pkgfs = Pkgfs::launch(blobfs_clone).map_err(UpdateError::PkgfsLaunchError)?;
     let cache = Arc::new(Cache::launch(&pkgfs).map_err(UpdateError::PkgCacheLaunchError)?);
     let resolver = Arc::new(
-        Resolver::launch(&pkgfs, Arc::clone(&cache), repository_config_file, channel_name)
-            .map_err(UpdateError::PkgResolverLaunchError)?,
+        Resolver::launch(
+            &pkgfs,
+            Arc::clone(&cache),
+            repository_config_file,
+            channel_name,
+            ssl_cert_dir,
+        )
+        .map_err(UpdateError::PkgResolverLaunchError)?,
     );
 
     let (blobfs_clone, remote) =
