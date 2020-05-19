@@ -9,10 +9,13 @@ zx_library("pdev") {
   sources = [ "pdev.cc" ]
   deps = [ "$zx/kernel/lib/init" ]
   public_deps = [
-    # <pdev/interrupt.h> has #include <dev/interrupt.h>.
-    "$zx/kernel/dev/interrupt:headers",
+    # <pdev/driver.h> has #include <lib/special-sections/special-sections.h>.
+    "$zx/kernel/lib/special-sections:headers",
 
     # <pdev/driver.h> has #include <lk/init.h>.
-    "$zx/kernel/lib/init:headers",
+    "$zx/kernel/lib/init",
+
+    # <pdev/interrupt.h> has #include <dev/interrupt.h>.
+    "$zx/kernel/dev/interrupt:headers",
   ]
 }

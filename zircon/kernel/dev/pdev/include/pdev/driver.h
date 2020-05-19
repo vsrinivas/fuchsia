@@ -7,11 +7,10 @@
 #ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_DRIVER_H_
 #define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_DRIVER_H_
 
-#include <zircon/compiler.h>
+#include <lib/special-sections/special-sections.h>
+#include <stdint.h>
 
 #include <lk/init.h>
-
-__BEGIN_CDECLS
 
 typedef void (*lk_pdev_init_hook)(const void* driver_data, uint32_t length);
 
@@ -23,16 +22,13 @@ struct lk_pdev_init_struct {
   const char* name;
 };
 
-#define LK_PDEV_INIT(_name, _type, _hook, _level)                                           \
-  alignas(lk_pdev_init_struct)                                                              \
-      __USED __SECTION(".data.rel.ro.lk_pdev_init") static const struct lk_pdev_init_struct \
-          _dev_init_struct_##_name = {                                                      \
-              .type = _type,                                                                \
-              .hook = _hook,                                                                \
-              .level = _level,                                                              \
-              .name = #_name,                                                               \
+#define LK_PDEV_INIT(_name, _type, _hook, _level)                            \
+  static const lk_pdev_init_struct _dev_init_struct_##_name SPECIAL_SECTION( \
+      ".data.rel.ro.lk_pdev_init", lk_pdev_init_struct) = {                  \
+      .type = _type,                                                         \
+      .hook = _hook,                                                         \
+      .level = _level,                                                       \
+      .name = #_name,                                                        \
   };
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_DRIVER_H_

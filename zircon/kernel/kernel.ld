@@ -126,7 +126,7 @@ SECTIONS
      * being after the __data_end symbol (see below).
      *
      * Therefore, we have to list all the special-case sections created
-     * by __SECTION("foo") uses in the kernel that are RELRO candidates,
+     * by SPECIAL_SECTION(...) uses in the kernel that are RELRO candidates,
      * i.e. things that have address constants in their initializers.
      * All such uses in the source use sections named ".data.rel.ro.foo"
      * instead of just "foo" specifically to ensure we write them here.

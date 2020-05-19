@@ -5,13 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_LK_INIT_H_
-#define ZIRCON_KERNEL_INCLUDE_LK_INIT_H_
+#ifndef ZIRCON_KERNEL_LIB_INIT_INCLUDE_LK_INIT_H_
+#define ZIRCON_KERNEL_LIB_INIT_INCLUDE_LK_INIT_H_
 
+#include <lib/special-sections/special-sections.h>
 #include <sys/types.h>
-#include <zircon/compiler.h>
-
-__BEGIN_CDECLS
 
 /*
  * LK's init system
@@ -83,22 +81,19 @@ struct lk_init_struct {
   uint level;
   uint flags;
   lk_init_hook hook;
-  const char *name;
+  const char* name;
 };
 
-#define LK_INIT_HOOK_FLAGS(_name, _hook, _level, _flags)                                  \
-  __ALIGNED(sizeof(void *))                                                               \
-  __USED __SECTION(                                                                       \
-      ".data.rel.ro.lk_init") static const struct lk_init_struct _init_struct_##_name = { \
-      .level = _level,                                                                    \
-      .flags = _flags,                                                                    \
-      .hook = _hook,                                                                      \
-      .name = #_name,                                                                     \
+#define LK_INIT_HOOK_FLAGS(_name, _hook, _level, _flags)                                   \
+  static const lk_init_struct _init_struct_##_name SPECIAL_SECTION(".data.rel.ro.lk_init", \
+                                                                   lk_init_struct) = {     \
+      .level = _level,                                                                     \
+      .flags = _flags,                                                                     \
+      .hook = _hook,                                                                       \
+      .name = #_name,                                                                      \
   };
 
 #define LK_INIT_HOOK(_name, _hook, _level) \
   LK_INIT_HOOK_FLAGS(_name, _hook, _level, LK_INIT_FLAG_PRIMARY_CPU)
 
-__END_CDECLS
-
-#endif  // ZIRCON_KERNEL_INCLUDE_LK_INIT_H_
+#endif  // ZIRCON_KERNEL_LIB_INIT_INCLUDE_LK_INIT_H_

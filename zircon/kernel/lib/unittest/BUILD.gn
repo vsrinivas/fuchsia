@@ -8,12 +8,16 @@ zx_library("unittest") {
   kernel = true
   sources = [ "unittest.cc" ]
   deps = [ "$zx/system/ulib/pretty" ]
+  public_deps = [
+    # <lib/unittest/unittest.h> has #include <lib/special-sections/special-sections.h>.
+    "$zx/kernel/lib/special-sections:headers",
+  ]
   if (toolchain.environment == "kernel") {
     sources += [
       "console.cc",
       "user_memory.cc",
     ]
-    public_deps = [
+    public_deps += [
       # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.
       "$zx/kernel/vm:headers",
 

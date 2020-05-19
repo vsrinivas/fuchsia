@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/counters.h>
+#include <lib/special-sections/special-sections.h>
 #include <platform.h>
 #include <stdlib.h>
 
@@ -16,7 +17,7 @@
 // kernel.ld uses this and fills in the descriptor table size after it and then
 // places the sorted descriptor table after that (and then pads to page size),
 // so as to fully populate the counters::DescriptorVmo layout.
-__USED __SECTION(".kcounter.desc.header") static const uint64_t vmo_header[] = {
+static const uint64_t vmo_header SPECIAL_SECTION(".kcounter.desc.header", uint64_t)[] = {
     counters::DescriptorVmo::kMagic,
     SMP_MAX_CPUS,
 };

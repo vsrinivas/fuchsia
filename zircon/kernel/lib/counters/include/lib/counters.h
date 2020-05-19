@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_COUNTERS_INCLUDE_LIB_COUNTERS_H_
 #define ZIRCON_KERNEL_LIB_COUNTERS_INCLUDE_LIB_COUNTERS_H_
 
-#include <zircon/compiler.h>
+#include <lib/special-sections/special-sections.h>
 
 #include <arch/ops.h>
 #include <kernel/atomic.h>
@@ -128,21 +128,22 @@ class Counter {
   const counters::Descriptor* desc_;
 };
 
-// Define the descriptor and reserve the arena space for the counters.
-// Because of -fdata-sections, each kcounter_arena_* array will be
-// placed in a .bss.kcounter.* section; kernel.ld recognizes those names
-// and places them all together to become the contiguous kcounters_arena
-// array.  Note that each kcounter_arena_* does not correspond with the
-// slots used for this particular counter (that would have terrible
-// cache effects); it just reserves enough space for counters_init() to
-// dole out in per-CPU chunks.
-#define KCOUNTER_DECLARE(var, name, type)                                      \
-  namespace {                                                                  \
-  __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name); \
-  alignas(counters::Descriptor) __USED                                         \
-      __SECTION("kcountdesc." name) const counters::Descriptor kcounter_desc_  \
-      ##var{name, counters::Type::k##type};                                    \
-  constexpr Counter var(&kcounter_desc_##var);                                 \
+// Define the descriptor and reserve the arena space for the counters.  Place
+// each kcounter_arena_* array in a .bss.kcounter.* section; kernel.ld
+// recognizes those names and places them all together to become the contiguous
+// kcounters_arena array.  Note that each kcounter_arena_* does not correspond
+// with the slots used for this particular counter (that would have terrible
+// cache effects); it just reserves enough space for counters_init() to dole
+// out in per-CPU chunks.
+#define KCOUNTER_DECLARE(var, name, type)                                                     \
+  namespace {                                                                                 \
+  int64_t kcounter_arena_##var SPECIAL_SECTION(".bss.kcounter." name, int64_t)[SMP_MAX_CPUS]; \
+  const counters::Descriptor kcounter_desc_##var SPECIAL_SECTION("kcountdesc." name,          \
+                                                                 counters::Descriptor) = {    \
+      name,                                                                                   \
+      counters::Type::k##type,                                                                \
+  };                                                                                          \
+  constexpr Counter var(&kcounter_desc_##var);                                                \
   }  // anonymous namespace
 
 #define KCOUNTER(var, name) KCOUNTER_DECLARE(var, name, Sum)

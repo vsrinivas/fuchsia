@@ -11,5 +11,9 @@ zx_library("console") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/init",
   ]
+  public_deps = [
+    # <lib/console.h> has #include <lib/special-sections/special-sections.h>.
+    "$zx/kernel/lib/special-sections:headers",
+  ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

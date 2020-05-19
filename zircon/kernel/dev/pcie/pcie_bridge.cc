@@ -13,6 +13,7 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 
 #include <dev/interrupt.h>
 #include <dev/pci_config.h>
@@ -20,8 +21,6 @@
 #include <fbl/alloc_checker.h>
 #include <kernel/spinlock.h>
 #include <vm/vm.h>
-
-#include <zircon/errors.h>
 
 #define LOCAL_TRACE 0
 

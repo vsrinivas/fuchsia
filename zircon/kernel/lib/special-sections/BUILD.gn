@@ -4,11 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("init") {
+library("special-sections") {
   kernel = true
   sources = []
-  public_deps = [
-    # <lk/init.h> has #include <lib/special-sections/special-sections.h>.
-    "$zx/kernel/lib/special-sections:headers",
-  ]
 }

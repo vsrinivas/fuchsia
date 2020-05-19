@@ -56,6 +56,7 @@
  * MODULE_DEPS += \
  *         lib/unittest   \
  */
+#include <lib/special-sections/special-sections.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -346,12 +347,12 @@ bool unittest_testcase(const char* name, const test_case_element*, size_t n);
     const test_case_element cases[] = {
 // The assembly silliness is to prevent the compiler from deciding it
 // can move the whole array into a static initializer with relocs.
-#define UNITTEST(name, fn)                                 \
-  []() -> test_case_element {                              \
-    const char* _n;                                        \
-    unittest_fn_t _f;                                      \
+#define UNITTEST(name, fn)                                    \
+  []() -> test_case_element {                                 \
+    const char* _n;                                           \
+    unittest_fn_t _f;                                         \
     __asm__("nop" : "=g"(_n), "=g"(_f) : "0"(name), "1"(fn)); \
-    return {_n, _f};                                       \
+    return {_n, _f};                                          \
   }(),
 #define UNITTEST_END_TESTCASE(global_id, name, desc)       \
   }                                                        \
@@ -405,17 +406,15 @@ typedef struct unitest_testcase_registration {
   static const unittest_registration_t __unittest_table_##_global_id[] = {
 #define UNITTEST(_name, _fn) {.name = _name, .fn = _fn},
 
-#define UNITTEST_END_TESTCASE(_global_id, _name, _desc)                                \
-  }                                                                                    \
-  ; /* __unittest_table_##_global_id */                                                \
-  __ALIGNED(sizeof(void*))                                                             \
-  __USED __SECTION(                                                                    \
-      ".data.rel.ro.unittest_testcases") static const unittest_testcase_registration_t \
-      __unittest_case_##_global_id = {                                                 \
-          .name = _name,                                                               \
-          .desc = _desc,                                                               \
-          .tests = __unittest_table_##_global_id,                                      \
-          .test_cnt = countof(__unittest_table_##_global_id),                          \
+#define UNITTEST_END_TESTCASE(_global_id, _name, _desc)                                       \
+  }                                                                                           \
+  ; /* __unittest_table_##_global_id */                                                       \
+  static const unittest_testcase_registration_t __unittest_case_##_global_id SPECIAL_SECTION( \
+      ".data.rel.ro.unittest_testcases", unittest_testcase_registration_t) = {                \
+      .name = _name,                                                                          \
+      .desc = _desc,                                                                          \
+      .tests = __unittest_table_##_global_id,                                                 \
+      .test_cnt = countof(__unittest_table_##_global_id),                                     \
   };
 
 #endif  // LK_DEBUGLEVEL == 0

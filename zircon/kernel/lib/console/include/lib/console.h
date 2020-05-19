@@ -9,12 +9,10 @@
 #define ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_
 
 #include <debug.h>
+#include <lib/special-sections/special-sections.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
-#include <zircon/compiler.h>
-
-__BEGIN_CDECLS
 
 /* command args */
 typedef struct {
@@ -59,7 +57,7 @@ typedef struct {
 #else  // LK_DEBUGLEVEL != 0
 
 #define STATIC_COMMAND_START \
-  alignas(cmd) __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
+  static const cmd _cmd_list SPECIAL_SECTION(".data.rel.ro.commands", cmd)[] = {
 #define STATIC_COMMAND_END(name) \
   }                              \
   ;
@@ -79,7 +77,5 @@ void console_abort_script(void);
 void panic_shell_start(void);
 
 extern int lastresult;
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_

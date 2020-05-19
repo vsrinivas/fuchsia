@@ -9,5 +9,6 @@ source_set("interrupt") {
   deps = [
     "$zx/kernel/dev/pdev",
     "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/init",
   ]
 }
