@@ -12,11 +12,9 @@
 
 class RootJobObserver final : public StateObserver {
  public:
-  RootJobObserver() : root_job_(JobDispatcher::CreateRootJob()) { root_job_->AddObserver(this); }
-
-  bool KillJobWithKillOnOOM() { return root_job_->KillJobWithKillOnOOM(); }
-
-  fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() { return root_job_; }
+  explicit RootJobObserver(fbl::RefPtr<JobDispatcher> root_job) : root_job_(root_job) {
+    root_job_->AddObserver(this);
+  }
 
  private:
   Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) final;

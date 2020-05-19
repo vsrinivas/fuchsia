@@ -31,11 +31,15 @@
 class Executor {
  public:
   void Init();
-  bool KillJobWithKillOnOOM();
-  fbl::RefPtr<JobDispatcher> GetRootJobDispatcher();
+
+  const fbl::RefPtr<JobDispatcher>& GetRootJobDispatcher() { return root_job_; }
 
  private:
-  // All jobs and processes of this Executor are rooted at the job in its RootJobObserver.
+  // All jobs and processes of this Executor are rooted at this job.
+  fbl::RefPtr<JobDispatcher> root_job_;
+
+  // Watch the root job, taking action (such as a system reboot) if it ends up
+  // with no children.
   ktl::unique_ptr<RootJobObserver> root_job_observer_;
 };
 

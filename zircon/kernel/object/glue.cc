@@ -109,7 +109,7 @@ static void on_oom() {
   switch (oom_behavior) {
     case OomBehavior::kJobKill:
 
-      if (!gExecutor.KillJobWithKillOnOOM()) {
+      if (!gExecutor.GetRootJobDispatcher()->KillJobWithKillOnOOM()) {
         printf("OOM: no alive job has a kill bit\n");
       }
 

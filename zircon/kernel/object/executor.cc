@@ -7,15 +7,13 @@
 #include <object/executor.h>
 
 void Executor::Init() {
+  // Create root job.
+  root_job_ = JobDispatcher::CreateRootJob();
+
+  // Watch the root job, alerting if it ever ends up with no children.
   fbl::AllocChecker ac;
-  root_job_observer_ = ktl::make_unique<RootJobObserver>(&ac);
+  root_job_observer_ = ktl::make_unique<RootJobObserver>(&ac, root_job_);
   if (!ac.check()) {
     panic("root-job: failed to allocate observer\n");
   }
-}
-
-bool Executor::KillJobWithKillOnOOM() { return root_job_observer_->KillJobWithKillOnOOM(); }
-
-fbl::RefPtr<JobDispatcher> Executor::GetRootJobDispatcher() {
-  return root_job_observer_->GetRootJobDispatcher();
 }
