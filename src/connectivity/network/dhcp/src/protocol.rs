@@ -108,10 +108,10 @@ impl Message {
             xid: 0,
             secs: 0,
             bdcast_flag: false,
-            ciaddr: Ipv4Addr::new(0, 0, 0, 0),
-            yiaddr: Ipv4Addr::new(0, 0, 0, 0),
-            siaddr: Ipv4Addr::new(0, 0, 0, 0),
-            giaddr: Ipv4Addr::new(0, 0, 0, 0),
+            ciaddr: Ipv4Addr::UNSPECIFIED,
+            yiaddr: Ipv4Addr::UNSPECIFIED,
+            siaddr: Ipv4Addr::UNSPECIFIED,
+            giaddr: Ipv4Addr::UNSPECIFIED,
             chaddr: MacAddr { octets: [0; 6] },
             sname: String::new(),
             file: String::new(),
@@ -1855,15 +1855,16 @@ fn trunc_string_to_n_and_push(s: &str, n: usize, buffer: &mut Vec<u8>) {
 mod tests {
 
     use super::*;
+    use net_declare::std::ip_v4;
     use std::net::Ipv4Addr;
 
-    const DEFAULT_SUBNET_MASK: [u8; 4] = [255, 255, 255, 0];
+    const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!(255.255.255.0);
 
     fn new_test_msg() -> Message {
         let mut msg = Message::new();
         msg.xid = 42;
         msg.secs = 1024;
-        msg.yiaddr = Ipv4Addr::new(192, 168, 1, 1);
+        msg.yiaddr = ip_v4!(192.168.1.1);
         msg.sname = String::from("relay.example.com");
         msg.file = String::from("boot.img");
         msg
@@ -1872,7 +1873,7 @@ mod tests {
     #[test]
     fn test_serialize_returns_correct_bytes() {
         let mut msg = new_test_msg();
-        msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
+        msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
 
         let bytes = msg.serialize();
 
@@ -1937,15 +1938,15 @@ mod tests {
                 xid: 42,
                 secs: 1024,
                 bdcast_flag: false,
-                ciaddr: Ipv4Addr::new(0, 0, 0, 0),
-                yiaddr: Ipv4Addr::new(192, 168, 1, 1),
-                siaddr: Ipv4Addr::new(0, 0, 0, 0),
-                giaddr: Ipv4Addr::new(0, 0, 0, 0),
+                ciaddr: Ipv4Addr::UNSPECIFIED,
+                yiaddr: ip_v4!(192.168.1.1),
+                siaddr: Ipv4Addr::UNSPECIFIED,
+                giaddr: Ipv4Addr::UNSPECIFIED,
                 chaddr: MacAddr { octets: [0, 0, 0, 0, 0, 0] },
                 sname: "relay.example.com".to_string(),
                 file: "boot.img".to_string(),
                 options: vec![
-                    DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)),
+                    DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK),
                     DhcpOption::ServerIdentifier(Ipv4Addr::from([0xAA, 0xBB, 0xCC, 0xDD])),
                 ],
             })
@@ -1956,7 +1957,7 @@ mod tests {
     fn test_serialize_then_deserialize_with_single_option_is_equal_to_starting_value() {
         let msg = || {
             let mut msg = new_test_msg();
-            msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
+            msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
             msg
         };
 
@@ -1974,8 +1975,8 @@ mod tests {
     fn test_serialize_then_deserialize_with_many_options_is_equal_to_starting_value() {
         let msg = || {
             let mut msg = new_test_msg();
-            msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
-            msg.options.push(DhcpOption::NameServer(vec![Ipv4Addr::from([8, 8, 8, 8])]));
+            msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
+            msg.options.push(DhcpOption::NameServer(vec![ip_v4!(1.2.3.4)]));
             msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
             msg
         };
@@ -1995,7 +1996,7 @@ mod tests {
 
     #[test]
     fn test_serialize_with_valid_option_returns_correct_bytes() {
-        let opt = DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK));
+        let opt = DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK);
         let mut bytes = Vec::with_capacity(6);
         let () = opt.serialize_to(&mut bytes);
         assert_eq!(bytes.len(), 6);
@@ -2027,7 +2028,7 @@ mod tests {
             _ => None,
         }
         .unwrap();
-        assert_eq!(val, Ipv4Addr::from(DEFAULT_SUBNET_MASK));
+        assert_eq!(val, DEFAULT_SUBNET_MASK);
     }
 
     #[test]
@@ -2076,8 +2077,8 @@ mod tests {
     fn test_buf_into_options_with_invalid_option_parses_other_valid_options() {
         let msg = || {
             let mut msg = Message::new();
-            msg.options.push(DhcpOption::SubnetMask(Ipv4Addr::from(DEFAULT_SUBNET_MASK)));
-            msg.options.push(DhcpOption::Router(vec![Ipv4Addr::from([192, 168, 1, 1])]));
+            msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
+            msg.options.push(DhcpOption::Router(vec![ip_v4!(192.168.1.1)]));
             msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
             msg
         };

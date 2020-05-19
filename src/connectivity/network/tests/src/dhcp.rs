@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_net_ext::{ip_addr, ipv4_addr};
+use net_declare::{fidl_ip, fidl_ip_v4};
 
 use anyhow::Context as _;
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -49,7 +49,7 @@ async fn acquire_dhcp() -> Result {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
                     static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                        ip_address: ip_addr![192, 168, 0, 1],
+                        ip_address: fidl_ip!(192.168.0.1),
                         prefix_len: 24,
                     }),
                     want_addr: None,
@@ -58,7 +58,7 @@ async fn acquire_dhcp() -> Result {
                     name: "client-ep",
                     env: DhcpTestEnv::Client,
                     static_addr: None,
-                    want_addr: Some((ip_addr![192, 168, 0, 2], ip_addr![255, 255, 255, 128])),
+                    want_addr: Some((fidl_ip!(192.168.0.2), fidl_ip!(255.255.255.128))),
                 },
             ],
         }],
@@ -78,7 +78,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
                     static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                        ip_address: ip_addr![192, 168, 0, 1],
+                        ip_address: fidl_ip!(192.168.0.1),
                         prefix_len: 24,
                     }),
                     want_addr: None,
@@ -87,7 +87,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
                     name: "client-ep",
                     env: DhcpTestEnv::Client,
                     static_addr: None,
-                    want_addr: Some((ip_addr![192, 168, 0, 2], ip_addr![255, 255, 255, 128])),
+                    want_addr: Some((fidl_ip!(192.168.0.2), fidl_ip!(255.255.255.128))),
                 },
             ],
         }],
@@ -108,7 +108,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "server-ep1",
                         env: DhcpTestEnv::Server,
                         static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address: ip_addr![192, 168, 0, 1],
+                            ip_address: fidl_ip!(192.168.0.1),
                             prefix_len: 24,
                         }),
                         want_addr: None,
@@ -117,7 +117,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "client-ep1",
                         env: DhcpTestEnv::Client,
                         static_addr: None,
-                        want_addr: Some((ip_addr![192, 168, 0, 2], ip_addr![255, 255, 255, 128])),
+                        want_addr: Some((fidl_ip!(192.168.0.2), fidl_ip!(255.255.255.128))),
                     },
                 ],
             },
@@ -128,7 +128,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "server-ep2",
                         env: DhcpTestEnv::Server,
                         static_addr: Some(fidl_fuchsia_net_stack::InterfaceAddress {
-                            ip_address: ip_addr![192, 168, 1, 1],
+                            ip_address: fidl_ip!(192.168.1.1),
                             prefix_len: 24,
                         }),
                         want_addr: None,
@@ -137,7 +137,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
                         name: "client-ep2",
                         env: DhcpTestEnv::Client,
                         static_addr: None,
-                        want_addr: Some((ip_addr![192, 168, 1, 2], ip_addr![255, 255, 255, 0])),
+                        want_addr: Some((fidl_ip!(192.168.1.2), fidl_ip!(255.255.255.0))),
                     },
                 ],
             },
@@ -313,11 +313,11 @@ async fn test_dhcp(
 /// `dns_resolver` loads them into its name servers configuration.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_discovered_dns() -> Result {
-    const SERVER_IP: fidl_fuchsia_net::IpAddress = ip_addr![192, 168, 0, 1];
+    const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
     /// DNS server served by DHCP.
-    const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = ipv4_addr![123, 12, 34, 56];
+    const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.56);
     /// Static DNS server given directly to `LookupAdmin`.
-    const STATIC_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = ipv4_addr![123, 12, 34, 99];
+    const STATIC_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.99);
 
     /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
     /// succeeded.

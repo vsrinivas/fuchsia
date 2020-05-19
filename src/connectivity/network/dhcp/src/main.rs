@@ -501,6 +501,7 @@ mod tests {
     use super::*;
     use dhcp::configuration::ServerParameters;
     use futures::{sink::drain, FutureExt};
+    use net_declare::{fidl_ip_v4, std_ip_v4};
     use std::convert::TryFrom;
 
     #[derive(Debug, Eq, PartialEq)]
@@ -541,9 +542,7 @@ mod tests {
             &self,
             _code: fidl_fuchsia_net_dhcp::OptionCode,
         ) -> Result<fidl_fuchsia_net_dhcp::Option_, fuchsia_zircon::Status> {
-            Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
-                addr: [0, 0, 0, 0],
-            }))
+            Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!(0.0.0.0)))
         }
         fn dispatch_get_parameter(
             &self,
@@ -593,17 +592,17 @@ mod tests {
 
     fn default_params() -> dhcp::configuration::ServerParameters {
         dhcp::configuration::ServerParameters {
-            server_ips: vec![Ipv4Addr::from([192, 168, 0, 1])],
+            server_ips: vec![std_ip_v4!(192.168.0.1)],
             lease_length: dhcp::configuration::LeaseLength {
                 default_seconds: 86400,
                 max_seconds: 86400,
             },
             managed_addrs: dhcp::configuration::ManagedAddresses {
-                network_id: Ipv4Addr::from([192, 168, 0, 0]),
-                broadcast: Ipv4Addr::from([192, 168, 0, 128]),
+                network_id: std_ip_v4!(192.168.0.0),
+                broadcast: std_ip_v4!(192.168.0.128),
                 mask: dhcp::configuration::SubnetMask::try_from(25).unwrap(),
-                pool_range_start: Ipv4Addr::from([192, 168, 0, 0]),
-                pool_range_stop: Ipv4Addr::from([192, 168, 0, 0]),
+                pool_range_start: std_ip_v4!(192.168.0.0),
+                pool_range_stop: std_ip_v4!(192.168.0.0),
             },
             permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
             static_assignments: dhcp::configuration::StaticAssignments(HashMap::new()),
@@ -624,10 +623,7 @@ mod tests {
             server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
 
-        let expected_result =
-            Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
-                addr: [0, 0, 0, 0],
-            }));
+        let expected_result = Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!(0.0.0.0)));
         assert_eq!(res, expected_result);
         Ok(())
     }
@@ -661,7 +657,7 @@ mod tests {
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(
-            fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] },
+            fidl_ip_v4!(0.0.0.0),
         )).fuse() => res.context("set_option failed"),
             server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;

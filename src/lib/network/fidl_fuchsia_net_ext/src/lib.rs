@@ -4,10 +4,6 @@
 
 //! Extensions for types in the `fidl_fuchsia_net` crate.
 
-mod macros;
-
-pub use macros::*;
-
 use anyhow;
 use fidl_fuchsia_net as fidl;
 

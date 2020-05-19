@@ -33,6 +33,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
+
+  test_deps = [ "//src/connectivity/lib/net-declare" ]
 }
 
 test_package("dhcp-tests") {
@@ -73,6 +75,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//src/connectivity/lib/net-declare",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
   ]

@@ -155,11 +155,11 @@ impl Server {
             server_ips: vec![],
             lease_length,
             managed_addrs: crate::configuration::ManagedAddresses {
-                network_id: Ipv4Addr::new(192, 168, 0, 0),
-                broadcast: Ipv4Addr::new(192, 168, 0, 255),
+                network_id: net_declare::std::ip_v4!(182.168.0.0),
+                broadcast: net_declare::std::ip_v4!(192.168.0.255),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
-                pool_range_start: Ipv4Addr::new(192, 168, 0, 0),
-                pool_range_stop: Ipv4Addr::new(192, 168, 0, 0),
+                pool_range_start: net_declare::std::ip_v4!(192.168.0.0),
+                pool_range_stop: net_declare::std::ip_v4!(192.168.0.0),
             },
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
@@ -1169,6 +1169,7 @@ pub mod tests {
     use super::*;
     use crate::configuration::LeaseLength;
     use crate::protocol::{DhcpOption, Message, MessageType, OpCode, OptionCode};
+    use net_declare::{fidl_ip_v4, std_ip_v4};
     use rand::Rng;
     use std::net::Ipv4Addr;
 
@@ -1227,10 +1228,7 @@ pub mod tests {
             .insert(OptionCode::Router, DhcpOption::Router(vec![random_ipv4_generator()]));
         server.options_repo.insert(
             OptionCode::DomainNameServer,
-            DhcpOption::DomainNameServer(vec![
-                Ipv4Addr::new(8, 8, 8, 8),
-                Ipv4Addr::new(8, 8, 4, 4),
-            ]),
+            DhcpOption::DomainNameServer(vec![std_ip_v4!(1.2.3.4), std_ip_v4!(4.3.2.1)]),
         );
         Ok(server)
     }
@@ -1262,7 +1260,7 @@ pub mod tests {
         offer.options.push(DhcpOption::IpAddressLeaseTime(100));
         offer.options.push(DhcpOption::RenewalTimeValue(50));
         offer.options.push(DhcpOption::RebindingTimeValue(75));
-        offer.options.push(DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)));
+        offer.options.push(DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)));
         if let Some(routers) = match server.options_repo.get(&OptionCode::Router) {
             Some(DhcpOption::Router(v)) => Some(v),
             _ => None,
@@ -1310,7 +1308,7 @@ pub mod tests {
         ack.options.push(DhcpOption::IpAddressLeaseTime(100));
         ack.options.push(DhcpOption::RenewalTimeValue(50));
         ack.options.push(DhcpOption::RebindingTimeValue(75));
-        ack.options.push(DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)));
+        ack.options.push(DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)));
         if let Some(routers) = match server.options_repo.get(&OptionCode::Router) {
             Some(DhcpOption::Router(v)) => Some(v),
             _ => None,
@@ -1543,7 +1541,7 @@ pub mod tests {
                 DhcpOption::RebindingTimeValue(
                     (server.params.lease_length.default_seconds * 3) / 4,
                 ),
-                DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)),
+                DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)),
                 DhcpOption::Router(router),
                 DhcpOption::DomainNameServer(dns_server),
             ],
@@ -1899,7 +1897,7 @@ pub mod tests {
                     DhcpOption::RebindingTimeValue(
                         (server.params.lease_length.default_seconds * 3) / 4,
                     ),
-                    DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)),
+                    DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)),
                     DhcpOption::Router(router),
                     DhcpOption::DomainNameServer(dns_server),
                 ],
@@ -2054,8 +2052,8 @@ pub mod tests {
 
         // For init-reboot, server and requested ip must be on the same subnet.
         // Hard-coding ip values here to achieve that.
-        let init_reboot_client_ip = Ipv4Addr::new(192, 168, 1, 60);
-        server.params.server_ips = vec![Ipv4Addr::new(192, 168, 1, 1)];
+        let init_reboot_client_ip = std_ip_v4!(192.168.1.60);
+        server.params.server_ips = vec![std_ip_v4!(192.168.1.1)];
 
         server.pool.allocated_addrs.insert(init_reboot_client_ip);
 
@@ -2076,7 +2074,7 @@ pub mod tests {
                     DhcpOption::RebindingTimeValue(
                         (server.params.lease_length.default_seconds * 3) / 4,
                     ),
-                    DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)),
+                    DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)),
                     DhcpOption::Router(router),
                     DhcpOption::DomainNameServer(dns_server),
                 ],
@@ -2140,8 +2138,8 @@ pub mod tests {
         let client_mac = req.chaddr;
 
         // Update requested ip and server ip to be on the same subnet.
-        req.options.push(DhcpOption::RequestedIpAddress(Ipv4Addr::new(192, 165, 30, 45)));
-        server.params.server_ips = vec![Ipv4Addr::new(192, 165, 30, 1)];
+        req.options.push(DhcpOption::RequestedIpAddress(std_ip_v4!(192.165.30.45)));
+        server.params.server_ips = vec![std_ip_v4!(192.165.30.1)];
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientMac(client_mac)));
         Ok(())
@@ -2154,11 +2152,11 @@ pub mod tests {
         let mut req = new_test_request();
 
         // Update requested ip and server ip to be on the same subnet.
-        let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
+        let init_reboot_client_ip = std_ip_v4!(192.165.25.4);
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
-        server.params.server_ips = vec![Ipv4Addr::new(192, 165, 25, 1)];
+        server.params.server_ips = vec![std_ip_v4!(192.165.25.1)];
 
-        let server_cached_ip = Ipv4Addr::new(192, 165, 25, 10);
+        let server_cached_ip = std_ip_v4!(192.165.25.10);
         server.pool.allocated_addrs.insert(server_cached_ip);
         server.cache.insert(
             req.chaddr,
@@ -2185,9 +2183,9 @@ pub mod tests {
         let mut server = new_test_minimal_server().await?;
         let mut req = new_test_request();
 
-        let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
+        let init_reboot_client_ip = std_ip_v4!(192.165.25.4);
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
-        server.params.server_ips = vec![Ipv4Addr::new(192, 165, 25, 1)];
+        server.params.server_ips = vec![std_ip_v4!(192.165.25.1)];
 
         server.pool.allocated_addrs.insert(init_reboot_client_ip);
         // Expire client binding to make it invalid.
@@ -2217,9 +2215,9 @@ pub mod tests {
         let mut server = new_test_minimal_server().await?;
         let mut req = new_test_request();
 
-        let init_reboot_client_ip = Ipv4Addr::new(192, 165, 25, 4);
+        let init_reboot_client_ip = std_ip_v4!(192.165.25.4);
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
-        server.params.server_ips = vec![Ipv4Addr::new(192, 165, 25, 1)];
+        server.params.server_ips = vec![std_ip_v4!(192.165.25.1)];
 
         server.cache.insert(
             req.chaddr,
@@ -2265,7 +2263,7 @@ pub mod tests {
                     DhcpOption::RebindingTimeValue(
                         (server.params.lease_length.default_seconds * 3) / 4,
                     ),
-                    DhcpOption::SubnetMask(Ipv4Addr::new(255, 255, 255, 0)),
+                    DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)),
                     DhcpOption::Router(router),
                     DhcpOption::DomainNameServer(dns_server),
                 ],
@@ -2804,13 +2802,13 @@ pub mod tests {
     async fn test_dispatch_with_decline_for_incorrect_server_recepient_deletes_client_binding(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        server.params.server_ips = vec![Ipv4Addr::new(192, 168, 1, 1)];
+        server.params.server_ips = vec![std_ip_v4!(192.168.1.1)];
 
         let mut decline = new_test_decline(&server);
 
         // Updating decline request to have wrong server ip.
         decline.options.remove(1);
-        decline.options.push(DhcpOption::ServerIdentifier(Ipv4Addr::new(1, 2, 3, 4)));
+        decline.options.push(DhcpOption::ServerIdentifier(std_ip_v4!(1.2.3.4)));
 
         let declined_ip = random_ipv4_generator();
         let client_mac = decline.chaddr;
@@ -2888,7 +2886,7 @@ pub mod tests {
         disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
         let mut server = new_test_minimal_server().await?;
-        server.pool.available_addrs.insert(Ipv4Addr::new(195, 168, 1, 45));
+        server.pool.available_addrs.insert(std_ip_v4!(195.168.1.45));
         let ll = LeaseLength { default_seconds: 60 * 60 * 24, max_seconds: server_max_lease_time };
         server.params.lease_length = ll;
 
@@ -2929,11 +2927,7 @@ pub mod tests {
     async fn test_server_dispatcher_get_option_with_set_option_returns_option() -> Result<(), Error>
     {
         let mut server = new_test_minimal_server().await?;
-        let option = || {
-            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
-                addr: [255, 255, 255, 0],
-            })
-        };
+        let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!(255.255.255.0));
         server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(option())?);
         let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)?;
         assert_eq!(result, option());
@@ -2955,11 +2949,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_server_dispatcher_set_option_returns_unit() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let option = || {
-            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
-                addr: [255, 255, 255, 0],
-            })
-        };
+        let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!(255.255.255.0));
         let () = server.dispatch_set_option(option())?;
         let stored_option: DhcpOption = DhcpOption::try_from_fidl(option())?;
         let code = stored_option.code();
@@ -3037,11 +3027,11 @@ pub mod tests {
             });
         let bad_mask =
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
-                network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
-                broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
-                mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [255, 255, 0, 255] }),
-                pool_range_start: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 2] }),
-                pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 254] }),
+                network_id: Some(fidl_ip_v4!(192.168.0.0)),
+                broadcast: Some(fidl_ip_v4!(192.168.0.255)),
+                mask: Some(fidl_ip_v4!(255.255.0.255)),
+                pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
+                pool_range_stop: Some(fidl_ip_v4!(192.168.0.254)),
             });
         let MacAddr { octets: mac } = random_mac_generator();
         let duplicated_static_assignment =
@@ -3079,11 +3069,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_server_dispatcher_list_options_returns_set_options() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mask = || {
-            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
-                addr: [255, 255, 255, 0],
-            })
-        };
+        let mask = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!(255.255.255.0));
         let hostname = || fidl_fuchsia_net_dhcp::Option_::HostName(String::from("testhostname"));
         server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(mask())?);
         server.options_repo.insert(OptionCode::HostName, DhcpOption::try_from_fidl(hostname())?);
@@ -3123,14 +3109,14 @@ pub mod tests {
     async fn test_server_dispatcher_reset_parameters() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
         let default_params = ServerParameters {
-            server_ips: vec![Ipv4Addr::from([192, 168, 0, 1])],
+            server_ips: vec![std_ip_v4!(192.168.0.1)],
             lease_length: LeaseLength { default_seconds: 86400, max_seconds: 86400 },
             managed_addrs: crate::configuration::ManagedAddresses {
-                network_id: Ipv4Addr::from([192, 168, 0, 0]),
-                broadcast: Ipv4Addr::from([192, 168, 0, 128]),
+                network_id: std_ip_v4!(192.168.0.0),
+                broadcast: std_ip_v4!(192.168.0.128),
                 mask: crate::configuration::SubnetMask::try_from(25).unwrap(),
-                pool_range_start: Ipv4Addr::from([192, 168, 0, 0]),
-                pool_range_stop: Ipv4Addr::from([192, 168, 0, 0]),
+                pool_range_start: std_ip_v4!(192.168.0.0),
+                pool_range_stop: std_ip_v4!(192.168.0.0),
             },
             permitted_macs: crate::configuration::PermittedMacs(vec![]),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
@@ -3148,9 +3134,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_server_dispatcher_clear_leases() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        server.params.managed_addrs.pool_range_stop = Ipv4Addr::from([192, 168, 0, 4]);
+        server.params.managed_addrs.pool_range_stop = std_ip_v4!(192.168.0.4);
         server.pool = AddressPool::new(server.params.managed_addrs.pool_range());
-        let client = Ipv4Addr::from([192, 168, 0, 2]);
+        let client = std_ip_v4!(192.168.0.2);
         let () = server
             .pool
             .allocate_addr(client)
@@ -3195,15 +3181,11 @@ pub mod tests {
         assert_eq!(
             server.dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
                 fidl_fuchsia_net_dhcp::AddressPool {
-                    network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
-                    broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
-                    mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [255, 255, 255, 0] }),
-                    pool_range_start: Some(fidl_fuchsia_net::Ipv4Address {
-                        addr: [192, 168, 0, 2]
-                    }),
-                    pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address {
-                        addr: [192, 168, 0, 254]
-                    })
+                    network_id: Some(fidl_ip_v4!(192.168.0.0)),
+                    broadcast: Some(fidl_ip_v4!(192.168.0.255)),
+                    mask: Some(fidl_ip_v4!(255.255.255.0)),
+                    pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
+                    pool_range_stop: Some(fidl_ip_v4!(192.168.0.254))
                 }
             )),
             Err(Status::BAD_STATE)
@@ -3218,13 +3200,11 @@ pub mod tests {
         let () = server
             .dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
                 fidl_fuchsia_net_dhcp::AddressPool {
-                    network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
-                    broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
-                    mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [255, 255, 255, 0] }),
-                    pool_range_start: Some(fidl_fuchsia_net::Ipv4Address {
-                        addr: [192, 168, 0, 2],
-                    }),
-                    pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 5] }),
+                    network_id: Some(fidl_ip_v4!(192.168.0.0)),
+                    broadcast: Some(fidl_ip_v4!(192.168.0.255)),
+                    mask: Some(fidl_ip_v4!(255.255.255.0)),
+                    pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
+                    pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
                 },
             ))
             .context("failed to set parameter")?;

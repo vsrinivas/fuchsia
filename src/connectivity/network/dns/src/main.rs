@@ -529,7 +529,11 @@ mod tests {
     use super::*;
 
     use dns::DEFAULT_PORT;
+    use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::assert_inspect_tree;
+    use net_declare::{
+        fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_socket_addr, std_ip, std_ip_v4, std_ip_v6,
+    };
     use std::net::SocketAddr;
     use std::{
         net::{IpAddr, Ipv4Addr, Ipv6Addr},
@@ -545,17 +549,17 @@ mod tests {
         lookup_ip::LookupIp,
     };
 
-    const IPV4_LOOPBACK: [u8; 4] = [127, 0, 0, 1];
-    const IPV6_LOOPBACK: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+    const IPV4_LOOPBACK: fnet::Ipv4Address = fidl_ip_v4!(127.0.0.1);
+    const IPV6_LOOPBACK: fnet::Ipv6Address = fidl_ip_v6!(::1);
     const LOCAL_HOST: &str = "localhost.";
 
     // IPv4 address returned by mock lookup.
-    const IPV4_HOST: Ipv4Addr = Ipv4Addr::new(240, 0, 0, 2);
+    const IPV4_HOST: Ipv4Addr = std_ip_v4!(240.0.0.2);
     // IPv6 address returned by mock lookup.
-    const IPV6_HOST: Ipv6Addr = Ipv6Addr::new(0xABCD, 0, 0, 0, 0, 0, 0, 2);
+    const IPV6_HOST: Ipv6Addr = std_ip_v6!(abcd::2);
 
-    const IPV4_NAMESERVER: IpAddr = IpAddr::V4(Ipv4Addr::new(1, 8, 8, 1));
-    const IPV6_NAMESERVER: IpAddr = IpAddr::V6(Ipv6Addr::new(1, 4860, 4860, 0, 0, 0, 0, 1));
+    const IPV4_NAMESERVER: IpAddr = std_ip!(1.8.8.1);
+    const IPV6_NAMESERVER: IpAddr = std_ip!(0001:12cf:12cf::1);
 
     // host which has IPv4 address only.
     const REMOTE_IPV4_HOST: &str = "www.foo.com";
@@ -566,26 +570,17 @@ mod tests {
     // host which has IPv4 and IPv6 address if reset name servers.
     const REMOTE_IPV4_IPV6_HOST: &str = "www.foobar.com";
 
-    const STATIC_SERVER_IPV4: fnet::Ipv4Address = fnet::Ipv4Address { addr: [8, 8, 8, 8] };
-    const STATIC_SERVER: fnet::IpAddress = fnet::IpAddress::Ipv4(STATIC_SERVER_IPV4);
+    const STATIC_SERVER_IPV4: fnet::Ipv4Address = fidl_ip_v4!(8.8.8.8);
 
     const DHCP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-        address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
-            address: fnet::Ipv4Address { addr: [8, 8, 4, 4] },
-            port: DEFAULT_PORT,
-        })),
+        address: Some(fidl_socket_addr!(8.8.4.4:53)),
         source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
             source_interface: Some(1),
         })),
     };
     const NDP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
         address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-            address: fnet::Ipv6Address {
-                addr: [
-                    0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x44, 0x44,
-                ],
-            },
+            address: fidl_ip_v6!(2001:4860:4860::4444),
             port: DEFAULT_PORT,
             zone_index: 2,
         })),
@@ -595,12 +590,7 @@ mod tests {
     };
     const DHCPV6_SERVER: fname::DnsServer_ = fname::DnsServer_ {
         address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-            address: fnet::Ipv6Address {
-                addr: [
-                    0x20, 0x02, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x44, 0x44,
-                ],
-            },
+            address: fidl_ip_v6!(2002:4860:4860::4444),
             port: DEFAULT_PORT,
             zone_index: 3,
         })),
@@ -674,8 +664,8 @@ mod tests {
             LOCAL_HOST,
             fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
             Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_LOOPBACK }],
-                ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_LOOPBACK }],
+                ipv4_addrs: vec![IPV4_LOOPBACK],
+                ipv6_addrs: vec![IPV6_LOOPBACK],
                 canonical_name: None,
             }),
         )
@@ -687,7 +677,7 @@ mod tests {
             LOCAL_HOST,
             fnet::LookupIpOptions::V4Addrs,
             Ok(fnet::IpAddressInfo {
-                ipv4_addrs: vec![fnet::Ipv4Address { addr: IPV4_LOOPBACK }],
+                ipv4_addrs: vec![IPV4_LOOPBACK],
                 ipv6_addrs: vec![],
                 canonical_name: None,
             }),
@@ -701,7 +691,7 @@ mod tests {
             fnet::LookupIpOptions::V6Addrs,
             Ok(fnet::IpAddressInfo {
                 ipv4_addrs: vec![],
-                ipv6_addrs: vec![fnet::Ipv6Address { addr: IPV6_LOOPBACK }],
+                ipv6_addrs: vec![IPV6_LOOPBACK],
                 canonical_name: None,
             }),
         )
@@ -711,12 +701,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_lookuphostname_localhost() {
         let proxy = setup_namelookup_service().await;
-        check_lookup_hostname(
-            &proxy,
-            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_LOOPBACK }),
-            Ok(String::from(LOCAL_HOST)),
-        )
-        .await;
+        check_lookup_hostname(&proxy, IPV4_LOOPBACK.into_ext(), Ok(String::from(LOCAL_HOST))).await;
     }
 
     struct MockResolver {
@@ -1044,10 +1029,7 @@ mod tests {
 
             // Multicast not allowed.
             let status = proxy
-                .set_default_dns_servers(
-                    &mut vec![fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [224, 0, 0, 1] })]
-                        .iter_mut(),
-                )
+                .set_default_dns_servers(&mut vec![fidl_ip!(224.0.0.1)].iter_mut())
                 .await
                 .expect("Failed to call SetDefaultDnsServers")
                 .expect_err("SetDefaultDnsServers should fail for multicast address");
@@ -1075,7 +1057,9 @@ mod tests {
         let env = TestEnvironment::new();
         env.run_config_sink(|mut sink| async move {
             let () = sink
-                .send(dns::policy::ServerConfig::DefaultServers(vec![STATIC_SERVER]))
+                .send(dns::policy::ServerConfig::DefaultServers(
+                    vec![STATIC_SERVER_IPV4.into_ext()],
+                ))
                 .await
                 .unwrap();
             let () = sink
@@ -1123,7 +1107,9 @@ mod tests {
         });
         env.run_config_sink(|mut sink| async move {
             let () = sink
-                .send(dns::policy::ServerConfig::DefaultServers(vec![STATIC_SERVER]))
+                .send(dns::policy::ServerConfig::DefaultServers(
+                    vec![STATIC_SERVER_IPV4.into_ext()],
+                ))
                 .await
                 .unwrap();
             let () = sink

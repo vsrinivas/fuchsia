@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_net_ext::ip_addr;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
+use net_declare::fidl_ip;
 
 use anyhow::Context as _;
 
@@ -158,10 +158,8 @@ async fn add_del_interface_address() -> Result {
                 != 0
         })
         .ok_or(anyhow::format_err!("failed to find loopback"))?;
-    let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
-        ip_address: ip_addr![1, 1, 1, 1],
-        prefix_len: 32,
-    };
+    let mut interface_address =
+        fidl_fuchsia_net_stack::InterfaceAddress { ip_address: fidl_ip!(1.1.1.1), prefix_len: 32 };
     let res = stack
         .add_interface_address(loopback.id, &mut interface_address)
         .await
@@ -209,10 +207,8 @@ async fn add_remove_interface_address_errors() -> Result {
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
-        ip_address: ip_addr![0, 0, 0, 0],
-        prefix_len: 0,
-    };
+    let mut interface_address =
+        fidl_fuchsia_net_stack::InterfaceAddress { ip_address: fidl_ip!(0.0.0.0), prefix_len: 0 };
 
     // Don't crash on interface not found.
 

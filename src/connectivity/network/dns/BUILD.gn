@@ -12,6 +12,7 @@ rustc_library("lib") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//src/connectivity/lib/net-declare",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -22,6 +23,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:trust-dns-resolver",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
+
+  test_deps = []
 }
 
 test_package("dns-tests") {
@@ -60,6 +63,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:trust-dns-resolver",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
+
+  test_deps = [ "//src/connectivity/lib/net-declare" ]
 }
 
 package("dns-resolver") {

@@ -216,6 +216,7 @@ impl Stash {
 mod tests {
     use super::*;
     use crate::configuration::{LeaseLength, ManagedAddresses};
+    use net_declare::std::ip_v4;
     use std::collections::HashMap;
     use std::convert::TryFrom;
 
@@ -262,11 +263,8 @@ mod tests {
         let accessor_client = stash.proxy.clone();
 
         let opts = vec![
-            DhcpOption::SubnetMask(std::net::Ipv4Addr::new(255, 255, 255, 0)),
-            DhcpOption::DomainNameServer(vec![
-                std::net::Ipv4Addr::new(8, 8, 8, 8),
-                std::net::Ipv4Addr::new(8, 8, 4, 4),
-            ]),
+            DhcpOption::SubnetMask(ip_v4!(255.255.255.0)),
+            DhcpOption::DomainNameServer(vec![ip_v4!(1.2.3.4), ip_v4!(4.3.2.1)]),
         ];
         let () = stash.store_options(&opts)?;
         let value = accessor_client.get_value(&OPTIONS_KEY.to_string()).await?;
@@ -285,14 +283,14 @@ mod tests {
         let accessor_client = stash.proxy.clone();
 
         let params = ServerParameters {
-            server_ips: vec![std::net::Ipv4Addr::new(192, 168, 0, 1)],
+            server_ips: vec![ip_v4!(192.168.0.1)],
             lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
             managed_addrs: ManagedAddresses {
-                network_id: std::net::Ipv4Addr::new(192, 168, 0, 0),
-                broadcast: std::net::Ipv4Addr::new(192, 168, 0, 255),
+                network_id: ip_v4!(192.168.0.0),
+                broadcast: ip_v4!(192.168.0.255),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
-                pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 10),
-                pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 254),
+                pool_range_start: ip_v4!(192.168.0.10),
+                pool_range_stop: ip_v4!(192.168.0.254),
             },
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
@@ -347,11 +345,8 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         let opts = vec![
-            DhcpOption::SubnetMask(std::net::Ipv4Addr::new(255, 255, 255, 0)),
-            DhcpOption::DomainNameServer(vec![
-                std::net::Ipv4Addr::new(8, 8, 8, 8),
-                std::net::Ipv4Addr::new(8, 8, 4, 4),
-            ]),
+            DhcpOption::SubnetMask(ip_v4!(255.255.255.0)),
+            DhcpOption::DomainNameServer(vec![ip_v4!(1.2.3.4), ip_v4!(4.3.2.1)]),
         ];
         let serialized_opts = serde_json::to_string(&opts)?;
         let opts = opts.into_iter().map(|o| (o.code(), o)).collect();
@@ -381,14 +376,14 @@ mod tests {
         let accessor = stash.proxy.clone();
 
         let params = ServerParameters {
-            server_ips: vec![std::net::Ipv4Addr::new(192, 168, 0, 1)],
+            server_ips: vec![ip_v4!(192.168.0.1)],
             lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
             managed_addrs: ManagedAddresses {
-                network_id: std::net::Ipv4Addr::new(192, 168, 0, 0),
-                broadcast: std::net::Ipv4Addr::new(192, 168, 0, 255),
+                network_id: ip_v4!(192.168.0.0),
+                broadcast: ip_v4!(192.168.0.255),
                 mask: crate::configuration::SubnetMask::try_from(24)?,
-                pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 10),
-                pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 254),
+                pool_range_start: ip_v4!(192.168.0.10),
+                pool_range_stop: ip_v4!(192.168.0.254),
             },
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
