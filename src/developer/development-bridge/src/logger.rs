@@ -8,8 +8,10 @@ use {
 };
 
 fn debug_config() -> Config {
+    // Sets the target level to "Error" so that all logs show their module
+    // target in the logs.
     ConfigBuilder::new()
-        .set_target_level(LevelFilter::Info)
+        .set_target_level(LevelFilter::Error)
         .add_filter_ignore_str("tokio_reactor")
         .build()
 }
