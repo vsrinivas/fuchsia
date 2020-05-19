@@ -7,10 +7,11 @@ use anyhow::{Context, Error};
 use fidl::encoding::Decodable;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_bluetooth_bredr::{
-    Attribute, ChannelParameters, ConnectionReceiverRequest, ConnectionReceiverRequestStream,
-    DataElement, Information, ProfileDescriptor, ProfileMarker, ProfileProxy, ProtocolDescriptor,
-    ProtocolIdentifier, SearchResultsRequest, SearchResultsRequestStream, SecurityRequirements,
-    ServiceClassProfileIdentifier, ServiceDefinition,
+    Attribute, Channel, ChannelParameters, ConnectionReceiverRequest,
+    ConnectionReceiverRequestStream, DataElement, Information, ProfileDescriptor, ProfileMarker,
+    ProfileProxy, ProtocolDescriptor, ProtocolIdentifier, SearchResultsRequest,
+    SearchResultsRequestStream, SecurityRequirements, ServiceClassProfileIdentifier,
+    ServiceDefinition,
 };
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::{PeerId, Uuid};
@@ -34,6 +35,9 @@ struct ProfileServerFacadeInner {
 
     /// Services currently active on the Profile Server Proxy
     advertisement_stoppers: HashMap<usize, oneshot::Sender<()>>,
+
+    // Holds the channel so the connection remains open.
+    l2cap_channel_holder: Option<Channel>,
 }
 
 /// Perform Profile Server operations.
@@ -51,6 +55,7 @@ impl ProfileServerFacade {
                 profile_server_proxy: None,
                 advertisement_count: 0,
                 advertisement_stoppers: HashMap::new(),
+                l2cap_channel_holder: None,
             }),
         }
     }
@@ -689,19 +694,14 @@ impl ProfileServerFacade {
                 );
             }
         };
-        let connect_future = match &self.inner.read().profile_server_proxy {
+        let connection_result = match &self.inner.read().profile_server_proxy {
             Some(server) => {
-                server.connect(&mut peer_id.into(), psm, ChannelParameters::new_empty())
+                server.connect(&mut peer_id.into(), psm, ChannelParameters::new_empty()).await?
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
-        let connect_future = async {
-            if let Err(err) = connect_future.await {
-                fx_log_err!("Failed connect with: {:?}", err);
-            };
-        };
-        fasync::spawn(connect_future);
+        self.inner.write().l2cap_channel_holder = Some(connection_result.unwrap());
 
         Ok(())
     }
@@ -711,6 +711,7 @@ impl ProfileServerFacade {
         // Dropping these will signal the other end with an Err, which is enough.
         self.inner.write().advertisement_stoppers.clear();
         self.inner.write().advertisement_count = 0;
+        self.inner.write().l2cap_channel_holder = None;
         self.inner.write().profile_server_proxy = None;
         Ok(())
     }
