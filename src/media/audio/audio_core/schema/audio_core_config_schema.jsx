@@ -1,5 +1,10 @@
 {
   "definitions": {
+    "channel_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
     "device_id": {
       "type": "string",
       "oneOf": [
@@ -51,6 +56,9 @@
         "lib": "string",
         "effect": "string",
         "name": "string",
+        // The number of channels in the audio stream output by this effect. If unspecified this
+        // will be equal to the number of input channels.
+        "output_channels": { "$ref" : "#/definitions/channel_count" },
         "config": {},
         "_comment": "string"
       },
@@ -81,10 +89,17 @@
         // Only a single mix group in a pipeline may set this to true; defaults to false if
         // unspecified.
         "loopback": "bool",
+
         // The output rate of this stage. For the root mix group, this will be the target rate that
         // will be requested from hardware. A different rate may be chosen if the hardware does not
         // support the rate requested.
-        "output_rate": "integer"
+        "output_rate": "integer",
+
+        // The output rate of this stage. This is the channelization that the sampler will produce
+        // _before_ applying any effects, which could apply further rechannelizations.
+        //
+        // This will default to '2' if unspecified.
+        "output_channels": { "$ref" : "#/definitions/channel_count" }
       },
       "additionalProperties": false
     },

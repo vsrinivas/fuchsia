@@ -35,6 +35,7 @@ static constexpr char kJsonKeyEffects[] = "effects";
 static constexpr char kJsonKeyLoopback[] = "loopback";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeyOutputRate[] = "output_rate";
+static constexpr char kJsonKeyOutputChannels[] = "output_channels";
 static constexpr char kJsonKeyInputDevices[] = "input_devices";
 static constexpr char kJsonKeyOutputDevices[] = "output_devices";
 static constexpr char kJsonKeySupportedStreamTypes[] = "supported_stream_types";
@@ -158,6 +159,12 @@ PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) 
     it->value.Accept(writer);
     effect.effect_config = config_buf.GetString();
   }
+
+  it = value.FindMember(kJsonKeyOutputChannels);
+  if (it != value.MemberEnd()) {
+    FX_DCHECK(it->value.IsUint());
+    effect.output_channels = it->value.GetUint();
+  }
   return effect;
 }
 
@@ -213,6 +220,15 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   } else {
     mix_group.output_rate = PipelineConfig::kDefaultMixGroupRate;
   }
+
+  it = value.FindMember(kJsonKeyOutputChannels);
+  if (it != value.MemberEnd()) {
+    FX_DCHECK(it->value.IsUint());
+    mix_group.output_channels = it->value.GetUint();
+  } else {
+    mix_group.output_channels = PipelineConfig::kDefaultMixGroupChannels;
+  }
+
   return mix_group;
 }
 

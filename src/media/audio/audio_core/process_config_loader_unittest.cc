@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/process_config_loader.h"
 
+#include <iostream>
+
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
@@ -456,6 +458,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
             "render:interruption"
           ],
           "output_rate": 96000,
+          "output_channels": 4,
           "effects": [
             {
               "lib": "libbar2.so",
@@ -476,7 +479,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
               "effects": [
                 {
                   "lib": "libfoo2.so",
-                  "effect": "effect3"
+                  "effect": "effect3",
+                  "output_channels": 4
                 }
               ],
               "inputs": [
@@ -553,10 +557,12 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("linearize_effect", effect.effect_name);
       EXPECT_EQ("instance_name", effect.instance_name);
       EXPECT_EQ("{\"a\":123,\"b\":456}", effect.effect_config);
+      EXPECT_FALSE(effect.output_channels);
     }
     ASSERT_EQ(1u, mix_group.inputs.size());
     ASSERT_FALSE(mix_group.loopback);
     ASSERT_EQ(96000u, mix_group.output_rate);
+    EXPECT_EQ(4u, mix_group.output_channels);
   }
 
   const auto& mix = root.inputs[0];
@@ -570,6 +576,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("libfoo2.so", effect.lib_name);
       EXPECT_EQ("effect3", effect.effect_name);
       EXPECT_EQ("", effect.effect_config);
+      EXPECT_TRUE(effect.output_channels);
+      EXPECT_EQ(4u, *effect.output_channels);
     }
     ASSERT_EQ(2u, mix_group.inputs.size());
     ASSERT_TRUE(mix_group.loopback);
@@ -587,14 +595,18 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("libfoo.so", effect.lib_name);
       EXPECT_EQ("effect1", effect.effect_name);
       EXPECT_EQ("{\"some_config\":0}", effect.effect_config);
+      EXPECT_FALSE(effect.output_channels);
     }
     {
       const auto& effect = mix_group.effects[1];
       EXPECT_EQ("libbar.so", effect.lib_name);
       EXPECT_EQ("effect2", effect.effect_name);
       EXPECT_EQ("{\"arg1\":55,\"arg2\":3.14}", effect.effect_config);
+      EXPECT_FALSE(effect.output_channels);
     }
     ASSERT_FALSE(mix_group.loopback);
+    EXPECT_EQ(48000u, mix_group.output_rate);
+    EXPECT_EQ(2u, mix_group.output_channels);
     ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
   }
 
@@ -609,8 +621,11 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("libbaz.so", effect.lib_name);
       EXPECT_EQ("baz", effect.effect_name);
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
+      EXPECT_FALSE(effect.output_channels);
     }
     ASSERT_FALSE(mix_group.loopback);
+    EXPECT_EQ(48000u, mix_group.output_rate);
+    EXPECT_EQ(2u, mix_group.output_channels);
     ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
   }
 }
@@ -769,6 +784,69 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithoutLoopbackPointSpecified) {
   ASSERT_EQ(result.error(),
             "Parse error: Failed to parse output device policies: Device supports loopback but no "
             "loopback point specified");
+}
+
+TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidChannelCount) {
+  const auto& CreateConfig = [](int mix_stage_chans, int effect_chans) {
+    std::ostringstream oss;
+    oss << R"JSON({
+      "volume_curve": [
+        {
+            "level": 0.0,
+            "db": -160.0
+        },
+        {
+            "level": 1.0,
+            "db": 0.0
+        }
+      ],
+      "output_devices": [
+        {
+          "device_id" : "*",
+          "supported_stream_types": [
+            "render:media",
+            "render:interruption",
+            "render:background",
+            "render:communications",
+            "render:system_agent"
+          ],
+          "pipeline": {
+            "streams": [
+              "render:media",
+              "render:interruption",
+              "render:background",
+              "render:communications",
+              "render:system_agent"
+            ],
+            "output_channels": )JSON"
+        << mix_stage_chans << R"JSON(,
+            "effects": [
+              {
+                "lib": "fake_effects.so",
+                "effect": "effect1",
+                "output_channels": )JSON"
+        << effect_chans << R"JSON(,
+                "config": { }
+              }
+            ]
+          }
+        }
+      ]
+    })JSON";
+    return oss.str();
+  };
+
+  // Sanity test our CreateConfig can build a valid config.
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(1, 1)).is_ok());
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(8, 8)).is_ok());
+
+  // Now verify we reject channel counts outside the range of [1, 8].
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(0, 1)).is_error());
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(1, 0)).is_error());
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(-1, 2)).is_error());
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(2, -1)).is_error());
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(8, 9)).is_error());
+  EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(9, 8)).is_error());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {

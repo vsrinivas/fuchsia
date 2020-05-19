@@ -15,6 +15,7 @@ namespace media::audio {
 class PipelineConfig {
  public:
   static constexpr uint32_t kDefaultMixGroupRate = 48000;
+  static constexpr uint16_t kDefaultMixGroupChannels = 2;
 
   struct Effect {
     // The name of the shared object to load the effect from.
@@ -29,6 +30,10 @@ class PipelineConfig {
     // To be passed to the EffectLoader. This is an opaque string used to configure the effect
     // instance.
     std::string effect_config;
+
+    // The number of output channels for this effect. If |std::nullopt|, then output channels will
+    // match the number of input channels.
+    std::optional<uint16_t> output_channels;
   };
 
   struct MixGroup {
@@ -38,6 +43,7 @@ class PipelineConfig {
     std::vector<MixGroup> inputs;
     bool loopback;
     uint32_t output_rate;
+    uint16_t output_channels;
   };
 
   static PipelineConfig Default() {
@@ -48,6 +54,7 @@ class PipelineConfig {
         RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION,
     };
     config.root_.output_rate = kDefaultMixGroupRate;
+    config.root_.output_channels = kDefaultMixGroupChannels;
     config.root_.loopback = true;
     return config;
   }

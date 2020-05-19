@@ -124,8 +124,13 @@ const char kConfigTripPoint[] = "config";
 // Verifies that the thermal agent works properly with a single thermal config entry with one trip
 // point.
 TEST_F(ThermalAgentTest, OneConfigEntry) {
-  PipelineConfig pipeline_config(
-      {"mixgroup", {}, {{"lib", "effect", kTargetName, kNominalConfig}}, {}, false, 48000});
+  PipelineConfig pipeline_config({"mixgroup",
+                                  {},
+                                  {{"lib", "effect", kTargetName, kNominalConfig, std::nullopt}},
+                                  {},
+                                  false,
+                                  48000,
+                                  2});
   std::vector<ThermalConfig::State> states{{kTripPoint, kConfigTripPoint}};
   ProcessConfig process_config =
       ProcessConfigBuilder()
@@ -187,12 +192,13 @@ const char kConfigTripPoint2_1[] = "config2_1";
 TEST_F(ThermalAgentTest, MultipleConfigEntries) {
   PipelineConfig pipeline_config({"mixgroup",
                                   {},
-                                  {{"lib", "effect", kTargetName0, kNominalConfig0},
-                                   {"lib", "effect", kTargetName1, kNominalConfig1},
-                                   {"lib", "effect", kTargetName2, kNominalConfig2}},
+                                  {{"lib", "effect", kTargetName0, kNominalConfig0, std::nullopt},
+                                   {"lib", "effect", kTargetName1, kNominalConfig1, std::nullopt},
+                                   {"lib", "effect", kTargetName2, kNominalConfig2, std::nullopt}},
                                   {},
                                   false,
-                                  48000});
+                                  48000,
+                                  2});
   std::vector<ThermalConfig::State> states0{{kTripPoint0_0, kConfigTripPoint0_0},
                                             {kTripPoint0_1, kConfigTripPoint0_1}};
   std::vector<ThermalConfig::State> states1{{kTripPoint1_0, kConfigTripPoint1_0},
