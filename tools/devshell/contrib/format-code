@@ -155,22 +155,21 @@ if [[ -n "${VERBOSE}" ]]; then
   printf "Files to be formatted:\n%s\n" "${FILES[@]}"
 fi
 
-#declare HOST_TOOLS_DIR="${FUCHSIA_BUILD_DIR}/${HOST_OUT_DIR}"
+readonly CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
+readonly CML_FMT_CMD="${HOST_OUT_DIR}/cmc format --cml --in-place"
+readonly DART_CMD="${PREBUILT_DART_DIR}/bin/dartfmt -w"
+readonly FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
+readonly FIDL_CMD="${FIDL_BIN} -i"
+readonly GN_CMD="${PREBUILT_GN} format"
+readonly GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
+readonly JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
+readonly JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
+readonly MARKDOWN_FMT_CMD="${FUCHSIA_OUT_DIR}/default/dart-tools/doc-checker"
+readonly PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
+readonly RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
+readonly RUST_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
 
-declare CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
-declare DART_CMD="${PREBUILT_DART_DIR}/bin/dartfmt -w"
-declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
-declare FIDL_CMD="${FIDL_BIN} -i"
-declare GN_CMD="${PREBUILT_GN} format"
-declare GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
-declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
-declare CML_FMT_CMD="${HOST_OUT_DIR}/cmc format --cml --in-place"
-declare PY_CMD="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython ${FUCHSIA_DIR}/prebuilt/third_party/yapf/yapf --in-place"
-declare RUST_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
-declare RUST_ENTRY_POINT_FMT_CMD="${PREBUILT_RUST_DIR}/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
-declare JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
-
-declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
+readonly FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
 
 # If there is a FIDL file to fix, and we don't have a copy of fidl-format,
 # generate one.
@@ -188,6 +187,7 @@ done
 
 [[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_FMT_CMD} "${RUST_ENTRY_POINT}"
 
+declare HAS_MARKDOWN=
 for file in ${FILES[@]}; do
   # Git reports deleted files, which we don't want to try to format
   [[ ! -f "${file}" ]] && continue
@@ -197,7 +197,17 @@ for file in ${FILES[@]}; do
   [[ -n "${fcmd}" ]] && ${fcmd} "${file}"
   declare hgcmd=$(hg-cmd ${file})
   [[ -n "${hgcmd}" ]] && ${hgcmd} "${file}"
+
+  # Collect markdown
+  if [[ ${file} == *.md ]]; then
+    HAS_MARKDOWN="1";
+  fi
 done
+
+# Markdown change detected, check entire project
+if [[ -n "${HAS_MARKDOWN}" && -x "${MARKDOWN_FMT_CMD}" ]]; then
+  ${MARKDOWN_FMT_CMD} --local-links-only --root "${FUCHSIA_DIR}";
+fi
 
 # The last thing this script does is often the [[ -n "${hgcmd}" ]], which will
 # often return a non-zero value.  So, we force the script to return 0 and rely
