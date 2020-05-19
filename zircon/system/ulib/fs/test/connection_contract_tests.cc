@@ -9,6 +9,7 @@
 
 #include <fs/internal/connection.h>
 #include <fs/pseudo_dir.h>
+#include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -25,9 +26,7 @@ class NoOpVfs : public fs::Vfs {
   void UnregisterConnection(fs::internal::Connection* connection) final {
     FAIL("Should never be reached in this test");
   }
-  void Shutdown(ShutdownCallback handler) override {
-    FAIL("Should never be reached in this test");
-  }
+  void Shutdown(ShutdownCallback handler) override { FAIL("Should never be reached in this test"); }
   bool IsTerminating() const final {
     ADD_FAILURE("Should never be reached in this test");
     return false;
@@ -87,7 +86,13 @@ TEST(ConnectionDeathTest, StartDispatchingRequiresVfsManagingConnection_Negative
   // StartDispatching requires registering the connection in a list first.
   if (ZX_DEBUG_ASSERT_IMPLEMENTED) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_DEATH([&] { RunTest(&loop, NoOpVfsBad(loop.dispatcher())); });
+    ASSERT_DEATH([&] {
+#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
+      // Disable LSAN, this thread is expected to leak by way of a crash.
+      __lsan::ScopedDisabler _;
+#endif
+      RunTest(&loop, NoOpVfsBad(loop.dispatcher()));
+    });
   }
 }
 
