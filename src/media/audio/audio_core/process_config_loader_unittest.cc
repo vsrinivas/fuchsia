@@ -366,6 +366,47 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputDriverGain) {
   EXPECT_FLOAT_EQ(config.output_device_profile(unknown_id).driver_gain_db(), 0.0f);
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDriverGain) {
+  static const std::string kConfigWithDriverGain =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "input_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_stream_types": [
+          "capture:background"
+        ],
+        "rate": 96000,
+        "driver_gain_db": -6.0
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithDriverGain.data(),
+                               kConfigWithDriverGain.size()));
+
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok());
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+  const audio_stream_unique_id_t unknown_id = {.data = {0x32, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                        0x81, 0x42, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                        0x22, 0x3a}};
+  auto& config = result.value().device_config();
+  EXPECT_FLOAT_EQ(config.input_device_profile(expected_id).driver_gain_db(), -6.0f);
+  EXPECT_FLOAT_EQ(config.input_device_profile(unknown_id).driver_gain_db(), 0.0f);
+}
+
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
   static const std::string kConfigWithInputDevices =
       R"JSON({

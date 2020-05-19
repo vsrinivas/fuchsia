@@ -187,7 +187,11 @@
 
         // The target rate for this device. A different rate may be chosen if the driver does
         // not support the rate requested.
-        "rate": "integer"
+        "rate": "integer",
+
+        // Gain value (in decibels) applied to device driver upon initialization.
+        // If the key is not specified, a default gain value of 0.0 will be used.
+        "driver_gain_db": "number"
       },
       "required": [ "device_id", "rate" ],
       "additionalProperties": false

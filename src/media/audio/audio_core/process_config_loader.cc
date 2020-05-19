@@ -455,15 +455,23 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   }
   auto rate = rate_it->value.GetUint();
 
+  float driver_gain_db = 0.0;
+  auto driver_gain_db_it = value.FindMember(kJsonKeyDriverGainDb);
+  if (driver_gain_db_it != value.MemberEnd()) {
+    FX_DCHECK(driver_gain_db_it->value.IsNumber());
+    driver_gain_db = driver_gain_db_it->value.GetDouble();
+  }
+
   StreamUsageSet supported_stream_types;
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedStreamTypes);
   if (supported_stream_types_it != value.MemberEnd()) {
     supported_stream_types = ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value);
     return fit::ok(std::make_pair(
-        device_id, DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types))));
+        device_id,
+        DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types), driver_gain_db)));
   }
 
-  return fit::ok(std::make_pair(device_id, DeviceConfig::InputDeviceProfile(rate)));
+  return fit::ok(std::make_pair(device_id, DeviceConfig::InputDeviceProfile(rate, driver_gain_db)));
 }
 
 fit::result<> ParseInputDevicePoliciesFromJsonObject(const rapidjson::Value& input_device_profiles,

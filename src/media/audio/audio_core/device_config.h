@@ -93,11 +93,12 @@ class DeviceConfig {
 
     InputDeviceProfile() : InputDeviceProfile(kDefaultRate) {}
 
-    InputDeviceProfile(uint32_t rate)
-        : InputDeviceProfile(rate, StreamUsageSetFromCaptureUsages(kFidlCaptureUsages)) {}
+    InputDeviceProfile(uint32_t rate, float driver_gain_db = 0.0)
+        : InputDeviceProfile(rate, StreamUsageSetFromCaptureUsages(kFidlCaptureUsages),
+                             driver_gain_db) {}
 
-    InputDeviceProfile(uint32_t rate, StreamUsageSet supported_usages)
-        : DeviceProfile(std::move(supported_usages)), rate_(rate) {}
+    InputDeviceProfile(uint32_t rate, StreamUsageSet supported_usages, float driver_gain_db = 0.0)
+        : DeviceProfile(std::move(supported_usages), driver_gain_db), rate_(rate) {}
 
     uint32_t rate() const { return rate_; }
 
