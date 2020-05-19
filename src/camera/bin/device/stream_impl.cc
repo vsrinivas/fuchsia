@@ -52,6 +52,17 @@ StreamImpl::~StreamImpl() {
   loop_.JoinThreads();
 }
 
+void StreamImpl::PostSetMuteState(MuteState mute_state, fit::closure completed) {
+  async::PostTask(loop_.dispatcher(), [this, mute_state, completed = std::move(completed)] {
+    mute_state_ = mute_state;
+    // On either transition, invalidate existing frames.
+    while (!frames_.empty()) {
+      frames_.pop();
+    }
+    completed();
+  });
+}
+
 void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
   zx_status_t status =
       async::PostTask(loop_.dispatcher(), [this, request = std::move(request)]() mutable {
@@ -95,6 +106,12 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   if (!info.metadata.has_timestamp()) {
     FX_LOGS(WARNING)
         << "Driver sent a frame without a timestamp. This frame will not be sent to clients.";
+    return;
+  }
+
+  // Discard any spurious frames received while muted.
+  if (mute_state_.muted()) {
+    legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
 
@@ -177,6 +194,10 @@ void StreamImpl::SendFrames() {
   if (frame_sinks_.size() > 1 && !frame_sink_warning_sent_) {
     FX_LOGS(INFO) << Messages::kMultipleFrameClients;
     frame_sink_warning_sent_ = true;
+  }
+
+  if (mute_state_.muted()) {
+    return;
   }
 
   while (!frames_.empty() && !frame_sinks_.empty()) {

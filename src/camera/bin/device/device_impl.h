@@ -60,6 +60,13 @@ class DeviceImpl {
   // Sets the current configuration to the provided index.
   void SetConfiguration(uint32_t index);
 
+  // Posts a task to set the software mute state.
+  void PostSetSoftwareMuteState(bool muted,
+                                fuchsia::camera3::Device::SetSoftwareMuteStateCallback callback);
+
+  // Toggles the streaming state of the controller if necessary.
+  void UpdateControllerStreamingState();
+
   // Posts a task to connect to a stream.
   void PostConnectToStream(uint32_t index,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
@@ -83,6 +90,9 @@ class DeviceImpl {
 
     // Posts a task to inform the client of a new configuration.
     void PostConfigurationUpdated(uint32_t index);
+
+    // Posts a task to inform the client of a new mute state.
+    void PostMuteUpdated(MuteState mute_state);
 
    private:
     // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
@@ -108,6 +118,7 @@ class DeviceImpl {
     async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Device> binding_;
     camera::HangingGetHelper<uint32_t> configuration_;
+    camera::HangingGetHelper<MuteState> mute_state_;
   };
 
   async::Loop loop_;
@@ -119,9 +130,10 @@ class DeviceImpl {
   std::vector<fuchsia::camera3::Configuration> configurations_;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
-
   uint32_t current_configuration_index_ = 0;
   std::vector<std::unique_ptr<StreamImpl>> streams_;
+  MuteState mute_state_;
+  bool controller_streaming_ = true;
 
   friend class Client;
 };

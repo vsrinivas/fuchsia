@@ -5,6 +5,7 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 
@@ -630,6 +631,137 @@ TEST_F(DeviceTest, SetCropRegion) {
       .x = 0.1f, .y = 0.4f, .width = 0.7f, .height = 0.7f};
   stream->SetCropRegion(std::make_unique<fuchsia::math::RectF>(kInvalidCropRegion));
   RunLoopUntilFailureOr(error_received);
+}
+
+TEST_F(DeviceTest, SoftwareMuteState) {
+  // Connect to the device.
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  bool watch_returned = false;
+  device->WatchMuteState([&](bool software_muted, bool hardware_muted) {
+    EXPECT_FALSE(software_muted);
+    EXPECT_FALSE(hardware_muted);
+    watch_returned = true;
+  });
+  RunLoopUntilFailureOr(watch_returned);
+
+  // Connect to the stream.
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  device->ConnectToStream(0, stream.NewRequest());
+
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  allocator_->AllocateSharedCollection(token.NewRequest());
+  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> received_token;
+  watch_returned = false;
+  stream->WatchBufferCollection(
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        received_token = std::move(token);
+        watch_returned = true;
+      });
+  RunLoopUntilFailureOr(watch_returned);
+
+  fuchsia::sysmem::BufferCollectionPtr collection;
+  collection.set_error_handler(MakeErrorHandler("Buffer Collection"));
+  allocator_->BindSharedCollection(std::move(received_token), collection.NewRequest());
+  collection->SetConstraints(
+      true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+             .min_buffer_count_for_camping = 5,
+             .image_format_constraints_count = 1,
+             .image_format_constraints{
+                 {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+                   .color_spaces_count = 1,
+                   .color_space{{{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}}},
+                   .min_coded_width = 1,
+                   .min_coded_height = 1}}}});
+  bool buffers_allocated_returned = false;
+  collection->WaitForBuffersAllocated(
+      [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+        EXPECT_EQ(status, ZX_OK);
+        buffers_allocated_returned = true;
+      });
+  RunLoopUntil([&]() { return HasFailure() || buffers_allocated_returned; });
+  ASSERT_FALSE(HasFailure());
+
+  uint32_t next_buffer_id = 0;
+  fit::closure send_frame = [&] {
+    fuchsia::camera2::FrameAvailableInfo frame_info{
+        .frame_status = fuchsia::camera2::FrameStatus::OK, .buffer_id = next_buffer_id};
+    frame_info.metadata.set_timestamp(0);
+    zx_status_t status = controller_->SendFrameViaLegacyStream(std::move(frame_info));
+    if (status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_BAD_STATE) {
+      // Keep trying until the device starts streaming.
+      async::PostTask(async_get_default_dispatcher(), send_frame.share());
+    } else {
+      ++next_buffer_id;
+      ASSERT_EQ(status, ZX_OK);
+    }
+  };
+
+  // Because the device and stream protocols are asynchronous, mute requests may be handled by
+  // streams while in a number of different states. Without deep hooks into the implementation, it
+  // is impossible to force the stream into a particular state. Instead, this test repeatedly
+  // toggles mute state in an attempt to exercise all cases.
+  constexpr uint32_t kToggleCount = 50;
+  for (uint32_t i = 0; i < kToggleCount; ++i) {
+    // Get a frame (unmuted).
+    bool frame_received = false;
+    stream->GetNextFrame([&](fuchsia::camera3::FrameInfo info) { frame_received = true; });
+    send_frame();
+    RunLoopUntilFailureOr(frame_received);
+
+    // Get a frame then immediately try to mute the device.
+    bool mute_completed = false;
+    bool muted_frame_requested = false;
+    bool unmute_requested = false;
+    bool unmuted_frame_received = false;
+    fuchsia::camera3::Stream::GetNextFrameCallback callback =
+        [&](fuchsia::camera3::FrameInfo info) {
+          if (muted_frame_requested) {
+            ASSERT_TRUE(unmute_requested)
+                << "Frame requested after receiving mute callback returned anyway.";
+          }
+          if (unmute_requested) {
+            unmuted_frame_received = true;
+          } else {
+            if (mute_completed) {
+              muted_frame_requested = true;
+            }
+            stream->GetNextFrame(callback.share());
+            send_frame();
+          }
+        };
+    callback({});
+    uint32_t mute_buffer_id_begin = next_buffer_id;
+    uint32_t mute_buffer_id_end = mute_buffer_id_begin;
+    device->SetSoftwareMuteState(true, [&] {
+      mute_completed = true;
+      mute_buffer_id_end = next_buffer_id;
+    });
+    RunLoopUntilFailureOr(mute_completed);
+
+    // Make sure all buffers were returned.
+    for (uint32_t j = mute_buffer_id_begin; j < mute_buffer_id_end; ++j) {
+      RunLoopUntil(
+          [&] { return HasFailure() || !controller_->LegacyStreamBufferIsOutstanding(j); });
+    }
+
+    // Unmute the device to get the last frame. Note that frames received while internally muted are
+    // discarded, so repeated sending of frames is necessary.
+    unmute_requested = true;
+    device->SetSoftwareMuteState(false, [] {});
+    while (!HasFailure() && !unmuted_frame_received) {
+      send_frame();
+      // Delay each attempt to avoid flooding the channel.
+      RunLoopWithTimeout(zx::msec(10));
+    }
+
+    ASSERT_FALSE(HasFailure());
+  }
+
+  collection->Close();
 }
 
 }  // namespace camera

@@ -75,4 +75,15 @@ inline zx_status_t WaitMixed(const zx::event& event, zx_signals_t signals_all,
   return status;
 }
 
+// Represents the mute state of a device as defined by the Device.WatchMuteState API.
+struct MuteState {
+  bool software_muted = false;
+  bool hardware_muted = false;
+  // Returns true iff any mute is active.
+  bool muted() const { return software_muted || hardware_muted; }
+  bool operator==(const MuteState& other) const {
+    return other.software_muted == software_muted && other.hardware_muted == hardware_muted;
+  }
+};
+
 #endif  // SRC_CAMERA_BIN_DEVICE_UTIL_H_

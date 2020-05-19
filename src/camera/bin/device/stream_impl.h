@@ -19,6 +19,7 @@
 #include <set>
 #include <vector>
 
+#include "src/camera/bin/device/util.h"
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
 // Represents a specific stream in a camera device's configuration. Serves multiple clients of the
@@ -33,6 +34,8 @@ class StreamImpl {
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
              StreamRequestedCallback on_stream_requested, fit::closure on_no_clients);
   ~StreamImpl();
+
+  void PostSetMuteState(MuteState mute_state, fit::closure completed);
 
  private:
   // Called when a client calls Rebind.
@@ -141,6 +144,7 @@ class StreamImpl {
   std::queue<fuchsia::camera3::FrameInfo> frames_;
   std::map<uint32_t, std::unique_ptr<async::Wait>> frame_waiters_;
   fuchsia::math::Size current_resolution_;
+  MuteState mute_state_;
   std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
   friend class Client;
 };

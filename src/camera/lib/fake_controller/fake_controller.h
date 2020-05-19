@@ -27,6 +27,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
       fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request);
   static std::vector<fuchsia::camera2::hal::Config> GetDefaultConfigs();
   zx_status_t SendFrameViaLegacyStream(fuchsia::camera2::FrameAvailableInfo info);
+  bool LegacyStreamBufferIsOutstanding(uint32_t id);
 
  private:
   // |fuchsia::camera2::hal::Controller|
@@ -42,6 +43,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   uint32_t get_configs_call_count_ = 0;
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::unique_ptr<camera::FakeLegacyStream> stream_;
+  bool streaming_enabled_ = true;
 };
 
 #endif  // SRC_CAMERA_LIB_FAKE_CONTROLLER_FAKE_CONTROLLER_H_

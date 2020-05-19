@@ -120,6 +120,18 @@ FakeController::FakeController()
 
 FakeController::~FakeController() { loop_.Shutdown(); }
 
+bool FakeController::LegacyStreamBufferIsOutstanding(uint32_t id) {
+  bool is_outstanding = false;
+  zx::event event;
+  zx::event::create(0, &event);
+  async::PostTask(loop_.dispatcher(), [&, this, id] {
+    is_outstanding = stream_->IsOutstanding(id);
+    event.signal(0, ZX_USER_SIGNAL_0);
+  });
+  event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+  return is_outstanding;
+}
+
 zx_status_t FakeController::SendFrameViaLegacyStream(fuchsia::camera2::FrameAvailableInfo info) {
   zx_status_t status = ZX_ERR_INTERNAL;
   zx::event event;
@@ -149,7 +161,7 @@ void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
                                   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  auto result = camera::FakeLegacyStream::Create(std::move(stream));
+  auto result = camera::FakeLegacyStream::Create(std::move(stream), loop_.dispatcher());
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error());
     return;
@@ -157,9 +169,23 @@ void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
   stream_ = result.take_value();
 }
 
-void FakeController::EnableStreaming() {}
+void FakeController::EnableStreaming() {
+  if (streaming_enabled_) {
+    FX_LOGS(ERROR) << "Called EnableStreaming when already enabled.";
+    binding_.Close(ZX_ERR_BAD_STATE);
+    return;
+  }
+  streaming_enabled_ = true;
+}
 
-void FakeController::DisableStreaming() {}
+void FakeController::DisableStreaming() {
+  if (!streaming_enabled_) {
+    FX_LOGS(ERROR) << "Called DisableStreaming when already disabled.";
+    binding_.Close(ZX_ERR_BAD_STATE);
+    return;
+  }
+  streaming_enabled_ = false;
+}
 
 void FakeController::GetDeviceInfo(
     fuchsia::camera2::hal::Controller::GetDeviceInfoCallback callback) {

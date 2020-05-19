@@ -163,6 +163,42 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   current_configuration_index_ = index;
   for (auto& client : clients_) {
     client.second->PostConfigurationUpdated(current_configuration_index_);
+    client.second->PostMuteUpdated(mute_state_);
+  }
+}
+
+void DeviceImpl::PostSetSoftwareMuteState(
+    bool muted, fuchsia::camera3::Device::SetSoftwareMuteStateCallback callback) {
+  zx_status_t status =
+      async::PostTask(loop_.dispatcher(), [this, muted, callback = std::move(callback)]() mutable {
+        mute_state_.software_muted = muted;
+        UpdateControllerStreamingState();
+        auto counter = std::make_shared<std::atomic_uint32_t>(streams_.size());
+        for (auto& stream : streams_) {
+          stream->PostSetMuteState(
+              mute_state_, [this, counter, callback = callback.share()]() mutable {
+                if (counter->fetch_sub(1) == 1) {
+                  async::PostTask(loop_.dispatcher(), [this, callback = callback.share()] {
+                    callback();
+                    for (auto& client : clients_) {
+                      client.second->PostMuteUpdated(mute_state_);
+                    }
+                  });
+                }
+              });
+        }
+      });
+  ZX_ASSERT(status == ZX_OK);
+}
+
+void DeviceImpl::UpdateControllerStreamingState() {
+  if (mute_state_.muted() && controller_streaming_) {
+    controller_->DisableStreaming();
+    controller_streaming_ = false;
+  }
+  if (!mute_state_.muted() && !controller_streaming_) {
+    controller_->EnableStreaming();
+    controller_streaming_ = true;
   }
 }
 

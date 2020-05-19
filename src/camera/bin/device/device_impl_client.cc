@@ -30,6 +30,10 @@ void DeviceImpl::Client::PostConfigurationUpdated(uint32_t index) {
   async::PostTask(loop_.dispatcher(), [this, index]() { configuration_.Set(index); });
 }
 
+void DeviceImpl::Client::PostMuteUpdated(MuteState mute_state) {
+  async::PostTask(loop_.dispatcher(), [this, mute_state] { mute_state_.Set(mute_state); });
+}
+
 void DeviceImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Device client " << id_ << " disconnected.";
   device_.PostRemoveClient(id_);
@@ -73,11 +77,22 @@ void DeviceImpl::Client::SetCurrentConfiguration(uint32_t index) {
 }
 
 void DeviceImpl::Client::WatchMuteState(WatchMuteStateCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (mute_state_.Get([callback = std::move(callback)](MuteState mute_state) {
+        callback(mute_state.software_muted, mute_state.hardware_muted);
+      })) {
+    CloseConnection(ZX_ERR_BAD_STATE);
+  }
 }
 
 void DeviceImpl::Client::SetSoftwareMuteState(bool muted, SetSoftwareMuteStateCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (!muted) {
+    callback();
+    callback = [] {};
+  }
+  fit::closure marshalling_callback = [this, callback = callback.share()]() mutable {
+    async::PostTask(loop_.dispatcher(), [callback = std::move(callback)] { callback(); });
+  };
+  device_.PostSetSoftwareMuteState(muted, std::move(marshalling_callback));
 }
 
 void DeviceImpl::Client::ConnectToStream(uint32_t index,
