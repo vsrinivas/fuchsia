@@ -726,7 +726,7 @@ void UsbDevice::GetConfigurationDescriptor(uint8_t config,
 void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
                                     GetStringDescriptorCompleter::Sync completer) {
   char buffer[llcpp::fuchsia::hardware::usb::device::MAX_STRING_DESC_SIZE];
-  size_t actual;
+  size_t actual = 0;
   auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id, buffer, sizeof(buffer), &actual);
   return completer.Reply(status, fidl::StringView(buffer, actual), lang_id);
 }

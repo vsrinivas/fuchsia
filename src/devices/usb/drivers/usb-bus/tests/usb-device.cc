@@ -108,6 +108,10 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
 
   void UsbHciRequestQueue(usb_request_t* usb_request_, const usb_request_complete_t* complete_cb_) {
     usb::BorrowedRequest<void> request(usb_request_, *complete_cb_, sizeof(usb_request_t));
+    if (should_return_empty_) {
+      request.Complete(ZX_OK, 0);
+      return;
+    }
     if ((request.request()->header.ep_address == 0) && !custom_control_) {
       if ((request.request()->setup.bmRequestType ==
            (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) &&
@@ -190,6 +194,8 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
     return enable_endpoint_hook_(device_id, ep_desc, ss_com_desc, enable);
   }
 
+  void SetEmptyState(bool should_return_empty) { should_return_empty_ = should_return_empty; }
+
   const usb_hci_protocol_t* proto() { return &proto_; }
 
   uint8_t configuration() { return selected_configuration_; }
@@ -210,6 +216,7 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
   bool device_reset() { return device_reset_; }
 
  private:
+  bool should_return_empty_ = false;
   bool device_reset_ = false;
   bool custom_control_ = false;
   uint8_t selected_configuration_ = 0;
@@ -305,6 +312,8 @@ class DeviceTest : public zxtest::Test {
   bool get_device_reset() { return hci_.device_reset(); }
 
   uint8_t get_reset_endpoint() { return hci_.reset_endpoint(); }
+
+  void SetEmptyState(bool should_return_empty) { hci_.SetEmptyState(should_return_empty); }
 
  private:
   fbl::RefPtr<FakeTimer> timer_;
@@ -568,6 +577,18 @@ TEST_F(DeviceTest, FidlGetConfigurationDescriptor) {
   descriptor = reinterpret_cast<const usb_configuration_descriptor_t*>(result->desc.data());
   ASSERT_EQ(descriptor->bConfigurationValue, 1);
   ASSERT_EQ(descriptor->wTotalLength, sizeof(*descriptor));
+}
+
+TEST_F(DeviceTest, FidlGetStringDescriptor_Empty) {
+  auto& fidl = get_fidl();
+  char golden[128];
+  size_t dest_len = 128;
+  utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[0][0]), 7,
+                reinterpret_cast<uint8_t*>(golden), &dest_len);
+  SetEmptyState(true);
+  auto result = fidl.GetStringDescriptor(1, MakeConstant<uint16_t, 2>("EN"));
+  ASSERT_TRUE(result->desc.empty());
+  ASSERT_EQ(result->s, ZX_ERR_INTERNAL);
 }
 
 TEST_F(DeviceTest, FidlGetStringDescriptor) {
