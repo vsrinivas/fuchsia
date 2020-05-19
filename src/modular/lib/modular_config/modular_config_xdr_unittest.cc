@@ -21,39 +21,42 @@ namespace modular {
 // an empty JSON and that JSON values are set correctly when BasemgrConfig
 // contains no values.
 TEST(ModularConfigXdr, BasemgrDefaultValues) {
-  std::string write_json;
+  static constexpr auto kExpectedJson = R"({
+      "enable_cobalt": true,
+      "use_minfs": true,
+      "use_session_shell_for_story_shell_factory": false,
+      "base_shell": {
+        "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
+        "keep_alive_after_login": false,
+        "args": []
+      },
+      "session_shells": [
+        {
+          "name": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+          "display_usage": "unknown",
+          "screen_height": 0.0,
+          "screen_width": 0.0,
+          "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+          "args": []
+        }
+      ],
+      "story_shell_url": "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
+    })";
+  rapidjson::Document expected_json_doc;
+  expected_json_doc.Parse(kExpectedJson);
+
+  // Serialize an empty BasemgrConfig to JSON.
+  rapidjson::Document write_config_json_doc;
   fuchsia::modular::session::BasemgrConfig write_config;
-  XdrWrite(&write_json, &write_config, XdrBasemgrConfig);
+  XdrWrite(&write_config_json_doc, &write_config, XdrBasemgrConfig);
 
-  std::string expected_json = R"({
-    "enable_cobalt":true,
-    "use_minfs":true,
-    "use_session_shell_for_story_shell_factory":false,
-    "base_shell":{
-      "url":"fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-      "keep_alive_after_login":false,
-      "args":[]
-    },
-    "session_shells":[
-      {
-        "name":"fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
-        "display_usage":"unknown",
-        "screen_height":0.0,
-        "screen_width":0.0,
-        "url":"fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
-        "args":[]
-      }
-    ],
-    "story_shell_url":"fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"})";
+  EXPECT_EQ(expected_json_doc, write_config_json_doc);
 
-  // Remove whitespace for string comparison
-  expected_json.erase(std::remove_if(expected_json.begin(), expected_json.end(), ::isspace),
-                      expected_json.end());
-  EXPECT_EQ(expected_json, write_json);
-
-  std::string read_json = "\"\"";
+  // Deserialize an empty JSON document into BasemgrConfig.
+  rapidjson::Document read_json_doc;
+  read_json_doc.SetObject();
   fuchsia::modular::session::BasemgrConfig read_config;
-  EXPECT_TRUE(XdrRead(read_json, &read_config, XdrBasemgrConfig));
+  EXPECT_TRUE(XdrRead(&read_json_doc, &read_config, XdrBasemgrConfig));
 
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_TRUE(read_config.use_minfs());
@@ -87,28 +90,31 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
 // an empty JSON and that JSON values are set correctly when SessionmgrConfig
 // contains no values.
 TEST(ModularConfigXdr, SessionmgrDefaultValues) {
-  std::string write_json;
+  static constexpr auto kExpectedJson = R"({
+      "cloud_provider": "LET_LEDGER_DECIDE",
+      "enable_cobalt": true,
+      "enable_story_shell_preload": true,
+      "use_memfs_for_ledger": false,
+      "startup_agents": null,
+      "session_agents": null,
+      "component_args": null,
+      "agent_service_index": null
+    })";
+  rapidjson::Document expected_json_doc;
+  expected_json_doc.Parse(kExpectedJson);
+
+  // Serialize an empty SessionmgrConfig to JSON.
+  rapidjson::Document write_config_json_doc;
   fuchsia::modular::session::SessionmgrConfig write_config;
-  XdrWrite(&write_json, &write_config, XdrSessionmgrConfig);
+  XdrWrite(&write_config_json_doc, &write_config, XdrSessionmgrConfig);
 
-  std::string expected_json = R"({
-      "cloud_provider":"LET_LEDGER_DECIDE",
-      "enable_cobalt":true,
-      "enable_story_shell_preload":true,
-      "use_memfs_for_ledger":false,
-      "startup_agents":null,
-      "session_agents":null,
-      "component_args":null,
-      "agent_service_index":null})";
+  EXPECT_EQ(expected_json_doc, write_config_json_doc);
 
-  // Remove whitespace for string comparison
-  expected_json.erase(std::remove_if(expected_json.begin(), expected_json.end(), ::isspace),
-                      expected_json.end());
-  EXPECT_EQ(expected_json, write_json);
-
-  std::string read_json = "\"\"";
+  // Deserialize an empty JSON document into SessionmgrConfig.
+  rapidjson::Document read_json_doc;
+  read_json_doc.SetObject();
   fuchsia::modular::session::SessionmgrConfig read_config;
-  EXPECT_TRUE(XdrRead(read_json, &read_config, XdrSessionmgrConfig));
+  EXPECT_TRUE(XdrRead(&read_json_doc, &read_config, XdrSessionmgrConfig));
 
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE,
             read_config.cloud_provider());
@@ -206,17 +212,24 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
 // Tests that the cloud provider field is read and written correctly when it's not set to the
 // default field.
 TEST(ModularConfigXdr, CloudProvider) {
-  std::string config_str = R"({"cloud_provider":"NONE"})";
+  static constexpr auto kConfigJson = R"({"cloud_provider": "NONE"})";
+  rapidjson::Document config_json_doc;
+  config_json_doc.Parse(kConfigJson);
 
+  // Deserialize the config from JSON.
   fuchsia::modular::session::SessionmgrConfig read_config;
-  EXPECT_TRUE(XdrRead(config_str, &read_config, XdrSessionmgrConfig));
+  EXPECT_TRUE(XdrRead(&config_json_doc, &read_config, XdrSessionmgrConfig));
+
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config.cloud_provider());
 
-  std::string write_json;
-  XdrWrite(&write_json, &read_config, XdrSessionmgrConfig);
+  // Serialize the config back to JSON.
+  rapidjson::Document write_config_json_doc;
+  XdrWrite(&write_config_json_doc, &read_config, XdrSessionmgrConfig);
 
+  // Deserialize again from the JSON document that contains the XdrWrite-serialized config.
   fuchsia::modular::session::SessionmgrConfig read_config_again;
-  EXPECT_TRUE(XdrRead(write_json, &read_config_again, XdrSessionmgrConfig));
+  EXPECT_TRUE(XdrRead(&write_config_json_doc, &read_config_again, XdrSessionmgrConfig));
+
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config_again.cloud_provider());
 }
 
