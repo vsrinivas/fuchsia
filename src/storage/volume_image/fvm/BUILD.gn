@@ -12,6 +12,10 @@ source_set("address-descriptor") {
   deps = [ "//third_party/rapidjson" ]
 }
 
+source_set("options") {
+  public = [ "options.h" ]
+}
+
 source_set("fvm-test") {
   testonly = true
   sources = [ "address_descriptor_test.cc" ]
