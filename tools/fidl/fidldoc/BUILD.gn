@@ -43,6 +43,13 @@ if (host_toolchain == current_toolchain) {
 
   # Markdown goldens have the same filename as JSON IR goldens with a ".md" extension
   host_test_data("copy_markdown_goldens") {
+    exec_script("markdown_goldens.py",
+                [
+                  "--input",
+                  rebase_path("//zircon/tools/fidl/goldens/jsonir_goldens.txt"),
+                  "--goldens",
+                  rebase_path("src/templates/markdown/testdata/"),
+                ])
     sources = []
     foreach(jsonir,
             read_file("//zircon/tools/fidl/goldens/jsonir_goldens.txt",

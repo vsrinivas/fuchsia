@@ -304,7 +304,11 @@ mod test {
                             .unwrap();
                     }
                     Err(_) => {
-                        let md_golden_data = fs::read_to_string(md_golden_path).unwrap();
+                        let md_golden_data = fs::read_to_string(&md_golden_path)
+                            .with_context(|| {
+                                format!("Unable to read golden from {}", &md_golden_path.display())
+                            })
+                            .unwrap();
                         // Running regular test
                         assert_eq!(
                             result, md_golden_data,
@@ -316,7 +320,7 @@ mod test {
             }
         }
 
-        assert_ne!(num_goldens, 0, "Found 0 goldens");
+        assert_ne!(num_goldens, 0, "Found 0 goldens in {}", &goldens_path.display());
     }
 
     fn goldens_path() -> PathBuf {
