@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::net::{set_nonblock, EventedFd},
+    crate::net::EventedFd,
     futures::{
         future::Future,
         ready,
@@ -14,7 +14,6 @@ use {
         marker::Unpin,
         net::{self, SocketAddr},
         ops::Deref,
-        os::unix::io::AsRawFd,
         pin::Pin,
     },
 };
@@ -37,9 +36,11 @@ impl UdpSocket {
     }
 
     pub fn from_socket(socket: net::UdpSocket) -> io::Result<UdpSocket> {
-        set_nonblock(socket.as_raw_fd())?;
-
-        unsafe { Ok(UdpSocket(EventedFd::new(socket)?)) }
+        let socket: socket2::Socket = socket.into();
+        let () = socket.set_nonblocking(true)?;
+        let socket = socket.into_udp_socket();
+        let socket = unsafe { EventedFd::new(socket)? };
+        Ok(UdpSocket(socket))
     }
 
     pub fn recv_from<'a>(&'a self, buf: &'a mut [u8]) -> RecvFrom<'a> {

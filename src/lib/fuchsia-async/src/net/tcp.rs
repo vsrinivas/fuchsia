@@ -5,7 +5,7 @@
 #![deny(missing_docs)]
 
 use {
-    crate::net::{set_nonblock, EventedFd},
+    crate::net::EventedFd,
     futures::{
         future::Future,
         io::{AsyncRead, AsyncWrite},
@@ -13,13 +13,11 @@ use {
         stream::Stream,
         task::{Context, Poll},
     },
-    net2::{TcpBuilder, TcpStreamExt},
     std::{
         io,
         marker::Unpin,
         net::{self, SocketAddr},
         ops::Deref,
-        os::unix::io::AsRawFd,
         pin::Pin,
     },
 };
@@ -43,15 +41,17 @@ impl Deref for TcpListener {
 impl TcpListener {
     /// Creates a new `TcpListener` bound to the provided socket.
     pub fn bind(addr: &SocketAddr) -> io::Result<TcpListener> {
-        let sock = match *addr {
-            SocketAddr::V4(..) => TcpBuilder::new_v4(),
-            SocketAddr::V6(..) => TcpBuilder::new_v6(),
-        }?;
-
-        sock.reuse_address(true)?;
-        sock.bind(addr)?;
-        let listener = sock.listen(1024)?;
-        TcpListener::from_std(listener)
+        let domain = match *addr {
+            SocketAddr::V4(..) => socket2::Domain::ipv4(),
+            SocketAddr::V6(..) => socket2::Domain::ipv6(),
+        };
+        let socket =
+            socket2::Socket::new(domain, socket2::Type::stream(), Some(socket2::Protocol::tcp()))?;
+        let () = socket.set_reuse_address(true)?;
+        let addr = (*addr).into();
+        let () = socket.bind(&addr)?;
+        let () = socket.listen(1024)?;
+        TcpListener::from_std(socket.into_tcp_listener())
     }
 
     /// Consumes this listener and returns a `Future` that resolves to an
@@ -90,8 +90,11 @@ impl TcpListener {
     /// Creates a new instance of `fuchsia_async::net::TcpListener` from an
     /// `std::net::TcpListener`.
     pub fn from_std(listener: net::TcpListener) -> io::Result<TcpListener> {
-        set_nonblock(listener.as_raw_fd())?;
-        unsafe { Ok(TcpListener(EventedFd::new(listener)?)) }
+        let listener: socket2::Socket = listener.into();
+        let () = listener.set_nonblocking(true)?;
+        let listener = listener.into_tcp_listener();
+        let listener = unsafe { EventedFd::new(listener)? };
+        Ok(TcpListener(listener))
     }
 
     /// Returns a reference to the underlying `std::net::TcpListener`.
@@ -157,17 +160,19 @@ impl TcpStream {
     /// Creates a new `TcpStream` connected to a specific socket address.
     /// This function returns a future which resolves to an `io::Result<TcpStream>`.
     pub fn connect(addr: SocketAddr) -> io::Result<TcpConnector> {
-        let sock = match addr {
-            SocketAddr::V4(..) => TcpBuilder::new_v4(),
-            SocketAddr::V6(..) => TcpBuilder::new_v6(),
-        }?;
-
-        let stream = sock.to_tcp_stream()?;
-        set_nonblock(stream.as_raw_fd())?;
-        let () = match stream.connect(&addr) {
+        let domain = match addr {
+            SocketAddr::V4(..) => socket2::Domain::ipv4(),
+            SocketAddr::V6(..) => socket2::Domain::ipv6(),
+        };
+        let socket =
+            socket2::Socket::new(domain, socket2::Type::stream(), Some(socket2::Protocol::tcp()))?;
+        let () = socket.set_nonblocking(true)?;
+        let addr = addr.into();
+        let () = match socket.connect(&addr) {
             Err(e) if e.raw_os_error() == Some(libc::EINPROGRESS) => Ok(()),
             res => res,
         }?;
+        let stream = socket.into_tcp_stream();
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
         let stream = unsafe { EventedFd::new(stream)? };
         let stream = Some(TcpStream { stream });
@@ -177,8 +182,9 @@ impl TcpStream {
 
     /// Creates a new `fuchsia_async::net::TcpStream` from a `std::net::TcpStream`.
     fn from_std(stream: net::TcpStream) -> io::Result<TcpStream> {
-        set_nonblock(stream.as_raw_fd())?;
-
+        let stream: socket2::Socket = stream.into();
+        let () = stream.set_nonblocking(true)?;
+        let stream = stream.into_tcp_stream();
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
         let stream = unsafe { EventedFd::new(stream)? };
         Ok(TcpStream { stream })
@@ -262,7 +268,6 @@ mod tests {
             io::{AsyncReadExt, AsyncWriteExt},
             stream::StreamExt,
         },
-        net2::TcpBuilder,
         std::{
             io::{Error, ErrorKind},
             net::{self, Ipv4Addr, SocketAddr},
@@ -295,13 +300,16 @@ mod tests {
         let mut exec = Executor::new().expect("could not create executor");
 
         // bind to a port to find an unused one, but don't start listening.
-        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
-        let socket = TcpBuilder::new_v4().unwrap();
-        let addr = socket
-            .bind(addr)
-            .expect("could not bind")
-            .local_addr()
-            .expect("local_addr query to succeed");
+        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0).into();
+        let socket = socket2::Socket::new(
+            socket2::Domain::ipv4(),
+            socket2::Type::stream(),
+            Some(socket2::Protocol::tcp()),
+        )
+        .expect("could not create socket");
+        let () = socket.bind(&addr).expect("could not bind");
+        let addr = socket.local_addr().expect("local addr query to succeed");
+        let addr = addr.as_std().expect("local addr to be ipv4 or ipv6");
 
         // connecting to the nonlistening port should fail.
         let connector = TcpStream::connect(addr).expect("could not create client");

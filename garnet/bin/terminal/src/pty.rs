@@ -82,8 +82,24 @@ impl Pty {
         // svchost.  Once that routing is gone, this bounce through should be unnecessary.
         let server_pty = fdio::create_fd(zx::Channel::from(server_chan).into())
             .context("failed to create FD from server PTY")?;
-        fasync::net::set_nonblock(server_pty.as_raw_fd())
-            .context("failed to set PTY to non-blocking")?;
+        let fd = server_pty.as_raw_fd();
+        let previous = {
+            let res = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+            if res == -1 {
+                Err(std::io::Error::last_os_error()).context("failed to get file status flags")
+            } else {
+                Ok(res)
+            }
+        }?;
+        let new = previous | libc::O_NONBLOCK;
+        if new != previous {
+            let res = unsafe { libc::fcntl(fd, libc::F_SETFL, new) };
+            let () = if res == -1 {
+                Err(std::io::Error::last_os_error()).context("failed to set file status flags")
+            } else {
+                Ok(())
+            }?;
+        }
         Ok(server_pty)
     }
 

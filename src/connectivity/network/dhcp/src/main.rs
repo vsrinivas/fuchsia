@@ -19,12 +19,11 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::DurationNum,
     futures::{Future, SinkExt, StreamExt, TryFutureExt, TryStreamExt},
-    net2::unix::UnixUdpBuilderExt,
     std::{
         cell::RefCell,
         collections::hash_map::Entry,
         collections::HashMap,
-        net::{IpAddr, Ipv4Addr},
+        net::{IpAddr, Ipv4Addr, SocketAddr},
         os::unix::io::AsRawFd,
     },
     void::Void,
@@ -129,17 +128,21 @@ impl SocketServerDispatcher for Server {
     type Socket = UdpSocket;
 
     fn create_socket(name: Option<&str>, src: Ipv4Addr) -> Result<Self::Socket, Error> {
-        let sock = net2::UdpBuilder::new_v4()?;
+        let socket = socket2::Socket::new(
+            socket2::Domain::ipv4(),
+            socket2::Type::dgram(),
+            Some(socket2::Protocol::udp()),
+        )?;
         // Since dhcpd may listen to multiple interfaces, we must enable
         // SO_REUSEPORT so that binding the same (address, port) pair to each
         // interface can still succeed.
-        let sock = sock.reuse_port(true)?;
+        let () = socket.set_reuse_port(true)?;
         if let Some(name) = name {
             // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
             // so we must set it through libc.
             if unsafe {
                 libc::setsockopt(
-                    sock.as_raw_fd(),
+                    socket.as_raw_fd(),
                     libc::SOL_SOCKET,
                     libc::SO_BINDTODEVICE,
                     name.as_ptr() as *const libc::c_void,
@@ -154,9 +157,9 @@ impl SocketServerDispatcher for Server {
                 ));
             }
         }
-        let sock = sock.bind((src, SERVER_PORT))?;
-        let () = sock.set_broadcast(true)?;
-        Ok(UdpSocket::from_socket(sock)?)
+        let () = socket.set_broadcast(true)?;
+        let () = socket.bind(&SocketAddr::new(IpAddr::V4(src), SERVER_PORT).into())?;
+        Ok(UdpSocket::from_socket(socket.into_udp_socket())?)
     }
 
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError> {

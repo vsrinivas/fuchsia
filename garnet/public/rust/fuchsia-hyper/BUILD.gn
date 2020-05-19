@@ -21,8 +21,8 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:net2",
     "//third_party/rust_crates:rustls",
+    "//third_party/rust_crates:socket2",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }

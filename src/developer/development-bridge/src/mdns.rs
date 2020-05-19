@@ -58,9 +58,6 @@ mod linux {
 
     use crate::net;
     use ::mdns::protocol as dns;
-    use net2;
-    use net2::unix::UnixUdpBuilderExt;
-    use net2::UdpSocketExt;
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
     use zerocopy::ByteSlice;
 
@@ -203,59 +200,78 @@ mod linux {
     }
 
     fn make_listen_socket(s: SocketAddr) -> io::Result<UdpSocket> {
-        match s {
+        Ok(match s {
             SocketAddr::V4(addr) => {
-                let socket = net2::UdpBuilder::new_v4()?
-                    .reuse_address(true)?
-                    .reuse_port(true)?
-                    .bind((Ipv4Addr::UNSPECIFIED, s.port()))?;
-                socket.set_multicast_loop_v4(false)?;
-                socket.join_multicast_v4(&addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
+                let socket = socket2::Socket::new(
+                    socket2::Domain::ipv4(),
+                    socket2::Type::dgram(),
+                    Some(socket2::Protocol::udp()),
+                )?;
+                let () = socket.set_reuse_address(true)?;
+                let () = socket.set_reuse_port(true)?;
+                let () = socket
+                    .bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), s.port()).into())?;
+                let () = socket.set_multicast_loop_v4(false)?;
+                let () = socket.join_multicast_v4(&addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
 
-                Ok(socket)
+                socket
             }
             SocketAddr::V6(addr) => {
-                let socket = net2::UdpBuilder::new_v6()?
-                    .only_v6(true)?
-                    .reuse_address(true)?
-                    .reuse_port(true)?
-                    .bind((Ipv6Addr::UNSPECIFIED, s.port()))?;
-                socket.set_multicast_loop_v6(false)?;
+                let socket = socket2::Socket::new(
+                    socket2::Domain::ipv6(),
+                    socket2::Type::dgram(),
+                    Some(socket2::Protocol::udp()),
+                )?;
+                let () = socket.set_only_v6(true)?;
+                let () = socket.set_reuse_address(true)?;
+                let () = socket.set_reuse_port(true)?;
+                let () = socket
+                    .bind(&SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), s.port()).into())?;
+                let () = socket.set_multicast_loop_v6(false)?;
                 // Presuming that this is a multicast address, we need to join
                 // on every interface.
                 for iface in unsafe { net::linux::get_mcast_interfaces()? } {
                     // If the iface doesn't have a link local IPv6 address,
                     // this will panic.
                     if iface.addrs.iter().any(|addr| addr.is_ipv6()) {
-                        socket.join_multicast_v6(&addr.ip(), iface.id)?;
+                        let () = socket.join_multicast_v6(&addr.ip(), iface.id)?;
                     }
                 }
 
-                Ok(socket)
+                socket
             }
         }
+        .into_udp_socket())
     }
 
     fn make_sender_socket(s: SocketAddr, d: SocketAddr, ttl: u8) -> io::Result<UdpSocket> {
         let socket = match s {
             SocketAddr::V4(saddr) => {
-                let socket = net2::UdpBuilder::new_v4()?
-                    .reuse_address(true)?
-                    .reuse_port(true)?
-                    .bind(saddr)?;
-                socket.set_multicast_ttl_v4(ttl.into())?;
+                let socket = socket2::Socket::new(
+                    socket2::Domain::ipv4(),
+                    socket2::Type::dgram(),
+                    Some(socket2::Protocol::udp()),
+                )?;
+                let () = socket.set_reuse_address(true)?;
+                let () = socket.set_reuse_port(true)?;
+                let () = socket.bind(&saddr.into())?;
+                let () = socket.set_multicast_ttl_v4(ttl.into())?;
                 socket
             }
             SocketAddr::V6(saddr) => {
-                let socket = net2::UdpBuilder::new_v6()?
-                    .reuse_address(true)?
-                    .reuse_port(true)?
-                    .bind(saddr)?;
-                socket.set_multicast_hops_v6(ttl.into())?;
+                let socket = socket2::Socket::new(
+                    socket2::Domain::ipv6(),
+                    socket2::Type::dgram(),
+                    Some(socket2::Protocol::udp()),
+                )?;
+                let () = socket.set_reuse_address(true)?;
+                let () = socket.set_reuse_port(true)?;
+                let () = socket.bind(&saddr.into())?;
+                let () = socket.set_multicast_hops_v6(ttl.into())?;
                 socket
             }
         };
-        socket.connect(d)?;
-        Ok(socket)
+        let () = socket.connect(&d.into())?;
+        Ok(socket.into_udp_socket())
     }
 }

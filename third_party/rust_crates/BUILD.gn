@@ -249,10 +249,6 @@ group("memchr") {
   deps = [ ":memchr-v2_3_3" ]
 }
 
-group("net2") {
-  deps = [ ":net2-v0_2_33" ]
-}
-
 group("nom") {
   deps = [ ":nom-v5_0_0" ]
 }
@@ -538,6 +534,10 @@ if (is_fuchsia) {
     deps = [ ":smallvec-v0_6_13" ]
   }
 }
+group("socket2") {
+  deps = [ ":socket2-v0_3_12" ]
+}
+
 group("splines") {
   deps = [ ":splines-v2_2_0" ]
 }
@@ -7555,6 +7555,43 @@ rust_library("snowflake-v1_3_0") {
     "-Cextra-filename=-ce6dd979630de036",
     "--cfg=feature=\"default\"",
   ]
+}
+
+rust_library("socket2-v0_3_12") {
+  crate_name = "socket2"
+  crate_root = "//third_party/rust_crates/vendor/socket2/src/lib.rs"
+  output_name = "socket2-1fd8d8c664cba3b6"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  if (true || false) {
+    deps += [ ":cfg-if-v0_1_10" ]
+    deps += [ ":libc-v0_2_66" ]
+  }
+  if (false) {
+    deps += [ ":redox_syscall-v0_1_51" ]
+  }
+  if (false) {
+    deps += [ ":winapi-v0_3_8" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=1fd8d8c664cba3b6",
+    "-Cextra-filename=-1fd8d8c664cba3b6",
+    "--cfg=feature=\"reuseport\"",
+    "--cfg=feature=\"unix\"",
+  ]
+
+  aliased_deps = {
+    syscall = ":redox_syscall-v0_1_51"
+  }
 }
 
 rust_library("spin-v0_5_2") {

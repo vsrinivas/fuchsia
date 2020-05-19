@@ -67,7 +67,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:getopts",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:net2",
+    "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",

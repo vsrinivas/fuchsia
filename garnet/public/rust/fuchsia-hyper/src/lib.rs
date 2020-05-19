@@ -27,7 +27,6 @@ use {
         },
         Body,
     },
-    net2::TcpStreamExt as _,
     std::{
         net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs},
         pin::Pin,

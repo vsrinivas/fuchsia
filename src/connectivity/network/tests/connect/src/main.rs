@@ -7,7 +7,6 @@ use fuchsia_zircon as zx;
 use futures::future::FutureExt as _;
 use futures::io::{AsyncReadExt as _, AsyncWriteExt as _};
 use futures::stream::{StreamExt as _, TryStreamExt as _};
-use net2::TcpStreamExt as _;
 use tcp_stream_ext::TcpStreamExt as _;
 
 #[derive(argh::FromArgs)]

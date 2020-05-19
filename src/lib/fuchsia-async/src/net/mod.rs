@@ -365,14 +365,3 @@ mod syscall {
         pub fn fdio_unsafe_wait_end(io: *const fdio_t, signals: zx_signals_t, events_out: &mut u32);
     }
 }
-
-// Set non-blocking (workaround since the std version doesn't work in fuchsia)
-// TODO: fix the std version and replace this
-pub fn set_nonblock(fd: RawFd) -> io::Result<()> {
-    let res = unsafe { libc::fcntl(fd, libc::F_SETFL, libc::O_NONBLOCK) };
-    if res == -1 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
-}
