@@ -132,7 +132,7 @@ group("tests") {
     "//zircon/system/utest/race-tests:race-tests-package",
     "//zircon/system/utest/ramdisk:ramdisk-package",
     "//zircon/system/utest/register-state:register-state-package",
-    "//zircon/system/utest/rtc-lib:rtc-lib-package",
+    "//zircon/system/ulib/rtc/test:rtc-lib-package",
     "//zircon/system/utest/status:status-package",
     "//zircon/system/utest/svchost:svchost-package",
     "//zircon/system/utest/sysconf:sysconf-package",
