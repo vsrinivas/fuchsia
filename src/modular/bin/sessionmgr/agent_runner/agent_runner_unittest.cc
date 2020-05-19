@@ -220,7 +220,7 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
     request_agent_service(test_config, service_name, kTestAgentUrl, std::move(service_request),
                           std::move(agent_controller));
 
-    RunLoopWithTimeoutOrUntil([&] {
+    RunLoopUntil([&] {
       return agent_got_service_request || service_status != ZX_OK ||
              (expect.service_status == ZX_OK && agent_controller_status != ZX_OK);
       // The order of error callbacks is non-deterministic. If checking for a
@@ -269,8 +269,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopWithTimeoutOrUntil(
-      [&test_agent] { return test_agent && test_agent->connect_call_count() > 0; });
+  RunLoopUntil([&test_agent] { return test_agent && test_agent->connect_call_count() > 0; });
   EXPECT_EQ(1, agent_launch_count);
   EXPECT_EQ(1, test_agent->connect_call_count());
 
@@ -282,8 +281,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   fuchsia::sys::ServiceProviderPtr incoming_services2;
   agent_runner()->ConnectToAgent("requestor_url2", kTestAgentUrl, incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
-  RunLoopWithTimeoutOrUntil(
-      [&test_agent] { return test_agent && test_agent->connect_call_count() > 1; });
+  RunLoopUntil([&test_agent] { return test_agent && test_agent->connect_call_count() > 1; });
   EXPECT_EQ(1, agent_launch_count);
   EXPECT_EQ(2, test_agent->connect_call_count());
 }
@@ -304,14 +302,14 @@ TEST_F(AgentRunnerTest, AgentController) {
   agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopWithTimeoutOrUntil([&test_agent] { return !!test_agent; });
+  RunLoopUntil([&test_agent] { return !!test_agent; });
   test_agent->KillApplication();
 
   // fuchsia::modular::Agent application died, so check that
   // fuchsia::modular::AgentController dies here.
   agent_controller.set_error_handler(
       [&agent_controller](zx_status_t status) { agent_controller.Unbind(); });
-  RunLoopWithTimeoutOrUntil([&agent_controller] { return !agent_controller.is_bound(); });
+  RunLoopUntil([&agent_controller] { return !agent_controller.is_bound(); });
   EXPECT_FALSE(agent_controller.is_bound());
 }
 
