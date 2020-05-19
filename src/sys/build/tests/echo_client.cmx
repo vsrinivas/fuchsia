@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/echo_client"
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.echo.Echo",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

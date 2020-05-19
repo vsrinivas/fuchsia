@@ -2,26 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
-
-# TODO(shayba)
-# * Single resources() target shared between multiple components
-# * resources() target with multiple sources & a destination pattern
-# * Multiple components in a package
-# * Same component in two packages
-# * Package with no components at all (data package)
-# * package_name and component_name overrides
-# * Simple integration test
-#
-# * Add and demonstrate all-in-one shortcuts:
-# - fuchsia_unit_test
-# - fuchsia_integration_test
-# - More?
 
 # Run all tests with:
 # fx test //src/sys/build/tests
 group("tests") {
-  deps = [ ":return_zero_test" ]
+  deps = [
+    ":echo-integration-test",
+    ":readfile-unittest",
+    ":return_zero_test",
+    ":twoplustwo-cpp-unittest",
+    ":twoplustwo-rust-unittest",
+  ]
   testonly = true
 }
 
@@ -62,4 +55,64 @@ fuchsia_test("return_zero_test") {
   package_name = "return-zero-package"
   component = ":return_zero_component"
   environments = basic_envs
+}
+
+fuchsia_cpp_unittest("twoplustwo-cpp-unittest") {
+  sources = [ "two_plus_two.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_rust_unittest("twoplustwo-rust-unittest") {
+  source_root = "two_plus_two.rs"
+}
+
+fuchsia_rust_unittest("readfile-unittest") {
+  source_root = "read_file.rs"
+  resources = [
+    {
+      source = "hello_world.txt"
+      destination = "data/hello_world.txt"
+    },
+  ]
+}
+
+fuchsia_component("echo-server") {
+  manifest = "//garnet/examples/fidl/meta/echo_server.cmx"
+  resources = [
+    {
+      source = "$root_out_dir/echo_server_go"
+      destination = "bin/echo_server"
+    },
+  ]
+  deps = [ "//garnet/examples/fidl/echo_server_go:echo_server_go_bin" ]
+}
+
+rustc_binary("echo_client_for_integration_test") {
+  source_root = "echo_client.rs"
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+fuchsia_component("echo-client") {
+  manifest = "echo_client.cmx"
+  resources = [
+    {
+      source = "$root_out_dir/echo_client_for_integration_test"
+      destination = "bin/echo_client"
+    },
+  ]
+  deps = [ ":echo_client_for_integration_test" ]
+}
+
+fuchsia_test_package("echo-integration-test") {
+  tests = [ ":echo-client" ]
+  components = [ ":echo-server" ]
 }

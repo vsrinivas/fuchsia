@@ -152,13 +152,15 @@ template("fuchsia_component") {
     }
     visibility = [ ":*" ]
 
-    foreach(resource, invoker.resources) {
-      source = rebase_path(resource.source, root_out_dir)
-      destination = get_path_info(resource.source, "file")
-      if (defined(resource.destination)) {
-        destination = resource.destination
+    if (defined(invoker.resources)) {
+      foreach(resource, invoker.resources) {
+        source = rebase_path(resource.source, root_out_dir)
+        destination = get_path_info(resource.source, "file")
+        if (defined(resource.destination)) {
+          destination = resource.destination
+        }
+        metadata.package_manifest_args += [ "--entry=$destination=$source" ]
       }
-      metadata.package_manifest_args += [ "--entry=$destination=$source" ]
     }
   }
 }

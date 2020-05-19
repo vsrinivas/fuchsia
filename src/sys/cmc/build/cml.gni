@@ -12,6 +12,10 @@ import("//src/sys/cmc/build/cmc.gni")
 #   manifest (required)
 #     [file] The path to the cml file that is to be compiled.
 #
+#   output_name (optional)
+#     [path] Name for the output.
+#     If not specified, the target name is used.
+#
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
@@ -20,11 +24,16 @@ template("cm") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "output_name",
                              "testonly",
                              "visibility",
                            ])
 
-    compiled_output = "${target_out_dir}/${target_name}"
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    compiled_output = "${target_out_dir}/${output_name}"
     inputs = [ invoker.manifest ]
     outputs = [ compiled_output ]
 

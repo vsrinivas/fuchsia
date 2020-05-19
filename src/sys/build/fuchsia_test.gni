@@ -51,9 +51,9 @@ template("fuchsia_test") {
   manifest_name = get_path_info(manifest_name[0], "file")
 
   test_spec(target_name) {
+    forward_variables_from(invoker, "*")
     target = invoker.package
     package_url = "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
-    forward_variables_from(invoker, "*")
     deps = [
       component,
       package,

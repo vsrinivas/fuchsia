@@ -59,7 +59,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     `fuchsia_component()` targets to include in the package.
 #     While it's possible for a package to just contain data files, or nothing
 #     at all, typically a package contains at least one component.
-#     Type: list(targets)
+#     Type: list(labels)
 #
 #   data_deps
 #   deps
