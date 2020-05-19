@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZBI_BOOTFS_ZBI_BOOTFS_H_
+#define ZBI_BOOTFS_ZBI_BOOTFS_H_
 
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/zx/vmo.h>
@@ -36,13 +37,13 @@ class __EXPORT ZbiBootfsParser {
 
  private:
   bool IsSkipBlock(const char* path, fuchsia_hardware_skipblock_PartitionInfo* partition_info);
-  zx_status_t Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size, zx::vmo& output,
-                         uint64_t output_offset, size_t output_size);
-  zx_status_t DecompressZstd(zx::vmo& input, uint64_t input_offset, size_t input_size,
-                             zx::vmo& output, uint64_t output_offset, size_t output_size);
-  zx_status_t DecompressLz4f(zx::vmo& input, uint64_t input_offset, size_t input_size,
-                             zx::vmo& output, uint64_t output_offset, size_t output_size);
   zx::vmo zbi_vmo;
 };
 
+__EXPORT
+zx_status_t Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size, zx::vmo& output,
+                       uint64_t output_offset, size_t output_size);
+
 }  // namespace zbi_bootfs
+
+#endif  // ZBI_BOOTFS_ZBI_BOOTFS_H_

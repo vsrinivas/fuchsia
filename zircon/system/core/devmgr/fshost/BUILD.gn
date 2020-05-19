@@ -146,13 +146,13 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_c",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/hermetic-decompressor",
     "//zircon/system/fidl/fuchsia-ldsvc:c",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zbi-bootfs",
   ]
 }
 

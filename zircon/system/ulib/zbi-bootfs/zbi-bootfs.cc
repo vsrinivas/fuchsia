@@ -7,7 +7,6 @@
 #include <lib/bootfs/parser.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -28,9 +27,6 @@
 #include <zstd/zstd.h>
 
 namespace zbi_bootfs {
-
-constexpr uint32_t kLz4fMagic = HermeticDecompressorEngineService::kLz4fMagic;
-constexpr uint32_t kZstdMagic = HermeticDecompressorEngineService::kZstdMagic;
 
 bool ZbiBootfsParser::IsSkipBlock(const char* path,
                                   fuchsia_hardware_skipblock_PartitionInfo* partition_info) {
@@ -325,28 +321,8 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
   return ZX_OK;
 }
 
-zx_status_t ZbiBootfsParser::Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size,
-                                        zx::vmo& output, uint64_t output_offset,
-                                        size_t output_size) {
-  uint32_t magic;
-
-  zx_status_t status = input.read(&magic, input_offset, sizeof(magic));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (magic == kLz4fMagic) {
-    return DecompressLz4f(input, input_offset, input_size, output, output_offset, output_size);
-  } else if (magic == kZstdMagic) {
-    return DecompressZstd(input, input_offset, input_size, output, output_offset, output_size);
-  }
-
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ZbiBootfsParser::DecompressZstd(zx::vmo& input, uint64_t input_offset,
-                                            size_t input_size, zx::vmo& output,
-                                            uint64_t output_offset, size_t output_size) {
+static zx_status_t DecompressZstd(zx::vmo& input, uint64_t input_offset, size_t input_size,
+                                  zx::vmo& output, uint64_t output_offset, size_t output_size) {
   auto input_buffer = std::make_unique<std::byte[]>(input_size);
   zx_status_t status = input.read(input_buffer.get(), input_offset, input_size);
   if (status != ZX_OK) {
@@ -368,9 +344,8 @@ zx_status_t ZbiBootfsParser::DecompressZstd(zx::vmo& input, uint64_t input_offse
   return ZX_OK;
 }
 
-zx_status_t ZbiBootfsParser::DecompressLz4f(zx::vmo& input, uint64_t input_offset,
-                                            size_t input_size, zx::vmo& output,
-                                            uint64_t output_offset, size_t output_size) {
+static zx_status_t DecompressLz4f(zx::vmo& input, uint64_t input_offset, size_t input_size,
+                                  zx::vmo& output, uint64_t output_offset, size_t output_size) {
   auto input_buffer = std::make_unique<std::byte[]>(input_size);
   zx_status_t status = input.read(input_buffer.get(), input_offset, input_size);
   if (status != ZX_OK) {
@@ -430,6 +405,27 @@ zx_status_t ZbiBootfsParser::DecompressLz4f(zx::vmo& input, uint64_t input_offse
   }
 
   return ZX_OK;
+}
+
+static constexpr uint32_t kLz4fMagic = 0x184D2204;
+static constexpr uint32_t kZstdMagic = 0xFD2FB528;
+
+zx_status_t Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size, zx::vmo& output,
+                       uint64_t output_offset, size_t output_size) {
+  uint32_t magic;
+
+  zx_status_t status = input.read(&magic, input_offset, sizeof(magic));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (magic == kLz4fMagic) {
+    return DecompressLz4f(input, input_offset, input_size, output, output_offset, output_size);
+  } else if (magic == kZstdMagic) {
+    return DecompressZstd(input, input_offset, input_size, output, output_offset, output_size);
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace zbi_bootfs

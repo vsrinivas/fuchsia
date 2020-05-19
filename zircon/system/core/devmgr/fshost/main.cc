@@ -13,7 +13,6 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
-#include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
@@ -30,6 +29,7 @@
 #include <fs/service.h>
 #include <loader-service/loader-service.h>
 #include <ramdevice-client/ramdisk.h>
+#include <zbi-bootfs/zbi-bootfs.h>
 
 #include "block-watcher.h"
 #include "fs-manager.h"
@@ -92,8 +92,8 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
              zx_status_get_string(status));
       return ZX_ERR_STOP;
     }
-    HermeticDecompressor decompressor;
-    status = decompressor(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0, header.extra);
+    status = zbi_bootfs::Decompress(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0,
+                                    header.extra);
     if (status != ZX_OK) {
       printf("fshost: failed to decompress RAMDISK: %s\n", zx_status_get_string(status));
       return ZX_ERR_STOP;
