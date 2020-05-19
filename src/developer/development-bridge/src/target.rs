@@ -20,6 +20,7 @@ use {
     std::fmt,
     std::fmt::{Debug, Display},
     std::net::{IpAddr, SocketAddr},
+    std::sync::atomic::{AtomicBool, Ordering},
     std::sync::Arc,
     std::time::Duration,
 };
@@ -84,13 +85,11 @@ impl RCSConnection {
 #[derive(Debug)]
 pub struct TargetState {
     pub rcs: Option<RCSConnection>,
-    pub host_pipe_loop_started: bool,
-    pub host_pipe_disconnected: bool,
 }
 
 impl TargetState {
     pub fn new() -> Self {
-        Self { rcs: None, host_pipe_loop_started: false, host_pipe_disconnected: false }
+        Self { rcs: None }
     }
 }
 
@@ -101,6 +100,7 @@ pub struct Target {
     last_response: RwLock<DateTime<Utc>>,
     addrs: RwLock<HashSet<TargetAddr>>,
     host_pipe: Mutex<Option<onet::HostPipeConnection>>,
+    host_pipe_loop_started: AtomicBool,
 }
 
 impl Target {
@@ -111,6 +111,7 @@ impl Target {
             state: Mutex::new(TargetState::new()),
             addrs: RwLock::new(HashSet::new()),
             host_pipe: Mutex::new(None),
+            host_pipe_loop_started: false.into(),
         }
     }
 
@@ -122,6 +123,7 @@ impl Target {
             state: Mutex::new(TargetState::new()),
             addrs: RwLock::new(addrs),
             host_pipe: Mutex::new(None),
+            host_pipe_loop_started: false.into(),
         }
     }
 
@@ -135,16 +137,15 @@ impl Target {
             state: Mutex::new(TargetState::new()),
             addrs: RwLock::new(HashSet::new()),
             host_pipe: Mutex::new(None),
+            host_pipe_loop_started: false.into(),
         }
     }
 
     /// Attempts to disconnect any active connections to the target.
     pub async fn disconnect(&self) -> Result<(), Error> {
-        let mut child_lock = self.host_pipe.lock().await;
-        if let Some(child) = child_lock.take() {
+        if let Some(child) = self.host_pipe.lock().await.as_mut() {
             child.stop()?;
         }
-        self.state.lock().await.host_pipe_disconnected = true;
         Ok(())
     }
 
@@ -186,7 +187,7 @@ impl Target {
     async fn overnet_info(&self) -> (bool, String) {
         let state = self.state.lock().await;
         (
-            state.host_pipe_loop_started,
+            self.host_pipe_loop_started.load(Ordering::Relaxed),
             match state.rcs.as_ref() {
                 Some(s) => s.overnet_id.id.to_string(),
                 None => String::from("not connected"),
@@ -225,11 +226,8 @@ impl Target {
         // Forces drop of target state mutex so that target can be returned.
         {
             let mut target_state = target.state.lock().await;
-            // If we're here, then overnet must have been started.
-            target_state.host_pipe_loop_started = true;
             target_state.rcs = Some(r);
         }
-
         Ok(target)
     }
 
@@ -263,22 +261,17 @@ impl Target {
         target: Arc<Target>,
         host_pipe_allocator: impl Fn(Arc<Target>) -> Result<onet::HostPipeConnection, Error> + 'static,
     ) {
-        {
-            let mut state = target.state.lock().await;
-            if state.host_pipe_loop_started {
-                return;
-            }
-            state.host_pipe_loop_started = true;
-        }
-
-        // In the rare (and wildly unlikely) scenario that host pipe gets
-        // disconnected before we get here, just exit, else start it up.
+        match target.host_pipe_loop_started.compare_exchange(
+            false,
+            true,
+            Ordering::Acquire,
+            Ordering::Relaxed,
+        ) {
+            Ok(false) => (),
+            _ => return,
+        };
         let mut pipe = target.host_pipe.lock().await;
-        if pipe.is_none() && target.state.lock().await.host_pipe_disconnected {
-            return;
-        }
         log::info!("Initiating overnet host-pipe");
-
         // Hack alert: since there's no error returned in this function, this unwraps
         // the error here and sets that host_pipe_loop_started is false. In order to
         // accomplish this, since the `?` operator isn't supported in a function that
@@ -291,12 +284,12 @@ impl Target {
                 log::warn!(
                     "Error starting host pipe connection, setting host_pipe_loop_started to false: {:?}", e
                 );
-                async {
-                    target.state.lock().await.host_pipe_loop_started = false;
-                }
+                target.host_pipe_loop_started.store(false, Ordering::Relaxed);
+
+                ()
             }) {
                 Ok(p) => Some(p),
-                Err(fut) => return fut.await,
+                Err(()) => return,
             };
     }
 }
@@ -532,17 +525,14 @@ mod test {
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs()).clone()),
                 host_pipe: Mutex::new(None),
+                host_pipe_loop_started: self.host_pipe_loop_started.load(Ordering::SeqCst).into(),
             }
         }
     }
 
     impl Clone for TargetState {
         fn clone(&self) -> Self {
-            Self {
-                rcs: self.rcs.clone(),
-                host_pipe_loop_started: self.host_pipe_loop_started,
-                host_pipe_disconnected: self.host_pipe_disconnected,
-            }
+            Self { rcs: self.rcs.clone() }
         }
     }
 
@@ -781,7 +771,7 @@ mod test {
                     setup_fake_remote_control_service(false, "foo".to_owned()),
                     &NodeId { id: 5u64 },
                 );
-                state.host_pipe_loop_started = true;
+                t_clone.host_pipe_loop_started.store(true, Ordering::Relaxed);
                 state.rcs = Some(conn);
             });
             // Adds a few hundred thousands as this is a race test.
@@ -826,7 +816,7 @@ mod test {
                 ))
             })
             .await;
-            assert!(!t.state.lock().await.host_pipe_loop_started);
+            assert!(!t.host_pipe_loop_started.load(Ordering::SeqCst));
         });
     }
 
@@ -834,9 +824,7 @@ mod test {
     fn test_target_run_host_pipe_skips_if_started() {
         hoist::run(async move {
             let t = Arc::new(Target::new("bloop"));
-            {
-                t.state.lock().await.host_pipe_loop_started = true;
-            }
+            t.host_pipe_loop_started.store(true, Ordering::Relaxed);
             // The error returned in this function should be skipped leaving
             // the loop state set to true.
             Target::run_host_pipe_with_allocator(t.clone(), |_| {
@@ -845,7 +833,7 @@ mod test {
                 ))
             })
             .await;
-            assert!(t.state.lock().await.host_pipe_loop_started);
+            assert!(t.host_pipe_loop_started.load(Ordering::SeqCst));
         });
     }
 }

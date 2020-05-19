@@ -26,8 +26,9 @@ pub struct HostPipeConnection {
     // Uses a std::thread handle for now as hoist::spawn() only returns a
     // `Future<Output = ()>`, making checking the return value after running
     // `stop()` difficult.
-    handle: ThreadHandle,
-    should_close_tx: oneshot::Sender<()>,
+    handle: Option<ThreadHandle>,
+    should_close_tx: Option<oneshot::Sender<()>>,
+    closed: bool,
 }
 
 struct HostPipeChild {
@@ -165,19 +166,29 @@ impl HostPipeConnection {
             })
             .context("spawning host pipe blocking thread")?;
 
-        Ok(Self { handle, should_close_tx })
+        Ok(Self { handle: Some(handle), should_close_tx: Some(should_close_tx), closed: false })
     }
 
-    pub fn stop(self) -> Result<(), Error> {
+    pub fn stop(&mut self) -> Result<(), Error> {
+        if self.closed {
+            return Ok(());
+        }
+        self.closed = true;
         // It's possible the thread has closed and the receiver will be dropped.
         // This is just here to un-stick the thread, so the result doesn't
         // matter.
-        let _ = self.should_close_tx.send(());
+        let _ = self.should_close_tx.take().expect("invariant violated").send(());
         // TODO(awdavies): Come up with a way to do this that doesn't block the
         // executor, which should be easier to do once there's a spawn function
         // that accepts an `async move` with a return value other than `()`.
-        self.handle.join().unwrap()?;
+        self.handle.take().expect("invariant violated").join().unwrap()?;
         Ok(())
+    }
+}
+
+impl Drop for HostPipeConnection {
+    fn drop(&mut self) {
+        let _ = self.stop().map_err(|e| log::warn!("error dropping host-pipe-connection: {:?}", e));
     }
 }
 
@@ -326,13 +337,15 @@ mod test {
     fn test_host_pipe_start_and_stop_normal_operation() {
         hoist::run(async move {
             let target = Arc::new(Target::new("floop"));
-            let conn = HostPipeConnection::new_with_cmd(
+            let mut conn = HostPipeConnection::new_with_cmd(
                 target,
                 start_child_normal_operation,
                 Duration::default(),
                 Duration::default(),
             )
             .unwrap();
+            assert!(conn.stop().is_ok());
+            assert!(conn.closed);
             assert!(conn.stop().is_ok());
         });
     }
@@ -342,7 +355,7 @@ mod test {
         // TODO(awdavies): Verify the error matches.
         hoist::run(async move {
             let target = Arc::new(Target::new("boop"));
-            let conn = HostPipeConnection::new_with_cmd(
+            let mut conn = HostPipeConnection::new_with_cmd(
                 target,
                 start_child_internal_failure,
                 Duration::default(),
@@ -350,6 +363,8 @@ mod test {
             )
             .unwrap();
             assert!(conn.stop().is_err());
+            assert!(conn.closed);
+            assert!(conn.stop().is_ok());
         });
     }
 
@@ -357,7 +372,7 @@ mod test {
     fn test_host_pipe_start_and_stop_cmd_fail() {
         hoist::run(async move {
             let target = Arc::new(Target::new("blorp"));
-            let conn = HostPipeConnection::new_with_cmd(
+            let mut conn = HostPipeConnection::new_with_cmd(
                 target,
                 start_child_cmd_fails,
                 Duration::default(),
