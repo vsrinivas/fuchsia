@@ -194,6 +194,7 @@ signal-hook = "0.1.13"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
+termios = "0.3.2"
 tokio = "0.1.22"
 
 # For crates that we don't want to vendor, create a dummy package in tiny_mirrors/ (see existing

@@ -573,6 +573,11 @@ group("termion") {
   deps = [ ":termion-v1_5_3" ]
 }
 
+if (!is_fuchsia) {
+  group("termios") {
+    deps = [ ":termios-v0_3_2" ]
+  }
+}
 group("test-case") {
   deps = [ ":test-case-v1_0_0($host_toolchain)" ]
 }
@@ -8042,6 +8047,28 @@ rust_library("termion-v1_5_3") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+}
+
+rust_library("termios-v0_3_2") {
+  crate_name = "termios"
+  crate_root = "//third_party/rust_crates/vendor/termios/src/lib.rs"
+  output_name = "termios-ef75c1b73286d58d"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":libc-v0_2_66" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=ef75c1b73286d58d",
+    "-Cextra-filename=-ef75c1b73286d58d",
+  ]
 }
 
 rust_proc_macro("test-case-v1_0_0") {
