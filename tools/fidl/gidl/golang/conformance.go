@@ -143,10 +143,7 @@ func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) e
 func marshalerContext(wireFormat gidlir.WireFormat) string {
 	switch wireFormat {
 	case gidlir.V1WireFormat:
-		return `fidl.MarshalerContext{
-			DecodeUnionsFromXUnionBytes: true,
-			EncodeUnionsAsXUnionBytes:   true,
-		}`
+		return `fidl.MarshalerContext{}`
 	default:
 		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
 	}
