@@ -99,3 +99,50 @@ TEST(ImageFormat, ZxPixelFormat) {
   other_format.has_format_modifier = false;
   EXPECT_TRUE(ImageFormatConvertSysmemToZx(&other_format, &back_format));
 }
+
+TEST(ImageFormat, PlaneByteOffset) {
+  fuchsia_sysmem_PixelFormat linear = {};
+  linear.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+  linear.has_format_modifier = true;
+  linear.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  fuchsia_sysmem_ImageFormatConstraints constraints = {};
+  constraints.pixel_format = linear;
+  constraints.min_coded_width = 12;
+  constraints.max_coded_width = 100;
+  constraints.min_coded_height = 12;
+  constraints.max_coded_height = 100;
+  constraints.bytes_per_row_divisor = 4 * 8;
+  constraints.max_bytes_per_row = 100000;
+
+  fuchsia_sysmem_ImageFormat_2 image_format;
+  EXPECT_TRUE(ImageConstraintsToFormat(&constraints, 18, 17, &image_format));
+  // The raw size would be 72 without bytes_per_row_divisor of 32.
+  EXPECT_EQ(96u, image_format.bytes_per_row);
+
+  uint64_t byte_offset;
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(&image_format, 0, &byte_offset));
+  EXPECT_EQ(0u, byte_offset);
+  EXPECT_FALSE(ImageFormatPlaneByteOffset(&image_format, 1, &byte_offset));
+
+  constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_I420;
+
+  constexpr uint32_t kBytesPerRow = 32;
+  EXPECT_TRUE(ImageConstraintsToFormat(&constraints, 18, 20, &image_format));
+  EXPECT_EQ(kBytesPerRow, image_format.bytes_per_row);
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(&image_format, 0, &byte_offset));
+  EXPECT_EQ(0u, byte_offset);
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(&image_format, 1, &byte_offset));
+  EXPECT_EQ(kBytesPerRow * 20, byte_offset);
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(&image_format, 2, &byte_offset));
+  EXPECT_EQ(kBytesPerRow * 20 + kBytesPerRow / 2 * 20 / 2, byte_offset);
+  EXPECT_FALSE(ImageFormatPlaneByteOffset(&image_format, 3, &byte_offset));
+
+  uint32_t row_bytes;
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(&image_format, 0, &row_bytes));
+  EXPECT_EQ(kBytesPerRow, row_bytes);
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(&image_format, 1, &row_bytes));
+  EXPECT_EQ(kBytesPerRow / 2, row_bytes);
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(&image_format, 2, &row_bytes));
+  EXPECT_EQ(kBytesPerRow / 2, row_bytes);
+  EXPECT_FALSE(ImageFormatPlaneRowBytes(&image_format, 3, &row_bytes));
+}

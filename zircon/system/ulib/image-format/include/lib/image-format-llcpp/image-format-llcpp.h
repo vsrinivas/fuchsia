@@ -9,6 +9,8 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/image-format/image_format.h>
 
+#include <optional>
+
 namespace image_format {
 
 fuchsia_sysmem_ImageFormatConstraints GetCConstraints(
@@ -48,6 +50,16 @@ constexpr llcpp::fuchsia::sysmem::BufferMemoryConstraints GetDefaultBufferMemory
 
 bool GetMinimumRowBytes(const llcpp::fuchsia::sysmem::ImageFormatConstraints& constraints,
                         uint32_t width, uint32_t* bytes_per_row_out);
+
+std::optional<llcpp::fuchsia::sysmem::ImageFormat_2> ConstraintsToFormat(
+    const llcpp::fuchsia::sysmem::ImageFormatConstraints& constraints, uint32_t coded_width,
+    uint32_t coded_height);
+
+bool GetPlaneByteOffset(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format, uint32_t plane,
+                        uint64_t* offset_out);
+
+bool GetPlaneRowBytes(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format, uint32_t plane,
+                      uint32_t* row_bytes_out);
 
 }  // namespace image_format
 

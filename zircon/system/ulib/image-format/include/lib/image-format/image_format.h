@@ -68,6 +68,17 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out);
 
+// Convert image constraints to the simplest ImageFormat_2 for them.
+bool ImageConstraintsToFormat(const fuchsia_sysmem_ImageFormatConstraints* constraints,
+                              uint32_t width, uint32_t height,
+                              fuchsia_sysmem_ImageFormat_2* image_format_out);
+
+bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                uint64_t* offset_out);
+
+bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                              uint32_t* row_bytes);
+
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,
                                   zx_pixel_format_t* zx_pixel_format_out);
 

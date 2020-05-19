@@ -4,6 +4,7 @@
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 
 #include <limits>
@@ -110,38 +111,25 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
       planes_out[i].bytes_per_row = 0;
     }
 
-    uint32_t bytes_per_pixel = 4;
-    if (settings_.image_format_constraints.pixel_format.type ==
-            llcpp::fuchsia::sysmem::PixelFormatType::NV12 ||
-        settings_.image_format_constraints.pixel_format.type ==
-            llcpp::fuchsia::sysmem::PixelFormatType::I420) {
-      bytes_per_pixel = 1;
-    } else if (settings_.image_format_constraints.pixel_format.type !=
-                   llcpp::fuchsia::sysmem::PixelFormatType::BGRA32 &&
-               settings_.image_format_constraints.pixel_format.type !=
-                   llcpp::fuchsia::sysmem::PixelFormatType::R8G8B8A8) {
-      // Sysmem should have given a format that was listed as supported.
-      DASSERT(false);
+    std::optional<llcpp::fuchsia::sysmem::ImageFormat_2> image_format =
+        image_format::ConstraintsToFormat(settings_.image_format_constraints, width, height);
+    if (!image_format) {
+      return DRETF(false, "Image format not valid");
     }
-    planes_out[0].bytes_per_row = magma::round_up(
-        std::max(static_cast<uint64_t>(settings_.image_format_constraints.min_bytes_per_row),
-                 bytes_per_pixel * width),
-        settings_.image_format_constraints.bytes_per_row_divisor);
-    planes_out[0].byte_offset = 0;
-    uint32_t coded_height = std::max(
-        static_cast<uint64_t>(settings_.image_format_constraints.min_coded_height), height);
-    if (settings_.image_format_constraints.pixel_format.type ==
-        llcpp::fuchsia::sysmem::PixelFormatType::NV12) {
-      // Planes are assumed to be tightly-packed for now.
-      planes_out[1].bytes_per_row = planes_out[0].bytes_per_row;
-      planes_out[1].byte_offset = planes_out[0].bytes_per_row * coded_height;
-    } else if (settings_.image_format_constraints.pixel_format.type ==
-               llcpp::fuchsia::sysmem::PixelFormatType::I420) {
-      // Planes are assumed to be tightly-packed for now.
-      planes_out[1].bytes_per_row = planes_out[2].bytes_per_row = planes_out[0].bytes_per_row / 2;
-      planes_out[1].byte_offset = planes_out[0].bytes_per_row * coded_height;
-      planes_out[2].byte_offset =
-          planes_out[1].byte_offset + planes_out[1].bytes_per_row * coded_height / 2;
+    for (uint32_t plane = 0; plane < MAGMA_MAX_IMAGE_PLANES; ++plane) {
+      uint64_t offset;
+      bool plane_valid = image_format::GetPlaneByteOffset(*image_format, plane, &offset);
+      if (!plane_valid) {
+        planes_out[plane].byte_offset = 0;
+      } else {
+        planes_out[plane].byte_offset = offset;
+      }
+      uint32_t row_bytes;
+      if (image_format::GetPlaneRowBytes(*image_format, plane, &row_bytes)) {
+        planes_out[plane].bytes_per_row = row_bytes;
+      } else {
+        planes_out[plane].bytes_per_row = 0;
+      }
     }
     return true;
   }

@@ -67,6 +67,10 @@ class ImageFormatSet {
  public:
   virtual bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const = 0;
   virtual uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const = 0;
+  virtual bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format,
+                                          uint32_t plane, uint64_t* offset_out) const = 0;
+  virtual bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format,
+                                        uint32_t plane, uint32_t* row_bytes_out) const = 0;
 };
 
 class IntelTiledFormats : public ImageFormatSet {
@@ -120,6 +124,24 @@ class IntelTiledFormats : public ImageFormatSet {
         return 0u;
     }
   }
+  bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                  uint64_t* offset_out) const override {
+    ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
+    if (plane == 0) {
+      *offset_out = 0;
+      return true;
+    }
+    return false;
+  }
+  bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                uint32_t* row_bytes_out) const override {
+    if (plane == 0) {
+      *row_bytes_out = 0;
+      return true;
+    } else {
+      return false;
+    }
+  }
 };
 
 class AfbcFormats : public ImageFormatSet {
@@ -170,6 +192,24 @@ class AfbcFormats : public ImageFormatSet {
                            fbl::round_up(image_format->coded_height, block_height) / block_height;
     return block_count * block_width * block_height * kBytesPerPixel +
            fbl::round_up(block_count * kBytesPerBlockHeader, kAfbcBodyAlignment);
+  }
+  bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                  uint64_t* offset_out) const override {
+    ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
+    if (plane == 0) {
+      *offset_out = 0;
+      return true;
+    }
+    return false;
+  }
+  bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                uint32_t* row_bytes_out) const override {
+    if (plane == 0) {
+      *row_bytes_out = 0;
+      return true;
+    } else {
+      return false;
+    }
   }
 };
 
@@ -226,6 +266,67 @@ class LinearFormats : public ImageFormatSet {
       default:
         return 0u;
     }
+  }
+  bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format,
+
+                                  uint32_t plane, uint64_t* offset_out) const override {
+    if (plane == 0) {
+      *offset_out = 0;
+      return true;
+    }
+    if (plane == 1) {
+      switch (image_format->pixel_format.type) {
+        case fuchsia_sysmem_PixelFormatType_NV12:
+        case fuchsia_sysmem_PixelFormatType_I420:
+        case fuchsia_sysmem_PixelFormatType_YV12:
+          *offset_out = image_format->coded_height * image_format->bytes_per_row;
+          return true;
+        default:
+          return false;
+      }
+    }
+    if (plane == 2) {
+      switch (image_format->pixel_format.type) {
+        case fuchsia_sysmem_PixelFormatType_I420:
+        case fuchsia_sysmem_PixelFormatType_YV12:
+          *offset_out = image_format->coded_height * image_format->bytes_per_row;
+          *offset_out += image_format->coded_height / 2 * image_format->bytes_per_row / 2;
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    return false;
+  }
+  bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                uint32_t* row_bytes_out) const override {
+    if (plane == 0) {
+      *row_bytes_out = image_format->bytes_per_row;
+      return true;
+    } else if (plane == 1) {
+      switch (image_format->pixel_format.type) {
+        case fuchsia_sysmem_PixelFormatType_NV12:
+          *row_bytes_out = image_format->bytes_per_row;
+          return true;
+        case fuchsia_sysmem_PixelFormatType_I420:
+        case fuchsia_sysmem_PixelFormatType_YV12:
+          *row_bytes_out = image_format->bytes_per_row / 2;
+          return true;
+        default:
+          return false;
+      }
+    } else if (plane == 2) {
+      switch (image_format->pixel_format.type) {
+        case fuchsia_sysmem_PixelFormatType_I420:
+        case fuchsia_sysmem_PixelFormatType_YV12:
+          *row_bytes_out = image_format->bytes_per_row / 2;
+          return true;
+        default:
+          return false;
+      }
+    }
+    return false;
   }
 };
 
@@ -488,10 +589,9 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
 
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out) {
-  // Bytes per row is not well-defined for tiled types.
-  ZX_DEBUG_ASSERT(!constraints->pixel_format.has_format_modifier ||
-                  constraints->pixel_format.format_modifier.value ==
-                      fuchsia_sysmem_FORMAT_MODIFIER_LINEAR);
+  if (constraints->pixel_format.has_format_modifier &&
+      constraints->pixel_format.format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR)
+    return false;
   if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
     return false;
   }
@@ -502,6 +602,50 @@ bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* con
       constraints->bytes_per_row_divisor);
   ZX_ASSERT(*minimum_row_bytes_out <= constraints->max_bytes_per_row);
   return true;
+}
+
+bool ImageConstraintsToFormat(const fuchsia_sysmem_ImageFormatConstraints* constraints,
+                              uint32_t width, uint32_t height,
+                              fuchsia_sysmem_ImageFormat_2* image_format_out) {
+  if (height < constraints->min_coded_height || height > constraints->max_coded_height) {
+    return false;
+  }
+  if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
+    return false;
+  }
+  uint32_t minimum_row_bytes;
+  if (ImageFormatMinimumRowBytes(constraints, width, &minimum_row_bytes)) {
+    image_format_out->bytes_per_row = minimum_row_bytes;
+  } else {
+    image_format_out->bytes_per_row = 0;
+  }
+  image_format_out->pixel_format = constraints->pixel_format;
+  image_format_out->coded_width = width;
+  image_format_out->coded_height = height;
+  image_format_out->display_width = width;
+  image_format_out->display_height = height;
+  image_format_out->layers = 1;
+  image_format_out->color_space = constraints->color_space[0];
+  image_format_out->has_pixel_aspect_ratio = false;
+  return true;
+}
+
+bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                uint64_t* offset_out) {
+  for (auto& format_set : kImageFormats) {
+    if (format_set->IsSupported(&image_format->pixel_format))
+      return format_set->ImageFormatPlaneByteOffset(image_format, plane, offset_out);
+  }
+  return false;
+}
+
+bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                              uint32_t* row_bytes_out) {
+  for (auto& format_set : kImageFormats) {
+    if (format_set->IsSupported(&image_format->pixel_format))
+      return format_set->ImageFormatPlaneRowBytes(image_format, plane, row_bytes_out);
+  }
+  return false;
 }
 
 bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format,

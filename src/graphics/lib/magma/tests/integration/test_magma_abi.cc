@@ -538,6 +538,9 @@ class TestConnection {
     buffer_settings.image_format_constraints.min_bytes_per_row = 128;
     buffer_settings.image_format_constraints.bytes_per_row_divisor = 256;
     buffer_settings.image_format_constraints.min_coded_height = 64;
+    buffer_settings.image_format_constraints.max_coded_height = 5096;
+    buffer_settings.image_format_constraints.max_coded_width = 5096;
+    buffer_settings.image_format_constraints.max_bytes_per_row = 0xffffffffu;
     fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
     encoder.Alloc(
         fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings, fidl::Encoder>(&encoder));
