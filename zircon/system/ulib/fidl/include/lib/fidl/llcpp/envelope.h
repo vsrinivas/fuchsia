@@ -14,15 +14,14 @@ namespace fidl {
 // Envelope is a typed version of fidl_envelope_t.
 template <typename T>
 struct Envelope {
-  // The size of the entire envelope contents, including any additional
-  // out-of-line objects that the envelope may contain. For example, a
-  // vector<string>'s num_bytes for ["hello", "world"] would include the
-  // string contents in the size, not just the outer vector. Always a multiple
-  // of 8; must be zero if envelope is null.
+  // The size of the entire envelope contents, including any additional out-of-line objects that the
+  // envelope may contain. For example, a vector<string>'s num_bytes for ["hello", "world"] would
+  // include the string contents in the size, not just the outer vector. Always a multiple of 8;
+  // must be zero in transit if envelope is null.
   uint32_t num_bytes;
 
-  // The number of handles in the envelope, including any additional
-  // out-of-line objects that the envelope contains. Must be zero if envelope is null.
+  // The number of handles in the envelope, including any additional out-of-line objects that the
+  // envelope contains. Must be zero in transit if envelope is null.
   uint32_t num_handles;
 
   // A pointer to the out-of-line envelope data.
