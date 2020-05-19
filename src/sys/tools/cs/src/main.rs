@@ -19,6 +19,7 @@ use {
         collections::HashMap,
         fmt, fs,
         path::{Path, PathBuf},
+        str::FromStr,
     },
     structopt::StructOpt,
 };
@@ -231,6 +232,31 @@ fn inspect_component(
     Ok(())
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum LogSeverity {
+    TRACE = 0,
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+    FATAL,
+}
+
+impl FromStr for LogSeverity {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Error> {
+        match s.to_lowercase().as_str() {
+            "fatal" => Ok(LogSeverity::FATAL),
+            "error" => Ok(LogSeverity::ERROR),
+            "warn" | "warning" => Ok(LogSeverity::WARN),
+            "info" => Ok(LogSeverity::INFO),
+            "debug" => Ok(LogSeverity::DEBUG),
+            "trace" => Ok(LogSeverity::TRACE),
+            _ => Err(format_err!("{} is not a valid log severity", s)),
+        }
+    }
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "Component Statistics (cs) Reporting Tool",
@@ -254,17 +280,16 @@ struct Opt {
     /// Show number of log messages for each component broken down by severity.
     #[structopt(long = "log-stats")]
     log_stats: bool,
+
+    /// The minimum severity to show in the log stats.
+    #[structopt(long = "min-severity", default_value = "info")]
+    min_severity: LogSeverity,
 }
 
 // Number of log messages broken down by severity for a given component.
 struct ComponentLogStats {
     component_url: String,
-    fatal_logs: u64,
-    error_logs: u64,
-    warning_logs: u64,
-    info_logs: u64,
-    debug_logs: u64,
-    trace_logs: u64,
+    log_counts: Vec<u64>,
     total_logs: u64,
 }
 
@@ -272,12 +297,16 @@ impl ComponentLogStats {
     fn get_sort_key(&self) -> (u64, u64, u64, u64, u64) {
         (
             // Fatal logs are reported separately. They shouldn't affect the order of the output.
-            self.error_logs,
-            self.warning_logs,
-            self.info_logs,
-            self.debug_logs,
-            self.trace_logs,
+            self.get_count(LogSeverity::ERROR),
+            self.get_count(LogSeverity::WARN),
+            self.get_count(LogSeverity::INFO),
+            self.get_count(LogSeverity::DEBUG),
+            self.get_count(LogSeverity::TRACE),
         )
+    }
+
+    fn get_count(&self, severity: LogSeverity) -> u64 {
+        self.log_counts[severity as usize]
     }
 }
 
@@ -293,18 +322,20 @@ impl From<NodeHierarchy> for ComponentLogStats {
             .collect::<HashMap<_, _>>();
         ComponentLogStats {
             component_url: node.name,
-            fatal_logs: map["fatal_logs"],
-            error_logs: map["error_logs"],
-            warning_logs: map["warning_logs"],
-            info_logs: map["info_logs"],
-            debug_logs: map["debug_logs"],
-            trace_logs: map["trace_logs"],
+            log_counts: vec![
+                map["trace_logs"],
+                map["debug_logs"],
+                map["info_logs"],
+                map["warning_logs"],
+                map["error_logs"],
+                map["fatal_logs"],
+            ],
             total_logs: map["total_logs"],
         }
     }
 }
 
-async fn print_log_stats() -> Result<(), Error> {
+async fn print_log_stats(opt: Opt) -> Result<(), Error> {
     let mut entries = fs::read_dir("/hub/c/archivist.cmx")?.collect::<Vec<_>>();
     if entries.len() == 0 {
         return Err(format_err!("No instance of archivist present in /hub/c/archivist.cmx"));
@@ -340,35 +371,42 @@ async fn print_log_stats() -> Result<(), Error> {
 
     // Number of fatal logs is expected to be zero. If that's not the case, report it here.
     for stats in &stats_list {
-        if stats.fatal_logs != 0 {
+        if stats.get_count(LogSeverity::FATAL) != 0 {
             println!(
                 "Found {} fatal log messages for component {}",
-                stats.fatal_logs, stats.component_url
+                stats.get_count(LogSeverity::FATAL),
+                stats.component_url
             );
         }
     }
 
-    println!(
-        "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
-        "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "Total", "Component"
-    );
+    //  Min severity cannot be FATAL.
+    let min_severity =
+        if opt.min_severity == LogSeverity::FATAL { LogSeverity::ERROR } else { opt.min_severity };
+
+    let min_severity_int = min_severity as usize;
+    let max_severity_int = LogSeverity::ERROR as usize;
+
+    let severity_strs = vec!["TRACE", "DEBUG", "INFO", "WARN", "ERROR"];
+    let mut table_str = String::new();
+    for i in (min_severity_int..=max_severity_int).rev() {
+        table_str.push_str(&format!("{:<7}", severity_strs[i]));
+    }
+    table_str.push_str(&format!("{:<7}{}\n", "Total", "Component"));
+
     for stats in stats_list {
         let last_slash_index = stats.component_url.rfind("/");
         let short_name = match last_slash_index {
             Some(index) => &stats.component_url[index + 1..],
             None => stats.component_url.as_str(),
         };
-        println!(
-            "{:<7}{:<7}{:<7}{:<7}{:<7}{:<7}{}",
-            stats.error_logs,
-            stats.warning_logs,
-            stats.info_logs,
-            stats.debug_logs,
-            stats.trace_logs,
-            stats.total_logs,
-            short_name
-        );
+        for i in (min_severity_int..=max_severity_int).rev() {
+            table_str.push_str(&format!("{:<7}", stats.log_counts[i]));
+        }
+        table_str.push_str(&format!("{:<7}{}\n", stats.total_logs, short_name));
     }
+
+    print!("{}", table_str);
 
     Ok(())
 }
@@ -381,7 +419,7 @@ async fn main() -> TraversalResult {
     let opt = Opt::from_args();
 
     if opt.log_stats {
-        print_log_stats().await?;
+        print_log_stats(opt).await?;
         return Ok(());
     }
 
