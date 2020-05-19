@@ -357,6 +357,11 @@ void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
       SetStateLocked(State::DEAD);
       became_dead = true;
     }
+
+    Thread::RuntimeStats child_runtime;
+    if (t->GetRuntimeStats(&child_runtime) == ZX_OK) {
+      aggregated_runtime_stats_.Add(child_runtime.TotalRuntime());
+    }
   }
 
   if (became_dead)
@@ -851,6 +856,11 @@ zx_status_t ProcessDispatcher::EnforceBasicPolicy(uint32_t condition) {
 }
 
 TimerSlack ProcessDispatcher::GetTimerSlackPolicy() const { return policy_.GetTimerSlack(); }
+
+TaskRuntimeStats ProcessDispatcher::GetAggregatedRuntime() const {
+  Guard<Mutex> guard{get_lock()};
+  return aggregated_runtime_stats_;
+}
 
 uintptr_t ProcessDispatcher::cache_vdso_code_address() {
   Guard<Mutex> guard{get_lock()};

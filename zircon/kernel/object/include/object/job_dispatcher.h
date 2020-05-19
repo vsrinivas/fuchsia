@@ -235,6 +235,9 @@ class JobDispatcher final
 
   Exceptionate exceptionate_;
   Exceptionate debug_exceptionate_;
+
+  // Aggregated runtime stats for processes that have exited.
+  TaskRuntimeStats aggregated_runtime_stats_ TA_GUARDED(get_lock());
 };
 
 // Returns the job that is the ancestor of all other tasks.

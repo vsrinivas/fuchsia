@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_THREAD_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_THREAD_DISPATCHER_H_
 
+#include <platform.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/debug.h>
@@ -23,6 +24,7 @@
 #include <kernel/mutex.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 #include <ktl/string_view.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
@@ -155,6 +157,9 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Fetch per thread stats for userspace.
   zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info);
 
+  // Fetch a consistent snapshot of the runtime stats.
+  zx_status_t GetRuntimeStats(Thread::RuntimeStats* out) const;
+
   // For debugger usage.
   zx_status_t ReadState(zx_thread_state_topic_t state_kind, user_out_ptr<void> buffer,
                         size_t buffer_size);
@@ -192,6 +197,20 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   void Suspending();
   // callback from kernel when thread is resuming
   void Resuming();
+
+  // Provide an update to this thread's runtime stats.
+  //
+  // WARNING: This method must not be called concurrently by two separate threads.
+  // For now, this method is protected by the thread_lock, but in the future this may change.
+  void UpdateRuntimeStats(const Thread::RuntimeStats& update) TA_REQ(thread_lock) {
+    uint64_t before = stats_generation_count_.fetch_add(1, std::memory_order_acq_rel);
+    runtime_stats_.Update(update);
+    uint64_t after = stats_generation_count_.fetch_add(1, std::memory_order_acq_rel);
+    // Ensure no concurrent write was happening at the start and that no concurrent writes happened
+    // during this operation.
+    DEBUG_ASSERT((before % 2) == 0);
+    DEBUG_ASSERT(after == before + 1);
+  }
 
  private:
   ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, Thread* core_thread, uint32_t flags);
@@ -290,6 +309,23 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // and therefor the thread's futex-context lock can be used to guard this
   // futex ID.
   uintptr_t blocking_futex_id_ = 0;
+
+  // Generation counter protecting runtime stats.
+  //
+  // This count provides single-writer, multi-reader consistency on reads from the runtime_stats_
+  // variable.
+  //
+  // Locking strategy:
+  // - All writes are preceded by and followed by acq-rel atomic fetch-adds.
+  // - All reads consist of:
+  //   1) atomic read with acquire ordering of the generation count,
+  //   2) copy stats out,
+  //   3) atomic read with acquire ordering of the generation count,
+  //   4) comparison of the two generation counts (must be even and match)
+  // - Reads retry until a consistent snapshot can be taken.
+  ktl::atomic<uint64_t> stats_generation_count_ = 0;
+  // The runtime stats for this thread.
+  Thread::RuntimeStats runtime_stats_ = {};
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_THREAD_DISPATCHER_H_

@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 
 #include <debug.h>
+#include <platform.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
@@ -25,6 +26,7 @@
 #include <kernel/cpu.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/spinlock.h>
+#include <kernel/task_runtime_stats.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 #include <kernel/wait.h>
@@ -367,6 +369,41 @@ struct Thread {
       dump_thread_user_tid_during_panic(tid, full);
     }
   };
+
+  // Stats for a thread's runtime.
+  struct RuntimeStats {
+    TaskRuntimeStats runtime;
+
+    // The last state the thread entered.
+    thread_state state = thread_state::THREAD_INITIAL;
+
+    // The time at which the thread last entered the state.
+    zx_time_t state_time = 0;
+
+    // Update this runtime stat with newer content.
+    //
+    // Adds to CPU and queue time, but sets the given state directly.
+    void Update(const RuntimeStats& other) {
+      runtime.Add(other.runtime);
+      state = other.state;
+      state_time = other.state_time;
+    }
+
+    // Get the current TaskRuntimeStats, including the current scheduler state.
+    TaskRuntimeStats TotalRuntime() const {
+      TaskRuntimeStats ret = runtime;
+      if (state == thread_state::THREAD_RUNNING) {
+        ret.cpu_time = zx_duration_add_duration(
+            ret.cpu_time, zx_duration_sub_duration(current_time(), state_time));
+      } else if (state == thread_state::THREAD_READY) {
+        ret.queue_time = zx_duration_add_duration(
+            ret.queue_time, zx_duration_sub_duration(current_time(), state_time));
+      }
+      return ret;
+    }
+  };
+
+  void UpdateRuntimeStats(const RuntimeStats& stats) TA_REQ(thread_lock);
 
   // Print the backtrace of the thread, if possible.
   zx_status_t PrintBacktrace();

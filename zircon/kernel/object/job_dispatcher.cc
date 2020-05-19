@@ -221,6 +221,9 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     --process_count_;
     UpdateSignalsDecrementLocked();
     should_die = IsReadyForDeadTransitionLocked();
+
+    // Aggregate runtime stats from exiting process.
+    aggregated_runtime_stats_.Add(process->GetAggregatedRuntime());
   }
 
   if (should_die)

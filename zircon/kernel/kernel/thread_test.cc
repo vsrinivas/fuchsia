@@ -423,6 +423,44 @@ bool set_migrate_ready_threads_test() {
   END_TEST;
 }
 
+bool runtime_test() {
+  BEGIN_TEST;
+  const zx_duration_t kCpuTime = 10, kQueueTime = 20;
+  Thread::RuntimeStats stats;
+  EXPECT_EQ(0, stats.runtime.cpu_time);
+  EXPECT_EQ(0, stats.runtime.queue_time);
+  EXPECT_EQ(thread_state::THREAD_INITIAL, stats.state);
+  EXPECT_EQ(0, stats.state_time);
+
+  // Update the stats, it ran for kCpuTime on CPU and is now ready.
+  stats.Update(Thread::RuntimeStats{.runtime = {.cpu_time = kCpuTime},
+                                    .state = thread_state::THREAD_READY,
+                                    .state_time = current_time()});
+  EXPECT_EQ(kCpuTime, stats.runtime.cpu_time);
+  EXPECT_EQ(0, stats.runtime.queue_time);
+  EXPECT_EQ(thread_state::THREAD_READY, stats.state);
+  EXPECT_NE(0, stats.state_time);
+  // Ensure queue time includes current time spent in queue, and cpu time does not.
+  TaskRuntimeStats runtime = stats.TotalRuntime();
+  EXPECT_NE(0, runtime.queue_time);
+  EXPECT_EQ(kCpuTime, runtime.cpu_time);
+
+  // Update stats to now be running, with additional queue time.
+  stats.Update(Thread::RuntimeStats{.runtime = {.queue_time = kQueueTime},
+                                    .state = thread_state::THREAD_RUNNING,
+                                    .state_time = current_time()});
+  EXPECT_EQ(kCpuTime, stats.runtime.cpu_time);
+  EXPECT_EQ(kQueueTime, stats.runtime.queue_time);
+  EXPECT_EQ(thread_state::THREAD_RUNNING, stats.state);
+  EXPECT_NE(0, stats.state_time);
+  // Ensure cpu time includes current time, and queue time does not.
+  runtime = stats.TotalRuntime();
+  EXPECT_NE(kCpuTime, runtime.cpu_time);
+  EXPECT_EQ(kQueueTime, runtime.queue_time);
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
@@ -434,4 +472,5 @@ UNITTEST("thread_empty_soft_affinity_mask", thread_empty_soft_affinity_mask)
 UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_and_hard_affinity)
 UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
+UNITTEST("runtime_test", runtime_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

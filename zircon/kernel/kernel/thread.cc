@@ -1578,3 +1578,9 @@ zx_status_t Thread::PrintBacktrace() {
 
   return _thread_print_backtrace(this, fp);
 }
+
+void Thread::UpdateRuntimeStats(const RuntimeStats& stats) {
+  if (user_thread_) {
+    user_thread_->UpdateRuntimeStats(stats);
+  }
+}

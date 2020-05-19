@@ -19,6 +19,7 @@
 #include <kernel/brwlock.h>
 #include <kernel/event.h>
 #include <kernel/mutex.h>
+#include <kernel/task_runtime_stats.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>
 #include <ktl/forward.h>
@@ -304,6 +305,9 @@ class ProcessDispatcher final
     return vdso_code_address_;
   }
 
+  // Retrieve the aggregated runtime of exited threads under this process.
+  TaskRuntimeStats GetAggregatedRuntime() const TA_EXCL(get_lock());
+
  private:
   using HandleList = fbl::DoublyLinkedListCustomTraits<Handle*, Handle::NodeListTraits>;
   // HandleCursor is used to reduce the lock duration while iterate over the handle table.
@@ -491,6 +495,9 @@ class ProcessDispatcher final
   // The user-friendly process name. For debug purposes only. That
   // is, there is no mechanism to mint a handle to a process via this name.
   fbl::Name<ZX_MAX_NAME_LEN> name_;
+
+  // Aggregated runtime stats from exited threads.
+  TaskRuntimeStats aggregated_runtime_stats_ TA_GUARDED(get_lock());
 };
 
 const char* StateToString(ProcessDispatcher::State state);
