@@ -4,7 +4,6 @@
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,6 +14,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <set>
 
 #include "src/camera/bin/camera-gym/buffer_collage.h"
 #include "src/camera/bin/camera-gym/lifecycle_impl.h"
@@ -39,16 +40,10 @@ int main(int argc, char* argv[]) {
     FX_PLOGS(ERROR, status) << "Failed to request Scenic service.";
     return EXIT_FAILURE;
   }
-  fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
-  status = context->svc()->Connect(registry.NewRequest());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to request Registry service.";
-    return EXIT_FAILURE;
-  }
 
   // Create the collage.
-  auto collage_result = camera::BufferCollage::Create(std::move(scenic), std::move(allocator),
-                                                      std::move(registry), [&] { loop.Quit(); });
+  auto collage_result =
+      camera::BufferCollage::Create(std::move(scenic), std::move(allocator), [&] { loop.Quit(); });
   if (collage_result.is_error()) {
     FX_PLOGS(ERROR, collage_result.error()) << "Failed to create BufferCollage.";
     return EXIT_FAILURE;
@@ -76,22 +71,49 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   auto cycler = cycler_result.take_value();
-  cycler->SetHandlers(
+  bool device_muted = false;
+  std::set<uint32_t> collection_ids;
+
+  camera::StreamCycler::AddCollectionHandler add_collection_handler =
       [&](fuchsia::sysmem::BufferCollectionTokenHandle token,
           fuchsia::sysmem::ImageFormat_2 image_format) -> uint32_t {
-        auto result =
-            fit::run_single_threaded(collage->AddCollection(std::move(token), image_format, ""));
-        if (result.is_error()) {
-          FX_LOGS(FATAL) << "Failed to add collection to collage.";
-          return 0;
-        }
-        return result.value();
-      },
-      [&](uint32_t id) { collage->RemoveCollection(id); },
-      [&](uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence) {
-        collage->PostShowBuffer(collection_id, buffer_index, std::move(release_fence),
-                                std::nullopt);
-      });
+    auto result =
+        fit::run_single_threaded(collage->AddCollection(std::move(token), image_format, ""));
+    if (result.is_error()) {
+      FX_LOGS(FATAL) << "Failed to add collection to collage.";
+      return 0;
+    }
+    collection_ids.insert(result.value());
+    return result.value();
+  };
+
+  camera::StreamCycler::RemoveCollectionHandler remove_collection_handler = [&](uint32_t id) {
+    collection_ids.erase(id);
+    collage->RemoveCollection(id);
+  };
+
+  camera::StreamCycler::ShowBufferHandler show_buffer_handler = [&](uint32_t collection_id,
+                                                                    uint32_t buffer_index,
+                                                                    zx::eventpair release_fence) {
+    collage->PostShowBuffer(collection_id, buffer_index, std::move(release_fence), std::nullopt);
+    if (!device_muted) {
+      // Only make the collection visible after we have shown an unmuted frame.
+      collage->PostSetCollectionVisibility(collection_id, true);
+    }
+  };
+
+  camera::StreamCycler::MuteStateHandler mute_handler = [&](bool muted) {
+    if (muted) {
+      // Immediately hide all collections on mute.
+      for (auto id : collection_ids) {
+        collage->PostSetCollectionVisibility(id, false);
+      }
+    }
+    device_muted = muted;
+  };
+
+  cycler->SetHandlers(std::move(add_collection_handler), std::move(remove_collection_handler),
+                      std::move(show_buffer_handler), std::move(mute_handler));
 
   // Publish the view service.
   context->outgoing()->AddPublicService(collage->GetHandler());

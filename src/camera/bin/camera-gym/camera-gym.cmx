@@ -9,7 +9,6 @@
             "fuchsia.sys.Environment",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.policy.DeviceListenerRegistry",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

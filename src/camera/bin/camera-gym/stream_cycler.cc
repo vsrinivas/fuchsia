@@ -60,10 +60,12 @@ fit::result<std::unique_ptr<StreamCycler>, zx_status_t> StreamCycler::Create(
 
 void StreamCycler::SetHandlers(StreamCycler::AddCollectionHandler on_add_collection,
                                StreamCycler::RemoveCollectionHandler on_remove_collection,
-                               StreamCycler::ShowBufferHandler on_show_buffer) {
+                               StreamCycler::ShowBufferHandler on_show_buffer,
+                               StreamCycler::MuteStateHandler on_mute_changed) {
   add_collection_handler_ = std::move(on_add_collection);
   remove_collection_handler_ = std::move(on_remove_collection);
   show_buffer_handler_ = std::move(on_show_buffer);
+  mute_state_handler_ = std::move(on_mute_changed);
 }
 
 // TODO(48506): Hard code stream ID
@@ -75,6 +77,9 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
       // Connect to device.
       // TODO(48506) Properly detect expected device id.
       watcher_->ConnectToDevice(event.added(), device_.NewRequest(loop_.dispatcher()));
+
+      // Watch for mute changes.
+      device_->WatchMuteState(fit::bind_member(this, &StreamCycler::WatchMuteStateHandler));
 
       // Fetch camera configurations
       device_->GetConfigurations(
@@ -101,6 +106,11 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
 
   // Hanging get.
   watcher_->WatchDevices(fit::bind_member(this, &StreamCycler::WatchDevicesCallback));
+}
+
+void StreamCycler::WatchMuteStateHandler(bool software_muted, bool hardware_muted) {
+  mute_state_handler_(software_muted | hardware_muted);
+  device_->WatchMuteState(fit::bind_member(this, &StreamCycler::WatchMuteStateHandler));
 }
 
 void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index) {

@@ -58,9 +58,7 @@ fit::result<zx::event, zx_status_t> MakeEventBridge(async_dispatcher_t* dispatch
 }
 
 BufferCollage::BufferCollage()
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      button_listener_binding_(this),
-      view_provider_binding_(this) {
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), view_provider_binding_(this) {
   SetStopOnError(scenic_);
   SetStopOnError(allocator_);
   view_provider_binding_.set_error_handler([this](zx_status_t status) {
@@ -78,7 +76,7 @@ BufferCollage::~BufferCollage() {
 
 fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
-    fuchsia::ui::policy::DeviceListenerRegistryHandle registry, fit::closure stop_callback) {
+    fit::closure stop_callback) {
   auto collage = std::unique_ptr<BufferCollage>(new BufferCollage);
 
   // Bind interface handles and save the stop callback.
@@ -92,11 +90,6 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
-  status = collage->registry_.Bind(std::move(registry), collage->loop_.dispatcher());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fit::error(status);
-  }
   collage->stop_callback_ = std::move(stop_callback);
 
   // Create a scenic session and set its event handlers.
@@ -106,10 +99,6 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
       fit::bind_member(collage.get(), &BufferCollage::OnScenicError));
   collage->session_->set_event_handler(
       fit::bind_member(collage.get(), &BufferCollage::OnScenicEvent));
-
-  // Register the class as a button listener.
-  collage->registry_->RegisterMediaButtonsListener(
-      collage->button_listener_binding_.NewBinding(collage->loop_.dispatcher()));
 
   // Start a thread and begin processing messages.
   status = collage->loop_.StartThread("BufferCollage Loop");
@@ -137,6 +126,7 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
   SetStopOnError(collection_view.collection, "Collection" + oss.str());
   SetStopOnError(collection_view.image_pipe, "Image Pipe" + oss.str());
   collection_view.image_format = image_format;
+  collection_view.visible = false;
 
   // Bind and duplicate the token.
   fuchsia::sysmem::BufferCollectionTokenPtr token_ptr;
@@ -245,6 +235,22 @@ void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index
   });
 }
 
+void BufferCollage::PostSetCollectionVisibility(uint32_t id, bool visible) {
+  async::PostTask(loop_.dispatcher(), [=] {
+    auto it = collection_views_.find(id);
+    if (it == collection_views_.end()) {
+      FX_LOGS(ERROR) << "Invalid collection ID " << id << ".";
+      Stop();
+      return;
+    }
+    auto& view = it->second;
+    if (view.visible != visible) {
+      view.visible = visible;
+      UpdateLayout();
+    }
+  });
+}
+
 void BufferCollage::OnNewRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
   if (view_provider_binding_.is_bound()) {
     request.Close(ZX_ERR_ALREADY_BOUND);
@@ -261,7 +267,6 @@ void BufferCollage::Stop() {
   }
   scenic_ = nullptr;
   allocator_ = nullptr;
-  registry_ = nullptr;
   view_ = nullptr;
   collection_views_.clear();
   loop_.Quit();
@@ -375,7 +380,7 @@ void BufferCollage::UpdateLayout() {
   for (auto& [id, view] : collection_views_) {
     view.material = std::make_unique<scenic::Material>(session_.get());
     view.material->SetTexture(view.image_pipe_id);
-    if (camera_muted_) {
+    if (!view.visible) {
       view.material->SetColor(0, 0, 0, 0);
     }
     auto [element_width, element_height] = ScaleToFit(
@@ -412,19 +417,6 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
       }
       UpdateLayout();
     }
-  }
-}
-
-void BufferCollage::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {
-  if (event.has_mic_mute()) {
-    auto muted = event.mic_mute();
-    if (muted == camera_muted_) {
-      return;
-    }
-
-    camera_muted_ = muted;
-    FX_LOGS(INFO) << "Camera is " << (camera_muted_ ? "muted" : "unmuted") << ".";
-    UpdateLayout();
   }
 }
 

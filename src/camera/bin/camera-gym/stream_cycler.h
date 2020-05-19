@@ -24,14 +24,17 @@ class StreamCycler {
                                                       fuchsia::sysmem::ImageFormat_2)>;
   using RemoveCollectionHandler = fit::function<void(uint32_t)>;
   using ShowBufferHandler = fit::function<void(uint32_t, uint32_t, zx::eventpair)>;
+  using MuteStateHandler = fit::function<void(bool)>;
   // Registers handlers that are called when the cycler adds or removes a buffer collection. The
   // value returned by |on_add_collection| will be subsequently passed to |on_remove_collection|.
   void SetHandlers(AddCollectionHandler on_add_collection,
-                   RemoveCollectionHandler on_remove_collection, ShowBufferHandler on_show_buffer);
+                   RemoveCollectionHandler on_remove_collection, ShowBufferHandler on_show_buffer,
+                   MuteStateHandler on_mute_changed);
 
  private:
   StreamCycler();
   void WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEvent> events);
+  void WatchMuteStateHandler(bool software_muted, bool hardware_muted);
   void ConnectToStream(uint32_t config_index, uint32_t stream_index);
   void OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info);
 
@@ -43,6 +46,7 @@ class StreamCycler {
   AddCollectionHandler add_collection_handler_;
   RemoveCollectionHandler remove_collection_handler_;
   ShowBufferHandler show_buffer_handler_;
+  MuteStateHandler mute_state_handler_;
 
   // stream_infos_ uses the same index as the corresponding stream index in configurations_.
   struct StreamInfo {
