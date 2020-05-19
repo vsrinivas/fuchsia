@@ -176,7 +176,7 @@ bool DecodeEvents(T events, const perfmon::ModelEventManager* model_event_manage
 
 bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = json_parser::InitSchema(kRootSchema);
+  auto root_schema = json_parser::InitSchemaDeprecated(kRootSchema);
   if (!root_schema) {
     return false;
   }
@@ -191,7 +191,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
                    << GetParseError_En(code);
     return false;
   }
-  if (!json_parser::ValidateSchema(document, *root_schema, "session config")) {
+  if (!json_parser::ValidateSchemaDeprecated(document, *root_schema, "session config")) {
     return false;
   }
 

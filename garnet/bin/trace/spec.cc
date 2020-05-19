@@ -298,10 +298,10 @@ bool DecodeMeasureTimeBetween(const rapidjson::Value& value, measure::TimeBetwee
 
 bool DecodeSpec(const std::string& json, Spec* spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = json_parser::InitSchema(kRootSchema);
-  auto duration_schema = json_parser::InitSchema(kDurationSchema);
-  auto time_between_schema = json_parser::InitSchema(kTimeBetweenSchema);
-  auto argument_value_schema = json_parser::InitSchema(kArgumentValueSchema);
+  auto root_schema = json_parser::InitSchemaDeprecated(kRootSchema);
+  auto duration_schema = json_parser::InitSchemaDeprecated(kDurationSchema);
+  auto time_between_schema = json_parser::InitSchemaDeprecated(kTimeBetweenSchema);
+  auto argument_value_schema = json_parser::InitSchemaDeprecated(kArgumentValueSchema);
   if (!root_schema || !duration_schema || !time_between_schema || !argument_value_schema) {
     return false;
   }
@@ -316,7 +316,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
                    << GetParseError_En(code);
     return false;
   }
-  if (!json_parser::ValidateSchema(document, *root_schema)) {
+  if (!json_parser::ValidateSchemaDeprecated(document, *root_schema)) {
     return false;
   }
 
@@ -410,7 +410,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     if (type == kMeasureDurationType) {
       measure::DurationSpec spec;
       spec.common = std::move(common);
-      if (!json_parser::ValidateSchema(measurement, *duration_schema) ||
+      if (!json_parser::ValidateSchemaDeprecated(measurement, *duration_schema) ||
           !DecodeMeasureDuration(measurement, &spec)) {
         return false;
       }
@@ -418,7 +418,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
       spec.common = std::move(common);
-      if (!json_parser::ValidateSchema(measurement, *time_between_schema) ||
+      if (!json_parser::ValidateSchemaDeprecated(measurement, *time_between_schema) ||
           !DecodeMeasureTimeBetween(measurement, &spec)) {
         return false;
       }
@@ -426,7 +426,7 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
       spec.common = std::move(common);
-      if (!json_parser::ValidateSchema(measurement, *argument_value_schema) ||
+      if (!json_parser::ValidateSchemaDeprecated(measurement, *argument_value_schema) ||
           !DecodeMeasureArgumentValue(measurement, &spec)) {
         return false;
       }

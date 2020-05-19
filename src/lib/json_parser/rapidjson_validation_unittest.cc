@@ -35,28 +35,28 @@ bool ParseJson(fxl::StringView json, rapidjson::Document* document) {
   return !document->HasParseError();
 }
 
-TEST(RapidJsonValidation, InvalidSchema) { EXPECT_FALSE(InitSchema(kInvalidSchema)); }
+TEST(RapidJsonValidation, InvalidSchema) { EXPECT_FALSE(InitSchemaDeprecated(kInvalidSchema)); }
 
-TEST(RapidJsonValidation, ValidSchema) { EXPECT_TRUE(InitSchema(kValidSchema)); }
+TEST(RapidJsonValidation, ValidSchema) { EXPECT_TRUE(InitSchemaDeprecated(kValidSchema)); }
 
 TEST(RapidJsonValidation, ValidJson) {
-  auto schema = InitSchema(kValidSchema);
+  auto schema = InitSchemaDeprecated(kValidSchema);
   ASSERT_TRUE(schema);
 
   rapidjson::Document document;
   ASSERT_TRUE(ParseJson(kValidJson, &document));
 
-  EXPECT_TRUE(ValidateSchema(document, *schema));
+  EXPECT_TRUE(ValidateSchemaDeprecated(document, *schema));
 }
 
 TEST(RapidJsonValidation, InvalidJson) {
-  auto schema = InitSchema(kValidSchema);
+  auto schema = InitSchemaDeprecated(kValidSchema);
   ASSERT_TRUE(schema);
 
   rapidjson::Document document;
   ASSERT_TRUE(ParseJson(kInvalidJson, &document));
 
-  EXPECT_FALSE(ValidateSchema(document, *schema));
+  EXPECT_FALSE(ValidateSchemaDeprecated(document, *schema));
 }
 
 }  // namespace json_parser

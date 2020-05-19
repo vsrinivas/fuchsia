@@ -11,6 +11,10 @@
 namespace json_parser {
 
 std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
+  return InitSchemaDeprecated(json);
+}
+
+std::unique_ptr<rapidjson::SchemaDocument> InitSchemaDeprecated(fxl::StringView json) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(json.data(), json.size()).HasParseError()) {
     auto offset = schema_document.GetErrorOffset();
@@ -30,6 +34,11 @@ std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
 
 bool ValidateSchema(const rapidjson::Value& value, const rapidjson::SchemaDocument& schema,
                     fxl::StringView value_name) {
+  return ValidateSchemaDeprecated(value, schema, value_name);
+}
+
+bool ValidateSchemaDeprecated(const rapidjson::Value& value,
+                              const rapidjson::SchemaDocument& schema, fxl::StringView value_name) {
   rapidjson::SchemaValidator validator(schema);
   if (!value.Accept(validator)) {
     rapidjson::StringBuffer uri_buffer;

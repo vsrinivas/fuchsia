@@ -100,9 +100,9 @@ void Config::ReadConfigFiles(const std::string& host_name, const std::string& co
     return;
   }
 
-  auto schema = json_parser::InitSchema(kSchema);
+  auto schema = json_parser::InitSchemaDeprecated(kSchema);
   parser_.ParseFromDirectory(config_dir, [this, &schema, &host_name](rapidjson::Document document) {
-    if (!json_parser::ValidateSchema(document, *schema)) {
+    if (!json_parser::ValidateSchemaDeprecated(document, *schema)) {
       parser_.ReportError("Schema validation failure.");
       return;
     }
