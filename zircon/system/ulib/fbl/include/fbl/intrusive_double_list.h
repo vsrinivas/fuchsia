@@ -25,7 +25,7 @@
 // Notes" section of fbl/intrusive_single_list.h for details.
 //
 // Additional functionality provided by a DoublyLinkedList<> includes...
-// ++ O(k) push_back/pop_back/back (in addition to push_front/pop_front/front)
+// ++ O(1) push_back/pop_back/back (in addition to push_front/pop_front/front)
 // ++ The ability to "insert" in addition to "insert_after"
 // ++ The ability to "erase" in addition to "erase_next"
 // ++ Support for bidirectional iteration.
@@ -34,7 +34,7 @@
 // pointer to the object which is the head of the list, or nullptr if the list
 // is empty.  Each object on the list has a DoublyLinkedListNodeState<> which
 // contains one raw pointer (prev) and one managed pointer (next) which are
-// arranged in a ring.  The tail of a non-empty list can be found in O(k) time
+// arranged in a ring.  The tail of a non-empty list can be found in O(1) time
 // by following the prev pointer of the head node of the list.
 namespace fbl {
 
