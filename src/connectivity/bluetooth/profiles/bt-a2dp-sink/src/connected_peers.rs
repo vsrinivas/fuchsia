@@ -5,7 +5,7 @@
 use {
     anyhow::format_err,
     bt_a2dp::media_types::*,
-    bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
+    bt_avdtp as avdtp,
     fidl_fuchsia_bluetooth_bredr::{Channel, ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -16,74 +16,10 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     parking_lot::RwLock,
-    std::{
-        collections::hash_map::Entry,
-        collections::{HashMap, HashSet},
-        convert::TryInto,
-        sync::Arc,
-    },
+    std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto, sync::Arc},
 };
 
 use crate::{avrcp_relay::AvrcpRelay, peer, Streams, SBC_SEID};
-
-fn codectype_to_availability_metric(
-    codec_type: avdtp::MediaCodecType,
-) -> metrics::A2dpCodecAvailabilityMetricDimensionCodec {
-    match codec_type {
-        avdtp::MediaCodecType::AUDIO_SBC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc,
-        avdtp::MediaCodecType::AUDIO_MPEG12 => {
-            metrics::A2dpCodecAvailabilityMetricDimensionCodec::Mpeg12
-        }
-        avdtp::MediaCodecType::AUDIO_AAC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Aac,
-        avdtp::MediaCodecType::AUDIO_ATRAC => {
-            metrics::A2dpCodecAvailabilityMetricDimensionCodec::Atrac
-        }
-        avdtp::MediaCodecType::AUDIO_NON_A2DP => {
-            metrics::A2dpCodecAvailabilityMetricDimensionCodec::VendorSpecific
-        }
-        _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
-    }
-}
-
-fn spawn_stream_discovery(peer: &peer::Peer) {
-    let collect_fut = peer.collect_capabilities();
-    let remote_capabilities_inspect = peer.remote_capabilities_inspect();
-    let mut cobalt = peer.cobalt_logger();
-
-    let discover_fut = async move {
-        // Store deduplicated set of codec event codes for logging.
-        let mut codec_event_codes = HashSet::new();
-
-        let streams = match collect_fut.await {
-            Ok(streams) => streams,
-            Err(e) => {
-                fx_log_info!("Collecting capabilities failed: {:?}", e);
-                return;
-            }
-        };
-
-        for stream in streams {
-            let capabilities = stream.capabilities();
-            remote_capabilities_inspect.append(stream.local_id(), &capabilities).await;
-            for cap in capabilities {
-                if let avdtp::ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type,
-                    ..
-                } = cap
-                {
-                    codec_event_codes
-                        .insert(codectype_to_availability_metric(codec_type.clone()) as u32);
-                }
-            }
-        }
-
-        for event_code in codec_event_codes {
-            cobalt.log_event(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event_code);
-        }
-    };
-    fasync::spawn(discover_fut);
-}
 
 /// ConnectedPeers owns the set of connected peers and manages peers based on
 /// discovery, connections and disconnections.
@@ -135,7 +71,7 @@ impl ConnectedPeers {
         peer: &DetachableWeak<PeerId, RwLock<peer::Peer>>,
     ) -> Result<(), anyhow::Error> {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        let remote_streams = strong.read().collect_capabilities().await?;
+        let remote_streams = strong.read().get_remote_capabilities().await?;
 
         // Find the SBC stream, which should exist (it is required)
         // TODO(39321): Prefer AAC when remote peer supports AAC.
@@ -180,12 +116,13 @@ impl ConnectedPeers {
             // discover the streams.
             if let Some(peer) = self.get(&id) {
                 peer.write().set_descriptor(desc.clone());
-                spawn_stream_discovery(&peer.read());
             }
         }
     }
 
-    pub fn connected(&mut self, id: PeerId, channel: Channel, initiate_streaming: bool) {
+    /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
+    /// this connection (and should take the INT role)
+    pub fn connected(&mut self, id: PeerId, channel: Channel, initiator: bool) {
         let socket = match channel.socket {
             Some(socket) => socket,
             None => {
@@ -224,9 +161,6 @@ impl ConnectedPeers {
                     Entry::Occupied(entry) => {
                         if let Some(prof) = entry.get() {
                             peer.set_descriptor(prof.clone());
-                            if !initiate_streaming {
-                                spawn_stream_discovery(&peer);
-                            }
                         }
                     }
                     // Otherwise just insert the device ID with no profile
@@ -240,7 +174,7 @@ impl ConnectedPeers {
 
                 let avrcp_relay = AvrcpRelay::start(id, self.domain.clone()).ok();
 
-                if initiate_streaming {
+                if initiator {
                     let weak_peer = self.connected.get(&id).expect("just added");
                     fuchsia_async::spawn_local(async move {
                         if let Err(e) = ConnectedPeers::start_streaming(&weak_peer).await {
@@ -273,9 +207,7 @@ mod tests {
     use bt_avdtp::Request;
     use fidl::encoding::Decodable;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{
-        ProfileMarker, ProfileRequestStream, ServiceClassProfileIdentifier,
-    };
+    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
     use fidl_fuchsia_cobalt::CobaltEvent;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc;
@@ -366,54 +298,6 @@ mod tests {
         };
 
         exercise_avdtp(&mut exec, remote, &peer.read());
-    }
-
-    fn expect_started_discovery(exec: &mut fasync::Executor, remote: zx::Socket) {
-        let remote_avdtp = avdtp::Peer::new(remote).expect("remote control should be creatable");
-        let mut remote_requests = remote_avdtp.take_request_stream();
-
-        // Start of discovery is by discovering the peer streaminformations.
-        let _ = match exec.run_until_stalled(&mut remote_requests.next()) {
-            Poll::Ready(Some(Ok(Request::Discover { responder }))) => responder,
-            x => panic!("Expected to get a discovery request but got {:?}", x),
-        };
-    }
-
-    #[test]
-    fn connected_peers_found_connected_peer_starts_discovery() {
-        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
-
-        let (remote, channel) = new_channel();
-
-        peers.connected(id, channel, false);
-
-        let profile_desc = ProfileDescriptor {
-            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
-            major_version: 1,
-            minor_version: 3,
-        };
-
-        peers.found(id, profile_desc);
-
-        expect_started_discovery(&mut exec, remote);
-    }
-
-    #[test]
-    fn connected_peers_connected_found_peer_starts_discovery() {
-        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
-
-        let profile_desc = ProfileDescriptor {
-            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
-            major_version: 1,
-            minor_version: 3,
-        };
-
-        peers.found(id, profile_desc);
-
-        let (remote, channel) = new_channel();
-        peers.connected(id, channel, false);
-
-        expect_started_discovery(&mut exec, remote);
     }
 
     #[test]

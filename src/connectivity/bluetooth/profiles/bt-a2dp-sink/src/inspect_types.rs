@@ -96,16 +96,16 @@ impl RemoteCapabilitiesInspect {
         RemoteCapabilitiesInspect(Arc::new(Mutex::new((inspect, vec![]))))
     }
 
-    /// Add a new string property to the node identied by the remote's stream endpoint id
-    /// containing a list of all capabilities that the endpoint supports.
-    pub async fn append<'a>(
-        &'a self,
-        id: &'a avdtp::StreamEndpointId,
-        caps: &'a Vec<avdtp::ServiceCapability>,
-    ) {
+    /// Add a string properties to the node identied by the remote's stream endpoint ids
+    /// and containing a list of all capabilities that the endpoint supports.
+    pub async fn append<'a>(&'a self, endpoints: &'a [avdtp::StreamEndpoint]) {
         let mut inner = self.0.lock().await;
-        let prop = inner.0.create_string(id.to_string(), caps.debug());
-        inner.1.push(prop);
+        for endpoint in endpoints {
+            let id_str = endpoint.local_id().to_string();
+            let caps_str = endpoint.capabilities().debug();
+            let prop = inner.0.create_string(id_str, caps_str);
+            inner.1.push(prop);
+        }
     }
 }
 

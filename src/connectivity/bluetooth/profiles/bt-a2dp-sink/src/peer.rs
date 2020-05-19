@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
+    bt_a2dp_sink_metrics as metrics,
+    bt_avdtp::{
+        self as avdtp, MediaCodecType, ServiceCapability, StreamEndpoint, StreamEndpointId,
+    },
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
@@ -17,11 +20,14 @@ use {
         Future, StreamExt,
     },
     parking_lot::Mutex,
-    std::pin::Pin,
-    std::sync::{Arc, Weak},
+    std::{
+        collections::HashSet,
+        pin::Pin,
+        sync::{Arc, Weak},
+    },
 };
 
-use crate::inspect_types::{RemoteCapabilitiesInspect, RemotePeerInspect};
+use crate::inspect_types::RemotePeerInspect;
 use crate::Streams;
 
 pub(crate) struct Peer {
@@ -79,28 +85,27 @@ impl Peer {
         lock.peer.clone()
     }
 
-    pub fn remote_capabilities_inspect(&self) -> RemoteCapabilitiesInspect {
-        let lock = self.inner.lock();
-        lock.inspect.remote_capabilities_inspect()
-    }
-
-    pub fn cobalt_logger(&self) -> CobaltSender {
-        let lock = self.inner.lock();
-        lock.cobalt_sender.clone()
-    }
-
     /// Perform Discovery and then Capability detection to discover the capabilities of the
     /// connected peer's stream endpoints
-    /// Returns a map of remote stream endpoint ids associated with the MediaCodec service capability of
+    /// Returns a vector of stream endpoints whose local_ids are the peer's stream ids.
     /// the endpoint.
-    pub fn collect_capabilities(&self) -> impl Future<Output = avdtp::Result<Vec<StreamEndpoint>>> {
-        let avdtp = self.inner.lock().peer.clone();
+    pub fn get_remote_capabilities(
+        &self,
+    ) -> impl Future<Output = avdtp::Result<Vec<StreamEndpoint>>> {
+        let avdtp = self.avdtp_peer();
+        let inner = self.inner.clone();
         let get_all = self.descriptor.map_or(false, a2dp_version_check);
         async move {
+            {
+                let lock = inner.lock();
+                if let Some(caps) = lock.cached_remote_endpoints.as_ref() {
+                    return Ok(caps.iter().map(StreamEndpoint::as_new).collect());
+                }
+            }
             fx_vlog!(1, "Discovering peer streams..");
             let infos = avdtp.discover().await?;
             fx_vlog!(1, "Discovered {} streams", infos.len());
-            let mut remote_streams = Vec::new();
+            let mut streams = Vec::new();
             for info in infos {
                 let capabilities = if get_all {
                     avdtp.get_all_capabilities(info.id()).await
@@ -113,15 +118,16 @@ impl Peer {
                         for cap in &capabilities {
                             fx_vlog!(1, "  - {:?}", cap);
                         }
-                        remote_streams.push(avdtp::StreamEndpoint::from_info(&info, capabilities));
+                        streams.push(StreamEndpoint::from_info(&info, capabilities));
                     }
                     Err(e) => {
                         fx_log_info!("Stream {} capabilities failed: {:?}, skipping", info.id(), e);
                     }
                 };
             }
+            inner.lock().set_remote_endpoints(&streams).await;
 
-            Ok(remote_streams)
+            Ok(streams)
         }
     }
 
@@ -271,6 +277,9 @@ struct PeerInner {
     closed_wakers: Option<Vec<Waker>>,
     /// The cobalt logger for this peer
     cobalt_sender: CobaltSender,
+    /// Cached vector of remote StreamEndpoints, if they have been set.
+    /// These Endpoints are all in the new state.
+    cached_remote_endpoints: Option<Vec<StreamEndpoint>>,
 }
 
 impl PeerInner {
@@ -284,9 +293,8 @@ impl PeerInner {
         let mut inspect = RemotePeerInspect::new(inspect);
         for (id, stream) in streams.iter_mut() {
             let stream_state_property = inspect.create_stream_state_inspect(id);
-            let callback = move |stream: &avdtp::StreamEndpoint| {
-                stream_state_property.set(&format!("{:?}", stream))
-            };
+            let callback =
+                move |stream: &StreamEndpoint| stream_state_property.set(&format!("{:?}", stream));
             stream.set_endpoint_update_callback(Some(Box::new(callback)));
         }
         Self {
@@ -296,6 +304,7 @@ impl PeerInner {
             inspect,
             closed_wakers: Some(Vec::new()),
             cobalt_sender,
+            cached_remote_endpoints: None,
         }
     }
 
@@ -321,8 +330,26 @@ impl PeerInner {
         Ok(())
     }
 
+    /// Sets the cached remote endpoint set to `endpoints`.
+    /// Updates the reported Inspect data to match.
+    fn set_remote_endpoints(&mut self, endpoints: &[StreamEndpoint]) -> impl Future<Output = ()> {
+        self.cached_remote_endpoints = Some(endpoints.iter().map(StreamEndpoint::as_new).collect());
+        let codec_metrics: HashSet<_> = endpoints
+            .iter()
+            .filter_map(|endpoint| {
+                endpoint.codec_type().map(|t| codectype_to_availability_metric(t) as u32)
+            })
+            .collect();
+        for metric in codec_metrics {
+            self.cobalt_sender.log_event(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, metric);
+        }
+        let inspect = self.inspect.remote_capabilities_inspect();
+        let endpoints_copy: Vec<_> = endpoints.iter().map(StreamEndpoint::as_new).collect();
+        async move { inspect.append(&endpoints_copy).await }
+    }
+
     // Starts the media decoding task for a stream |seid|.
-    fn start_endpoint(&mut self, seid: &avdtp::StreamEndpointId) -> Result<(), avdtp::ErrorCode> {
+    fn start_endpoint(&mut self, seid: &StreamEndpointId) -> Result<(), avdtp::ErrorCode> {
         let inspect = &mut self.inspect;
         let cobalt_sender = self.cobalt_sender.clone();
         self.local.get_mut(&seid).and_then(|stream| {
@@ -467,6 +494,21 @@ impl PeerInner {
                 responder.send()
             }
         }
+    }
+}
+
+fn codectype_to_availability_metric(
+    codec_type: &MediaCodecType,
+) -> metrics::A2dpCodecAvailabilityMetricDimensionCodec {
+    match codec_type {
+        &MediaCodecType::AUDIO_SBC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc,
+        &MediaCodecType::AUDIO_MPEG12 => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Mpeg12,
+        &MediaCodecType::AUDIO_AAC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Aac,
+        &MediaCodecType::AUDIO_ATRAC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Atrac,
+        &MediaCodecType::AUDIO_NON_A2DP => {
+            metrics::A2dpCodecAvailabilityMetricDimensionCodec::VendorSpecific
+        }
+        _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
     }
 }
 
@@ -648,6 +690,68 @@ mod tests {
             // TODO: confirm the stream is usable
             Poll::Ready(Ok(_stream)) => {}
         }
+    }
+
+    #[test]
+    /// Test that the get_remote_capabilities works correctly
+    fn test_peer_get_remote_capabilities() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (proxy, _prof_stream) =
+            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let (cobalt_sender, _) = fake_cobalt_sender();
+
+        let id = PeerId(1);
+        let (avdtp, remote) = setup_avdtp_peer();
+        let inspect = inspect::Inspector::new();
+        let inspect = inspect.root().create_child(inspect::unique_name("peer_"));
+        let streams = create_streams();
+        let peer = Peer::create(id, avdtp, streams, proxy, inspect, cobalt_sender);
+
+        let get_remote_fut = peer.get_remote_capabilities();
+        pin_mut!(get_remote_fut);
+        assert!(exec.run_until_stalled(&mut get_remote_fut).is_pending());
+
+        let remote = avdtp::Peer::new(remote).expect("create remote peer");
+
+        let mut request_stream = remote.take_request_stream();
+
+        let mut streams = create_streams();
+
+        // Should have received a discover request, then a request to get the capabilities of all
+        // the things.
+        match exec.run_until_stalled(&mut request_stream.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::Discover { responder }))) => {
+                responder.send(&streams.information()).expect("discover response success");
+            }
+            x => panic!("Expected an avdtp discovery request, got {:?}", x),
+        };
+
+        assert!(exec.run_until_stalled(&mut get_remote_fut).is_pending());
+
+        match exec.run_until_stalled(&mut request_stream.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder }))) => {
+                let sbc_seid: StreamEndpointId = SBC_SEID.try_into().unwrap();
+                assert_eq!(sbc_seid, stream_id);
+                responder
+                    .send(streams.get_endpoint(&stream_id).unwrap().capabilities().as_slice())
+                    .expect("get capabilities response success");
+            }
+            x => panic!("Expected an avdtp get capabilities request, got {:?}", x),
+        };
+
+        match exec.run_until_stalled(&mut get_remote_fut) {
+            Poll::Ready(Ok(endpoints)) => assert_eq!(1, endpoints.len()),
+            x => panic!("Expected get remote capabilities to be done, got {:?}", x),
+        };
+
+        // The second time, it just returns the cached results.
+        let get_remote_fut = peer.get_remote_capabilities();
+        pin_mut!(get_remote_fut);
+
+        match exec.run_until_stalled(&mut get_remote_fut) {
+            Poll::Ready(Ok(endpoints)) => assert_eq!(1, endpoints.len()),
+            x => panic!("Expected get remote capabilities to be done, got {:?}", x),
+        };
     }
 
     #[test]
