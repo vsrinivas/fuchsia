@@ -18,6 +18,7 @@ fostr_fidl("fuchsia.feedback") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
   ]
 }
 

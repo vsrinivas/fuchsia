@@ -4,6 +4,8 @@
 
 library fuchsia.feedback;
 
+using fuchsia.sys;
+
 /// Allows a component to choose a different crash reporting product to file crashes for that
 /// component under.
 ///
@@ -16,7 +18,7 @@ protocol CrashReportingProductRegister {
     /// Upsert() may be called multiple times for the same |component_url|, e.g., once for each
     /// launch of the component, in which case only the most recent call's product information
     /// will be used in crash reports.
-    Upsert(string:MAX component_url, CrashReportingProduct product);
+    Upsert(fuchsia.sys.component_url component_url, CrashReportingProduct product);
 };
 
 /// Product release information to report to the crash server.
