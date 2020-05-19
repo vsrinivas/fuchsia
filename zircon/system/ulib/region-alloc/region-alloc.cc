@@ -63,8 +63,9 @@ void RegionAllocator::Reset() {
 zx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool) {
   fbl::AutoLock alloc_lock(&alloc_lock_);
 
-  if (!allocated_regions_by_base_.is_empty() || !avail_regions_by_base_.is_empty())
+  if (!allocated_regions_by_base_.is_empty() || !avail_regions_by_base_.is_empty()) {
     return ZX_ERR_BAD_STATE;
+  }
 
   region_pool_ = region_pool;
   return ZX_OK;
@@ -75,20 +76,23 @@ zx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
 
   // Start with sanity checks
   zx_status_t ret = AddSubtractSanityCheckLocked(region);
-  if (ret != ZX_OK)
+  if (ret != ZX_OK) {
     return ret;
+  }
 
   // Make sure that we do not intersect with the available regions if we do
   // not allow overlaps.
-  if (!allow_overlap && IntersectsLocked(avail_regions_by_base_, region))
+  if (!allow_overlap && IntersectsLocked(avail_regions_by_base_, region)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // All sanity checks passed.  Grab a piece of free bookkeeping from our pool,
   // fill it out, then add it to the sets of available regions (indexed by
   // base address as well as size)
   Region* to_add = region_pool_->New(this);
-  if (to_add == nullptr)
+  if (to_add == nullptr) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   to_add->base = region.base;
   to_add->size = region.size;
@@ -104,8 +108,9 @@ zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 
   // Start with sanity checks
   zx_status_t ret = AddSubtractSanityCheckLocked(to_subtract);
-  if (ret != ZX_OK)
+  if (ret != ZX_OK) {
     return ret;
+  }
 
   // Make a copy of the region to subtract.  We may need to modify the region
   // as part of the subtraction algorithm.
@@ -145,8 +150,9 @@ zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
       // are out of luck.
       if ((region.base != before->base) && (region_end != before_end)) {
         Region* second = region_pool_->New(this);
-        if (second == nullptr)
+        if (second == nullptr) {
           return ZX_ERR_NO_MEMORY;
+        }
 
         // Looks like we have the memory we need.  Compute the base/size of
         // the two regions which will be left over, then update the first
@@ -194,8 +200,9 @@ zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
   // If we have gotten this far, then there is no single region in the
   // available set which completely contains the subtraction region.  We
   // cannot continue unless allow_incomplete is true.
-  if (!allow_incomplete)
+  if (!allow_incomplete) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Great!  At this point we know that we are going to succeed, we just need
   // to go about updating all of the bookkeeping.  We may need to trim the end
@@ -244,8 +251,9 @@ zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
     ZX_DEBUG_ASSERT(after->base > region.base);
 
     // Case #3
-    if (after->base >= region_end)
+    if (after->base >= region_end) {
       break;
+    }
 
     // Cases #1 and #2.  No matter what, we need to...
     // 1) Advance after, re-naming the old 'after' to 'trim in the process.
@@ -272,8 +280,9 @@ zx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
     ZX_DEBUG_ASSERT(region_pool_ != nullptr);
     region_pool_->Delete(trim);
 
-    if (!region.size)
+    if (!region.size) {
       break;
+    }
   }
 
   // Sanity check.  The number of elements in the base index should match the
@@ -287,13 +296,15 @@ zx_status_t RegionAllocator::GetRegion(uint64_t size, uint64_t alignment,
   fbl::AutoLock alloc_lock(&alloc_lock_);
 
   // Check our RegionPool
-  if (region_pool_ == nullptr)
+  if (region_pool_ == nullptr) {
     return ZX_ERR_BAD_STATE;
+  }
 
   // Sanity check the arguments.
   out_region = nullptr;
-  if (!size || !alignment || !fbl::is_pow2(alignment))
+  if (!size || !alignment || !fbl::is_pow2(alignment)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Compute the things we will need round-up align base addresses.
   uint64_t mask = alignment - 1;
@@ -317,14 +328,16 @@ zx_status_t RegionAllocator::GetRegion(uint64_t size, uint64_t alignment,
     // the address space, and if overhead required to align the allocation
     // is not larger than what is leftover in the region after performing
     // the allocation.
-    if ((aligned_base >= iter->base) && (overhead <= leftover))
+    if ((aligned_base >= iter->base) && (overhead <= leftover)) {
       break;
+    }
 
     ++iter;
   }
 
-  if (!iter.IsValid())
+  if (!iter.IsValid()) {
     return ZX_ERR_NOT_FOUND;
+  }
 
   return AllocFromAvailLocked(iter, out_region, aligned_base, size);
 }
@@ -334,16 +347,18 @@ zx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
   fbl::AutoLock alloc_lock(&alloc_lock_);
 
   // Check our RegionPool
-  if (region_pool_ == nullptr)
+  if (region_pool_ == nullptr) {
     return ZX_ERR_BAD_STATE;
+  }
 
   uint64_t base = requested_region.base;
   uint64_t size = requested_region.size;
 
   // Sanity check the arguments.
   out_region = nullptr;
-  if (!size || ((base + size) < base))
+  if (!size || ((base + size) < base)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Find the first available region whose base address is strictly greater
   // than the one we are looking for, then back up one.
@@ -353,8 +368,9 @@ zx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
   // If the iterator is invalid, then we cannot satisfy this request.  If it
   // is valid, then we can satisfy this request if and only if the region we
   // found completely contains the requested region.
-  if (!iter.IsValid())
+  if (!iter.IsValid()) {
     return ZX_ERR_NOT_FOUND;
+  }
 
   // We know that base must be >= iter->base
   // We know that iter->size is non-zero.
@@ -369,8 +385,9 @@ zx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
   ZX_DEBUG_ASSERT(iter->base <= base);
   uint64_t req_end = base + size - 1;
   uint64_t iter_end = iter->base + iter->size - 1;
-  if (req_end > iter_end)
+  if (req_end > iter_end) {
     return ZX_ERR_NOT_FOUND;
+  }
 
   // Great, we have found a region which should be able to satisfy our
   // allocation request.  Get an iterator for the by-size index, then use the
@@ -381,19 +398,22 @@ zx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
 
 zx_status_t RegionAllocator::AddSubtractSanityCheckLocked(const ralloc_region_t& region) {
   // Check our RegionPool
-  if (region_pool_ == nullptr)
+  if (region_pool_ == nullptr) {
     return ZX_ERR_BAD_STATE;
+  }
 
   // Sanity check the region to make sure that it is well formed.  We do not
   // allow a region which is of size zero, or which wraps around the
   // allocation space.
-  if ((region.base + region.size) <= region.base)
+  if ((region.base + region.size) <= region.base) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Next, make sure the region we are adding or subtracting does not
   // intersect any region which is currently allocated.
-  if (IntersectsLocked(allocated_regions_by_base_, region))
+  if (IntersectsLocked(allocated_regions_by_base_, region)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   return ZX_OK;
 }
@@ -448,8 +468,9 @@ zx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
     // we want to allocate, but we will not use all of it.  Break it into
     // two pieces and return the one which comes first.
     Region* before_region = region_pool_->New(this);
-    if (before_region == nullptr)
+    if (before_region == nullptr) {
       return ZX_ERR_NO_MEMORY;
+    }
 
     Region* after_region = avail_regions_by_size_.erase(source);
 
@@ -468,8 +489,9 @@ zx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
     // region (after aligning).  Break it into two pieces and return the one
     // which comes after.
     Region* after_region = region_pool_->New(this);
-    if (after_region == nullptr)
+    if (after_region == nullptr) {
       return ZX_ERR_NO_MEMORY;
+    }
 
     Region* before_region = avail_regions_by_size_.erase(source);
 
@@ -485,8 +507,9 @@ zx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
     // Looks like we need to break our region into 3 chunk and return the
     // middle chunk.  Start by grabbing the bookkeeping we require first.
     Region* region = region_pool_->New(this);
-    if (region == nullptr)
+    if (region == nullptr) {
       return ZX_ERR_NO_MEMORY;
+    }
 
     Region* after_region = region_pool_->New(this);
     if (after_region == nullptr) {
@@ -548,8 +571,9 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
   while (after.IsValid()) {
     ZX_DEBUG_ASSERT(region->base < after->base);
 
-    if (!(allow_overlap ? (region_end >= after->base) : (region_end == after->base)))
+    if (!(allow_overlap ? (region_end >= after->base) : (region_end == after->base))) {
       break;
+    }
 
     uint64_t after_end = (after->base + after->size);
     region_end = fbl::max(region_end, after_end);
@@ -577,15 +601,17 @@ bool RegionAllocator::IntersectsLocked(const Region::WAVLTreeSortByBase& tree,
   // element exists, and its base is < the exclusive end of region, then
   // we have an intersection.
   auto iter = tree.lower_bound(region.base);
-  if (iter.IsValid() && (iter->base < (region.base + region.size)))
+  if (iter.IsValid() && (iter->base < (region.base + region.size))) {
     return true;
+  }
 
   // Check the element before us in the tree.  If it exists, we know that it's
   // base is < region.base.  If it's exclusive end is >= region.base, then we
   // have an intersection.
   --iter;
-  if (iter.IsValid() && (region.base < (iter->base + iter->size)))
+  if (iter.IsValid() && (region.base < (iter->base + iter->size))) {
     return true;
+  }
 
   return false;
 }

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <region-alloc/region-alloc.h>
-#include <stdio.h>
 #include <inttypes.h>
-#include <zxtest/zxtest.h>
-
-#include <fbl/algorithm.h>
+#include <stdio.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <region-alloc/region-alloc.h>
+#include <zxtest/zxtest.h>
 
 #include "common.h"
 
@@ -47,8 +47,9 @@ TEST(RegionAllocCppApiTestCase, RegionPools) {
   EXPECT_NULL(pool.get());
 
   // Add some regions to our allocator.
-  for (size_t i = 0; i < fbl::count_of(GOOD_REGIONS); ++i)
+  for (size_t i = 0; i < fbl::count_of(GOOD_REGIONS); ++i) {
     EXPECT_OK(alloc.AddRegion(GOOD_REGIONS[i]));
+  }
 
   // Make a new pool and try to assign it to the allocator.  This should fail
   // because the allocator is currently using resources from its currently
@@ -71,8 +72,9 @@ TEST(RegionAllocCppApiTestCase, RegionPools) {
 
   // Attempt (and fail) to add some bad regions (regions which overlap,
   // regions which wrap the address space)
-  for (size_t i = 0; i < fbl::count_of(BAD_REGIONS); ++i)
+  for (size_t i = 0; i < fbl::count_of(BAD_REGIONS); ++i) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, alloc.AddRegion(BAD_REGIONS[i]));
+  }
 
   // Force the region bookkeeping pool to run out of memory by adding more and
   // more regions until we eventually run out of room.  Make sure that the
@@ -110,8 +112,9 @@ TEST(RegionAllocCppApiTestCase, AllocBySize) {
   // Make a pool and attach it to an allocator.  Then add the test regions to it.
   RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
-  for (size_t i = 0; i < fbl::count_of(ALLOC_BY_SIZE_REGIONS); ++i)
+  for (size_t i = 0; i < fbl::count_of(ALLOC_BY_SIZE_REGIONS); ++i) {
     ASSERT_OK(alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]));
+  }
 
   // Run the alloc by size tests.  Hold onto the regions it allocates so they
   // don't automatically get returned to the pool.
@@ -152,8 +155,9 @@ TEST(RegionAllocCppApiTestCase, AllocSpecific) {
   // Make a pool and attach it to an allocator.  Then add the test regions to it.
   RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
-  for (size_t i = 0; i < fbl::count_of(ALLOC_SPECIFIC_REGIONS); ++i)
+  for (size_t i = 0; i < fbl::count_of(ALLOC_SPECIFIC_REGIONS); ++i) {
     ASSERT_OK(alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]));
+  }
 
   // Run the alloc specific tests.  Hold onto the regions it allocates so they
   // don't automatically get returned to the pool.

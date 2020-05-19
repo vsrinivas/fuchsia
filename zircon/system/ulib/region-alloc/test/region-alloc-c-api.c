@@ -44,8 +44,9 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
   pool = NULL;
 
   // Add some regions to our allocator.
-  for (size_t i = 0; i < countof(GOOD_REGIONS); ++i)
+  for (size_t i = 0; i < countof(GOOD_REGIONS); ++i) {
     EXPECT_OK(ralloc_add_region(alloc, &GOOD_REGIONS[i], false));
+  }
 
   // Make a new pool and try to assign it to the allocator.  This should fail
   // because the allocator is currently using resources from its currently
@@ -68,8 +69,9 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
 
   // Attempt (and fail) to add some bad regions (regions which overlap,
   // regions which wrap the address space)
-  for (size_t i = 0; i < countof(BAD_REGIONS); ++i)
+  for (size_t i = 0; i < countof(BAD_REGIONS); ++i) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, ralloc_add_region(alloc, &BAD_REGIONS[i], false));
+  }
 
   // Force the region bookkeeping pool to run out of memory by adding more and
   // more regions until we eventually run out of room.  Make sure that the
@@ -161,9 +163,11 @@ TEST(RegionAllocCApiTestCase, AllocBySize) {
   }
 
   // Put the regions we have allocated back in the allocator.
-  for (size_t i = 0; i < countof(regions); ++i)
-    if (regions[i])
+  for (size_t i = 0; i < countof(regions); ++i) {
+    if (regions[i]) {
       ralloc_put_region(regions[i]);
+    }
+  }
 
   // Destroy our allocator.
   ralloc_destroy_allocator(alloc);
@@ -187,8 +191,9 @@ TEST(RegionAllocCApiTestCase, AllocSpecific) {
     ralloc_release_pool(pool);
   }
 
-  for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i)
+  for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i) {
     EXPECT_OK(ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], false));
+  }
 
   // Run the alloc by size tests.  Hold onto the regions it allocates so they
   // can be cleaned up properly when the test finishes.
@@ -214,9 +219,11 @@ TEST(RegionAllocCApiTestCase, AllocSpecific) {
   }
 
   // Put the regions we have allocated back in the allocator.
-  for (size_t i = 0; i < countof(regions); ++i)
-    if (regions[i])
+  for (size_t i = 0; i < countof(regions); ++i) {
+    if (regions[i]) {
       ralloc_put_region(regions[i]);
+    }
+  }
 
   // Destroy our allocator.
   ralloc_destroy_allocator(alloc);
