@@ -39,6 +39,6 @@ class Puppet : public fuchsia::validate::logs::Validate {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  Puppet puppet(sys::ComponentContext::Create());
+  Puppet puppet(sys::ComponentContext::CreateAndServeOutgoingDirectory());
   loop.Run();
 }

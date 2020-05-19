@@ -34,7 +34,8 @@ PlatformCASEAuthDelegate gPlatformCASEAuthDelegate;
 // Implementation of Internal::InitCASEAuthDelegate as defined in the
 // openweave-core adaptation layer.
 WEAVE_ERROR InitCASEAuthDelegate() {
-  new (&gPlatformCASEAuthDelegate) PlatformCASEAuthDelegate(sys::ComponentContext::Create());
+  new (&gPlatformCASEAuthDelegate)
+      PlatformCASEAuthDelegate(sys::ComponentContext::CreateAndServeOutgoingDirectory());
   SecurityMgr.SetCASEAuthDelegate(&gPlatformCASEAuthDelegate);
   return WEAVE_NO_ERROR;
 }

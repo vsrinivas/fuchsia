@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
   // Create an instance of the application state.
   my_component_v1_cpp::App app(loop.dispatcher());
 
-  auto component_context = sys::ComponentContext::Create();
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   // Serve a protocol using:
   // component_context->outgoing()->AddPublicService<MyProtocol>(..);
 
