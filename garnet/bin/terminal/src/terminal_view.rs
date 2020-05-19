@@ -693,6 +693,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[ignore] // TODO(fxbug.dev/52560) re-enable this test when de-flaked
     async fn bytes_written_are_processed_by_term() -> Result<(), Error> {
         let (mut view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
 
