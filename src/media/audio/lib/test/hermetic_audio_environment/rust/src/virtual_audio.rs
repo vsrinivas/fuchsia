@@ -8,6 +8,8 @@ use futures::Future;
 pub trait VirtualAudioDevice: Sized {
     fn connect(env: &Environment) -> Result<Self>;
     fn set_unique_id(&self, id: [u8; 16]) -> Result<()>;
+    fn set_fifo_depth(&self, fifo_depth_bytes: u32) -> Result<()>;
+    fn set_external_delay(&self, external_delay: i64) -> Result<()>;
     fn add(&self) -> Result<()>;
     fn remove(&self) -> Result<()>;
 }
@@ -34,6 +36,14 @@ macro_rules! impl_virtual_audio_device {
 
             fn set_unique_id(&self, mut id: [u8; 16]) -> Result<()> {
                 Ok(self.set_unique_id(&mut id)?)
+            }
+
+            fn set_fifo_depth(&self, fifo_depth_bytes: u32) -> Result<()> {
+                Ok(self.set_fifo_depth(fifo_depth_bytes)?)
+            }
+
+            fn set_external_delay(&self, external_delay: i64) -> Result<()> {
+                Ok(self.set_external_delay(external_delay)?)
             }
 
             fn add(&self) -> Result<()> {
@@ -69,6 +79,8 @@ pub async fn with_connected_device<D: VirtualAudioDevice, F: Future<Output = Res
     let device = D::connect(&env)?;
     const EXPECTED_ID: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     device.set_unique_id(EXPECTED_ID.clone())?;
+    device.set_fifo_depth(0)?;
+    device.set_external_delay(0)?;
 
     println!("Adding virtual device to AudioDeviceEnumerator");
     device.add()?;
