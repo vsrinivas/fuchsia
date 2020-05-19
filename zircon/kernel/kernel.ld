@@ -174,6 +174,12 @@ SECTIONS
                ".data.rel.ro.unittest_testcases overalignment -> padding gaps");
     }
 
+    asan_globals : {
+        PROVIDE_HIDDEN(__start_asan_globals = .);
+        KEEP(*(asan_globals))
+        PROVIDE_HIDDEN(__stop_asan_globals = .);
+    }
+
     .data.rel.ro : {
         *(.data.rel.ro* .gnu.linkonce.d.rel.ro.*)
     }

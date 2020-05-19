@@ -150,7 +150,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         bad = 0;
     } else if (r_offset % 8 != 0) {
         bad = "misaligned r_offset";
-    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|code_patch_table|__llvm_prf_data/) {
+    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|code_patch_table|__llvm_prf_data|asan_globals/) {
         bad = "fixup in unexpected section"
     } else {
         bad = 0;
@@ -166,9 +166,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
                       this_prefix, 16 - length(this_prefix), r_offset - 8,
                       this_prefix, 16 - length(this_prefix), r_offset + 8,
                       kernel);
-        sed_cmd = sprintf("\
-sed '\''1,/^Disassembly/d;/^$/d;s/^/    /;/%s/s/^  /=>/'\''", $1);
-        system(objdump_cmd " | " sed_cmd " >&2");
+        print "\tTry:", objdump_cmd > "/dev/stderr";
     }
 }
 END {
