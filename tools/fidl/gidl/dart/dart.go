@@ -5,8 +5,8 @@
 package dart
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 	"text/template"
@@ -99,30 +99,32 @@ type decodeFailureCase struct {
 }
 
 // Generate generates dart tests.
-func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func Generate(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return tmpl.Execute(wr, tmplInput{
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, tmplInput{
 		EncodeSuccessCases: encodeSuccessCases,
 		DecodeSuccessCases: decodeSuccessCases,
 		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
 	})
+	return map[string][]byte{"": buf.Bytes()}, err
 }
 
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {

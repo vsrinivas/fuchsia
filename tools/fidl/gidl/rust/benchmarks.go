@@ -5,8 +5,8 @@
 package rust
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"strings"
 	"text/template"
 
@@ -83,13 +83,13 @@ type benchmark struct {
 }
 
 // GenerateBenchmarks generates Rust benchmarks.
-func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		benchmarks = append(benchmarks, benchmark{
@@ -103,7 +103,9 @@ func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 		NumBenchmarks: len(benchmarks) * 2,
 		Benchmarks:    benchmarks,
 	}
-	return benchmarkTmpl.Execute(wr, input)
+	var buf bytes.Buffer
+	err := benchmarkTmpl.Execute(&buf, input)
+	return map[string][]byte{"": buf.Bytes()}, err
 }
 
 func benchmarkName(gidlName string) string {

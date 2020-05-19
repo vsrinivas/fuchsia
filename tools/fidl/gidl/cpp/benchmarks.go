@@ -5,16 +5,16 @@
 package cpp
 
 import (
+	"bytes"
 	fidlir "fidl/compiler/backend/types"
 	"fmt"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
-	"io"
 	"strings"
 	"text/template"
 )
 
-var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
+var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <benchmarkfidl/cpp/fidl.h>
 #include <perftest/perftest.h>
 
@@ -24,7 +24,6 @@ var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
-{{ range .Benchmarks }}
 {{ .Type }} Build{{ .Name }}() {
   {{ .ValueBuild }}
   auto result = {{ .ValueVar }};
@@ -39,36 +38,30 @@ bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
   return hlcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
 }
-{{ end }}
 
 void RegisterTests() {
-  {{ range .Benchmarks }}
   perftest::RegisterTest("HLCPP/Builder/{{ .Path }}/WallTime", BenchmarkBuilder{{ .Name }});
   perftest::RegisterTest("HLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
   perftest::RegisterTest("HLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
-  {{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 
 }  // namespace
 `))
 
-type benchmarksTmplInput struct {
-	Benchmarks []benchmark
-}
-type benchmark struct {
+type benchmarkTmplInput struct {
 	Path, Name, Type     string
 	ValueBuild, ValueVar string
 }
 
 // Generate generates High-Level C++ benchmarks.
-func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
-	var benchmarks []benchmark
+	files := map[string][]byte{}
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
@@ -76,17 +69,19 @@ func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(gidlBenchmark.Value, decl)
 		valueBuild := valueBuilder.String()
-		benchmarks = append(benchmarks, benchmark{
+		var buf bytes.Buffer
+		if err := benchmarkTmpl.Execute(&buf, benchmarkTmplInput{
 			Path:       gidlBenchmark.Name,
 			Name:       benchmarkName(gidlBenchmark.Name),
 			Type:       benchmarkTypeFromValue(gidlBenchmark.Value),
 			ValueBuild: valueBuild,
 			ValueVar:   valueVar,
-		})
+		}); err != nil {
+			return nil, err
+		}
+		files[benchmarkName("_"+gidlBenchmark.Name)] = buf.Bytes()
 	}
-	return benchmarksTmpl.Execute(wr, benchmarksTmplInput{
-		Benchmarks: benchmarks,
-	})
+	return files, nil
 }
 
 func benchmarkTypeFromValue(value gidlir.Value) string {

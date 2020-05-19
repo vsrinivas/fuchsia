@@ -5,8 +5,8 @@
 package llcpp
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"text/template"
 
 	fidlcommon "fidl/compiler/backend/common"
@@ -85,30 +85,32 @@ type decodeFailureCase struct {
 }
 
 // Generate generates Low-Level C++ tests.
-func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return conformanceTmpl.Execute(wr, conformanceTmplInput{
+	var buf bytes.Buffer
+	err = conformanceTmpl.Execute(&buf, conformanceTmplInput{
 		EncodeSuccessCases: encodeSuccessCases,
 		DecodeSuccessCases: decodeSuccessCases,
 		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
 	})
+	return map[string][]byte{"": buf.Bytes()}, err
 }
 
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {

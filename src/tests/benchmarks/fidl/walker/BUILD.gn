@@ -23,10 +23,15 @@ gidl_walker("benchmark_suite_walker") {
 executable("bin") {
   output_name = "walker_fidl_microbenchmarks"
   testonly = true
-  sources = [ "main.cc" ]
+  sources = [
+    "main.cc",
+    "walker_benchmark_util.cc",
+  ]
   deps = [
     ":benchmark_suite_walker",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
     "//zircon/system/ulib/perftest",
   ]
   libs = [ "zircon" ]

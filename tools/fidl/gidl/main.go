@@ -5,13 +5,13 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -28,8 +28,10 @@ import (
 )
 
 // Generator is a function that generates conformance tests for a particular
-// backend and writes them to the io.Writer.
-type Generator func(io.Writer, gidlir.All, fidlir.Root) error
+// backend and returns a map of test name to file bytes. The test name is
+// added as a suffix to the name of the file before the extension
+// (e.g. my_file.go -> my_file_test_name.go).
+type Generator func(gidlir.All, fidlir.Root) (map[string][]byte, error)
 
 var conformanceGenerators = map[string]Generator{
 	"go":    gidlgolang.GenerateConformanceTests,
@@ -77,7 +79,9 @@ type GIDLFlags struct {
 	JSONPath *string
 	Language *string
 	Type     *string
-	Out      *string
+	// TODO(fxb/52371) It should not be necessary to specify the number of generated files.
+	NumOutputFiles *int
+	Out            *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -91,7 +95,11 @@ var flags = GIDLFlags{
 	Language: flag.String("language", "",
 		fmt.Sprintf("target language (%s)", strings.Join(allLanguages, "/"))),
 	Type: flag.String("type", "", fmt.Sprintf("output type (%s)", strings.Join(allGeneratorTypes, "/"))),
-	Out:  flag.String("out", "-", "optional path to write output to"),
+	NumOutputFiles: flag.Int("num-output-files", 1,
+		`Upper bound on number of output files.
+	Used to split C++ outputs to multiple files.
+	Must be at least as large as the actual number of outputs.`),
+	Out: flag.String("out", "-", "optional path to write output to"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -158,7 +166,6 @@ func main() {
 	if language == "" {
 		panic("must specify --language")
 	}
-	buf := new(bytes.Buffer)
 
 	gidlir.ValidateAllType(gidl, *flags.Type)
 	generatorMap, ok := allGenerators[*flags.Type]
@@ -167,28 +174,61 @@ func main() {
 	}
 	generator, ok := generatorMap[language]
 	if !ok {
-		panic(fmt.Sprintf("unknown language: %s", language))
+		log.Fatalf("unknown language: %s", language)
 	}
 
-	err := generator(buf, gidl, fidl)
+	files, err := generator(gidl, fidl)
 	if err != nil {
-		panic(err)
-	}
-	var writer = os.Stdout
-	if *flags.Out != "-" {
-		err := os.MkdirAll(filepath.Dir(*flags.Out), os.ModePerm)
-		if err != nil {
-			panic(err)
-		}
-		writer, err = os.Create(*flags.Out)
-		if err != nil {
-			panic(err)
-		}
-		defer writer.Close()
+		log.Fatal(err)
 	}
 
-	_, err = writer.Write(buf.Bytes())
-	if err != nil {
-		panic(err)
+	if len(files) > *flags.NumOutputFiles {
+		log.Fatalf("more generated gidl outputs than the number of output files")
 	}
+
+	if *flags.Out == "-" {
+		if len(files) != 1 {
+			log.Fatalf("multiple files generated, can't output to stdout")
+		}
+		for _, file := range files {
+			_, err = os.Stdout.Write(file)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		return
+	}
+
+	os.Remove(filepath.Dir(*flags.Out)) // clear any existing directory
+	if err := os.MkdirAll(filepath.Dir(*flags.Out), os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	// TODO(fxb/52371) The key in 'files' is the type name and should be used for naming files.
+	fileNum := 1
+	for _, file := range files {
+		if err := ioutil.WriteFile(outputFilepath(*flags.Out, fileNum), file, 0666); err != nil {
+			log.Fatal(err)
+		}
+		fileNum++
+	}
+	// Fill unused output files with empty files to have a consistent set of source dependencies
+	// in GN.
+	// TODO(fxb/52371) The empty file doesn't work for some languages, like go that require a
+	// package to be declared.
+	for ; fileNum <= *flags.NumOutputFiles; fileNum++ {
+		if err := ioutil.WriteFile(outputFilepath(*flags.Out, fileNum), []byte{}, 0666); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+// x/y/abc.test.go -> x/y/abc123.test.go
+func outputFilepath(inputFilepath string, fileNum int) string {
+	extra := ""
+	if fileNum > 1 {
+		extra = fmt.Sprintf("%d", fileNum)
+	}
+	dir, filename := path.Split(inputFilepath)
+	newfilename := strings.Join(strings.SplitN(filename, ".", 2), fmt.Sprintf("%s.", extra))
+	return path.Join(dir, newfilename)
 }

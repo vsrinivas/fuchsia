@@ -5,8 +5,8 @@
 package golang
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"strconv"
 	"text/template"
 
@@ -113,23 +113,23 @@ type decodeFailureCase struct {
 }
 
 // GenerateConformanceTests generates Go tests.
-func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, schema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	input := conformanceTmplInput{
 		EncodeSuccessCases: encodeSuccessCases,
@@ -137,7 +137,9 @@ func GenerateConformanceTests(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) e
 		EncodeFailureCases: encodeFailureCases,
 		DecodeFailureCases: decodeFailureCases,
 	}
-	return withGoFmt{conformanceTmpl}.Execute(wr, input)
+	var buf bytes.Buffer
+	err = withGoFmt{conformanceTmpl}.Execute(&buf, input)
+	return map[string][]byte{"": buf.Bytes()}, err
 }
 
 func marshalerContext(wireFormat gidlir.WireFormat) string {

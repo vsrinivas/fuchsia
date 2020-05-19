@@ -5,8 +5,8 @@
 package walker
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"strings"
 	"text/template"
 
@@ -16,7 +16,7 @@ import (
 	gidlmixer "gidl/mixer"
 )
 
-var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
+var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <benchmarkfidl/llcpp/fidl.h>
 #include <perftest/perftest.h>
 
@@ -24,7 +24,6 @@ var benchmarksTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
-{{ range .Benchmarks }}
 {{ .Type }} Build{{ .Name }}() {
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
@@ -34,48 +33,45 @@ namespace {
 bool BenchmarkWalker{{ .Name }}(perftest::RepeatState* state) {
 	return walker_benchmarks::WalkerBenchmark(state, Build{{ .Name }});
 }
-{{ end }}
 
 void RegisterTests() {
-{{ range .Benchmarks }}
 	perftest::RegisterTest("Walker/{{ .Path }}/WallTime", BenchmarkWalker{{ .Name }});
-{{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 
 } // namespace
 `))
 
-type benchmarksTmplInput struct {
-	Benchmarks []walkerBenchmark
-}
-
-type walkerBenchmark struct {
+type benchmarkTmplInput struct {
 	Path, Name, Type     string
 	ValueBuild, ValueVar string
 }
 
-func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
-	var tmplInput benchmarksTmplInput
+	files := map[string][]byte{}
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return fmt.Errorf("walker benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("walker benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
 		valBuild, valVar := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
-		tmplInput.Benchmarks = append(tmplInput.Benchmarks, walkerBenchmark{
+		var buf bytes.Buffer
+		if err := benchmarkTmpl.Execute(&buf, benchmarkTmplInput{
 			Path:       gidlBenchmark.Name,
 			Name:       benchmarkName(gidlBenchmark.Name),
 			Type:       llcppBenchmarkType(gidlBenchmark.Value),
 			ValueBuild: valBuild,
 			ValueVar:   valVar,
-		})
+		}); err != nil {
+			return nil, err
+		}
+		files[benchmarkName("_"+gidlBenchmark.Name)] = buf.Bytes()
 	}
-	return benchmarksTmpl.Execute(wr, tmplInput)
+	return files, nil
 }
 
 func llcppBenchmarkType(value gidlir.Value) string {

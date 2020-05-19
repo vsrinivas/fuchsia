@@ -5,8 +5,8 @@
 package golang
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"strings"
 	"text/template"
 
@@ -143,18 +143,19 @@ var EncodeCounts = []EncodeCount{
 type benchmarkTmplInput struct {
 	Benchmarks []benchmark
 }
+
 type benchmark struct {
 	Name, ChromeperfPath, Value, ValueType string
 }
 
 // GenerateBenchmarks generates Go benchmarks.
-func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value)
 		if err != nil {
-			return fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		benchmarks = append(benchmarks, benchmark{
@@ -167,7 +168,9 @@ func GenerateBenchmarks(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	input := benchmarkTmplInput{
 		Benchmarks: benchmarks,
 	}
-	return withGoFmt{benchmarkTmpl}.Execute(wr, input)
+	var buf bytes.Buffer
+	err := withGoFmt{benchmarkTmpl}.Execute(&buf, input)
+	return map[string][]byte{"": buf.Bytes()}, err
 }
 
 func goBenchmarkName(gidlName string) string {
