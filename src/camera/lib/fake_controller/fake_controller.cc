@@ -5,10 +5,11 @@
 #include "src/camera/lib/fake_controller/fake_controller.h"
 
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
-#include "lib/fidl/cpp/optional.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 
 static fuchsia::camera2::DeviceInfo DefaultDeviceInfo() {
@@ -120,10 +121,19 @@ FakeController::FakeController()
 FakeController::~FakeController() { loop_.Shutdown(); }
 
 zx_status_t FakeController::SendFrameViaLegacyStream(fuchsia::camera2::FrameAvailableInfo info) {
-  if (!stream_ || !stream_->IsStreaming()) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-  return stream_->SendFrameAvailable(std::move(info));
+  zx_status_t status = ZX_ERR_INTERNAL;
+  zx::event event;
+  zx::event::create(0, &event);
+  async::PostTask(loop_.dispatcher(), [this, &status, &event, info = std::move(info)]() mutable {
+    if (!stream_ || !stream_->IsStreaming()) {
+      status = ZX_ERR_SHOULD_WAIT;
+    } else {
+      status = stream_->SendFrameAvailable(std::move(info));
+    }
+    event.signal(0, ZX_USER_SIGNAL_0);
+  });
+  event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+  return status;
 }
 
 void FakeController::GetNextConfig(

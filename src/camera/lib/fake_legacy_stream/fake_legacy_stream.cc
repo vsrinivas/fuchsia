@@ -5,19 +5,19 @@
 #include "fake_legacy_stream.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <memory>
 #include <sstream>
 #include <unordered_set>
-
-#include "fuchsia/sysmem/cpp/fidl.h"
-#include "zircon/types.h"
 
 namespace camera {
 
@@ -70,6 +70,13 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
  public:
   FakeLegacyStreamImpl() : binding_(this) {}
 
+  void CheckSameThread() {
+    auto dispatcher = async_get_default_dispatcher();
+    if (dispatcher) {
+      ZX_ASSERT_MSG(dispatcher == binding_.dispatcher(), "FakeLegacyStream is not thread-safe!");
+    }
+  }
+
   // |camera::FakeLegacyStream|
   fit::result<void, std::string> StreamClientStatus() override {
     if (client_error_count_ == 0) {
@@ -80,6 +87,7 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
   }
 
   zx_status_t SendFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) override {
+    CheckSameThread();
     if (stopped_) {
       FX_LOGS(INFO) << "Client has not started the stream";
       return ZX_ERR_BAD_STATE;
@@ -102,9 +110,13 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
     return ZX_OK;
   }
 
-  bool IsStreaming() override { return !stopped_; }
+  bool IsStreaming() override {
+    CheckSameThread();
+    return !stopped_;
+  }
 
   bool IsOutstanding(uint32_t buffer_id) override {
+    CheckSameThread();
     return outstanding_buffer_ids_.find(buffer_id) != outstanding_buffer_ids_.end();
   };
 

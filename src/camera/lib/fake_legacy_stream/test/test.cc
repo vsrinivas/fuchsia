@@ -4,10 +4,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
 
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 
 class FakeLegacyStreamTest : public gtest::TestLoopFixture {
@@ -109,4 +111,14 @@ TEST_F(FakeLegacyStreamTest, BadClient3) {
   auto result = fake_legacy_stream_->StreamClientStatus();
   ASSERT_TRUE(result.is_error());
   std::cerr << result.error() << std::endl;
+}
+
+// Threading assert.
+TEST_F(FakeLegacyStreamTest, WrongDispatcher) {
+  fuchsia::camera2::StreamPtr stream;
+  async::Loop other(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto result = camera::FakeLegacyStream::Create(stream.NewRequest(), other.dispatcher());
+  ASSERT_TRUE(result.is_ok());
+  auto fake = result.take_value();
+  ASSERT_DEATH(fake->IsStreaming(), ".*thread.*");
 }

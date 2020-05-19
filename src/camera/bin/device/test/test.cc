@@ -148,7 +148,7 @@ TEST_F(DeviceTest, GetFrames) {
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
-        auto result = FakeLegacyStream::Create(std::move(request));
+        auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fake = result.take_value();
         token.BindSync()->Close();
