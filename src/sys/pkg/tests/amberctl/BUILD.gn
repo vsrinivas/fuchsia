@@ -73,8 +73,8 @@ test_package("amberctl-tests") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-for-integration-test.cmx")
-      dest = "pkg-resolver-for-integration-test.cmx"
+              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
+      dest = "pkg-resolver-isolated.cmx"
     },
   ]
 

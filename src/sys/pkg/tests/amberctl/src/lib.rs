@@ -133,8 +133,7 @@ impl TestEnv {
 
     fn new_with_mounts(mounts: Mounts) -> Self {
         let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-for-integration-test.cmx"
-                .to_owned(),
+            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-isolated.cmx".to_owned(),
         )
         .add_dir_to_namespace(
             "/pkgfs".to_owned(),

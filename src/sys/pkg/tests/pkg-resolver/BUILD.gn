@@ -557,7 +557,7 @@ test_package("pkg-resolver-integration-tests") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-for-integration-test.cmx")
+              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
       dest = "pkg-resolver.cmx"
     },
   ]

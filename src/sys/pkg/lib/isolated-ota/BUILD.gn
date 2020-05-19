@@ -154,7 +154,7 @@ test_package("isolated-ota-tests") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-for-integration-test.cmx")
+              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
       dest = "pkg-resolver.cmx"
     },
     {
@@ -209,7 +209,7 @@ package("isolated-swd") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-for-integration-test.cmx")
+              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
       dest = "pkg-resolver-isolated.cmx"
     },
     {
