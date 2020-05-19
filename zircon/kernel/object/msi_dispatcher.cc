@@ -61,12 +61,12 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
     base_irq_id = alloc->block().base_irq_id;
   }
 
-  auto cleanup = fbl::MakeAutoCall([alloc, msi_id]() { alloc->ReleaseId(msi_id); });
   zx_status_t st = alloc->ReserveId(msi_id);
   if (st != ZX_OK) {
     LTRACEF("failed to reserve msi_id %u: %d\n", msi_id, st);
     return st;
   }
+  auto cleanup = fbl::MakeAutoCall([alloc, msi_id]() { alloc->ReleaseId(msi_id); });
 
   // To handle MSI masking we need to create a kernel mapping for the VMO handed
   // to us, this will provide access to the register controlling the given MSI.
@@ -163,6 +163,7 @@ MsiDispatcher::~MsiDispatcher() {
     LTRACEF("MsiDispatcher: Failed to release MSI id %u (vector %u): %d\n", msi_id_,
             base_irq_id_ + msi_id_, st);
   }
+  LTRACEF("MsiDispatcher: cleaning up MSI id %u\n", msi_id_);
   kcounter_add(dispatcher_msi_destroy_count, 1);
 }
 

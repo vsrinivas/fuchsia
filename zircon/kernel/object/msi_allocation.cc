@@ -11,6 +11,7 @@
 
 #include <fbl/ref_counted.h>
 #include <ktl/move.h>
+#include <ktl/popcount.h>
 #include <object/msi_allocation.h>
 
 KCOUNTER(msi_create_count, "msi.create")
@@ -122,5 +123,6 @@ void MsiAllocation::GetInfo(zx_info_msi* info) const TA_EXCL(lock_) {
   info->target_addr = block_.tgt_addr;
   info->target_data = block_.tgt_data;
   info->base_irq_id = block_.base_irq_id;
+  info->interrupt_count = ktl::popcount(ids_in_use_);
   info->num_irq = block_.num_irq;
 }

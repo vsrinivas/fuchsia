@@ -427,12 +427,20 @@ TEST_F(MsiTest, AllocationAndCreation) {
       zx::msi::create(msi, /*options=*/0, /*msi_id=*/msi_cnt, vmo, /*vmo_offset=*/0, &interrupt),
       ZX_ERR_BAD_STATE);
   ASSERT_OK(zx::msi::create(msi, /*options=*/0, /*msi_id=*/0, vmo, /*vmo_offset=*/0, &interrupt));
+  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
+  ASSERT_EQ(msi_info.interrupt_count, 1);
   ASSERT_EQ(*mock_mask_reg, 1);
   ASSERT_STATUS(
       zx::msi::create(msi, /*options=*/0, /*msi_id=*/0, vmo, /*vmo_offset=*/0, &interrupt_dup),
       ZX_ERR_ALREADY_BOUND);
   ASSERT_OK(
       zx::msi::create(msi, /*options=*/0, /*msi_id=*/1, vmo, /*vmo_offset=*/0, &interrupt_dup));
+  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
+  ASSERT_EQ(msi_info.interrupt_count, 2);
+  interrupt.reset();
+  interrupt_dup.reset();
+  ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
+  ASSERT_EQ(msi_info.interrupt_count, 0);
 }
 
 }  // namespace
