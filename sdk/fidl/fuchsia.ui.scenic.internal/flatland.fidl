@@ -122,15 +122,13 @@ table ImageProperties {
 /// ReleaseTransform() for more information.
 using TransformId = uint64;
 
-/// A user-defined identifier for a particular Link. See CreateLink() for more information.
-using LinkId = uint64;
-
 /// A user-defined identifier for a particular BufferCollection. See RegisterBufferCollection()
 /// for more information.
 using BufferCollectionId = uint64;
 
-/// A user-defined identifier for a particular Image. See CreateImage() for more information.
-using ImageId = uint64;
+/// A user-defined identifier for a particular piece of Content. See Content creation functions
+/// (e.g. CreateLink(), CreateImage()) for more information.
+using ContentId = uint64;
 
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
@@ -285,7 +283,7 @@ protocol Flatland {
     // Content constructors
 
     /// A Link is a connection between the objects authored in this Graph, and the objects in
-    /// another process. The parent process has control over how the linked content is integrated
+    /// another process. The parent process has control over how the linked Content is integrated
     /// into their Graph through this Link object, and the object's associated Link properties.
     ///
     /// `LinkProperties` must have logical_size set. This is the initial size that will drive the
@@ -294,9 +292,9 @@ protocol Flatland {
     ///
     /// The logical_size must have positive X and Y components.
     ///
-    /// Zero is not a valid link id. All other values are valid, assuming they are not already
-    /// in use (see ReleaseLink() for more details).
-    CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
+    /// Zero is not a valid Link id. All other values are valid, assuming they are not already
+    /// in use for another piece of Content (see ReleaseLink() for more details).
+    CreateLink(ContentId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);
 
     /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
@@ -321,52 +319,39 @@ protocol Flatland {
     /// the constraints specified by the backing BufferCollection (i.e. width and height within a
     /// valid range, accepted pixel format, etc.)
     ///
-    /// Zero is not a valid image id. All other values are valid, assuming they are not already in
-    /// use (see ReleaseImage() for more details).
-    CreateImage(ImageId image_id, BufferCollectionId buffer_id, uint32 vmo_index,
+    /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
+    /// use for another piece of Content (see ReleaseImage() for more details).
+    CreateImage(ContentId image_id, BufferCollectionId buffer_id, uint32 vmo_index,
                 ImageProperties properties);
 
     // Content management
 
-    /// Setting a Link on a Transform makes the content from the Link visible in the render tree
-    /// as long as the Transform is visible from the root Transform. The contents of the Link will
-    /// be rendered before, and therefore "behind", any content attached to the descendants of the
+    /// Setting a piece of Content on a Transform makes that Content visible in the render tree as
+    /// long as the Transform is visible from the root Transform. The Content will be rendered
+    /// before, and therefore "behind", any Content attached to the descendants of the Transform.
+    ///
+    /// Because each Transform can have, at most, a single piece of Content on it, calling this
+    /// function on a Transform that already has Content will replace that Content.
+    ///
+    /// Calling this function with a Content id of 0 will remove any Content currently on the
     /// Transform.
-    ///
-    /// Note that setting a Link on a Transform will remove any other content currently attached to
-    /// that Transform.
-    ///
-    /// Calling this function with a Link id of zero will remove any content currently attached to
-    /// the given Transform id, including other non-Link Content.
-    SetLinkOnTransform(LinkId link_id, TransformId transform_id);
-
-    /// Setting an Image on a Transform makes the contents of the Image visible in the render tree
-    /// as long as the Transform is visible from the root Transfrm. The contents of the Image will
-    /// be rendered before, and therefore "behind", any content attached to the descendants of the
-    /// Transform.
-    ///
-    /// Note that setting an Image on a Transform will remove any other content currently attached
-    /// to that Transform.
-    ///
-    /// Calling this function with a Image id of zero will remove any content currently attached to
-    /// the given Transform id, including other non-Image content.
-    SetImageOnTransform(ImageId image_id, TransformId transform_id);
+    SetContentOnTransform(ContentId content_id, TransformId transform_id);
 
     // Content mutators
 
-    /// Transforms are usually sufficient to change how content is presented. Links, however, have
+    /// Transforms are usually sufficient to change how Content is presented. Links, however, have
     /// special properties that are not part of the Transform hierarchy. Those properties can be set
     /// using this function.
     ///
     /// The logical_size must have positive X and Y components.
-    SetLinkProperties(LinkId link_id, LinkProperties properties);
+    SetLinkProperties(ContentId link_id, LinkProperties properties);
 
     /// The Content size for a Link is the size of the rectangle in the parent's space that the
     /// Link occupies. This effectively applies a scale to the Link Content equal to the ratio from
     /// its Content size to its logical_size.
     ///
     /// The Link Content size must have positive X and Y components.
-    SetLinkSize(LinkId link_id, Vec2 size);
+    SetLinkSize(ContentId link_id, Vec2 size);
 
     // ***** Cleanup operations *****
 
@@ -391,7 +376,7 @@ protocol Flatland {
     /// Despite having a return type, this function is still feed-forward like LinkToParent() and
     /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
     /// presented operations have been executed.
-    ReleaseLink(LinkId id) -> (ContentLinkToken token);
+    ReleaseLink(ContentId id) -> (ContentLinkToken token);
 
     /// Released Images will be garbage collected by the system once they are no longer necessary
     /// for rendering. For Images, this means the Image is no longer attached to any Transform and
@@ -404,5 +389,5 @@ protocol Flatland {
     ///
     /// It is an error to call functions with a released id (unless that id has been reused to
     /// construct a new Image).
-    ReleaseImage(ImageId id);
+    ReleaseImage(ContentId id);
 };

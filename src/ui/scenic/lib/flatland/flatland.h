@@ -36,9 +36,8 @@ namespace flatland {
 class Flatland : public fuchsia::ui::scenic::internal::Flatland {
  public:
   using TransformId = uint64_t;
-  using LinkId = uint64_t;
   using BufferCollectionId = uint64_t;
-  using ImageId = uint64_t;
+  using ContentId = uint64_t;
 
   // Passing the same LinkSystem and UberStructSystem to multiple Flatland instances will allow
   // them to link to each other through operations that involve tokens and parent/child
@@ -85,7 +84,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void SetRootTransform(TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void CreateLink(
-      LinkId link_id, fuchsia::ui::scenic::internal::ContentLinkToken token,
+      ContentId link_id, fuchsia::ui::scenic::internal::ContentLinkToken token,
       fuchsia::ui::scenic::internal::LinkProperties properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
@@ -93,24 +92,22 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       BufferCollectionId collection_id,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void CreateImage(ImageId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
+  void CreateImage(ContentId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkOnTransform(LinkId link_id, TransformId transform_id) override;
+  void SetContentOnTransform(ContentId content_id, TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetImageOnTransform(ImageId image_id, TransformId transform_id) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkProperties(LinkId link_id,
+  void SetLinkProperties(ContentId link_id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkSize(LinkId link_id, fuchsia::ui::scenic::internal::Vec2 size) override;
+  void SetLinkSize(ContentId link_id, fuchsia::ui::scenic::internal::Vec2 size) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void ReleaseLink(LinkId link_id,
+  void ReleaseLink(ContentId link_id,
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void ReleaseImage(ImageId image_id) override;
+  void ReleaseImage(ContentId image_id) override;
 
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
@@ -165,6 +162,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // it a fixed attachment point for cross-instance Links.
   const TransformHandle local_root_;
 
+  // A mapping from user-generated ID to the TransformHandle that owns that piece of Content.
+  // Attaching Content to a Transform consists of setting one of these "Content Handles" as the
+  // priority child of the Transform.
+  std::unordered_map<ContentId, TransformHandle> content_handles_;
+
   // Wraps a LinkSystem::ChildLink and the properties currently associated with that link.
   struct ChildLinkData {
     LinkSystem::ChildLink link;
@@ -176,8 +178,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // designated for it.
   void UpdateLinkScale(const ChildLinkData& link_data);
 
-  // A mapping from user-generated ID to ChildLinkData.
-  std::unordered_map<LinkId, ChildLinkData> child_links_;
+  // A mapping from Flatland-generated TransformHandle to the ChildLinkData it represents.
+  std::unordered_map<TransformHandle, ChildLinkData> child_links_;
 
   // The link from this Flatland instance to our parent.
   std::optional<LinkSystem::ParentLink> parent_link_;
@@ -226,9 +228,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // A mapping from user-generated ID to BufferCollectionData.
   std::unordered_map<BufferCollectionId, BufferCollectionData> buffer_collections_;
-
-  // A mapping from user-generated ID to the TransformHandle representing that Image.
-  std::unordered_map<ImageId, TransformHandle> image_handles_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;

@@ -351,7 +351,7 @@ void Flatland::SetRootTransform(TransformId transform_id) {
   });
 }
 
-void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
+void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkProperties properties,
                           fidl::InterfaceRequest<ContentLink> content_link) {
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
@@ -398,10 +398,12 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
   pending_operations_.push_back(
       [=, link = std::move(link), properties = std::move(properties)]() mutable {
         if (link_id == 0) {
+          FX_LOGS(ERROR) << "CreateLink called with ContentId zero.";
           return false;
         }
 
-        if (child_links_.count(link_id)) {
+        if (content_handles_.count(link_id)) {
+          FX_LOGS(ERROR) << "CreateLink called with existing ContentId " << link_id;
           return false;
         }
 
@@ -412,7 +414,8 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
         // that future logical size changes will result in the correct scale matrix.
         Vec2 size = properties.logical_size();
 
-        child_links_[link_id] = {
+        content_handles_[link_id] = link.graph_handle;
+        child_links_[link.graph_handle] = {
             .link = std::move(link), .properties = std::move(properties), .size = std::move(size)};
 
         return true;
@@ -450,7 +453,7 @@ void Flatland::RegisterBufferCollection(
   });
 }
 
-void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
+void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id, uint32_t vmo_index,
                            ImageProperties properties) {
   FX_DCHECK(renderer_);
 
@@ -460,7 +463,7 @@ void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, u
       return false;
     }
 
-    if (image_handles_.count(image_id)) {
+    if (content_handles_.count(image_id)) {
       FX_LOGS(ERROR) << "CreateImage called with pre-existing image_id " << image_id;
       return false;
     }
@@ -523,8 +526,7 @@ void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, u
     }
 
     auto handle = transform_graph_.CreateTransform();
-
-    image_handles_[image_id] = handle;
+    content_handles_[image_id] = handle;
 
     auto& metadata = image_metadatas_[handle];
     metadata.collection_id = buffer_data.collection_id;
@@ -536,79 +538,56 @@ void Flatland::CreateImage(ImageId image_id, BufferCollectionId collection_id, u
   });
 }
 
-void Flatland::SetLinkOnTransform(LinkId link_id, TransformId transform_id) {
+void Flatland::SetContentOnTransform(ContentId content_id, TransformId transform_id) {
   pending_operations_.push_back([=]() {
     if (transform_id == kInvalidId) {
-      FX_LOGS(ERROR) << "SetLinkOnTransform called with transform_id zero";
+      FX_LOGS(ERROR) << "SetContentOnTransform called with transform_id zero";
       return false;
     }
 
     auto transform_kv = transforms_.find(transform_id);
 
     if (transform_kv == transforms_.end()) {
-      FX_LOGS(ERROR) << "SetLinkOnTransform failed, transform_id " << transform_id << " not found";
+      FX_LOGS(ERROR) << "SetContentOnTransform failed, transform_id " << transform_id
+                     << " not found";
       return false;
     }
 
-    if (link_id == 0) {
+    if (content_id == 0) {
       transform_graph_.ClearPriorityChild(transform_kv->second);
       return true;
     }
 
-    auto link_kv = child_links_.find(link_id);
+    auto handle_kv = content_handles_.find(content_id);
 
-    if (link_kv == child_links_.end()) {
-      FX_LOGS(ERROR) << "SetLinkOnTransform failed, link_id " << link_id << " not found";
+    if (handle_kv == content_handles_.end()) {
+      FX_LOGS(ERROR) << "SetContentOnTransform failed, content_id " << content_id << " not found";
       return false;
     }
 
-    transform_graph_.SetPriorityChild(transform_kv->second, link_kv->second.link.graph_handle);
+    transform_graph_.SetPriorityChild(transform_kv->second, handle_kv->second);
     return true;
   });
 }
 
-void Flatland::SetImageOnTransform(ImageId image_id, TransformId transform_id) {
-  pending_operations_.push_back([=]() {
-    if (transform_id == kInvalidId) {
-      FX_LOGS(ERROR) << "SetImageOnTransform called with transform_id zero";
-      return false;
-    }
-
-    auto transform_kv = transforms_.find(transform_id);
-
-    if (transform_kv == transforms_.end()) {
-      FX_LOGS(ERROR) << "SetImageOnTransform failed, transform_id " << transform_id << " not found";
-      return false;
-    }
-
-    if (image_id == 0) {
-      transform_graph_.ClearPriorityChild(transform_kv->second);
-      return true;
-    }
-
-    auto image_handle_kv = image_handles_.find(image_id);
-
-    if (image_handle_kv == image_handles_.end()) {
-      FX_LOGS(ERROR) << "SetImageOnTransform failed, image_id " << image_id << " not found";
-      return false;
-    }
-
-    transform_graph_.SetPriorityChild(transform_kv->second, image_handle_kv->second);
-    return true;
-  });
-}
-
-void Flatland::SetLinkProperties(LinkId link_id, LinkProperties properties) {
+void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   pending_operations_.push_back([=, properties = std::move(properties)]() mutable {
     if (link_id == 0) {
       FX_LOGS(ERROR) << "SetLinkProperties called with link_id zero.";
       return false;
     }
 
-    auto link_kv = child_links_.find(link_id);
+    auto content_kv = content_handles_.find(link_id);
+
+    if (content_kv == content_handles_.end()) {
+      FX_LOGS(ERROR) << "SetLinkProperties failed, link_id " << link_id << " not found";
+      return false;
+    }
+
+    auto link_kv = child_links_.find(content_kv->second);
 
     if (link_kv == child_links_.end()) {
-      FX_LOGS(ERROR) << "SetLinkProperties failed, link_id " << link_id << " not found";
+      FX_LOGS(ERROR) << "SetLinkProperties failed, content_id " << link_id << " is not a Link";
       return false;
     }
 
@@ -637,7 +616,7 @@ void Flatland::SetLinkProperties(LinkId link_id, LinkProperties properties) {
   });
 }
 
-void Flatland::SetLinkSize(LinkId link_id, Vec2 size) {
+void Flatland::SetLinkSize(ContentId link_id, Vec2 size) {
   pending_operations_.push_back([=, size = std::move(size)]() {
     if (link_id == 0) {
       FX_LOGS(ERROR) << "SetLinkSize called with link_id zero.";
@@ -650,10 +629,17 @@ void Flatland::SetLinkSize(LinkId link_id, Vec2 size) {
       return false;
     }
 
-    auto link_kv = child_links_.find(link_id);
+    auto content_kv = content_handles_.find(link_id);
+
+    if (content_kv == content_handles_.end()) {
+      FX_LOGS(ERROR) << "SetLinkSize failed, link_id " << link_id << " not found";
+      return false;
+    }
+
+    auto link_kv = child_links_.find(content_kv->second);
 
     if (link_kv == child_links_.end()) {
-      FX_LOGS(ERROR) << "SetLinkSize failed, link_id " << link_id << " not found";
+      FX_LOGS(ERROR) << "SetLinkSize failed, content_id " << link_id << " is not a Link";
       return false;
     }
 
@@ -688,7 +674,7 @@ void Flatland::ReleaseTransform(TransformId transform_id) {
   });
 }
 
-void Flatland::ReleaseLink(LinkId link_id,
+void Flatland::ReleaseLink(ContentId link_id,
                            fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) {
   pending_operations_.push_back([this, link_id, callback = std::move(callback)]() {
     if (link_id == 0) {
@@ -696,10 +682,17 @@ void Flatland::ReleaseLink(LinkId link_id,
       return false;
     }
 
-    auto link_kv = child_links_.find(link_id);
+    auto content_kv = content_handles_.find(link_id);
+
+    if (content_kv == content_handles_.end()) {
+      FX_LOGS(ERROR) << "ReleaseLink failed, link_id " << link_id << " not found";
+      return false;
+    }
+
+    auto link_kv = child_links_.find(content_kv->second);
 
     if (link_kv == child_links_.end()) {
-      FX_LOGS(ERROR) << "ReleaseLink failed, link_id " << link_id << " not found";
+      FX_LOGS(ERROR) << "ReleaseLink failed, content_id " << link_id << " is not a Link";
       return false;
     }
 
@@ -723,7 +716,8 @@ void Flatland::ReleaseLink(LinkId link_id,
     bool content_released = transform_graph_.ReleaseTransform(link_kv->second.link.graph_handle);
     FX_DCHECK(content_released);
 
-    child_links_.erase(link_id);
+    child_links_.erase(link_kv->second.link.graph_handle);
+    content_handles_.erase(link_id);
 
     callback(std::move(return_token));
 
@@ -731,26 +725,33 @@ void Flatland::ReleaseLink(LinkId link_id,
   });
 }
 
-void Flatland::ReleaseImage(ImageId image_id) {
+void Flatland::ReleaseImage(ContentId image_id) {
   pending_operations_.push_back([=]() {
     if (image_id == kInvalidId) {
       FX_LOGS(ERROR) << "ReleaseImage called with image_id zero";
       return false;
     }
 
-    auto image_handle_kv = image_handles_.find(image_id);
+    auto content_kv = content_handles_.find(image_id);
 
-    if (image_handle_kv == image_handles_.end()) {
+    if (content_kv == content_handles_.end()) {
       FX_LOGS(ERROR) << "ReleaseImage failed, image_id " << image_id << " not found";
       return false;
     }
 
-    bool erased_from_graph = transform_graph_.ReleaseTransform(image_handle_kv->second);
+    auto image_kv = image_metadatas_.find(content_kv->second);
+
+    if (image_kv == image_metadatas_.end()) {
+      FX_LOGS(ERROR) << "ReleaseImage failed, content_id " << image_id << " is not an Image";
+      return false;
+    }
+
+    bool erased_from_graph = transform_graph_.ReleaseTransform(content_kv->second);
     FX_DCHECK(erased_from_graph);
 
     // Even though the handle is released, it may still be referenced by client Transforms. The
     // image_metadatas_ map preserves the entry until it shows up in the dead_transforms list.
-    image_handles_.erase(image_id);
+    content_handles_.erase(image_id);
 
     return true;
   });
