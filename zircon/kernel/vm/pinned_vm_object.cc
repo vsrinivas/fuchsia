@@ -23,14 +23,9 @@ zx_status_t PinnedVmObject::Create(fbl::RefPtr<VmObject> vmo, size_t offset, siz
   DEBUG_ASSERT(out_pinned_vmo != nullptr);
 
   if (vmo->is_paged()) {
-    zx_status_t status = vmo->CommitRange(offset, size);
+    zx_status_t status = vmo->CommitRangePinned(offset, size);
     if (status != ZX_OK) {
       LTRACEF("vmo->CommitRange failed: %d\n", status);
-      return status;
-    }
-    status = vmo->Pin(offset, size);
-    if (status != ZX_OK) {
-      LTRACEF("vmo->Pin failed: %d\n", status);
       return status;
     }
   }

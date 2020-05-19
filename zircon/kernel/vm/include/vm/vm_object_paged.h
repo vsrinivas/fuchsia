@@ -106,11 +106,17 @@ class VmObjectPaged final : public VmObject {
 
   size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override;
 
-  zx_status_t CommitRange(uint64_t offset, uint64_t len) override;
+  zx_status_t CommitRange(uint64_t offset, uint64_t len) override {
+    Guard<Mutex> guard{&lock_};
+    return CommitRangeInternal(offset, len, false, guard.take());
+  }
+  zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) override {
+    Guard<Mutex> guard{&lock_};
+    return CommitRangeInternal(offset, len, true, guard.take());
+  }
   zx_status_t DecommitRange(uint64_t offset, uint64_t len) override;
   zx_status_t ZeroRange(uint64_t offset, uint64_t len) override;
 
-  zx_status_t Pin(uint64_t offset, uint64_t len) override;
   void Unpin(uint64_t offset, uint64_t len) override;
 
   zx_status_t Read(void* ptr, uint64_t offset, size_t len) override;
@@ -202,7 +208,9 @@ class VmObjectPaged final : public VmObject {
   // internal page list routine
   void AddPageToArray(size_t index, vm_page_t* p);
 
-  zx_status_t PinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+  // Unified function that implements both CommitRange and CommitRangePinned
+  zx_status_t CommitRangeInternal(uint64_t offset, uint64_t len, bool pin, Guard<Mutex>&& adopt);
+
   void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // Internal decommit range helper that expects the lock to be held. On success it will populate

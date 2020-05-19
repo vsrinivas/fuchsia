@@ -273,4 +273,50 @@ TEST(Bti, NoDelayedUnpin) {
   thread.join();
 }
 
+TEST(Bti, DecommitRace) {
+  zx::iommu iommu;
+  zx::bti bti;
+  zx_iommu_desc_dummy_t desc;
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()),
+            ZX_OK);
+  ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+  // Create the VMO we will pin/decommit.
+  constexpr uint64_t kPageCount = 64;
+  constexpr uint64_t kVmoSize = ZX_PAGE_SIZE * kPageCount;
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(kVmoSize, 0, &vmo), ZX_OK);
+
+  // Spin up a helper that will perform the decommits.
+  std::atomic<bool> running = true;
+
+  // Flag that indicates the helper thread is up and running in case it takes a bit.
+  std::atomic<bool> done_one_iteration = false;
+  std::thread thread = std::thread([&running, &done_one_iteration, &vmo] {
+    while (running) {
+      vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, kVmoSize, nullptr, 0);
+      done_one_iteration = true;
+    }
+  });
+
+  zx_paddr_t paddrs[kPageCount];
+
+  // Wait until at least one iteration of the helper thread is done. Shouldn't take long so no need
+  // to yield or sleep.
+  while (!done_one_iteration)
+    ;
+
+  // Perform pin+unpin some arbitrary number of times to see if we hit the race condition.
+  for (int i = 0; i < 20000; i++) {
+    zx::pmt pmt;
+    ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, kVmoSize, paddrs, kPageCount, &pmt), ZX_OK);
+    ASSERT_EQ(pmt.unpin(), ZX_OK);
+  }
+
+  running = false;
+  thread.join();
+}
+
 }  // namespace

@@ -2000,16 +2000,35 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
+zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bool pin,
+                                               Guard<Mutex>&& adopt) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
-  Guard<Mutex> guard{&lock_};
+  DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+  Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
+  // Convince the static analysis that we now do actually hold lock_.
+  AssertHeld(lock_);
 
-  // trim the size
-  uint64_t new_len;
-  if (!TrimRange(offset, len, size_, &new_len)) {
-    return ZX_ERR_OUT_OF_RANGE;
+  if (is_slice()) {
+    uint64_t parent_offset;
+    VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
+    AssertHeld(parent->lock_);
+    return parent->CommitRangeInternal(offset + parent_offset, len, pin, guard.take());
+  }
+
+  // If a pin is requested the entire range must exist and be valid, otherwise we can commit a
+  // partial range.
+  uint64_t new_len = len;
+  if (pin) {
+    // verify that the range is within the object
+    if (unlikely(!InRange(offset, len, size_))) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+  } else {
+    if (!TrimRange(offset, len, size_, &new_len)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
   }
 
   // was in range, just zero length
@@ -2042,7 +2061,7 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
         },
         offset, end);
 
-    if (count == 0) {
+    if (count == 0 && !pin) {
       return ZX_OK;
     }
 
@@ -2055,6 +2074,14 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
   auto list_cleanup = fbl::MakeAutoCall([&page_list]() {
     if (!list_is_empty(&page_list)) {
       pmm_free(&page_list);
+    }
+  });
+
+  // Should any errors occur we need to unpin everything.
+  auto pin_cleanup = fbl::MakeAutoCall([this, original_offset = offset, &offset, pin]() {
+    if (pin) {
+      AssertHeld(*lock());
+      UnpinLocked(original_offset, offset - original_offset);
     }
   });
 
@@ -2074,33 +2101,44 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
 
       // Re-run the range checks, since size_ could have changed while we were blocked. This
       // is not a failure, since the arguments were valid when the syscall was made. It's as
-      // if the commit was successful but then the pages were thrown away.
-      if (!TrimRange(offset, new_len, size_, &new_len)) {
-        return ZX_OK;
+      // if the commit was successful but then the pages were thrown away. Unless we are pinning,
+      // in which case pages being thrown away is explicitly an error.
+      new_len = len;
+      if (pin) {
+        // verify that the range is within the object
+        if (unlikely(!InRange(offset, len, size_))) {
+          return ZX_ERR_OUT_OF_RANGE;
+        }
+      } else {
+        if (!TrimRange(offset, len, size_, &new_len)) {
+          pin_cleanup.cancel();
+          return ZX_OK;
+        }
       }
 
       if (new_len == 0) {
+        pin_cleanup.cancel();
         return ZX_OK;
       }
 
       end = ROUNDUP_PAGE_SIZE(offset + new_len);
       DEBUG_ASSERT(end > offset);
-      offset = ROUNDDOWN(offset, PAGE_SIZE);
     }
 
-    // cur_offset tracks how far we've made page requests, even if they're not done
+    // Remember what our offset was prior to attempting to commit.
+    const uint64_t prev_offset = offset;
+
+    // cur_offset tracks how far we've made page requests, even if they're not done.
     uint64_t cur_offset = offset;
-    // new_offset tracks how far we've successfully committed and is where we'll
-    // restart from if we need to retry the commit
-    uint64_t new_offset = offset;
     while (cur_offset < end) {
       // Don't commit if we already have this page
       VmPageOrMarker* p = page_list_.Lookup(cur_offset);
+      vm_page_t* page = nullptr;
       if (!p || !p->IsPage()) {
         // Check if our parent has the page
         const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
         zx_status_t res =
-            GetPageLocked(cur_offset, flags, &page_list, &page_request, nullptr, nullptr);
+            GetPageLocked(cur_offset, flags, &page_list, &page_request, &page, nullptr);
         if (res == ZX_ERR_NEXT || res == ZX_ERR_SHOULD_WAIT) {
           // In either case we'll need to wait on the request and retry, but if we get
           // ZX_ERR_NEXT we keep faulting until we eventually see ZX_ERR_SHOULD_WAIT.
@@ -2111,19 +2149,42 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
         } else if (res != ZX_OK) {
           return res;
         }
+      } else {
+        page = p->Page();
       }
 
-      cur_offset += PAGE_SIZE;
       if (!retry) {
-        new_offset = offset;
+        // As long as we're not in the retry state cur_offset and offset should track.
+        DEBUG_ASSERT(offset == cur_offset);
+        // Pin the page if needed and then formally commit by increasing our working offset.
+        if (pin) {
+          DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+          if (page->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
+            return ZX_ERR_UNAVAILABLE;
+          }
+
+          page->object.pin_count++;
+          if (page->object.pin_count == 1) {
+            pmm_page_queues()->MoveToWired(page);
+          } else {
+            DEBUG_ASSERT(list_in_list(&page->queue_node));
+          }
+          // Pinning every page in the largest vmo possible as many times as possible can't overflow
+          static_assert(VmObjectPaged::MAX_SIZE / PAGE_SIZE <
+                        UINT64_MAX / VM_PAGE_OBJECT_MAX_PIN_COUNT);
+          pinned_page_count_++;
+        }
+        offset += PAGE_SIZE;
+        len -= PAGE_SIZE;
       }
+      cur_offset += PAGE_SIZE;
     }
 
     // Unmap all of the pages in the range we touched. This may end up unmapping non-present
     // ranges or unmapping things multiple times, but it's necessary to ensure that we unmap
     // everything that actually is present before anything else sees it.
-    if (cur_offset - offset) {
-      RangeChangeUpdateLocked(offset, cur_offset - offset, RangeChangeOp::Unmap);
+    if (cur_offset - prev_offset) {
+      RangeChangeUpdateLocked(offset, cur_offset - prev_offset, RangeChangeOp::Unmap);
     }
 
     if (retry && cur_offset == end) {
@@ -2132,9 +2193,9 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
         return res;
       }
     }
-    offset = new_offset;
   } while (retry);
 
+  pin_cleanup.cancel();
   return ZX_OK;
 }
 
@@ -2475,72 +2536,6 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
     }
     *slot = VmPageOrMarker::Marker();
   }
-
-  return ZX_OK;
-}
-
-zx_status_t VmObjectPaged::Pin(uint64_t offset, uint64_t len) {
-  canary_.Assert();
-
-  Guard<Mutex> guard{&lock_};
-  return PinLocked(offset, len);
-}
-
-zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
-  canary_.Assert();
-
-  // verify that the range is within the object
-  if (unlikely(!InRange(offset, len, size_))) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  if (unlikely(len == 0)) {
-    return ZX_OK;
-  }
-
-  if (is_slice()) {
-    uint64_t parent_offset;
-    VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
-    AssertHeld(parent->lock_);
-    return parent->PinLocked(offset + parent_offset, len);
-  }
-
-  const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
-  const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
-
-  uint64_t pin_range_end = start_page_offset;
-  zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [&pin_range_end](const auto& page, uint64_t off) {
-        if (page.IsMarker()) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        vm_page* p = page.Page();
-        DEBUG_ASSERT(p->state() == VM_PAGE_STATE_OBJECT);
-        if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
-          return ZX_ERR_UNAVAILABLE;
-        }
-
-        p->object.pin_count++;
-        if (p->object.pin_count == 1) {
-          pmm_page_queues()->MoveToWired(p);
-        } else {
-          DEBUG_ASSERT(list_in_list(&p->queue_node));
-        }
-        pin_range_end = off + PAGE_SIZE;
-        return ZX_ERR_NEXT;
-      },
-      [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_NOT_FOUND; }, start_page_offset,
-      end_page_offset);
-
-  if (status != ZX_OK) {
-    pinned_page_count_ += (pin_range_end - start_page_offset) / PAGE_SIZE;
-    UnpinLocked(start_page_offset, pin_range_end - start_page_offset);
-    return status;
-  }
-
-  // Pinning every page in the largest vmo possible as many times as possible can't overflow
-  static_assert(VmObjectPaged::MAX_SIZE / PAGE_SIZE < UINT64_MAX / VM_PAGE_OBJECT_MAX_PIN_COUNT);
-  pinned_page_count_ += (end_page_offset - start_page_offset) / PAGE_SIZE;
 
   return ZX_OK;
 }

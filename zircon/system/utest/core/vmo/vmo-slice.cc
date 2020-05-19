@@ -399,4 +399,35 @@ TEST(VmoSliceTestCase, NotCoWType) {
   EXPECT_EQ(0, info.flags & ZX_INFO_VMO_IS_COW_CLONE);
 }
 
+TEST(VmoSliceTestCase, Pin) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  zx::vmo slice_vmo;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, PAGE_SIZE, &slice_vmo));
+
+  zx::iommu iommu;
+  zx::bti bti;
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  // Pin the slice, this should block decommits in the parent.
+  zx_paddr_t paddr;
+  zx::pmt pmt;
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, slice_vmo, 0, PAGE_SIZE, &paddr, 1, &pmt));
+
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.op_range(ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, nullptr, 0));
+
+  EXPECT_OK(pmt.unpin());
+}
+
 }  // namespace
