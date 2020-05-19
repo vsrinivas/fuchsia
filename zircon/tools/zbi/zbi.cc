@@ -2301,9 +2301,9 @@ Format control switches (last switch affects all output):\n\
     --compressed[=HOW], -c [HOW]   compress BOOTFS images (see below)\n\
     --uncompressed, -u             do not compress BOOTFS images\n\
 \n\
-HOW defaults to `lz4f` and can be one of (case-insensitive):\n\
+HOW defaults to `zstd` and can be one of (case-insensitive):\n\
  * `none` (same as `--uncompressed`)\n\
- * `LEVEL` (an integer) or `max` (default algorithm, currently `lz4f`)\n\
+ * `LEVEL` (an integer) or `max` (default algorithm, currently `zstd`)\n\
  * `lz4f` or `lz4f.LEVEL` (an integer) or `lz4f.max`\n\
  * `zstd` or `zstd.LEVEL` (an integer) or `zstd.max` or `zstd.overclock`\n\
 The meaning of LEVEL depends on the algorithm.  The default is chosen for\n\

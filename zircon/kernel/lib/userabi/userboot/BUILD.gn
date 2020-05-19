@@ -104,9 +104,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/third_party/ulib/musl/src/string:stdmem",
     ]
 
-    if (zbi_compression_algorithm == "lz4f") {
-      defines += [ "ZBI_COMPRESSION_MAGIC=kLz4fMagic" ]
-    } else if (zbi_compression_algorithm == "zstd") {
+    if (zbi_compression_algorithm == "zstd") {
       defines += [ "ZBI_COMPRESSION_MAGIC=kZstdMagic" ]
     } else {
       assert(zbi_compression_algorithm == "none",
