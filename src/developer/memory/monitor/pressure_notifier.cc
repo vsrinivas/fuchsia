@@ -13,7 +13,7 @@ namespace monitor {
 // on this thread.
 PressureNotifier::PressureNotifier(bool watch_for_changes, sys::ComponentContext* context,
                                    async_dispatcher_t* dispatcher)
-    : provider_dispatcher_(dispatcher), observer_(watch_for_changes, this) {
+    : provider_dispatcher_(dispatcher), context_(context), observer_(watch_for_changes, this) {
   if (context) {
     context->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
@@ -27,6 +27,17 @@ void PressureNotifier::Notify() {
 
 void PressureNotifier::PostLevelChange() {
   Level level_to_send = observer_.GetCurrentLevel();
+
+  if (level_to_send == Level::kNormal) {
+    // See comments about |generate_new_crash_reports_| in the definition of |FileCrashReport()|.
+    generate_new_crash_reports_ = true;
+  } else if (level_to_send == Level::kCritical && generate_new_crash_reports_) {
+    // File crash report before notifying watchers, so that we can capture the state *before*
+    // watchers can respond to memory pressure, thereby changing the state that caused the memory
+    // pressure in the first place.
+    FileCrashReport();
+  }
+
   // TODO(rashaeqbal): Throttle notifications to prevent thrashing.
   for (auto& watcher : watchers_) {
     // Notify the watcher only if we received a response for the previous level change, i.e. there
@@ -132,6 +143,40 @@ fuchsia::memorypressure::Level PressureNotifier::ConvertLevel(Level level) const
     default:
       return fuchsia::memorypressure::Level::NORMAL;
   }
+}
+
+void PressureNotifier::FileCrashReport() {
+  if (context_ == nullptr) {
+    return;
+  }
+  auto crash_reporter = context_->svc()->Connect<fuchsia::feedback::CrashReporter>();
+  if (!crash_reporter) {
+    return;
+  }
+
+  fuchsia::feedback::GenericCrashReport generic_report;
+  generic_report.set_crash_signature("fuchsia-critical-memory-pressure");
+
+  fuchsia::feedback::SpecificCrashReport specific_report;
+  specific_report.set_generic(std::move(generic_report));
+
+  fuchsia::feedback::CrashReport report;
+  report.set_program_name("system");
+  report.set_specific_report(std::move(specific_report));
+
+  crash_reporter->File(std::move(report),
+                       [](fuchsia::feedback::CrashReporter_File_Result unused) {});
+
+  // Skip generating further crash reports on future Critical transitions, unless we also observe a
+  // Normal transition first.
+  //
+  // This is done for two reasons:
+  // 1) It helps limit the number of crash reports we generate.
+  // 2) If the memory pressure changes to Critical again after going via Normal, we're
+  // presumably observing a different memory access pattern / use case, so it makes sense to
+  // generate a new crash report. Instead if we're only observing Critical -> Warning ->
+  // Critical transitions, we might be seeing the same memory access pattern repeat.
+  generate_new_crash_reports_ = false;
 }
 
 }  // namespace monitor

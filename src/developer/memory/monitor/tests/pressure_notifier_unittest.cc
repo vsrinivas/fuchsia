@@ -4,9 +4,11 @@
 
 #include "src/developer/memory/monitor/pressure_notifier.h"
 
+#include <fuchsia/feedback/cpp/fidl_test_base.h>
 #include <lib/async/default.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
@@ -15,41 +17,83 @@ namespace test {
 
 namespace fmp = fuchsia::memorypressure;
 
+class CrashReporterForTest : public fuchsia::feedback::testing::CrashReporter_TestBase {
+ public:
+  CrashReporterForTest() : binding_(this) {}
+
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) {
+    num_crash_reports_++;
+    fuchsia::feedback::CrashReporter_File_Result result;
+    result.set_response({});
+    callback(std::move(result));
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> GetHandler() {
+    return [this](fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+      binding_.Bind(std::move(request));
+    };
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    FX_NOTIMPLEMENTED() << name << " is not implemented";
+  }
+
+  size_t num_crash_reports() const { return num_crash_reports_; }
+
+ private:
+  fidl::Binding<fuchsia::feedback::CrashReporter> binding_;
+  size_t num_crash_reports_ = 0;
+};
+
 class PressureNotifierUnitTest : public gtest::TestLoopFixture {
  public:
-  PressureNotifierUnitTest()
-      : context_provider_(),
-        context_(context_provider_.TakeContext()),
-        notifier_(false, context_.get(), async_get_default_dispatcher()) {}
+  void SetUp() override {
+    context_provider_ =
+        std::make_unique<sys::testing::ComponentContextProvider>(async_get_default_dispatcher());
+    context_provider_->service_directory_provider()->AddService(crash_reporter_.GetHandler());
+    notifier_ = std::make_unique<PressureNotifier>(false, context_provider_->context(),
+                                                   async_get_default_dispatcher());
+  }
 
  protected:
   fmp::ProviderPtr Provider() {
     fmp::ProviderPtr provider;
-    context_provider_.ConnectToPublicService(provider.NewRequest());
+    context_provider_->ConnectToPublicService(provider.NewRequest());
     return provider;
   }
 
-  void InitialLevel() { notifier_.observer_.WaitOnLevelChange(); }
+  void InitialLevel() { notifier_->observer_.WaitOnLevelChange(); }
 
-  int GetWatcherCount() { return notifier_.watchers_.size(); }
+  int GetWatcherCount() { return notifier_->watchers_.size(); }
 
   void ReleaseWatchers() {
-    for (auto &w : notifier_.watchers_) {
-      notifier_.ReleaseWatcher(w->proxy.get());
+    for (auto& w : notifier_->watchers_) {
+      notifier_->ReleaseWatcher(w->proxy.get());
     }
   }
 
+  void TriggerLevelChange(Level level) {
+    if (level >= Level::kNumLevels) {
+      return;
+    }
+    notifier_->observer_.OnLevelChanged(notifier_->observer_.wait_items_[level].handle);
+    RunLoopUntilIdle();
+  }
+
+  bool generate_new_crash_reports() const { return notifier_->generate_new_crash_reports_; }
+
+  size_t num_crash_reports() const { return crash_reporter_.num_crash_reports(); }
+
  private:
-  sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<sys::ComponentContext> context_;
-  PressureNotifier notifier_;
+  std::unique_ptr<sys::testing::ComponentContextProvider> context_provider_;
+  std::unique_ptr<PressureNotifier> notifier_;
+  CrashReporterForTest crash_reporter_;
 };
 
 class PressureWatcherForTest : public fmp::Watcher {
  public:
-  PressureWatcherForTest(bool send_responses) : send_responses_(send_responses) {}
-
-  ~PressureWatcherForTest() override { bindings_.CloseAll(); }
+  PressureWatcherForTest(bool send_responses)
+      : binding_(this, watcher_ptr_.NewRequest()), send_responses_(send_responses) {}
 
   void OnLevelChanged(fmp::Level level, OnLevelChangedCallback cb) override {
     changes_++;
@@ -62,18 +106,15 @@ class PressureWatcherForTest : public fmp::Watcher {
 
   void Respond() { stashed_cb_(); }
 
-  void Register(fmp::ProviderPtr provider) {
-    bindings_.AddBinding(this, watcher_ptr_.NewRequest());
-    provider->RegisterWatcher(watcher_ptr_.Unbind());
-  }
+  void Register(fmp::ProviderPtr provider) { provider->RegisterWatcher(watcher_ptr_.Unbind()); }
 
   int NumChanges() const { return changes_; }
 
  private:
-  fidl::BindingSet<Watcher> bindings_;
+  fmp::WatcherPtr watcher_ptr_;
+  fidl::Binding<Watcher> binding_;
   int changes_ = 0;
   bool send_responses_;
-  fmp::WatcherPtr watcher_ptr_;
   OnLevelChangedCallback stashed_cb_;
 };
 
@@ -273,6 +314,80 @@ TEST_F(PressureNotifierUnitTest, ReleaseWatcherPendingCallback) {
   RunLoopUntilIdle();
   // Verify that the watcher has been freed.
   ASSERT_EQ(GetWatcherCount(), 0);
+}
+
+TEST_F(PressureNotifierUnitTest, CrashReportOnCritical) {
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(generate_new_crash_reports());
+}
+
+TEST_F(PressureNotifierUnitTest, NoCrashReportOnWarning) {
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kWarning);
+
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+}
+
+TEST_F(PressureNotifierUnitTest, NoCrashReportOnNormal) {
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kNormal);
+
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+}
+
+TEST_F(PressureNotifierUnitTest, NoCrashReportOnCriticalToWarning) {
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kWarning);
+
+  // No new crash reports for Critical -> Warning
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  // No new crash reports for Warning -> Critical
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(generate_new_crash_reports());
+}
+
+TEST_F(PressureNotifierUnitTest, CrashReportOnCriticalToNormal) {
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kNormal);
+
+  // No new crash reports for Critical -> Normal, but can generate future reports.
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_TRUE(generate_new_crash_reports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  // New crash report generated on Critical, but cannot generate any more reports.
+  ASSERT_EQ(num_crash_reports(), 2ul);
+  ASSERT_FALSE(generate_new_crash_reports());
 }
 
 }  // namespace test

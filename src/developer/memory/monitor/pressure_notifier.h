@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_MEMORY_MONITOR_PRESSURE_NOTIFIER_H_
 #define SRC_DEVELOPER_MEMORY_MONITOR_PRESSURE_NOTIFIER_H_
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -41,11 +42,16 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   void NotifyWatcher(WatcherState* watcher, Level level);
   fuchsia::memorypressure::Level ConvertLevel(Level level) const;
 
+  void FileCrashReport();
+
   async::TaskClosureMethod<PressureNotifier, &PressureNotifier::PostLevelChange> post_task_{this};
   async_dispatcher_t* const provider_dispatcher_;
+  sys::ComponentContext* const context_;
   fidl::BindingSet<fuchsia::memorypressure::Provider> bindings_;
   std::vector<std::unique_ptr<WatcherState>> watchers_;
   PressureObserver observer_;
+
+  bool generate_new_crash_reports_ = true;
 
   friend class test::PressureNotifierUnitTest;
 };
