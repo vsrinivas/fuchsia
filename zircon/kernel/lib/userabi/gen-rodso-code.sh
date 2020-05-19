@@ -130,51 +130,15 @@ grok_segments() {
         echo "#define ${1}_DATA_END_dynsym (${1}_DATA_START_dynsym + $size)" >> $OUTFILE
       fi
       ;;
-    # Hex dump of section '.note.gnu.build-id':
-    # 0x000001c8 04000000 08000000 03000000 474e5500 ............GNU.
-    *Hex\ dump*)
-      # This always comes last, so we can consume the rest of the lines.
-      grok_build_id "$1"
-      ;;
     esac
   done
   return $status
 }
 
-grok_build_id() {
-  # The first line looks like:
-  #   0x000001c8 04000000 08000000 03000000 474e5500 ............GNU.
-  # where 0x000001c8 is the address of the section.  Subsequent lines look
-  # similar, but possibly with an odd ending:
-  #   0x000001d8 9470536b 2dd1e5e7                   .pSk-...
-  local -a hex words=()
-  read -a hex
-  local addr="${hex[0]}"
-
-  while true; do
-    local n=${#hex[@]} i=1
-    while ((i < n - 1)); do
-      words+=("${hex[$i]}")
-      ((i++))
-    done
-    read -a hex || break
-  done
-
-  local -a bytes=()
-  local w
-  for w in "${words[@]}"; do
-    bytes+=("0x${w:0:2}," "0x${w:2:2}," "0x${w:4:2}," "0x${w:6:2},")
-  done
-
-  echo "#define ${1}_BUILD_ID_NOTE_ADDRESS $addr" >> "$OUTFILE"
-  echo "#define ${1}_BUILD_ID_NOTE_SIZE ${#bytes[@]}" >> "$OUTFILE"
-  echo "#define ${1}_BUILD_ID_NOTE_BYTES {${bytes[@]}}" >> "$OUTFILE"
-}
-
 find_segments() {
   # This if silliness disarms -e so we can observe grok_segments's return code.
   if {
-  "$READELF" -W -S -l -x.note.gnu.build-id "$2" | grok_segments "$1"
+  "$READELF" -W -S -l "$2" | grok_segments "$1"
   case $? in
   $SEGMENTS_NO_DYNSYM) have_dynsym=no ;;
   $SEGMENTS_HAVE_DYNSYM) have_dynsym=yes ;;
