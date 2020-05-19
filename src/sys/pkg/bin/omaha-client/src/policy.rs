@@ -847,4 +847,19 @@ mod tests {
         });
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), false);
     }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_omaha_client_policy_config_parses() {
+        // TODO(fxbug.dev/52236) )This struct will be moved into the policy proper in a follow-on ticket.
+        // Right now we're just testing the GN template.
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct PolicyConfig {
+            periodic_interval_minutes: u32,
+            startup_delay_seconds: u32,
+            retry_delay_seconds: u32,
+        }
+        let config = std::fs::read_to_string("/config/data/policy_config.json").unwrap();
+        let _p: PolicyConfig =
+            serde_json::from_str(&config).expect("parsed policy config with the correct types");
+    }
 }

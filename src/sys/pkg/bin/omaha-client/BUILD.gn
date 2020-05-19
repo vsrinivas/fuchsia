@@ -7,6 +7,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/pkg/bin/omaha-client/omcl_policy_config.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {
@@ -89,7 +90,10 @@ package("omaha-client") {
 }
 
 test_package("omaha-client-service-bin-tests") {
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    ":omaha-client-policy-config-for-test",
+  ]
 
   tests = [
     {
@@ -132,6 +136,14 @@ config_data("omaha-client-sysmgr-config") {
   for_pkg = "sysmgr"
   outputs = [ "omaha_client_sysmgr.config" ]
   sources = [ "sysmgr.config" ]
+}
+
+omcl_policy_config("omaha-client-policy-config-for-test") {
+  testonly = true
+  periodic_interval_minutes = 42
+  startup_delay_seconds = 43
+  retry_delay_seconds = 301
+  for_pkg = "omaha-client-service-bin-tests"
 }
 
 group("tests") {
