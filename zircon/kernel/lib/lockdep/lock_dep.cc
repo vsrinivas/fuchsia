@@ -168,7 +168,7 @@ void SystemInitThreadLockState(ThreadLockState*) {}
 
 // Wakes up the loop detector thread to re-evaluate the dependency graph.
 void SystemTriggerLoopDetection() {
-  if (spin_lock_held(&ThreadLock::Get()->lock())) {
+  if (ThreadLock::Get()->lock().IsHeld()) {
     AssertHeld<ThreadLock, IrqSave>(*ThreadLock::Get());
     graph_edge_event.SignalThreadLocked();
   } else {
