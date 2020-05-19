@@ -82,6 +82,17 @@ ModularConfigReader ModularConfigReader::CreateFromNamespace() {
   return ModularConfigReader(fbl::unique_fd(open("/", O_RDONLY)));
 }
 
+// static
+std::string ModularConfigReader::GetOverriddenConfigPath() {
+  return files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
+                         modular_config::kStartupConfigFilePath);
+}
+
+// static
+bool ModularConfigReader::OverriddenConfigExists() {
+  return files::IsFile(GetOverriddenConfigPath());
+}
+
 void ModularConfigReader::ParseConfig(const std::string& config, const std::string& config_path) {
   rapidjson::Document doc;
 

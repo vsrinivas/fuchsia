@@ -41,6 +41,12 @@ class ModularConfigReader {
   // incoming namespace.
   static ModularConfigReader CreateFromNamespace();
 
+  // Returns the overridden config path.
+  static std::string GetOverriddenConfigPath();
+
+  // Returns true if configurations exist at the overridden config path.
+  static bool OverriddenConfigExists();
+
   // Returns the parsed `basemgr` section of the config.
   fuchsia::modular::session::BasemgrConfig GetBasemgrConfig() const;
 
