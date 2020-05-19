@@ -38,8 +38,8 @@ test("stdio") {
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/runtime",
-    "//zircon/public/lib/unittest",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/unittest",
   ]
 
   # TODO(47392): Fix the leaks and remove this.

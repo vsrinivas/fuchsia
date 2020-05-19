@@ -93,10 +93,10 @@ test("fit") {
   if (is_fuchsia) {
     deps += [
       "//zircon/public/lib/fdio",
-      "//zircon/public/lib/unittest",
+      "//zircon/system/ulib/unittest",
     ]
   } else {
-    deps += [ "//zircon/public/lib/unittest-static" ]
+    deps += [ "//zircon/system/ulib/unittest:unittest-static" ]
   }
 
   # TODO(48668): Fix the leaks and remove this.

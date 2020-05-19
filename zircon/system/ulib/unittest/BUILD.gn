@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("unittest") {
   sdk = "shared"
   sdk_headers = [ "unittest/unittest.h" ]
@@ -14,12 +26,12 @@ zx_library("unittest") {
     "unittest.cc",
     "watchdog.cc",
   ]
-  deps = [ "$zx/system/ulib/pretty" ]
+  deps = [ "//zircon/public/lib/pretty" ]
   if (current_os == "linux") {
     libs = [ "pthread" ]
   }
   if (is_fuchsia) {
-    deps += [ "$zx/system/ulib/zx" ]
+    deps += [ "//zircon/public/lib/zx" ]
   }
 }
 
@@ -35,9 +47,7 @@ zx_library("unittest-static") {
     "unittest.cc",
     "watchdog.cc",
   ]
-  deps = [
-    "$zx/system/ulib/pretty",
-  ]
+  deps = [ "//zircon/public/lib/pretty" ]
   if (current_os == "linux") {
     libs = [ "pthread" ]
   }

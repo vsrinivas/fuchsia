@@ -20,7 +20,7 @@ test("getentropy") {
   sources = [ "getentropy.cc" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

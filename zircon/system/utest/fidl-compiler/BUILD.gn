@@ -219,8 +219,8 @@ if (current_toolchain == default_toolchain) {
       ":examples",
       ":goldens",
       "//third_party/boringssl",
-      "//zircon/public/lib/unittest-static",
       "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/unittest:unittest-static",
       "//zircon/tools/fidl:compiler",
     ]
   }

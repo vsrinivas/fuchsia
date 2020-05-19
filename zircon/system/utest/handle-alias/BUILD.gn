@@ -20,7 +20,7 @@ test("handle-alias") {
   sources = [ "handle-alias.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/unittest",
   ]
   libs = [ "zircon" ]
 }

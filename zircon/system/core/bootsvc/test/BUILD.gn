@@ -39,7 +39,7 @@ test("bootsvc-unit-test") {
   deps = [
     "..:util",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

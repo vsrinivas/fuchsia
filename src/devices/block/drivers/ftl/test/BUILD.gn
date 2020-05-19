@@ -39,8 +39,8 @@ test("ftl") {
   include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [
     ":shared",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

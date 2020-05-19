@@ -25,9 +25,9 @@ test("vmo") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

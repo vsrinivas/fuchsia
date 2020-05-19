@@ -39,7 +39,7 @@ test("lazy_init-test") {
   sources = []
   deps = [
     "//zircon/public/lib/lazy_init",
-    "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/unittest",
   ]
 
   if (is_fuchsia) {
@@ -55,6 +55,7 @@ test("lazy_init-test") {
     ]
   }
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
   # TODO(47442): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

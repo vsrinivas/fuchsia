@@ -14,8 +14,8 @@ executable("blktest") {
   testonly = false
   sources = [ "main.c" ]
   deps = [
-    "//zircon/public/lib/unittest",
     "//zircon/system/ulib/blktest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

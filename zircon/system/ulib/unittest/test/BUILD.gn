@@ -29,7 +29,7 @@ test("unittest") {
   sources = [ "unittest-test.cpp" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

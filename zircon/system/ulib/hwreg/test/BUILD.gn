@@ -38,9 +38,9 @@ test("libhwreg") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/hwreg-mock",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 
@@ -54,10 +54,10 @@ test("libhwreg-i2c") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

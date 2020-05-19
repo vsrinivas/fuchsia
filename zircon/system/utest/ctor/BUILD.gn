@@ -21,7 +21,7 @@ test("ctor") {
   deps = [
     ":dso-ctor",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/unittest",
+    "//zircon/system/ulib/unittest",
   ]
 }
 
@@ -32,7 +32,7 @@ shared_library("dso-ctor") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [ ":*" ]
   sources = [ "dso-ctor/dso-ctor.cc" ]
-  deps = [ "//zircon/public/lib/unittest" ]
+  deps = [ "//zircon/system/ulib/unittest" ]
 }
 
 unittest_package("ctor-package") {

@@ -28,11 +28,11 @@ source_set("threads") {
     ":thread-functions",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/runtime",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/test-exceptions",
+    "//zircon/system/ulib/unittest",
   ]
 }
 

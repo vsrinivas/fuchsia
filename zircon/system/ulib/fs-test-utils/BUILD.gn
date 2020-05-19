@@ -39,7 +39,6 @@ zx_library("fs-test-utils") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
@@ -62,5 +61,6 @@ zx_library("fs-test-utils") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/unittest",
   ]
 }
