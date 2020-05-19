@@ -329,6 +329,25 @@ static void __NO_RETURN trigger_hw_bkpt() {
   trigger_unsupported();
 }
 
+#if defined(__aarch64__)
+static void __NO_RETURN trigger_arm64_wfi() {
+  // WFI is illegal in user space
+  __asm__("wfi");
+  __asm__("wfi");
+  trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_arm64_wfe() {
+  // WFE is legal in user space
+  // Run it twice in a row in case the event is already set and it is naturally
+  // 'falling through'.
+  __asm__("wfe");
+  __asm__("wfe");
+  trigger_unsupported();
+}
+
+#endif
+
 // ARM does not trap on integer divide-by-zero.
 #if defined(__x86_64__)
 static void __NO_RETURN trigger_integer_divide_by_zero() {
@@ -398,6 +417,10 @@ static const struct {
     {ZX_EXCP_GENERAL, "integer-divide-by-zero", true, trigger_integer_divide_by_zero},
     {ZX_EXCP_GENERAL, "sse-divide-by-zero", true, trigger_sse_divide_by_zero},
     {ZX_EXCP_GENERAL, "x87-divide-by-zero", true, trigger_x87_divide_by_zero},
+#endif
+#if defined(__aarch64__)
+    {ZX_EXCP_GENERAL, "arm64-wfi", true, trigger_arm64_wfi},
+    {ZX_EXCP_GENERAL, "arm64-wfe", false, trigger_arm64_wfe},
 #endif
 };
 
