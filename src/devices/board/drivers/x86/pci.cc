@@ -19,6 +19,7 @@
 #include <bits/limits.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
@@ -30,7 +31,6 @@
 // pci bus driver.
 
 PciRootHost RootHost;
-const char* kLogTag = "acpi-pci:";
 
 struct ResourceContext {
   zx_handle_t pci_handle;
@@ -221,7 +221,7 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   ACPI_TABLE_HEADER* raw_table = nullptr;
   ACPI_STATUS status = AcpiGetTable(const_cast<char*>(ACPI_SIG_MCFG), 1, &raw_table);
   if (status != AE_OK) {
-    zxlogf(DEBUG, "%s no MCFG table found.", kLogTag);
+    zxlogf(DEBUG, "no MCFG table found.");
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -235,7 +235,7 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   uintptr_t table_end = reinterpret_cast<uintptr_t>(mcfg) + mcfg->Header.Length;
   size_t table_bytes = table_end - table_start;
   if (table_bytes % sizeof(McfgAllocation)) {
-    zxlogf(ERROR, "%s MCFG table has invalid size %zu", kLogTag, table_bytes);
+    zxlogf(ERROR, "MCFG table has invalid size %zu", table_bytes);
     return ZX_ERR_INTERNAL;
   }
 
@@ -244,9 +244,8 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   // later.
   for (unsigned i = 0; i < table_bytes / sizeof(acpi_mcfg_allocation); i++) {
     auto entry = &(reinterpret_cast<acpi_mcfg_allocation*>(table_start))[i];
-    zxlogf(DEBUG, "%s MCFG allocation %u (Addr = %#llx, Segment = %u, Start = %u, End = %u)",
-           kLogTag, i, entry->Address, entry->PciSegment, entry->StartBusNumber,
-           entry->EndBusNumber);
+    zxlogf(DEBUG, "MCFG allocation %u (Addr = %#llx, Segment = %u, Start = %u, End = %u)", i,
+           entry->Address, entry->PciSegment, entry->StartBusNumber, entry->EndBusNumber);
     mcfg_table->push_back(
         {entry->Address, entry->PciSegment, entry->StartBusNumber, entry->EndBusNumber});
   }
@@ -295,8 +294,8 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
 
   zx_status_t status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(DEBUG, "%s Unable to read _BBN for '%s' (%d), assuming base bus of 0", kLogTag,
-           dev_ctx->name, status);
+    zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx->name,
+           status);
 
     // Until we find an ecam we assume this potential legacy pci bus spans
     // bus 0 to bus 255 in its segment group.
@@ -307,8 +306,8 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   status = acpi_seg_call(object, &dev_ctx->info.segment_group);
   if (status != ZX_OK) {
     dev_ctx->info.segment_group = 0;
-    zxlogf(DEBUG, "%s Unable to read _SEG for '%s' (%d), assuming segment group 0.", kLogTag,
-           dev_ctx->name, status);
+    zxlogf(DEBUG, "Unable to read _SEG for '%s' (%d), assuming segment group 0.", dev_ctx->name,
+           status);
   }
 
   // If an MCFG is found for the given segment group this root has then we'll
@@ -321,14 +320,14 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   if (status == ZX_OK) {
     // Do the bus values make sense?
     if (found_bbn && mcfg_alloc.start_bus_number != pinfo.start_bus_num) {
-      zxlogf(ERROR, "%s: conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
-             kLogTag, dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
+      zxlogf(ERROR, "conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
+             dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
     }
 
     // Do the segment values make sense?
     if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.pci_segment) {
-      zxlogf(ERROR, "%s: conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
-             kLogTag, dev_ctx->name, pinfo.segment_group, mcfg_alloc.pci_segment);
+      zxlogf(ERROR, "conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
+             dev_ctx->name, pinfo.segment_group, mcfg_alloc.pci_segment);
     }
 
     // Since we have an ecam its metadata will replace anything defined in the ACPI tables.
@@ -349,11 +348,15 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   }
 
   if (zxlog_level_enabled(DEBUG)) {
-    printf("%s %s { acpi_obj(%p), bus range: %u:%u, segment: %u }\n", kLogTag, dev_ctx->name,
-           dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num, pinfo.segment_group);
+    fbl::StringBuffer<128> log;
+    log.AppendPrintf("%s { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx->name,
+                     dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
+                     pinfo.segment_group);
     if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
-      printf("%s ecam base %#" PRIxPTR "\n", kLogTag, mcfg_alloc.address);
+      log.AppendPrintf(", ecam base: %#" PRIxPTR, mcfg_alloc.address);
     }
+    log.AppendPrintf(" }");
+    zxlogf(DEBUG, "%s", log.c_str());
   }
 
   // These are cached here to work around dev_ctx potentially going out of scope
@@ -366,13 +369,13 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   status = Pciroot<pciroot_ctx>::Create(&RootHost, std::move(dev_ctx), parent, ctx->platform_bus(),
                                         name);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to add pciroot device for '%s': %d", kLogTag, name, status);
+    zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {
     // TODO(cja): these support the legacy-ish ACPI nhlt table handling that will need to be
     // updated in the future.
     ctx->set_found_pci(true);
     *ctx->mutable_last_pci() = last_pci_bbn;
-    zxlogf(INFO, "%s published pciroot '%s'", kLogTag, name);
+    zxlogf(INFO, "published pciroot '%s'", name);
   }
 
   return status;
