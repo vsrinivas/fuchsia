@@ -288,6 +288,9 @@ class __POINTER(_KeyType) HashTable {
   void clear_unsafe() {
     static_assert(PtrTraits::IsManaged == false,
                   "clear_unsafe is not allowed for containers of managed pointers");
+    static_assert(NodeTraits::NodeState::kNodeOptions & NodeOptions::AllowClearUnsafe,
+                  "Container does not support clear_unsafe.  Consider adding "
+                  "NodeOptions::AllowClearUnsafe to your node storage.");
 
     for (auto& e : buckets_)
       e.clear_unsafe();

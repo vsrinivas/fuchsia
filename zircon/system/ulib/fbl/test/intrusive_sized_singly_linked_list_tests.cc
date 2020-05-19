@@ -20,15 +20,15 @@ struct OtherListTraits {
   }
 };
 
-template <typename PtrType>
+template <typename PtrType, NodeOptions kNodeOptions = NodeOptions::None>
 class SizedSLLTraits {
  public:
   using TestObjBaseType = TestObjBase;
 
   // clang-format off
   using ContainerType           = SizedSinglyLinkedList<PtrType>;
-  using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
-  using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
+  using ContainableBaseClass    = SinglyLinkedListable<PtrType, kNodeOptions>;
+  using ContainerStateType      = SinglyLinkedListNodeState<PtrType, kNodeOptions>;
 
   using OtherContainerStateType = ContainerStateType;
   using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
@@ -73,6 +73,13 @@ using UPDDTE = DEFINE_TEST_THUNK(Sequence, SizedSLL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(Sequence, SizedSLL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(Sequence, SizedSLL, RefPtr);
 
+// Versions of the test objects which support clear_unsafe.
+template <typename PtrType>
+using CU_SizedSLLTraits = SizedSLLTraits<PtrType, fbl::NodeOptions::AllowClearUnsafe>;
+DEFINE_TEST_OBJECTS(CU_SizedSLL);
+using CU_UMTE   = DEFINE_TEST_THUNK(Sequence, CU_SizedSLL, Unmanaged);
+using CU_UPDDTE = DEFINE_TEST_THUNK(Sequence, CU_SizedSLL, UniquePtrDefaultDeleter);
+
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
@@ -81,12 +88,20 @@ RUN_ZXTEST(SizedSinglyLinkedListTest, UPDDTE,  Clear)
 RUN_ZXTEST(SizedSinglyLinkedListTest, UPCDTE,  Clear)
 RUN_ZXTEST(SizedSinglyLinkedListTest, RPTE,    Clear)
 
-RUN_ZXTEST(SizedSinglyLinkedListTest, UMTE,    ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because node lacks AllowClearUnsafe option.
+RUN_ZXTEST(SizedSinglyLinkedListTest, UMTE,    ClearUnsafe)
 RUN_ZXTEST(SizedSinglyLinkedListTest, UPDDTE,  ClearUnsafe)
 RUN_ZXTEST(SizedSinglyLinkedListTest, UPCDTE,  ClearUnsafe)
 RUN_ZXTEST(SizedSinglyLinkedListTest, RPTE,    ClearUnsafe)
 #endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because pointer type is managed.
+RUN_ZXTEST(SizedSinglyLinkedListTest, CU_UPDDTE,  ClearUnsafe)
+#endif
+
+RUN_ZXTEST(SizedSinglyLinkedListTest, CU_UMTE, ClearUnsafe)
 
 RUN_ZXTEST(SizedSinglyLinkedListTest, UMTE,    IsEmpty)
 RUN_ZXTEST(SizedSinglyLinkedListTest, UPDDTE,  IsEmpty)

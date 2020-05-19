@@ -423,7 +423,8 @@ struct SlabOriginSetter<
 // to template expansion.
 class SlabAllocatorBase {
  protected:
-  struct FreeListEntry : public SinglyLinkedListable<FreeListEntry*> {};
+  struct FreeListEntry
+      : public SinglyLinkedListable<FreeListEntry*, NodeOptions::AllowClearUnsafe> {};
 
   struct Slab {
     explicit Slab(size_t initial_bytes_used) : bytes_used_(initial_bytes_used) {}

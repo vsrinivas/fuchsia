@@ -52,15 +52,15 @@ struct OtherHashState {
   typename OtherHashTraits<PtrType>::BucketStateType bucket_state_;
 };
 
-template <typename PtrType>
+template <typename PtrType, NodeOptions kNodeOptions = NodeOptions::None>
 class HTSLLTraits {
  public:
   using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
 
   // clang-format off
   using ContainerType           = HashTable<size_t, PtrType>;
-  using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
-  using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
+  using ContainableBaseClass    = SinglyLinkedListable<PtrType, kNodeOptions>;
+  using ContainerStateType      = SinglyLinkedListNodeState<PtrType, kNodeOptions>;
   using KeyType                 = typename ContainerType::KeyType;
   using HashType                = typename ContainerType::HashType;
 
@@ -113,6 +113,13 @@ using UPDDTE = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(Associative, HTSLL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(Associative, HTSLL, RefPtr);
 
+// Versions of the test objects which support clear_unsafe.
+template <typename PtrType>
+using CU_HTSLLTraits = HTSLLTraits<PtrType, fbl::NodeOptions::AllowClearUnsafe>;
+DEFINE_TEST_OBJECTS(CU_HTSLL);
+using CU_UMTE   = DEFINE_TEST_THUNK(Associative, CU_HTSLL, Unmanaged);
+using CU_UPDDTE = DEFINE_TEST_THUNK(Associative, CU_HTSLL, UniquePtrDefaultDeleter);
+
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
@@ -121,12 +128,20 @@ RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   Clear)
 RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   Clear)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     Clear)
 
-RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because node lacks AllowClearUnsafe option.
+RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedHashTableTest, UPCDTE,   ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedHashTableTest, RPTE,     ClearUnsafe)
 #endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because pointer type is managed.
+RUN_ZXTEST(SinglyLinkedHashTableTest, CU_UPDDTE,  ClearUnsafe)
+#endif
+
+RUN_ZXTEST(SinglyLinkedHashTableTest, CU_UMTE,  ClearUnsafe)
 
 RUN_ZXTEST(SinglyLinkedHashTableTest, UMTE,     IsEmpty)
 RUN_ZXTEST(SinglyLinkedHashTableTest, UPDDTE,   IsEmpty)

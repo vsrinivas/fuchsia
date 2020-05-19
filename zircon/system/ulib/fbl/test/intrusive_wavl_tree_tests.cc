@@ -56,7 +56,7 @@ class OtherTreeNodeState {
   KeyType key_ = 0;
 };
 
-template <typename PtrType>
+template <typename PtrType, NodeOptions kNodeOptions = NodeOptions::None>
 class WAVLTraits {
  public:
   // clang-format off
@@ -64,8 +64,8 @@ class WAVLTraits {
     using TestObjBaseType         = KeyedTestObjBase<KeyType>;
 
     using ContainerType           = WAVLTree<KeyType, PtrType>;
-    using ContainableBaseClass    = WAVLTreeContainable<PtrType>;
-    using ContainerStateType      = WAVLTreeNodeState<PtrType>;
+    using ContainableBaseClass    = WAVLTreeContainable<PtrType, kNodeOptions>;
+    using ContainerStateType      = WAVLTreeNodeState<PtrType, kNodeOptions>;
 
     using OtherContainerStateType = OtherTreeNodeState<KeyType, PtrType>;
     using OtherContainerTraits    = OtherTreeTraits<OtherContainerStateType>;
@@ -105,6 +105,13 @@ using UPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrDefaultDelet
 using UPCDTE = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(OrderedAssociative, WAVL, RefPtr);
 VERIFY_CONTAINER_SIZES(WAVL, sizeof(void*) * 4);
+
+// Versions of the test objects which support clear_unsafe.
+template <typename PtrType>
+using CU_WAVLTraits = WAVLTraits<PtrType, fbl::NodeOptions::AllowClearUnsafe>;
+DEFINE_TEST_OBJECTS(CU_WAVL);
+using CU_UMTE   = DEFINE_TEST_THUNK(OrderedAssociative, CU_WAVL, Unmanaged);
+using CU_UPDDTE = DEFINE_TEST_THUNK(OrderedAssociative, CU_WAVL, UniquePtrDefaultDeleter);
 // clang-format on
 
 // WAVLBalanceTestObserver
@@ -528,12 +535,20 @@ RUN_ZXTEST(WavlTreeTest, UPDDTE,   Clear)
 RUN_ZXTEST(WavlTreeTest, UPCDTE,   Clear)
 RUN_ZXTEST(WavlTreeTest, RPTE,     Clear)
 
-RUN_ZXTEST(WavlTreeTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because node lacks AllowClearUnsafe option.
+RUN_ZXTEST(WavlTreeTest, UMTE,     ClearUnsafe)
 RUN_ZXTEST(WavlTreeTest, UPDDTE,   ClearUnsafe)
 RUN_ZXTEST(WavlTreeTest, UPCDTE,   ClearUnsafe)
 RUN_ZXTEST(WavlTreeTest, RPTE,     ClearUnsafe)
 #endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because pointer type is managed.
+RUN_ZXTEST(WavlTreeTest, CU_UPDDTE,  ClearUnsafe)
+#endif
+
+RUN_ZXTEST(WavlTreeTest, CU_UMTE,  ClearUnsafe)
 
 RUN_ZXTEST(WavlTreeTest, UMTE,     IsEmpty)
 RUN_ZXTEST(WavlTreeTest, UPDDTE,   IsEmpty)

@@ -85,7 +85,8 @@ class PseudoDir : public Vnode {
   class Entry : public fbl::ContainableBaseClasses<
                     fbl::TaggedWAVLTreeContainable<std::unique_ptr<Entry>, IdTreeTag,
                                                    fbl::NodeOptions::AllowMultiContainerUptr>,
-                    fbl::TaggedWAVLTreeContainable<Entry*, NameTreeTag>> {
+                    fbl::TaggedWAVLTreeContainable<Entry*, NameTreeTag,
+                                                   fbl::NodeOptions::AllowClearUnsafe>> {
    public:
     Entry(uint64_t id, fbl::String name, fbl::RefPtr<fs::Vnode> node);
     ~Entry();

@@ -85,6 +85,13 @@ struct WAVLTreeNodeStateBase
 
   WAVLTreeNodeStateBase() = default;
 
+  ~WAVLTreeNodeStateBase() {
+    ZX_DEBUG_ASSERT(IsValid());
+    if constexpr (!(kNodeOptions & fbl::NodeOptions::AllowClearUnsafe)) {
+      ZX_DEBUG_ASSERT(!InContainer());
+    }
+  }
+
   bool IsValid() const { return (parent_ || (!parent_ && !left_ && !right_)); }
   bool InContainer() const { return (parent_ != nullptr); }
 
@@ -526,6 +533,9 @@ class __POINTER(KeyType_) WAVLTree {
   void clear_unsafe() {
     static_assert(PtrTraits::IsManaged == false,
                   "clear_unsafe is not allowed for containers of managed pointers");
+    static_assert(NodeTraits::NodeState::kNodeOptions & NodeOptions::AllowClearUnsafe,
+                  "Container does not support clear_unsafe.  Consider adding "
+                  "NodeOptions::AllowClearUnsafe to your node storage.");
 
     root_ = nullptr;
     left_most_ = sentinel();

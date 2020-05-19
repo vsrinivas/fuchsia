@@ -177,11 +177,10 @@ struct SinglyLinkedListNodeState
 
   constexpr SinglyLinkedListNodeState() {}
   ~SinglyLinkedListNodeState() {
-    // Note; this ASSERT can only be enforced for lists made of managed
-    // pointer types.  Lists formed from unmanaged pointers can potentially
-    // leave next_ in a non-null state during destruction if the list is
-    // cleared using "clear_unsafe".
-    ZX_DEBUG_ASSERT(!PtrTraits::IsManaged || (next_ == nullptr));
+    ZX_DEBUG_ASSERT(IsValid());
+    if constexpr (!(kNodeOptions & fbl::NodeOptions::AllowClearUnsafe)) {
+      ZX_DEBUG_ASSERT(!InContainer());
+    }
   }
 
   // Defer to CommonNodeStateBase for enforcement of the various copy/move
@@ -471,8 +470,9 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
   // structure, but leaves all of the node-state(s) of the current element(s)
   // alone.
   //
-  // Only usable with containers of unmanaged pointers (Very Bad things can happen
-  // if you try this with containers of managed pointers).
+  // Only usable with containers of unmanaged pointers (Very Bad things can
+  // happen if you try this with containers of managed pointers) whose nodes
+  // have the NodeOptions::AllowClearUnsafe option set.
   //
   // Note: While this can be useful in special cases (such as resetting a free
   // list for a pool/slab allocator during destruction), you normally do not
@@ -480,6 +480,10 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
   void clear_unsafe() {
     static_assert(PtrTraits::IsManaged == false,
                   "clear_unsafe is not allowed for containers of managed pointers");
+    static_assert(NodeTraits::NodeState::kNodeOptions & NodeOptions::AllowClearUnsafe,
+                  "Container does not support clear_unsafe.  Consider adding "
+                  "NodeOptions::AllowClearUnsafe to your node storage.");
+
     head_ = sentinel();
     this->ResetSizeTracker();
   }

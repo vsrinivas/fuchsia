@@ -20,15 +20,15 @@ struct OtherListTraits {
   }
 };
 
-template <typename PtrType>
+template <typename PtrType, NodeOptions kNodeOptions = NodeOptions::None>
 class SLLTraits {
  public:
   // clang-format off
   using TestObjBaseType         = TestObjBase;
 
   using ContainerType           = SinglyLinkedList<PtrType>;
-  using ContainableBaseClass    = SinglyLinkedListable<PtrType>;
-  using ContainerStateType      = SinglyLinkedListNodeState<PtrType>;
+  using ContainableBaseClass    = SinglyLinkedListable<PtrType, kNodeOptions>;
+  using ContainerStateType      = SinglyLinkedListNodeState<PtrType, kNodeOptions>;
 
   using OtherContainerStateType = ContainerStateType;
   using OtherContainerTraits    = OtherListTraits<OtherContainerStateType>;
@@ -84,6 +84,14 @@ using UPCDTE = DEFINE_TEST_THUNK(Sequence, SLL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(Sequence, SLL, RefPtr);
 VERIFY_CONTAINER_SIZES(SLL, sizeof(void*));
 
+// Versions of the test objects which support clear_unsafe.
+template <typename PtrType>
+using CU_SLLTraits = SLLTraits<PtrType, fbl::NodeOptions::AllowClearUnsafe>;
+DEFINE_TEST_OBJECTS(CU_SLL);
+using CU_UMTE   = DEFINE_TEST_THUNK(Sequence, CU_SLL, Unmanaged);
+using CU_UPDDTE = DEFINE_TEST_THUNK(Sequence, CU_SLL, UniquePtrDefaultDeleter);
+VERIFY_CONTAINER_SIZES(CU_SLL, sizeof(void*));
+
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
@@ -92,12 +100,20 @@ RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  Clear)
 RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  Clear)
 RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Clear)
 
-RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because node lacks AllowClearUnsafe option.
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  ClearUnsafe)
 RUN_ZXTEST(SinglyLinkedListTest, RPTE,    ClearUnsafe)
 #endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because pointer type is managed.
+RUN_ZXTEST(SinglyLinkedListTest, CU_UPDDTE,  ClearUnsafe)
+#endif
+
+RUN_ZXTEST(SinglyLinkedListTest, CU_UMTE, ClearUnsafe)
 
 RUN_ZXTEST(SinglyLinkedListTest, UMTE,    IsEmpty)
 RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  IsEmpty)

@@ -86,6 +86,14 @@ using RFC_UPCDTE = DEFINE_TEST_THUNK(Sequence, RFC_DLL, UniquePtrCustomDeleter);
 using RFC_RPTE   = DEFINE_TEST_THUNK(Sequence, RFC_DLL, RefPtr);
 VERIFY_CONTAINER_SIZES(RFC_DLL, sizeof(void*));
 
+// Versions of the test objects which support clear_unsafe.
+template <typename PtrType>
+using CU_DLLTraits = DLLTraits<PtrType, fbl::NodeOptions::AllowClearUnsafe>;
+DEFINE_TEST_OBJECTS(CU_DLL);
+using CU_UMTE   = DEFINE_TEST_THUNK(Sequence, CU_DLL, Unmanaged);
+using CU_UPDDTE = DEFINE_TEST_THUNK(Sequence, CU_DLL, UniquePtrDefaultDeleter);
+VERIFY_CONTAINER_SIZES(CU_DLL, sizeof(void*));
+
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
@@ -94,12 +102,20 @@ RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Clear)
 RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Clear)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Clear)
 
-RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because node lacks AllowClearUnsafe option.
+RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    ClearUnsafe)
 #endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because pointer type is managed.
+RUN_ZXTEST(DoublyLinkedListTest, CU_UPDDTE,  ClearUnsafe)
+#endif
+
+RUN_ZXTEST(DoublyLinkedListTest, CU_UMTE, ClearUnsafe)
 
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    IsEmpty)
 RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  IsEmpty)

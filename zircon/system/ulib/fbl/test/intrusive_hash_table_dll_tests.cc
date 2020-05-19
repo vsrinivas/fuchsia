@@ -52,15 +52,15 @@ struct OtherHashState {
   typename OtherHashTraits<PtrType>::BucketStateType bucket_state_;
 };
 
-template <typename PtrType>
+template <typename PtrType, NodeOptions kNodeOptions = NodeOptions::None>
 class HTDLLTraits {
  public:
   // clang-format off
     using ObjType = typename ::fbl::internal::ContainerPtrTraits<PtrType>::ValueType;
 
     using ContainerType           = HashTable<size_t, PtrType, DoublyLinkedList<PtrType>>;
-    using ContainableBaseClass    = DoublyLinkedListable<PtrType>;
-    using ContainerStateType      = DoublyLinkedListNodeState<PtrType>;
+    using ContainableBaseClass    = DoublyLinkedListable<PtrType, kNodeOptions>;
+    using ContainerStateType      = DoublyLinkedListNodeState<PtrType, kNodeOptions>;
     using KeyType                 = typename ContainerType::KeyType;
     using HashType                = typename ContainerType::HashType;
 
@@ -116,6 +116,13 @@ using UPDDTE = DEFINE_TEST_THUNK(Associative, HTDLL, UniquePtrDefaultDeleter);
 using UPCDTE = DEFINE_TEST_THUNK(Associative, HTDLL, UniquePtrCustomDeleter);
 using RPTE   = DEFINE_TEST_THUNK(Associative, HTDLL, RefPtr);
 
+// Versions of the test objects which support clear_unsafe.
+template <typename PtrType>
+using CU_HTDLLTraits = HTDLLTraits<PtrType, fbl::NodeOptions::AllowClearUnsafe>;
+DEFINE_TEST_OBJECTS(CU_HTDLL);
+using CU_UMTE   = DEFINE_TEST_THUNK(Associative, CU_HTDLL, Unmanaged);
+using CU_UPDDTE = DEFINE_TEST_THUNK(Associative, CU_HTDLL, UniquePtrDefaultDeleter);
+
 //////////////////////////////////////////
 // General container specific tests.
 //////////////////////////////////////////
@@ -124,12 +131,20 @@ RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   Clear)
 RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   Clear)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     Clear)
 
-RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     ClearUnsafe)
 #if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because node lacks AllowClearUnsafe option.
+RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedHashTableTest, UPCDTE,   ClearUnsafe)
 RUN_ZXTEST(DoublyLinkedHashTableTest, RPTE,     ClearUnsafe)
 #endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+// Won't compile because pointer type is managed.
+RUN_ZXTEST(DoublyLinkedHashTableTest, CU_UPDDTE,  ClearUnsafe)
+#endif
+
+RUN_ZXTEST(DoublyLinkedHashTableTest, CU_UMTE,  ClearUnsafe)
 
 RUN_ZXTEST(DoublyLinkedHashTableTest, UMTE,     IsEmpty)
 RUN_ZXTEST(DoublyLinkedHashTableTest, UPDDTE,   IsEmpty)

@@ -164,7 +164,8 @@ class VmoPool {
   friend class Buffer;
 
  private:
-  struct ListableBuffer : public fbl::SinglyLinkedListable<ListableBuffer*> {
+  struct ListableBuffer
+      : public fbl::SinglyLinkedListable<ListableBuffer*, fbl::NodeOptions::AllowClearUnsafe> {
     // Get the start of the virtual memory address.
     void* virtual_address() const;
     // Get the start of the physical address.

@@ -166,6 +166,9 @@ enum class NodeOptions : uint64_t {
   // without needing to go through the container's erase method.
   AllowRemoveFromContainer = (1 << 5),
 
+  // Enables the |clear_unsafe| operation on containers of unmanaged pointers.
+  AllowClearUnsafe = (1 << 6),
+
   // Reserved bits reserved for testing purposes and should always be ignored by
   // node implementations.
   ReservedBits = 0xF000000000000000,

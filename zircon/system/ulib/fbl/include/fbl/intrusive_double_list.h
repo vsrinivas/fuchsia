@@ -66,11 +66,10 @@ struct DoublyLinkedListNodeState
 
   constexpr DoublyLinkedListNodeState() {}
   ~DoublyLinkedListNodeState() {
-    // Note; this ASSERT can only be enforced for lists made of managed
-    // pointer types.  Lists formed from unmanaged pointers can potentially
-    // leave next_ in a non-null state during destruction if the list is
-    // cleared using "clear_unsafe".
-    ZX_DEBUG_ASSERT(IsValid() && (!PtrTraits::IsManaged || !InContainer()));
+    ZX_DEBUG_ASSERT(IsValid());
+    if constexpr (!(kNodeOptions & fbl::NodeOptions::AllowClearUnsafe)) {
+      ZX_DEBUG_ASSERT(!InContainer());
+    }
   }
 
   bool IsValid() const { return ((next_ == nullptr) == (prev_ == nullptr)); }
@@ -516,6 +515,10 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
   void clear_unsafe() {
     static_assert(PtrTraits::IsManaged == false,
                   "clear_unsafe is not allowed for containers of managed pointers");
+    static_assert(NodeTraits::NodeState::kNodeOptions & NodeOptions::AllowClearUnsafe,
+                  "Container does not support clear_unsafe.  Consider adding "
+                  "NodeOptions::AllowClearUnsafe to your node storage.");
+
     head_ = sentinel();
 
     // Update our count bookkeeping.
