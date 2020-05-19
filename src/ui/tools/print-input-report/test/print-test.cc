@@ -17,7 +17,6 @@
 #include <gtest/gtest.h>
 #include <hid/usages.h>
 
-#include "src/ui/input/lib/hid-input-report/fidl.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/tools/print-input-report/devices.h"
 #include "src/ui/tools/print-input-report/printer.h"
@@ -62,23 +61,19 @@ class FakePrinter : public print_input_report::Printer {
   std::vector<std::string> expected_strings_;
 };
 
-class PrintInputReport : public ::testing::Test {
+class PrintInputReport : public testing::Test {
  protected:
   virtual void SetUp() {
     // Make the channels and the fake device.
     zx::channel token_server, token_client;
     ASSERT_EQ(zx::channel::create(0, &token_server, &token_client), ZX_OK);
-    fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>();
 
-    // Make and run the thread for the fake device's FIDL interface. This is necessary
-    // because the interface is asyncronous and will block the dispatcher.
-    // TODO(dgilhooley): When LLCPP supports async clients, make this test single threaded
-    // with a dispatcher.
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
-    ASSERT_EQ(loop_->StartThread("test-print-input-report-loop"), ZX_OK);
-    fidl::Bind(loop_->dispatcher(), std::move(token_server), fake_device_.get());
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-    // Make the client.
+    fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
+        fidl::InterfaceRequest<fuchsia::input::report::InputDevice>(std::move(token_server)),
+        loop_->dispatcher());
+    ASSERT_EQ(ZX_OK, loop_->StartThread("print-input-report-test-thread"));
     client_ = fuchsia_input_report::InputDevice::SyncClient(std::move(token_client));
   }
 
@@ -87,28 +82,23 @@ class PrintInputReport : public ::testing::Test {
     loop_->JoinThreads();
   }
 
-  std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
+  std::unique_ptr<async::Loop> loop_;
   std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
 };
 
 TEST_F(PrintInputReport, PrintMouseInputReport) {
-  hid_input_report::MouseInputReport mouse = {};
-  mouse.movement_x = 100;
-  mouse.movement_y = 200;
-  mouse.position_x = 300;
-  mouse.position_y = 400;
-  mouse.scroll_v = 100;
+  fuchsia::input::report::InputReport report;
+  report.mutable_mouse()->set_movement_x(100);
+  report.mutable_mouse()->set_movement_y(200);
+  report.mutable_mouse()->set_position_x(300);
+  report.mutable_mouse()->set_position_y(400);
+  report.mutable_mouse()->set_scroll_v(100);
+  report.mutable_mouse()->set_pressed_buttons({1, 10, 5});
 
-  mouse.num_buttons_pressed = 3;
-  mouse.buttons_pressed[0] = 1;
-  mouse.buttons_pressed[1] = 10;
-  mouse.buttons_pressed[2] = 5;
-
-  hid_input_report::InputReport report;
-  report.report = mouse;
-
-  fake_device_->SetReport(report);
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -126,85 +116,62 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
 }
 
 TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
-  hid_input_report::MouseDescriptor mouse = {};
-  mouse.input = hid_input_report::MouseInputDescriptor();
+  auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+  auto mouse = descriptor->mutable_mouse()->mutable_input();
 
-  fuchsia_input_report::Axis axis;
-  axis.unit = fuchsia_input_report::Unit::DISTANCE;
+  fuchsia::input::report::Axis axis;
+  axis.unit = fuchsia::input::report::Unit::DISTANCE;
   axis.range.min = -100;
   axis.range.max = -100;
-  mouse.input->movement_x = axis;
+  mouse->set_movement_x(axis);
 
-  axis.unit = fuchsia_input_report::Unit::NONE;
+  axis.unit = fuchsia::input::report::Unit::NONE;
   axis.range.min = -200;
   axis.range.max = -200;
-  mouse.input->movement_y = axis;
+  mouse->set_movement_y(axis);
 
   axis.range.min = 300;
   axis.range.max = 300;
-  mouse.input->position_x = axis;
+  mouse->set_position_x(axis);
 
   axis.range.min = 400;
   axis.range.max = 400;
-  mouse.input->position_y = axis;
+  mouse->set_position_y(axis);
 
-  mouse.input->num_buttons = 3;
-  mouse.input->buttons[0] = 1;
-  mouse.input->buttons[1] = 10;
-  mouse.input->buttons[2] = 5;
+  mouse->set_buttons({1, 10, 5});
 
-  hid_input_report::ReportDescriptor descriptor;
-  descriptor.descriptor = mouse;
-
-  fake_device_->SetDescriptor(descriptor);
+  fake_device_->SetDescriptor(std::move(descriptor));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
-      "Mouse Descriptor:\n",
-      "  Movement X:\n",
-      "    Unit: DISTANCE\n",
-      "    Min:      -100\n",
-      "    Max:      -100\n",
-      "  Movement Y:\n",
-      "    Unit:     NONE\n",
-      "    Min:      -200\n",
-      "    Max:      -200\n",
-      "  Position X:\n",
-      "    Unit:     NONE\n",
-      "    Min:       300\n",
-      "    Max:       300\n",
-      "  Position Y:\n",
-      "    Unit:     NONE\n",
-      "    Min:       400\n",
-      "    Max:       400\n",
-      "  Button: 1\n",
-      "  Button: 10\n",
-      "  Button: 5\n",
+      "Mouse Descriptor:\n",  "  Movement X:\n", "    Unit: DISTANCE\n", "    Min:      -100\n",
+      "    Max:      -100\n", "  Movement Y:\n", "    Unit:     NONE\n", "    Min:      -200\n",
+      "    Max:      -200\n", "  Position X:\n", "    Unit:     NONE\n", "    Min:       300\n",
+      "    Max:       300\n", "  Position Y:\n", "    Unit:     NONE\n", "    Min:       400\n",
+      "    Max:       400\n", "  Button: 1\n",   "  Button: 10\n",       "  Button: 5\n",
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
 }
 
 TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
-  fuchsia_input_report::Axis axis;
-  axis.unit = fuchsia_input_report::Unit::LINEAR_VELOCITY;
-  axis.range.min = 0;
-  axis.range.max = 1000;
+  auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+  auto values = descriptor->mutable_sensor()->mutable_input()->mutable_values();
 
-  hid_input_report::SensorDescriptor sensor_desc = {};
-  sensor_desc.input = hid_input_report::SensorInputDescriptor();
-  sensor_desc.input->values[0].axis = axis;
-  sensor_desc.input->values[0].type = fuchsia_input_report::SensorType::ACCELEROMETER_X;
+  fuchsia::input::report::SensorAxis axis;
+  axis.axis.unit = fuchsia::input::report::Unit::LINEAR_VELOCITY;
+  axis.axis.range.min = 0;
+  axis.axis.range.max = 1000;
+  axis.type = fuchsia::input::report::SensorType::ACCELEROMETER_X;
 
-  axis.unit = fuchsia_input_report::Unit::LUMINOUS_FLUX;
-  sensor_desc.input->values[1].axis = axis;
-  sensor_desc.input->values[1].type = fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE;
-  sensor_desc.input->num_values = 2;
+  values->push_back(axis);
 
-  hid_input_report::ReportDescriptor desc;
-  desc.descriptor = sensor_desc;
+  axis.axis.unit = fuchsia::input::report::Unit::LUMINOUS_FLUX;
+  axis.type = fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE;
 
-  fake_device_->SetDescriptor(desc);
+  values->push_back(axis);
+
+  fake_device_->SetDescriptor(std::move(descriptor));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -225,15 +192,12 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
 }
 
 TEST_F(PrintInputReport, PrintSensorInputReport) {
-  hid_input_report::SensorInputReport sensor_report = {};
-  sensor_report.values[0] = 100;
-  sensor_report.values[1] = -100;
-  sensor_report.num_values = 2;
+  fuchsia::input::report::InputReport report;
+  report.mutable_sensor()->set_values({100, -100});
 
-  hid_input_report::InputReport report;
-  report.report = sensor_report;
-
-  fake_device_->SetReport(report);
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -246,31 +210,28 @@ TEST_F(PrintInputReport, PrintSensorInputReport) {
 }
 
 TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
-  hid_input_report::TouchDescriptor touch_desc = {};
-  touch_desc.input = hid_input_report::TouchInputDescriptor();
-  touch_desc.input->touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
+  auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+  auto touch = descriptor->mutable_touch()->mutable_input();
+  touch->set_touch_type(fuchsia::input::report::TouchType::TOUCHSCREEN);
+  touch->set_max_contacts(100);
 
-  touch_desc.input->max_contacts = 100;
-
-  fuchsia_input_report::Axis axis;
-  axis.unit = fuchsia_input_report::Unit::NONE;
+  fuchsia::input::report::Axis axis;
+  axis.unit = fuchsia::input::report::Unit::NONE;
   axis.range.min = 0;
   axis.range.max = 300;
 
-  touch_desc.input->contacts[0].position_x = axis;
+  fuchsia::input::report::ContactInputDescriptor contact;
+  contact.set_position_x(axis);
 
   axis.range.max = 500;
-  touch_desc.input->contacts[0].position_y = axis;
+  contact.set_position_y(axis);
 
   axis.range.max = 100;
-  touch_desc.input->contacts[0].pressure = axis;
+  contact.set_pressure(axis);
 
-  touch_desc.input->num_contacts = 1;
+  touch->mutable_contacts()->push_back(std::move(contact));
 
-  hid_input_report::ReportDescriptor desc;
-  desc.descriptor = touch_desc;
-
-  fake_device_->SetDescriptor(desc);
+  fake_device_->SetDescriptor(std::move(descriptor));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -296,21 +257,21 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
 }
 
 TEST_F(PrintInputReport, PrintTouchInputReport) {
-  hid_input_report::TouchInputReport touch_report = {};
+  fuchsia::input::report::InputReport report;
+  fuchsia::input::report::ContactInputReport contact;
 
-  touch_report.num_contacts = 1;
+  contact.set_contact_id(10);
+  contact.set_position_x(123);
+  contact.set_position_y(234);
+  contact.set_pressure(345);
+  contact.set_contact_width(678);
+  contact.set_contact_height(789);
 
-  touch_report.contacts[0].contact_id = 10;
-  touch_report.contacts[0].position_x = 123;
-  touch_report.contacts[0].position_y = 234;
-  touch_report.contacts[0].pressure = 345;
-  touch_report.contacts[0].contact_width = 678;
-  touch_report.contacts[0].contact_height = 789;
+  report.mutable_touch()->mutable_contacts()->push_back(std::move(contact));
 
-  hid_input_report::InputReport report;
-  report.report = touch_report;
-
-  fake_device_->SetReport(report);
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -327,23 +288,14 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
 }
 
 TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
-  hid_input_report::KeyboardDescriptor keyboard_desc = {};
+  auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+  descriptor->mutable_keyboard()->mutable_input()->set_keys({fuchsia::ui::input2::Key::A,
+                                                             fuchsia::ui::input2::Key::UP,
+                                                             fuchsia::ui::input2::Key::LEFT_SHIFT});
+  descriptor->mutable_keyboard()->mutable_output()->set_leds(
+      {fuchsia::input::report::LedType::CAPS_LOCK, fuchsia::input::report::LedType::SCROLL_LOCK});
 
-  keyboard_desc.input = hid_input_report::KeyboardInputDescriptor();
-  keyboard_desc.input->num_keys = 3;
-  keyboard_desc.input->keys[0] = llcpp::fuchsia::ui::input2::Key::A;
-  keyboard_desc.input->keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
-  keyboard_desc.input->keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
-
-  keyboard_desc.output = hid_input_report::KeyboardOutputDescriptor();
-  keyboard_desc.output->num_leds = 2;
-  keyboard_desc.output->leds[0] = fuchsia_input_report::LedType::CAPS_LOCK;
-  keyboard_desc.output->leds[1] = fuchsia_input_report::LedType::SCROLL_LOCK;
-
-  hid_input_report::ReportDescriptor desc;
-  desc.descriptor = keyboard_desc;
-
-  fake_device_->SetDescriptor(desc);
+  fake_device_->SetDescriptor(std::move(descriptor));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -361,17 +313,14 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
 }
 
 TEST_F(PrintInputReport, PrintKeyboardInputReport) {
-  hid_input_report::KeyboardInputReport keyboard_report = {};
+  fuchsia::input::report::InputReport report;
+  report.mutable_keyboard()->set_pressed_keys({fuchsia::ui::input2::Key::A,
+                                               fuchsia::ui::input2::Key::UP,
+                                               fuchsia::ui::input2::Key::LEFT_SHIFT});
 
-  keyboard_report.num_pressed_keys = 3;
-  keyboard_report.pressed_keys[0] = llcpp::fuchsia::ui::input2::Key::A;
-  keyboard_report.pressed_keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
-  keyboard_report.pressed_keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
-
-  hid_input_report::InputReport report;
-  report.report = keyboard_report;
-
-  fake_device_->SetReport(report);
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -386,14 +335,12 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
 }
 
 TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
-  hid_input_report::KeyboardInputReport keyboard_report = {};
+  fuchsia::input::report::InputReport report;
+  report.mutable_keyboard()->set_pressed_keys({});
 
-  keyboard_report.num_pressed_keys = 0;
-
-  hid_input_report::InputReport report;
-  report.report = keyboard_report;
-
-  fake_device_->SetReport(report);
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -406,18 +353,13 @@ TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
 }
 
 TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
-  hid_input_report::ConsumerControlDescriptor descriptor = {};
+  auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+  descriptor->mutable_consumer_control()->mutable_input()->set_buttons(
+      {fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
+       fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
+       fuchsia::input::report::ConsumerControlButton::REBOOT});
 
-  descriptor.input = hid_input_report::ConsumerControlInputDescriptor();
-  descriptor.input->num_buttons = 3;
-  descriptor.input->buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
-  descriptor.input->buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
-  descriptor.input->buttons[2] = fuchsia_input_report::ConsumerControlButton::REBOOT;
-
-  hid_input_report::ReportDescriptor report_descriptor;
-  report_descriptor.descriptor = descriptor;
-
-  fake_device_->SetDescriptor(report_descriptor);
+  fake_device_->SetDescriptor(std::move(descriptor));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
@@ -433,17 +375,15 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
 }
 
 TEST_F(PrintInputReport, PrintConsumerControlReport) {
-  hid_input_report::ConsumerControlInputReport report = {};
+  fuchsia::input::report::InputReport report;
+  report.mutable_consumer_control()->set_pressed_buttons(
+      {fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
+       fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
+       fuchsia::input::report::ConsumerControlButton::REBOOT});
 
-  report.num_pressed_buttons = 3;
-  report.pressed_buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
-  report.pressed_buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
-  report.pressed_buttons[2] = fuchsia_input_report::ConsumerControlButton::REBOOT;
-
-  hid_input_report::InputReport input_report;
-  input_report.report = report;
-
-  fake_device_->SetReport(input_report);
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{

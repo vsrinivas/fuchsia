@@ -6,52 +6,44 @@
 
 #include <fbl/auto_lock.h>
 
+#include "lib/fidl/cpp/clone.h"
+
 namespace fake_input_report_device {
 
-void FakeInputDevice::SetDescriptor(hid_input_report::ReportDescriptor descriptor) {
+void FakeInputDevice::SetDescriptor(fuchsia::input::report::DeviceDescriptorPtr descriptor) {
   fbl::AutoLock lock(&lock_);
-  descriptor_ = descriptor;
+  descriptor_ = std::move(descriptor);
 }
 
-void FakeInputDevice::GetDescriptor(GetDescriptorCompleter::Sync completer) {
+void FakeInputDevice::GetDescriptor(GetDescriptorCallback callback) {
   fbl::AutoLock lock(&lock_);
-  hid_input_report::FidlDescriptor fidl;
-  hid_input_report::SetFidlDescriptor(descriptor_, &fidl);
-
-  fuchsia_input_report::DeviceDescriptor descriptor = fidl.builder.build();
-  completer.Reply(std::move(descriptor));
+  fuchsia::input::report::DeviceDescriptor desc;
+  fidl::Clone(*descriptor_, &desc);
+  callback(std::move(desc));
 }
 
-void FakeInputDevice::GetReportsEvent(GetReportsEventCompleter::Sync completer) {
+void FakeInputDevice::GetReportsEvent(GetReportsEventCallback callback) {
   fbl::AutoLock lock(&lock_);
   zx::event new_event;
   zx_status_t status = reports_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
-  completer.Reply(status, std::move(new_event));
+  callback(status, std::move(new_event));
 }
 
-void FakeInputDevice::GetReports(GetReportsCompleter::Sync completer) {
+void FakeInputDevice::GetReports(GetReportsCallback callback) {
   fbl::AutoLock lock(&lock_);
-  hid_input_report::FidlInputReport fidl;
-  zx_status_t status = hid_input_report::SetFidlInputReport(report_, &fidl);
-  if (status != ZX_OK) {
-    completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(nullptr, 0));
-    return;
-  }
-
-  fuchsia_input_report::InputReport report = fidl.builder.build();
   reports_event_.signal(ZX_USER_SIGNAL_0, 0);
-  completer.Reply(
-      fidl::VectorView<fuchsia_input_report::InputReport>(fidl::unowned_ptr(&report), 1));
+  callback(std::move(reports_));
 }
 
-void FakeInputDevice::SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
-                                       SendOutputReportCompleter::Sync completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-};
+void FakeInputDevice::SendOutputReport(fuchsia::input::report::OutputReport report,
+                                       SendOutputReportCallback callback) {
+  callback(
+      fuchsia::input::report::InputDevice_SendOutputReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+}
 
-void FakeInputDevice::SetReport(hid_input_report::InputReport report) {
+void FakeInputDevice::SetReports(std::vector<fuchsia::input::report::InputReport> reports) {
   fbl::AutoLock lock(&lock_);
-  report_ = report;
+  reports_ = std::move(reports);
   reports_event_.signal(0, ZX_USER_SIGNAL_0);
 }
 

@@ -84,12 +84,14 @@ class ReaderInterpreterInputTest : public ReaderInterpreterTest {
     // Make the channels and the fake device.
     zx::channel token_server;
     ASSERT_EQ(zx::channel::create(0, &token_server, &token_client_), ZX_OK);
-    fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>();
 
     // Make and run the thread for the fake device's FIDL interface.
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test-print-input-report-loop"), ZX_OK);
-    fidl::Bind(loop_->dispatcher(), std::move(token_server), fake_device_.get());
+
+    fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
+        fidl::InterfaceRequest<fuchsia::input::report::InputDevice>(std::move(token_server)),
+        loop_->dispatcher());
   }
 
   void TearDown() override {
@@ -101,28 +103,25 @@ class ReaderInterpreterInputTest : public ReaderInterpreterTest {
 TEST_F(ReaderInterpreterInputTest, TouchScreen) {
   // Add a touchscreen descriptor.
   {
-    hid_input_report::TouchDescriptor touch_desc = {};
-    touch_desc.input = hid_input_report::TouchInputDescriptor();
-    touch_desc.input->touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
+    auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+    auto touch = descriptor->mutable_touch()->mutable_input();
+    touch->set_touch_type(fuchsia::input::report::TouchType::TOUCHSCREEN);
+    touch->set_max_contacts(100);
 
-    touch_desc.input->max_contacts = 100;
-
-    fuchsia_input_report::Axis axis;
-    axis.unit = fuchsia_input_report::Unit::NONE;
+    fuchsia::input::report::Axis axis;
+    axis.unit = fuchsia::input::report::Unit::NONE;
     axis.range.min = 0;
     axis.range.max = 300;
 
-    touch_desc.input->contacts[0].position_x = axis;
+    fuchsia::input::report::ContactInputDescriptor contact;
+    contact.set_position_x(axis);
 
     axis.range.max = 500;
-    touch_desc.input->contacts[0].position_y = axis;
+    contact.set_position_y(axis);
 
-    touch_desc.input->num_contacts = 1;
+    touch->mutable_contacts()->push_back(std::move(contact));
 
-    hid_input_report::ReportDescriptor desc;
-    desc.descriptor = touch_desc;
-
-    fake_device_->SetDescriptor(desc);
+    fake_device_->SetDescriptor(std::move(descriptor));
   }
 
   // Add the device.
@@ -143,17 +142,18 @@ TEST_F(ReaderInterpreterInputTest, TouchScreen) {
 
   // Send a Touchscreen report.
   {
-    hid_input_report::TouchInputReport touch = {};
-    touch.num_contacts = 1;
-    touch.contacts[0].contact_id = 10;
-    touch.contacts[0].is_pressed = true;
-    touch.contacts[0].position_x = 30;
-    touch.contacts[0].position_y = 50;
+    fuchsia::input::report::InputReport report;
+    fuchsia::input::report::ContactInputReport contact;
 
-    hid_input_report::InputReport report;
-    report.report = touch;
+    contact.set_contact_id(10);
+    contact.set_position_x(30);
+    contact.set_position_y(50);
 
-    fake_device_->SetReport(report);
+    report.mutable_touch()->mutable_contacts()->push_back(std::move(contact));
+
+    std::vector<fuchsia::input::report::InputReport> reports;
+    reports.push_back(std::move(report));
+    fake_device_->SetReports(std::move(reports));
   }
   RunLoopUntilIdle();
 
@@ -170,19 +170,15 @@ TEST_F(ReaderInterpreterInputTest, TouchScreen) {
 TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
   // Add a descriptor.
   {
-    hid_input_report::ConsumerControlDescriptor consumer_desc = {};
-    consumer_desc.input = hid_input_report::ConsumerControlInputDescriptor();
-    consumer_desc.input->num_buttons = 5;
-    consumer_desc.input->buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
-    consumer_desc.input->buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
-    consumer_desc.input->buttons[2] = fuchsia_input_report::ConsumerControlButton::PAUSE;
-    consumer_desc.input->buttons[3] = fuchsia_input_report::ConsumerControlButton::MIC_MUTE;
-    consumer_desc.input->buttons[4] = fuchsia_input_report::ConsumerControlButton::REBOOT;
+    auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+    descriptor->mutable_consumer_control()->mutable_input()->set_buttons(
+        {fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
+         fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
+         fuchsia::input::report::ConsumerControlButton::PAUSE,
+         fuchsia::input::report::ConsumerControlButton::MIC_MUTE,
+         fuchsia::input::report::ConsumerControlButton::REBOOT});
 
-    hid_input_report::ReportDescriptor desc;
-    desc.descriptor = consumer_desc;
-
-    fake_device_->SetDescriptor(desc);
+    fake_device_->SetDescriptor(std::move(descriptor));
   }
 
   // Add the device.
@@ -203,18 +199,17 @@ TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
 
   // Send a report.
   {
-    hid_input_report::ConsumerControlInputReport consumer = {};
-    consumer.num_pressed_buttons = 5;
-    consumer.pressed_buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
-    consumer.pressed_buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
-    consumer.pressed_buttons[2] = fuchsia_input_report::ConsumerControlButton::PAUSE;
-    consumer.pressed_buttons[3] = fuchsia_input_report::ConsumerControlButton::MIC_MUTE;
-    consumer.pressed_buttons[4] = fuchsia_input_report::ConsumerControlButton::REBOOT;
+    fuchsia::input::report::InputReport report;
+    report.mutable_consumer_control()->set_pressed_buttons(
+        {fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
+         fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
+         fuchsia::input::report::ConsumerControlButton::PAUSE,
+         fuchsia::input::report::ConsumerControlButton::MIC_MUTE,
+         fuchsia::input::report::ConsumerControlButton::REBOOT});
 
-    hid_input_report::InputReport report;
-    report.report = consumer;
-
-    fake_device_->SetReport(report);
+    std::vector<fuchsia::input::report::InputReport> reports;
+    reports.push_back(std::move(report));
+    fake_device_->SetReports(std::move(reports));
   }
   RunLoopUntilIdle();
 
@@ -232,27 +227,22 @@ TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
 TEST_F(ReaderInterpreterInputTest, Mouse) {
   // Add a descriptor.
   {
-    hid_input_report::MouseDescriptor mouse_desc = {};
-    mouse_desc.input = hid_input_report::MouseInputDescriptor();
+    auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+    auto mouse = descriptor->mutable_mouse()->mutable_input();
 
-    fuchsia_input_report::Axis axis;
-    axis.unit = fuchsia_input_report::Unit::NONE;
+    fuchsia::input::report::Axis axis;
+    axis.unit = fuchsia::input::report::Unit::NONE;
     axis.range.min = -100;
     axis.range.max = 100;
-    mouse_desc.input->movement_x = axis;
+    mouse->set_movement_x(axis);
 
     axis.range.min = -200;
     axis.range.max = 200;
-    mouse_desc.input->movement_y = axis;
+    mouse->set_movement_y(axis);
 
-    mouse_desc.input->num_buttons = 2;
-    mouse_desc.input->buttons[0] = 1;
-    mouse_desc.input->buttons[1] = 3;
+    mouse->set_buttons({1, 3});
 
-    hid_input_report::ReportDescriptor desc;
-    desc.descriptor = mouse_desc;
-
-    fake_device_->SetDescriptor(desc);
+    fake_device_->SetDescriptor(std::move(descriptor));
   }
 
   // Add the device.
@@ -274,17 +264,14 @@ TEST_F(ReaderInterpreterInputTest, Mouse) {
 
   // Send a report.
   {
-    hid_input_report::MouseInputReport mouse = {};
-    mouse.num_buttons_pressed = 2;
-    mouse.buttons_pressed[0] = 1;
-    mouse.buttons_pressed[1] = 3;
-    mouse.movement_x = 100;
-    mouse.movement_y = 200;
+    fuchsia::input::report::InputReport report;
+    report.mutable_mouse()->set_movement_x(100);
+    report.mutable_mouse()->set_movement_y(200);
+    report.mutable_mouse()->set_pressed_buttons({1, 3});
 
-    hid_input_report::InputReport report;
-    report.report = mouse;
-
-    fake_device_->SetReport(report);
+    std::vector<fuchsia::input::report::InputReport> reports;
+    reports.push_back(std::move(report));
+    fake_device_->SetReports(std::move(reports));
   }
   RunLoopUntilIdle();
 
