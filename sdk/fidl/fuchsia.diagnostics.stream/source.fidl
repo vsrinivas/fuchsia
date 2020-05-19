@@ -64,19 +64,17 @@ table Interest {
 };
 
 /// The severity of a given record.
-enum Severity {
-    /// Components should only record fatal records prior to terminating operation. Fatal
-    /// records are informative only, and front-end libraries which trigger an exit in response
-    /// to them should clearly document this behavior to their users.
-    FATAL = 5;
-    /// Components should include error records as well as more severe records.
-    ERROR = 4;
-    /// Components should include warning records as well as more severe records.
-    WARN = 3;
-    /// Components should include informative records as well as more severe records. (default)
-    INFO = 2;
-    /// Components should include developer-facing debug records as well as more severe records.
-    DEBUG = 1;
+enum Severity : int8 {
     /// Components should include all records.
-    ANY = 0;
+    ALL = -0x7F;
+    /// Components should include trace records as well as more severe records.
+    TRACE = 0x10;
+    /// Components should include developer-facing debug records as well as more severe records.
+    DEBUG = 0x20;
+    /// Components should include informative records as well as more severe records. (default)
+    INFO = 0x30;
+    /// Components should include warning records as well as more severe records.
+    WARN = 0x40;
+    /// Components should include error records as well as more severe records.
+    ERROR = 0x50;
 };

@@ -42,25 +42,27 @@ The required metadata for a log record are a record type, the overall length of 
 timestamp. These are encoded in the first 16 bytes of a record:
 
 <!-- TODO(fxbug.dev/50239) update diagrams when we use more bits for size -->
-
+<!-- TODO(fxbug.dev/50517) finalize bits used for severity -->
 ```
 .---------------------------------------------------------------.
 |       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
 |2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
 |---+-----------+-----------------------------------------------|
-| T | SizeWords | Reserved                                      |
+| T | SizeWords | Reserved                            | Severity|
 |---------------------------------------------------------------|
 | TimestampNanos                                                |
 '---------------------------------------------------------------'
 
 T (type)       = {0,3}    must be 9
 SizeWords      = {4,15}   includes header word
-Reserved       = {16,63}  must be 0
+Reserved       = {16,55}  must be 0
+Severity       = {56,63}  severity of the log record
 TimestampNanos = {64,127}
 ```
 
 Currently all records are expected to have type=9. This was chosen to mirror the [trace format] but
 may require a change before these records can be processed by tracing tools.
+Values for severity are defined in [/sdk/fidl/fuchsia.diagnostics.stream/source.fidl]
 
 ## Arguments
 
