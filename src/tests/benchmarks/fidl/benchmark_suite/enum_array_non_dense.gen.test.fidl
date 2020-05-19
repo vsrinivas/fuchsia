@@ -1,0 +1,24 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+
+library benchmarkfidl;
+
+enum EnumArrayNonDenseElement{
+    A = 1;
+    C = 3;
+};
+struct EnumArrayNonDense16 {
+    array<EnumArrayNonDenseElement>:16 values;
+};
+
+struct EnumArrayNonDense256 {
+    array<EnumArrayNonDenseElement>:256 values;
+};
+
+[BindingsDenylist = "rust, cpp, llcpp, walker"]
+struct EnumArrayNonDense4096 {
+    array<EnumArrayNonDenseElement>:4096 values;
+};

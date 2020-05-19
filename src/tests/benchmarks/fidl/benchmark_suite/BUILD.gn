@@ -8,9 +8,12 @@ import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 benchmark_suite_fidl_files = [
+  "bool_array.gen.test.fidl",
   "byte_array.gen.test.fidl",
   "byte_vector.test.fidl",
   "byte_vector_limit.gen.test.fidl",
+  "enum_array.gen.test.fidl",
+  "float_array.gen.test.fidl",
   "gpu_magma.test.fidl",
   "hardware_display.test.fidl",
   "inline.test.fidl",
