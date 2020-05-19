@@ -155,6 +155,8 @@ A component is a unit of executable software on Fuchsia. Components support
 [capability routing](#capability-routing), software composition, isolation
 boundaries, continuity between executions, and introspection.
 
+-   [Components](/docs/concepts/components)
+
 ### **Component collection** {#component-collection}
 
 A node in the [component instance tree](#component-instance-tree) whose children
@@ -675,11 +677,6 @@ as [GN](#gn) in Fuchsia.
 
 A file system directory where a [component](#component) may [expose](#expose)
 capabilities for others to use.
-
-### **Package** {#package}
-
-Package is an overloaded term. Package may refer to a
-[Fuchsia Package](#fuchsia-package) or a [GN build package](#gn).
 
 ### **Paver** {#paver}
 
