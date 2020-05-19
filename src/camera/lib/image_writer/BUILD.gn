@@ -16,6 +16,7 @@ source_set("image_writer") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",
   ]
 }

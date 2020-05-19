@@ -30,12 +30,15 @@ std::pair<uint16_t, uint16_t> DoublePixelToPixelValues(
 }
 
 // RAW12 Writer methods.
-std::unique_ptr<Raw12Writer> Raw12Writer::Create(uint32_t width, uint32_t height) {
+fit::result<std::unique_ptr<Raw12Writer>, zx_status_t> Raw12Writer::Create(uint32_t width,
+                                                                           uint32_t height) {
   // TODO(nzo): consider if there's a case where odd width/height would be necessary.
-  FX_CHECK(width > 0 && height > 0) << "Invalid dimensions passed in.";
-
+  if (!(width > 0 && height > 0)) {
+    FX_LOGS(DEBUG) << "Invalid dimensions passed in.";
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
   const size_t kSize = width * height * kBytesPerDoublePixel;
-  return std::make_unique<Raw12Writer>(width, height, kSize);
+  return fit::ok(std::make_unique<Raw12Writer>(width, height, kSize));
 }
 
 zx_status_t Raw12Writer::Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b) {

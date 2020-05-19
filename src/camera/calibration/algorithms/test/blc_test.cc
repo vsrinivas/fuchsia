@@ -20,7 +20,9 @@ constexpr uint16_t kGreenVal = 500;
 constexpr uint16_t kBlueVal = 500;
 
 TEST(BlcTest, BlcRaw12WorksCorrectly) {
-  std::unique_ptr<Raw12Writer> image_writer = Raw12Writer::Create(kWidth, kHeight);
+  auto result = Raw12Writer::Create(kWidth, kHeight);
+  ASSERT_TRUE(result.is_ok());
+  auto image_writer = result.take_value();
 
   zx::vmo vmo;
   std::vector<uint8_t> buf(kWidth * kHeight * kBytesPerDoublePixel);

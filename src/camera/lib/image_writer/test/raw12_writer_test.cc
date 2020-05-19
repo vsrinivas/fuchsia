@@ -41,15 +41,17 @@ constexpr uint32_t kPadding = 1000;
 TEST(Raw12WriterTest, Constructor) { Raw12Writer::Create(kWidth, kHeight); }
 
 TEST(Raw12WriterTest, ConstructorCheckFailsWithZeroWidth) {
-  ASSERT_DEATH(Raw12Writer::Create(0, kHeight), "");
+  ASSERT_TRUE(Raw12Writer::Create(0, kHeight).is_error());
 }
 TEST(Raw12WriterTest, ConstructorCheckFailsWithZeroHeight) {
-  ASSERT_DEATH(Raw12Writer::Create(kWidth, 0), "");
+  ASSERT_TRUE(Raw12Writer::Create(kWidth, 0).is_error());
 }
 
 // Helper method to initialize a Raw12Writer and write an image of specified width/height.
 void ReadTestImage(std::vector<uint8_t>* buf, uint32_t width, uint32_t height) {
-  auto image_writer = Raw12Writer::Create(width, height);
+  auto result = Raw12Writer::Create(width, height);
+  ASSERT_TRUE(result.is_ok());
+  auto image_writer = result.take_value();
 
   zx_status_t status;
   zx::vmo vmo;
