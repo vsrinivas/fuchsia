@@ -118,7 +118,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
   zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating poitns", opps.count);
 
-  auto cpu_device = std::make_unique<AmlCpu>(device, std::move(thermal_fidl_client));
+  auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client));
 
   status = cpu_device->DdkAdd("cpu",                         // name
                               DEVICE_ADD_NON_BINDABLE,       // flags
