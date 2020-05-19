@@ -456,4 +456,58 @@ TEST_F(StepThreadControllerTest, IntoInlineSameLine) { DoIntoInlineFunctionTest(
 
 TEST_F(StepThreadControllerTest, IntoInlineNextLine) { DoIntoInlineFunctionTest(true); }
 
+// This tests when we're in the middle of a step and there's a "line 0" entry (indicating
+// compiler-generated code with no corresponding line number) followed by a different line.  This is
+// an interesting case because the stack frame will "fix" the line 0 to the next entry to avoid
+// showing the user "no line information" errors. But we want to continue over the "line 0" code and
+// stop at the inline function.
+TEST_F(StepThreadControllerTest, StepThroughLine0) {
+  SymbolContext symbol_context(kSymbolizedModuleAddress);
+
+  // Start location for the step.
+  constexpr uint64_t kStartIp = kSymbolizedModuleAddress + 0x1000;
+  constexpr uint64_t kSp = 0x100000;
+  FileLine step_file_line("file.cc", 10);
+  Location start_loc(kStartIp, step_file_line, 0, symbol_context);
+
+  // Line table entry for the initial location.
+  AddressRange start_range(kStartIp, kStartIp + 8);
+  module_symbols()->AddLineDetails(
+      kStartIp, LineDetails(step_file_line, {LineDetails::LineEntry(start_range)}));
+
+  // Inject stop for the initial location.
+  std::vector<std::unique_ptr<Frame>> stack;
+  stack.push_back(std::make_unique<MockFrame>(nullptr, nullptr, start_loc, kSp, kSp));
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep, std::move(stack), true);
+
+  // Create a "step" controller to get over this line. This will continue execution.
+  auto step_into = std::make_unique<StepThreadController>(StepMode::kSourceLine);
+  bool continued = false;
+  thread()->ContinueWith(std::move(step_into), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
+  EXPECT_TRUE(continued);
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
+
+  // Provide a line mapping entry for the "line 0" location we're about to stop at. This follows the
+  // line stepped over above.
+  uint64_t kLine0Ip = start_range.end();
+  AddressRange line0_range(kLine0Ip, kLine0Ip + 8);
+  module_symbols()->AddLineDetails(kLine0Ip,
+                                   LineDetails(FileLine(), {LineDetails::LineEntry(line0_range)}));
+
+  // Stop at the "line 0" address. This stack's file_line will show the *next* entry in the line
+  // table. This should be ignored in favor of the data we inserted into the LineDetails above.
+  Location line0_loc(kLine0Ip, FileLine("file.cc", 11), 0, symbol_context);
+  stack.push_back(std::make_unique<MockFrame>(nullptr, nullptr, line0_loc, kSp, kSp));
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep, std::move(stack), true);
+
+  // It should automatically continue over the "line 0" entry.
+  EXPECT_TRUE(continued);
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+}
+
 }  // namespace zxdb

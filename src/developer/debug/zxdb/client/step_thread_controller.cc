@@ -181,6 +181,8 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
 
   if (step_mode_ == StepMode::kSourceLine) {
     ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
+    // Normally you'll want to use the line information from line_details instead of from the Stack.
+    // See big comment below.
     LineDetails line_details = process_symbols->LineDetailsForAddress(ip);
 
     if (!line_details.is_valid()) {
@@ -203,30 +205,43 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // could still be on line 10!
     //
     // We could also have "line 0" entries which represent code without any corresponding source
-    // line (usually bookkeeping by the compiler).
+    // line (usually bookkeeping by the compiler). We always want to step over "line 0" code ranges.
     //
-    // This checks if we're in another entry representing the same source line or line 0, and
-    // continues stepping in that range.
+    // To make things more complicated, the stack will try to fix up "line 0" locations to use the
+    // next real file/line in order to avoid showing "no line information" errors in the stack
+    // trace. This means we can't trust the stack frame's location for making stepping decisions and
+    // should always use the line_details.
+    //
+    // This case is a little different than the code in InitWithThread() which always wants to use
+    // the stack frame's location if there is ambiguity. This is because when the user starts
+    // stepping, they think they're at the location identified by the Stack frame. But once we're in
+    // the middle of stepping, there is no more expectation about ambiguous stack frames.
     //
     // Note: don't check the original file_line_ variable for line 0 since if the source of the step
     // was in one of these weird locations, all subsequent lines will compare for equality and we'll
     // never stop stepping!
-    //
-    // As in InitWithThread(), always use the stack's file/line over the result from the line table.
-    const Location& top_location = top_frame->GetLocation();
-    if (top_location.file_line().line() == 0 || top_location.file_line() == *file_line_) {
-      // Still on the same line.
-      if (top_location.file_line() == line_details.file_line()) {
-        // Can use the range from the line table.
-        current_ranges_ = AddressRanges(line_details.GetExtent());
-        Log("Got new range for line: %s", current_ranges_.ToString().c_str());
-        return kContinue;
-      } else {
-        // Line table and stack don't match due to inlined calls. Clearing the range will make the
-        // next operation will either single-step or step into an inline function.
-        current_ranges_ = AddressRanges();
-        // Fall-through to trying to fixup inline frames or stopping.
-      }
+    if (stack.hide_ambiguous_inline_frame_count() > 0) {
+      // There are ambiguous locations to step into at this location, the next "step" operation will
+      // be to go into that. Clear the range and fall through to the inline stepping code at the
+      // bottom of this function.
+      //
+      // Note in this case the current line_details will normally identify the first line of the
+      // most deeply nested inline function, while the current stack frame's location will be the
+      // call location of the current inline. This code needs to happen before the line_details are
+      // checked because the line_details don't represent the thing we're trying to step.
+      current_ranges_ = AddressRanges();
+      Log("Stepping hit inline boundary");
+    } else if (line_details.file_line().line() == 0 || line_details.file_line() == *file_line_) {
+      // The current code's file/line matches what we're stepping over. Continue stepping inside the
+      // current range.
+      current_ranges_ = AddressRanges(line_details.GetExtent());
+      Log("Still on the same line, continuing with new range: %s",
+          current_ranges_.ToString().c_str());
+      return kContinue;
+    } else {
+      // This "else" case is just that the line information is different than the one we're trying
+      // to step over, so we fall through to the "done" code at the end of the function.
+      Log("Got to a different line.");
     }
   }
 

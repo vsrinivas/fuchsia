@@ -199,17 +199,21 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
   const auto& rows = line_table->Rows;
   uint32_t found_row_index = line_table->lookupAddress(relative_address);
 
-  // The row could be not found or it could be in a "nop" range indicated by
-  // an "end sequence" marker. For padding between functions, the compiler will
-  // insert a row with this marker to indicate everything until the next
-  // address isn't an instruction. With this flag, the other information on the
-  // line will be irrelevant (in practice it will be the same as for the
-  // previous entry).
+  // The row could be not found or it could be in a "nop" range indicated by an "end sequence"
+  // marker. For padding between functions, the compiler will insert a row with this marker to
+  // indicate everything until the next address isn't an instruction. With this flag, the other
+  // information on the line will be irrelevant (in practice it will be the same as for the previous
+  // entry).
   if (found_row_index == line_table->UnknownRowIndex || rows[found_row_index].EndSequence)
     return LineDetails();
 
-  // Adjust the beginning and end ranges to include all matching
-  // entries of the same line.
+  // Adjust the beginning and end ranges to include all matching entries of the same line.
+  //
+  // Note that this code must not try to hide "line 0" entries (corresponding to compiler-generated
+  // code). This function is used by the stepping code which has its own handling for these ranges.
+  // Trying to put "line 0" code in with the previous or next entry (what some other code does that
+  // tries to hide this from the user) will confuse the stepping code which will always step through
+  // these instructions.
   uint32_t first_row_index = found_row_index;
   while (first_row_index > 0 &&
          SameFileLine(rows[found_row_index], rows[first_row_index - 1], greedy)) {
