@@ -6,7 +6,8 @@
         "services": [
             "fuchsia.camera2.hal.Controller",
             "fuchsia.logger.LogSink",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.policy.DeviceListenerRegistry"
         ]
     }
 }

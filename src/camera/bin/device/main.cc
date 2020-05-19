@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -29,22 +30,30 @@ int main(int argc, char* argv[]) {
   std::string outgoing_service_name = argv[1];
 
   // Connect to required environment services.
-  fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
+  fuchsia::camera2::hal::ControllerHandle controller;
   zx_status_t status = context->svc()->Connect(controller.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(FATAL, status) << "Failed to request controller service.";
     return EXIT_FAILURE;
   }
 
-  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator;
+  fuchsia::sysmem::AllocatorHandle allocator;
   status = context->svc()->Connect(allocator.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(FATAL, status) << "Failed to request allocator service.";
     return EXIT_FAILURE;
   }
 
+  fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
+  status = context->svc()->Connect(registry.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to request registry service.";
+    return EXIT_FAILURE;
+  }
+
   // Create the device and publish its service.
-  auto result = DeviceImpl::Create(std::move(controller), std::move(allocator));
+  auto result =
+      DeviceImpl::Create(std::move(controller), std::move(allocator), std::move(registry));
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.error()) << "Failed to create device.";
     return EXIT_FAILURE;

@@ -15,17 +15,21 @@
 #include "src/camera/bin/device/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 
-DeviceImpl::DeviceImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+DeviceImpl::DeviceImpl()
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), button_listener_binding_(this) {}
 
 DeviceImpl::~DeviceImpl() {
   Unbind(controller_);
+  Unbind(allocator_);
+  Unbind(registry_);
   async::PostTask(loop_.dispatcher(), [this] { loop_.Quit(); });
   loop_.JoinThreads();
 }
 
 fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
     fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller,
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator) {
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator,
+    fuchsia::ui::policy::DeviceListenerRegistryHandle registry) {
   auto device = std::make_unique<DeviceImpl>();
 
   ZX_ASSERT(zx::event::create(0, &device->bad_state_event_) == ZX_OK);
@@ -88,6 +92,12 @@ fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
           };
 
   device->controller_->GetNextConfig(get_next_config_callback.share());
+
+  // Bind the registry interface and register the device as a listener.
+
+  ZX_ASSERT(device->registry_.Bind(std::move(registry), device->loop_.dispatcher()) == ZX_OK);
+  device->registry_->RegisterMediaButtonsListener(
+      device->button_listener_binding_.NewBinding(device->loop_.dispatcher()));
 
   // Start the device thread and begin processing messages.
 
@@ -294,4 +304,14 @@ void DeviceImpl::OnStreamRequested(
 
         collection->Close();
       });
+}
+
+void DeviceImpl::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {
+  if (event.has_mic_mute()) {
+    mute_state_.hardware_muted = event.mic_mute();
+    UpdateControllerStreamingState();
+    for (auto& client : clients_) {
+      client.second->PostMuteUpdated(mute_state_);
+    }
+  }
 }

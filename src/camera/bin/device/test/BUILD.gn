@@ -7,7 +7,11 @@ executable("test") {
 
   output_name = "device_test"
 
-  sources = [ "test.cc" ]
+  sources = [
+    "fake_device_listener_registry.cc",
+    "fake_device_listener_registry.h",
+    "test.cc",
+  ]
 
   deps = [
     "//garnet/packages/prod:sysmem_connector",

@@ -8,6 +8,7 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
@@ -22,15 +23,16 @@
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
 // Represents a physical camera device, and serves multiple clients of the camera3.Device protocol.
-class DeviceImpl {
+class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
  public:
   DeviceImpl();
-  ~DeviceImpl();
+  ~DeviceImpl() override;
 
   // Creates a DeviceImpl using the given |controller|.
   static fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
-      fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller,
-      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator);
+      fuchsia::camera2::hal::ControllerHandle controller,
+      fuchsia::sysmem::AllocatorHandle allocator,
+      fuchsia::ui::policy::DeviceListenerRegistryHandle registry);
 
   // Returns a service handler for use with a service directory.
   fidl::InterfaceRequestHandler<fuchsia::camera3::Device> GetHandler();
@@ -81,6 +83,9 @@ class DeviceImpl {
                          fit::function<void(uint32_t)> max_camping_buffers_callback,
                          uint32_t format_index);
 
+  // |fuchsia::ui::policy::MediaButtonsListener|
+  void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override;
+
   // Represents a single client connection to the DeviceImpl class.
   class Client : public fuchsia::camera3::Device {
    public:
@@ -125,6 +130,8 @@ class DeviceImpl {
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
   fuchsia::sysmem::AllocatorPtr allocator_;
+  fuchsia::ui::policy::DeviceListenerRegistryPtr registry_;
+  fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> button_listener_binding_;
   fuchsia::camera2::DeviceInfo device_info_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   std::vector<fuchsia::camera3::Configuration> configurations_;

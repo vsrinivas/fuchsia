@@ -13,6 +13,7 @@
 
 #include "src/camera/bin/device/device_impl.h"
 #include "src/camera/bin/device/stream_impl.h"
+#include "src/camera/bin/device/test/fake_device_listener_registry.h"
 #include "src/camera/bin/device/util.h"
 #include "src/camera/lib/fake_controller/fake_controller.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
@@ -35,21 +36,27 @@ static void nop_stream_requested(
 
 class DeviceTest : public gtest::RealLoopFixture {
  protected:
-  DeviceTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
+  DeviceTest()
+      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+        fake_listener_registry_(async_get_default_dispatcher()) {}
 
   void SetUp() override {
     context_->svc()->Connect(allocator_.NewRequest());
     allocator_.set_error_handler(MakeErrorHandler("Sysmem Allocator"));
 
-    fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
+    fuchsia::camera2::hal::ControllerHandle controller;
     auto controller_result = FakeController::Create(controller.NewRequest());
     ASSERT_TRUE(controller_result.is_ok());
     controller_ = controller_result.take_value();
 
-    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator;
+    fuchsia::sysmem::AllocatorHandle allocator;
     context_->svc()->Connect(allocator.NewRequest());
 
-    auto device_result = DeviceImpl::Create(std::move(controller), std::move(allocator));
+    fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
+    fake_listener_registry_.GetHandler()(registry.NewRequest());
+
+    auto device_result =
+        DeviceImpl::Create(std::move(controller), std::move(allocator), std::move(registry));
     ASSERT_TRUE(device_result.is_ok());
     device_ = device_result.take_value();
   }
@@ -103,6 +110,7 @@ class DeviceTest : public gtest::RealLoopFixture {
   fuchsia::sysmem::AllocatorPtr allocator_;
   fuchsia::camera3::StreamProperties fake_properties_;
   fuchsia::camera2::hal::StreamConfig fake_legacy_config_;
+  FakeDeviceListenerRegistry fake_listener_registry_;
 };
 
 TEST_F(DeviceTest, CreateStreamNullConnection) {
@@ -762,6 +770,46 @@ TEST_F(DeviceTest, SoftwareMuteState) {
   }
 
   collection->Close();
+}
+
+TEST_F(DeviceTest, HardwareMuteState) {
+  // Connect to the device.
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+
+  // Device should start unmuted.
+  bool watch_returned = false;
+  device->WatchMuteState([&](bool software_muted, bool hardware_muted) {
+    EXPECT_FALSE(software_muted);
+    EXPECT_FALSE(hardware_muted);
+    watch_returned = true;
+  });
+  RunLoopUntilFailureOr(watch_returned);
+
+  // Verify mute event.
+  watch_returned = false;
+  device->WatchMuteState([&](bool software_muted, bool hardware_muted) {
+    EXPECT_FALSE(software_muted);
+    EXPECT_TRUE(hardware_muted);
+    watch_returned = true;
+  });
+  fuchsia::ui::input::MediaButtonsEvent mute_event;
+  mute_event.set_mic_mute(true);
+  fake_listener_registry_.SendMediaButtonsEvent(std::move(mute_event));
+  RunLoopUntilFailureOr(watch_returned);
+
+  // Verify unmute event.
+  watch_returned = false;
+  device->WatchMuteState([&](bool software_muted, bool hardware_muted) {
+    EXPECT_FALSE(software_muted);
+    EXPECT_FALSE(hardware_muted);
+    watch_returned = true;
+  });
+  fuchsia::ui::input::MediaButtonsEvent unmute_event;
+  unmute_event.set_mic_mute(false);
+  fake_listener_registry_.SendMediaButtonsEvent(std::move(unmute_event));
+  RunLoopUntilFailureOr(watch_returned);
 }
 
 }  // namespace camera
