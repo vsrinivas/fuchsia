@@ -211,7 +211,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		return
 	}
 
-	detachWithError := func(reason string) {
+	detachWithError := func(reason error) {
 		c.admin.mu.Lock()
 		closed := c.admin.mu.closed
 		c.admin.mu.Unlock()
@@ -231,7 +231,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.dispatcherWg.Done()
 		if err := c.handler.TxReceiverLoop(); err != nil {
-			detachWithError(fmt.Sprintf("TX read loop: %s", err))
+			detachWithError(fmt.Errorf("TX read loop: %w", err))
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX read loop finished")
 	}()
@@ -240,7 +240,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.dispatcherWg.Done()
 		if err := c.handler.TxSenderLoop(); err != nil {
-			detachWithError(fmt.Sprintf("TX write loop: %s", err))
+			detachWithError(fmt.Errorf("TX write loop: %w", err))
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX write loop finished")
 	}()
@@ -270,7 +270,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			// This entry is going back to the driver; it can be reused.
 			c.resetDescriptor(descriptor)
 		}); err != nil {
-			detachWithError(fmt.Sprintf("RX loop: %s", err))
+			detachWithError(fmt.Errorf("RX loop: %w", err))
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "Rx loop finished")
 	}()

@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"sync"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"unsafe"
 
 	"fuchsia.googlesource.com/syslog"
@@ -167,24 +166,6 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 
 	c.handler.Stats.Tx = fifo.MakeFifoStats(fifos.TxDepth)
 	c.handler.Stats.Rx = fifo.MakeFifoStats(fifos.RxDepth)
-
-	// Spawn a goroutine observing PEER_CLOSED on the channel, so we can be
-	// notified of device removal even when not attached to a dispatcher (i.e.
-	// disabled).
-	if deviceInterface, ok := c.device.(*ethernet.DeviceWithCtxInterface); ok {
-		c.wg.Add(1)
-		go func() {
-			defer c.wg.Done()
-			obs, err := zxwait.Wait(*deviceInterface.Handle(), zx.SignalChannelPeerClosed, zx.TimensecInfinite)
-			if err != nil {
-				_ = syslog.ErrorTf(tag, "error observing device channel close: %s", err)
-				return
-			}
-			c.detachWithError(fmt.Errorf("device channel observed close signals: %b", obs))
-		}()
-	} else {
-		_ = syslog.WarnTf(tag, "failed to get interface for device (%T), channel closure will not be observed", c.device)
-	}
 
 	return c, nil
 }
