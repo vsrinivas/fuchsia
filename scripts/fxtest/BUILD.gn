@@ -48,6 +48,7 @@ dart_library("fxtest_lib") {
     "env_reader.dart",
     "exceptions.dart",
     "execution_handle.dart",
+    "exit_code.dart",
     "fuchsia_locator.dart",
     "fxtest.dart",
     "matching/comparer.dart",

@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+
 import 'package:fxtest/fxtest.dart';
-import 'package:pedantic/pedantic.dart';
 import 'package:test/test.dart';
+
 import 'helpers.dart';
 
 void main() {
@@ -34,8 +35,8 @@ void main() {
     buffer = OutputBuffer.locMemIO();
   });
 
-  tearDown(() async {
-    unawaited(streamController.close());
+  tearDown(() {
+    streamController.close();
   });
 
   group('output is collected correctly', () {
@@ -50,10 +51,13 @@ void main() {
         Output('test 2'),
         ErrOutput('test 3'),
       ]);
+      // 0 is the default exit code if no other exit code was set.
+      int commandExitCode = 0;
       var cmd = FuchsiaTestCommand.fromConfig(
         testsConfig,
         outputFormatter: outputFormatter,
         testRunnerBuilder: (TestsConfig config) => runner,
+        exitCodeSetter: (e) => commandExitCode = e,
       );
       // Use the command's builder so we test how things are actually wired up,
       // instead of duplicating the wiring-up here
@@ -64,6 +68,7 @@ void main() {
       // has been overwritten.
       expect(buffer.content.first, contains('✅'));
       expect(buffer.content.first, contains('/whatever/host_x64/lib_tests'));
+      expect(commandExitCode, 0);
     });
   });
 
@@ -78,10 +83,13 @@ void main() {
       Output('test 2'),
       ErrOutput('test 3'),
     ]);
+    // 0 is the default exit code if no other exit code was set.
+    int commandExitCode = 0;
     var cmd = FuchsiaTestCommand.fromConfig(
       testsConfig,
       outputFormatter: outputFormatter,
       testRunnerBuilder: (TestsConfig config) => runner,
+      exitCodeSetter: (e) => commandExitCode = e,
     );
     // Use the command's builder so we test how things are actually wired up,
     // instead of duplicating the wiring-up here
@@ -96,5 +104,6 @@ void main() {
     // has been overwritten.
     expect(allOutput, contains('❌'));
     expect(allOutput, contains('/whatever/host_x64/lib_tests'));
+    expect(commandExitCode, 2);
   });
 }

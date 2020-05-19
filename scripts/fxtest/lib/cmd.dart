@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
 
+import 'exit_code.dart';
+
 /// Main entry-point for all Fuchsia tests, both host and on-device.
 ///
 /// [FuchsiaTestCommand] receives a combination of test names and feature flags,
@@ -58,6 +60,8 @@ class FuchsiaTestCommand {
   /// server are available, for example).
   final Checklist checklist;
 
+  final ExitCodeSetter _exitCodeSetter;
+
   int _numberOfTests;
 
   FuchsiaTestCommand({
@@ -67,7 +71,9 @@ class FuchsiaTestCommand {
     @required this.checklist,
     @required this.testsConfig,
     @required this.testRunnerBuilder,
-  }) : _numberOfTests = 0 {
+    ExitCodeSetter exitCodeSetter,
+  })  : _exitCodeSetter = exitCodeSetter ?? setExitCode,
+        _numberOfTests = 0 {
     if (outputFormatter == null) {
       throw AssertionError('`outputFormatter` must not be null');
     }
@@ -79,6 +85,7 @@ class FuchsiaTestCommand {
     @required TestRunner Function(TestsConfig) testRunnerBuilder,
     FuchsiaLocator fuchsiaLocator,
     OutputFormatter outputFormatter,
+    ExitCodeSetter exitCodeSetter,
   }) {
     fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
     var _outputFormatter =
@@ -97,6 +104,7 @@ class FuchsiaTestCommand {
       outputFormatter: _outputFormatter,
       testRunnerBuilder: testRunnerBuilder,
       testsConfig: testsConfig,
+      exitCodeSetter: exitCodeSetter,
     );
   }
 
@@ -128,7 +136,7 @@ class FuchsiaTestCommand {
       await runTests(parsedManifest.testBundles);
     } on FailFastException catch (_) {
       // Non-zero exit code indicates generic but fatal failure
-      exitCode = failureExitCode;
+      _exitCodeSetter(failureExitCode);
     }
     emitEvent(AllTestsCompleted());
   }
@@ -182,9 +190,9 @@ class FuchsiaTestCommand {
       await testBundle.run().forEach((TestEvent event) {
         emitEvent(event);
         if (event is FatalError) {
-          exitCode = failureExitCode;
+          _exitCodeSetter(failureExitCode);
         } else if (event is TestResult && !event.isSuccess) {
-          exitCode = event.exitCode ?? failureExitCode;
+          _exitCodeSetter(event.exitCode ?? failureExitCode);
         }
       });
       _numberOfTests += 1;
