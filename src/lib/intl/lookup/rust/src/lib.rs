@@ -163,7 +163,8 @@ pub unsafe extern "C" fn intl_lookup_new(
             }
         }
     }
-    let lookup_or = Lookup::new(&locales[..]);
+    let data = icu_data::Loader::new().expect("icu data loaded");
+    let lookup_or = Lookup::new(data, &locales[..]);
     match lookup_or {
         Ok(lookup) => Box::into_raw(Box::new(lookup)),
         Err(_) => {
@@ -251,23 +252,38 @@ impl Catalog {
     }
 }
 
-#[allow(dead_code)] // Clean up before reviewing
+/// Implements localized string lookup.
+///
+/// Requires that the ICU data loader is configured and that the ICU data are registered in the
+/// program's package.  See the [rust
+/// documentation](https://fuchsia.dev/fuchsia-src/development/internationalization/icu_data#rust_example)
+/// for detailed instructions.
+///
+/// ```ignore
+/// use intl_lookup::Lookup;
+/// let icu_data = icu_data::Loader::new().expect("icu data loaded");
+/// let l = Lookup::new(icu_data, &vec!["es"])?;
+/// assert_eq!("el stringo", l.str(ftest::MessageIds::StringName as u64)?);
+/// ```
 pub struct Lookup {
     requested: Vec<uloc::ULoc>,
-    supported: Vec<uloc::ULoc>,
     catalog: Catalog,
+    // The loader is required to ensure that the unicode locale data is kept
+    // in memory while this Lookup is in use.
+    #[allow(dead_code)]
+    icu_data: icu_data::Loader,
 }
 
 impl Lookup {
     /// Creates a new instance of Lookup, with the default ways to look up the
     /// data.
-    pub fn new(requested: &[&str]) -> Result<Lookup> {
+    pub fn new(icu_data: icu_data::Loader, requested: &[&str]) -> Result<Lookup> {
         let supported_locales =
             Lookup::get_available_locales().with_context(|| "while creating Lookup")?;
         // Load all available locale maps.
         let catalog = Lookup::load_locales(&supported_locales[..])
             .with_context(|| "while loading locales")?;
-        Lookup::new_internal(requested, &supported_locales, catalog)
+        Lookup::new_internal(icu_data, requested, &supported_locales, catalog)
     }
 
     // Loads all supported locales from disk.
@@ -298,36 +314,63 @@ impl Lookup {
     /// Create a new [Lookup] from parts.  Only to be used in tests.
     #[cfg(test)]
     pub fn new_from_parts(
+        icu_data: icu_data::Loader,
         requested: &[&str],
         supported: &Vec<String>,
         catalog: Catalog,
     ) -> Result<Lookup> {
-        Lookup::new_internal(requested, supported, catalog)
+        Lookup::new_internal(icu_data, requested, supported, catalog)
     }
 
     fn new_internal(
+        icu_data: icu_data::Loader,
         requested: &[&str],
         supported: &Vec<String>,
         catalog: Catalog,
     ) -> Result<Lookup> {
-        let requested_locales: Vec<uloc::ULoc> = requested
-            .iter()
-            .map(|l| uloc::ULoc::try_from(*l))
-            .map(|r: Result<uloc::ULoc, _>| r.expect("could not parse"))
-            .collect();
-        let supported_locales = supported
+        let mut supported_locales = supported
             .iter()
             .map(|s: &String| uloc::ULoc::try_from(s.as_str()))
             .collect::<Result<Vec<_>, _>>()
             .with_context(|| "while determining supported locales")?;
 
-        // Check whether requested locales are available.
-        let (_, accept_result) =
-            uloc::accept_language(requested_locales.clone(), supported_locales.clone())?;
-        if accept_result == usys::UAcceptResult::ULOC_ACCEPT_FAILED {
-            return Err(anyhow::anyhow!("no matching locale found for: requested={:?}", requested));
+        // Work around a locale fallback resolution bug
+        // https://unicode-org.atlassian.net/browse/ICU-20931 which has been fixed in ICU 67.  This
+        // has to stay in place until Fuchsia starts using ICU version 67.
+        supported_locales.push(uloc::ULoc::try_from("und-und")?);
+        let supported_locales = supported_locales;
+
+        // Compute a fallback for each requested locale, and fail if none is available.
+        let mut requested_locales = vec![];
+        for locale in requested.iter() {
+            let (maybe_accepted_locale, accept_result) = uloc::accept_language(
+                vec![uloc::ULoc::try_from(*locale)
+                    .with_context(|| format!("could not parse as locale: {:}", &locale))?],
+                supported_locales.clone(),
+            )?;
+            match accept_result {
+                usys::UAcceptResult::ULOC_ACCEPT_FAILED => {
+                    return Err(anyhow::anyhow!(
+                        "no matching locale found for: requested={:?}, supported: {:?}",
+                        &locale,
+                        &supported_locales
+                    ));
+                }
+                _ => match maybe_accepted_locale {
+                    None => {
+                        return Err(anyhow::anyhow!(
+                            "no matching locale found for: requested={:?}, supported: {:?}",
+                            &locale,
+                            &supported_locales
+                        ));
+                    }
+                    Some(loc) => {
+                        requested_locales.push(loc);
+                    }
+                },
+            }
         }
-        Ok(Lookup { requested: requested_locales, supported: supported_locales, catalog })
+        Ok(Lookup { requested: requested_locales, catalog, icu_data })
     }
 
     #[cfg(test)]
@@ -391,7 +434,8 @@ mod tests {
 
     #[test]
     fn lookup_en() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["en"])?;
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["en"])?;
         assert_eq!("text_string", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
         assert_eq!("text_string_2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
         Ok(())
@@ -399,7 +443,8 @@ mod tests {
 
     #[test]
     fn lookup_fr() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["fr"])?;
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["fr"])?;
         assert_eq!("le string", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
         assert_eq!("le string 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
         Ok(())
@@ -407,7 +452,8 @@ mod tests {
 
     #[test]
     fn lookup_es() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["es"])?;
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["es"])?;
         assert_eq!("el stringo", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
         assert_eq!("el stringo 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
         Ok(())
@@ -416,7 +462,17 @@ mod tests {
     // When "es" is preferred, use it.
     #[test]
     fn lookup_es_en() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["es", "en"])?;
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["es", "en"])?;
+        assert_eq!("el stringo", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
+        assert_eq!("el stringo 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
+        Ok(())
+    }
+
+    #[test]
+    fn lookup_es_419_fallback() -> Result<(), LookupStatus> {
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["es-419-u-ca-gregorian"]).expect("locale exists");
         assert_eq!("el stringo", l.string(ftest::MessageIds::StringName as u64)?.to_str()?);
         assert_eq!("el stringo 2", l.string(ftest::MessageIds::StringName2 as u64)?.to_str()?);
         Ok(())
@@ -424,7 +480,8 @@ mod tests {
 
     #[test]
     fn nonexistent_locale_rejected() -> Result<()> {
-        match Lookup::new(&vec!["nonexistent-locale"]) {
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        match Lookup::new(icu_data, &vec!["nonexistent-locale"]) {
             Ok(_) => Err(anyhow::anyhow!("unexpectedly accepted nonexistent locale")),
             Err(_) => Ok(()),
         }
@@ -432,10 +489,21 @@ mod tests {
 
     #[test]
     fn locale_fallback_accounted_for() -> Result<()> {
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
         // These locales are directly supported by the tests.
-        Lookup::new(&vec!["en"])?;
-        Lookup::new(&vec!["fr"])?;
-        Lookup::new(&vec!["es"])?;
+        Lookup::new(icu_data.clone(), &vec!["en"])?;
+        Lookup::new(icu_data.clone(), &vec!["fr"])?;
+        Lookup::new(icu_data.clone(), &vec!["es"])?;
+
+        // The following languages are not directly supported.  Instead they
+        // are supported via the locale fallback mechanism.
+
+        // Falls back to "en".
+        Lookup::new(icu_data.clone(), &vec!["en-US"])?;
+        // Falls back to "es".
+        Lookup::new(icu_data.clone(), &vec!["es-ES"])?;
+        // Falls back to "es", too.
+        Lookup::new(icu_data.clone(), &vec!["es-419"])?;
         Ok(())
     }
 
@@ -457,7 +525,8 @@ mod tests {
 
     #[test]
     fn test_real_lookup() -> Result<(), LookupStatus> {
-        let l = Lookup::new(&vec!["es"])?;
+        let icu_data = icu_data::Loader::new().expect("icu data loaded");
+        let l = Lookup::new(icu_data, &vec!["es"])?;
         assert_eq!("el stringo", l.str(ftest::MessageIds::StringName as u64)?);
         Ok(())
     }

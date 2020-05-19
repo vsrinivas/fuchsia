@@ -26,6 +26,7 @@ rustc_staticlib("lib") {
   edition = "2018"
   public = [ "lookup.h" ]
   deps = [
+    "//src/lib/icu_data/rust/icu_data",
     "//src/lib/intl/model:lib",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
@@ -70,6 +71,10 @@ test_package("intl-lookup-rust-tests") {
     {
       path = rebase_path("$target_gen_dir/es/l10n.json")
       dest = "assets/locales/es/l10n.json"
+    },
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
     },
   ]
 }
