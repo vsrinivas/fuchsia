@@ -11,6 +11,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <vm/pmm.h>
+#include <vm/scanner.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -240,6 +241,8 @@ static bool guest_physical_address_space_get_page() {
     return true;
   }
 
+  AutoVmScannerDisable scanner_disable;
+
   // Setup.
   ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;
   zx_status_t status = create_gpas(&gpas);
@@ -276,6 +279,8 @@ static bool guest_physical_address_space_get_page_complex() {
   if (!hypervisor_supported()) {
     return true;
   }
+
+  AutoVmScannerDisable scanner_disable;
 
   // Test GetPage with a less trivial VMAR configuration.
   //
@@ -352,6 +357,8 @@ static bool guest_physical_address_space_get_page_not_present() {
   if (!hypervisor_supported()) {
     return true;
   }
+
+  AutoVmScannerDisable scanner_disable;
 
   // Setup.
   ktl::unique_ptr<hypervisor::GuestPhysicalAddressSpace> gpas;

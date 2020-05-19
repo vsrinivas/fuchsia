@@ -808,6 +808,11 @@ static bool vmm_alloc_contiguous_smoke_test() {
 // then destroys it.
 static bool multiple_regions_test() {
   BEGIN_TEST;
+
+  // As we create a user aspace whose pointers we will directly touch we must disable the scanner
+  // to prevent our mappings from being removed from underneath us.
+  AutoVmScannerDisable scanner_disable;
+
   void* ptr;
   static const size_t alloc_size = 16 * 1024;
 
@@ -999,6 +1004,9 @@ static bool PagesInWiredQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
 // Creates a vm object, commits memory.
 static bool vmo_commit_test() {
   BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
   static const size_t alloc_size = PAGE_SIZE * 16;
   fbl::RefPtr<VmObject> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
@@ -1016,6 +1024,8 @@ static bool vmo_commit_test() {
 // Creates a paged VMO, pins it, and tries operations that should unpin it.
 static bool vmo_pin_test() {
   BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
   fbl::RefPtr<VmObject> vmo;
@@ -1067,6 +1077,8 @@ static bool vmo_pin_test() {
 static bool vmo_multiple_pin_test() {
   BEGIN_TEST;
 
+  AutoVmScannerDisable scanner_disable;
+
   static const size_t alloc_size = PAGE_SIZE * 16;
   fbl::RefPtr<VmObject> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
@@ -1115,6 +1127,9 @@ static bool vmo_multiple_pin_test() {
 // Creates a vm object, commits odd sized memory.
 static bool vmo_odd_size_commit_test() {
   BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
   static const size_t alloc_size = 15;
   fbl::RefPtr<VmObject> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
@@ -1541,6 +1556,8 @@ static bool vmo_cache_test() {
 static bool vmo_lookup_test() {
   BEGIN_TEST;
 
+  AutoVmScannerDisable scanner_disable;
+
   static const size_t alloc_size = PAGE_SIZE * 16;
   fbl::RefPtr<VmObject> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
@@ -1594,6 +1611,9 @@ static bool vmo_lookup_test() {
 
 static bool vmo_lookup_clone_test() {
   BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
   static const size_t page_count = 4;
   static const size_t alloc_size = PAGE_SIZE * page_count;
   fbl::RefPtr<VmObject> vmo;
@@ -1693,6 +1713,8 @@ static bool vmo_clone_removes_write_test() {
 
 static bool vmo_zero_scan_test() {
   BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
 
   auto mem = testing::UserMemory::Create(PAGE_SIZE);
   ASSERT_NONNULL(mem);
@@ -1813,10 +1835,7 @@ static zx_status_t make_committed_pager_vmo(vm_page_t** out_page, fbl::RefPtr<Vm
 static bool vmo_move_pages_on_access_test() {
   BEGIN_TEST;
 
-  // Disable the page scanner as this test would be flaky if the page queues were allowed to auto
-  // rotate, or if eviction were to happen.
-  scanner_push_disable_count();
-  auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
+  AutoVmScannerDisable scanner_disable;
 
   fbl::RefPtr<VmObject> vmo;
   vm_page_t* page;
@@ -1870,10 +1889,7 @@ static bool vmo_dedupe_zero_page() {
   BEGIN_TEST;
   // test that a zero page gets removed
 
-  // Disable the page scanner as this test would be flaky if the zero page scanner were to run in
-  // the middle.
-  scanner_push_disable_count();
-  auto pop_count = fbl::MakeAutoCall([] { scanner_pop_disable_count(); });
+  AutoVmScannerDisable scanner_disable;
 
   fbl::RefPtr<VmObject> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * 3, &vmo);

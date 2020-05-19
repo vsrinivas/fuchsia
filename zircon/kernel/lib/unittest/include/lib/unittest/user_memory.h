@@ -13,6 +13,7 @@
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 #include <vm/pmm.h>
+#include <vm/scanner.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -79,6 +80,11 @@ class UserMemory {
 
   fbl::RefPtr<VmMapping> mapping_;
   fbl::RefPtr<VmObject> vmo_;
+
+  // User memory here is going to be touched directly by the kernel and will not have the option to
+  // fault in memory that should get reclaimed by the scanner. Therefore as long as we are using any
+  // UserMemory we should disable the scanner.
+  AutoVmScannerDisable scanner_disable_;
 };
 
 }  // namespace testing

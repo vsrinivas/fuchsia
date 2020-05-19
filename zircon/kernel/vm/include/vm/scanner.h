@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
 
+#include <fbl/macros.h>
+
 // Increase the disable count of the scanner. This may need to block until the scanner finishes any
 // current work and so should not be called with other locks held that may conflict with the
 // scanner. Generally this is expected to be used by unittests.
@@ -22,6 +24,18 @@ void scanner_pop_disable_count();
 // This is expected to be used internally by the scanner thread, but is exposed for testing,
 // debugging and other code to use.
 uint64_t scanner_do_zero_scan(uint64_t limit);
+
+// AutoVmScannerDisable is an RAII helper for disabling scanning using the
+// scanner_push_disable_count()/scanner_pop_disable_count(). Disabling the scanner is useful in test
+// code where it is not possible or practical to hold locks to prevent the scanner from taking
+// actions.
+class AutoVmScannerDisable {
+ public:
+  AutoVmScannerDisable() { scanner_push_disable_count(); }
+  ~AutoVmScannerDisable() { scanner_pop_disable_count(); }
+
+  DISALLOW_COPY_ASSIGN_AND_MOVE(AutoVmScannerDisable);
+};
 
 // Instructs the scanner to reclaim memory until free memory equals the target. Reclamation will
 // happen asynchronously and this function returns immediately. Once the target is reached, or
