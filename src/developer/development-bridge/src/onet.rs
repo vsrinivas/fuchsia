@@ -181,16 +181,14 @@ impl HostPipeConnection {
     }
 }
 
-pub async fn start_ascendd() {
+pub async fn run_ascendd() -> Result<(), Error> {
     log::info!("Starting ascendd");
-    hoist::spawn(async move {
-        ascendd_lib::run_ascendd(ascendd_lib::Opt {
-            sockpath: Some(SOCKET.to_string()),
-            ..Default::default()
-        })
-        .await
-        .unwrap();
-    });
+    ascendd_lib::run_ascendd(ascendd_lib::Opt {
+        sockpath: Some(SOCKET.to_string()),
+        ..Default::default()
+    })
+    .await
+    .map_err(|e| e.context("running ascendd"))
 }
 
 fn overnet_pipe() -> Result<fidl::AsyncSocket, Error> {

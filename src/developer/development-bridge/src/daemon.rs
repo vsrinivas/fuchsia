@@ -83,23 +83,21 @@ impl Daemon {
     }
 
     pub fn spawn_receiver_loop(
-        mut rx: mpsc::UnboundedReceiver<Target>,
+        rx: mpsc::UnboundedReceiver<Target>,
         tc: Arc<TargetCollection>,
         hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
     ) {
         spawn(async move {
-            loop {
-                let target = rx.next().await.unwrap();
+            rx.for_each_concurrent(None, |target| async {
                 let target_clone = tc.merge_insert(target).await;
                 let tc_clone = tc.clone();
                 let hooks_clone = (*hooks.lock().await).clone();
-                spawn(async move {
-                    futures::future::join_all(
-                        hooks_clone.iter().map(|hook| hook.on_new_target(&target_clone, &tc_clone)),
-                    )
-                    .await;
-                });
-            }
+                futures::future::join_all(
+                    hooks_clone.iter().map(|hook| hook.on_new_target(&target_clone, &tc_clone)),
+                )
+                .await;
+            })
+            .await
         });
     }
 
@@ -303,9 +301,8 @@ pub async fn start() -> Result<(), Error> {
         return Ok(());
     }
     setup_logger("ffx.daemon").await;
-    onet::start_ascendd().await;
-    let daemon = Daemon::new().await?;
-    exec_server(daemon).await
+    futures::try_join!(onet::run_ascendd(), exec_server(Daemon::new().await?))?;
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
