@@ -1706,6 +1706,32 @@ void Coordinator::Suspend(
       std::move(callback));
 }
 
+void Coordinator::Suspend2(
+    power_fidl::statecontrol::SuspendRequest request,
+    power_fidl::statecontrol::Admin::Interface::Suspend2Completer::Sync completer) {
+  if (!request.has_state()) {
+    power_fidl::statecontrol::Admin_Suspend2_Result result;
+    result.set_err(std::make_unique<zx_status_t>(ZX_ERR_INVALID_ARGS));
+    completer.Reply(std::move(result));
+    return;
+  }
+
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_Suspend2_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_Suspend2_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(request.state())),
+          std::move(callback));
+}
+
 void Coordinator::SetTerminationSystemState(
     device_manager_fidl::SystemPowerState state,
     device_manager_fidl::SystemStateTransition::Interface::SetTerminationSystemStateCompleter::Sync

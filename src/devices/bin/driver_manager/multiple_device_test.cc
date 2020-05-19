@@ -244,6 +244,176 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_TRUE(suspend_task_sys.is_pending());
 }
 
+TEST_F(MultipleDeviceTestCase, Suspend2NoState) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  zx::channel services, services_remote;
+  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
+
+  zx::channel channel, channel_remote;
+  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+
+  bool callback_executed = false;
+  DoSuspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM, [&](uint32_t flags) {
+    auto request = llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Builder(
+                       std::make_unique<
+                           llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Frame>())
+                       .build();
+
+    auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Suspend2(
+        zx::unowned(channel), std::move(request));
+    ASSERT_OK(response.status());
+    zx_status_t call_status = ZX_OK;
+    if (response->result.is_err()) {
+      call_status = response->result.err();
+    }
+    ASSERT_EQ(call_status, ZX_ERR_INVALID_ARGS);
+    callback_executed = true;
+  });
+
+  ASSERT_TRUE(callback_executed);
+}
+
+TEST_F(MultipleDeviceTestCase, Suspend2FidlMexec) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
+
+  async::Wait suspend_task_pbus(
+      platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
+                                     ZX_OK);
+      });
+  ASSERT_OK(suspend_task_pbus.Begin(driver_host_loop.dispatcher()));
+
+  async::Wait suspend_task_sys(
+      sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
+                                     ZX_OK);
+      });
+  ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
+
+  zx::channel services, services_remote;
+  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
+
+  zx::channel channel, channel_remote;
+  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+
+  bool callback_executed = false;
+  DoSuspend(DEVICE_SUSPEND_FLAG_MEXEC, [&](uint32_t flags) {
+    auto state = std::make_unique<llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState>(
+        llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+    auto request = llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Builder(
+                       std::make_unique<
+                           llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Frame>())
+                       .set_state(std::move(state))
+                       .build();
+
+    auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Suspend2(
+        zx::unowned(channel), std::move(request));
+    ASSERT_OK(response.status());
+    zx_status_t call_status = ZX_OK;
+    if (response->result.is_err()) {
+      call_status = response->result.err();
+    }
+    ASSERT_OK(call_status);
+    callback_executed = true;
+  });
+
+  ASSERT_TRUE(callback_executed);
+  ASSERT_FALSE(suspend_task_pbus.is_pending());
+  ASSERT_FALSE(suspend_task_sys.is_pending());
+}
+
+TEST_F(MultipleDeviceTestCase, Suspend2FidlMexecFail) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
+
+  async::Wait suspend_task_pbus(
+      platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        zx_txid_t txid;
+        CheckSuspendReceived(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC, &txid);
+      });
+  ASSERT_OK(suspend_task_pbus.Begin(driver_host_loop.dispatcher()));
+
+  async::Wait suspend_task_sys(
+      sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        CheckSuspendReceived(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
+      });
+  ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
+
+  zx::channel services, services_remote;
+  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
+
+  zx::channel channel, channel_remote;
+  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+
+  auto state = std::make_unique<llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState>(
+      llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+  auto suspend_request =
+      llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Builder(
+          std::make_unique<llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Frame>())
+          .set_state(std::move(state))
+          .build();
+
+  bool callback_executed = false;
+  DoSuspend(DEVICE_SUSPEND_FLAG_MEXEC, [&](uint32_t flags) {
+    auto state = std::make_unique<llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState>(
+        llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+    auto request = llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Builder(
+                       std::make_unique<
+                           llcpp::fuchsia::hardware::power::statecontrol::SuspendRequest::Frame>())
+                       .set_state(std::move(state))
+                       .build();
+
+    auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Suspend2(
+        zx::unowned(channel), std::move(request));
+    ASSERT_OK(response.status());
+    zx_status_t call_status = ZX_OK;
+    if (response->result.is_err()) {
+      call_status = response->result.err();
+    }
+    ASSERT_EQ(call_status, ZX_ERR_TIMED_OUT);
+    callback_executed = true;
+  });
+
+  ASSERT_TRUE(callback_executed);
+  ASSERT_FALSE(suspend_task_pbus.is_pending());
+  ASSERT_TRUE(suspend_task_sys.is_pending());
+}
+
 TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
