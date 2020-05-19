@@ -8,7 +8,10 @@ use crate::message::message_client::MessageClient;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
 use anyhow::{format_err, Error};
+use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
+use futures::lock::Mutex;
+use std::sync::Arc;
 
 /// Helper for creating a beacon. The builder allows chaining additional fuses
 pub struct BeaconBuilder<P: Payload + 'static, A: Address + 'static> {
@@ -48,6 +51,8 @@ pub struct Beacon<P: Payload + 'static, A: Address + 'static> {
     /// The sender half of an internal channel established between the Beacon and
     /// Receptor.
     event_sender: UnboundedSender<MessageEvent<P, A>>,
+    /// Sentinel for secondary ActionFuses
+    sentinel: Arc<Mutex<Sentinel>>,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
@@ -57,13 +62,24 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
         messenger: Messenger<P, A>,
         fuses: Vec<ActionFuseHandle>,
     ) -> (Beacon<P, A>, Receptor<P, A>) {
+        let sentinel = Arc::new(Mutex::new(Sentinel::new()));
         let (event_tx, event_rx) = futures::channel::mpsc::unbounded::<MessageEvent<P, A>>();
-
-        let beacon = Beacon { messenger: messenger, event_sender: event_tx };
+        let beacon =
+            Beacon { messenger: messenger, event_sender: event_tx, sentinel: sentinel.clone() };
 
         // pass fuse to receptor to hold and set when it goes out of scope.
-        let receptor =
-            Receptor::new(event_rx, Some(ActionFuseBuilder::new().chain_fuses(fuses).build()));
+        let receptor = Receptor::new(
+            event_rx,
+            ActionFuseBuilder::new()
+                .add_action(Box::new(move || {
+                    let sentinel = sentinel.clone();
+                    fasync::spawn(async move {
+                        sentinel.lock().await.trigger().await;
+                    });
+                }))
+                .chain_fuses(fuses)
+                .build(),
+        );
 
         (beacon, receptor)
     }
@@ -94,8 +110,44 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
         Ok(())
     }
 
+    /// Adds the specified fuse to the beacon's sentinel.
+    pub(super) async fn add_fuse(&mut self, fuse: ActionFuseHandle) {
+        self.sentinel.lock().await.add_fuse(fuse);
+    }
+
     /// Returns the identifier for the associated Messenger.
     pub(super) fn get_messenger_id(&self) -> MessengerId {
         self.messenger.get_id()
+    }
+}
+
+/// Sentinel gathers actions fuses from other sources and releases them
+/// on-demand.
+struct Sentinel {
+    active: bool,
+    fuses: Vec<ActionFuseHandle>,
+}
+
+impl Sentinel {
+    /// Generates a new Sentinel.
+    fn new() -> Self {
+        Self { active: true, fuses: vec![] }
+    }
+
+    /// Adds a fuse if still active.
+    fn add_fuse(&mut self, fuse: ActionFuseHandle) {
+        // In the case we're not active anymore, do not add fuse.
+        if !self.active {
+            return;
+        }
+
+        self.fuses.push(fuse);
+    }
+
+    /// Removes all pending fuses.
+    async fn trigger(&mut self) {
+        self.active = false;
+        // Clear fuses, triggering them.
+        self.fuses.clear();
     }
 }

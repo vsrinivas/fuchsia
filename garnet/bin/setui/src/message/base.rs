@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::internal::common::Timestamp;
+use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::beacon::Beacon;
 use crate::message::message_client::MessageClient;
 use crate::message::messenger::{Messenger, MessengerClient};
@@ -152,6 +153,14 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
 
     pub fn get_author(&self) -> Signature<A> {
         self.author.signature.clone()
+    }
+
+    /// Binds the action fuse to the author's receptor. The fuse will fire
+    /// once that receptor is released.
+    pub(super) async fn bind_to_author(&mut self, fuse: ActionFuseHandle) {
+        if let Some(beacon) = self.return_path.last_mut() {
+            beacon.add_fuse(fuse).await;
+        }
     }
 
     /// Returns the list of participants for the reply return path.

@@ -79,4 +79,10 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
         )
         .auto_forwarder(self.forwarder.clone())
     }
+
+    /// Tracks the lifetime of the reply listener, firing the fuse when it
+    /// goes out of scope.
+    pub async fn bind_to_recipient(&mut self, fuse: ActionFuseHandle) {
+        self.message.bind_to_author(fuse).await;
+    }
 }

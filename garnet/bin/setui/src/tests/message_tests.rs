@@ -492,3 +492,39 @@ async fn test_message_timestamp() {
         }
     }
 }
+
+/// Verifies that the proper signal is fired when a receptor disappears.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_bind_to_recipient() {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
+
+    let (messenger, mut receptor) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    {
+        let (scoped_messenger, _scoped_receptor) =
+            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        scoped_messenger
+            .message(ORIGINAL, Audience::Messenger(messenger.get_signature()))
+            .send()
+            .ack();
+
+        if let Ok(MessageEvent::Message(payload, mut client)) = receptor.watch().await {
+            assert_eq!(payload, ORIGINAL);
+            client
+                .bind_to_recipient(
+                    ActionFuseBuilder::new()
+                        .add_action(Box::new(move || {
+                            tx.unbounded_send(()).ok();
+                        }))
+                        .build(),
+                )
+                .await;
+        } else {
+            panic!("Should have received message");
+        }
+    }
+
+    // Receptor has fallen out of scope, should receive callback.
+    assert!(!rx.next().await.is_none());
+}
