@@ -3,7 +3,9 @@
 
 [TOC]
 
-## C Bindings
+## [DEPRECATED] C Bindings
+
+The C bindings are deprecated in favor of [LLCPP](#llcpp).
 
 *   Optimized to meet the needs of low-level systems programming, plus tight
     constraints around dependencies and toolchains. The compiler, bindings
@@ -21,7 +23,7 @@
 *   As the Low-Level C++ Bindings mature, there are plans to re-implement
     the C bindings as a light-weight wrapper around the C++ bindings.
 
-## Low-Level C++ Bindings
+## Low-Level C++ Bindings {#llcpp}
 
 *   Optimized to meet the needs of low-level systems programming while providing
     slightly more safety and features than the C bindings.
@@ -46,6 +48,8 @@
     such as namespaces, string views, and array containers.
 *   Client is synchronous only. However, async client support is planned.
 
+Refer to the [LLCPP tutorial][llcpp-tutorial] to get started.
+
 ## High-Level C++ Bindings
 
 *   Optimized to meet the needs of high-level service programming.
@@ -66,9 +70,11 @@
 *   Both async and synchronous clients are supported. However, the async clients
     are not thread-safe.
 
+Refer to the [HLCPP tutorial][hlcpp-tutorial] to get started.
+
 ## Summary
 
-Category                           | Simple C                          | Low-level C++                                 | High-level C++
+Category                           | [DEPRECATED] C                    | Low-level C++                                 | High-level C++
 -----------------------------------|-----------------------------------|-----------------------------------------------|--------------------
 **audience**                       | drivers                           | drivers and performance-critical applications | high-level services
 **abstraction overhead**           | almost zero                       | almost zero                                   | heap allocation, construction, destruction
@@ -102,3 +108,5 @@ TODO
 
 <!-- xrefs -->
 [layout-attribute]: /docs/reference/fidl/language/attributes.md#layout
+[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-llcpp.md
+[hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-hlcpp.md

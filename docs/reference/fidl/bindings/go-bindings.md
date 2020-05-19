@@ -29,7 +29,7 @@ const string NAME = "Tic-Tac-Toe";
 
 Are generated as:
 
-```golanglang
+```golang
 const (
   BoardSize uint8  = 9
   Name      string = "Tic-Tac-Toe"
