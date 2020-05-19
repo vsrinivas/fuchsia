@@ -47,6 +47,7 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
   // Sets the report descriptor. Must be called before binding the driver because
   // the driver reads |hiddesc_| on bind.
   void SetReportDescriptor(std::vector<uint8_t> report_desc) {
+    fbl::AutoLock lock(&report_read_lock_);
     hiddesc_.wReportDescLength = htole16(report_desc.size());
     report_desc_ = std::move(report_desc);
   }
@@ -62,11 +63,13 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
 
   // This lets us send a report with an incorrect length.
   void SendReportWithLength(std::vector<uint8_t> report, size_t len) {
-    fbl::AutoLock lock(&report_read_lock_);
+    {
+      fbl::AutoLock lock(&report_read_lock_);
 
-    report_ = std::move(report);
-    report_len_ = len;
-    irq_.trigger(0, zx::clock::get_monotonic());
+      report_ = std::move(report);
+      report_len_ = len;
+      irq_.trigger(0, zx::clock::get_monotonic());
+    }
     sync_completion_wait_deadline(&report_read_, zx::time::infinite().get());
     sync_completion_reset(&report_read_);
   }
@@ -77,7 +80,8 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
 
  private:
   zx_status_t TransactCommands(const uint8_t* write_buffer, size_t write_buffer_size,
-                               uint8_t* read_buffer, size_t* read_buffer_size) {
+                               uint8_t* read_buffer, size_t* read_buffer_size)
+      __TA_REQUIRES(report_read_lock_) {
     if (write_buffer_size < 4) {
       return ZX_ERR_INTERNAL;
     }
@@ -123,6 +127,7 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
 
   zx_status_t Transact(const uint8_t* write_buffer, size_t write_buffer_size, uint8_t* read_buffer,
                        size_t* read_buffer_size) override {
+    fbl::AutoLock lock(&report_read_lock_);
     // General Read.
     if (write_buffer_size == 0) {
       // Reading the Reset status.
@@ -200,9 +205,9 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
 
   fbl::Mutex report_read_lock_;
   sync_completion_t report_read_;
-  std::vector<uint8_t> report_desc_;
-  std::vector<uint8_t> report_;
-  size_t report_len_ = 0;
+  std::vector<uint8_t> report_desc_ __TA_GUARDED(report_read_lock_);
+  std::vector<uint8_t> report_ __TA_GUARDED(report_read_lock_);
+  size_t report_len_ __TA_GUARDED(report_read_lock_) = 0;
 };
 
 class I2cHidTest : public zxtest::Test {
