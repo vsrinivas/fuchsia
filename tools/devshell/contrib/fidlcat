@@ -277,6 +277,7 @@ if launch_debug_agent "${port}" "" "${agent_out}"; then
   arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
   arguments+=("-s" "${FUCHSIA_BUILD_DIR}")
   arguments+=("-s" "${ZIRCON_BUILDROOT}")
+  arguments+=("-s" "${FUCHSIA_DIR}/prebuilt")
   arguments+=("-s" "${PREBUILT_CLANG_DIR}/lib/debug")
   arguments+=("--symbol-cache" "~")
   arguments+=("--pretty-print")
