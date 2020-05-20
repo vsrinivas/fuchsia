@@ -18,7 +18,7 @@ using fuchsia::settings::Error;
 using fuchsia::settings::HourCycle;
 using fuchsia::settings::IntlSettings;
 
-static const int32_t kTimeoutSec = 10;
+static const int32_t kTimeoutSec = 30;
 
 // See README.md for more detail about this test.
 class IntlServicesTest : public sys::testing::TestWithEnvironment {
@@ -97,7 +97,10 @@ TEST_F(IntlServicesTest, AsyncSetThenGet) {
 
   // The test should normally run for a fraction of a second, so even though this measures time
   // *after* the test events completed, it should not matter for timeout checks.
-  ASSERT_FALSE(Timeout()) << "Test took too long to complete";
+  ASSERT_FALSE(Timeout()) << "Test took too long to complete: "
+                          << " set_completed=" << set_completed
+                          << " get_completed=" << get_completed
+                          << " on_change_completed=" << on_change_completed;
 
   ASSERT_TRUE(set_result.is_ok());
 
