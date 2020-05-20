@@ -142,11 +142,11 @@ template("fuchsia_component") {
     }
     deps += [ ":${target_name}_metadata" ]
   }
+  manifest_source = get_target_outputs(":$target_name")
+  manifest_source = rebase_path(manifest_source[0], root_out_dir)
 
   # Package the manifest
   group("${target_name}_metadata") {
-    manifest_source = get_target_outputs(":${invoker.target_name}")
-    manifest_source = rebase_path(manifest_source[0], root_out_dir)
     metadata = {
       package_manifest_args = [ "--entry=meta/$manifest_name=$manifest_source" ]
     }

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 # Run all tests with:
@@ -11,50 +10,24 @@ group("tests") {
   deps = [
     ":echo-integration-test",
     ":readfile-unittest",
-    ":return_zero_test",
+    ":return_zero_package",
     ":twoplustwo-cpp-unittest",
     ":twoplustwo-rust-unittest",
   ]
   testonly = true
 }
 
-executable("return_zero_bin") {
-  output_name = "return_zero"
+fuchsia_cpp_component("return_zero_component") {
   sources = [ "return_zero.cc" ]
-  testonly = true
-}
-
-fuchsia_component("return_zero_component") {
+  output_name = "return_zero"
   manifest = "return_zero.cmx"
   component_name = "return-zero"
   testonly = true
-  resources = [
-    {
-      source = "$root_out_dir/return_zero"
-      destination = "bin/return_zero"
-    },
-  ]
-  deps = [ ":return_zero_bin" ]
 }
 
-fuchsia_package("return_zero_package") {
+fuchsia_test_package("return_zero_package") {
   package_name = "return-zero-package"
-  components = [ ":return_zero_component" ]
-  testonly = true
-}
-
-# Run just this test with any of the following:
-# * Specify the test component's URL:
-#   fx test fuchsia-pkg://fuchsia.com/return-zero-package#meta/return-zero.cmx
-# * Specify the test component's name:
-#   fx test return-zero
-# * Specify the test's package, and run all registered test components in it:
-#   fx test return-zero-package
-fuchsia_test("return_zero_test") {
-  package = ":return_zero_package"
-  package_name = "return-zero-package"
-  component = ":return_zero_component"
-  environments = basic_envs
+  tests = [ ":return_zero_component" ]
 }
 
 fuchsia_cpp_unittest("twoplustwo-cpp-unittest") {
@@ -90,8 +63,9 @@ fuchsia_component("echo-server") {
   deps = [ "//garnet/examples/fidl/echo_server_go:echo_server_go_bin" ]
 }
 
-rustc_binary("echo_client_for_integration_test") {
+fuchsia_rust_component("echo-client-test") {
   source_root = "echo_client.rs"
+  manifest = "echo_client_test.cmx"
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -101,18 +75,7 @@ rustc_binary("echo_client_for_integration_test") {
   ]
 }
 
-fuchsia_component("echo-client") {
-  manifest = "echo_client.cmx"
-  resources = [
-    {
-      source = "$root_out_dir/echo_client_for_integration_test"
-      destination = "bin/echo_client"
-    },
-  ]
-  deps = [ ":echo_client_for_integration_test" ]
-}
-
 fuchsia_test_package("echo-integration-test") {
-  tests = [ ":echo-client" ]
+  tests = [ ":echo-client-test" ]
   components = [ ":echo-server" ]
 }

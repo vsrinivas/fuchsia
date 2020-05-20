@@ -51,11 +51,12 @@ import("fuchsia_unittest_internal.gni")
 #
 #   Additional `executable()` parameters will be forwarded.
 template("fuchsia_cpp_unittest") {
-  executable_target = "${target_name}_executable"
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
+
+  executable_target = "${target_name}_executable"
   executable(executable_target) {
     forward_variables_from(invoker,
                            "*",
@@ -67,6 +68,7 @@ template("fuchsia_cpp_unittest") {
                            ])
     output_name = output_name
     testonly = true
+    visibility = [ ":*" ]
   }
 
   if (!defined(invoker.manifest)) {

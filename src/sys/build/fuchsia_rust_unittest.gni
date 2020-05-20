@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_test.gni")
 import("fuchsia_unittest_internal.gni")
 
 # Defines a Rust test to be used as a unit test on Fuchsia.
@@ -52,15 +51,23 @@ import("fuchsia_unittest_internal.gni")
 #
 #   Additional `rustc_test()` parameters will be forwarded.
 template("fuchsia_rust_unittest") {
-  executable_target = "${target_name}_executable"
+  assert(
+      !(defined(invoker.output_name) && defined(invoker.name)),
+      "Can't specify both `output_name` and `name` for fuchsia_rust_unittest($target_name)")
+
   output_name = target_name
-  if (defined(invoker.name)) {
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  } else if (defined(invoker.name)) {
     output_name = invoker.name
   }
 
   # Rust tools don't like dashes ¯\_(ツ)_/¯
   output_name = string_replace(output_name, "-", "_")
-  rustc_test(executable_target) {
+
+  import("//build/rust/rustc_test.gni")
+  rustc_test_target = "${target_name}_rustc_test"
+  rustc_test(rustc_test_target) {
     forward_variables_from(invoker,
                            "*",
                            [
@@ -70,6 +77,7 @@ template("fuchsia_rust_unittest") {
                              "test_spec",
                            ])
     name = output_name
+    visibility = [ ":*" ]
   }
 
   if (!defined(invoker.manifest)) {
@@ -99,7 +107,7 @@ template("fuchsia_rust_unittest") {
   fuchsia_unittest_internal(target_name) {
     forward_variables_from(invoker, [ "manifest_contents" ])
     forward_variables_from(invoker, "*")
-    executable_target = ":$executable_target"
+    executable_target = ":$rustc_test_target"
     additional_resources = [
       {
         source = "$root_out_dir/$output_name"

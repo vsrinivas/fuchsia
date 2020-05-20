@@ -201,6 +201,46 @@ Note the following details:
     have exactly one of). This is a [recommended practice][source-code-layout]
     for organizing targets across the source tree.
 
+### Language-specific component templates {#language-specific-component-templates}
+
+To simplify defining components in commonly used languages, simplified templates
+are provided.
+
+<section class="tabs">
+
+#### C++ {.new-tab}
+
+[`fuchsia_cpp_component.gni`](/src/sys/build/fuchsia_cpp_component.gni)
+
+```
+import("//src/sys/build/components.gni")
+
+fuchsia_cpp_component("my-component") {
+  sources = [ "main.cc" ]
+  deps = [ ... ]
+}
+```
+
+Additional [`executable()`][executable] parameters may be provided.
+
+#### Rust {.new-tab}
+
+[`fuchsia_rust_component.gni`](/src/sys/build/fuchsia_rust_component.gni)
+
+```
+import("//src/sys/build/components.gni")
+
+fuchsia_rust_component("my-component") {
+  deps = [ ... ]
+}
+```
+
+Additional [`rustc_binary()`][rustc-binary] parameters may be provided.
+
+</section>
+
+Support for additional languages may be added upon request.
+
 ### Unit tests {#unit-tests}
 
 Since unit tests are very common, simplified templates are provided to define
@@ -221,6 +261,8 @@ fuchsia_cpp_unittest("my-unittest") {
 }
 ```
 
+Additional [`executable()`][executable] parameters may be provided.
+
 #### Rust {.new-tab}
 
 [`fuchsia_rust_unittest.gni`](/src/sys/build/fuchsia_rust_unittest.gni)
@@ -229,15 +271,16 @@ fuchsia_cpp_unittest("my-unittest") {
 import("//src/sys/build/fuchsia_cpp_unittest.gni")
 
 fuchsia_rust_unittest("my-unittest") {
-  source_root = "my_unittest.rs"
   # Alternatively put sources under `src/` and remove the line above
   deps = [ ... ]
 }
 ```
 
+Additional [`rustc_test()`][rustc-test] parameters may be provided.
+
 </section>
 
-Support for unit tests in additional languages may be added upon request.
+Support for additional languages may be added upon request.
 
 In the example above, the unit tests don't specify a component manifest. One is
 then generated for them, which requests very trivial capabilities for the
@@ -270,6 +313,7 @@ See also:
 
 [cml-format]: /docs/concepts/components/component_manifests.md
 [cmx-format]: /docs/concepts/storage/component_manifest.md
+[executable]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
 [glossary-component]: /docs/glossary.md#component
 [glossary-component-instance]: /docs/glossary.md#component-instance
@@ -279,5 +323,7 @@ See also:
 [glossary-package]: /docs/glossary.md#fuchsia-package
 [package-name]: /docs/concepts/packages/package_url.md#package-name
 [pm]: /src/sys/pkg/bin/pm/README.md
+[rustc-binary]: /build/rust/rustc_binary.gni
+[rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
 [working-with-packages]: /docs/development/sdk/documentation/packages.md
