@@ -22,7 +22,10 @@ class MockProcess implements Process {
   @override
   final Future<int> exitCode;
 
-  MockProcess({stdout, stderr, Future<int> exitCode})
+  MockProcess(
+      {Stream<List<int>> stdout,
+      Stream<List<int>> stderr,
+      Future<int> exitCode})
       : stdout = stdout ?? Stream.empty(),
         stderr = stderr ?? Stream.empty(),
         exitCode = exitCode ?? Future<int>.value(0);

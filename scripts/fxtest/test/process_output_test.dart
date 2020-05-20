@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+
 import 'package:fxtest/fxtest.dart';
 import 'package:test/test.dart';
+
+import 'mock_start_process.dart';
 
 // Note: These tests pass locally (when executed by `pub run test`), but not
 // when built by GN, because of their dependency on `output_tester.sh`.
@@ -21,14 +25,14 @@ void main() {
         strings.add(s);
       }
 
-      var runner = TestRunner();
+      var startProcess = mockStartProcess(createOutputTester());
+      var runner = TestRunner(startProcess: startProcess);
       runner.output.listen(addStrings);
-      ProcessResult result = await runner.run(
+      var result = await runner.run(
         './test/output_tester.sh',
         [],
         workingDirectory: '.',
       );
-      await Future.delayed(Duration(milliseconds: 1));
 
       expect(strings.length, 3);
       expect(strings[0], 'line 1');
@@ -38,9 +42,10 @@ void main() {
     });
 
     test('when -o is not passed', () async {
-      var runner = TestRunner();
-      runner.output.listen((val) => null);
-      ProcessResult result = await runner.run(
+      var startProcess = mockStartProcess(createOutputTester());
+      var runner = TestRunner(startProcess: startProcess);
+      runner.output.listen((_) {});
+      var result = await runner.run(
         './test/output_tester.sh',
         [],
         workingDirectory: '.',
@@ -48,4 +53,20 @@ void main() {
       expect(result.stdout, 'line 1\nline 2\n');
     });
   });
+}
+
+/// Creates an output tester mock process with hardcoded output.
+Process createOutputTester() {
+  var stringEncoder = Utf8Encoder();
+  var stdoutController = StreamController<List<int>>()
+    ..add(stringEncoder.convert("line 1\n"))
+    ..add(stringEncoder.convert("line 2\n"))
+    ..close();
+  var stderrController = StreamController<List<int>>()
+    ..add(stringEncoder.convert("stderr\n"))
+    ..close();
+  return MockProcess(
+    stdout: stdoutController.stream,
+    stderr: stderrController.stream,
+  );
 }
