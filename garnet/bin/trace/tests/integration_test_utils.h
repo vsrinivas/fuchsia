@@ -22,13 +22,13 @@
 namespace tracing {
 namespace test {
 
-using TestRunner = bool(const tracing::Spec& spec);
-using TestVerifier = bool(const tracing::Spec& spec, const std::string& test_output_file);
+using TspecTestRunner = bool(const tracing::Spec& spec);
+using TspecTestVerifier = bool(const tracing::Spec& spec, const std::string& test_output_file);
 
 struct IntegrationTest {
   const char* name;
-  TestRunner* run;
-  TestVerifier* verify;
+  TspecTestRunner* run;
+  TspecTestVerifier* verify;
 };
 
 // When emitting a small fixed number of events, emit this amount.

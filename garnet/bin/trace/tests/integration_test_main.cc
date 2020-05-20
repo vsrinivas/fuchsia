@@ -17,6 +17,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
+#include <initializer_list>
 #include <iostream>
 
 #include <src/lib/files/file.h>
@@ -28,29 +29,68 @@
 
 const char kUsageString[] = {
     "Test runner usage:\n"
-    "  $program [options] run tspec-file\n"
+    "  $program [options] run test-name buffer-size buffering-mode\n"
     "\n"
     "Test verifier usage:\n"
-    "  $program [options] verify tspec-file trace-output-file\n"
+    "  $program [options] verify test-name buffer-size buffering-mode trace-output-file\n"
+    // TODO(52043): Remove tspec options once all tests are converted
+    "Tspec test runner usage:\n"
+    "  $program [options] run_tspec tspec-file\n"
+    "\n"
+    "Tspec test verifier usage:\n"
+    "  $program [options] verify_tspec tspec-file trace-output-file\n"
     "\n"
     "Options:\n"
     "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
     "  --verbose[=LEVEL]  set debug verbosity level\n"
     "  --log-file=FILE    write log output to FILE\n"};
 
-static int RunTest(const tracing::Spec& spec, tracing::test::TestRunner* run) {
-  bool success = run(spec);
-  return success ? EXIT_SUCCESS : EXIT_FAILURE;
-}
-
-static int VerifyTest(const tracing::Spec& spec, tracing::test::TestVerifier* verify,
-                      const std::string& test_output_file) {
-  if (!verify(spec, test_output_file))
-    return EXIT_FAILURE;
-  return EXIT_SUCCESS;
-}
-
 static void PrintUsageString() { std::cout << kUsageString << std::endl; }
+
+static bool ParseInteger(const std::string& string_value, size_t* int_value) {
+  *int_value = strtoul(string_value.c_str(), nullptr, 10);
+  if (*int_value == 0L) {
+    FX_LOGS(ERROR) << "Failed to parse integer " << string_value;
+  }
+  return *int_value != 0L;
+}
+
+static bool CopyArguments(const std::vector<std::string>& args,
+                          std::initializer_list<std::string*> outputs) {
+  if (args.size() != outputs.size() + 1) {
+    FX_LOGS(ERROR) << "Wrong number of arguments to " << args[0] << " invocation";
+    return false;
+  }
+  int argument_index = 1;  // skip first arg (command name)
+  for (std::string* output : outputs) {
+    *output = args[argument_index++];
+  }
+  return true;
+}
+
+static bool ReadTspec(const std::string& spec_file_path, tracing::Spec* spec,
+                      const tracing::test::IntegrationTest** test) {
+  std::string spec_file_contents;
+  if (!files::ReadFileToString(spec_file_path, &spec_file_contents)) {
+    FX_LOGS(ERROR) << "Can't read test spec: " << spec_file_path;
+    return false;
+  }
+
+  if (!tracing::DecodeSpec(spec_file_contents, spec)) {
+    FX_LOGS(ERROR) << "Error decoding test spec: " << spec_file_path;
+    return false;
+  }
+
+  std::string test_name = *spec->test_name;
+
+  *test = tracing::test::LookupTest(test_name);
+  if (*test == nullptr) {
+    FX_LOGS(ERROR) << "Unknown test name: " << test_name;
+    return false;
+  }
+
+  return true;
+}
 
 int main(int argc, char* argv[]) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -70,56 +110,71 @@ int main(int argc, char* argv[]) {
 
   auto args = cl.positional_args();
 
-  if (args.size() < 2) {
+  if (args.empty()) {
     PrintUsageString();
     return EXIT_FAILURE;
   }
 
   const std::string command = args[0];
-  const std::string spec_file_path = args[1];
 
   if (command == "run") {
-    if (args.size() != 2) {
-      FX_LOGS(ERROR) << "Wrong number of arguments to run invocation";
-      return EXIT_FAILURE;
+    std::string test_name, buffer_size_string, buffering_mode;
+    size_t buffer_size;
+    if (!(CopyArguments(args, {&test_name, &buffer_size_string, &buffering_mode}) &&
+          ParseInteger(buffer_size_string, &buffer_size))) {
+      return EXIT_FAILURE;  // error already logged
     }
-  } else if (command == "verify") {
-    if (args.size() != 3) {
-      FX_LOGS(ERROR) << "Wrong number of arguments to verify invocation";
-      return EXIT_FAILURE;
+
+    FX_LOGS(ERROR) << "Command run not yet implemented";
+    return EXIT_FAILURE;
+  }
+
+  if (command == "verify") {
+    std::string test_name, buffer_size_string, buffering_mode, trace_output_file;
+    size_t buffer_size;
+    if (!(CopyArguments(args,
+                        {&test_name, &buffer_size_string, &buffering_mode, &trace_output_file}) &&
+          ParseInteger(buffer_size_string, &buffer_size))) {
+      return EXIT_FAILURE;  // error already logged
     }
-  } else {
-    FX_LOGS(ERROR) << "Unknown command: " << command;
+
+    FX_LOGS(ERROR) << "Command verify not yet implemented";
     return EXIT_FAILURE;
   }
 
-  std::string spec_file_contents;
-  if (!files::ReadFileToString(spec_file_path, &spec_file_contents)) {
-    FX_LOGS(ERROR) << "Can't read test spec: " << spec_file_path;
-    return EXIT_FAILURE;
+  if (command == "run_tspec") {
+    std::string spec_file;
+    if (!CopyArguments(args, {&spec_file})) {
+      return EXIT_FAILURE;  // error already logged
+    }
+
+    tracing::Spec spec;
+    const tracing::test::IntegrationTest* test;
+    if (!ReadTspec(spec_file, &spec, &test)) {
+      return EXIT_FAILURE;  // error already logged
+    }
+
+    FX_LOGS(INFO) << "Running subprogram for test " << spec_file << ":\"" << test->name << "\"";
+    return test->run(spec) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
-  tracing::Spec spec;
-  if (!tracing::DecodeSpec(spec_file_contents, &spec)) {
-    FX_LOGS(ERROR) << "Error decoding test spec: " << spec_file_path;
-    return EXIT_FAILURE;
+  if (command == "verify_tspec") {
+    std::string spec_file, trace_output_file;
+    if (!CopyArguments(args, {&spec_file, &trace_output_file})) {
+      return EXIT_FAILURE;  // error already logged
+    }
+
+    tracing::Spec spec;
+    const tracing::test::IntegrationTest* test;
+    if (!ReadTspec(spec_file, &spec, &test)) {
+      return EXIT_FAILURE;  // error already logged
+    }
+
+    FX_LOGS(INFO) << "Verifying test " << spec_file << ":\"" << test->name << "\", output file "
+                  << trace_output_file;
+    return test->verify(spec, trace_output_file) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
-  FX_DCHECK(spec.test_name);
-  auto test_name = *spec.test_name;
-
-  auto test = tracing::test::LookupTest(test_name);
-  if (test == nullptr) {
-    FX_LOGS(ERROR) << "Unknown test name: " << test_name;
-    return EXIT_FAILURE;
-  }
-
-  if (command == "run") {
-    FX_LOGS(INFO) << "Running subprogram for test " << spec_file_path << ":\"" << test_name << "\"";
-    return RunTest(spec, test->run);
-  } else {
-    FX_LOGS(INFO) << "Verifying test " << spec_file_path << ":\"" << test_name << "\"";
-    const std::string& trace_output_file = args[2];
-    return VerifyTest(spec, test->verify, trace_output_file);
-  }
+  FX_LOGS(ERROR) << "Unknown command: " << command;
+  return EXIT_FAILURE;
 }

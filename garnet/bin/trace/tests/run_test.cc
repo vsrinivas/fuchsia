@@ -39,6 +39,7 @@ const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx"
 // The path of the trace program as a shell command.
 const char kTraceProgramPath[] = "/bin/trace";
 
+// TODO(52043): Remove tspec functionality once all tests are converted
 static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
   std::string tspec_contents;
   if (!files::ReadFileToString(tspec_path, &tspec_contents)) {
@@ -53,10 +54,10 @@ static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
   return true;
 }
 
-static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
-                                  const std::string& relative_output_file_path,
-                                  std::vector<std::string>* args,
-                                  const syslog::LogSettings& log_settings) {
+static bool BuildTraceProgramArgsWithTspec(const std::string& relative_tspec_path,
+                                           const std::string& relative_output_file_path,
+                                           std::vector<std::string>* args,
+                                           const syslog::LogSettings& log_settings) {
   tracing::Spec spec;
   if (!ReadTspec(std::string(kTestPackagePath) + "/" + relative_tspec_path, &spec)) {
     return false;
@@ -75,7 +76,7 @@ static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
 
   // Note that |relative_tspec_path| cannot have a comma.
   args->push_back(
-      fxl::StringPrintf("--append-args=run,%s",
+      fxl::StringPrintf("--append-args=run_tspec,%s",
                         (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) +
                          "/" + relative_tspec_path)
                             .c_str()));
@@ -83,13 +84,13 @@ static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
   return true;
 }
 
-static void BuildVerificationProgramArgs(const std::string& tspec_path,
-                                         const std::string& output_file_path,
-                                         std::vector<std::string>* args,
-                                         const syslog::LogSettings& log_settings) {
+static void BuildVerificationProgramArgsWithTspec(const std::string& tspec_path,
+                                                  const std::string& output_file_path,
+                                                  std::vector<std::string>* args,
+                                                  const syslog::LogSettings& log_settings) {
   AppendLoggingArgs(args, "", log_settings);
 
-  args->push_back("verify");
+  args->push_back("verify_tspec");
   args->push_back(tspec_path);
   args->push_back(output_file_path);
 }
@@ -200,7 +201,8 @@ static bool RunTraceComponentAndWait(const std::string& app, const std::vector<s
 bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
               const syslog::LogSettings& log_settings) {
   std::vector<std::string> args;
-  if (!BuildTraceProgramArgs(relative_tspec_path, relative_output_file_path, &args, log_settings)) {
+  if (!BuildTraceProgramArgsWithTspec(relative_tspec_path, relative_output_file_path, &args,
+                                      log_settings)) {
     return false;
   }
 
@@ -222,7 +224,7 @@ bool VerifyTspec(const std::string& relative_tspec_path,
   const std::string& program_path = *spec.app;
 
   std::vector<std::string> args;
-  BuildVerificationProgramArgs(
+  BuildVerificationProgramArgsWithTspec(
       (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" +
        relative_tspec_path),
       std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path, &args, log_settings);
