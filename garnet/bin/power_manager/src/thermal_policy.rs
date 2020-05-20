@@ -15,9 +15,9 @@ use fidl_fuchsia_cobalt::HistogramBucket;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use log::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
 use power_metrics_registry::ThermalLimitResultMetricDimensionResult as thermal_limit_result;
 use serde_derive::Deserialize;
@@ -538,14 +538,14 @@ impl ThermalPolicy {
 
             if self.state.thermal_load.get().0 == 0 {
                 // We've just entered thermal limiting
-                fx_log_info!("Begin thermal mitigation");
+                info!("Begin thermal mitigation");
                 self.thermal_metrics.borrow_mut().log_throttle_start(timestamp);
                 self.inspect.throttle_history().mark_throttling_active(timestamp);
                 self.state.throttle_end_deadline.set(None);
             } else if thermal_load.0 == 0 {
                 // We've just exited thermal limiting. Set the deadline time that we may consider
                 // the throttle event officially complete.
-                fx_log_info!("End thermal mitigation");
+                info!("End thermal mitigation");
                 let throttle_end_deadline = timestamp
                     + Nanoseconds(self.config.policy_params.throttle_end_delay.into_nanos());
                 self.state.throttle_end_deadline.set(Some(throttle_end_deadline));
@@ -608,17 +608,15 @@ impl ThermalPolicy {
         );
 
         if error_integral < error_integral_min {
-            fx_log_err!(
+            error!(
                 "error_integral {} less than error_integral_min {}",
-                error_integral,
-                error_integral_min
+                error_integral, error_integral_min
             );
             thermal_limiter::MAX_THERMAL_LOAD
         } else if error_integral > error_integral_max {
-            fx_log_err!(
+            error!(
                 "error_integral {} greater than error_integral_max {}",
-                error_integral,
-                error_integral_max
+                error_integral, error_integral_max
             );
             ThermalLoad(0)
         } else {

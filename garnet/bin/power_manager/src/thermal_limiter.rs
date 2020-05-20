@@ -13,10 +13,10 @@ use fidl_fuchsia_thermal as fthermal;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::{self as inspect, Property};
-use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
 use futures::TryStreamExt;
+use log::*;
 use serde_json as json;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -232,7 +232,7 @@ impl ThermalLimiter {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
         );
     }
 

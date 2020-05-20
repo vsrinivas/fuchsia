@@ -14,7 +14,7 @@ use fidl_fuchsia_kernel as fstats;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
-use fuchsia_syslog::fx_log_err;
+use log::*;
 use serde_json as json;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -196,7 +196,7 @@ impl CpuStatsHandler {
                 "old_stats" => format!("{:?}", old_idle).as_str(),
                 "new_stats" => format!("{:?}", new_idle).as_str()
             );
-            fx_log_err!(
+            error!(
                 "Number of CPUs changed (old={}; new={})",
                 old_idle.idle_times.len(),
                 new_idle.idle_times.len()
@@ -220,11 +220,9 @@ impl CpuStatsHandler {
     fn calculate_cpu_load(cpu_num: usize, old_idle: &CpuIdleStats, new_idle: &CpuIdleStats) -> f32 {
         let total_time_delta = new_idle.timestamp.0 - old_idle.timestamp.0;
         if total_time_delta <= 0 {
-            fx_log_err!(
+            error!(
                 "Expected positive total_time_delta, got: {} (start={}; end={})",
-                total_time_delta,
-                old_idle.timestamp.0,
-                new_idle.timestamp.0
+                total_time_delta, old_idle.timestamp.0, new_idle.timestamp.0
             );
             return 0.0;
         }

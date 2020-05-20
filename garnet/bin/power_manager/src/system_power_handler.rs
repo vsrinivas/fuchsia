@@ -11,8 +11,8 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device_manager as fdevmgr;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
-use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon as zx;
+use log::*;
 use serde_json as json;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -96,7 +96,7 @@ impl SystemPowerStateHandler {
             "SystemPowerStateHandler::handle_system_shutdown",
             "reason" => reason.as_str()
         );
-        fx_log_info!("System shutdown (reason: {})", reason);
+        info!("System shutdown (reason: {})", reason);
         let result = self.dev_mgr_suspend(fdevmgr::SUSPEND_FLAG_POWEROFF).await;
         log_if_err!(result, "System shutdown failed");
         fuchsia_trace::instant!(

@@ -15,10 +15,10 @@ use fidl_fuchsia_sys2 as fsys;
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::{self as inspect, Property};
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon::{self as zx, Status as zx_status};
 use futures::prelude::*;
 use futures::TryStreamExt;
+use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
@@ -241,7 +241,7 @@ impl SystemShutdownHandler {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
         );
     }
 
@@ -266,7 +266,7 @@ impl SystemShutdownHandler {
             return Err(zx_status::ALREADY_EXISTS);
         }
 
-        fx_log_info!("System shutdown (reason: {:?})", reason);
+        info!("System shutdown (reason: {:?})", reason);
         self.inspect.log_suspend_request(state);
 
         // Handle the suspend using a timeout if one is present in the config
@@ -367,7 +367,7 @@ fn system_power_state_to_driver_manager_state(
 /// the power_manager is marked as a critical process to the root job, once the power_manager exits
 /// the root job will also exit, and the system will reboot.
 fn force_shutdown() {
-    fx_log_info!("Force shutdown requested");
+    info!("Force shutdown requested");
     std::process::exit(1);
 }
 
