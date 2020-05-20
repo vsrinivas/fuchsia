@@ -66,7 +66,7 @@ zx_ticks_t (*current_ticks)(void) = [](void) -> zx_ticks_t { return 0; };
 
 namespace {
 
-spin_lock_t timer_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
+SpinLock timer_lock __CPU_ALIGN_EXCLUSIVE;
 DECLARE_SINGLETON_LOCK_WRAPPER(TimerLock, timer_lock);
 
 affine::Ratio gTicksToTime;
@@ -240,7 +240,7 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
   const zx_time_t latest_deadline = deadline.latest();
   const zx_time_t earliest_deadline = deadline.earliest();
 
-  Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
+  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
   uint cpu = arch_curr_cpu_num();
 
@@ -300,7 +300,7 @@ void TimerQueue::PreemptCancel() {
 bool Timer::Cancel() {
   DEBUG_ASSERT(magic_ == kMagic);
 
-  Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
+  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
   uint cpu = arch_curr_cpu_num();
 
@@ -386,7 +386,7 @@ void timer_tick(zx_time_t now) {
     Scheduler::TimerTick(SchedTime{now});
   }
 
-  Guard<spin_lock_t, NoIrqSave> guard{TimerLock::Get()};
+  Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
 
   for (;;) {
     // see if there's an event to process
@@ -450,10 +450,10 @@ void timer_tick(zx_time_t now) {
   update_platform_timer(cpu, deadline);
 }
 
-zx_status_t Timer::TrylockOrCancel(spin_lock_t* lock) {
+zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
   // spin trylocking on the passed in spinlock either waiting for it
   // to grab or the passed in timer to be canceled.
-  while (unlikely(spin_trylock(lock))) {
+  while (unlikely(lock->TryAcquire())) {
     // we failed to grab it, check for cancel
     if (cancel_) {
       // we were canceled, so bail immediately
@@ -467,7 +467,7 @@ zx_status_t Timer::TrylockOrCancel(spin_lock_t* lock) {
 }
 
 void TimerQueue::TransitionOffCpu(uint old_cpu) {
-  Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
+  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
   uint cpu = arch_curr_cpu_num();
 
   Timer* old_head = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
@@ -498,7 +498,7 @@ void TimerQueue::TransitionOffCpu(uint old_cpu) {
 
 void TimerQueue::ThawPercpu(void) {
   DEBUG_ASSERT(arch_ints_disabled());
-  Guard<spin_lock_t, NoIrqSave> guard{TimerLock::Get()};
+  Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
 
   uint cpu = arch_curr_cpu_num();
 
@@ -522,7 +522,7 @@ void PrintTimerQueues(char* buf, size_t len) {
   size_t ptr = 0;
   zx_time_t now = current_time();
 
-  Guard<spin_lock_t, IrqSave> guard{TimerLock::Get()};
+  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
   for (uint i = 0; i < percpu::processor_count(); i++) {
     if (mp_is_cpu_online(i)) {
       ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);

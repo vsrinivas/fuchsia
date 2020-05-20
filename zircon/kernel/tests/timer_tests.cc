@@ -288,7 +288,7 @@ struct timer_args {
   volatile int timer_fired;
   volatile int remaining;
   volatile int wait;
-  spin_lock_t* lock;
+  SpinLock* lock;
 };
 
 static void timer_cb(Timer*, zx_time_t now, void* void_arg) {
@@ -375,7 +375,7 @@ static void timer_trylock_cb(Timer* t, zx_time_t now, void* void_arg) {
 
   int result = t->TrylockOrCancel(arg->lock);
   if (!result) {
-    spin_unlock(arg->lock);
+    arg->lock->Release();
   }
 
   atomic_store(&arg->result, result);
@@ -395,7 +395,7 @@ static bool trylock_or_cancel_canceled() {
   Timer t;
 
   SpinLock lock;
-  arg.lock = lock.GetInternal();
+  arg.lock = &lock;
   arg.wait = 1;
 
   arch_disable_ints();
@@ -443,7 +443,7 @@ static bool trylock_or_cancel_get_lock() {
   Timer t;
 
   SpinLock lock;
-  arg.lock = lock.GetInternal();
+  arg.lock = &lock;
   arg.wait = 1;
 
   arch_disable_ints();
