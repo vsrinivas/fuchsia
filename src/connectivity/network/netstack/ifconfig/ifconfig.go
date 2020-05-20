@@ -16,11 +16,9 @@ import (
 	"fuchsia.googlesource.com/component"
 	"netstack/fidlconv"
 
-	"fidl/fuchsia/hardware/ethernet"
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/net/dhcp"
 	"fidl/fuchsia/netstack"
-	"fidl/fuchsia/wlan/service"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
@@ -28,7 +26,6 @@ import (
 type netstackClientApp struct {
 	ctx      *component.Context
 	netstack *netstack.NetstackWithCtxInterface
-	wlan     *service.WlanWithCtxInterface
 }
 
 func (a *netstackClientApp) printAll() {
@@ -74,10 +71,6 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
 	}
 	fmt.Printf("\tmetric:%d\n", iface.Metric)
 	fmt.Printf("\t%s\n", flagsToString(iface.Flags))
-
-	if isWLAN(iface.Features) {
-		fmt.Printf("\tWLAN Status: %s\n", a.wlanStatus())
-	}
 }
 
 func (a *netstackClientApp) setStatus(iface netstack.NetInterface2, up bool) {
@@ -312,52 +305,6 @@ func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop stri
 	return nil
 }
 
-func (a *netstackClientApp) wlanStatus() string {
-	if a.wlan == nil {
-		return "failed to query (FIDL service unintialized)"
-	}
-	res, err := a.wlan.Status(context.Background())
-	if err != nil {
-		return fmt.Sprintf("failed to query (error: %v)", err)
-	} else if res.Error.Code != service.ErrCodeOk {
-		return fmt.Sprintf("failed to query (err: code(%v) desc(%v)", res.Error.Code, res.Error.Description)
-	} else {
-		status := wlanStateToStr(res.State)
-		if res.CurrentAp != nil {
-			ap := res.CurrentAp
-			isSecureStr := ""
-			if ap.IsSecure {
-				isSecureStr = "*"
-			}
-			status += fmt.Sprintf(" BSSID: %x SSID: %q Security: %v RSSI: %d dBm",
-				ap.Bssid, ap.Ssid, isSecureStr, ap.RssiDbm)
-		}
-		return status
-	}
-}
-
-func wlanStateToStr(state service.State) string {
-	switch state {
-	case service.StateBss:
-		return "starting-bss"
-	case service.StateQuerying:
-		return "querying"
-	case service.StateScanning:
-		return "scanning"
-	case service.StateJoining:
-		return "joining"
-	case service.StateAuthenticating:
-		return "authenticating"
-	case service.StateAssociating:
-		return "associating"
-	case service.StateAssociated:
-		return "associated"
-	default:
-		return "unknown"
-	}
-
-}
-
 func hwAddrToString(hwaddr []uint8) string {
 	var b strings.Builder
 	for i, d := range hwaddr {
@@ -397,10 +344,6 @@ func validateCidr(cidr string) (address netfidl.IpAddress, prefixLength uint8) {
 	prefixLen, _ := netSubnet.Mask.Size()
 
 	return toIpAddress(netAddr), uint8(prefixLen)
-}
-
-func isWLAN(features uint32) bool {
-	return features&ethernet.InfoFeatureWlan != 0
 }
 
 // bytesToString returns a human-friendly display of the given byte count.
@@ -451,13 +394,6 @@ func main() {
 	a.netstack = pxy
 	defer a.netstack.Close()
 	a.ctx.ConnectToEnvService(req)
-
-	reqWlan, pxyWlan, errWlan := service.NewWlanWithCtxInterfaceRequest()
-	if errWlan == nil {
-		a.wlan = pxyWlan
-		defer a.wlan.Close()
-		a.ctx.ConnectToEnvService(reqWlan)
-	}
 
 	if len(os.Args) == 1 {
 		a.printAll()
