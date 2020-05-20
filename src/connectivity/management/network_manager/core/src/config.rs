@@ -444,7 +444,7 @@ impl TryFrom<DhcpServer> for lifmgr::DhcpServerConfig {
         let reservations = a.iter().filter_map(|x| x.try_into().ok());
 
         Ok(lifmgr::DhcpServerConfig {
-            options: lifmgr::DhcpServerOptions { enable: s.enabled, ..Default::default() },
+            options: lifmgr::DhcpServerOptions { enable: Some(s.enabled), ..Default::default() },
             pool: Some(lifmgr::DhcpAddressPool {
                 id: ElementId::default(),
                 start: s.dhcp_pool.start,

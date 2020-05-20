@@ -192,15 +192,16 @@ impl From<&LIF> for netconfig::Lif {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct DnsSearch {
     /// List of DNS servers to consult.
-    servers: Vec<LifIpAddr>,
+    pub(crate) servers: Vec<LifIpAddr>,
     /// Domain to add to non fully qualified domain names.
-    domain_name: Option<String>,
+    pub(crate) domain_name: Option<String>,
 }
-impl From<netconfig::DnsSearch> for DnsSearch {
-    fn from(d: netconfig::DnsSearch) -> Self {
+
+impl From<&netconfig::DnsSearch> for DnsSearch {
+    fn from(d: &netconfig::DnsSearch) -> Self {
         DnsSearch {
-            servers: d.servers.into_iter().map(|ip| LifIpAddr::from(&ip)).collect(),
-            domain_name: d.domain_name,
+            servers: d.servers.iter().map(|ip| LifIpAddr::from(ip)).collect(),
+            domain_name: d.domain_name.clone(),
         }
     }
 }
@@ -208,11 +209,23 @@ impl From<netconfig::DnsSearch> for DnsSearch {
 /// Keeps track of DHCP server options.
 #[derive(Debug, Eq, PartialEq, Clone, Default)]
 pub(crate) struct DhcpServerOptions {
-    pub(crate) id: ElementId,
-    pub(crate) lease_time_sec: u32,
+    pub(crate) id: Option<ElementId>,
+    pub(crate) lease_time_sec: Option<u32>,
     pub(crate) default_gateway: Option<fidl_fuchsia_net::Ipv4Address>,
     pub(crate) dns_server: Option<DnsSearch>,
-    pub(crate) enable: bool,
+    pub(crate) enable: Option<bool>,
+}
+
+impl From<&netconfig::DhcpServerOptions> for DhcpServerOptions {
+    fn from(options: &netconfig::DhcpServerOptions) -> Self {
+        DhcpServerOptions {
+            id: options.element.map(|id| ElementId::from(id)),
+            lease_time_sec: options.lease_time_sec,
+            default_gateway: options.default_gateway,
+            dns_server: options.dns_server.as_ref().map(|dns_server| DnsSearch::from(dns_server)),
+            enable: options.enable,
+        }
+    }
 }
 
 /// Defines the DHCP address pool.
@@ -264,7 +277,7 @@ pub struct DhcpServerConfig {
 impl From<&netconfig::DhcpServerConfig> for DhcpServerConfig {
     fn from(p: &netconfig::DhcpServerConfig) -> Self {
         DhcpServerConfig {
-            options: DhcpServerOptions::default(),
+            options: DhcpServerOptions::from(&p.options),
             pool: Some(DhcpAddressPool::from(&p.pool)),
             reservations: p.reservations.iter().map(|x| x.into()).collect(),
         }
@@ -407,7 +420,7 @@ impl LIFProperties {
                 if self.dhcp == Dhcp::Client {
                     warn!(
                         "Setting a static ip is not allowed when \
-                                 a dhcp client is configured"
+                         a DHCP client is configured"
                     );
                     return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
@@ -429,7 +442,7 @@ impl LIFProperties {
                 if self.dhcp == Dhcp::Client {
                     warn!(
                         "Setting an ipv4 gateway is not allowed when \
-                                 a dhcp client is configured"
+                         a DHCP client is configured"
                     );
                     return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }

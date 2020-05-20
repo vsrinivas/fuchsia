@@ -827,6 +827,12 @@ impl ElementId {
     }
 }
 
+impl From<netconfig::Id> for ElementId {
+    fn from(id: netconfig::Id) -> Self {
+        ElementId { uuid: u128::from_ne_bytes(id.uuid), version: id.version }
+    }
+}
+
 impl From<ElementId> for netconfig::Id {
     fn from(id: ElementId) -> Self {
         netconfig::Id { uuid: id.uuid.to_ne_bytes(), version: id.version }

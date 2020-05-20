@@ -7,11 +7,12 @@
 use {
     crate::address::{subnet_mask_to_prefix_length, to_ip_addr, LifIpAddr},
     crate::error,
-    crate::lifmgr::{self, LIFProperties},
+    crate::lifmgr::{self, DhcpAddressPool, LIFProperties},
     crate::oir,
     crate::DnsPolicy,
     anyhow::{Context as _, Error},
     fidl_fuchsia_net as fnet,
+    fidl_fuchsia_net_dhcp::{self as fnetdhcp, Server_Marker, Server_Proxy},
     fidl_fuchsia_net_name::{LookupAdminMarker, LookupAdminProxy},
     fidl_fuchsia_net_stack::{
         self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
@@ -22,6 +23,7 @@ use {
     fidl_fuchsia_router_config as netconfig,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
+    futures::{stream, StreamExt, TryStreamExt},
     std::convert::TryFrom,
     std::net::IpAddr,
 };
@@ -138,6 +140,11 @@ pub struct NetCfg {
     stack: StackProxy,
     netstack: NetstackProxy,
     lookup_admin: LookupAdminProxy,
+    // NOTE: The DHCP server component does not support applying different configurations to
+    // multiple interfaces. To avoid managing the lifetimes of multiple components, limit to
+    // running at most one DHCP server at a time. The only use case for DHCP server (OOBE through
+    // softAP) only requires one running server.
+    dhcp_server: Option<(PortId, Server_Proxy)>,
 }
 
 #[derive(Debug)]
@@ -293,7 +300,7 @@ impl NetCfg {
             .context("network_manager failed to connect to netstack")?;
         let lookup_admin = connect_to_service::<LookupAdminMarker>()
             .context("network_manager failed to connect to lookup admin")?;
-        Ok(NetCfg { stack, netstack, lookup_admin })
+        Ok(NetCfg { stack, netstack, lookup_admin, dhcp_server: None })
     }
 
     /// Returns event streams for fuchsia.fnet.stack and fuchsia.netstack.
@@ -424,46 +431,428 @@ impl NetCfg {
     ///
     /// `enable` controls whether the given `PortId` has a DHCP client started or stopped.
     pub async fn set_dhcp_client_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
-        let (dhcp_client, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
-                .context("dhcp client: failed to create fidl endpoints")?;
+        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnetdhcp::ClientMarker>()
+            .context("dhcp client: failed to create fidl endpoints")?;
         if let Err(e) = self.netstack.get_dhcp_client(pid.to_u32(), server_end).await {
             warn!("failed to create fidl endpoint for dhch client: {:?}", e);
             return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
         }
         let r = if enable {
-            dhcp_client.start().await.context("failed to start dhcp client")?
+            dhcp_client.start().await.context("failed to start DHCP client")?
         } else {
-            dhcp_client.stop().await.context("failed to stop dhcp client")?
+            dhcp_client.stop().await.context("failed to stop DHCP client")?
         };
         if let Err(e) = r {
-            warn!("failed to start dhcp client: {:?}", e);
+            warn!("failed to start DHCP client: {:?}", e);
             return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
         }
         info!("DHCP client on nicid: {}, enabled: {}", pid.to_u32(), enable);
         Ok(())
     }
 
+    /// Gets a FIDL connection to the DHCP server running on the interface specified by `pid`.
+    ///
+    /// This function lazily enables a DHCP server if no servers are currently enabled.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * a server is enabled on another interface
+    ///   * failed to enable a new server when no servers are running
+    fn get_dhcp_server(&mut self, pid: PortId) -> error::Result<&Server_Proxy> {
+        if self.dhcp_server.is_none() {
+            let server_proxy = connect_to_service::<Server_Marker>().map_err(|e| {
+                warn!("failed to launch DHCP server component: {:?}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?;
+            self.dhcp_server = Some((pid, server_proxy));
+        }
+
+        match self.dhcp_server.as_ref() {
+            Some((current_pid, server_proxy)) => {
+                if *current_pid == pid {
+                    Ok(server_proxy)
+                } else {
+                    warn!("at most one DHCP server is allowed: a server is currently enabled on interface {:?}, requesting a new server on interface {:?}", current_pid, pid);
+                    Err(error::NetworkManager::Hal(error::Hal::OperationFailed))
+                }
+            }
+            None => unreachable!(),
+        }
+    }
+
+    /// Starts the DHCP server on the interface specified by `pid`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * a server is enabled on another interface
+    ///   * failed to start the server through FIDL
+    async fn start_dhcp_server(&mut self, pid: PortId) -> error::Result<()> {
+        self.get_dhcp_server(pid)?
+            .start_serving()
+            .await
+            .map_err(|e| {
+                warn!("fidl query failed: {}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?
+            .map(|_| ())
+            .map_err(|e| {
+                warn!(
+                    "failed to start DHCP server: {}",
+                    fuchsia_zircon::Status::from_raw(e).to_string()
+                );
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })
+    }
+
+    /// Stops the DHCP server on the interface specified by `pid`.
+    ///
+    /// NOTE: This doesn't disable the server, only puts it in a stopped state. This function is
+    /// used to soft restart the server after new parameters are set, so they can take effect. In
+    /// order to disable a server and start a new one on another interface, use
+    /// `disable_dhcp_server`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * a server is enabled on another interface
+    ///   * failed to stop the server through FIDL
+    async fn stop_dhcp_server(&mut self, pid: PortId) -> error::Result<()> {
+        self.get_dhcp_server(pid)?.stop_serving().await.map_err(|e| {
+            warn!("failed to stop DHCP server: {:?}", e);
+            error::NetworkManager::Hal(error::Hal::OperationFailed)
+        })
+    }
+
+    /// Disables the DHCP server on the interface specified by `pid`.
+    ///
+    /// Different from `stop_dhcp_server`, this function drops the FIDL connection to the current
+    /// DHCP server, allowing new servers to be enabled on other interfaces after.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * the input `pid` doesn't match the interface the current server is enabled on
+    ///   * failed to stop the server
+    async fn disable_dhcp_server(&mut self, pid: PortId) -> error::Result<()> {
+        match self.dhcp_server {
+            Some((current_pid, _)) => {
+                if current_pid == pid {
+                    self.stop_dhcp_server(pid).await?;
+                    self.dhcp_server = None;
+                    Ok(())
+                } else {
+                    warn!("DHCP server is running on interface {:?}, requesting to disable server on interface {:?}", current_pid, pid);
+                    Err(error::NetworkManager::Hal(error::Hal::OperationFailed))
+                }
+            }
+            None => {
+                warn!("no running DHCP server to disable");
+                Ok(())
+            }
+        }
+    }
+
     /// Sets the state of the DHCP server on the specified interface.
     ///
-    /// `enable` controls whether the given `PortId` has a DHCP client started or stopped.
+    /// `enable` controls whether the interface specified by `pid` has a DHCP server enabled or
+    /// not. Re-enabling a running server will cause a restart.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * a server is enabled on another interface
+    ///   * failed to start/stop server through FIDL
     pub async fn set_dhcp_server_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
-        // TODO(dpradilla): call API here when ready.
+        // TODO(jayzhuang): add an optimization to only restart the server if any parameters have
+        // changed.
+        if enable {
+            self.stop_dhcp_server(pid).await?;
+            let iface_info = self.get_interface_info(pid).await?;
+            let addrs = iface_info
+                .properties
+                .addresses
+                .into_iter()
+                .filter_map(|if_addr| match if_addr.ip_address {
+                    fnet::IpAddress::Ipv4(addr) => Some(addr),
+                    fnet::IpAddress::Ipv6(_) => None,
+                })
+                .collect::<Vec<_>>();
+            self.set_dhcp_server_parameter(pid, &mut fnetdhcp::Parameter::IpAddrs(addrs)).await?;
+            self.set_dhcp_server_parameter(
+                pid,
+                &mut fnetdhcp::Parameter::BoundDeviceNames(vec![String::from(
+                    iface_info.properties.name,
+                )]),
+            )
+            .await?;
+            self.start_dhcp_server(pid).await?;
+        } else {
+            self.disable_dhcp_server(pid).await?;
+        }
         info!("set_dhcp_server_state pid: {:?} enable: {}", pid, enable);
         Ok(())
     }
 
+    /// Validates and extracts DHCP server options, parameters and the desired enable state from
+    /// input configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the input configuration is invalid.
+    async fn dhcp_server_config_to_option_and_param(
+        &self,
+        pid: PortId,
+        config: &lifmgr::DhcpServerConfig,
+    ) -> error::Result<(Vec<fnetdhcp::Option_>, Vec<fnetdhcp::Parameter>, Option<bool>)> {
+        let mut options = Vec::new();
+        let mut params = Vec::new();
+
+        let lifmgr::DhcpServerConfig {
+            options:
+                lifmgr::DhcpServerOptions { id: _, default_gateway, dns_server, enable, lease_time_sec },
+            pool,
+            reservations,
+        } = config;
+
+        if let Some(default_gateway) = default_gateway {
+            options.push(fnetdhcp::Option_::Router(vec![*default_gateway]));
+        }
+
+        if let Some(dns_server) = dns_server {
+            options.push(fnetdhcp::Option_::DomainNameServer(
+                dns_server
+                    .servers
+                    .iter()
+                    .filter_map(|addr| match addr.address {
+                        IpAddr::V4(addr) => Some(fnet::Ipv4Address { addr: addr.octets() }),
+                        IpAddr::V6(_) => None,
+                    })
+                    .collect(),
+            ));
+        }
+
+        if let Some(lease_time_sec) = lease_time_sec {
+            params.push(fnetdhcp::Parameter::Lease(fnetdhcp::LeaseLength {
+                default: Some(*lease_time_sec),
+                max: None,
+            }));
+        }
+
+        if let Some(DhcpAddressPool { start, end, .. }) = pool {
+            let if_info = self.get_interface_info(pid).await?;
+
+            // NOTE: network and mask are not specified in the input configuration, so use the
+            // first address from the interface.
+            let (addr, prefix_len) = if_info
+                .properties
+                .addresses
+                .into_iter()
+                .filter_map(|if_addr| match if_addr.ip_address {
+                    fnet::IpAddress::Ipv4(addr) => Some((addr.addr, if_addr.prefix_len)),
+                    fnet::IpAddress::Ipv6(_) => None,
+                })
+                .next()
+                .ok_or({
+                    warn!("can't add address pool: no address found on interface {:?}", pid);
+                    error::NetworkManager::Hal(error::Hal::OperationFailed)
+                })?;
+
+            let subnet = net_types::ip::AddrSubnet::<_, net_types::SpecifiedAddr<_>>::new(
+                net_types::ip::Ipv4Addr::new(addr),
+                prefix_len,
+            )
+            .map_err(|e| {
+                warn!("can't get subnet from interface address: {:?}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?
+            .into_subnet();
+
+            for addr in &[start, end] {
+                if !subnet.contains(&net_types::ip::Ipv4Addr::new(addr.octets())) {
+                    warn!(
+                        "address pool range {}-{}, does not match subnet {} of interface {:?}",
+                        start, end, subnet, pid
+                    );
+                    return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
+                }
+            }
+
+            params.push(fnetdhcp::Parameter::AddressPool(fnetdhcp::AddressPool {
+                network_id: Some(fnet::Ipv4Address { addr: subnet.network().ipv4_bytes() }),
+                broadcast: Some(fnet::Ipv4Address { addr: subnet.broadcast().ipv4_bytes() }),
+                mask: Some(fnet::Ipv4Address {
+                    addr: (u32::MAX << (32 - subnet.prefix())).to_be_bytes(),
+                }),
+                pool_range_start: Some(fnet::Ipv4Address { addr: start.octets() }),
+                pool_range_stop: Some(fnet::Ipv4Address { addr: end.octets() }),
+            }));
+        }
+
+        params.push(fnetdhcp::Parameter::StaticallyAssignedAddrs(
+            reservations
+                .iter()
+                .map(|reservation| fnetdhcp::StaticAssignment {
+                    host: Some(fnet::MacAddress { octets: reservation.mac.to_array() }),
+                    assigned_addr: Some(fnet::Ipv4Address { addr: reservation.address.octets() }),
+                })
+                .collect(),
+        ));
+
+        Ok((options, params, *enable))
+    }
+
     /// Sets the configuration of the DHCP server on the specified interface.
     ///
+    /// This function is no-op if input configuration is `None`.
+    ///
+    /// NOTE: This operation is not atomic. The server will be stopped before applying
+    /// configurations, if any. Failure to apply any configuration will leave the server in the
+    /// stopped state, so we don't have a DHCP server with undefined configuration serving
+    /// addresses.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///     * a DHCP server is enabled on another interface
+    ///     * input configuration is invalid
+    ///     * failed to apply any of the configurations through FIDL
     pub async fn set_dhcp_server_config(
         &mut self,
         pid: PortId,
-        _old: &Option<lifmgr::DhcpServerConfig>,
+        current: &Option<lifmgr::DhcpServerConfig>,
         desired: &Option<lifmgr::DhcpServerConfig>,
     ) -> error::Result<()> {
-        // TODO(dpradilla): call API here when ready.
+        if let Some(config) = desired {
+            // Try to validate and convert the input configuration before actually applying any of
+            // them.
+            let (options, params, enable) =
+                self.dhcp_server_config_to_option_and_param(pid, config).await?;
+
+            let enable = match enable {
+                Some(enable) => enable,
+                None => {
+                    // No explicit server state is included in the new config, so try to maintain
+                    // the current state from previous configuration.
+                    match current {
+                        Some(lifmgr::DhcpServerConfig {
+                            options: lifmgr::DhcpServerOptions { enable: Some(enable), .. },
+                            ..
+                        }) => *enable,
+                        // If a desired state is never specified (previous state is also None),
+                        // leave the server disabled.
+                        _ => false,
+                    }
+                }
+            };
+
+            // It's not necessary to go through the configurations because the server will
+            // eventually be disabled anyways.
+            if !enable {
+                self.disable_dhcp_server(pid).await?;
+                return Ok(());
+            }
+
+            if options.len() + params.len() > 0 {
+                self.stop_dhcp_server(pid).await?;
+            }
+
+            // Assign `self` to a variable so it can be used in try_fold and returned back.
+            let cfg = self;
+            let cfg = stream::iter(options)
+                .map(Ok)
+                .try_fold(cfg, |cfg, mut option| async move {
+                    cfg.set_dhcp_server_option(pid, &mut option).await.map(|_| cfg)
+                })
+                .await?;
+            let cfg = stream::iter(params)
+                .map(Ok)
+                .try_fold(cfg, |cfg, mut param| async move {
+                    cfg.set_dhcp_server_parameter(pid, &mut param).await.map(|_| cfg)
+                })
+                .await?;
+
+            cfg.start_dhcp_server(pid).await?;
+        }
+
         info!("set_dhcp_server_config pid: {:?} config: {:?}", pid, desired);
         Ok(())
+    }
+
+    /// Gets interface info from netstack.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the FIDL call failed.
+    async fn get_interface_info(&self, pid: PortId) -> error::Result<stack::InterfaceInfo> {
+        self.stack
+            .get_interface_info(pid.to_u64())
+            .await
+            .map_err(|e| {
+                warn!("fidl query failed: {}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?
+            .map_err(|e| {
+                warn!("get_interface_info({}) failed: {:?}", pid.to_u64(), e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })
+    }
+
+    /// Sets an option on the DHCP server on the specified interface.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * a server is enabled on another interface
+    ///   * failed to set server option though FIDL
+    async fn set_dhcp_server_option(
+        &mut self,
+        pid: PortId,
+        option: &mut fnetdhcp::Option_,
+    ) -> error::Result<()> {
+        self.get_dhcp_server(pid)?
+            .set_option(option)
+            .await
+            .map_err(|e| {
+                warn!("fidl query failed: {}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?
+            .map_err(|e| {
+                warn!(
+                    "failed to set DHCP server option: {}",
+                    fuchsia_zircon::Status::from_raw(e).to_string()
+                );
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })
+    }
+
+    /// Sets a parameter on the DHCP server on the specified interface.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if
+    ///   * a server is enabled on another interface
+    ///   * failed to set server parameter though FIDL
+    async fn set_dhcp_server_parameter(
+        &mut self,
+        pid: PortId,
+        param: &mut fnetdhcp::Parameter,
+    ) -> error::Result<()> {
+        self.get_dhcp_server(pid)?
+            .set_parameter(param)
+            .await
+            .map_err(|e| {
+                warn!("fidl query failed: {}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })?
+            .map_err(|e| {
+                warn!(
+                    "failed to set DHCP server parameter: {}",
+                    fuchsia_zircon::Status::from_raw(e).to_string()
+                );
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })
     }
 
     /// Sets the state of IP forwarding.
@@ -515,11 +904,11 @@ impl NetCfg {
         properties: &'a lifmgr::LIFProperties,
     ) -> error::Result<()> {
         match (&old.dhcp, &properties.dhcp) {
-            // dhcp is still disabled, check for manual IP address changes.
+            // DHCP is still disabled, check for manual IP address changes.
             (lifmgr::Dhcp::None, lifmgr::Dhcp::None) => {
                 self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
             }
-            // No changes to dhcp configuration, it is still enabled, nothing to do.
+            // No changes to DHCP configuration, it is still enabled, nothing to do.
             (lifmgr::Dhcp::Client, lifmgr::Dhcp::Client) => {}
             (lifmgr::Dhcp::Server, lifmgr::Dhcp::Server) => {
                 self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
@@ -536,22 +925,22 @@ impl NetCfg {
                 self.set_dhcp_server_state(pid, true).await?;
             }
 
-            // dhcp configuration transitions from client enabled
+            // DHCP configuration transitions from client enabled
             (lifmgr::Dhcp::Client, lifmgr::Dhcp::None) => {
-                // Disable dhcp and apply manual address configuration.
+                // Disable DHCP and apply manual address configuration.
                 self.set_dhcp_client_state(pid, false).await?;
                 self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
             }
             (lifmgr::Dhcp::Client, lifmgr::Dhcp::Server) => {
-                // Disable dhcp and apply manual address configuration.
+                // Disable DHCP and apply manual address configuration.
                 self.set_dhcp_client_state(pid, false).await?;
                 self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
                 self.set_dhcp_server_config(pid, &old.dhcp_config, &properties.dhcp_config).await?;
                 self.set_dhcp_server_state(pid, true).await?;
             }
-            // dhcp configuration transitions from disabled to enabled.
+            // DHCP configuration transitions from disabled to enabled.
             (_, lifmgr::Dhcp::Client) => {
-                // Remove any manual IP address and enable dhcp client.
+                // Remove any manual IP address and enable DHCP client.
                 self.apply_manual_ip(pid, &old.address_v4, &None).await?;
                 self.set_dhcp_client_state(pid, properties.dhcp == lifmgr::Dhcp::Client).await?;
                 self.set_dhcp_server_state(pid, false).await?;
@@ -588,7 +977,7 @@ impl NetCfg {
     /// Sets the DNS resolver.
     pub async fn set_dns_resolver(
         &mut self,
-        servers: &mut [fidl_fuchsia_net::IpAddress],
+        servers: &mut [fnet::IpAddress],
         _domains: Option<String>,
         _policy: DnsPolicy,
     ) -> error::Result<()> {
@@ -641,7 +1030,12 @@ impl NetCfg {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::{address::LifIpAddr, lifmgr::DnsSearch, ElementId},
+        futures::join,
+        std::net::Ipv4Addr,
+    };
 
     fn interface_info_with_addrs(addrs: Vec<stack::InterfaceAddress>) -> InterfaceInfo {
         InterfaceInfo {
@@ -710,6 +1104,15 @@ mod tests {
         ]
     }
 
+    fn create_test_netcfg() -> NetCfg {
+        let stack: StackProxy = fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
+        let netstack: NetstackProxy =
+            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
+        let lookup_admin: LookupAdminProxy =
+            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
+        NetCfg { stack, netstack, lookup_admin, dhcp_server: None }
+    }
+
     #[test]
     fn test_net_interface_info_into_hal_interface() {
         let info = interface_info_with_addrs(sample_addresses());
@@ -748,13 +1151,9 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_ignore_interface_without_ip() {
-        let stack: StackProxy =
-            fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
-        let netstack: NetstackProxy =
-            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        let lookup_admin: LookupAdminProxy =
-            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
-        let mut netcfg = NetCfg { stack, netstack, lookup_admin };
+        let mut netcfg = create_test_netcfg();
+        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
+
         assert_eq!(
             netcfg.interfaces().await.unwrap(),
             // Should return only interfaces with a valid address.
@@ -1065,17 +1464,13 @@ mod tests {
     fn test_route_from_forwarding_entry() {
         assert_eq!(
             Route::from(&ForwardingEntry {
-                subnet: fidl_fuchsia_net::Subnet {
-                    addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                        addr: [1, 2, 3, 0],
-                    }),
+                subnet: fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 23,
                 },
-                destination: stack::ForwardingDestination::NextHop(
-                    fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                        addr: [1, 2, 3, 4]
-                    },)
-                ),
+                destination: stack::ForwardingDestination::NextHop(fnet::IpAddress::Ipv4(
+                    fnet::Ipv4Address { addr: [1, 2, 3, 4] },
+                )),
             }),
             Route {
                 target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
@@ -1088,10 +1483,8 @@ mod tests {
 
         assert_eq!(
             Route::from(&ForwardingEntry {
-                subnet: fidl_fuchsia_net::Subnet {
-                    addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                        addr: [1, 2, 3, 0],
-                    }),
+                subnet: fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 23,
                 },
                 destination: stack::ForwardingDestination::DeviceId(3)
@@ -1107,20 +1500,20 @@ mod tests {
 
         assert_eq!(
             Route::from(&ForwardingEntry {
-                subnet: fidl_fuchsia_net::Subnet {
-                    addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                subnet: fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                         addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                     }),
                     prefix_len: 64,
                 },
-                destination: stack::ForwardingDestination::NextHop(
-                    fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                destination: stack::ForwardingDestination::NextHop(fnet::IpAddress::Ipv6(
+                    fnet::Ipv6Address {
                         addr: [
                             0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02,
                             0x65
                         ],
-                    })
-                ),
+                    }
+                )),
             }),
             Route {
                 target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 64 },
@@ -1133,8 +1526,8 @@ mod tests {
 
         assert_eq!(
             Route::from(&ForwardingEntry {
-                subnet: fidl_fuchsia_net::Subnet {
-                    addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                subnet: fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                         addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                     }),
                     prefix_len: 58,
@@ -1155,15 +1548,11 @@ mod tests {
     fn test_route_from_routetableentry2() {
         assert_eq!(
             Route::from(&netstack::RouteTableEntry2 {
-                destination: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: [1, 2, 3, 0],
-                }),
-                netmask: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: [255, 255, 254, 0],
-                }),
-                gateway: Some(Box::new(fidl_fuchsia_net::IpAddress::Ipv4(
-                    fidl_fuchsia_net::Ipv4Address { addr: [1, 2, 3, 1] }
-                ))),
+                destination: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
+                netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 254, 0] }),
+                gateway: Some(Box::new(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                    addr: [1, 2, 3, 1]
+                }))),
                 nicid: 1,
                 metric: 100,
             }),
@@ -1178,12 +1567,8 @@ mod tests {
 
         assert_eq!(
             Route::from(&netstack::RouteTableEntry2 {
-                destination: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: [1, 2, 3, 0],
-                }),
-                netmask: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: [255, 255, 254, 0],
-                }),
+                destination: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
+                netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 254, 0] }),
                 gateway: None,
                 nicid: 3,
                 metric: 50,
@@ -1199,20 +1584,17 @@ mod tests {
 
         assert_eq!(
             Route::from(&netstack::RouteTableEntry2 {
-                destination: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                destination: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 }),
-                netmask: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                netmask: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0],
                 }),
-                gateway: Some(Box::new(fidl_fuchsia_net::IpAddress::Ipv6(
-                    fidl_fuchsia_net::Ipv6Address {
-                        addr: [
-                            0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02,
-                            0x65
-                        ],
-                    }
-                ))),
+                gateway: Some(Box::new(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                    addr: [
+                        0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02, 0x65
+                    ],
+                }))),
                 nicid: 9,
                 metric: 500,
             }),
@@ -1227,10 +1609,10 @@ mod tests {
 
         assert_eq!(
             Route::from(&netstack::RouteTableEntry2 {
-                destination: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                destination: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 }),
-                netmask: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                netmask: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 }),
                 gateway: None,
@@ -1245,5 +1627,470 @@ mod tests {
             },
             "valid IPv6 entry, no gateway"
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_dhcp_servers() {
+        let mut netcfg = create_test_netcfg();
+
+        netcfg.get_dhcp_server(PortId(1)).expect("failed to get DHCP server in test");
+        assert!(netcfg.dhcp_server.is_some());
+
+        netcfg.get_dhcp_server(PortId(1)).expect("failed to get DHCP server in test");
+        assert_eq!(
+            netcfg.get_dhcp_server(PortId(2)).expect_err("get DHCP server with wrong id succeeded"),
+            error::NetworkManager::Hal(error::Hal::OperationFailed)
+        );
+
+        netcfg.dhcp_server = None; // Manually disable the server so no FIDL calls are made.
+        netcfg.get_dhcp_server(PortId(2)).expect("failed to get DHCP server in test");
+        assert!(netcfg.dhcp_server.is_some());
+        assert_eq!(
+            netcfg.get_dhcp_server(PortId(1)).expect_err("get DHCP server with wrong id succeeded"),
+            error::NetworkManager::Hal(error::Hal::OperationFailed)
+        );
+    }
+
+    async fn handle_get_interface(request: stack::StackRequest) {
+        match request {
+            stack::StackRequest::GetInterfaceInfo { responder, .. } => {
+                responder
+                    .send(&mut Ok(stack::InterfaceInfo {
+                        id: 42,
+                        properties: stack::InterfaceProperties {
+                            name: "forty-two".to_string(),
+                            topopath: "".to_string(),
+                            filepath: "".to_string(),
+                            mac: None,
+                            mtu: 0,
+                            features: 0,
+                            administrative_status: stack::AdministrativeStatus::Enabled,
+                            physical_status: stack::PhysicalStatus::Up,
+                            addresses: vec![stack::InterfaceAddress {
+                                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                                    addr: [192, 168, 42, 1],
+                                }),
+                                prefix_len: 24,
+                            }],
+                        },
+                    }))
+                    .unwrap();
+            }
+            _ => {
+                panic!("unexpected stack request: {:?}", request);
+            }
+        }
+    }
+
+    #[derive(Debug, PartialEq)]
+    enum MockDhcpServerRequest {
+        StartServing,
+        StopServing,
+        SetOption(fnetdhcp::Option_),
+        SetParameter(fnetdhcp::Parameter),
+    }
+
+    struct MockDhcpServer {
+        requests: Vec<MockDhcpServerRequest>,
+        should_err: bool,
+    }
+
+    impl MockDhcpServer {
+        fn new() -> Self {
+            Self { requests: Vec::new(), should_err: false }
+        }
+
+        fn get_response(&self) -> Result<(), i32> {
+            if self.should_err {
+                Err(0)
+            } else {
+                Ok(())
+            }
+        }
+
+        async fn handle_request_stream(&mut self, stream: fnetdhcp::Server_RequestStream) {
+            self.requests = stream
+                .map(|request| match request.expect("dhcp server request failed") {
+                    fnetdhcp::Server_Request::StartServing { responder } => {
+                        responder
+                            .send(&mut self.get_response())
+                            .expect("failed to send test response");
+                        MockDhcpServerRequest::StartServing
+                    }
+                    fnetdhcp::Server_Request::StopServing { responder } => {
+                        responder.send().expect("failed to send test response");
+                        MockDhcpServerRequest::StopServing
+                    }
+                    fnetdhcp::Server_Request::SetOption { value, responder } => {
+                        responder
+                            .send(&mut self.get_response())
+                            .expect("failed to send test response");
+                        MockDhcpServerRequest::SetOption(value)
+                    }
+                    fnetdhcp::Server_Request::SetParameter { value, responder } => {
+                        responder
+                            .send(&mut self.get_response())
+                            .expect("failed to send test response");
+                        MockDhcpServerRequest::SetParameter(value)
+                    }
+                    _ => panic!("unexpected DHCP server request"),
+                })
+                .collect::<Vec<_>>()
+                .await;
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_enable_disable_dhcp_server() {
+        let mut netcfg = create_test_netcfg();
+        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
+            .expect("failed to spawn test handler");
+
+        // Trying to disable DHCP server when no servers are running is no-op.
+        netcfg
+            .set_dhcp_server_state(PortId(42), false)
+            .await
+            .expect("failed to disable DHCP server in test");
+        assert!(netcfg.dhcp_server.is_none());
+
+        let (dhcpd_proxy, dhcpd_stream) =
+            fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
+                .expect("failed to create test proxy and stream");
+        netcfg.dhcp_server = Some((PortId(42), dhcpd_proxy));
+
+        let enable_then_disable_server = async {
+            netcfg
+                .set_dhcp_server_state(PortId(42), true)
+                .await
+                .expect("failed to enable test DHCP server");
+            assert!(netcfg.dhcp_server.is_some());
+
+            netcfg
+                .set_dhcp_server_state(PortId(1), false)
+                .await
+                .expect_err("attempt to disable a server on a different interface should fail");
+
+            netcfg
+                .set_dhcp_server_state(PortId(42), false)
+                .await
+                .expect("failed to disable test DHCP server");
+            // Server is dropped after disable.
+            assert!(netcfg.dhcp_server.is_none());
+
+            // Drop the channel to stop mock server.
+            drop(netcfg);
+        };
+
+        let mut mock_server = MockDhcpServer::new();
+        join!(enable_then_disable_server, mock_server.handle_request_stream(dhcpd_stream));
+
+        assert_eq!(
+            mock_server.requests,
+            vec![
+                // Enables server.
+                MockDhcpServerRequest::StopServing,
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::IpAddrs(vec![
+                    fnet::Ipv4Address { addr: [192, 168, 42, 1] }
+                ])),
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::BoundDeviceNames(vec![
+                    "forty-two".to_string()
+                ])),
+                MockDhcpServerRequest::StartServing,
+                // Disables server.
+                MockDhcpServerRequest::StopServing,
+            ],
+        );
+    }
+
+    struct DhcpServerConfigTestCase<'a> {
+        current_config: Option<lifmgr::DhcpServerConfig>,
+        new_config: Option<lifmgr::DhcpServerConfig>,
+        want_num_requests: usize,
+        want_enable: bool,
+        want_requests: &'a [MockDhcpServerRequest],
+    }
+
+    async fn run_dhcp_server_config_test(tc: DhcpServerConfigTestCase<'_>) {
+        let mut netcfg = create_test_netcfg();
+        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
+            .expect("failed to spawn test handler");
+
+        let (dhcpd_proxy, dhcpd_stream) =
+            fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
+                .expect("failed to create test proxy and stream");
+        netcfg.dhcp_server = Some((PortId(42), dhcpd_proxy));
+
+        let set_server_config = async {
+            netcfg
+                .set_dhcp_server_config(PortId(42), &tc.current_config, &tc.new_config)
+                .await
+                .expect("failed to set test DHCP server config");
+            if !tc.want_enable {
+                assert!(netcfg.dhcp_server.is_none());
+            }
+            // Drop the channel to stop mock server.
+            drop(netcfg);
+        };
+
+        let mut mock_server = MockDhcpServer::new();
+        join!(set_server_config, mock_server.handle_request_stream(dhcpd_stream));
+
+        assert_eq!(mock_server.requests.len(), tc.want_num_requests);
+
+        if tc.want_num_requests > 0 {
+            assert_eq!(mock_server.requests[0], MockDhcpServerRequest::StopServing);
+
+            if tc.want_enable {
+                assert_eq!(
+                    mock_server.requests[tc.want_num_requests - 1],
+                    MockDhcpServerRequest::StartServing
+                );
+            } else {
+                assert_eq!(
+                    mock_server.requests[tc.want_num_requests - 1],
+                    MockDhcpServerRequest::StopServing
+                );
+            }
+
+            // Order of the requests doesn't matter, so only check existence.
+            tc.want_requests.iter().for_each(|request| {
+                assert!(mock_server.requests.contains(request));
+            });
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server() {
+        run_dhcp_server_config_test(DhcpServerConfigTestCase {
+            current_config: None,
+            new_config: Some(lifmgr::DhcpServerConfig {
+                options: lifmgr::DhcpServerOptions {
+                    id: Some(ElementId::new(1)),
+                    lease_time_sec: Some(3600),
+                    default_gateway: Some(fnet::Ipv4Address { addr: [192, 168, 42, 42] }),
+                    dns_server: Some(DnsSearch {
+                        servers: vec![LifIpAddr {
+                            address: IpAddr::V4(Ipv4Addr::new(192, 168, 42, 242)),
+                            prefix: 24,
+                        }],
+                        domain_name: None,
+                    }),
+                    enable: Some(true),
+                },
+                pool: Some(lifmgr::DhcpAddressPool {
+                    id: ElementId::new(1),
+                    start: Ipv4Addr::new(192, 168, 42, 100),
+                    end: Ipv4Addr::new(192, 168, 42, 200),
+                }),
+                reservations: vec![lifmgr::DhcpReservation {
+                    id: ElementId::new(1),
+                    name: None,
+                    address: Ipv4Addr::new(192, 168, 42, 201),
+                    mac: eui48::MacAddress::new([1, 2, 3, 4, 5, 6]),
+                }],
+            }),
+            want_num_requests: 7,
+            want_enable: true,
+            want_requests: &[
+                MockDhcpServerRequest::SetOption(fnetdhcp::Option_::Router(vec![
+                    fnet::Ipv4Address { addr: [192, 168, 42, 42] },
+                ])),
+                MockDhcpServerRequest::SetOption(fnetdhcp::Option_::Router(vec![
+                    fnet::Ipv4Address { addr: [192, 168, 42, 42] },
+                ])),
+                MockDhcpServerRequest::SetOption(fnetdhcp::Option_::DomainNameServer(vec![
+                    fnet::Ipv4Address { addr: [192, 168, 42, 242] },
+                ])),
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::Lease(
+                    fnetdhcp::LeaseLength { default: Some(3600), max: None },
+                )),
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::AddressPool(
+                    fnetdhcp::AddressPool {
+                        network_id: Some(fnet::Ipv4Address { addr: [192, 168, 42, 0] }),
+                        broadcast: Some(fnet::Ipv4Address { addr: [192, 168, 42, 255] }),
+                        mask: Some(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
+                        pool_range_start: Some(fnet::Ipv4Address { addr: [192, 168, 42, 100] }),
+                        pool_range_stop: Some(fnet::Ipv4Address { addr: [192, 168, 42, 200] }),
+                    },
+                )),
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::StaticallyAssignedAddrs(
+                    vec![fnetdhcp::StaticAssignment {
+                        host: Some(fnet::MacAddress { octets: [1, 2, 3, 4, 5, 6] }),
+                        assigned_addr: Some(fnet::Ipv4Address { addr: [192, 168, 42, 201] }),
+                    }],
+                )),
+            ],
+        })
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server_should_skip_unspecified_configs() {
+        run_dhcp_server_config_test(DhcpServerConfigTestCase {
+            current_config: None,
+            new_config: Some(lifmgr::DhcpServerConfig {
+                options: lifmgr::DhcpServerOptions {
+                    lease_time_sec: Some(3600),
+                    enable: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            want_num_requests: 4,
+            want_enable: true,
+            want_requests: &[
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::Lease(
+                    fnetdhcp::LeaseLength { default: Some(3600), max: None },
+                )),
+                MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::StaticallyAssignedAddrs(
+                    Vec::new(),
+                )),
+            ],
+        })
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server_should_set_new_server_state_if_explicitly_requested() {
+        stream::iter(&[
+            (Some(true), 3), // 3 requests sent to server: stop, set reserved address, then restart.
+            (Some(false), 1), // 1 request sent to server: stop only.
+        ])
+        .for_each(|(new_status, num_requests)| async move {
+            run_dhcp_server_config_test(DhcpServerConfigTestCase {
+                current_config: None,
+                new_config: Some(lifmgr::DhcpServerConfig {
+                    options: lifmgr::DhcpServerOptions {
+                        enable: *new_status,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                want_num_requests: *num_requests,
+                want_enable: new_status.expect("unexpected none status in test input"),
+                want_requests: &[],
+            })
+            .await;
+        })
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server_should_maintain_previous_state_if_no_new_state_requested() {
+        stream::iter(&[
+            (Some(true), 3), // 3 requests sent to server: stop, set reserved address, then restart.
+            (Some(false), 1), // 1 request sent to server: stop only.
+            (None, 1),       // 1 request sent to server: stop only.
+        ])
+        .for_each(|(old_status, num_requests)| {
+            async move {
+                run_dhcp_server_config_test(DhcpServerConfigTestCase {
+                    current_config: Some(lifmgr::DhcpServerConfig {
+                        options: lifmgr::DhcpServerOptions {
+                            enable: *old_status,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                    new_config: Some(lifmgr::DhcpServerConfig {
+                        options: lifmgr::DhcpServerOptions { enable: None, ..Default::default() },
+                        ..Default::default()
+                    }),
+                    want_num_requests: *num_requests,
+                    // If a desired state is never specified (previous state is also None),
+                    // leave the server disabled.
+                    want_enable: old_status.unwrap_or(false),
+                    want_requests: &[],
+                })
+                .await;
+            }
+        })
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server_with_none_config_is_noop() {
+        // No stub server is running on interface with ID 42, the test would fail if
+        // `set_dhcp_server_config` tries to do anything.
+        create_test_netcfg()
+            .set_dhcp_server_config(PortId(42), &None, &None)
+            .await
+            .expect("failed to set test DHCP server config");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server_address_pool_not_in_subnet() {
+        let mut netcfg = create_test_netcfg();
+        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
+            .expect("failed to spawn test handler");
+
+        let (dhcpd_proxy, dhcpd_stream) =
+            fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
+                .expect("failed to create test proxy and stream");
+        netcfg.dhcp_server = Some((PortId(42), dhcpd_proxy));
+
+        let set_server_config = async {
+            let res = netcfg
+                .set_dhcp_server_config(
+                    PortId(42),
+                    &None,
+                    &Some(lifmgr::DhcpServerConfig {
+                        options: lifmgr::DhcpServerOptions {
+                            enable: Some(true),
+                            ..Default::default()
+                        },
+                        pool: Some(lifmgr::DhcpAddressPool {
+                            id: ElementId::new(1),
+                            // Doesn't match subnet of the interface.
+                            start: Ipv4Addr::new(192, 168, 92, 100),
+                            end: Ipv4Addr::new(192, 168, 92, 200),
+                        }),
+                        ..Default::default()
+                    }),
+                )
+                .await;
+            // Drop the channel to stop mock server.
+            drop(netcfg);
+
+            assert_eq!(res, Err(error::NetworkManager::Hal(error::Hal::OperationFailed)));
+        };
+
+        let mut mock_server = MockDhcpServer::new();
+        join!(set_server_config, mock_server.handle_request_stream(dhcpd_stream));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_configure_dhcp_server_should_propagate_fidl_error() {
+        let mut netcfg = create_test_netcfg();
+        netcfg.stack = fidl::endpoints::spawn_stream_handler(handle_get_interface)
+            .expect("failed to spawn test handler");
+
+        let (dhcpd_proxy, dhcpd_stream) =
+            fidl::endpoints::create_proxy_and_stream::<Server_Marker>()
+                .expect("failed to create test proxy and stream");
+        netcfg.dhcp_server = Some((PortId(42), dhcpd_proxy));
+
+        let set_server_config = async {
+            let res = netcfg
+                .set_dhcp_server_config(
+                    PortId(42),
+                    &None,
+                    &Some(lifmgr::DhcpServerConfig {
+                        options: lifmgr::DhcpServerOptions {
+                            enable: Some(true),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                )
+                .await;
+            assert_eq!(res, Err(error::NetworkManager::Hal(error::Hal::OperationFailed)));
+            // Drop the channel to stop mock server.
+            drop(netcfg);
+        };
+
+        let mut mock_server = MockDhcpServer::new();
+        mock_server.should_err = true;
+        join!(set_server_config, mock_server.handle_request_stream(dhcpd_stream));
     }
 }
