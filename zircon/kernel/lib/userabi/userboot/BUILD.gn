@@ -102,6 +102,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/zx",
       "$zx/third_party/ulib/musl/src/string:minimal_str",
       "$zx/third_party/ulib/musl/src/string:stdmem",
+      "$zx/third_party/ulib/zstd:zstd-standalone",
     ]
 
     if (zbi_compression_algorithm == "zstd") {

@@ -18,10 +18,10 @@ config("zstd-config") {
 
   configs = [ "$zx_build/public/gn/config:visibility_hidden" ]
   defines = [
+    "XXH_NAMESPACE=ZSTD_",
     "ZDICTLIB_VISIBILITY=",
     "ZSTDERRORLIB_VISIBILITY=",
     "ZSTDLIB_VISIBILITY=",
-    "XXH_NAMESPACE=ZSTD_",
   ]
 
   if (is_host) {
@@ -34,6 +34,36 @@ config("zstd-config") {
       [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
+zstd_sources = [
+  "$zstd/lib/common/debug.c",
+  "$zstd/lib/common/entropy_common.c",
+  "$zstd/lib/common/error_private.c",
+  "$zstd/lib/common/fse_decompress.c",
+  "$zstd/lib/common/pool.c",
+  "$zstd/lib/common/threading.c",
+  "$zstd/lib/common/xxhash.c",
+  "$zstd/lib/compress/fse_compress.c",
+  "$zstd/lib/compress/hist.c",
+  "$zstd/lib/compress/huf_compress.c",
+  "$zstd/lib/compress/zstd_compress.c",
+  "$zstd/lib/compress/zstd_compress_literals.c",
+  "$zstd/lib/compress/zstd_compress_sequences.c",
+  "$zstd/lib/compress/zstd_double_fast.c",
+  "$zstd/lib/compress/zstd_fast.c",
+  "$zstd/lib/compress/zstd_lazy.c",
+  "$zstd/lib/compress/zstd_ldm.c",
+  "$zstd/lib/compress/zstd_opt.c",
+  "$zstd/lib/compress/zstdmt_compress.c",
+  "$zstd/lib/decompress/huf_decompress.c",
+  "$zstd/lib/decompress/zstd_ddict.c",
+  "$zstd/lib/decompress/zstd_decompress.c",
+  "$zstd/lib/decompress/zstd_decompress_block.c",
+  "$zstd/lib/dictBuilder/cover.c",
+  "$zstd/lib/dictBuilder/divsufsort.c",
+  "$zstd/lib/dictBuilder/fastcover.c",
+  "$zstd/lib/dictBuilder/zdict.c",
+]
+
 zx_library("zstd") {
   host = true
 
@@ -43,36 +73,18 @@ zx_library("zstd") {
   sdk = "static"
   sdk_headers = [ "zstd/zstd.h" ]
 
-  sources = [
-    "$zstd/lib/common/debug.c",
-    "$zstd/lib/common/entropy_common.c",
-    "$zstd/lib/common/error_private.c",
-    "$zstd/lib/common/fse_decompress.c",
-    "$zstd/lib/common/pool.c",
-    "$zstd/lib/common/threading.c",
-    "$zstd/lib/common/xxhash.c",
-    "$zstd/lib/common/zstd_common.c",
-    "$zstd/lib/compress/fse_compress.c",
-    "$zstd/lib/compress/hist.c",
-    "$zstd/lib/compress/huf_compress.c",
-    "$zstd/lib/compress/zstd_compress.c",
-    "$zstd/lib/compress/zstd_compress_literals.c",
-    "$zstd/lib/compress/zstd_compress_sequences.c",
-    "$zstd/lib/compress/zstd_double_fast.c",
-    "$zstd/lib/compress/zstd_fast.c",
-    "$zstd/lib/compress/zstd_lazy.c",
-    "$zstd/lib/compress/zstd_ldm.c",
-    "$zstd/lib/compress/zstd_opt.c",
-    "$zstd/lib/compress/zstdmt_compress.c",
-    "$zstd/lib/decompress/huf_decompress.c",
-    "$zstd/lib/decompress/zstd_ddict.c",
-    "$zstd/lib/decompress/zstd_decompress.c",
-    "$zstd/lib/decompress/zstd_decompress_block.c",
-    "$zstd/lib/dictBuilder/cover.c",
-    "$zstd/lib/dictBuilder/divsufsort.c",
-    "$zstd/lib/dictBuilder/fastcover.c",
-    "$zstd/lib/dictBuilder/zdict.c",
-  ]
+  sources = zstd_sources + [ "$zstd/lib/common/zstd_common.c" ]
+
+  configs += [ ":zstd-config" ]
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+}
+
+# The standalone varaint of this library does not depend malloc or free and is
+# suitable for use in userboot.
+zx_library("zstd-standalone") {
+  sources = zstd_sources + [ "zstd_common_standalone.c" ]
 
   configs += [ ":zstd-config" ]
 
