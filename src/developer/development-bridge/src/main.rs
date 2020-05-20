@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::daemon::{is_daemon_running, start as start_daemon},
     crate::logger::setup_logger,
     anyhow::{format_err, Context, Error},
     ffx_command::{Ffx, Subcommand},
     ffx_config::command::exec_config,
     ffx_core::constants::DAEMON,
-    ffxlib::find_and_connect,
+    ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
@@ -17,15 +16,7 @@ use {
     std::process::Command,
 };
 
-mod daemon;
-mod discovery;
 mod logger;
-mod mdns;
-mod net;
-mod onet;
-mod ssh;
-mod target;
-mod util;
 
 // Cli
 pub struct Cli {
@@ -34,7 +25,6 @@ pub struct Cli {
 
 impl Cli {
     pub async fn new() -> Result<Self, Error> {
-        setup_logger("ffx").await;
         let daemon_proxy = Cli::find_daemon().await?;
         Ok(Self { daemon_proxy })
     }
@@ -115,9 +105,17 @@ impl Cli {
 
 ////////////////////////////////////////////////////////////////////////////////
 // main
+fn get_log_name(subcommand: &Subcommand) -> &'static str {
+    if let Subcommand::Daemon(_) = subcommand {
+        "ffx.daemon"
+    } else {
+        "ffx"
+    }
+}
 
 async fn async_main() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
+    setup_logger(get_log_name(&app.subcommand)).await;
     let writer = Box::new(std::io::stdout());
     match app.subcommand {
         Subcommand::Echo(c) => {

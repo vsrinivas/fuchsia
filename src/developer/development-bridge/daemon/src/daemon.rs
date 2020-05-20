@@ -4,23 +4,17 @@
 
 use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
-    crate::logger::setup_logger,
     crate::mdns::MdnsTargetFinder,
     crate::ok_or_continue,
-    crate::onet,
     crate::target::{RCSConnection, Target, TargetCollection},
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
     ffx_core::constants::{MAX_RETRY_COUNT, RETRY_DELAY, SOCKET},
-    fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-    },
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_developer_bridge::{DaemonError, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-    fidl_fuchsia_overnet::{
-        ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
-    },
+    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     futures::channel::mpsc,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -248,61 +242,6 @@ impl Daemon {
         }
         Ok(())
     }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Overnet Server implementation
-
-async fn next_request(
-    stream: &mut ServiceProviderRequestStream,
-) -> Result<Option<ServiceProviderRequest>, Error> {
-    Ok(stream.try_next().await.context("error running service provider server")?)
-}
-
-async fn exec_server(daemon: Daemon) -> Result<(), Error> {
-    let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-    let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist::publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
-    while let Some(ServiceProviderRequest::ConnectToService {
-        chan,
-        info: _,
-        control_handle: _control_handle,
-    }) = next_request(&mut stream).await?
-    {
-        log::trace!("Received service request for service");
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        let daemon_clone = daemon.clone();
-        spawn(async move {
-            daemon_clone
-                .handle_requests_from_stream(DaemonRequestStream::from_channel(chan))
-                .await
-                .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
-        });
-    }
-    Ok(())
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// start
-
-pub fn is_daemon_running() -> bool {
-    // Try to connect directly to the socket. This will fail if nothing is listening on the other side
-    // (even if the path exists).
-    match std::os::unix::net::UnixStream::connect(SOCKET) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
-}
-
-pub async fn start() -> Result<(), Error> {
-    if is_daemon_running() {
-        return Ok(());
-    }
-    setup_logger("ffx.daemon").await;
-    futures::try_join!(onet::run_ascendd(), exec_server(Daemon::new().await?))?;
-    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////

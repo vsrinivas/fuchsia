@@ -2,44 +2,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/host.gni")
-import("./build/ffx.gni")
-
-group("development-bridge") {
-  testonly = true
-
-  public_deps = [
-    ":ffx",
-    ":tests",
-  ]
-}
+import("//build/rust/rustc_library.gni")
 
 if (host_toolchain == current_toolchain) {
-  ffx("ffx") {
+  rustc_library("lib") {
+    name = "ffx_daemon"
     version = "0.1.0"
     edition = "2018"
     with_unit_tests = true
 
-    plugin_deps = [
-      "//src/developer/development-bridge/run-component:ffx_run_component",
-      "//src/developer/development-bridge/test:ffx_test",
-    ]
-
     deps = [
-      "config:lib",
-      "core:lib",
-      "daemon:lib",
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/hoist",
+      "//src/connectivity/overnet/tools/ascendd:lib",
+      "//src/developer/development-bridge:args_lib",
+      "//src/developer/development-bridge:command_lib",
+      "//src/developer/development-bridge/config:lib",
+      "//src/developer/development-bridge/core:lib",
       "//src/lib/fidl/rust/fidl",
+      "//src/lib/mdns/rust:mdns",
+      "//src/lib/network/packet",
+      "//src/lib/zerocopy",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-std",
+      "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:simplelog",
+      "//third_party/rust_crates:socket2",
+      "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:tokio",
     ]
 
@@ -48,23 +45,7 @@ if (host_toolchain == current_toolchain) {
   }
 }
 
-install_host_tools("host") {
-  deps = [ ":bin($host_toolchain)" ]
-  outputs = [ "ffx" ]
-}
-
-group("ffx") {
-  deps = [
-    ":bin($host_toolchain)",
-    ":host",
-    "daemon:lib($host_toolchain)",
-  ]
-}
-
 group("tests") {
   testonly = true
-  deps = [
-    ":ffx_tests($host_toolchain)",
-    "daemon:tests",
-  ]
+  deps = [ ":lib_test($host_toolchain)" ]
 }
