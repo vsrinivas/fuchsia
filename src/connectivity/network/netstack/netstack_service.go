@@ -74,10 +74,21 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 			}
 		}
 
+		var flags uint32
+		ifs.mu.Lock()
+		if ifs.mu.state == link.StateStarted {
+			flags |= netstack.NetInterfaceFlagUp
+		}
+		if ifs.mu.dhcp.enabled {
+			flags |= netstack.NetInterfaceFlagDhcp
+		}
+		metric := uint32(ifs.mu.metric)
+		ifs.mu.Unlock()
+
 		netInterface := netstack.NetInterface2{
 			Id:        uint32(ifs.nicid),
-			Flags:     ifs.getFlags(),
-			Metric:    uint32(ifs.mu.metric),
+			Flags:     flags,
+			Metric:    metric,
 			Name:      nicInfo.Name,
 			Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
 			Ipv6addrs: ipv6addrs,
@@ -113,19 +124,6 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 	}
 
 	return interfaces
-}
-
-func (ifs *ifState) getFlags() uint32 {
-	var flags uint32
-	ifs.mu.Lock()
-	if ifs.mu.state == link.StateStarted {
-		flags |= netstack.NetInterfaceFlagUp
-	}
-	if ifs.mu.dhcp.enabled {
-		flags |= netstack.NetInterfaceFlagDhcp
-	}
-	ifs.mu.Unlock()
-	return flags
 }
 
 func (ns *Netstack) getInterfaces2() []netstack.NetInterface2 {
