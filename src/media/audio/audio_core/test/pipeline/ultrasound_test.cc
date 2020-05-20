@@ -102,10 +102,10 @@ TEST_F(UltrasoundTest, CreateRenderer) {
   CreateOutput();
   auto renderer = CreateRenderer();
 
-  testing::VerifyAppropriateRights(renderer->reference_clock());
-  testing::VerifyClockAdvances(renderer->reference_clock());
-  testing::VerifyClockCannotBeRateAdjusted(renderer->reference_clock());
-  testing::VerifyClockIsSystemMonotonic(renderer->reference_clock());
+  clock::testing::VerifyReadOnlyRights(renderer->reference_clock());
+  clock::testing::VerifyAdvances(renderer->reference_clock());
+  clock::testing::VerifyCannotBeRateAdjusted(renderer->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(renderer->reference_clock());
 }
 
 TEST_F(UltrasoundTest, RendererDoesNotSupportSetPcmStreamType) {
@@ -181,10 +181,10 @@ TEST_F(UltrasoundTest, CreateCapturer) {
   CreateInput();
   auto capturer = CreateCapturer();
 
-  testing::VerifyAppropriateRights(capturer->reference_clock());
-  testing::VerifyClockAdvances(capturer->reference_clock());
-  testing::VerifyClockCannotBeRateAdjusted(capturer->reference_clock());
-  testing::VerifyClockIsSystemMonotonic(capturer->reference_clock());
+  clock::testing::VerifyReadOnlyRights(capturer->reference_clock());
+  clock::testing::VerifyAdvances(capturer->reference_clock());
+  clock::testing::VerifyCannotBeRateAdjusted(capturer->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(capturer->reference_clock());
 }
 
 TEST_F(UltrasoundTest, CapturerDoesNotSupportSetPcmStreamType) {

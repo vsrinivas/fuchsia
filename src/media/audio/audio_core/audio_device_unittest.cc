@@ -68,14 +68,14 @@ TEST_F(AudioDeviceTest, UniqueIdFromStringMixedCase) {
 TEST_F(AudioDeviceTest, DefaultReferenceClock) {
   ASSERT_TRUE(device_.reference_clock().is_valid());
 
-  testing::VerifyClockAdvances(device_.reference_clock());
-  testing::VerifyClockCanBeRateAdjusted(device_.reference_clock());
+  clock::testing::VerifyAdvances(device_.reference_clock());
+  clock::testing::VerifyCanBeRateAdjusted(device_.reference_clock());
 }
 
 TEST_F(AudioDeviceTest, RefClockIsClockMono) {
   ASSERT_TRUE(device_.reference_clock().is_valid());
 
-  testing::VerifyClockIsSystemMonotonic(device_.reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(device_.reference_clock());
 }
 
 }  // namespace

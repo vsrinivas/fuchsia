@@ -7,21 +7,27 @@
 
 #include <lib/zx/clock.h>
 
-namespace media::audio::testing {
+namespace media::audio::clock::testing {
 
 // Clock should have rights DUPLICATE, TRANSFER, READ; clock should not have WRITE
-void VerifyAppropriateRights(const zx::clock& ref_clock);
-void VerifyClockAdvances(const zx::clock& ref_clock);
+void VerifyReadOnlyRights(const zx::clock& ref_clock);
+void VerifyAdvances(const zx::clock& ref_clock);
 
-void VerifyClockCannotBeRateAdjusted(const zx::clock& ref_clock);
-void VerifyClockCanBeRateAdjusted(const zx::clock& ref_clock);
+void VerifyCannotBeRateAdjusted(const zx::clock& ref_clock);
+void VerifyCanBeRateAdjusted(const zx::clock& ref_clock);
 
-zx::clock CreateClockForSamenessTest();
-void VerifySameClock(const zx::clock& clock1, const zx::clock& clock2);
+// We want to distinguish whether two handles point to the SAME underlying clock object, as opposed
+// to simply having the same start times and rates (the latter would be the case for two clones of
+// CLOCK_MONOTONIC). To do this, in CreateClockForSamenessTest we set a specific value in the
+// clock's "error_bound" field. This field is not changed by AudioCore or other parties, so it
+// serves as a unique marker for this underlying object.
+zx::clock CreateForSamenessTest();
+void VerifySame(const zx::clock& clock1, const zx::clock& clock2);
+void VerifyNotSame(const zx::clock& clock1, const zx::clock& clock2);
 
-void VerifyClockIsSystemMonotonic(const zx::clock& clock);
-void VerifyClockIsNotSystemMonotonic(const zx::clock& clock);
+void VerifyIsSystemMonotonic(const zx::clock& clock);
+void VerifyIsNotSystemMonotonic(const zx::clock& clock);
 
-}  // namespace media::audio::testing
+}  // namespace media::audio::clock::testing
 
 #endif  // SRC_MEDIA_AUDIO_LIB_CLOCK_TESTING_CLOCK_TEST_H_
