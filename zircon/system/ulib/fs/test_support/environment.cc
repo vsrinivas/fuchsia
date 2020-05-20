@@ -221,7 +221,7 @@ void Environment::CreateDevmgr() {
   args.disable_netsvc = true;
   args.driver_search_paths.push_back("/boot/driver");
   ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
-  ASSERT_OK(wait_for_device_at(devfs_root().get(), "misc/ramctl", ZX_SEC(5)));
+  ASSERT_OK(wait_for_device_at(devfs_root().get(), "misc/ramctl", zx::duration::infinite().get()));
 
   fdio_ns_t* name_space;
   ASSERT_OK(fdio_ns_get_installed(&name_space));
