@@ -21,6 +21,7 @@ pub mod hardware_power_statecontrol;
 pub mod hwinfo;
 pub mod i2c;
 pub mod input;
+pub mod input_report;
 pub mod launch;
 pub mod light;
 pub mod location;

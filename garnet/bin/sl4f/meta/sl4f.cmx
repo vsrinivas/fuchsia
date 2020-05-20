@@ -5,6 +5,7 @@
     "sandbox": {
         "dev": [
             "class/i2c",
+            "class/input-report",
             "class/light",
             "class/wlanphy",
             "wifi"
@@ -32,6 +33,7 @@
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",
+            "fuchsia.input.report.InputDevice",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
