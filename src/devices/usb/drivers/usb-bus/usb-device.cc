@@ -832,6 +832,13 @@ zx_status_t UsbDevice::Init() {
       return status;
     }
     uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
+    if (config_desc_size < sizeof(config_desc_header)) {
+      zxlogf(ERROR,
+             "%s: GetDescriptor(USB_DT_CONFIG) gave length shorter than self: "
+             "expected at least %lu, got %u\n",
+             __func__, sizeof(config_desc_header), config_desc_size);
+      return ZX_ERR_IO;
+    }
     auto* config_desc = new (&ac) uint8_t[config_desc_size];
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
@@ -840,12 +847,33 @@ zx_status_t UsbDevice::Init() {
 
     // read full configuration descriptor
     status = GetDescriptor(USB_DT_CONFIG, config, 0, config_desc, config_desc_size, &actual);
-    if (status == ZX_OK && actual != config_desc_size) {
-      status = ZX_ERR_IO;
-    }
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: GetDescriptor(USB_DT_CONFIG) failed", __func__);
       return status;
+    }
+
+    // Guard against the device being evil in a couple ways here.
+
+    // If the actual number of bytes we read for this descriptor doesn't
+    // match the number of bytes the descriptor said we should
+    // expect when we first asked for the descriptor header, return an error.
+    if (actual != config_desc_size) {
+      zxlogf(ERROR, "%s GetDescriptor(USB_DT_CONFIG) config %u expected %u bytes, got %lu\n",
+             __func__, config, config_desc_size, actual);
+      return ZX_ERR_IO;
+    }
+
+    // Similarly, if the second time we read the descriptor, the field
+    // inside the descriptor we just read says that it's a different size from
+    // what we expected or what we read the first time, return an error.
+    uint16_t config_desc_size_on_second_read =
+        letoh16(reinterpret_cast<usb_configuration_descriptor_t*>(config_desc)->wTotalLength);
+    if (actual != config_desc_size_on_second_read) {
+      zxlogf(ERROR,
+             "%s GetDescriptor(USB_DT_CONFIG) config %u length changed between reads: "
+             "was %u bytes, then became %u\n",
+             __func__, config, config_desc_size, config_desc_size_on_second_read);
+      return ZX_ERR_IO;
     }
   }
   // we will create devices for interfaces on the first configuration by default

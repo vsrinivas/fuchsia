@@ -689,4 +689,162 @@ TEST_F(DeviceTest, FidlSetConfiguration) {
   ASSERT_EQ(get_configuration(), 2);
 }
 
+class EvilFakeHci : public ddk::UsbHciProtocol<EvilFakeHci> {
+  // A fake HCI that pretends to be a device that does dodgy things with
+  // configuration descriptors: namely, changing the size they claim to be
+  // depending on how many requests for config descriptors have been made
+  // previously.
+ public:
+  EvilFakeHci(uint16_t initial_config_length, uint16_t subsequent_config_length) {
+    initial_config_length_ = initial_config_length;
+    subsequent_config_length_ = subsequent_config_length;
+    proto_.ops = &usb_hci_protocol_ops_;
+    proto_.ctx = this;
+  }
+  uint64_t UsbHciGetCurrentFrame() { return kCurrentFrame; }
+
+  zx_status_t UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
+                                 const usb_hub_descriptor_t* desc, bool multi_tt) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb_speed_t speed) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t UsbHciHubDeviceReset(uint32_t device_id, uint32_t port) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address) { return ZX_OK; }
+
+  zx_status_t UsbHciResetDevice(uint32_t hub_address, uint32_t device_id) { return ZX_OK; }
+
+  size_t UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address) {
+    return ((device_id == kDeviceId) && (ep_address == kTransferSizeEndpoint)) ? kMaxTransferSize
+                                                                               : 0;
+  }
+
+  zx_status_t UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
+    auto requests = pending_requests();
+    requests.CompleteAll(ZX_ERR_CANCELED, 0);
+    return ZX_OK;
+  }
+
+  void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf) {}
+
+  size_t UsbHciGetMaxDeviceCount() { return 0; }
+
+  size_t UsbHciGetRequestSize() {
+    return usb::BorrowedRequest<void>::RequestSize(sizeof(usb_request_t));
+  }
+
+  void UsbHciRequestQueue(usb_request_t* usb_request_, const usb_request_complete_t* complete_cb_) {
+    usb::BorrowedRequest<void> request(usb_request_, *complete_cb_, sizeof(usb_request_t));
+    EXPECT_EQ(request.request()->header.ep_address, 0);
+    EXPECT_EQ(request.request()->setup.bmRequestType,
+              USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE);
+    EXPECT_EQ(request.request()->setup.bRequest, USB_REQ_GET_DESCRIPTOR);
+
+    if (request.request()->header.ep_address == 0) {
+      if ((request.request()->setup.bmRequestType ==
+           (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) &&
+          (request.request()->setup.bRequest == USB_REQ_GET_DESCRIPTOR)) {
+        uint8_t type = static_cast<uint8_t>(request.request()->setup.wValue >> 8);
+        uint8_t index = static_cast<uint8_t>(request.request()->setup.wValue);
+        switch (type) {
+          case USB_DT_DEVICE: {
+            usb_device_descriptor_t* descriptor;
+            request.Mmap(reinterpret_cast<void**>(&descriptor));
+            descriptor->bNumConfigurations = 2;
+            descriptor->idVendor = kVendorId;
+            descriptor->idProduct = kProductId;
+            descriptor->bDeviceClass = kDeviceClass;
+            descriptor->bDeviceSubClass = kDeviceSubclass;
+            descriptor->bDeviceProtocol = kDeviceProtocol;
+            request.Complete(ZX_OK, sizeof(*descriptor));
+          }
+            return;
+          case USB_DT_CONFIG: {
+            usb_configuration_descriptor_t* descriptor;
+            request.Mmap(reinterpret_cast<void**>(&descriptor));
+            // Use the config descriptor lengths described in the constructor
+            // arguments.
+            descriptor->wTotalLength =
+                (config_descriptor_request_count_ % 2 == 0 ? initial_config_length_
+                                                           : subsequent_config_length_);
+            config_descriptor_request_count_++;
+            descriptor->bConfigurationValue = static_cast<uint8_t>(index + 1);
+            request.Complete(ZX_OK, sizeof(*descriptor));
+          }
+            return;
+        }
+      }
+
+      // The host should not send us any requests (like attempting to set a configuration)
+      // after we do questionable things with wTotalLength.
+      request.Complete(ZX_ERR_INVALID_ARGS, 0);
+      return;
+    }
+    pending_requests_.push(std::move(request));
+  }
+
+  zx_status_t UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
+                                   const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  const usb_hci_protocol_t* proto() { return &proto_; }
+
+  usb::BorrowedRequestQueue<void> pending_requests() { return std::move(pending_requests_); }
+
+ private:
+  int config_descriptor_request_count_ = 0;
+  uint16_t initial_config_length_;
+  uint16_t subsequent_config_length_;
+  usb_hci_protocol_t proto_;
+  fit::function<zx_status_t(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
+                            const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable)>
+      enable_endpoint_hook_;
+  usb::BorrowedRequestQueue<void> pending_requests_;
+};
+
+TEST(DeviceTest, GetConfigurationDescriptorTooShortRejected) {
+  // We expect this device to fail to initialize because wTotalLength is too
+  // short -- 1 byte is shorter than the minimal config descriptor length, so
+  // such a response is invalid.
+  EvilFakeHci hci(1, 1);
+  fbl::RefPtr<FakeTimer> timer = fbl::MakeRefCounted<FakeTimer>();
+  timer->set_timeout_handler([=](sync_completion_t* completion, zx_duration_t duration) {
+    return sync_completion_wait(completion, duration);
+  });
+
+  auto device =
+      fbl::MakeRefCounted<UsbDevice>(fake_ddk::kFakeParent, ddk::UsbHciProtocolClient(hci.proto()),
+                                     kDeviceId, kHubId, kDeviceSpeed, timer);
+  auto result = device->Init();
+  ASSERT_EQ(result, ZX_ERR_IO);
+}
+
+TEST(DeviceTest, GetConfigurationDescriptorDifferentSizesAreRejected) {
+  // We expect this device to fail to initialize because when we request its
+  // configuration descriptors, the wTotalSize value we get back changes between
+  // the first (size-fetching) request and second (full descriptor-fetching) request.
+  EvilFakeHci hci(sizeof(usb_configuration_descriptor_t), 65535);
+  fbl::RefPtr<FakeTimer> timer = fbl::MakeRefCounted<FakeTimer>();
+  timer->set_timeout_handler([=](sync_completion_t* completion, zx_duration_t duration) {
+    return sync_completion_wait(completion, duration);
+  });
+
+  auto device =
+      fbl::MakeRefCounted<UsbDevice>(fake_ddk::kFakeParent, ddk::UsbHciProtocolClient(hci.proto()),
+                                     kDeviceId, kHubId, kDeviceSpeed, timer);
+  auto result = device->Init();
+  ASSERT_EQ(result, ZX_ERR_IO);
+}
+
 }  // namespace usb_bus
