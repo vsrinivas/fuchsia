@@ -185,14 +185,13 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {"metrics", no_argument, nullptr, 'm'},
         {"journal", no_argument, nullptr, 'j'},
         {"pager", no_argument, nullptr, 'p'},
-        {"write-uncompressed", no_argument, nullptr, 'u'},
         {"compression", required_argument, nullptr, 'c'},
         {"compression-level", required_argument, nullptr, 'l'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmjpuc:l:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmjpc:l:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -209,11 +208,6 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         break;
       case 'p':
         options->pager = true;
-        break;
-      case 'u':
-        // TODO(jfsulliv): Remove legacy parameter.
-        options->compression_settings.compression_algorithm =
-            blobfs::CompressionAlgorithm::UNCOMPRESSED;
         break;
       case 'c': {
         std::optional<blobfs::CompressionAlgorithm> algorithm = ParseAlgorithm(optarg);
