@@ -19,6 +19,7 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/bti.h>
 #include <stdio.h>
 #include <zircon/listnode.h>
@@ -177,6 +178,30 @@ class PcieTest : public zxtest::Test {
     }
   }
 
+  // Helper function to mark uCode-originated packets. uCode-originated means the packet is from
+  // firmware (either a packet from air or a notification from firmware), rather than from driver.
+  // Then this packet will NOT be reclaimed by driver (because there is nothing to reclaim).
+  //
+  // Args:
+  //   from, to: the index in the command queue rxb. inclusive.
+  //
+  void markUcodeOrignated(uint32_t from, uint32_t to) {
+    struct iwl_rxq* rxq = &trans_pcie_->rxq[0];  // the command queue
+    for(uint32_t i = from; i <= to; ++i) {
+      struct iwl_rx_mem_buffer* rxb = rxq->queue[i];
+      for(size_t offset = 0;
+          offset < io_buffer_size(&rxb->io_buf, 0);
+          offset += ZX_ALIGN(1, FH_RSCSR_FRAME_ALIGN)) {  // move to next packet
+        struct iwl_rx_cmd_buffer rxcb = {
+            ._io_buf = rxb->io_buf,
+            ._offset = static_cast<int>(offset),
+        };
+        struct iwl_rx_packet* pkt = (struct iwl_rx_packet*)rxb_addr(&rxcb);
+        pkt->hdr.sequence |= SEQ_RX_FRAME;
+      }
+    }
+  }
+
  protected:
   struct iwl_trans* trans_;
   struct iwl_trans_pcie* trans_pcie_;
@@ -327,6 +352,7 @@ TEST_F(PcieTest, RxInterrupts) {
   // Process 128 buffers. The driver should process each buffer and indicate this to the hardware by
   // setting the write index (rxq->write_actual).
   rb_status->closed_rb_num = 128;
+  markUcodeOrignated(0, 127);
   ASSERT_OK(iwl_pcie_isr(trans_));
   EXPECT_EQ(trans_pcie_->rxq->write, 127);
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 120);
@@ -338,6 +364,7 @@ TEST_F(PcieTest, RxInterrupts) {
 
   // Process another 300 buffers, wrapping to the beginning of the circular buffer.
   rb_status->closed_rb_num = 172;
+  markUcodeOrignated(128, 171);
   ASSERT_OK(iwl_pcie_isr(trans_));
   EXPECT_EQ(trans_pcie_->rxq->write, 171);
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 168);
