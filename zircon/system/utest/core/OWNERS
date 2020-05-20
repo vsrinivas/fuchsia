@@ -1,0 +1,5 @@
+include /zircon/kernel/OWNERS
+
+adanis@google.com
+
+# COMPONENT: Zircon>kernel
