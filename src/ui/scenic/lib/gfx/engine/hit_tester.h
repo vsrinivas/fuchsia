@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_HIT_TESTER_H_
 
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 
 namespace scenic_impl {
@@ -21,15 +20,6 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
 // Convenience function that takes a ViewHit accumulator instead of a NodeHit accumulator.
 void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
              HitAccumulator<ViewHit>* accumulator);
-
-// Takes a screen space point and a layer stack, and performs a hit test in the Z-direction on all
-// layers in |layer_stack|.
-void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack,
-                          const glm::vec2& screen_space_coords,
-                          gfx::HitAccumulator<gfx::ViewHit>* accumulator);
-
-// Creates a ray in the Z-direction (pointing into the screen) at |screen_space_coords|.
-escher::ray4 CreateScreenPerpendicularRay(glm::vec2 screen_space_coords);
 
 }  // namespace gfx
 }  // namespace scenic_impl

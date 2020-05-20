@@ -6,15 +6,12 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <sstream>
 #include <stack>
 
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
-#include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
+#include "src/ui/scenic/lib/gfx/resources/view.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -99,37 +96,7 @@ void HitTest(Node* starting_node, const escher::ray4& world_space_ray,
       accumulator, [](const NodeHit& hit) { return CreateViewHit(hit); });
 
   HitTest(starting_node, world_space_ray, &transforming_accumulator);
-}
-
-void PerformGlobalHitTest(const LayerStackPtr& layer_stack, const glm::vec2& screen_space_coords,
-                          HitAccumulator<ViewHit>* accumulator) {
-  const escher::ray4 ray = CreateScreenPerpendicularRay(screen_space_coords);
-  FX_VLOGS(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
-
-  for (auto& layer : layer_stack->layers()) {
-    const glm::mat4 screen_to_world_transform = layer->GetScreenToWorldSpaceTransform();
-    const escher::ray4 camera_ray = screen_to_world_transform * ray;
-    fxl::WeakPtr<Scene> scene = layer->scene();
-    if (scene)
-      HitTest(scene.get(), camera_ray, accumulator);
-
-    if (!accumulator->EndLayer()) {
-      break;
-    }
-  }
-}
-
-escher::ray4 CreateScreenPerpendicularRay(glm::vec2 screen_space_coords) {
-  // We set the elevation for the origin point, and Z value for the direction,
-  // such that we start above the scene and point into the scene.
-  //
-  // During hit testing, we translate an arbitrary pointer's (x,y) Screen Space
-  // coordinates to a View's (x', y') Local Space coordinates.
-  return {
-      // Origin as homogeneous point.
-      .origin = {screen_space_coords.x, screen_space_coords.y, 0, 1},
-      .direction = {0, 0, 1, 0},
-  };
+  transforming_accumulator.EndLayer();
 }
 
 }  // namespace gfx

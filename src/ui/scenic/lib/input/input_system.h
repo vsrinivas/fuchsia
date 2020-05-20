@@ -14,7 +14,6 @@
 #include <map>
 #include <optional>
 
-#include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
@@ -122,18 +121,14 @@ class InputSystem : public System,
   void DispatchDeferredPointerEvent(PointerEventBuffer::DeferredPointerEvent views_and_event);
 
   // Injects a touch event directly to the View with koid |target|.
-  void InjectTouchEventExclusive(
-      const fuchsia::ui::input::PointerEvent& context_local_pointer_event, zx_koid_t context,
-      zx_koid_t target);
+  void InjectTouchEventExclusive(const fuchsia::ui::input::PointerEvent& context_space_event,
+                                 zx_koid_t context, zx_koid_t target);
 
   // Injects a touch event by hit testing for appropriate targets.
-  void InjectTouchEventHitTested(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
-                                 const glm::vec2 screen_space_coords,
-                                 const gfx::LayerStackPtr& layer_stack, bool parallel_dispatch,
-                                 bool a11y_enabled);
-  void InjectMouseEventHitTested(const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
-                                 const glm::vec2 screen_space_coords,
-                                 const gfx::LayerStackPtr& layer_stack);
+  void InjectTouchEventHitTested(const fuchsia::ui::input::PointerEvent& context_space_event,
+                                 zx_koid_t context, zx_koid_t target, bool parallel_dispatch);
+  void InjectMouseEventHitTested(const fuchsia::ui::input::PointerEvent& context_space_event,
+                                 zx_koid_t context, zx_koid_t target);
 
   // Retrieve KOID of focus chain's root view.
   // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
@@ -164,6 +159,11 @@ class InputSystem : public System,
   // Return std::nullopt for exceptional cases (e.g., invalid or unknown view ref).
   // Precondition: scene_graph_ must be set.
   std::optional<glm::mat4> GetWorldToViewTransform(zx_koid_t view_ref_koid) const;
+
+  // Takes a world space point and returns it in
+  // screen space (Vulkan) Normalized Device Coordinates.
+  // TODO(50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y code.
+  glm::vec2 GetScreenSpaceNDCPoint(glm::vec2 world_space_point) const;
 
   InjectorId last_injector_id_ = 0;
 

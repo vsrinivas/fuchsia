@@ -49,11 +49,12 @@ namespace gfx {
 namespace test {
 namespace {
 
-// Creates a hit ray in world space. This is an input hit ray after being transformed by the layer.
-escher::ray4 WorldSpaceCreateScreenPerpendicularRay(float x, float y) {
+// Creates a hit ray at z = -1000, pointing in the z-direction.
+escher::ray4 CreateZRay(glm::vec2 coords) {
   return {
-      .origin = {x, y, -1000, 1},
-      .direction = {0, 0, 1000, 0},
+      // Origin as homogeneous point.
+      .origin = {coords.x, coords.y, -1000, 1},
+      .direction = {0, 0, 1, 0},
   };
 }
 
@@ -96,6 +97,7 @@ class TestHitAccumulator : public HitAccumulator<T> {
 class HitTestTest : public gtest::TestLoopFixture {
  public:
   enum : uint32_t {
+    kRootSessionId = 1,
     kCompositorId = 20001,
     kLayerStackId,
     kLayerId,
@@ -131,7 +133,7 @@ class HitTestTest : public gtest::TestLoopFixture {
   CustomSession CreateRootSession(float layer_width, float layer_height) {
     layer_width_ = layer_width;
     layer_height_ = layer_height;
-    CustomSession session = CreateSession(1);
+    CustomSession session = CreateSession(kRootSessionId);
 
     session.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
     session.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
@@ -151,24 +153,18 @@ class HitTestTest : public gtest::TestLoopFixture {
 
   // Direct scene access for more focused hit tester unit testing.
   Scene* scene() {
-    const auto& layers = layer_stack()->layers();
+    const CompositorWeakPtr& compositor =
+        engine_->scene_graph()->GetCompositor(GlobalId(kRootSessionId, kCompositorId));
+    FX_CHECK(compositor);
+    LayerStackPtr layer_stack = compositor->layer_stack();
+    FX_CHECK(layer_stack);
+    const auto& layers = layer_stack->layers();
     FX_CHECK(layers.size() == 1);
     const Layer* layer = layers.begin()->get();
     FX_CHECK(layer->renderer());
     FX_CHECK(layer->renderer()->camera());
     FX_CHECK(layer->renderer()->camera()->scene());
     return layer->renderer()->camera()->scene().get();
-  }
-
-  // Models input subsystem's access to Engine internals.
-  // For simplicity, we use the first (and only) compositor and layer stack.
-  LayerStackPtr layer_stack() {
-    const CompositorWeakPtr& compositor = engine_->scene_graph()->first_compositor();
-    FX_CHECK(compositor);
-    LayerStackPtr layer_stack = compositor->layer_stack();
-    FX_CHECK(layer_stack);
-
-    return layer_stack;
   }
 
  private:
@@ -224,21 +220,20 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
   }
 
   {
-    // Hit from (1, 1.5) should be at (1, 1.5, 0) in view coordinates.
-    // Depth should be 1.999:
-    // * hit ray originates in device space (clip space)
-    // * geometry is at z = 0 in global space
-    // * orthographic projection maps z [0, 1000] to [0, 1] in clip space (now at z = .999)
-    // * hit ray is at z = 0 (1 length behind the camera) with direction z = 1
-    //   (result: hit z = 0.999)
+    // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates.
+    // Depth should be 999:
+    // * hit ray originates at -1000 in World Space in direction z = 1
+    // * geometry is at z = 1 in World Space
+    //  result: hit distance = 999
     TestHitAccumulator<ViewHit> accumulator;
-    const glm::vec2 screen_space_point{1, 1.5f};
-    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
+    const glm::vec2 world_space_point{1, 1.5f};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
-    EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    EXPECT_NEAR(hit.distance, 999.f, std::numeric_limits<float>::epsilon());
   }
 }
 
@@ -288,23 +283,24 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
 
   {
     // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates and depth should
-    // be 0.999 (z = -1 in 1000-space). Although the rectangle is scaled, the view is not.
+    // be 999 (z = -1 in 1000-space). Although the rectangle is scaled, the view is not.
     TestHitAccumulator<ViewHit> accumulator;
-    const glm::vec2 screen_space_point{1, 1.5f};
-    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
+    const glm::vec2 world_space_point{1, 1.5f};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
-    EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    EXPECT_NEAR(hit.distance, 999.f, std::numeric_limits<float>::epsilon());
   }
 }
 
 // Makes sure view-space hit coordinates are correct under view transformation.
 //
 // This scene includes a centered 5 x 3 rectangle at z = -1 in a 16 x 9 x 1000 viewing volume where
-// the view is translated by (3, 2, 1) and scaled by 3x. So, the resulting rectangle is from (3, 2,
-// -2) to (18, 11, -2) global.
+// the view is translated by (3, 2, 1) and scaled by 3x. So, the resulting rectangle is from
+// (3, 2, -2) to (18, 11, -2) in World Space.
 TEST_F(SingleSessionHitTestTest, ViewTransform) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -348,80 +344,18 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
 
   {
     // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should
-    // be 0.998 (z = -2 in 1000-space).
+    // be 998 (z = -2 in a World Space with hit ray originating in a z = -1000)
     TestHitAccumulator<ViewHit> accumulator;
-    const glm::vec2 screen_space_point{5, 6};
-    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
+    const glm::vec2 world_space_point{5, 6};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
     EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
-    EXPECT_NEAR(hit.distance, 0.998f, std::numeric_limits<float>::epsilon());
-  }
-}
-
-// Makes sure view-space hit coordinates are correct under camera transformation.
-//
-// This scene includes a full-screen rectangle at z = -1 in a 16 x 9 x 1000 viewing volume. The
-// camera clip space is translated (.25, 2/3) and scaled by 3x. In terms of the viewing volume, this
-// is a 2 x 3 translation.
-TEST_F(SingleSessionHitTestTest, CameraTransform) {
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-  enum : uint32_t {
-    kViewHolderId = 10,
-    kViewId,
-    kShapeId,
-    kRectId,
-    kMaterialId,
-  };
-
-  CustomSession sess = CreateRootSession(16, 9);
-  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-  {
-    sess.Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token),
-                                              "MyViewHolder"));
-    auto pair = scenic::ViewRefPair::New();
-    view_ref_koid = utils::ExtractKoid(pair.view_ref);
-    sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(pair.control_ref),
-                                        std::move(pair.view_ref), "MyView"));
-    sess.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId,
-                                               {.bounding_box{.min{0, 0, -2}, .max{16, 9, 0}}}));
-
-    // Rectangle (full screen) and material
-    sess.Apply(scenic::NewCreateMaterialCmd(kMaterialId));
-    sess.Apply(scenic::NewSetColorCmd(kMaterialId, 0, 255, 255, 255));
-    sess.Apply(scenic::NewCreateRectangleCmd(kRectId, 16, 9));
-
-    // Shape
-    sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
-    sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
-    sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, {8, 4.5f, -1}));
-
-    // Graph
-    sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
-    sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeId));
-
-    // Camera
-    sess.Apply(scenic::NewSetCameraClipSpaceTransformCmd(kCameraId, .25f, 2.f / 3, 3));
-    // After this, the original (-1, -1) x (1, 1) NDC is mapped to (-2.75, -2 1/3) x (3.25, 3 2/3),
-    // i.e. the original (0, 0) x (16, 9) input space is mapped to (-14, -6) x (34, 21) as it scales
-    // to (-16, -9) x (32, 18) + the 2 x 3 translation.
-  }
-
-  {
-    // Hit from (1, 1.5) should be at (5, 7.5 / 3, -1) in view coordinates (i.e. (15, 7.5) in the
-    // effective input space, scaled down 3x to view space).
-    // Depth should still be 1.999 (the clip-space scaling is not applied to Z).
-    TestHitAccumulator<ViewHit> accumulator;
-    const glm::vec2 screen_space_point{1, 1.5f};
-    PerformGlobalHitTest(layer_stack(), screen_space_point, &accumulator);
-    ASSERT_FALSE(accumulator.hits().empty());
-
-    const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view_ref_koid, view_ref_koid);
-    EXPECT_NEAR(hit.distance, 0.999f, std::numeric_limits<float>::epsilon());
+    // Need to check against 1000x epsilon, since we lose that much precision starting the ray at
+    // -1000.
+    EXPECT_NEAR(hit.distance, 998.f, 1000 * std::numeric_limits<float>::epsilon());
   }
 }
 
@@ -488,14 +422,17 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
   {
     // First hit test should intersect the view's bounding box.
     TestHitAccumulator<ViewHit> accumulator;
-    PerformGlobalHitTest(layer_stack(), glm::vec2{5, layer_height() / 2}, &accumulator);
+    const glm::vec2 world_space_point{5, layer_height() / 2};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u) << "Should see a hit on the rectangle";
   }
   {
     // Second hit test should completely miss the view's bounding box.
     TestHitAccumulator<ViewHit> accumulator;
-    PerformGlobalHitTest(layer_stack(), glm::vec2{layer_width() / 2 + 50, layer_height() / 2},
-                         &accumulator);
+    const glm::vec2 world_space_point{layer_width() / 2 + 50, layer_height() / 2};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 0u)
         << "Should see no hits since its outside the view bounds";
   }
@@ -576,8 +513,9 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
 
   {
     TestHitAccumulator<NodeHit> accumulator;
-    HitTest(scene(), WorldSpaceCreateScreenPerpendicularRay(layer_width() / 2, layer_height() / 2),
-            &accumulator);
+    const glm::vec2 world_space_point{layer_width() / 2, layer_height() / 2};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
 
     ASSERT_EQ(accumulator.hits().size(), 1u);
     EXPECT_EQ(accumulator.hits().front().node->id(), kHittableShapeNodeId);
@@ -637,12 +575,16 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
 
   {
     TestHitAccumulator<ViewHit> accumulator;
-    PerformGlobalHitTest(layer_stack(), glm::vec2{4, 4.5f}, &accumulator);
+    const glm::vec2 world_space_point{4, 4.5f};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
   {
     TestHitAccumulator<ViewHit> accumulator;
-    PerformGlobalHitTest(layer_stack(), glm::vec2{12, 4.5f}, &accumulator);
+    const glm::vec2 world_space_point{12, 4.5f};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
 }
@@ -744,8 +686,9 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
 
   {
     TestHitAccumulator<NodeHit> accumulator;
-    HitTest(scene(), WorldSpaceCreateScreenPerpendicularRay(layer_width() / 2, layer_height() / 2),
-            &accumulator);
+    const glm::vec2 world_space_point{layer_width() / 2, layer_height() / 2};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u)
         << "Should only hit the shape encompassed by both views.";
     EXPECT_EQ(accumulator.hits().front().node->id(), kInnerShapeNodeId);
@@ -839,8 +782,9 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 
   {
     TestHitAccumulator<ViewHit> accumulator;
-    PerformGlobalHitTest(layer_stack(), glm::vec2{3 * layer_width() / 4, 3 * layer_height() / 4},
-                         &accumulator);
+    const glm::vec2 world_space_point{3 * layer_width() / 4, 3 * layer_height() / 4};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
     EXPECT_TRUE(accumulator.hits().empty());
   }
 }
@@ -854,7 +798,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   auto [view_token_2, view_holder_token_2] = scenic::ViewTokenPair::New();
 
   // Create bounds for the views.
-  const std::array<float, 3> bbox_min = {0, 0, -4};
+  const std::array<float, 3> bbox_min = {0, 0, -1000};
   const std::array<float, 3> bbox_max = {10, 10, 0};
   const std::array<float, 3> inset_min = {0, 0, 0};
   const std::array<float, 3> inset_max = {0, 0, 0};
@@ -946,12 +890,14 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
   {
     ViewHitAccumulator accumulator;
-    PerformGlobalHitTest(layer_stack(), glm::vec2{4, 4}, &accumulator);
-
+    const glm::vec2 world_space_point{4, 4};
+    const escher::ray4 ray = CreateZRay(world_space_point);
+    HitTest(scene(), ray, &accumulator);
+    accumulator.EndLayer();
     const auto& hits = accumulator.hits();
 
     // All that for this!
-    ASSERT_EQ(hits.size(), 2u) << "Should see two hits across two views.";
+    ASSERT_EQ(hits.size(), 2u) << "Should see two hits across two view sessions.";
     EXPECT_EQ(hits[0].view_ref_koid, view_ref_koid2);
     EXPECT_EQ(hits[1].view_ref_koid, view_ref_koid1);
   }

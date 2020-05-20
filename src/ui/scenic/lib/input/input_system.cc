@@ -12,7 +12,6 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/helper.h"
@@ -29,6 +28,15 @@ using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
 
 namespace {
+
+// Creates a hit ray at z = -1000, pointing in the z-direction.
+escher::ray4 CreateZRay(glm::vec2 coords) {
+  return {
+      // Origin as homogeneous point.
+      .origin = {coords.x, coords.y, -1000, 1},
+      .direction = {0, 0, 1, 0},
+  };
+}
 
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
@@ -145,7 +153,7 @@ void A11yPointerEventRegistry::Register(
         pointer_event_listener,
     RegisterCallback callback) {
   if (!accessibility_pointer_event_listener()) {
-    accessibility_pointer_event_listener().Bind(std::move(pointer_event_listener));
+    accessibility_pointer_event_listener_.Bind(std::move(pointer_event_listener));
     accessibility_pointer_event_listener_.set_error_handler(
         [this](zx_status_t) { on_disconnect_(); });
     on_register_();
@@ -215,8 +223,8 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
       },
       /*inject*/
       [this](zx_koid_t context, zx_koid_t target,
-             const fuchsia::ui::input::PointerEvent& context_local_event) {
-        InjectTouchEventExclusive(context_local_event, context, target);
+             const fuchsia::ui::input::PointerEvent& context_space_event) {
+        InjectTouchEventExclusive(context_space_event, context, target);
       });
   FX_CHECK(success) << "Injector already exists.";
 
@@ -251,6 +259,33 @@ void InputSystem::RegisterListener(
   success_callback(true);
 }
 
+glm::vec2 InputSystem::GetScreenSpaceNDCPoint(glm::vec2 world_space_coords) const {
+  if (!scene_graph_)
+    return {0, 0};  // Center of screen.
+
+  // Assuming single compositor.
+  // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
+  gfx::CompositorWeakPtr compositor = scene_graph_->first_compositor();
+  if (!compositor)
+    return {0, 0};
+
+  gfx::LayerStackPtr layer_stack = compositor->layer_stack();
+  if (!layer_stack)
+    return {0, 0};
+
+  const auto layers = layer_stack->layers();
+  if (layers.empty())
+    return {0, 0};
+
+  // RootPresenter promises to use at most one layer at a time.
+  const glm::mat4 world_to_screen_space_transform =
+      glm::inverse((*layers.begin())->GetScreenToWorldSpaceTransform());
+  const glm::vec2 screen_space_coords =
+      TransformPointerCoords(world_space_coords, world_to_screen_space_transform);
+
+  return NormalizePointerCoords(screen_space_coords, layer_stack);
+}
+
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                                          scheduling::SessionId session_id, bool parallel_dispatch) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
@@ -272,28 +307,40 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
     return;
 
   // Assume we only have one layer.
-  const glm::vec2 screen_space_coords = PointerCoords(command.pointer_event);
+  const gfx::LayerPtr first_layer = *layers.begin();
   const glm::mat4 screen_space_to_world_space_transform =
-      (*layers.begin())->GetScreenToWorldSpaceTransform();
+      first_layer->GetScreenToWorldSpaceTransform();
+  const zx_koid_t scene_koid = first_layer->scene()->view_ref_koid();
+
+  const glm::vec2 screen_space_coords = PointerCoords(command.pointer_event);
   const glm::vec2 world_space_coords =
       TransformPointerCoords(screen_space_coords, screen_space_to_world_space_transform);
-  const fuchsia::ui::input::PointerEvent world_space_pointer_event =
-      ClonePointerWithCoords(command.pointer_event, world_space_coords);
+
+  FX_DCHECK(GetWorldToViewTransform(scene_koid));
+  const glm::mat4 world_space_to_context_space_transform =
+      GetWorldToViewTransform(scene_koid).value();
+  const glm::vec2 context_space_coords =
+      TransformPointerCoords(world_space_coords, world_space_to_context_space_transform);
+
+  const fuchsia::ui::input::PointerEvent context_space_event =
+      ClonePointerWithCoords(command.pointer_event, context_space_coords);
 
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH: {
       TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
-      trace_flow_id_t trace_id = PointerTraceHACK(world_space_pointer_event.radius_major,
-                                                  world_space_pointer_event.radius_minor);
+      const trace_flow_id_t trace_id =
+          PointerTraceHACK(context_space_event.radius_major, context_space_event.radius_minor);
       TRACE_FLOW_END("input", "dispatch_event_to_scenic", trace_id);
 
-      FX_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
-      if (world_space_pointer_event.phase == Phase::HOVER) {
+      FX_DCHECK(context_space_event.type == PointerEventType::TOUCH);
+      if (context_space_event.phase == Phase::HOVER) {
         FX_LOGS(WARNING) << "Oops, touch device had unexpected HOVER event.";
         return;
       }
-      InjectTouchEventHitTested(world_space_pointer_event, screen_space_coords, layer_stack,
-                                parallel_dispatch, IsA11yListenerEnabled());
+      // Using scene_koid as both context and target, since it's guaranteed to be the root and thus
+      // to deliver events to any client in the scene graph.
+      InjectTouchEventHitTested(context_space_event, /*context*/ scene_koid, /*target*/ scene_koid,
+                                parallel_dispatch);
       break;
     }
     case PointerEventType::MOUSE: {
@@ -305,20 +352,18 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
                          << ") had an unexpected event: " << command.pointer_event.phase;
         return;
       }
-      InjectMouseEventHitTested(world_space_pointer_event, screen_space_coords, layer_stack);
+      // Using scene as both context and target.
+      InjectMouseEventHitTested(context_space_event, /*context*/ scene_koid, /*target*/ scene_koid);
       break;
     }
     default:
-      // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER
-      // events, which need to trigger an additional hit test on the DOWN event
-      // and send CANCEL events to disassociated clients.
-      FX_LOGS(INFO) << "Add stylus support.";
+      FX_LOGS(INFO) << "Stylus not supported by legacy input injection API.";
       break;
   }
 }
 
 void InputSystem::InjectTouchEventExclusive(
-    const fuchsia::ui::input::PointerEvent& context_local_pointer_event, zx_koid_t context,
+    const fuchsia::ui::input::PointerEvent& context_space_event, zx_koid_t context,
     zx_koid_t target) {
   if (!scene_graph_)
     return;
@@ -327,10 +372,10 @@ void InputSystem::InjectTouchEventExclusive(
   if (!context_to_world_transform)
     return;
 
-  const glm::vec2 world_space_coords = TransformPointerCoords(
-      PointerCoords(context_local_pointer_event), context_to_world_transform.value());
+  const glm::vec2 world_space_coords = TransformPointerCoords(PointerCoords(context_space_event),
+                                                              context_to_world_transform.value());
   const fuchsia::ui::input::PointerEvent world_space_pointer_event =
-      ClonePointerWithCoords(context_local_pointer_event, world_space_coords);
+      ClonePointerWithCoords(context_space_event, world_space_coords);
   ReportPointerEventToView(world_space_pointer_event, target);
 }
 
@@ -342,16 +387,32 @@ void InputSystem::InjectTouchEventExclusive(
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
 void InputSystem::InjectTouchEventHitTested(
-    const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
-    const glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack,
-    bool parallel_dispatch, bool a11y_enabled) {
-  FX_DCHECK(world_space_pointer_event.type == PointerEventType::TOUCH);
-  const uint32_t pointer_id = world_space_pointer_event.pointer_id;
-  const Phase pointer_phase = world_space_pointer_event.phase;
+    const fuchsia::ui::input::PointerEvent& context_space_event, zx_koid_t context,
+    zx_koid_t target, bool parallel_dispatch) {
+  FX_DCHECK(scene_graph_);
+  FX_DCHECK(context_space_event.type == PointerEventType::TOUCH);
+  const uint32_t pointer_id = context_space_event.pointer_id;
+  const Phase pointer_phase = context_space_event.phase;
+  const bool a11y_enabled = IsA11yListenerEnabled();
+
+  std::optional<glm::mat4> context_to_world = GetViewToWorldTransform(context);
+  FX_DCHECK(context_to_world);
+  const glm::mat4 context_to_world_transform = context_to_world.value();
+  const glm::vec2 context_space_coords = PointerCoords(context_space_event);
+  const glm::vec2 world_space_coords =
+      TransformPointerCoords(context_space_coords, context_to_world_transform);
+
+  // Create a ray that points in the Z-direction in context space.
+  // TODO(52135): Specify hit-test direction as an input argument.
+  const escher::ray4 context_space_ray = CreateZRay(context_space_coords);
+  const escher::ray4 world_space_ray = context_to_world_transform * context_space_ray;
+
+  const fuchsia::ui::input::PointerEvent world_space_pointer_event =
+      ClonePointerWithCoords(context_space_event, world_space_coords);
 
   if (pointer_phase == Phase::ADD) {
     gfx::ViewHitAccumulator accumulator;
-    PerformGlobalHitTest(layer_stack, screen_space_coords, &accumulator);
+    scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
@@ -427,7 +488,7 @@ void InputSystem::InjectTouchEventHitTested(
       // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
       // will keep going until we find a hit with a valid owning View.
       gfx::TopHitAccumulator top_hit;
-      PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
+      scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &top_hit);
 
       if (top_hit.hit()) {
         view_ref_koid = top_hit.hit()->view_ref_koid;
@@ -436,11 +497,10 @@ void InputSystem::InjectTouchEventHitTested(
 
     glm::vec2 top_hit_view_local;
     if (view_ref_koid != ZX_KOID_INVALID) {
-      top_hit_view_local = TransformPointerCoords(PointerCoords(world_space_pointer_event),
+      top_hit_view_local = TransformPointerCoords(world_space_coords,
                                                   GetWorldToViewTransform(view_ref_koid).value());
     }
-    // TODO(50549): Still screen space dependent. Fix when a11y has its own view.
-    const auto ndc = NormalizePointerCoords(screen_space_coords, layer_stack);
+    const auto ndc = GetScreenSpaceNDCPoint(world_space_coords);
 
     AccessibilityPointerEvent packet = BuildAccessibilityPointerEvent(
         world_space_pointer_event, ndc, top_hit_view_local, view_ref_koid);
@@ -476,19 +536,33 @@ void InputSystem::InjectTouchEventHitTested(
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
 void InputSystem::InjectMouseEventHitTested(
-    const fuchsia::ui::input::PointerEvent& world_space_pointer_event,
-    glm::vec2 screen_space_coords, const gfx::LayerStackPtr& layer_stack) {
-  FX_DCHECK(world_space_pointer_event.type == PointerEventType::MOUSE);
-  const uint32_t device_id = world_space_pointer_event.device_id;
-  const Phase pointer_phase = world_space_pointer_event.phase;
-  const glm::vec2 pointer = PointerCoords(world_space_pointer_event);
+    const fuchsia::ui::input::PointerEvent& context_space_event, zx_koid_t context,
+    zx_koid_t target) {
+  FX_DCHECK(context_space_event.type == PointerEventType::MOUSE);
+  const uint32_t device_id = context_space_event.device_id;
+  const Phase pointer_phase = context_space_event.phase;
+
+  std::optional<glm::mat4> context_to_world = GetViewToWorldTransform(context);
+  FX_DCHECK(context_to_world);
+  const glm::mat4 context_to_world_transform = context_to_world.value();
+  const glm::vec2 context_space_coords = PointerCoords(context_space_event);
+  const glm::vec2 world_space_coords =
+      TransformPointerCoords(context_space_coords, context_to_world_transform);
+
+  // Create a ray that points in the Z-direction in context space.
+  // TODO(52135): Specify hit-test direction as an input argument.
+  const escher::ray4 context_space_ray = CreateZRay(context_space_coords);
+  const escher::ray4 world_space_ray = context_to_world_transform * context_space_ray;
+
+  const fuchsia::ui::input::PointerEvent world_space_pointer_event =
+      ClonePointerWithCoords(context_space_event, world_space_coords);
 
   if (pointer_phase == Phase::DOWN) {
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
+    scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &top_hit);
 
     std::vector</*view_ref_koids*/ zx_koid_t> hit_views;
     if (top_hit.hit()) {
@@ -530,7 +604,7 @@ void InputSystem::InjectMouseEventHitTested(
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    PerformGlobalHitTest(layer_stack, screen_space_coords, &top_hit);
+    scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &top_hit);
 
     if (top_hit.hit()) {
       const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;
