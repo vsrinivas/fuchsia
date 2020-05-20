@@ -24,12 +24,14 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"github.com/google/subcommands"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -285,8 +287,37 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		if err != nil {
 			return err
 		}
-		client, err := sshutil.ConnectToNodeDeprecated(ctx, t.Nodename(), config)
-		if err != nil {
+
+		var client *ssh.Client
+		// TODO(fxb/52397): Determine whether this is necessary or there is a better
+		// way to address this bug.
+		if err = retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 2), func() error {
+			// TODO(fxb/52397): Remove after done debugging.
+			logger.Debugf(ctx, "creating SSH connection")
+			client, err = sshutil.ConnectToNodeDeprecated(ctx, t.Nodename(), config)
+			if err != nil {
+				return err
+			}
+
+			subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
+
+			ip, err := t.IPv4Addr()
+			if err != nil {
+				logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", t.Nodename(), err)
+			} else if ip != nil {
+				logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ip)
+				subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
+			}
+
+			if r.repoURL != "" {
+				if err := botanist.AddPackageRepository(ctx, client, config, r.repoURL, r.blobURL); err != nil {
+					logger.Errorf(ctx, "failed to set up a package repository: %v", err)
+					client.Close()
+					return err
+				}
+			}
+			return nil
+		}, nil); err != nil {
 			return err
 		}
 		// This should generally only fail if the client has already closed by
@@ -294,22 +325,6 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		// that we can safely ignore.
 		defer client.Close()
 
-		subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
-
-		ip, err := t.IPv4Addr()
-		if err != nil {
-			logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", t.Nodename(), err)
-		} else if ip != nil {
-			logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ip)
-			subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
-		}
-
-		if r.repoURL != "" {
-			if err := botanist.AddPackageRepository(ctx, client, config, r.repoURL, r.blobURL); err != nil {
-				logger.Errorf(ctx, "failed to set up a package repository: %v", err)
-				return err
-			}
-		}
 		if r.syslogFile != "" {
 			s, err := os.Create(r.syslogFile)
 			if err != nil {
