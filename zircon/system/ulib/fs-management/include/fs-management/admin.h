@@ -30,6 +30,10 @@ typedef struct init_options {
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
   const char* write_compression_algorithm;
+  // An optional compression level for the filesystem to use when storing files (if the filesystem
+  // and the configured |write_compression_algorithm| supports it).
+  // Setting to < 0 indicates no value (the filesystem chooses a default if necessary).
+  int write_compression_level;
   // If true, run fsck after every transaction (if supported). This is for testing/debugging
   // purposes.
   bool fsck_after_every_transaction;

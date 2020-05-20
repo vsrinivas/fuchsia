@@ -68,6 +68,9 @@ void FilesystemTest::Mount() {
   if (environment_->write_compression_algorithm()) {
     options.write_compression_algorithm = *environment_->write_compression_algorithm();
   }
+  if (environment_->write_compression_level()) {
+    options.write_compression_level = *environment_->write_compression_level();
+  }
 
   if (read_only_) {
     options.readonly = true;

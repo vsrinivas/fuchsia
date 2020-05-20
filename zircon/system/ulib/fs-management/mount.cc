@@ -105,6 +105,9 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .enable_journal = options->enable_journal,
       .enable_pager = options->enable_pager,
       .write_compression_algorithm = options->write_compression_algorithm,
+      // TODO(jfsulliv): This is currently only used in tests. Plumb through mount options if
+      // needed.
+      .write_compression_level = -1,
       .fsck_after_every_transaction = options->fsck_after_every_transaction,
       .callback = cb,
   };

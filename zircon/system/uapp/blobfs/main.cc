@@ -158,7 +158,7 @@ int usage() {
       "                                    Does not affect any blobs already stored on-disk.\n"
       "                                    'alg' can be one of ZSTD, ZSTD_SEEKABLE, ZSTD_CHUNKED,\n"
       "                                    or UNCOMPRESSED.\n"
-      "         -l|--compression-level n   Aggressiveness of compression to apply to newly stored\n"
+      "         -l|--compression_level n   Aggressiveness of compression to apply to newly stored\n"
       "                                    blobs. Only used if -c is one of ZSTD*, in which case\n"
       "                                    the level is the zstd compression level.\n"
       "         -h|--help                  Display this message\n"
@@ -186,7 +186,7 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         {"journal", no_argument, nullptr, 'j'},
         {"pager", no_argument, nullptr, 'p'},
         {"compression", required_argument, nullptr, 'c'},
-        {"compression-level", required_argument, nullptr, 'l'},
+        {"compression_level", required_argument, nullptr, 'l'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
@@ -221,7 +221,7 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
       case 'l': {
         std::optional<int> level = ParseInt(optarg);
         if (!level || level < 0) {
-          fprintf(stderr, "Invalid argument for --compression-level: %s\n", optarg);
+          fprintf(stderr, "Invalid argument for --compression_level: %s\n", optarg);
           return usage();
         }
         options->compression_settings.compression_level = level;

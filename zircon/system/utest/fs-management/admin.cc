@@ -124,6 +124,7 @@ static constexpr init_options_t readonly_options = {
     .enable_journal = true,
     .enable_pager = false,
     .write_compression_algorithm = nullptr,
+    .write_compression_level = -1,
     .callback = launch_stdio_async,
 };
 

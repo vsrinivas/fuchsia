@@ -60,6 +60,7 @@ class Environment : public zxtest::Environment {
     bool use_journal = true;
     bool use_pager = false;
     const char* write_compression_algorithm = nullptr;
+    std::optional<int> write_compression_level = std::nullopt;
 
     // Power-failure related tests.
     uint32_t power_stride = 1;  // Number of steps to skip between runs.
@@ -91,6 +92,8 @@ class Environment : public zxtest::Environment {
     }
     return config_.write_compression_algorithm;
   }
+
+  std::optional<int> write_compression_level() const { return config_.write_compression_level; }
 
   disk_format_type format_type() const { return config_.format_type; }
 

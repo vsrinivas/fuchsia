@@ -40,6 +40,8 @@ zx_status_t InitNativeFs(const char* binary, zx::channel device, const init_opti
   std::array<zx_handle_t, kNumHandles> handles = {device.release(), export_server.release()};
   std::array<uint32_t, kNumHandles> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST};
 
+  // |compression_level| should outlive |argv|.
+  std::string compression_level;
   std::vector<const char*> argv;
   argv.push_back(binary);
   if (options.readonly) {
@@ -60,6 +62,11 @@ zx_status_t InitNativeFs(const char* binary, zx::channel device, const init_opti
   if (options.write_compression_algorithm) {
     argv.push_back("--compression");
     argv.push_back(options.write_compression_algorithm);
+  }
+  if (options.write_compression_level >= 0) {
+    compression_level = std::to_string(options.write_compression_level);
+    argv.push_back("--compression_level");
+    argv.push_back(compression_level.c_str());
   }
   if (options.fsck_after_every_transaction) {
     argv.push_back("--fsck_after_every_transaction");
@@ -106,6 +113,7 @@ const init_options_t default_init_options = {
     .enable_journal = true,
     .enable_pager = false,
     .write_compression_algorithm = nullptr,
+    .write_compression_level = -1,
     .fsck_after_every_transaction = false,
     .callback = launch_stdio_async,
 };
