@@ -39,8 +39,8 @@ fn run_listener(log_proxy: LogProxy) -> impl Stream<Item = LogMessage> {
     recv_logs
 }
 
-#[fasync::run_singlethreaded()]
-async fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn hello_world_integration_test() -> Result<(), Error> {
     // Connect to the realm service, so that we can bind to and interact with child components
     let realm_proxy = fclient::realm()?;
 
