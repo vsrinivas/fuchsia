@@ -80,10 +80,176 @@ impl MessageFilter {
     pub fn should_send(&self, log_message: &Message) -> bool {
         let reject_pid = self.pid.map(|p| log_message.pid() != Some(p)).unwrap_or(false);
         let reject_tid = self.tid.map(|t| log_message.tid() != Some(t)).unwrap_or(false);
-        let reject_severity = self.min_severity.map(|m| m > log_message.severity).unwrap_or(false);
+        let reject_severity = self
+            .min_severity
+            .map(|m| m.for_listener() > log_message.severity.for_listener())
+            .unwrap_or(false);
         let reject_tags =
             !self.tags.is_empty() && !log_message.tags().any(|tag| self.tags.contains(tag));
 
         !(reject_pid || reject_tid || reject_severity || reject_tags)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::logs::message::LogHierarchy;
+
+    fn test_message() -> Message {
+        Message {
+            size: 1,
+            time: fuchsia_zircon::Time::from_nanos(1),
+            severity: Severity::Info,
+            contents: LogHierarchy::new("root", vec![], vec![]),
+        }
+    }
+
+    #[test]
+    fn should_send_verbose() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Verbose(15));
+        for verbosity in 1..15 {
+            message.severity = Severity::Verbose(verbosity);
+            assert_eq!(filter.should_send(&message), true);
+        }
+
+        filter.min_severity = Some(Severity::Debug);
+        message.severity = Severity::Verbose(1);
+        assert_eq!(filter.should_send(&message), true);
+    }
+
+    #[test]
+    fn should_reject_verbose() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Verbose(1));
+        for verbosity in 2..15 {
+            message.severity = Severity::Verbose(verbosity);
+            assert_eq!(filter.should_send(&message), false);
+        }
+
+        filter.min_severity = Some(Severity::Info);
+        message.severity = Severity::Verbose(1);
+        assert_eq!(filter.should_send(&message), false);
+    }
+
+    #[test]
+    fn should_send_info() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Info);
+        message.severity = Severity::Info;
+        assert_eq!(filter.should_send(&message), true);
+
+        filter.min_severity = Some(Severity::Debug);
+        message.severity = Severity::Info;
+        assert_eq!(filter.should_send(&message), true);
+    }
+
+    #[test]
+    fn should_reject_info() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Warn);
+        message.severity = Severity::Info;
+        assert_eq!(filter.should_send(&message), false);
+    }
+
+    #[test]
+    fn should_send_warn() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Warn);
+        message.severity = Severity::Warn;
+        assert_eq!(filter.should_send(&message), true);
+
+        filter.min_severity = Some(Severity::Info);
+        message.severity = Severity::Warn;
+        assert_eq!(filter.should_send(&message), true);
+    }
+
+    #[test]
+    fn should_reject_warn() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Error);
+        message.severity = Severity::Warn;
+        assert_eq!(filter.should_send(&message), false);
+    }
+
+    #[test]
+    fn should_send_error() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Error);
+        message.severity = Severity::Error;
+        assert_eq!(filter.should_send(&message), true);
+
+        filter.min_severity = Some(Severity::Warn);
+        message.severity = Severity::Error;
+        assert_eq!(filter.should_send(&message), true);
+    }
+
+    #[test]
+    fn should_reject_error() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Fatal);
+        message.severity = Severity::Error;
+        assert_eq!(filter.should_send(&message), false);
+    }
+
+    #[test]
+    fn should_send_debug() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Debug);
+        message.severity = Severity::Debug;
+        assert_eq!(filter.should_send(&message), true);
+
+        filter.min_severity = Some(Severity::Trace);
+        message.severity = Severity::Debug;
+        assert_eq!(filter.should_send(&message), true);
+    }
+
+    #[test]
+    fn should_reject_debug() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Info);
+        message.severity = Severity::Debug;
+        assert_eq!(filter.should_send(&message), false);
+    }
+
+    #[test]
+    fn should_send_trace() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Trace);
+        message.severity = Severity::Trace;
+        assert_eq!(filter.should_send(&message), true);
+    }
+
+    #[test]
+    fn should_reject_trace() {
+        let mut message = test_message();
+        let mut filter = MessageFilter::default();
+
+        filter.min_severity = Some(Severity::Debug);
+        message.severity = Severity::Trace;
+        assert_eq!(filter.should_send(&message), false);
     }
 }

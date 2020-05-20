@@ -146,7 +146,13 @@ bool LogFirstNState::ShouldLog(uint32_t n) {
   return counter_value < n;
 }
 
-int GetVlogVerbosity() { return std::max(int8_t(LOG_DEBUG + 1), int8_t(GetMinLogLevel())); }
+int GetVlogVerbosity() {
+  int min_level = GetMinLogLevel();
+  if (min_level < LOG_INFO && min_level > LOG_DEBUG) {
+    return LOG_INFO - min_level;
+  }
+  return 0;
+}
 
 bool ShouldCreateLogMessage(LogSeverity severity) { return severity >= GetMinLogLevel(); }
 

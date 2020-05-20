@@ -232,7 +232,7 @@ pub enum Severity {
 }
 
 impl Severity {
-    fn for_listener(self) -> fx_log_severity_t {
+    pub fn for_listener(self) -> fx_log_severity_t {
         match self {
             Severity::Trace => LogLevelFilter::Trace as _,
             Severity::Debug => LogLevelFilter::Debug as _,

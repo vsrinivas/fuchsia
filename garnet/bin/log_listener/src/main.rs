@@ -349,7 +349,7 @@ fn help(name: &str) -> String {
             Defaults to INFO.
 
         --verbosity <integer>:
-            Verbosity to filter on. It should be positive integer greater than 0.
+            Verbosity to filter on represented as a positive integer.
             If this is passed, it overrides default severity.
             Errors out if both this and --severity are passed.
             Defaults to 0 which means don't filter on verbosity.
@@ -478,13 +478,16 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                         return Err("Invalid arguments: Cannot pass both severity and verbosity"
                             .to_string());
                     }
+                    if v == 0 {
+                        return Err(format!(
+                            "Invalid verbosity: '{}', must be greater than 0.",
+                            args[i + 1]
+                        ));
+                    }
                     options.filter.min_severity = LogLevelFilter::None;
                     options.filter.verbosity = v;
                 } else {
-                    return Err(format!(
-                        "Invalid verbosity: '{}', should be positive integer greater than 0.",
-                        args[i + 1]
-                    ));
+                    return Err(format!("Invalid verbosity: '{}'", args[i + 1]));
                 }
             }
             "--pid" => {
@@ -726,7 +729,7 @@ fn get_log_level(level: i32) -> String {
         l if (l == LogLevelFilter::Trace as i32) => "TRACE".to_string(),
         l if (l == LogLevelFilter::Debug as i32) => "DEBUG".to_string(),
         l if (l < LogLevelFilter::Info as i32 && l > LogLevelFilter::Debug as i32) => {
-            format!("VLOG({})", -(l - LogLevelFilter::Info as i32))
+            format!("VLOG({})", (LogLevelFilter::Info as i32) - l)
         }
         l if (l == LogLevelFilter::Info as i32) => "INFO".to_string(),
         l if (l == LogLevelFilter::Warn as i32) => "WARNING".to_string(),

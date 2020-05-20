@@ -162,6 +162,28 @@ TEST_F(LoggingFixture, VLogT) {
   EXPECT_THAT(log, testing::Not(testing::HasSubstr("EFGH")));
 }
 
+TEST_F(LoggingFixture, VlogVerbosity) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+
+  EXPECT_EQ(0, GetVlogVerbosity());
+
+  new_settings.min_log_level = LOG_INFO - 1;
+  SetLogSettings(new_settings);
+
+  EXPECT_EQ(1, GetVlogVerbosity());
+
+  new_settings.min_log_level = LOG_INFO - 15;
+  SetLogSettings(new_settings);
+
+  EXPECT_EQ(15, GetVlogVerbosity());
+
+  new_settings.min_log_level = LOG_DEBUG;
+  SetLogSettings(new_settings);
+
+  EXPECT_EQ(0, GetVlogVerbosity());
+}
+
 TEST_F(LoggingFixture, DVLogNoMinLevel) {
   LogSettings new_settings;
   EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
