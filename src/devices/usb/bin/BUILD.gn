@@ -5,8 +5,5 @@
 group("tests") {
   testonly = true
 
-  deps = [
-    "bin:tests",
-    "drivers:tests",
-  ]
+  deps = [ "lsusb:tests" ]
 }

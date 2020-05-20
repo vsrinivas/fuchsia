@@ -2,7 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/zircon_images.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 import("//build/unification/images/migrated_manifest.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":lsusb-test-package" ]
+}
+
+test("bin") {
+  testonly = true
+  output_name = "lsusb-test"
+  visibility = [ ":*" ]
+
+  sources = [ "test.cc" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/runtime",
+    "//zircon/public/lib/zxtest",
+  ]
+}
 
 executable("lsusb") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -16,4 +40,29 @@ executable("lsusb") {
 
 migrated_manifest("lsusb-manifest") {
   deps = [ ":lsusb" ]
+}
+
+# A simple test utility that returns the integer value provided to it in its first argument.
+
+test_package("lsusb-test-package") {
+  deps = [
+    ":bin",
+    ":lsusb",
+  ]
+
+  binaries = [
+    {
+      name = "lsusb-test"
+    },
+    {
+      name = "lsusb"
+    },
+  ]
+
+  tests = [
+    {
+      name = "lsusb-test"
+      environments = basic_envs
+    },
+  ]
 }

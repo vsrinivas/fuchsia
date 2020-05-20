@@ -53,8 +53,7 @@ static zx_handle_t handle_from_fd(int fd) {
 static bool stdio_advanced_pipe_test(void) {
   BEGIN_TEST;
 
-  // TODO(kulakowski): Consider another helper process
-  const char* file = "/boot/bin/lsusb";
+  const char* file = "/boot/bin/stdio-test-util";
 
   zx_handle_t fdio_job = zx_job_default();
   ASSERT_NE(fdio_job, ZX_HANDLE_INVALID, "no fdio job object");
@@ -73,14 +72,14 @@ static bool stdio_advanced_pipe_test(void) {
   ASSERT_EQ(stdio_pipe(stderr_fds, false), 0, "stderr pipe creation failed");
 
   zx_handle_t handles[] = {
-    handle_from_fd(stdin_fds[1]),
-    handle_from_fd(stdout_fds[1]),
-    handle_from_fd(stderr_fds[1]),
+      handle_from_fd(stdin_fds[1]),
+      handle_from_fd(stdout_fds[1]),
+      handle_from_fd(stderr_fds[1]),
   };
   uint32_t handle_ids[] = {
-    PA_HND(PA_FD, 0),
-    PA_HND(PA_FD, 1),
-    PA_HND(PA_FD, 2),
+      PA_HND(PA_FD, 0),
+      PA_HND(PA_FD, 1),
+      PA_HND(PA_FD, 2),
   };
 
   // Start the process
@@ -97,7 +96,7 @@ static bool stdio_advanced_pipe_test(void) {
   ASSERT_GE(read_to_end(stdout_fds[0], &out, &out_size), 0, "reading stdout failed");
   ASSERT_GE(read_to_end(stderr_fds[0], &err, &err_size), 0, "reading stderr failed");
 
-  ASSERT_EQ(strncmp((char*)out, "ID   ", 5), 0, "Got wrong stdout");
+  ASSERT_EQ(strncmp((char*)out, "Hello universe!", 15), 0, "Got wrong stdout");
   ASSERT_EQ(err_size, (size_t)0, "Got wrong stderr");
 
   free(out);
