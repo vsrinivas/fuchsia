@@ -7,7 +7,6 @@ use {
     crate::onet,
     anyhow::{anyhow, Context, Error},
     async_std::sync::RwLock,
-    async_std::task,
     chrono::{DateTime, Utc},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_remotecontrol::{
@@ -22,7 +21,7 @@ use {
     std::net::{IpAddr, SocketAddr},
     std::sync::atomic::{AtomicBool, Ordering},
     std::sync::Arc,
-    std::time::Duration,
+    std::time::{Duration, Instant},
 };
 
 #[derive(Debug, Clone)]
@@ -245,7 +244,7 @@ impl Target {
                 Some(_) => return Ok(state_guard),
                 None => {
                     std::mem::drop(state_guard);
-                    task::sleep(retry_delay).await;
+                    overnet_core::wait_until(Instant::now() + retry_delay).await;
                 }
             }
         }

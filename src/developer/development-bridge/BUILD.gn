@@ -68,6 +68,9 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:tokio",
     ]
+
+    # TODO: remove this dep once Overnet is on async-std also.
+    deps += ["//src/connectivity/overnet/lib/core"]
   }
 }
 
