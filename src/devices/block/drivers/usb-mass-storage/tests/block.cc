@@ -7,7 +7,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <fbl/string.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "../usb-mass-storage.h"
 
@@ -44,8 +44,7 @@ static void BlockCallback(void* ctx, zx_status_t status, block_op_t* op) {
   context->op = op;
 }
 
-bool UmsBlockDeviceConstructorTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, ConstructorTest) {
   Binder ddk;
   Context context;
   ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
@@ -57,14 +56,13 @@ bool UmsBlockDeviceConstructorTest() {
               "Parameters must be set to user-provided values.");
   dev.Adopt();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
-bool UmsBlockDeviceAddTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, AddTest) {
   Binder ddk;
   Context context;
-  ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
+  auto fake_zxdev = reinterpret_cast<zx_device_t*>(&context);
+  ums::UmsBlockDevice dev(fake_zxdev, 5,
                           [&](ums::Transaction* txn) { context.txn = txn; });
   context.dev = &dev;
   ums::BlockDeviceParameters params = {};
@@ -73,17 +71,15 @@ bool UmsBlockDeviceAddTest() {
               "Parameters must be set to user-provided values.");
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
-  dev.DdkAsyncRemove();
+  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
-bool UmsBlockDeviceGetSizeTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, GetSizeTest) {
   Binder ddk;
   Context context;
-  ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
-                          [&](ums::Transaction* txn) { context.txn = txn; });
+  auto fake_zxdev = reinterpret_cast<zx_device_t*>(&context);
+  ums::UmsBlockDevice dev(fake_zxdev, 5, [&](ums::Transaction* txn) { context.txn = txn; });
   context.dev = &dev;
   ums::BlockDeviceParameters params = {};
   params.lun = 5;
@@ -99,17 +95,15 @@ bool UmsBlockDeviceGetSizeTest() {
   context.info.block_count = params.total_blocks;
   dev.SetBlockDeviceParameters(params);
   EXPECT_EQ(params.block_size * params.total_blocks, dev.DdkGetSize());
-  dev.DdkAsyncRemove();
+  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
-bool UmsBlockDeviceNotSupportedTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, NotSupportedTest) {
   Binder ddk;
   Context context;
-  ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
-                          [&](ums::Transaction* txn) { context.txn = txn; });
+  auto fake_zxdev = reinterpret_cast<zx_device_t*>(&context);
+  ums::UmsBlockDevice dev(fake_zxdev, 5, [&](ums::Transaction* txn) { context.txn = txn; });
   context.dev = &dev;
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
@@ -118,17 +112,15 @@ bool UmsBlockDeviceNotSupportedTest() {
   txn.op.command = BLOCK_OP_MASK;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, context.status);
-  dev.DdkAsyncRemove();
+  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
-bool UmsBlockDeviceReadTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, ReadTest) {
   Binder ddk;
   Context context;
-  ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
-                          [&](ums::Transaction* txn) { context.txn = txn; });
+  auto fake_zxdev = reinterpret_cast<zx_device_t*>(&context);
+  ums::UmsBlockDevice dev(fake_zxdev, 5, [&](ums::Transaction* txn) { context.txn = txn; });
   context.dev = &dev;
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
@@ -136,17 +128,15 @@ bool UmsBlockDeviceReadTest() {
   ums::Transaction txn;
   txn.op.command = BLOCK_OP_READ;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
-  dev.DdkAsyncRemove();
+  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
-bool UmsBlockDeviceWriteTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, WriteTest) {
   Binder ddk;
   Context context;
-  ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
-                          [&](ums::Transaction* txn) { context.txn = txn; });
+  auto fake_zxdev = reinterpret_cast<zx_device_t*>(&context);
+  ums::UmsBlockDevice dev(fake_zxdev, 5, [&](ums::Transaction* txn) { context.txn = txn; });
   context.dev = &dev;
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
@@ -155,17 +145,15 @@ bool UmsBlockDeviceWriteTest() {
   txn.op.command = BLOCK_OP_WRITE;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  dev.DdkAsyncRemove();
+  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
-bool UmsBlockDeviceFlushTest() {
-  BEGIN_TEST;
+TEST(UmsBlock, FlushTest) {
   Binder ddk;
   Context context;
-  ums::UmsBlockDevice dev(reinterpret_cast<zx_device_t*>(&context), 5,
-                          [&](ums::Transaction* txn) { context.txn = txn; });
+  auto fake_zxdev = reinterpret_cast<zx_device_t*>(&context);
+  ums::UmsBlockDevice dev(fake_zxdev, 5, [&](ums::Transaction* txn) { context.txn = txn; });
   context.dev = &dev;
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
@@ -174,22 +162,8 @@ bool UmsBlockDeviceFlushTest() {
   txn.op.command = BLOCK_OP_FLUSH;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  dev.DdkAsyncRemove();
+  dev.DdkUnbindNew(ddk::UnbindTxn(fake_zxdev));
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(usb_mass_storage_tests)
-RUN_TEST(UmsBlockDeviceAddTest)
-RUN_TEST(UmsBlockDeviceGetSizeTest)
-RUN_NAMED_TEST("UMS block device constructor sets paramaters appropriately",
-               UmsBlockDeviceConstructorTest)
-RUN_NAMED_TEST("BlockImplQueue with invalid OPCODE type returns an error",
-               UmsBlockDeviceNotSupportedTest)
-RUN_NAMED_TEST("BlockImplQueue read OPCODE initiates a read transaction", UmsBlockDeviceReadTest)
-RUN_NAMED_TEST("write OPCODE initiates a write transaction", UmsBlockDeviceWriteTest)
-RUN_NAMED_TEST("flush OPCODE initiates a flush transaction", UmsBlockDeviceFlushTest)
-
-END_TEST_CASE(usb_mass_storage_tests)

@@ -76,7 +76,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   void DdkUnbindDeprecated();
 
   // Performs the object initialization.
-  zx_status_t Init();
+  zx_status_t Init(bool is_test_mode);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbMassStorageDevice);
 
@@ -163,6 +163,8 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   fbl::Mutex txn_lock_;               // protects queued_txns, txn_completion and dead
 
   fbl::Array<fbl::RefPtr<ums::UmsBlockDevice>> block_devs_;
+
+  bool is_test_mode_ = false;
 };
 }  // namespace ums
 

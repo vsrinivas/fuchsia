@@ -108,8 +108,9 @@ void UsbMassStorageDevice::RequestQueue(usb_request_t* request,
 }
 
 // Performs the object initialization.
-zx_status_t UsbMassStorageDevice::Init() {
+zx_status_t UsbMassStorageDevice::Init(bool is_test_mode) {
   dead_ = false;
+  is_test_mode_ = is_test_mode;
   zxlogf(INFO, "UMS: parent: '%s'", device_get_name(parent()));
   // Add root device, which will contain block devices for logical units
   zx_status_t status = DdkAdd("ums", DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INVISIBLE);
@@ -161,7 +162,7 @@ zx_status_t UsbMassStorageDevice::Init() {
     }
   }
 
-  if (!bulk_in_max_packet || !bulk_out_max_packet) {
+  if (!is_test_mode_ && (!bulk_in_max_packet || !bulk_out_max_packet)) {
     DEBUG_PRINT(("UMS:ums_bind could not find endpoints\n"));
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -789,11 +790,11 @@ int UsbMassStorageDevice::WorkerThread() {
   ums::Transaction* current_txn = nullptr;
   while (1) {
     if (wait) {
-#ifndef UNITTEST
-      status = sync_completion_wait(&txn_completion_, ZX_SEC(1));
-#else
-      status = sync_completion_wait(&txn_completion_, ZX_SEC(0));
-#endif
+      if (is_test_mode_) {
+        status = sync_completion_wait(&txn_completion_, ZX_SEC(1));
+      } else {
+        status = sync_completion_wait(&txn_completion_, ZX_SEC(0));
+      }
       if (list_is_empty(&queued_txns_) && !dead_) {
         if (CheckLunsReady() != ZX_OK) {
           return status;
@@ -898,7 +899,7 @@ static zx_status_t bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = device->Init();
+  zx_status_t status = device->Init(false /* is_test_mode */);
   return status;
 }
 static constexpr zx_driver_ops_t usb_mass_storage_driver_ops = []() {

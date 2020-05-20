@@ -13,7 +13,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "../block.h"
 
@@ -415,7 +415,7 @@ static zx_status_t Setup(Context* context, ums::UsbMassStorageDevice* dev,
   ops->get_max_transfer_size = GetMaxTransferSize;
   ops->control_in = ControlIn;
   // Driver initialization
-  status = dev->Init();
+  status = dev->Init(true /* is_test_mode */);
   if (status != ZX_OK) {
     return status;
   }
@@ -427,9 +427,8 @@ static zx_status_t Setup(Context* context, ums::UsbMassStorageDevice* dev,
 // UMS read test
 // This test validates the read functionality on multiple LUNS
 // of a USB mass storage device.
-bool UmsTestRead() {
+TEST(Ums, TestRead) {
   // Setup
-  BEGIN_TEST;
   Binder bind;
   Context parent_dev;
   usb_protocol_ops_t ops;
@@ -467,14 +466,12 @@ bool UmsTestRead() {
   // Unbind
   dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
-  END_TEST;
 }
 
 // This test validates the write functionality on multiple LUNS
 // of a USB mass storage device.
-bool UmsTestWrite() {
+TEST(Ums, TestWrite) {
   // Setup
-  BEGIN_TEST;
   Binder bind;
   Context parent_dev;
   usb_protocol_ops_t ops;
@@ -518,14 +515,12 @@ bool UmsTestWrite() {
   // Unbind
   dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
-  END_TEST;
 }
 
 // This test validates the flush functionality on multiple LUNS
 // of a USB mass storage device.
-bool UmsTestFlush() {
+TEST(Ums, TestFlush) {
   // Setup
-  BEGIN_TEST;
   Binder bind;
   Context parent_dev;
   ums::UsbMassStorageDevice dev(reinterpret_cast<zx_device_t*>(&parent_dev));
@@ -549,13 +544,6 @@ bool UmsTestFlush() {
   // Unbind
   dev.DdkUnbindDeprecated();
   EXPECT_EQ(4, parent_dev.block_devs);
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(usb_mass_storage_tests)
-RUN_NAMED_TEST("USB mass storage device test (read)", UmsTestRead)
-RUN_NAMED_TEST("USB mass storage device test (write)", UmsTestWrite)
-RUN_NAMED_TEST("USB mass storage device test (flush)", UmsTestFlush)
-END_TEST_CASE(usb_mass_storage_tests)
