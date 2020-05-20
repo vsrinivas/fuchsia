@@ -124,6 +124,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
             Arc::clone(&repo_manager),
             &config,
             &channel_inspect_state,
+            cobalt_sender.clone(),
         )
         .await,
     ));
@@ -311,6 +312,7 @@ async fn load_rewrite_manager(
     repo_manager: Arc<RwLock<RepositoryManager>>,
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
+    cobalt_sender: CobaltSender,
 ) -> RewriteManager {
     let dynamic_rules_path =
         if config.enable_dynamic_configuration() { Some(DYNAMIC_RULES_PATH) } else { None };
@@ -338,6 +340,7 @@ async fn load_rewrite_manager(
     match crate::ota_channel::create_rewrite_rule_for_ota_channel(
         &channel_inspect_state,
         &repo_manager.read(),
+        cobalt_sender.clone(),
     )
     .await
     {

@@ -21,31 +21,6 @@ use {
     std::sync::Arc,
 };
 
-#[fasync::run_singlethreaded(test)]
-async fn pkg_resolver_startup_duration() {
-    let env = TestEnvBuilder::new().build();
-
-    let events = env
-        .mocks
-        .logger_factory
-        .wait_for_at_least_n_events_with_metric_id(
-            1,
-            metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
-        )
-        .await;
-    assert_matches!(
-        events[0],
-        CobaltEvent {
-            metric_id: metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
-            ref event_codes,
-            component: None,
-            payload: EventPayload::ElapsedMicros(_)
-        } if event_codes == &vec![0]
-    );
-
-    env.stop().await;
-}
-
 async fn assert_count_events(
     env: &TestEnv,
     expected_metric_id: u32,
@@ -81,6 +56,69 @@ async fn assert_count_events(
     }
 }
 
+async fn assert_elapsed_duration_events(
+    env: &TestEnv,
+    expected_metric_id: u32,
+    expected_event_codes: Vec<impl AsEventCodes>,
+) {
+    let actual_events = env
+        .mocks
+        .logger_factory
+        .wait_for_at_least_n_events_with_metric_id(expected_event_codes.len(), expected_metric_id)
+        .await;
+    assert_eq!(
+        actual_events.len(),
+        expected_event_codes.len(),
+        "event count different than expected, actual_events: {:?}",
+        actual_events
+    );
+    for (event, expected_codes) in
+        actual_events.into_iter().zip(expected_event_codes.into_iter().map(|c| c.as_event_codes()))
+    {
+        assert_matches!(
+            event,
+            CobaltEvent {
+                metric_id,
+                event_codes,
+                component: None,
+                payload: EventPayload::ElapsedMicros(_),
+            } if metric_id == expected_metric_id && event_codes == expected_codes
+        )
+    }
+}
+
+async fn verify_resolve_emits_cobalt_events_with_metric_id(
+    pkg: Package,
+    handler: Option<impl UriPathHandler>,
+    expected_resolve_result: Result<(), Status>,
+    metric_id: u32,
+    expected_events: Vec<impl AsEventCode>,
+) {
+    let env = TestEnvBuilder::new().build();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let mut served_repository = repo.server();
+    if let Some(handler) = handler {
+        served_repository = served_repository.uri_path_override_handler(handler);
+    }
+    let served_repository = served_repository.start().unwrap();
+    let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
+    let config = served_repository.make_repo_config(repo_url);
+    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
+
+    assert_eq!(
+        env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
+        expected_resolve_result
+    );
+    assert_count_events(&env, metric_id, expected_events).await;
+    env.stop().await;
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn repository_manager_load_static_configs_success() {
     let env = TestEnvBuilder::new()
@@ -93,6 +131,31 @@ async fn repository_manager_load_static_configs_success() {
         vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success],
     )
     .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn pkg_resolver_startup_duration() {
+    let env = TestEnvBuilder::new().build();
+
+    let events = env
+        .mocks
+        .logger_factory
+        .wait_for_at_least_n_events_with_metric_id(
+            1,
+            metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
+        )
+        .await;
+    assert_matches!(
+        events[0],
+        CobaltEvent {
+            metric_id: metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
+            ref event_codes,
+            component: None,
+            payload: EventPayload::ElapsedMicros(_)
+        } if event_codes == &vec![0]
+    );
 
     env.stop().await;
 }
@@ -151,69 +214,6 @@ async fn repository_manager_load_static_configs_overridden() {
     .await;
 
     env.stop().await;
-}
-
-async fn verify_resolve_emits_cobalt_events_with_metric_id(
-    pkg: Package,
-    handler: Option<impl UriPathHandler>,
-    expected_resolve_result: Result<(), Status>,
-    metric_id: u32,
-    expected_events: Vec<impl AsEventCode>,
-) {
-    let env = TestEnvBuilder::new().build();
-    let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&pkg)
-            .build()
-            .await
-            .unwrap(),
-    );
-    let mut served_repository = repo.server();
-    if let Some(handler) = handler {
-        served_repository = served_repository.uri_path_override_handler(handler);
-    }
-    let served_repository = served_repository.start().unwrap();
-    let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
-    let config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
-
-    assert_eq!(
-        env.resolve_package(&format!("fuchsia-pkg://example.com/{}", pkg.name())).await.map(|_| ()),
-        expected_resolve_result
-    );
-    assert_count_events(&env, metric_id, expected_events).await;
-    env.stop().await;
-}
-
-async fn assert_elapsed_duration_events(
-    env: &TestEnv,
-    expected_metric_id: u32,
-    expected_event_codes: Vec<impl AsEventCodes>,
-) {
-    let actual_events = env
-        .mocks
-        .logger_factory
-        .wait_for_at_least_n_events_with_metric_id(expected_event_codes.len(), expected_metric_id)
-        .await;
-    assert_eq!(
-        actual_events.len(),
-        expected_event_codes.len(),
-        "event count different than expected, actual_events: {:?}",
-        actual_events
-    );
-    for (event, expected_codes) in
-        actual_events.into_iter().zip(expected_event_codes.into_iter().map(|c| c.as_event_codes()))
-    {
-        assert_matches!(
-            event,
-            CobaltEvent {
-                metric_id,
-                event_codes,
-                component: None,
-                payload: EventPayload::ElapsedMicros(_),
-            } if metric_id == expected_metric_id && event_codes == expected_codes
-        )
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -582,6 +582,20 @@ async fn font_manager_load_static_registry_failure_pkg_url() {
             metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl,
             metrics::FontManagerLoadStaticRegistryMetricDimensionResult::PkgUrl,
         ],
+    )
+    .await;
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn load_repository_for_channel_success_no_rewrite_rule() {
+    let env = TestEnvBuilder::new().build();
+
+    assert_count_events(
+        &env,
+        metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success],
     )
     .await;
 
