@@ -7,7 +7,7 @@ success("BoolTrue") {
         value: true,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -18,7 +18,7 @@ success("BoolFalse") {
         value: false,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -29,7 +29,7 @@ success("ByteZero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -40,7 +40,7 @@ success("Byte255") {
         value: 255,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -51,7 +51,7 @@ success("Int8Min") {
         value: -128,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -62,7 +62,7 @@ success("Int8Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -73,7 +73,7 @@ success("Int8Max") {
         value: 127,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x7f,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -84,7 +84,7 @@ success("Int16Min") {
         value: -32768,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x80,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -95,7 +95,7 @@ success("Int16Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -106,7 +106,7 @@ success("Int16Max") {
         value: 32767,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0x7f,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -117,7 +117,7 @@ success("Int32Min") {
         value: -2147483648,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x80,0x00,0x00,0x00,0x00,
         ],
     },
@@ -128,7 +128,7 @@ success("Int32Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -139,7 +139,7 @@ success("Int32Max") {
         value: 2147483647,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0xff,0x7f,0x00,0x00,0x00,0x00,
         ],
     },
@@ -150,7 +150,7 @@ success("Int64Min") {
         value: -9223372036854775808,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,
         ],
     },
@@ -161,7 +161,7 @@ success("Int64Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -172,7 +172,7 @@ success("Int64Max") {
         value: 9223372036854775807,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x7f,
         ],
     },
@@ -183,7 +183,7 @@ success("Uint8Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -194,7 +194,7 @@ success("Uint8Max") {
         value: 255,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -205,7 +205,7 @@ success("Uint16Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -216,7 +216,7 @@ success("Uint16Max") {
         value: 65535,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -227,7 +227,7 @@ success("Uint32Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -238,7 +238,7 @@ success("Uint32Max") {
         value: 4294967295,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
         ],
     },
@@ -249,7 +249,7 @@ success("Uint64Zero") {
         value: 0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -260,7 +260,7 @@ success("Uint64Max") {
         value: 18446744073709551615,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
         ],
     },
@@ -274,7 +274,7 @@ success("Float32Zero") {
         value: 0.0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -285,7 +285,7 @@ success("Float32One") {
         value: 1.0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x80,0x3f,0x00,0x00,0x00,0x00,
         ],
     },
@@ -296,7 +296,7 @@ success("Float32MinusOne") {
         value: -1.0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x80,0xbf,0x00,0x00,0x00,0x00,
         ],
     },
@@ -307,7 +307,7 @@ success("Float32Max") {
         value: 3.40282346638528859811704183484516925440e+38,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0x7f,0x7f,0x00,0x00,0x00,0x00,
         ],
     },
@@ -318,7 +318,7 @@ success("Float64Zero") {
         value: 0.0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         ],
     },
@@ -329,7 +329,7 @@ success("Float64One") {
         value: 1.0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0xf0,0x3f,
         ],
     },
@@ -340,7 +340,7 @@ success("Float64MinusOne") {
         value: -1.0,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00,0x00,0x00,0x00,0x00,0x00,0xf0,0xbf,
         ],
     },
@@ -351,7 +351,7 @@ success("Float64Max") {
         value: 1.797693134862315708145274237317043567981e+308,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff,0xff,0xff,0xff,0xff,0xff,0xef,0x7f,
         ],
     },

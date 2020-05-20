@@ -9,14 +9,6 @@ success("UnionWithBoundString") {
         },
     },
     bytes = {
-        old = [
-            // primary object
-            num(0):8, // tag
-            num(4):8, repeat(0xff):8, // boundFiveStr size, present
-
-            // secondary object 1: boundFiveStr
-            'a', 'b', 'c', 'd', padding:4,
-        ],
         v1 = [
             // primary object
             num(1):8, // ordinal
@@ -49,9 +41,6 @@ success("UnionMigration_SingleVariant") {
         },
     },
     bytes = {
-        old = [
-            num(0):4, num(42):4 // tag, x
-        ],
         v1 = [
             // primary object
             num(1):8, // ordinal
@@ -70,9 +59,6 @@ success("ReverseOrdinalUnion") {
         },
     },
     bytes = {
-        old = [
-            num(2):4, padding:4, num(42):8, // tag, x
-        ],
         v1 = [
             // primary object
             num(4):8, // ordinal

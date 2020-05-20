@@ -65,14 +65,22 @@ var allGeneratorTypes = func() []string {
 
 var allLanguages = func() []string {
 	var list []string
+	seen := make(map[string]struct{})
 	for _, generatorMap := range allGenerators {
 		for language := range generatorMap {
-			list = append(list, language)
+			if _, ok := seen[language]; !ok {
+				seen[language] = struct{}{}
+				list = append(list, language)
+			}
 		}
 	}
 	sort.Strings(list)
 	return list
 }()
+
+var allWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+}
 
 // GIDLFlags stores the command-line flags for the GIDL program.
 type GIDLFlags struct {
@@ -107,7 +115,11 @@ func parseGidlIr(filename string) gidlir.All {
 	if err != nil {
 		panic(err)
 	}
-	result, err := gidlparser.NewParser(filename, f, allLanguages).Parse()
+	config := gidlparser.Config{
+		Languages:   allLanguages,
+		WireFormats: allWireFormats,
+	}
+	result, err := gidlparser.NewParser(filename, f, config).Parse()
 	if err != nil {
 		panic(err)
 	}
@@ -174,7 +186,7 @@ func main() {
 	}
 	generator, ok := generatorMap[language]
 	if !ok {
-		log.Fatalf("unknown language: %s", language)
+		log.Fatalf("unknown language for %s: %s", *flags.Type, language)
 	}
 
 	files, err := generator(gidl, fidl)

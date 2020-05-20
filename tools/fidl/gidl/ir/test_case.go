@@ -4,7 +4,7 @@
 
 package ir
 
-import "fmt"
+import "strings"
 
 type All struct {
 	EncodeSuccess []EncodeSuccess
@@ -73,42 +73,34 @@ type Encoding struct {
 	Bytes      []byte
 }
 
-type WireFormat uint
+type WireFormat string
 
 const (
-	_ WireFormat = iota
-	OldWireFormat
-	V1WireFormat
+	V1WireFormat WireFormat = "v1"
 )
 
-var nameToWireFormat = map[string]WireFormat{}
-var wireFormatToName = map[WireFormat]string{}
-var allWireFormats = func() []WireFormat {
-	register := func(wf WireFormat, name string) WireFormat {
-		nameToWireFormat[name] = wf
-		wireFormatToName[wf] = name
-		return wf
-	}
-	return []WireFormat{
-		register(OldWireFormat, "old"),
-		register(V1WireFormat, "v1"),
-	}
-}()
-
-func AllWireFormats() []WireFormat {
-	return append([]WireFormat(nil), allWireFormats...)
-}
-
 func (wf WireFormat) String() string {
-	if name, ok := wireFormatToName[wf]; ok {
-		return name
-	}
-	return fmt.Sprintf("unknown wire format (%d)", wf)
+	return string(wf)
 }
 
-func WireFormatByName(name string) (WireFormat, error) {
-	if wf, ok := nameToWireFormat[name]; ok {
-		return wf, nil
+type WireFormatList []WireFormat
+
+func (list WireFormatList) Includes(wireFormat WireFormat) bool {
+	for _, wf := range list {
+		if wf == wireFormat {
+			return true
+		}
 	}
-	return 0, fmt.Errorf("unknown wire format %q", name)
+	return false
+}
+
+func (list WireFormatList) Join(sep string) string {
+	var b strings.Builder
+	for i, wf := range list {
+		if i != 0 {
+			b.WriteString(sep)
+		}
+		b.WriteString(string(wf))
+	}
+	return b.String()
 }

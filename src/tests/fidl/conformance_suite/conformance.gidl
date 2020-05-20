@@ -6,7 +6,7 @@ success("EmptyStruct") {
     value = EmptyStruct {
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x00, // one byte
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
         ],
@@ -20,7 +20,7 @@ success("EmptyStructSandwich") {
         after: "after",
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // length of "before"
             255, 255, 255, 255, 255, 255, 255, 255, // "before" is present
             0,                   // empty struct zero field
@@ -43,7 +43,7 @@ success("Uint8Uint16Uint32Uint64") {
         f4: 0x08090a0b0c0d0e0f,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01, // f1
             0x00, // padding
             0x03, 0x02, // f2
@@ -61,7 +61,7 @@ success("Uint64Uint32Uint16Uint8") {
         f4: 0x01,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f1
             0x07, 0x06, 0x05, 0x04, // f2
             0x03, 0x02, // f3
@@ -76,7 +76,7 @@ success("SimpleTableEmpty") {
         table: SimpleTable {},
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
         ],
@@ -91,7 +91,7 @@ success("SimpleTableXAndY") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
@@ -117,7 +117,7 @@ success("SimpleTableJustY") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
@@ -143,7 +143,7 @@ success("TableWithStringAndVectorNoVectorContent") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
@@ -169,7 +169,7 @@ success("SimpleTableThenUint64") {
         number: 0xdeadbeefdeadbeef,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, // uint64 number
@@ -198,7 +198,7 @@ success("ReverseOrdinalTable") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             // table
             0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // max ordinal 4
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // present
@@ -224,7 +224,7 @@ success("ReverseOrdinalTable") {
 
 decode_success("TableWithUnknownReservedFields") {
     bytes = {
-        old, v1 = [
+        v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
@@ -252,7 +252,7 @@ decode_success("TableWithUnknownReservedFields") {
 
 decode_success("TableWithUnknownTrailingFields") {
     bytes = {
-        old, v1 = [
+        v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
@@ -289,7 +289,7 @@ success("InlineXUnionInStruct") {
         after: "after",
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
@@ -319,7 +319,7 @@ success("OptionalXUnionInStructAbsent") {
         after: "after",
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
@@ -348,7 +348,7 @@ success("OptionalXUnionInStructPresent") {
         after: "after",
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // "before" length
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // "before" presence
 
@@ -380,7 +380,7 @@ success("XUnionInTableXUnionAbsent") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             // primary object
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
@@ -424,7 +424,7 @@ success("XUnionInTableXUnionPresent") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             // primary object
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // vector<envelope> element count
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // vector<envelope> present
@@ -477,7 +477,7 @@ success("Flexible XUnion Field Unknown") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
             0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
@@ -493,7 +493,7 @@ success("StrictXUnion") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
             0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
             0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
@@ -516,7 +516,7 @@ decode_failure("StrictXUnion Field Unknown") {
     bindings_allowlist = [dart,go,],
     type = TestStrictXUnionInStruct,
     bytes = {
-        old, v1 = [
+        v1 = [
             0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
             0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
@@ -603,23 +603,6 @@ success("AddEthernetDeviceRequest") {
         this_should_be_a_handle: 0xffffffff,
     },
     bytes = {
-        old = [
-            0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // topological_path
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // topological_path
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // name
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // name
-            0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // subnet (dhcp variant)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, // device (handle present)
-            0x40, 0x2f, 0x64, 0x65, 0x76, 0x2f, 0x73, 0x79, // @/dev/sy
-            0x73, 0x2f, 0x70, 0x63, 0x69, 0x2f, 0x30, 0x30, // s/pci/00
-            0x3a, 0x30, 0x33, 0x2e, 0x30, 0x2f, 0x65, 0x31, // :03.0/e1
-            0x30, 0x30, 0x30, 0x2f, 0x65, 0x74, 0x68, 0x65, // 000/ethe
-            0x72, 0x6e, 0x65, 0x74, 0x00, 0x00, 0x00, 0x00, // rnet
-            0x65, 0x74, 0x68, 0x70, 0x30, 0x30, 0x30, 0x33, // ethp0003
-        ],
         v1 = [
             0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // topological_path
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // topological_path
@@ -654,7 +637,7 @@ success("FileGetAttrResponse") {
         },
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00,
             0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00, 0x00,
             1, 0, 0, 0, 0, 0, 0, 0,
@@ -691,26 +674,6 @@ success("Optionals") {
         },
     },
     bytes = {
-        old = [
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // EmptyStruct
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // EmptyStruct? present
-            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // TableWithEmptyStruct length 1
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, //   present
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // XUnionWithEmptyStruct tag 0
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // XUnionWithEmptyStruct? present
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UnionWithEmptyStruct tag 0
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // UnionWithEmptyStruct? present
-
-            // secondary objects
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // EmptyStruct
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // envelope 8 bytes, 0 handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, //   present
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // EmptyStruct (table t)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // XUnionWithEmptyStruct tag 0
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // UnionWithEmptyStruct tag 0
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-        ],
         v1 = [
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // EmptyStruct
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // EmptyStruct? present
@@ -752,7 +715,7 @@ success("Arrays") {
         arr_arr_int: [[1, 2, 3,], [4, 5, 6,],],
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             // primary object
             0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_int: 1, 2
             0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_string: "a" size 1
@@ -790,7 +753,7 @@ success("Vectors") {
         vec_vec_int: [[1, 2,], [3,],],
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             // primary object
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_empty: size 0
             0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
@@ -842,7 +805,7 @@ success("StrictBitsKnownValue") {
         b: 1,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -853,7 +816,7 @@ success("StrictBitsCombinedValue") {
         b: 3,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -874,7 +837,7 @@ decode_failure("StrictBitsUnknownBit") {
     bindings_denylist = [dart,go],
     type = StrictBitsStruct,
     bytes = {
-        old, v1 = [
+        v1 = [
             0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -886,7 +849,7 @@ success("FlexibleBitsKnownValue") {
         b: 1,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -899,7 +862,7 @@ success("FlexibleBitsUnknownValue") {
         b: 0xffffffff,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -912,7 +875,7 @@ success("FlexibleBitsUint64UnknownValue") {
         b: 0x0102030405060708,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
         ],
     },
@@ -923,7 +886,7 @@ success("StrictEnumKnownValue") {
         e: 1,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -944,7 +907,7 @@ decode_failure("StrictEnumUnknownValue") {
     bindings_denylist = [dart,go],
     type = StrictEnumStruct,
     bytes = {
-        old, v1 = [
+        v1 = [
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -956,7 +919,7 @@ success("FlexibleEnumKnownValue") {
         e: 1,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -969,7 +932,7 @@ success("FlexibleEnumUnknownValue") {
         e: 0xffffffff,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
         ],
     },
@@ -982,7 +945,7 @@ success("FlexibleEnumUint64UnknownValue") {
         e: 0x0102030405060708,
     },
     bytes = {
-        old, v1 = [
+        v1 = [
             0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
         ],
     },

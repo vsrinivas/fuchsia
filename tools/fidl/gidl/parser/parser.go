@@ -17,15 +17,21 @@ import (
 type Parser struct {
 	scanner    scanner.Scanner
 	lookaheads []token
-	// All supported languages, used to validate bindings allowlist/denylist.
-	allLanguages ir.LanguageList
+	config     Config
 }
 
-func NewParser(name string, input io.Reader, allLanguages []string) *Parser {
+type Config struct {
+	// All supported languages, used to validate bindings allowlist/denylist.
+	Languages ir.LanguageList
+	// All supported wire formats, used to validate `bytes` sections.
+	WireFormats ir.WireFormatList
+}
+
+func NewParser(name string, input io.Reader, config Config) *Parser {
 	var p Parser
 	p.scanner.Position.Filename = name
 	p.scanner.Init(input)
-	p.allLanguages = allLanguages
+	p.config = config
 	return &p
 }
 
@@ -213,9 +219,12 @@ var sections = map[string]sectionMetadata{
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeFailure{
-				Name:              name,
-				Value:             body.Value,
-				WireFormats:       ir.AllWireFormats(),
+				Name:  name,
+				Value: body.Value,
+				// TODO(fxb/52495): Temporarily hardcoded to v1. We should
+				// either make encode_failure tests specify a wireformat -> err
+				// mapping, or remove the WireFormats field.
+				WireFormats:       []ir.WireFormat{ir.V1WireFormat},
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -539,9 +548,9 @@ func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
 		if tok, err := p.consumeToken(tText); err != nil {
 			return err
-		} else if !p.allLanguages.Includes(tok.value) {
+		} else if !p.config.Languages.Includes(tok.value) {
 			return p.newParseError(tok, "invalid language '%s'; must be one of: %s",
-				tok.value, strings.Join(p.allLanguages, ", "))
+				tok.value, strings.Join(p.config.Languages, ", "))
 		} else {
 			result = append(result, tok.value)
 			return nil
@@ -567,9 +576,10 @@ func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 			if err != nil {
 				return err
 			}
-			wf, err := ir.WireFormatByName(tok.value)
-			if err != nil {
-				return err
+			wf := ir.WireFormat(tok.value)
+			if !p.config.WireFormats.Includes(wf) {
+				return p.newParseError(tok, "invalid wire format '%s'; must be one of: %s",
+					tok.value, p.config.WireFormats.Join(", "))
 			}
 			if _, ok := seenWireFormats[wf]; ok {
 				return p.newParseError(tok, "duplicate wire format: %s", tok.value)
