@@ -60,6 +60,12 @@ __BEGIN_CDECLS
 #define FIDL_ALIGN(a) (((a) + 7u) & ~7u)
 #define FIDL_ALIGNDECL alignas(FIDL_ALIGNMENT)
 
+// The maximum depth of out-of-line objects in the wire format.
+// 0 is the initial depth, 1 is the first out of line object, etc.
+// Tables count as two depth levels because the vector body and the
+// table elements are both out of line.
+#define FIDL_MAX_DEPTH 32
+
 // An opaque struct containing metadata for encoding a particular fidl
 // type. The actual length of the struct is different depending on the
 // kind of fidl type it is describing.

@@ -128,6 +128,88 @@ bool validate_null_validate_parameters() {
   END_TEST;
 }
 
+// TODO(fxb/52382) Move this test to GIDL.
+bool validate_walker_recursive_struct_max_out_of_line_depth() {
+  BEGIN_TEST;
+
+  // Up to 32 out of line objects are allowed - here there are 33 pointers.
+  uintptr_t message[34];
+  for (int i = 0; i < 33; i++) {
+    message[i] = 0xffffffffffffffff;
+  }
+  message[33] = 0;
+
+  const char* error = nullptr;
+  auto status = fidl_validate(&fidl_test_coding_RecursiveOptionalTable, &message[0],
+                              sizeof(message), 0, &error);
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_STR_EQ(error, "recursion depth exceeded");
+
+  // Reduce the max recursion depth by 1.
+  status = fidl_validate(&fidl_test_coding_RecursiveOptionalTable, &message[1],
+                         sizeof(message) - sizeof(uintptr_t), 0, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  END_TEST;
+}
+
+// TODO(fxb/52382) Move this test to GIDL.
+bool validate_walker_table_max_out_of_line_depth_exceeded() {
+  BEGIN_TEST;
+
+  // 1 table + 31 non-null pointers + 1 null pointer = 33 out of line elements.
+  uint8_t message[sizeof(fidl_vector_t) + sizeof(fidl_envelope_t) + sizeof(uintptr_t) * 32];
+  fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(message);
+  fidl_envelope_t* envelope = reinterpret_cast<fidl_envelope_t*>(message + sizeof(fidl_vector_t));
+  uintptr_t* opt_structs =
+      reinterpret_cast<uintptr_t*>(message + sizeof(fidl_vector_t) + sizeof(fidl_envelope_t));
+  vec->count = 1;
+  vec->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+  envelope->num_bytes = 256;
+  envelope->num_handles = 0;
+  envelope->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+  for (int i = 0; i < 31; i++) {
+    opt_structs[i] = FIDL_ALLOC_PRESENT;
+  }
+  opt_structs[31] = 0;
+
+  const char* error = nullptr;
+  auto status =
+      fidl_validate(&fidl_test_coding_RecursiveTableTable, &message[0], sizeof(message), 0, &error);
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_STR_EQ(error, "recursion depth exceeded");
+
+  END_TEST;
+}
+
+// TODO(fxb/52382) Move this test to GIDL.
+bool validate_walker_table_max_out_of_line_depth_matched() {
+  BEGIN_TEST;
+
+  // 1 table + 30 non-null pointers + 1 null pointer = 32 out of line elements.
+  uint8_t message[sizeof(fidl_vector_t) + sizeof(fidl_envelope_t) + sizeof(uintptr_t) * 31];
+  fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(message);
+  fidl_envelope_t* envelope = reinterpret_cast<fidl_envelope_t*>(message + sizeof(fidl_vector_t));
+  uintptr_t* opt_structs =
+      reinterpret_cast<uintptr_t*>(message + sizeof(fidl_vector_t) + sizeof(fidl_envelope_t));
+  vec->count = 1;
+  vec->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+  envelope->num_bytes = 248;
+  envelope->num_handles = 0;
+  envelope->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+  for (int i = 0; i < 30; i++) {
+    opt_structs[i] = FIDL_ALLOC_PRESENT;
+  }
+  opt_structs[30] = 0;
+
+  const char* error = nullptr;
+  auto status =
+      fidl_validate(&fidl_test_coding_RecursiveTableTable, &message[0], sizeof(message), 0, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  END_TEST;
+}
+
 bool validate_single_present_handle() {
   BEGIN_TEST;
 
@@ -1728,6 +1810,12 @@ bool validate_primitives_struct() {
 
   END_TEST;
 }
+
+BEGIN_TEST_CASE(walker)
+RUN_TEST(validate_walker_recursive_struct_max_out_of_line_depth)
+RUN_TEST(validate_walker_table_max_out_of_line_depth_exceeded)
+RUN_TEST(validate_walker_table_max_out_of_line_depth_matched)
+END_TEST_CASE(walker)
 
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(validate_null_validate_parameters)

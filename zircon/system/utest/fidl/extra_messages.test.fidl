@@ -212,3 +212,11 @@ struct Uint32VectorStruct {
 struct StringStruct {
     string str;
 };
+
+struct RecursiveOptional {
+    RecursiveOptional? inner;
+};
+
+table RecursiveTable {
+    1: RecursiveOptional inner;
+};

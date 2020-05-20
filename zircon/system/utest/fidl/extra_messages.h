@@ -57,6 +57,8 @@ extern const FidlCodedStruct fidl_test_coding_LLCPPStyleUnionStructTable;
 extern const FidlCodedStruct fidl_test_coding_Uint32VectorStructTable;
 extern const FidlCodedStruct fidl_test_coding_StringStructTable;
 
+extern const FidlCodedStruct fidl_test_coding_RecursiveOptionalTable;
+extern const FidlCodedStruct fidl_test_coding_RecursiveTableTable;
 #if defined(__cplusplus)
 }
 #endif
