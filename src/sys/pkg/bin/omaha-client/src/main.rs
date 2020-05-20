@@ -54,8 +54,10 @@ fn main() -> Result<(), Error> {
         let installer = temp_installer::FuchsiaInstaller::new()?;
         let stash = storage::Stash::new("omaha-client").await;
         let stash_ref = Rc::new(Mutex::new(stash));
-        let policy_engine =
-            policy::FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
+        let policy_engine = policy::FuchsiaPolicyEngineBuilder
+            .time_source(StandardTimeSource)
+            .load_config_from("/config/data")
+            .build();
         futures.push(policy_engine.start_watching_ui_activity().boxed_local());
         let (state_machine_control, state_machine) = StateMachineBuilder::new(
             policy_engine,
