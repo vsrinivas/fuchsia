@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
@@ -12,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include <thread>
 
@@ -23,9 +23,9 @@ struct State {
 
   State(size_t thread_count, size_t number_of_switches) : number_of_switches(number_of_switches) {
     FX_CHECK(0 == pthread_barrier_init(&start_barrier, nullptr,
-                                      thread_count + 1));  // additional thread for main
+                                       thread_count + 1));  // additional thread for main
     FX_CHECK(0 == pthread_barrier_init(&stop_barrier, nullptr,
-                                      thread_count + 1));  // additional thread for main
+                                       thread_count + 1));  // additional thread for main
   }
 };
 

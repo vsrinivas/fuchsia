@@ -84,9 +84,9 @@ executable("context_switch_overhead_helper") {
   testonly = true
   sources = [ "context_switch_overhead_helper.cc" ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//sdk/lib/syslog/cpp",
   ]
 }
 
