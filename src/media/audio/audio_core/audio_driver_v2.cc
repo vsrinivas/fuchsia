@@ -13,6 +13,8 @@
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -44,6 +46,17 @@ AudioDriverV2::AudioDriverV2(AudioDevice* owner, DriverTimeoutHandler timeout_ha
       timeout_handler_(std::move(timeout_handler)),
       ref_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
+
+  // We create the clock as a clone of MONOTONIC, but once the driver provides details (such as the
+  // clock domain), this may become a recovered clock, based on DMA progress across the ring buffer.
+  // TODO(mpuryear): Clocks should be per-domain not per-driver; default is the MONO domain's clock.
+  ref_clock_ = audio::clock::WritableCloneOfMonotonic();
+  FX_DCHECK(ref_clock_.is_valid()) << "WritableCloneOfMonotonic failed";
+
+  // This utility function also strips off the WRITE right.
+  auto status = audio::clock::DuplicateClock(ref_clock_, &read_only_clock_);
+  FX_DCHECK(status == ZX_OK);
+  FX_DCHECK(read_only_clock_.is_valid()) << "DuplicateClock failed";
 }
 
 zx_status_t AudioDriverV2::Init(zx::channel stream_channel) {

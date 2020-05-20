@@ -18,6 +18,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -91,7 +92,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // capturers and cleaning up all resources.
   fit::promise<void> Shutdown();
 
-  const zx::clock& reference_clock() { return ref_clock_; }
+  // (read-only) clock reference from AudioDriver
+  ClockReference reference_clock() const;
 
  protected:
   AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
@@ -226,8 +228,6 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   const fbl::RefPtr<AudioDeviceSettings>& device_settings() const { return device_settings_; }
 
  private:
-  void EstablishReferenceClock();
-
   DeviceRegistry& device_registry_;
   ThreadingModel& threading_model_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
@@ -270,8 +270,6 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   volatile bool activated_ = false;
 
   LinkMatrix& link_matrix_;
-
-  zx::clock ref_clock_;
 };
 
 }  // namespace media::audio

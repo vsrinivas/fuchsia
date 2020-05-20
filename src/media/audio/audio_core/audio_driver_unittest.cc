@@ -8,6 +8,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/testing/clock_test.h"
 
 namespace media::audio {
 namespace {
@@ -195,6 +196,21 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   int64_t ptscts_pos_frames = ptscts_ref_clock_to_fractional_frames.Apply(now.get()) /
                               FractionalFrames<uint32_t>(1).raw_value();
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
+}
+
+TYPED_TEST(AudioDriverTest, ClockRefIsAdvancing) {
+  ASSERT_TRUE(this->driver_->reference_clock().get().is_valid());
+  clock::testing::VerifyAdvances(this->driver_->reference_clock().get());
+}
+
+TYPED_TEST(AudioDriverTest, ClockRefClockIsReadOnly) {
+  ASSERT_TRUE(this->driver_->reference_clock().get().is_valid());
+  clock::testing::VerifyCannotBeRateAdjusted(this->driver_->reference_clock().get());
+}
+
+TYPED_TEST(AudioDriverTest, DefaultClockIsClockMono) {
+  ASSERT_TRUE(this->driver_->reference_clock().get().is_valid());
+  clock::testing::VerifyIsSystemMonotonic(this->driver_->reference_clock().get());
 }
 
 }  // namespace

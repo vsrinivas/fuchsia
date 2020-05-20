@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
 
@@ -107,6 +108,8 @@ class AudioDriver {
       FXL_NO_THREAD_SAFETY_ANALYSIS = 0;
   virtual const TimelineFunction& ptscts_ref_clock_to_fractional_frames() const = 0;
   virtual const TimelineFunction& safe_read_or_write_ref_clock_to_frames() const = 0;
+
+  virtual ClockReference reference_clock() const = 0;
 };
 
 // TODO(41922): Remove AudioDriverV1 once the transition to V2 is completed.
@@ -163,6 +166,8 @@ class AudioDriverV1 : public AudioDriver {
                       audio_set_gain_flags_t set_flags) override;
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
+
+  ClockReference reference_clock() const override { return clock_reference_; }
 
  private:
   friend class AudioDevice;
@@ -338,6 +343,9 @@ class AudioDriverV1 : public AudioDriver {
 
   // fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC is not defined for AudioDriverV1 types.
   uint32_t clock_domain_ = 0;
+  zx::clock ref_clock_;
+  zx::clock read_only_clock_;
+  ClockReference clock_reference_ = ClockReference::MakeReadonly(read_only_clock_);
 };
 
 class AudioDriverV2 : public AudioDriver {
@@ -393,6 +401,8 @@ class AudioDriverV2 : public AudioDriver {
                       audio_set_gain_flags_t set_flags) override;
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
+
+  ClockReference reference_clock() const override { return clock_reference_; }
 
  private:
   static constexpr uint32_t kDriverInfoHasUniqueId = (1u << 0);
@@ -527,6 +537,9 @@ class AudioDriverV2 : public AudioDriver {
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
 
   uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
+  zx::clock ref_clock_;
+  zx::clock read_only_clock_;
+  ClockReference clock_reference_ = ClockReference::MakeReadonly(read_only_clock_);
 };
 
 }  // namespace media::audio

@@ -65,17 +65,19 @@ TEST_F(AudioDeviceTest, UniqueIdFromStringMixedCase) {
       << " got: " << AudioDevice::UniqueIdToString(id_result_from_valid.value());
 }
 
-TEST_F(AudioDeviceTest, DefaultReferenceClock) {
-  ASSERT_TRUE(device_.reference_clock().is_valid());
-
-  clock::testing::VerifyAdvances(device_.reference_clock());
-  clock::testing::VerifyCanBeRateAdjusted(device_.reference_clock());
+TEST_F(AudioDeviceTest, ReferenceClockIsAdvancing) {
+  ASSERT_TRUE(device_.reference_clock().get().is_valid());
+  clock::testing::VerifyAdvances(device_.reference_clock().get());
 }
 
-TEST_F(AudioDeviceTest, RefClockIsClockMono) {
-  ASSERT_TRUE(device_.reference_clock().is_valid());
+TEST_F(AudioDeviceTest, ReferenceClockIsReadOnly) {
+  ASSERT_TRUE(device_.reference_clock().get().is_valid());
+  clock::testing::VerifyCannotBeRateAdjusted(device_.reference_clock().get());
+}
 
-  clock::testing::VerifyIsSystemMonotonic(device_.reference_clock());
+TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {
+  ASSERT_TRUE(device_.reference_clock().get().is_valid());
+  clock::testing::VerifyIsSystemMonotonic(device_.reference_clock().get());
 }
 
 }  // namespace

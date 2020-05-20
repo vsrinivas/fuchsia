@@ -5,8 +5,11 @@
 #include "src/media/audio/lib/clock/utils.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 
 #include <gtest/gtest.h>
+
+#include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio::clock {
 namespace {
@@ -57,10 +60,8 @@ TEST(ClockUtilsTest, DuplicateClockCanBeRead) {
   zx::clock ref_clock, dupe_clock;
   zx_time_t now, now2;
 
-  auto status =
-      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
-                        nullptr, &ref_clock);
-  EXPECT_EQ(status, ZX_OK);
+  ref_clock = audio::clock::CloneOfMonotonic();
+  EXPECT_TRUE(ref_clock.is_valid());
 
   EXPECT_EQ(ref_clock.read(&now), ZX_OK);
 
@@ -106,13 +107,14 @@ TEST(ClockUtilsTest, DuplicateClockCanBeDuplicated) {
   zx::clock ref_clock, dupe_clock, dupe_of_dupe_clock;
   zx_time_t now;
 
-  auto status =
-      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
-                        nullptr, &ref_clock);
-  EXPECT_EQ(status, ZX_OK);
+  ref_clock = audio::clock::CloneOfMonotonic();
+  EXPECT_TRUE(ref_clock.is_valid());
 
   EXPECT_EQ(DuplicateClock(ref_clock, &dupe_clock), ZX_OK);
   EXPECT_EQ(DuplicateClock(dupe_clock, &dupe_of_dupe_clock), ZX_OK);
+
+  EXPECT_TRUE(dupe_clock.is_valid());
+  EXPECT_TRUE(dupe_of_dupe_clock.is_valid());
 
   EXPECT_EQ(dupe_of_dupe_clock.read(&now), ZX_OK);
   EXPECT_GT(now, 0);
