@@ -777,7 +777,6 @@ zx_status_t Blobfs::InitializeVnodes() {
                      digest.ToString().c_str(), node_index - 1);
       return status;
     }
-    metrics_.UpdateLookup(vnode->SizeData());
     metrics_.IncrementCompressionFormatMetric(*inode);
   }
 

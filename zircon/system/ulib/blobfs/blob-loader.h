@@ -104,6 +104,8 @@ class BlobLoader {
                        const fzl::OwnedVmoMapper& vmo) const;
   zx_status_t LoadAndDecompressData(uint32_t node_index, const Inode& inode,
                                     const fzl::OwnedVmoMapper& vmo) const;
+
+  // The out duration will only be valid when Cobalt metrics are enabled. Otherwise it will be 0.
   zx_status_t LoadDataInternal(uint32_t node_index, const Inode& inode,
                                const fzl::OwnedVmoMapper& vmo, fs::Duration* out_duration,
                                uint64_t* out_bytes_read) const;

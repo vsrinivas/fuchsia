@@ -48,18 +48,24 @@ BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 void BlobfsMetrics::Dump() {
   constexpr uint64_t mb = 1 << 20;
 
+  // Timings are only recorded when Cobalt metrics are enabled.
+
   FS_TRACE_INFO("Allocation Info:\n");
-  FS_TRACE_INFO("  Allocated %zu blobs (%zu MB) in %zu ms\n", blobs_created_,
-                blobs_created_total_size_ / mb, TicksToMs(total_allocation_time_ticks_));
-  FS_TRACE_INFO("Writeback Info:\n");
-  FS_TRACE_INFO("  (Client) Wrote %zu MB of data and %zu MB of merkle trees\n",
+  FS_TRACE_INFO("  Allocated %zu blobs (%zu MB)\n", blobs_created_,
+                blobs_created_total_size_ / mb);
+  if (Collecting())
+    FS_TRACE_INFO("  Total allocation time is %zu ms\n", TicksToMs(total_allocation_time_ticks_));
+
+  FS_TRACE_INFO("Write Info:\n");
+  FS_TRACE_INFO("  Wrote %zu MB of data and %zu MB of merkle trees\n",
                 data_bytes_written_ / mb, merkle_bytes_written_ / mb);
-  FS_TRACE_INFO("  (Client) Enqueued writeback in %zu ms, made merkle tree in %zu ms\n",
-                TicksToMs(total_write_enqueue_time_ticks_),
-                TicksToMs(total_merkle_generation_time_ticks_));
-  FS_TRACE_INFO("  (Writeback Thread) Wrote %zu MB of data in %zu ms\n",
-                total_writeback_bytes_written_ / mb, TicksToMs(total_writeback_time_ticks_));
-  FS_TRACE_INFO("Lookup Info:\n");
+  if (Collecting()) {
+    FS_TRACE_INFO("  Enqueued to journal in %zu ms, made merkle tree in %zu ms\n",
+                  TicksToMs(total_write_enqueue_time_ticks_),
+                  TicksToMs(total_merkle_generation_time_ticks_));
+  }
+
+  FS_TRACE_INFO("Read Info:\n");
   FS_TRACE_INFO("  Opened %zu blobs (%zu MB)\n", blobs_opened_, blobs_opened_total_size_ / mb);
 
   auto verify_snapshot = verification_metrics_.Get();
@@ -67,9 +73,12 @@ void BlobfsMetrics::Dump() {
   FS_TRACE_INFO("  Verified %zu blobs (%zu MB data, %zu MB merkle)\n",
                 verify_snapshot.blobs_verified, verify_snapshot.data_size / mb,
                 verify_snapshot.merkle_size / mb);
-  FS_TRACE_INFO("  Spent %zu ms reading %zu MB from disk, %zu ms verifying\n",
-                TicksToMs(zx::ticks(read_snapshot.read_time)), read_snapshot.read_size / mb,
-                TicksToMs(zx::ticks(verify_snapshot.verification_time)));
+  FS_TRACE_INFO("  Read %zu MB from disk\n", read_snapshot.read_size / mb);
+  if (Collecting()) {
+    FS_TRACE_INFO("  Spent %zu ms reading, %zu ms verifying\n",
+                  TicksToMs(zx::ticks(read_snapshot.read_time)),
+                  TicksToMs(zx::ticks(verify_snapshot.verification_time)));
+  }
 }
 
 void BlobfsMetrics::ScheduleMetricFlush() {
@@ -108,11 +117,6 @@ void BlobfsMetrics::UpdateClientWrite(uint64_t data_size, uint64_t merkle_size,
   merkle_bytes_written_ += merkle_size;
   total_write_enqueue_time_ticks_ += enqueue_duration;
   total_merkle_generation_time_ticks_ += generate_duration;
-}
-
-void BlobfsMetrics::UpdateWriteback(uint64_t size, const fs::Duration& duration) {
-  total_writeback_time_ticks_ += duration;
-  total_writeback_bytes_written_ += size;
 }
 
 void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode& inode) {

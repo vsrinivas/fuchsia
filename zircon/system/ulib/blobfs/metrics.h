@@ -58,10 +58,6 @@ class BlobfsMetrics {
                          const fs::Duration& enqueue_duration,
                          const fs::Duration& generate_duration);
 
-  // Updates aggregate information about flushing bits down
-  // to the underlying storage driver.
-  void UpdateWriteback(uint64_t size, const fs::Duration& duration);
-
   // Returns a new Latency event for the given event. This requires the event to be backed up by
   // an histogram in both cobalt metrics and Inspect.
   LatencyEvent NewLatencyEvent(fs_metrics::Event event) {
@@ -101,10 +97,6 @@ class BlobfsMetrics {
   uint64_t merkle_bytes_written_ = 0;
   zx::ticks total_write_enqueue_time_ticks_ = {};
   zx::ticks total_merkle_generation_time_ticks_ = {};
-  // Measured by true time writing back to disk. This may be distinct from
-  // the client time because of asynchronous writeback buffers.
-  zx::ticks total_writeback_time_ticks_ = {};
-  uint64_t total_writeback_bytes_written_ = 0;
 
   // LOOKUP STATS
 
