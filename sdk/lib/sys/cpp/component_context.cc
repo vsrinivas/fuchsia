@@ -29,8 +29,4 @@ std::unique_ptr<ComponentContext> ComponentContext::CreateAndServeOutgoingDirect
                                             zx::channel(directory_request));
 }
 
-std::unique_ptr<ComponentContext> ComponentContext::Create() {
-  return CreateAndServeOutgoingDirectory();
-}
-
 }  // namespace sys

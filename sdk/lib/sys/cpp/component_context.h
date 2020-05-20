@@ -111,12 +111,6 @@ class ComponentContext final {
   // ```
   static std::unique_ptr<ComponentContext> CreateAndServeOutgoingDirectory();
 
-  // STOP! Use CreateAndServeOutgoingDirectory().
-  //
-  // Currently equivalent to Create(). Exists to support a transition away from
-  // automatically serving outgoing() on construction. See fxbug.dev/4741.
-  static std::unique_ptr<ComponentContext> Create();
-
   // The component's incoming directory of services from its namespace.
   //
   // Use this object to connect to services offered by other components.
