@@ -8,7 +8,7 @@
 
 ## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
-##   -c <text> add item to kernel command line
+##   -c <text> append item to kernel command line
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
@@ -61,6 +61,7 @@ VULKAN=1
 HTTP=0
 GRPCWEBPROXY_DIR=""
 CMDLINE=""
+OPT_CMDLINE=""
 SMP=$SMP_DEFAULT
 MEMSIZE=$MEMSIZE_DEFAULT
 AUTHORIZED_KEYS="${FUCHSIA_DIR}/.ssh/authorized_keys"
@@ -110,7 +111,7 @@ while [[ $# -ge 1 ]]; do
     ;;
   -c)
     shift
-    CMDLINE+="$1 "
+    OPT_CMDLINE+="$1 "
     ;;
   -ds)
     shift
@@ -428,6 +429,10 @@ CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '
 
 # Don't 'reboot' the emulator if the kernel crashes
 CMDLINE+="kernel.halt-on-panic=true "
+
+# Finally, append any values received via option. We save them for last so that
+# they can override others since "last value wins".
+CMDLINE+=$OPT_CMDLINE
 
 # run aemu
 set -x

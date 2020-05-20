@@ -1,0 +1,42 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx emu
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/emu"
+  "tools/devshell/lib/fvm.sh"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/image_build_vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+declare fx
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  btf::make_mock "${PREBUILT_AEMU_DIR}/emulator"
+  btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
+  btf::make_zircontools_mock "zbi"
+}
+
+# Test that -c arguments are added to the end of the kernel command line.
+TEST_kernel_cmdline_append() {
+  BT_EXPECT ${fx} emu --headless -c foobar
+  source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
+
+  # The last arg will contain the kernel command line string.
+  local cmdline_string="${BT_MOCK_ARGS[-1]}"
+
+  # Convert the string to an array so we can easily examine the last element.
+  local cmdline_array=($cmdline_string)
+  BT_EXPECT_EQ "${cmdline_array[-1]}" "foobar"
+}
+
+BT_RUN_TESTS "$@"
