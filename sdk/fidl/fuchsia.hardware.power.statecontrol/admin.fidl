@@ -54,9 +54,9 @@ protocol Admin {
 /// Suspend2 is called. The main purpose of this protocol is to be able to track reboot reasons.
 /// Consider relying Component Framework's orderly shutdown if you're looking at using this
 /// protocol.
-/// [Discoverable]
 // TODO(52277): Revisit this protocol once Component Manager performs an orderly
 // shutdown.
+[Discoverable]
 protocol SuspendWatcherRegister {
     /// Register a callback to be executed when Suspend or Suspend2 is called.
     Register(SuspendWatcher watcher);
@@ -80,6 +80,8 @@ table SuspendRequest {
 };
 
 /// Reasons why components instruct a device to reboot.
+//  If you make a CL adding a new value to RebootReason, please add a member of
+//  //src/developer/feedback/OWNERs as a reviewer.
 enum RebootReason : uint16 {
     USER_REQUEST = 1;
     SYSTEM_UPDATE = 2;
