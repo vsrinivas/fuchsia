@@ -194,9 +194,9 @@ template("fidl") {
           output_stem = "cpp/libfuzzer"
           target_suffix = "libfuzzer"
           additional_public_deps = [
-            "//zircon/public/lib/async-default",
-            "//zircon/public/lib/async-loop-cpp",
-            "//zircon/public/lib/async-loop-default",
+            "//zircon/system/ulib/async-default",
+            "//zircon/system/ulib/async-loop:async-loop-cpp",
+            "//zircon/system/ulib/async-loop:async-loop-default",
           ]
           header_only = true
 

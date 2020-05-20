@@ -98,8 +98,8 @@ executable("vkcube_on_scenic") {
     "CUBE_USE_IMAGE_PIPE",
   ]
   deps = [
-    "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
+    "$zircon_build_root/system/ulib/async-loop:async-loop-default",
     "$zircon_build_root/system/ulib/trace",
     "$zircon_build_root/system/ulib/trace-provider:trace-provider-with-fdio",
     "//src/lib/vulkan",
@@ -119,8 +119,8 @@ executable("vkcube_on_fb") {
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
   deps = [
-    "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
+    "$zircon_build_root/system/ulib/async-loop:async-loop-default",
     "$zircon_build_root/system/ulib/trace",
     "$zircon_build_root/system/ulib/trace-provider:trace-provider-with-fdio",
     "//src/lib/vulkan",
@@ -143,8 +143,8 @@ executable("vkcube_skip_present") {
     "CUBE_SKIP_PRESENT",
   ]
   deps = [
-    "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/async-loop-default",
+    "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
+    "$zircon_build_root/system/ulib/async-loop:async-loop-default",
     "$zircon_build_root/system/ulib/trace",
     "$zircon_build_root/system/ulib/trace-provider",
     "//src/lib/vulkan",

@@ -1,25 +1,5 @@
 [
   {
-    "label": "//zircon/system/ulib/async-default:async-default",
-    "name": "async-default",
-    "sdk": true
-  },
-  {
-    "label": "//zircon/system/ulib/async-loop:async-loop",
-    "name": "async-loop",
-    "sdk": true
-  },
-  {
-    "label": "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "name": "async-loop-cpp",
-    "sdk": true
-  },
-  {
-    "label": "//zircon/system/ulib/async-loop:async-loop-default",
-    "name": "async-loop-default",
-    "sdk": true
-  },
-  {
     "label": "//zircon/system/ulib/fzl:fzl",
     "name": "fzl",
     "sdk": false
