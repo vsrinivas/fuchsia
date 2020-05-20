@@ -83,10 +83,24 @@ impl FlowWindow {
             waker.wake();
         }
     }
+
+    /// Resets the internal counter to zero.
+    pub fn reset(&self) {
+        let mut inner = self.inner.lock();
+        traceln!("FlowWindow::reset");
+        (*inner).0 = 0;
+    }
+
+    /// Method for getting the current value of the
+    /// flow window. Intended to only be used for testing.
+    #[cfg(test)]
+    pub fn get(&self) -> u32 {
+        self.inner.lock().0
+    }
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::*;
     use fuchsia_async as fasync;
 
@@ -115,5 +129,11 @@ pub(crate) mod tests {
         assert_eq!(flow_window.dec(1).now_or_never(), Some(()));
 
         futures::join!(flow_window.dec(1), async { flow_window.inc(1) });
+
+        flow_window.inc(1);
+        assert_eq!(flow_window.get(), 1);
+        flow_window.reset();
+        assert_eq!(flow_window.get(), 0);
+        assert_eq!(flow_window.dec(1).now_or_never(), None);
     }
 }

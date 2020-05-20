@@ -75,6 +75,7 @@ where
 {
     async fn open(&self) -> Result<(), Error> {
         self.device_proxy.open().await?.map_err(SpinelError)?;
+        self.send_window.reset();
         self.device_proxy.ready_to_receive_frames(INBOUND_FRAME_WINDOW_SIZE.try_into().unwrap())?;
         Ok(())
     }
