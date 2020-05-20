@@ -58,6 +58,9 @@ use crate::hardware_power_statecontrol::facade::HardwarePowerStatecontrolFacade;
 // Hwinfo related includes
 use crate::hwinfo::facade::HwinfoFacade;
 
+// i2c related includes
+use crate::i2c::facade::I2cFacade;
+
 // Input related includes
 use crate::input::facade::InputFacade;
 
@@ -156,6 +159,7 @@ impl Sl4f {
                 "gatt_server_facade" => GattServerFacade::new(),
                 "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
+                "i2c_facade" => I2cFacade::new(),
                 "input_facade" => InputFacade::new(),
                 "launch_facade" => LaunchFacade::new(),
                 "light_facade" => LightFacade::new(),

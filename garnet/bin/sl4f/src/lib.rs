@@ -19,6 +19,7 @@ pub mod factory_store;
 pub mod file;
 pub mod hardware_power_statecontrol;
 pub mod hwinfo;
+pub mod i2c;
 pub mod input;
 pub mod launch;
 pub mod light;

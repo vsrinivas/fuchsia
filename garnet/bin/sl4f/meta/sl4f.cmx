@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/i2c",
             "class/light",
             "class/wlanphy",
             "wifi"
@@ -25,6 +26,7 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.hardware.i2c",
             "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.hwinfo.Board",
