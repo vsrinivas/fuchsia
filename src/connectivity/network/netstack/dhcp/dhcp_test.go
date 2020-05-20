@@ -901,8 +901,6 @@ func TestStateTransition(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var wg sync.WaitGroup
-			defer wg.Wait()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -976,11 +974,7 @@ func TestStateTransition(t *testing.T) {
 				return &b
 			}
 
-			wg.Add(1)
-			go func() {
-				c.Run(ctx)
-				wg.Done()
-			}()
+			c.Run(ctx)
 
 			var addr tcpip.AddressWithPrefix
 			select {
@@ -1045,8 +1039,6 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	)
 	testTimeout := stateTransitionTestTimeout(leaseLength)
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -1096,11 +1088,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		}
 	}
 
-	wg.Add(1)
-	go func() {
-		c.Run(ctx)
-		wg.Done()
-	}()
+	c.Run(ctx)
 
 	select {
 	case gotAddr := <-addrCh:

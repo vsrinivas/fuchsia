@@ -7,9 +7,7 @@ package eth
 // #include <zircon/device/ethernet.h>
 // #include <zircon/types.h>
 import "C"
-import (
-	"fmt"
-)
+import "fmt"
 
 const FifoMaxSize = C.ZX_FIFO_MAX_SIZE_BYTES
 const cookieMagic = 0x42420102 // used to fill top 32-bits of FifoEntry.cookie
