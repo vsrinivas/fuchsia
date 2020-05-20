@@ -40,18 +40,18 @@ zx_status_t register_int_handler(unsigned int vector, int_handler handler, void*
   return ZX_OK;
 }
 
-static zx_status_t default_mask(unsigned int vector) { return ZX_ERR_NOT_CONFIGURED; }
+static zx_status_t default_mask(unsigned int vector) { return ZX_ERR_NOT_SUPPORTED; }
 
-static zx_status_t default_unmask(unsigned int vector) { return ZX_ERR_NOT_CONFIGURED; }
+static zx_status_t default_unmask(unsigned int vector) { return ZX_ERR_NOT_SUPPORTED; }
 
 static zx_status_t default_configure(unsigned int vector, enum interrupt_trigger_mode tm,
                                      enum interrupt_polarity pol) {
-  return ZX_ERR_NOT_CONFIGURED;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t default_get_config(unsigned int vector, enum interrupt_trigger_mode* tm,
                                       enum interrupt_polarity* pol) {
-  return ZX_ERR_NOT_CONFIGURED;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static bool default_is_valid(unsigned int vector, uint32_t flags) { return false; }
@@ -77,7 +77,7 @@ static bool default_msi_supports_masking() { return false; }
 
 static zx_status_t default_msi_alloc_block(uint requested_irqs, bool can_target_64bit, bool is_msix,
                                            msi_block_t* out_block) {
-  return ZX_ERR_NOT_CONFIGURED;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static void default_msi_free_block(msi_block_t* block) {}
@@ -144,9 +144,7 @@ bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
 
 unsigned int remap_interrupt(unsigned int vector) { return intr_ops->remap(vector); }
 
-void interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
-  intr_ops->send_ipi(target, ipi);
-}
+void interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) { intr_ops->send_ipi(target, ipi); }
 
 void interrupt_init_percpu() { intr_ops->init_percpu(); }
 
