@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{location::InspectLocation, options::PathFormat, result::IqueryResult},
+    crate::{deprecated_options::PathFormat, location::InspectLocation, result::IqueryResult},
     anyhow::Error,
     fuchsia_inspect::reader::NodeHierarchy,
 };

@@ -4,9 +4,9 @@
 
 use {
     crate::{
+        deprecated_options::PathFormat,
         formatting::{format_parts, get_child_listing, get_locations, Formatter},
         location::InspectLocation,
-        options::PathFormat,
         result::IqueryResult,
     },
     anyhow::{format_err, Error},

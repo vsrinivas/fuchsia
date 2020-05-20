@@ -4,25 +4,31 @@
 
 use {
     crate::{
-        options::{usage, ModeCommand, Options, OptionsReadError},
+        commands::Command,
+        deprecated_options::{usage, DeprecatedOptions, ModeCommand, OptionsReadError},
+        options::Options,
         result::IqueryResult,
     },
     anyhow::Error,
+    argh::FromArgs,
     fuchsia_async as fasync,
     std::{env, path::Path},
 };
 
 mod commands;
+mod deprecated_commands;
+mod deprecated_options;
 mod formatting;
 mod location;
 mod options;
 mod result;
+mod types;
 
 /// Exceute the command specified in the |options|.
-async fn execute(options: &Options) -> Vec<Result<IqueryResult, Error>> {
+async fn legacy_execute(options: &DeprecatedOptions) -> Vec<Result<IqueryResult, Error>> {
     match options.mode {
-        ModeCommand::Cat | ModeCommand::Ls => commands::cat(&options.path).await,
-        ModeCommand::Find => commands::find(&options.path, options.recursive).await,
+        ModeCommand::Cat | ModeCommand::Ls => deprecated_commands::cat(&options.path).await,
+        ModeCommand::Find => deprecated_commands::find(&options.path, options.recursive).await,
         ModeCommand::Report => {
             // REPORT is a CAT and Options takes care of treating it as such.
             panic!("Unexpected command");
@@ -31,7 +37,7 @@ async fn execute(options: &Options) -> Vec<Result<IqueryResult, Error>> {
 }
 
 /// Print the results to stdout depending on the format and mode specified in |options|.
-fn output(results: Vec<IqueryResult>, options: &Options) {
+fn output(results: Vec<IqueryResult>, options: &DeprecatedOptions) {
     let output = match options.mode {
         ModeCommand::Cat | ModeCommand::Report => options.formatter().format_recursive(results),
         ModeCommand::Find => options.formatter().format_locations(results),
@@ -43,9 +49,8 @@ fn output(results: Vec<IqueryResult>, options: &Options) {
     };
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let options = Options::read(env::args().into_iter()).await.unwrap_or_else(|error| {
+async fn legacy_fallback() -> Result<(), Error> {
+    let options = DeprecatedOptions::read(env::args().into_iter()).await.unwrap_or_else(|error| {
         eprintln!("Error: {}", error);
         match error {
             OptionsReadError::ParseError(_) => {
@@ -60,7 +65,7 @@ async fn main() -> Result<(), Error> {
         std::env::set_current_dir(Path::new(&path))?;
     }
 
-    let results = execute(&options)
+    let results = legacy_execute(&options)
         .await
         .into_iter()
         .filter_map(|result| match result {
@@ -77,6 +82,32 @@ async fn main() -> Result<(), Error> {
     }
 
     output(results, &options);
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    // TODO(fxbug.dev/45458): just use `argh::from_env` once we don't need to support the legacy
+    // interface.
+    let strings: Vec<String> = std::env::args().collect();
+    let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
+    match Options::from_args(&[strs[0]], &strs[1..]) {
+        Ok(options) => {
+            match options.command.execute().await {
+                Ok(()) => {}
+                Err(err) => eprintln!("{}", err),
+            };
+        }
+        Err(early_exit) => match early_exit.status {
+            Ok(()) => {
+                println!("{}", early_exit.output);
+                std::process::exit(0);
+            }
+            Err(()) => {
+                legacy_fallback().await?;
+            }
+        },
+    }
 
     Ok(())
 }
