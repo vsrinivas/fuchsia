@@ -65,8 +65,6 @@ ParseResult Keyboard::ParseInputReportDescriptor(
   }
 
   // No error, write to class members.
-  descriptor_.input = KeyboardInputDescriptor();
-
   key_values_ = std::move(key_values);
 
   num_key_fields_ = num_key_fields;

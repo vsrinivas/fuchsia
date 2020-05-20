@@ -7,7 +7,6 @@
 
 #include <set>
 
-#include "src/ui/input/lib/hid-input-report/descriptors.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report {
@@ -51,8 +50,6 @@ class Keyboard : public Device {
   size_t num_leds_ = 0;
   uint8_t output_report_id_ = 0;
   size_t output_report_size_ = 0;
-
-  KeyboardDescriptor descriptor_ = {};
 };
 
 }  // namespace hid_input_report

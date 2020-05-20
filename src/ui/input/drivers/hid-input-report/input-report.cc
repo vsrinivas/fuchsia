@@ -23,7 +23,6 @@
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
 
-#include "src/ui/input/lib/hid-input-report/descriptors.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report_dev {

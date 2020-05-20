@@ -5,7 +5,6 @@
 #ifndef SRC_UI_INPUT_LIB_HID_INPUT_REPORT_CONSUMER_CONTROL_H_
 #define SRC_UI_INPUT_LIB_HID_INPUT_REPORT_CONSUMER_CONTROL_H_
 
-#include "src/ui/input/lib/hid-input-report/descriptors.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report {
@@ -34,8 +33,6 @@ class ConsumerControl : public Device {
       button_fields_;
   size_t input_report_size_ = 0;
   uint8_t input_report_id_ = 0;
-
-  ConsumerControlDescriptor descriptor_ = {};
 };
 
 }  // namespace hid_input_report

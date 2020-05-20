@@ -16,7 +16,6 @@
 #include <gtest/gtest.h>
 
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/ui/input/lib/hid-input-report/fidl.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"
 #include "src/ui/lib/input_report_reader/tests/mock_device_watcher.h"

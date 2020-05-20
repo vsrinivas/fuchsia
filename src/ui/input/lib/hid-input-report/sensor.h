@@ -5,7 +5,6 @@
 #ifndef SRC_UI_INPUT_LIB_HID_INPUT_REPORT_SENSOR_H_
 #define SRC_UI_INPUT_LIB_HID_INPUT_REPORT_SENSOR_H_
 
-#include "src/ui/input/lib/hid-input-report/descriptors.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report {
@@ -28,8 +27,6 @@ class Sensor : public Device {
  private:
   hid::Attributes values_[fuchsia_input_report::SENSOR_MAX_VALUES] = {};
   size_t num_values_ = 0;
-
-  SensorDescriptor descriptor_ = {};
 
   size_t report_size_ = 0;
   uint8_t report_id_ = 0;

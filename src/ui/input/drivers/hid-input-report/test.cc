@@ -22,7 +22,6 @@
 #include <zxtest/zxtest.h>
 
 #include "input-report.h"
-#include "src/ui/input/lib/hid-input-report/descriptors.h"
 
 namespace hid_input_report_dev {
 
