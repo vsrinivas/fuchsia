@@ -1,3 +1,4 @@
+pub mod args;
 pub mod constants;
 
 pub use core_macros::{ffx_command, ffx_plugin};

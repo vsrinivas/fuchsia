@@ -5,7 +5,7 @@
 use {
   argh::FromArgs,
   ffx_config_args::ConfigCommand,
-  ffx_args::{DaemonCommand, EchoCommand, ListCommand, QuitCommand},
+  ffx_core::args::{DaemonCommand, EchoCommand, ListCommand, QuitCommand},
 };
 
 #[derive(FromArgs, Debug, PartialEq)]

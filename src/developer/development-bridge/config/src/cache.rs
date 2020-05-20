@@ -102,8 +102,8 @@ async fn load_config_with_instant(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_args::DaemonCommand;
     use ffx_command::Subcommand;
+    use ffx_core::args::DaemonCommand;
     use futures::future::join_all;
     use std::time::Duration;
 

@@ -32,26 +32,6 @@ template("ffx") {
     }
   }
 
-  rustc_library("args_lib") {
-    name = "ffx_args"
-    source_root = "./src/args.rs"
-
-    deps = args_deps + [
-             "config:args_lib",
-             "core:lib",
-             "//third_party/rust_crates:argh",
-           ]
-    non_rust_deps = [ "//third_party/boringssl" ]
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "name",
-                             "deps",
-                             "source_root",
-                             "non_rust_deps",
-                           ])
-  }
-
   command("ffx_sub_command") {
     output_name = "cmd_args.rs"
     plugin_deps = invoker.plugin_deps
@@ -61,8 +41,8 @@ template("ffx") {
     name = "ffx_command"
     source_root = "$target_gen_dir/cmd_args.rs"
     deps = args_deps + [
-             ":args_lib",
              ":ffx_sub_command",
+             "core:lib",
              "config:args_lib",
              "//third_party/rust_crates:argh",
            ]
@@ -87,7 +67,6 @@ template("ffx") {
     deps = ffx_deps + [
              ":command_lib",
              ":plugins_lib",
-             ":args_lib",
            ]
     non_rust_deps = [ "//third_party/boringssl" ]
     forward_variables_from(invoker,
@@ -111,7 +90,6 @@ template("ffx") {
     testonly = true
 
     deps = tests_deps + [
-             ":args_lib_test($host_toolchain)",
              ":bin_test($host_toolchain)",
              "config:tests($host_toolchain)",
            ]

@@ -100,7 +100,6 @@ template("ffx_plugin") {
       ":" + args,
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//src/connectivity/overnet/lib/hoist",
-      "//src/developer/development-bridge:args_lib",
       "//src/developer/development-bridge/core:lib",
       "//src/developer/development-bridge:command_lib",
       "//src/developer/development-bridge/config:lib",

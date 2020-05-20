@@ -173,6 +173,7 @@ mod test {
     use {
         super::*,
         ffx_config::{ffx_cmd, ffx_env},
+        ffx_core::args::DaemonCommand,
         fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest},
         futures::TryStreamExt,
     };
@@ -212,10 +213,7 @@ mod test {
         // Testing these macros outside of the config library.
         assert_eq!(
             ffx_cmd!(),
-            ffx_command::Ffx {
-                config: None,
-                subcommand: ffx_command::Subcommand::Daemon(ffx_args::DaemonCommand {}),
-            }
+            Ffx { config: None, subcommand: Subcommand::Daemon(DaemonCommand {}) }
         );
         let env: Result<(), Error> = ffx_env!();
         assert!(env.is_err());

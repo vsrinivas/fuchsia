@@ -14,7 +14,7 @@ macro_rules! ffx_cmd {
         {
             ffx_command::Ffx {
                 config: None,
-                subcommand: ffx_command::Subcommand::Daemon(ffx_args::DaemonCommand {}),
+                subcommand: ffx_command::Subcommand::Daemon(ffx_core::args::DaemonCommand {}),
             }
         }
         #[cfg(not(test))]

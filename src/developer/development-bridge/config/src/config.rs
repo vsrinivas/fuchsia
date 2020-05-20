@@ -166,8 +166,8 @@ impl<'a> WriteConfig for Config<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_args::DaemonCommand;
     use ffx_command::Subcommand;
+    use ffx_core::args::DaemonCommand;
 
     fn test_heuristic(key: &str) -> Option<Value> {
         Some(Value::String(key.to_string()))
