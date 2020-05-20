@@ -29,7 +29,7 @@ write_file(pkg_archive_manifest, pkg_archive_contents)
 pkg_archive = "$root_build_dir/packages.tar.gz"
 compiled_action("package_archive") {
   testonly = true
-  tool = "//build/tools/tar_maker"
+  tool = "//build/tools/tarmaker"
   inputs = [ pkg_archive_manifest ]
   outputs = [ pkg_archive ]
   args = [

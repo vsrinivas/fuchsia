@@ -6,13 +6,13 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("lib") {
-  name = "fuchsia.googlesource.com/tarmaker"
+  name = "go.fuchsia.dev/fuchsia/build/tools/tarmaker"
 
   sources = [ "main.go" ]
 }
 
-go_binary("tar_maker") {
-  gopackage = "fuchsia.googlesource.com/tarmaker"
+go_binary("tarmaker") {
+  gopackage = "go.fuchsia.dev/fuchsia/build/tools/tarmaker"
 
   deps = [ ":lib" ]
 }

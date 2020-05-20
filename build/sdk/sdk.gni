@@ -262,7 +262,7 @@ template("sdk") {
     compiled_action(archive_generate_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      tool = "//build/tools/tar_maker"
+      tool = "//build/tools/tarmaker"
 
       inputs = [ archive_manifest_file ]
 
