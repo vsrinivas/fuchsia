@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
-    log::{error, info, warn},
+    log::{error, info, warn, debug},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -317,7 +317,9 @@ fn maybe_serve_handler_async(event: Event) -> Option<ClientEnd<fsys::HandlerMark
         // Expect exactly one call to Resume
         if let Some(Ok(fsys::HandlerRequest::Resume { responder })) = stream.next().await {
             event.resume();
-            responder.send().unwrap();
+            if let Err(e) = responder.send() {
+                debug!("failed to respond to Resume request: {:?}", e);
+            }
         }
     });
     Some(client_end)
