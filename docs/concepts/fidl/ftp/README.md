@@ -36,6 +36,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-054](ftp-054.md) | 2019-11-21 | 2019-12-12 | Parameter Attributes &mdash; A Chance to Write Self Documenting APIs
 [FTP-049](ftp-049.md) | 2019-11-20 | 2019-12-19 | FIDL Tuning Process Evolution
 [FTP-059](ftp-059.md) | 2020-03-16 | 2020-03-19 | Reserved Bits in Vector/String/Array Count Fields
+[FTP-040](ftp-040.md) | 2019-04-07 | 2020-05-14 | Identifier Uniqueness &mdash; SnowFlake vs SNOW_FLAKE
 
 ## Rejected proposals
 
@@ -48,7 +49,6 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-035](ftp-035.md) | 2019-02-28 | *withdrawn*| Automatic Flow Tracing
 [FTP-036](ftp-036.md) | 2019-03-07 | 2019-03-14 | Update to Struct Declarations
 [FTP-042](ftp-042.md) | 2019-04-01 | 2019-04-01 | Non Nullable Types &mdash; Poisson d'Avril
-[FTP-040](ftp-040.md) | 2019-04-07 | 2019-04-18 | Identifier Uniqueness &mdash; SnowFlake vs SNOW_FLAKE
 [FTP-045](ftp-045.md) | 2018-12-26 | 2019-05-29 | Zero-Size Empty Structs: &infin;% more efficient
 
 ## Process
