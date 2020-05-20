@@ -14,7 +14,7 @@ your source device supports AAC, you are likely to get high quality audio.
 The `bt-a2dp-sink` component requires some services to be reachable when it is
 run to be useful.  For audio playback, a provider of the
 `fuchsia.media.SessionAudioConsumerFactory` service must be available. One provider of
-this currently in Fuchsia is the `mediaplayer` package located at `//src/media/playback/mediaplayer` 
+this currently in Fuchsia is the `mediaplayer` package located at `//src/media/playback/mediaplayer`
 is one provider, but the config must also be provided.
 
 The Player must in turn be able to decode audio and play it. Currently SBC
@@ -23,13 +23,13 @@ For most players to play audio, the `fuchsia.media.Audio` and
 `fuchsia.media.AudioCore` services will be used.
 
 Without too many extra dependencies, adding the `services` bundle from audio,
-the `mediaplayer` package and the audio consumer config package to the available 
-packages will provide all of these requirements. 
+the `mediaplayer` package and the audio consumer config package to the available
+packages will provide all of these requirements.
 
 Adding the following to your Fuchsia set configuration should build them all and make
 them available:
 
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //src/media/audio/bundles:services --with //src/media/playback/mediaplayer --with-base=//src/media/playback/mediaplayer:audio_consumer_config`
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //src/media/audio/bundles:services --with //src/media/playback/mediaplayer --with-base=//src/media/playback/mediaplayer:audio_consumer_config --with //src/media/codec:codec_factory --with //src/media/codec:codec_runner_sw_sbc`
 
 The profile makes an effort to determine if playing media will fail, and quits
 with a message on startup.
