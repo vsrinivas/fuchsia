@@ -33,7 +33,9 @@ constexpr bool kEnableRendererWavWriters = false;
 class AudioAdmin;
 class StreamRegistry;
 
-class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
+class BaseRenderer : public AudioObject,
+                     public fuchsia::media::AudioRenderer,
+                     public std::enable_shared_from_this<BaseRenderer> {
  public:
   ~BaseRenderer() override;
 

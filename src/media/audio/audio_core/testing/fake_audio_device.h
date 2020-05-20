@@ -73,14 +73,18 @@ class FakeAudioOutput : public FakeAudioDevice {
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
       const AudioObject& source, std::shared_ptr<ReadableStream> stream) override {
     stream->SetMinLeadTime(min_lead_time_);
+    stream_ = std::move(stream);
     return fit::ok(mixer_);
   }
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
+
+  const std::shared_ptr<ReadableStream>& stream() const { return stream_; }
 
   // Must implement, because this class descends from AudioDevice, not AudioOutput
   zx::duration min_lead_time() const override { return min_lead_time_; }
 
  private:
+  std::shared_ptr<ReadableStream> stream_;
   std::shared_ptr<mixer::NoOp> mixer_ = std::make_shared<mixer::NoOp>();
   zx::duration min_lead_time_;
 };

@@ -82,8 +82,22 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
 void BaseRenderer::CleanupDestLink(const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::CleanupDestLink");
   auto it = packet_queues_.find(&dest);
-  FX_CHECK(it != packet_queues_.end());
+  FX_DCHECK(it != packet_queues_.end());
+  auto queue = std::move(it->second);
   packet_queues_.erase(it);
+
+  // Flush this queue to:
+  //
+  //   1) Ensure we release any packet references in order.
+  //   2) Hold a reference to self until the flush has completed. This is needed because the packets
+  //      in the queue are allocated using a SlabAllocated owned by us, so we ensure we outlive
+  //      our packets.
+  //
+  // It's okay to release the reference to |queue| since either the Flush will have completed
+  // synchronously, or otherwise the mix job will hold a strong reference to the queue and perform
+  // the flush at the end of the mix job when the packet queue buffers are unlocked.
+  queue->Flush(PendingFlushToken::Create(context_.threading_model().FidlDomain().dispatcher(),
+                                         [self = shared_from_this()] {}));
 }
 
 void BaseRenderer::RecomputeMinLeadTime() {

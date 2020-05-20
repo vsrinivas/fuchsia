@@ -194,5 +194,45 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   EXPECT_FALSE(context().audio_admin().IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
 }
 
+TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
+  auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
+                                                 &context().link_matrix());
+  context().route_graph().AddDevice(output.get());
+  RunLoopUntilIdle();
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+
+  // Enqueue a packet
+  fuchsia::media::StreamPacket packet;
+  packet.pts = fuchsia::media::NO_TIMESTAMP;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = 128;
+  fidl_renderer_->SendPacketNoReply(std::move(packet));
+  RunLoopUntilIdle();
+
+  // This will be the packet queue created when the link between the renderer and output was formed.
+  auto packet_queue = output->stream();
+  ASSERT_TRUE(packet_queue);
+
+  // Acquire a buffer.
+  auto buf = packet_queue->ReadLock(zx::time(0), 0, 32);
+  ASSERT_TRUE(buf);
+  EXPECT_EQ(0u, buf->start().Floor());
+  EXPECT_EQ(32u, buf->length().Floor());
+
+  // Simulate closing the client binding. This will shutdown the renderer.
+  fidl_renderer_.Unbind();
+  RunLoopUntilIdle();
+
+  // Now release the buffer.
+  buf = std::nullopt;
+  RunLoopUntilIdle();
+}
+
 }  // namespace
 }  // namespace media::audio
