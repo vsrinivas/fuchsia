@@ -8,7 +8,7 @@ mod access_point;
 mod client;
 mod generic;
 pub use self::access_point::{
-    ApMessage, ApMessageSender, ApStateUpdate, ApStatesUpdate, ConnectedClientInformation,
+    ApListenerMessageSender, ApMessage, ApStateUpdate, ApStatesUpdate, ConnectedClientInformation,
 };
 pub use self::client::{ClientMessage, ClientMessageSender, ClientNetworkState, ClientStateUpdate};
 pub use self::generic::{serve, Message};

@@ -24,6 +24,8 @@ use {
     std::sync::Arc,
 };
 
+#[cfg(test)]
+mod access_point;
 pub mod types;
 
 #[derive(Debug)]
@@ -44,7 +46,7 @@ pub(crate) struct AccessPoint {
     inner: Arc<Mutex<AccessPointInner>>,
     phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
     device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    update_sender: Option<listener::ApMessageSender>,
+    update_sender: Option<listener::ApListenerMessageSender>,
     iface_id: Arc<Mutex<Option<u16>>>,
 }
 
@@ -75,7 +77,7 @@ impl AccessPoint {
     }
 
     /// Allows the policy service to set the update sender when starting the AP service.
-    pub fn set_update_sender(&mut self, update_sender: listener::ApMessageSender) {
+    pub fn set_update_sender(&mut self, update_sender: listener::ApListenerMessageSender) {
         self.update_sender = Some(update_sender);
     }
 

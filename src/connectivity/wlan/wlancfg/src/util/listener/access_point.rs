@@ -7,7 +7,7 @@ use {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ConnectedClientInformation {
-    count: u8,
+    pub count: u8,
 }
 
 impl Into<fidl_policy::ConnectedClientInformation> for ConnectedClientInformation {
@@ -81,7 +81,7 @@ impl Listener<Vec<fidl_policy::AccessPointState>> for fidl_policy::AccessPointSt
 
 // Helpful aliases for servicing client updates
 pub type ApMessage = Message<fidl_policy::AccessPointStateUpdatesProxy, ApStatesUpdate>;
-pub type ApMessageSender = mpsc::UnboundedSender<ApMessage>;
+pub type ApListenerMessageSender = mpsc::UnboundedSender<ApMessage>;
 
 #[cfg(test)]
 mod tests {
