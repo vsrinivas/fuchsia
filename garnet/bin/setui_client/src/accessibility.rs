@@ -41,12 +41,8 @@ pub async fn command(
 
     if settings == AccessibilitySettings::empty() {
         // No values set, perform a get instead.
-        let setting = proxy.watch().await?;
-
-        match setting {
-            Ok(setting_value) => Ok(format!("{:#?}", setting_value)),
-            Err(err) => Ok(format!("{:#?}", err)),
-        }
+        let setting_value = proxy.watch2().await?;
+        Ok(format!("{:#?}", setting_value))
     } else {
         let mutate_result = proxy.set(settings).await?;
         match mutate_result {

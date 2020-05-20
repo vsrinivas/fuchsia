@@ -19,9 +19,6 @@ class MockSetUIAccessibility : public fuchsia::settings::Accessibility {
   ~MockSetUIAccessibility() override;
 
   // |fuchsia.settings.Accessibility|
-  void Watch(WatchCallback callback) override;
-
-  // |fuchsia.settings.Accessibility|
   void Watch2(Watch2Callback callback) override;
 
   // |fuchsia.settings.Accessibility|
@@ -29,8 +26,6 @@ class MockSetUIAccessibility : public fuchsia::settings::Accessibility {
 
  private:
   fidl::BindingSet<fuchsia::settings::Accessibility> bindings_;
-
-  WatchCallback watchCallback_;
 
   Watch2Callback watch2Callback_;
 

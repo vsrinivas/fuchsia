@@ -7,10 +7,13 @@ use {
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
-    crate::switchboard::base::SettingType,
+    crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError},
+    crate::tests::fakes::base::create_setting_handler,
     crate::EnvironmentBuilder,
+    fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_types::ColorRgba,
+    fuchsia_zircon::Status,
     futures::lock::Mutex,
     std::sync::Arc,
 };
@@ -21,6 +24,33 @@ async fn create_test_accessibility_env(
     storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> AccessibilityProxy {
     EnvironmentBuilder::new(storage_factory)
+        .settings(&[SettingType::Accessibility])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap()
+        .connect_to_service::<AccessibilityMarker>()
+        .unwrap()
+}
+
+// Creates an environment that will fail on a get request.
+async fn create_test_env_with_failures(
+    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+) -> AccessibilityProxy {
+    EnvironmentBuilder::new(storage_factory)
+        .handler(
+            SettingType::Accessibility,
+            create_setting_handler(Box::new(move |request| {
+                if request == SettingRequest::Get {
+                    Box::pin(async move {
+                        Err(SwitchboardError::UnhandledType {
+                            setting_type: SettingType::Accessibility,
+                        })
+                    })
+                } else {
+                    Box::pin(async { Ok(None) })
+                }
+            })),
+        )
         .settings(&[SettingType::Accessibility])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -73,8 +103,7 @@ async fn test_accessibility_set_all() {
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Fetch the initial value.
-    let settings =
-        accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = accessibility_proxy.watch2().await.expect("watch completed");
     assert_eq!(settings, initial_settings);
 
     // Set the various settings values.
@@ -90,8 +119,7 @@ async fn test_accessibility_set_all() {
     assert_eq!(expected_info, retrieved_struct);
 
     // Verify the value we set is returned when watching.
-    let settings =
-        accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = accessibility_proxy.watch2().await.expect("watch completed");
     assert_eq!(settings, expected_settings);
 }
 
@@ -165,7 +193,67 @@ async fn test_accessibility_set_captions() {
     assert_eq!(expected_info, retrieved_struct);
 
     // Verify the value we set is returned when watching.
-    let settings =
-        accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = accessibility_proxy.watch2().await.expect("watch completed");
     assert_eq!(settings, expected_settings);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch() {
+    let accessibility_proxy = create_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let result = accessibility_proxy.watch().await.ok();
+    assert_eq!(result, Some(Err(Error::Failed)));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch2() {
+    let accessibility_proxy = create_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let result = accessibility_proxy.watch2().await;
+    assert!(result.is_err());
+    assert_eq!(
+        ClientChannelClosed(Status::INTERNAL).to_string(),
+        result.err().unwrap().to_string()
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_simultaneous_watch() {
+    const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
+    const TEST_COLOR: ColorRgba = ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
+    const CHANGED_FONT_STYLE: CaptionFontStyle = CaptionFontStyle {
+        family: Some(CaptionFontFamily::Casual),
+        color: Some(TEST_COLOR),
+        relative_size: Some(1.0),
+        char_edge_style: Some(EdgeStyle::Raised),
+    };
+    const CHANGED_CAPTION_SETTINGS: CaptionsSettings = CaptionsSettings {
+        for_media: Some(true),
+        for_tts: Some(true),
+        font_style: Some(CHANGED_FONT_STYLE),
+        window_color: Some(TEST_COLOR),
+        background_color: Some(TEST_COLOR),
+    };
+
+    let mut expected_settings = AccessibilitySettings::empty();
+    expected_settings.audio_description = Some(true);
+    expected_settings.screen_reader = Some(true);
+    expected_settings.color_inversion = Some(true);
+    expected_settings.enable_magnification = Some(true);
+    expected_settings.color_correction = Some(CHANGED_COLOR_BLINDNESS_TYPE.into());
+    expected_settings.captions_settings = Some(CHANGED_CAPTION_SETTINGS);
+
+    let accessibility_proxy = create_test_accessibility_env(InMemoryStorageFactory::create()).await;
+
+    // Set the various settings values.
+    accessibility_proxy
+        .set(expected_settings.clone())
+        .await
+        .expect("set completed")
+        .expect("set successful");
+
+    // Watch for the result with both watches.
+    let result = accessibility_proxy.watch().await.ok();
+    let result2 = accessibility_proxy.watch2().await.ok();
+
+    assert_eq!(result, Some(Ok(expected_settings.clone())));
+    assert_eq!(result2, Some(expected_settings.clone()));
 }

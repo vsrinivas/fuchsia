@@ -204,11 +204,13 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory.clone(),
         );
 
+        EnvironmentBuilder::get_configuration_handlers(&mut handler_factory);
+
+        // Override the configuration handlers with any custom handlers specified
+        // in the environment.
         for (setting_type, handler) in self.handlers {
             handler_factory.register(setting_type, handler);
         }
-
-        EnvironmentBuilder::get_configuration_handlers(&mut handler_factory);
 
         if create_environment(
             service_dir,

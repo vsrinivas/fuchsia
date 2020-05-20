@@ -67,7 +67,7 @@ async fn main() -> Result<(), Error> {
     validate_accessibility_set().await?;
 
     println!("  client calls watch");
-    validate_accessibility_watch().await?;
+    validate_accessibility_watch2().await?;
 
     println!("audio service tests");
     println!("  client calls audio watch");
@@ -514,11 +514,11 @@ async fn validate_accessibility_set() -> Result<(), Error> {
     Ok(())
 }
 
-async fn validate_accessibility_watch() -> Result<(), Error> {
+async fn validate_accessibility_watch2() -> Result<(), Error> {
     let env = create_service!(
         Services::Accessibility,
-        AccessibilityRequest::Watch { responder } => {
-            responder.send(&mut Ok(AccessibilitySettings::empty()))?;
+        AccessibilityRequest::Watch2 { responder } => {
+            responder.send(AccessibilitySettings::empty())?;
         }
     );
 

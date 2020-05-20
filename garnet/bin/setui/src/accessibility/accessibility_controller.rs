@@ -32,9 +32,9 @@ pub struct AccessibilityController {
 
 #[async_trait]
 impl data_controller::Create<AccessibilityInfo> for AccessibilityController {
-    /// Creates the controller
+    /// Creates the controller.
     async fn create(client: ClientProxy<AccessibilityInfo>) -> Result<Self, ControllerError> {
-        Ok(AccessibilityController { client: client })
+        Ok(AccessibilityController { client })
     }
 }
 
@@ -43,6 +43,7 @@ impl controller::Handle for AccessibilityController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
         match request {
             SettingRequest::Get => {
+                // TODO(fxb/52060): Figure out how to report persistent storage epitaphs.
                 Some(Ok(Some(SettingResponse::Accessibility(self.client.read().await))))
             }
             SettingRequest::SetAccessibilityInfo(info) => {

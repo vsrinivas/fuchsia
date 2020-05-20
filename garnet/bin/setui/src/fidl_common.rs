@@ -8,6 +8,7 @@ macro_rules! fidl_hanging_get_responder {
         use crate::switchboard::base::FidlResponseErrorLogger;
         use fidl::endpoints::ServiceMarker;
         use fuchsia_syslog::fx_log_err;
+        use fuchsia_zircon::Status;
 
         impl Sender<$setting_type> for $responder_type {
             fn send_response(self, data: $setting_type) {
@@ -16,6 +17,7 @@ macro_rules! fidl_hanging_get_responder {
 
             fn on_error(self) {
                 fx_log_err!("error occurred watching for service: {:?}", $marker_debug_name);
+                self.control_handle().shutdown_with_epitaph(Status::INTERNAL);
             }
         }
     };
