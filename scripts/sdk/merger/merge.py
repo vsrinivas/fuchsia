@@ -21,9 +21,9 @@ class Part(object):
         self.type = json['type']
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.meta == other.meta and
-                self.type == other.type)
+        return (
+            isinstance(other, self.__class__) and self.meta == other.meta and
+            self.type == other.type)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -128,6 +128,8 @@ def _get_files(element_meta):
             arch_files[arch] = contents
     elif type == 'documentation':
         common_files.update(element_meta['docs'])
+    elif type == 'config' or type == 'license':
+        common_files.update(element_meta['data'])
     elif type == 'device_profile':
         # This type is pure metadata.
         pass
@@ -164,8 +166,8 @@ def _copy_files(files, source_dir, dest_dir):
         _copy_file(file, source_dir, dest_dir)
 
 
-def _copy_identical_files(set_one, source_dir_one, set_two, source_dir_two,
-                          dest_dir):
+def _copy_identical_files(
+        set_one, source_dir_one, set_two, source_dir_two, dest_dir):
     '''Verifies that two sets of files are absolutely identical and then copies
     them to the output directory.
     '''
@@ -213,7 +215,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
             meta['target_files'].update(meta_two['target_files'])
     elif (type == 'cc_source_library' or type == 'dart_library' or
           type == 'fidl_library' or type == 'documentation' or
-          type == 'device_profile'):
+          type == 'device_profile' or type == 'config' or type == 'license'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one
@@ -222,8 +224,8 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     meta_path = os.path.join(dest_dir, element)
     _ensure_directory(meta_path)
     with open(meta_path, 'w') as meta_file:
-        json.dump(meta, meta_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            meta, meta_file, indent=2, sort_keys=True, separators=(',', ': '))
     return True
 
 
@@ -232,7 +234,6 @@ def _has_host_content(parts):
     content built for a host.
     '''
     return 'host_tool' in [part.type for part in parts]
-
 
 
 def _write_manifest(source_dir_one, source_dir_two, dest_dir):
@@ -244,9 +245,7 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     parts_one = set([Part(p) for p in manifest_one['parts']])
     parts_two = set([Part(p) for p in manifest_two['parts']])
 
-    manifest = {
-        'arch': {}
-    }
+    manifest = {'arch': {}}
 
     # Schema version.
     if manifest_one['schema_version'] != manifest_two['schema_version']:
@@ -265,10 +264,10 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
         # meaningful in that case but is still needed: just pick one.
         host_archs.add(manifest_one['arch']['host'])
     if len(host_archs) != 1:
-        print('Error: mismatching host architecture: %s' %
-              ', '.join(host_archs))
+        print(
+            'Error: mismatching host architecture: %s' % ', '.join(host_archs))
         return False
-    manifest['arch']['host']= list(host_archs)[0]
+    manifest['arch']['host'] = list(host_archs)[0]
 
     # Id.
     if manifest_one['id'] != manifest_two['id']:
@@ -277,8 +276,9 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     manifest['id'] = manifest_one['id']
 
     # Target architectures.
-    manifest['arch']['target'] = sorted(set(manifest_one['arch']['target']) |
-                                        set(manifest_two['arch']['target']))
+    manifest['arch']['target'] = sorted(
+        set(manifest_one['arch']['target']) |
+        set(manifest_two['arch']['target']))
 
     # Parts.
     manifest['parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
@@ -286,35 +286,45 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
     manifest_path = os.path.join(dest_dir, 'meta', 'manifest.json')
     _ensure_directory(manifest_path)
     with open(manifest_path, 'w') as manifest_file:
-        json.dump(manifest, manifest_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            manifest,
+            manifest_file,
+            indent=2,
+            sort_keys=True,
+            separators=(',', ': '))
     return True
 
 
 def main():
     parser = argparse.ArgumentParser(
-            description=('Merges the contents of two SDKs'))
+        description=('Merges the contents of two SDKs'))
     first_group = parser.add_mutually_exclusive_group(required=True)
-    first_group.add_argument('--first-archive',
-                             help='Path to the first SDK - as an archive',
-                             default='')
-    first_group.add_argument('--first-directory',
-                             help='Path to the first SDK - as a directory',
-                             default='')
+    first_group.add_argument(
+        '--first-archive',
+        help='Path to the first SDK - as an archive',
+        default='')
+    first_group.add_argument(
+        '--first-directory',
+        help='Path to the first SDK - as a directory',
+        default='')
     second_group = parser.add_mutually_exclusive_group(required=True)
-    second_group.add_argument('--second-archive',
-                            help='Path to the second SDK - as an archive',
-                            default='')
-    second_group.add_argument('--second-directory',
-                            help='Path to the second SDK - as a directory',
-                            default='')
+    second_group.add_argument(
+        '--second-archive',
+        help='Path to the second SDK - as an archive',
+        default='')
+    second_group.add_argument(
+        '--second-directory',
+        help='Path to the second SDK - as a directory',
+        default='')
     output_group = parser.add_mutually_exclusive_group(required=True)
-    output_group.add_argument('--output-archive',
-                              help='Path to the merged SDK - as an archive',
-                              default='')
-    output_group.add_argument('--output-directory',
-                              help='Path to the merged SDK - as a directory',
-                              default='')
+    output_group.add_argument(
+        '--output-archive',
+        help='Path to the merged SDK - as an archive',
+        default='')
+    output_group.add_argument(
+        '--output-directory',
+        help='Path to the merged SDK - as a directory',
+        default='')
     args = parser.parse_args()
 
     has_errors = False
@@ -323,10 +333,10 @@ def main():
          _open_archive(args.second_archive, args.second_directory) as second_dir, \
          _open_output(args.output_archive, args.output_directory) as out_dir:
 
-        first_elements = set([Part(p)
-                              for p in _get_manifest(first_dir)['parts']])
-        second_elements = set([Part(p)
-                               for p in _get_manifest(second_dir)['parts']])
+        first_elements = set(
+            [Part(p) for p in _get_manifest(first_dir)['parts']])
+        second_elements = set(
+            [Part(p) for p in _get_manifest(second_dir)['parts']])
         common_elements = first_elements & second_elements
 
         # Copy elements that appear in a single SDK.
@@ -357,8 +367,9 @@ def main():
                     if not _copy_identical_files(first_arch[arch], first_dir,
                                                  second_arch[arch], second_dir,
                                                  out_dir):
-                        print('Error: different %s files for %s' % (arch,
-                                                                   element))
+                        print(
+                            'Error: different %s files for %s' %
+                            (arch, element))
                         has_errors = True
                         continue
                 elif arch in first_arch:

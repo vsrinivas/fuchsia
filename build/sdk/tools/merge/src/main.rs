@@ -9,8 +9,9 @@ use std::iter::{FromIterator, Iterator};
 use structopt::StructOpt;
 
 use sdk_metadata::{
-    BanjoLibrary, CcPrebuiltLibrary, CcSourceLibrary, DartLibrary, DeviceProfile, Documentation,
-    ElementType, FidlLibrary, HostTool, JsonObject, LoadableModule, Manifest, Part, Sysroot,
+    BanjoLibrary, CcPrebuiltLibrary, CcSourceLibrary, DartLibrary, Data, DeviceProfile,
+    Documentation, ElementType, FidlLibrary, HostTool, JsonObject, LoadableModule, Manifest, Part,
+    Sysroot,
 };
 
 mod app;
@@ -22,6 +23,7 @@ mod merge_banjo_library;
 mod merge_cc_prebuilt_library;
 mod merge_cc_source_library;
 mod merge_dart_library;
+mod merge_data;
 mod merge_device_profile;
 mod merge_documentation;
 mod merge_fidl_library;
@@ -38,6 +40,7 @@ use crate::merge_banjo_library::merge_banjo_library;
 use crate::merge_cc_prebuilt_library::merge_cc_prebuilt_library;
 use crate::merge_cc_source_library::merge_cc_source_library;
 use crate::merge_dart_library::merge_dart_library;
+use crate::merge_data::merge_data;
 use crate::merge_device_profile::merge_device_profile;
 use crate::merge_documentation::merge_documentation;
 use crate::merge_fidl_library::merge_fidl_library;
@@ -65,10 +68,7 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
 
     // Host architecture.
     let has_host_content = |manifest: &Manifest| -> bool {
-        manifest
-            .parts
-            .iter()
-            .any(|part: &Part| part.kind == ElementType::HostTool)
+        manifest.parts.iter().any(|part: &Part| part.kind == ElementType::HostTool)
     };
     let mut host_archs = HashSet::new();
     if has_host_content(&base) {
@@ -82,11 +82,7 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
         // case but is still needed: just pick one.
         result.arch.host = base.arch.host.clone();
     } else if host_archs.len() == 1 {
-        result.arch.host = host_archs
-            .iter()
-            .next()
-            .expect("Should have 1 host arch")
-            .clone();
+        result.arch.host = host_archs.iter().next().expect("Should have 1 host arch").clone();
     } else {
         let error = format!("Host architecture mismatch: {:?}", host_archs.iter());
         return Err(Error::CannotMerge { error })?;
@@ -127,7 +123,9 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
 }
 
 fn merge_common_part<F: TarballContent>(
-    part: &Part, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
+    part: &Part,
+    base: &impl InputTarball<F>,
+    complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     match part.kind {
@@ -138,18 +136,22 @@ fn merge_common_part<F: TarballContent>(
         ElementType::CcSourceLibrary => {
             merge_cc_source_library(&part.meta, base, complement, output)
         }
+        ElementType::Config => merge_data(&part.meta, base, complement, output),
         ElementType::DartLibrary => merge_dart_library(&part.meta, base, complement, output),
         ElementType::DeviceProfile => merge_device_profile(&part.meta, base, complement, output),
         ElementType::Documentation => merge_documentation(&part.meta, base, complement, output),
         ElementType::FidlLibrary => merge_fidl_library(&part.meta, base, complement, output),
         ElementType::HostTool => merge_host_tool(&part.meta, base, complement, output),
+        ElementType::License => merge_data(&part.meta, base, complement, output),
         ElementType::LoadableModule => merge_loadable_module(&part.meta, base, complement, output),
         ElementType::Sysroot => merge_sysroot(&part.meta, base, complement, output),
     }
 }
 
 fn copy_part_as_is<F: TarballContent>(
-    part: &Part, source: &impl InputTarball<F>, output: &mut impl OutputTarball<F>,
+    part: &Part,
+    source: &impl InputTarball<F>,
+    output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     let provider: Box<dyn FileProvider> = match part.kind {
         ElementType::BanjoLibrary => Box::new(source.get_metadata::<BanjoLibrary>(&part.meta)?),
@@ -159,11 +161,13 @@ fn copy_part_as_is<F: TarballContent>(
         ElementType::CcSourceLibrary => {
             Box::new(source.get_metadata::<CcSourceLibrary>(&part.meta)?)
         }
+        ElementType::Config => Box::new(source.get_metadata::<Data>(&part.meta)?),
         ElementType::DartLibrary => Box::new(source.get_metadata::<DartLibrary>(&part.meta)?),
         ElementType::DeviceProfile => Box::new(source.get_metadata::<DeviceProfile>(&part.meta)?),
         ElementType::Documentation => Box::new(source.get_metadata::<Documentation>(&part.meta)?),
         ElementType::FidlLibrary => Box::new(source.get_metadata::<FidlLibrary>(&part.meta)?),
         ElementType::HostTool => Box::new(source.get_metadata::<HostTool>(&part.meta)?),
+        ElementType::License => Box::new(source.get_metadata::<Data>(&part.meta)?),
         ElementType::LoadableModule => Box::new(source.get_metadata::<LoadableModule>(&part.meta)?),
         ElementType::Sysroot => Box::new(source.get_metadata::<Sysroot>(&part.meta)?),
     };

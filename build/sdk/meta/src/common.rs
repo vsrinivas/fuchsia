@@ -25,11 +25,13 @@ pub enum ElementType {
     BanjoLibrary,
     CcPrebuiltLibrary,
     CcSourceLibrary,
+    Config,
     DartLibrary,
     DeviceProfile,
     Documentation,
     FidlLibrary,
     HostTool,
+    License,
     LoadableModule,
     Sysroot,
 }
