@@ -15,6 +15,13 @@ namespace media::audio {
 
 class UltrasoundCapturer : public BaseCapturer {
  public:
+  static std::shared_ptr<UltrasoundCapturer> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request, Context* context,
+      fuchsia::ultrasound::Factory::CreateCapturerCallback callback) {
+    return std::make_shared<UltrasoundCapturer>(std::move(request), context, std::move(callback));
+  }
+
+  // Callers should use the |Create| method instead, this is only public to enable std::make_shared.
   UltrasoundCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
                      Context* context,
                      fuchsia::ultrasound::Factory::CreateCapturerCallback callback);

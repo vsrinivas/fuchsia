@@ -184,9 +184,6 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
 
   void RecomputeMinFenceTime();
 
-  void Shutdown(std::unique_ptr<BaseCapturer> self)
-      FXL_LOCKS_EXCLUDED(context_.threading_model().FidlDomain().token());
-
   TimelineRate dest_frames_to_clock_mono_rate() {
     return TimelineRate(ZX_SEC(1), format_.frames_per_second());
   }
@@ -226,7 +223,6 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::vector<LinkMatrix::LinkHandle> source_links_ FXL_GUARDED_BY(mix_domain_->token());
 
   // Capture bookkeeping
-  bool async_mode_ = false;
   fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_dest_frames_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;

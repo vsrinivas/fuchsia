@@ -61,14 +61,13 @@ void RouteGraph::RemoveDevice(AudioDevice* device) {
   UpdateGraphForDeviceChange();
 }
 
-void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
+void RouteGraph::AddRenderer(std::shared_ptr<AudioObject> renderer) {
   TRACE_DURATION("audio", "RouteGraph::AddRenderer");
   FX_DCHECK(throttle_output_);
   FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
 
-  renderers_.insert(
-      {renderer.get(), RoutableOwnedObject{std::shared_ptr<AudioObject>(renderer.release()), {}}});
+  renderers_.insert({renderer.get(), RoutableOwnedObject{std::move(renderer), {}}});
 }
 
 void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile) {
@@ -120,13 +119,12 @@ void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
   renderers_.erase(it);
 }
 
-void RouteGraph::AddCapturer(std::unique_ptr<AudioObject> capturer) {
+void RouteGraph::AddCapturer(std::shared_ptr<AudioObject> capturer) {
   TRACE_DURATION("audio", "RouteGraph::AddCapturer");
   FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
 
-  capturers_.insert(
-      {capturer.get(), RoutableOwnedObject{std::shared_ptr<AudioObject>(capturer.release()), {}}});
+  capturers_.insert({capturer.get(), RoutableOwnedObject{std::move(capturer), {}}});
 }
 
 void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile) {

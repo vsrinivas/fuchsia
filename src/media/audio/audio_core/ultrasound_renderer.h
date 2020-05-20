@@ -15,6 +15,13 @@ namespace media::audio {
 
 class UltrasoundRenderer : public BaseRenderer {
  public:
+  static std::shared_ptr<UltrasoundRenderer> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request, Context* context,
+      fuchsia::ultrasound::Factory::CreateRendererCallback callback) {
+    return std::make_shared<UltrasoundRenderer>(std::move(request), context, std::move(callback));
+  }
+
+  // Callers should use the |Create| method instead, this is only public to enable std::make_shared.
   UltrasoundRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
                      Context* context,
                      fuchsia::ultrasound::Factory::CreateRendererCallback callback);

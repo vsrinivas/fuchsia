@@ -188,17 +188,16 @@ TEST_F(DriverOutputTest, HandlePlugDetectBeforeStartResponse) {
 
   // Now add a renderer. We expect it to not yet be linked because the ring buffer hasn't completed
   // the |AUDIO_RB_CMD_START| message yet.
-  auto renderer = std::make_unique<testing::FakeAudioRenderer>(
+  auto renderer = testing::FakeAudioRenderer::Create(
       dispatcher(), std::make_optional<Format>(Format::Create(kDefaultStreamType).take_value()),
       fuchsia::media::AudioRenderUsage::MEDIA, &context().link_matrix());
-  auto renderer_raw = renderer.get();
-  context().route_graph().AddRenderer(std::move(renderer));
+  context().route_graph().AddRenderer(renderer);
   context().route_graph().SetRendererRoutingProfile(
-      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
+      *renderer, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   RunLoopUntilIdle();
 
   // Since the output is not started, we should not have linked the renderer yet.
-  ASSERT_FALSE(context().link_matrix().AreLinked(*renderer_raw, *output_));
+  ASSERT_FALSE(context().link_matrix().AreLinked(*renderer, *output_));
 
   // Now finish starting the ring buffer and confirm the link has been made to our renderer.
   auto result = driver_->StepRingBuffer();
@@ -207,7 +206,7 @@ TEST_F(DriverOutputTest, HandlePlugDetectBeforeStartResponse) {
   ASSERT_EQ(result.value(), AUDIO_RB_CMD_START);
   result = driver_->StepRingBuffer();
   ASSERT_FALSE(result.is_ok());
-  ASSERT_TRUE(context().link_matrix().AreLinked(*renderer_raw, *output_));
+  ASSERT_TRUE(context().link_matrix().AreLinked(*renderer, *output_));
 
   threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
   RunLoopUntilIdle();

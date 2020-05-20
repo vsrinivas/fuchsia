@@ -50,7 +50,7 @@ void AudioCoreImpl::CreateAudioRenderer(
   AUD_VLOG(TRACE);
 
   context_.route_graph().AddRenderer(
-      std::make_unique<AudioRenderer>(std::move(audio_renderer_request), &context_));
+      AudioRenderer::Create(std::move(audio_renderer_request), &context_));
 }
 
 void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
@@ -62,7 +62,7 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
     FX_LOGS(WARNING) << "Attempted to create AudioCapturer with invalid stream type";
     return;
   }
-  context_.route_graph().AddCapturer(std::make_unique<AudioCapturer>(
+  context_.route_graph().AddCapturer(AudioCapturer::Create(
       std::move(configuration), std::make_optional<Format>(format.take_value()),
       std::move(audio_capturer_request), &context_));
 }
@@ -77,8 +77,8 @@ void AudioCoreImpl::CreateAudioCapturer(
                                 : fuchsia::media::AudioCapturerConfiguration::WithInput(
                                       fuchsia::media::InputAudioCapturerConfiguration());
   context_.route_graph().AddCapturer(
-      std::make_unique<AudioCapturer>(std::move(configuration), /*format= */ std::nullopt,
-                                      std::move(audio_capturer_request), &context_));
+      AudioCapturer::Create(std::move(configuration), /*format= */ std::nullopt,
+                            std::move(audio_capturer_request), &context_));
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,

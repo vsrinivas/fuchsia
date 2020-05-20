@@ -34,7 +34,7 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
   void SetUp() override {
     testing::ThreadingModelFixture::SetUp();
 
-    renderer_ = std::make_unique<AudioRenderer>(fidl_renderer_.NewRequest(), &context());
+    renderer_ = AudioRenderer::Create(fidl_renderer_.NewRequest(), &context());
     EXPECT_NE(renderer_.get(), nullptr);
   }
 
@@ -73,7 +73,7 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
 
  protected:
   fuchsia::media::AudioRendererPtr fidl_renderer_;
-  std::unique_ptr<AudioRenderer> renderer_;
+  std::shared_ptr<AudioRenderer> renderer_;
 
   fzl::VmoMapper vmo_mapper_;
   zx::vmo vmo_;

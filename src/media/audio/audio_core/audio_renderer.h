@@ -17,6 +17,13 @@ class AudioRenderer : public BaseRenderer,
                       public fuchsia::media::audio::GainControl,
                       public StreamVolume {
  public:
+  static std::shared_ptr<AudioRenderer> Create(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
+      Context* context) {
+    return std::make_shared<AudioRenderer>(std::move(audio_renderer_request), context);
+  }
+
+  // Callers should use the |Create| method instead, this is only public to enable std::make_shared.
   AudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
                 Context* context);
   ~AudioRenderer();

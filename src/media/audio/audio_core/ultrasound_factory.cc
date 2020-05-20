@@ -22,30 +22,25 @@ UltrasoundFactory::UltrasoundFactory(Context* context) : context_(*context) {
 void UltrasoundFactory::CreateCapturer(
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
     CreateCapturerCallback callback) {
-  auto capturer =
-      std::make_unique<UltrasoundCapturer>(std::move(request), &context_, std::move(callback));
-  auto capturer_raw = capturer.get();
+  auto capturer = UltrasoundCapturer::Create(std::move(request), &context_, std::move(callback));
   // Ultrasound capturers are immediately routable.
-  context_.route_graph().AddCapturer(std::move(capturer));
+  context_.route_graph().AddCapturer(capturer);
   context_.route_graph().SetCapturerRoutingProfile(
-      *capturer_raw,
-      RoutingProfile{.routable = true,
-                     .usage = StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)});
+      *capturer, RoutingProfile{.routable = true,
+                                .usage = StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)});
 }
 
 void UltrasoundFactory::CreateRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
     CreateRendererCallback callback) {
-  auto renderer =
-      std::make_unique<UltrasoundRenderer>(std::move(request), &context_, std::move(callback));
-  auto renderer_raw = renderer.get();
+  auto renderer = UltrasoundRenderer::Create(std::move(request), &context_, std::move(callback));
   // Ultrasound renderers are immediately routable.
-  context_.route_graph().AddRenderer(std::move(renderer));
+  context_.route_graph().AddRenderer(renderer);
   context_.route_graph().SetRendererRoutingProfile(
-      *renderer_raw, RoutingProfile{
-                         .routable = true,
-                         .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
-                     });
+      *renderer, RoutingProfile{
+                     .routable = true,
+                     .usage = StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND),
+                 });
 }
 
 }  // namespace media::audio

@@ -17,10 +17,17 @@ class AudioCapturer : public BaseCapturer,
                       public fuchsia::media::audio::GainControl,
                       public StreamVolume {
  public:
+  static std::shared_ptr<AudioCapturer> Create(
+      fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request, Context* context) {
+    return std::make_shared<AudioCapturer>(std::move(configuration), std::move(format),
+                                           std::move(request), context);
+  }
+
+  // Callers should use the |Create| method instead, this is only public to enable std::make_shared.
   AudioCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
                 std::optional<Format> format,
                 fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request, Context* context);
-
   ~AudioCapturer() override;
 
  private:
