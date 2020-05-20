@@ -99,16 +99,5 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
   EXPECT_THAT(second_logs.Value(), testing::HasSubstr(output));
 }
 
-TEST_F(CollectKernelLogTest, Check_RecordsTimeout) {
-  // Set the timeout to 0 so kernel log collection always times out.
-  const zx::duration timeout = zx::sec(0);
-  ::fit::result<AttachmentValue> result = GetKernelLog(timeout);
-  ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
-
-  ASSERT_EQ(logs.State(), AttachmentValue::State::kMissing);
-  EXPECT_THAT(logs, AttachmentValue(Error::kTimeout));
-}
-
 }  // namespace
 }  // namespace feedback
