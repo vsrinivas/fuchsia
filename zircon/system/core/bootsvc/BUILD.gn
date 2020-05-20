@@ -50,7 +50,6 @@ executable("bin") {
   deps = [
     ":util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -63,7 +62,6 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bootfs",
     "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/launchpad",
     "//zircon/system/ulib/loader-service",

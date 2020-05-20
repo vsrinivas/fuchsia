@@ -5,7 +5,6 @@
 #ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
 #define ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
 
-#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
@@ -53,25 +52,6 @@ fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatche
 // Create a service to retrieve ZBI items.
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map);
-
-// A service that implements a fidl protocol to vend kernel statistics.
-class KernelStatsImpl : public llcpp::fuchsia::kernel::Stats::Interface {
- public:
-  // The service requires the root resource as that is necessary today to call
-  // the appropriate zx_object_get_info syscalls. It does not require any rights
-  // on that handle though.
-  explicit KernelStatsImpl(const zx::resource& root_resource) : root_resource_(root_resource) {}
-
-  // Binds the implementation to the passed in dispatcher.
-  fbl::RefPtr<fs::Service> CreateService(async_dispatcher_t* dispatcher);
-
-  void GetMemoryStats(GetMemoryStatsCompleter::Sync completer) override;
-
-  void GetCpuStats(GetCpuStatsCompleter::Sync completer) override;
-
- private:
-  const zx::resource& root_resource_;
-};
 
 }  // namespace bootsvc
 

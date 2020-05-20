@@ -4,7 +4,6 @@
 
 #include <ctype.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
@@ -372,9 +371,6 @@ int main(int argc, char** argv) {
   svcfs_svc->AddService(
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
-  bootsvc::KernelStatsImpl kernel_stats(root_resource);
-  svcfs_svc->AddService(llcpp::fuchsia::kernel::Stats::Name,
-                        kernel_stats.CreateService(loop.dispatcher()));
 
   // Consume certain VMO types from the startup handle table
   printf("bootsvc: Loading kernel VMOs...\n");

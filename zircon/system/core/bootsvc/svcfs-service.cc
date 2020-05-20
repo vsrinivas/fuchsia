@@ -6,7 +6,6 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fidl-async/bind.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -114,73 +113,6 @@ fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::
         auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
         return fidl_bind(dispatcher, channel.release(), dispatch, &data, &kItemsOps);
       });
-}
-
-fbl::RefPtr<fs::Service> KernelStatsImpl::CreateService(async_dispatcher_t* dispatcher) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, this](zx::channel channel) mutable {
-    return fidl::Bind(dispatcher, std::move(channel), this);
-  });
-}
-
-void KernelStatsImpl::GetMemoryStats(GetMemoryStatsCompleter::Sync completer) {
-  zx_info_kmem_stats_t mem_stats;
-  zx_status_t status = root_resource_.get_info(ZX_INFO_KMEM_STATS, &mem_stats,
-                                               sizeof(zx_info_kmem_stats_t), nullptr, nullptr);
-  if (status != ZX_OK) {
-    completer.Close(status);
-    return;
-  }
-  llcpp::fuchsia::kernel::MemoryStats::UnownedBuilder builder;
-  builder.set_total_bytes(fidl::unowned_ptr(&mem_stats.total_bytes));
-  builder.set_free_bytes(fidl::unowned_ptr(&mem_stats.free_bytes));
-  builder.set_wired_bytes(fidl::unowned_ptr(&mem_stats.wired_bytes));
-  builder.set_total_heap_bytes(fidl::unowned_ptr(&mem_stats.total_heap_bytes));
-  builder.set_free_heap_bytes(fidl::unowned_ptr(&mem_stats.free_heap_bytes));
-  builder.set_vmo_bytes(fidl::unowned_ptr(&mem_stats.vmo_bytes));
-  builder.set_mmu_overhead_bytes(fidl::unowned_ptr(&mem_stats.mmu_overhead_bytes));
-  builder.set_ipc_bytes(fidl::unowned_ptr(&mem_stats.ipc_bytes));
-  builder.set_other_bytes(fidl::unowned_ptr(&mem_stats.other_bytes));
-  completer.Reply(builder.build());
-}
-
-void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
-  zx_info_cpu_stats_t cpu_stats[ZX_CPU_SET_MAX_CPUS];
-  size_t actual, available;
-  zx_status_t status = root_resource_.get_info(ZX_INFO_CPU_STATS, cpu_stats,
-                                               sizeof(zx_info_cpu_stats_t) * ZX_CPU_SET_MAX_CPUS,
-                                               &actual, &available);
-  if (status != ZX_OK) {
-    completer.Close(status);
-    return;
-  }
-
-  llcpp::fuchsia::kernel::CpuStats stats;
-  stats.actual_num_cpus = actual;
-  llcpp::fuchsia::kernel::PerCpuStats per_cpu_stats[available];
-  stats.per_cpu_stats = fidl::VectorView(fidl::unowned_ptr(per_cpu_stats), available);
-  for (uint32_t cpu_num = 0; cpu_num < available; ++cpu_num) {
-    auto& cpu_stat = cpu_stats[cpu_num];
-    per_cpu_stats[cpu_num] =
-        llcpp::fuchsia::kernel::PerCpuStats::Builder(
-            std::make_unique<llcpp::fuchsia::kernel::PerCpuStats::Frame>())
-            .set_cpu_number(fidl::unowned_ptr(&cpu_stat.cpu_number))
-            .set_flags(fidl::unowned_ptr(&cpu_stat.flags))
-            .set_idle_time(fidl::unowned_ptr(&cpu_stat.idle_time))
-            .set_reschedules(fidl::unowned_ptr(&cpu_stat.reschedules))
-            .set_context_switches(fidl::unowned_ptr(&cpu_stat.context_switches))
-            .set_irq_preempts(fidl::unowned_ptr(&cpu_stat.irq_preempts))
-            .set_yields(fidl::unowned_ptr(&cpu_stat.yields))
-            .set_ints(fidl::unowned_ptr(&cpu_stat.ints))
-            .set_timer_ints(fidl::unowned_ptr(&cpu_stat.timer_ints))
-            .set_timers(fidl::unowned_ptr(&cpu_stat.timers))
-            .set_page_faults(fidl::unowned_ptr(&cpu_stat.page_faults))
-            .set_exceptions(fidl::unowned_ptr(&cpu_stat.exceptions))
-            .set_syscalls(fidl::unowned_ptr(&cpu_stat.syscalls))
-            .set_reschedule_ipis(fidl::unowned_ptr(&cpu_stat.reschedule_ipis))
-            .set_generic_ipis(fidl::unowned_ptr(&cpu_stat.generic_ipis))
-            .build();
-  }
-  completer.Reply(std::move(stats));
 }
 
 }  // namespace bootsvc

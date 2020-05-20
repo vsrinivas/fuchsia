@@ -7,6 +7,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
             process_launcher::ProcessLauncher,
             root_job::{RootJob, ROOT_JOB_CAPABILITY_PATH, ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH},
@@ -56,6 +57,7 @@ use {
 pub struct BuiltinEnvironment {
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
+    pub kernel_stats: Option<Arc<KernelStats>>,
     pub process_launcher: Option<Arc<ProcessLauncher>>,
     pub root_job: Arc<RootJob>,
     pub root_job_for_inspect: Arc<RootJob>,
@@ -114,6 +116,18 @@ impl BuiltinEnvironment {
         // Set up BootArguments service.
         let boot_args = BootArguments::new();
         model.root_realm.hooks.install(boot_args.hooks()).await;
+
+        // Set up KernelStats service.
+        let kernel_stats = root_resource_handle.as_ref().map(|handle| {
+            KernelStats::new(
+                handle
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .expect("Failed to duplicate root resource handle"),
+            )
+        });
+        if let Some(kernel_stats) = kernel_stats.as_ref() {
+            model.root_realm.hooks.install(kernel_stats.hooks()).await;
+        }
 
         // Set up ReadOnlyLog service.
         let read_only_log = root_resource_handle.as_ref().map(|handle| {
@@ -211,6 +225,7 @@ impl BuiltinEnvironment {
             process_launcher,
             root_job,
             root_job_for_inspect,
+            kernel_stats,
             read_only_log,
             write_only_log,
             root_resource,
