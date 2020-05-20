@@ -12,7 +12,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
-zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use_bitmask) {
+zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use_bitmask,
+                                  Duration duration) {
+  duration_ = duration;
   zx_status_t res = WAVCommon::Initialize(filename, InitMode::SOURCE);
   if (res != ZX_OK)
     return res;
@@ -153,7 +155,16 @@ zx_status_t WAVSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out
   if ((fd_ < 0) || finished())
     return ZX_ERR_BAD_STATE;
 
-  ZX_DEBUG_ASSERT(payload_played_ < payload_len_);
+  const bool loop = std::holds_alternative<LoopingDoneCallback>(duration_);
+  if (loop) {
+    // We wrap around to allow looping.
+    if (payload_played_ >= payload_len_) {
+      payload_played_ = 0;
+      Seek(0);
+    }
+  } else {
+    ZX_DEBUG_ASSERT(payload_played_ < payload_len_);
+  }
   uint32_t todo = fbl::min(buf_space, payload_len_ - payload_played_);
   zx_status_t res = Read(buffer, todo);
   if (res == ZX_OK) {
@@ -162,4 +173,13 @@ zx_status_t WAVSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out
   }
 
   return res;
+}
+
+bool WAVSource::finished() const {
+  const bool loop = std::holds_alternative<LoopingDoneCallback>(duration_);
+  if (loop) {
+    return !std::get<LoopingDoneCallback>(duration_)();
+  } else {
+    return payload_played_ >= payload_len_;
+  }
 }

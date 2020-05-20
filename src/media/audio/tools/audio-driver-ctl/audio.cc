@@ -57,6 +57,7 @@ enum class Command {
   TONE,
   NOISE,
   PLAY,
+  LOOP,
   RECORD,
 };
 
@@ -120,7 +121,9 @@ void usage(const char* prog_name) {
           static_cast<int>(MIN_PLAY_DURATION * 1000));
   printf("play   : Params : <file>\n");
   printf("         Play the specified WAV file on the selected output.\n");
-  printf("record : Params : <file> [duration]\n"
+  printf("loop   : Params : <file>\n");
+  printf("         Repeat the specified WAV file on the selected output until a key is pressed\n");
+  printf("record : Params : <file> [<duration>]\n"
          "         Record to the specified WAV file from the selected input.\n"
          "         Duration is specified in seconds.\n"
          "         If duration is unspecified records until a key is pressed.\n");
@@ -303,6 +306,7 @@ int main(int argc, const char** argv) {
     { "tone",   Command::TONE,          true,  false },
     { "noise",  Command::NOISE,         true,  false },
     { "play",   Command::PLAY,          true,  false },
+    { "loop",   Command::LOOP,          true,  false },
     { "record", Command::RECORD,        false, true  },
       // clang-format on
   };
@@ -403,6 +407,7 @@ int main(int argc, const char** argv) {
 
   float tone_freq = 440.0;
   float duration;
+  bool play_loop = false;
   float amplitude = DEFAULT_PLAY_AMPLITUDE;
   const char* wav_filename = nullptr;
   float target_gain = -100.0;
@@ -495,6 +500,15 @@ int main(int argc, const char** argv) {
           arg++;
         }
       }
+
+      break;
+
+    case Command::LOOP:
+      if (arg >= argc)
+        return -1;
+      wav_filename = argv[arg];
+      play_loop = true;
+      arg++;
 
       break;
 
@@ -608,10 +622,25 @@ int main(int argc, const char** argv) {
       }
 
       WAVSource wav_source;
-      res = wav_source.Initialize(wav_filename, active);
+      res = wav_source.Initialize(wav_filename, active, duration_config);
       if (res != ZX_OK)
         return res;
 
+      return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
+    }
+
+    case Command::LOOP: {
+      if (stream->input()) {
+        printf("The \"loop\" command can only be used on output streams.\n");
+        return -1;
+      }
+
+      WAVSource wav_source;
+      duration_config = loop_done;
+      res = wav_source.Initialize(wav_filename, active, duration_config);
+      if (res != ZX_OK)
+        return res;
+      printf("Looping %s until a key is pressed\n", wav_filename);
       return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(wav_source);
     }
 
