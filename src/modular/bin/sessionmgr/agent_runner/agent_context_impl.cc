@@ -126,11 +126,9 @@ class AgentContextImpl::InitializeCall : public Operation<> {
           agent_context_impl->app_client_->primary_service().Unbind();
         });
 
-    // When the agent process dies, we remove it.
+    // When the agent component dies, clean up.
     agent_context_impl_->app_client_->SetAppErrorHandler(
-        [agent_context_impl = agent_context_impl_] {
-          agent_context_impl->agent_runner_->RemoveAgent(agent_context_impl->url_);
-        });
+        [agent_context_impl = agent_context_impl_] { agent_context_impl->StopOnAppError(); });
 
     // When all the |fuchsia::modular::AgentController| bindings go away maybe
     // stop the agent.
@@ -146,56 +144,95 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   fuchsia::io::DirectoryPtr outgoing_dir_ptr_;
 };
 
-// If |terminating| is set to true, the agent will be torn down irrespective
+// If |is_teardown| is set to true, the agent will be torn down irrespective
 // of whether there is an open-connection. Returns |true| if the
 // agent was stopped, false otherwise.
 class AgentContextImpl::StopCall : public Operation<bool> {
  public:
-  StopCall(const bool terminating, AgentContextImpl* const agent_context_impl,
+  StopCall(const bool is_teardown, AgentContextImpl* const agent_context_impl,
            ResultCall result_call)
       : Operation("AgentContextImpl::StopCall", std::move(result_call), agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
-        terminating_(terminating) {}
+        is_teardown_(is_teardown) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &stopped_};
 
-    if (agent_context_impl_->state_ == State::TERMINATING) {
+    if (agent_context_impl_->state_ == State::TERMINATING ||
+        agent_context_impl_->state_ == State::TERMINATED) {
       return;
     }
 
-    if (terminating_ || agent_context_impl_->agent_controller_bindings_.size() == 0) {
+    // Don't stop the agent if it has connections, unless it's being torn down.
+    if (!is_teardown_ && agent_context_impl_->agent_controller_bindings_.size() != 0) {
+      return;
+    }
+
+    // If there's no fuchsia::modular::Lifecycle binding, it's not possible to teardown gracefully.
+    if (!agent_context_impl_->app_client_->primary_service().is_bound()) {
       Stop(flow);
+    } else {
+      Teardown(flow);
     }
   }
 
-  void Stop(FlowToken flow) {
+  void Teardown(FlowToken flow) {
+    FlowTokenHolder branch{flow};
+
     agent_context_impl_->state_ = State::TERMINATING;
+
     // Calling Teardown() below will branch |flow| into normal and timeout
     // paths. |flow| must go out of scope when either of the paths finishes.
     //
     // TODO(mesch): AppClient/AsyncHolder should implement this. See also
     // StoryProviderImpl::StopStoryShellCall.
-    FlowTokenHolder branch{flow};
     agent_context_impl_->app_client_->Teardown(kBasicTimeout, [this, branch] {
       std::unique_ptr<FlowToken> cont = branch.Continue();
       if (cont) {
-        Kill(*cont);
+        Stop(*cont);
       }
     });
   }
 
-  void Kill(FlowToken flow) {
+  void Stop(FlowToken flow) {
     stopped_ = true;
+    agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_context_bindings_.CloseAll();
     agent_context_impl_->token_manager_bindings_.CloseAll();
+    agent_context_impl_->app_client_.reset();
   }
 
   bool stopped_ = false;
   AgentContextImpl* const agent_context_impl_;
-  const bool terminating_;  // is the agent runner terminating?
+  const bool is_teardown_;
+};
+
+class AgentContextImpl::OnAppErrorCall : public Operation<> {
+ public:
+  OnAppErrorCall(AgentContextImpl* const agent_context_impl, ResultCall result_call)
+      : Operation("AgentContextImpl::OnAppErrorCall", std::move(result_call),
+                  agent_context_impl->url_),
+        agent_context_impl_(agent_context_impl) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // The agent is already being cleanly terminated. |StopCall| will clean up.
+    if (agent_context_impl_->state_ == State::TERMINATING) {
+      return;
+    }
+
+    agent_context_impl_->state_ = State::TERMINATED;
+    agent_context_impl_->agent_.Unbind();
+    agent_context_impl_->agent_context_bindings_.CloseAll();
+    agent_context_impl_->token_manager_bindings_.CloseAll();
+    agent_context_impl_->app_client_.reset();
+  }
+
+  AgentContextImpl* const agent_context_impl_;
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
@@ -332,27 +369,32 @@ void AgentContextImpl::StopAgentIfIdle() {
     return;
   }
 
-  operation_queue_.Add(std::make_unique<StopCall>(false /* is agent runner terminating? */, this,
-                                                  [this](bool stopped) {
-                                                    if (stopped) {
-                                                      agent_runner_->RemoveAgent(url_);
-                                                      // |this| is no longer valid at this
-                                                      // point.
-                                                    }
-                                                  }));
+  operation_queue_.Add(
+      std::make_unique<StopCall>(/*is_teardown=*/false, this, [this](bool stopped) {
+        if (stopped) {
+          agent_runner_->RemoveAgent(url_);
+          // |this| is no longer valid at this point.
+        }
+      }));
 }
 
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
   FX_LOGS(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
-  operation_queue_.Add(
-      std::make_unique<StopCall>(true /* is agent runner terminating? */, this,
-                                 [this, callback = std::move(callback)](bool stopped) {
-                                   FX_DCHECK(stopped);
-                                   agent_runner_->RemoveAgent(url_);
-                                   callback();
-                                   // |this| is no longer valid at this
-                                   // point.
-                                 }));
+
+  operation_queue_.Add(std::make_unique<StopCall>(
+      /*is_teardown=*/true, this, [this, callback = std::move(callback)](bool stopped) {
+        FX_DCHECK(stopped);
+        agent_runner_->RemoveAgent(url_);
+        callback();
+        // |this| is no longer valid at this point.
+      }));
+}
+
+void AgentContextImpl::StopOnAppError() {
+  operation_queue_.Add(std::make_unique<OnAppErrorCall>(this, [this]() {
+    agent_runner_->RemoveAgent(url_);
+    // |this| is no longer valid at this point.
+  }));
 }
 
 }  // namespace modular

@@ -73,7 +73,24 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request);
 
-  enum class State { INITIALIZING, RUNNING, TERMINATING };
+  // Lifecycle state of the agent process.
+  //
+  // INITIALIZING --> RUNNING --> TERMINATING --> TERMINATED
+  //                     |                            ^
+  //                     +----------------------------+
+  enum class State {
+    // Initial state. The agent has not started at this point.
+    INITIALIZING,
+
+    // Agent component has been started and the context is initialized.
+    RUNNING,
+
+    // Agent is being gracefully torn down.
+    TERMINATING,
+
+    // Agent component has terminated. This is a terminal state.
+    TERMINATED
+  };
   State state() { return state_; }
 
  private:
@@ -111,9 +128,25 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // AgentControllers, fuchsia::modular::Agent.Stop() is called with a timeout.
   void StopAgentIfIdle();
 
+  // Adds an operation on |operation_queue_| that disconnects from agent protocols
+  // and moves the state to TERMINATED.
+  //
+  // This is meant to be called to handle an unexpected agent component termination,
+  // not directly as part of a graceful teardown sequence. However, it still may
+  // be executed during teardown (TERMINATING state), in which case it does nothing.
+  void StopOnAppError();
+
   const std::string url_;
 
+  // Client to the agent component, created when the agent starts, and destroyed when
+  // the agent is terminated.
+  //
+  // |app_client_| owns the agent's ComponentController. Destroying it signals that the agent
+  // component should be terminated.
+  //
+  // Exists only in the RUNNING and TERMINATING state. Reset to nullptr when TERMINATED.
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client_;
+
   fuchsia::modular::AgentPtr agent_;
   fidl::BindingSet<fuchsia::modular::AgentContext> agent_context_bindings_;
   fidl::BindingSet<fuchsia::modular::AgentController> agent_controller_bindings_;
@@ -139,6 +172,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // Operations implemented here.
   class InitializeCall;
   class StopCall;
+  class OnAppErrorCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);
 };

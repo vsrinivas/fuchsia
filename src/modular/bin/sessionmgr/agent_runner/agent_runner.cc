@@ -126,7 +126,8 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
 
   auto agent_it = running_agents_.find(agent_url);
   if (agent_it != running_agents_.end()) {
-    if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
+    if (agent_it->second->state() == AgentContextImpl::State::TERMINATING ||
+        agent_it->second->state() == AgentContextImpl::State::TERMINATED) {
       run_agent_callbacks_[agent_url].push_back(std::move(done));
     } else {
       // Agent is already running, so we can issue the

@@ -79,13 +79,16 @@ static zx_koid_t get_object_koid(zx_handle_t handle) {
 }
 
 class TestAgent : fuchsia::modular::Agent,
+                  fuchsia::modular::Lifecycle,
                   public fuchsia::sys::ComponentController {
  public:
   TestAgent(zx::channel directory_request,
             fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl,
-            std::unique_ptr<component::ServiceNamespace> services_ptr = nullptr)
+            std::unique_ptr<component::ServiceNamespace> services_ptr = nullptr,
+            bool serve_lifecycle_protocol = false)
       : controller_(this, std::move(ctrl)),
         agent_binding_(this),
+        lifecycle_binding_(this),
         services_ptr_(std::move(services_ptr)) {
     auto outgoing_dir = std::make_unique<vfs::PseudoDir>();
     outgoing_dir->AddEntry(
@@ -93,13 +96,26 @@ class TestAgent : fuchsia::modular::Agent,
         std::make_unique<vfs::Service>([this](zx::channel channel, async_dispatcher_t* /*unused*/) {
           agent_binding_.Bind(std::move(channel));
         }));
+    if (serve_lifecycle_protocol) {
+      outgoing_dir->AddEntry(fuchsia::modular::Lifecycle::Name_,
+                             std::make_unique<vfs::Service>(
+                                 [this](zx::channel channel, async_dispatcher_t* /*unused*/) {
+                                   lifecycle_binding_.Bind(std::move(channel));
+                                 }));
+    }
     outgoing_dir_server_ = std::make_unique<modular::PseudoDirServer>(std::move(outgoing_dir));
     outgoing_dir_server_->Serve(std::move(directory_request));
+    controller_.set_error_handler(
+        [this](zx_status_t /*unused*/) { controller_connected_ = false; });
   }
 
   void KillApplication() { controller_.Unbind(); }
 
   int connect_call_count() { return connect_call_count_; }
+
+  bool lifecycle_terminate_called() { return lifecycle_terminate_called_; }
+
+  bool controller_connected() { return controller_connected_; }
 
  private:
   // |ComponentController|
@@ -116,9 +132,17 @@ class TestAgent : fuchsia::modular::Agent,
     }
   }
 
+  // |fuchsia::modular::Lifecycle|
+  void Terminate() override {
+    lifecycle_terminate_called_ = true;
+    controller_connected_ = false;
+    controller_.Close(ZX_OK);
+  }
+
  private:
   fidl::Binding<fuchsia::sys::ComponentController> controller_;
   fidl::Binding<fuchsia::modular::Agent> agent_binding_;
+  fidl::Binding<fuchsia::modular::Lifecycle> lifecycle_binding_;
   std::unique_ptr<component::ServiceNamespace> services_ptr_;
 
   // `outgoing_dir_server_` must be initialized after `agent_binding_` (which itself serves
@@ -128,6 +152,14 @@ class TestAgent : fuchsia::modular::Agent,
 
   // The number of times Connect() has been called.
   int connect_call_count_ = 0;
+
+  // When true, the agent has been gracefully torn down via |fuchsia::modular::Lifecycle|.
+  bool lifecycle_terminate_called_ = false;
+
+  // When true, the ComponentController is bound. AgentContextImpl disconnects from
+  // ComponentController when it wants to terminate the agent, which sets this to false.
+  // This is also set to false when the agent is gracefully torn down in Terminate.
+  bool controller_connected_ = true;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestAgent);
 };
@@ -383,6 +415,70 @@ TEST_F(AgentRunnerTest, ConnectToServiceName) {
   set_agent_service_index(test_config.agent_service_index);
 
   execute_connect_to_agent_service_test(test_config, expect);
+}
+
+// Tests that AgentRunner terminates an agent component on teardown. In this case, the agent does
+// not serve |fuchsia::modular::Lifecycle| protocol that allows a graceful teardown.
+TEST_F(AgentRunnerTest, TerminateOnTeardown) {
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent =
+            std::make_unique<TestAgent>(std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  fuchsia::sys::ServiceProviderPtr incoming_services;
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
+                                 agent_controller.NewRequest());
+
+  RunLoopUntil([&test_agent] { return !!test_agent; });
+
+  EXPECT_TRUE(agent_controller.is_bound());
+
+  // Teardown the agent runner.
+  auto is_torn_down = false;
+  agent_runner()->Teardown([&is_torn_down] { is_torn_down = true; });
+  RunLoopUntil([&is_torn_down] { return is_torn_down; });
+
+  // The agent should have been terminated.
+  EXPECT_FALSE(agent_controller.is_bound());
+  EXPECT_FALSE(test_agent->controller_connected());
+}
+
+// Tests that AgentRunner terminates an agent component on teardown. In this case, the agent
+// serves the |fuchsia::modular::Lifecycle| protocol that allows a graceful teardown.
+TEST_F(AgentRunnerTest, TerminateGracefullyOnTeardown) {
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent = std::make_unique<TestAgent>(
+            std::move(launch_info.directory_request), std::move(ctrl),
+            /*services_ptr=*/nullptr, /*serve_lifecycle_protocol=*/true);
+      });
+
+  fuchsia::sys::ServiceProviderPtr incoming_services;
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
+                                 agent_controller.NewRequest());
+
+  RunLoopUntil([&test_agent] { return !!test_agent; });
+
+  EXPECT_TRUE(agent_controller.is_bound());
+
+  // Teardown the agent runner.
+  auto is_torn_down = false;
+  agent_runner()->Teardown([&is_torn_down] { is_torn_down = true; });
+  RunLoopUntil([&is_torn_down] { return is_torn_down; });
+
+  // The agent should have been instructed to tear down gracefully.
+  EXPECT_TRUE(test_agent->lifecycle_terminate_called());
+
+  // The agent should have been terminated.
+  EXPECT_FALSE(agent_controller.is_bound());
+  EXPECT_FALSE(test_agent->controller_connected());
 }
 
 }  // namespace modular_testing
