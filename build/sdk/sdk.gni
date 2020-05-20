@@ -112,13 +112,9 @@ template("sdk") {
 
     script = "//build/sdk/verify_sdk_api.py"
 
-    inputs = [
-      intermediate_manifest_file,
-    ]
+    inputs = [ intermediate_manifest_file ]
 
-    outputs = [
-      computed_api_file,
-    ]
+    outputs = [ computed_api_file ]
 
     args = [
       "--manifest",
@@ -140,9 +136,7 @@ template("sdk") {
       args += [ "--warn" ]
     }
 
-    public_deps = [
-      ":$generation_target_name",
-    ]
+    public_deps = [ ":$generation_target_name" ]
   }
 
   final_manifest_file = "$root_out_dir/sdk/manifest/$sdk_name"
@@ -151,17 +145,11 @@ template("sdk") {
   copy(copy_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    sources = [
-      intermediate_manifest_file,
-    ]
+    sources = [ intermediate_manifest_file ]
 
-    outputs = [
-      final_manifest_file,
-    ]
+    outputs = [ final_manifest_file ]
 
-    deps = [
-      ":$verify_api_target_name",
-    ]
+    deps = [ ":$verify_api_target_name" ]
   }
 
   # Verifies that the manifest is valid.
@@ -172,9 +160,7 @@ template("sdk") {
 
     schema = "//build/sdk/manifest_schema.json"
 
-    deps = [
-      ":$copy_target_name",
-    ]
+    deps = [ ":$copy_target_name" ]
   }
 
   sdk_meta_file = "$target_gen_dir/$sdk_name.sdk_meta.json"
@@ -185,13 +171,9 @@ template("sdk") {
 
     script = "//build/sdk/generate_meta.py"
 
-    inputs = [
-      final_manifest_file,
-    ]
+    inputs = [ final_manifest_file ]
 
-    outputs = [
-      sdk_meta_file,
-    ]
+    outputs = [ sdk_meta_file ]
 
     args = [
       "--manifest",
@@ -227,9 +209,7 @@ template("sdk") {
 
     schema = "//build/sdk/meta/manifest.json"
 
-    public_deps = [
-      ":$meta_target_name",
-    ]
+    public_deps = [ ":$meta_target_name" ]
   }
 
   archive_manifest_file = "$target_gen_dir/$sdk_name.archive_manifest"
@@ -248,17 +228,11 @@ template("sdk") {
 
     script = "//build/sdk/generate_archive_manifest.py"
 
-    sources = [
-      "//build/sdk/sdk_common.py",
-    ]
+    sources = [ "//build/sdk/sdk_common.py" ]
 
-    inputs = [
-      final_manifest_file,
-    ]
+    inputs = [ final_manifest_file ]
 
-    outputs = [
-      archive_manifest_file,
-    ]
+    outputs = [ archive_manifest_file ]
 
     args = [
       "--manifest",
@@ -276,9 +250,7 @@ template("sdk") {
       ]
     }
 
-    public_deps = [
-      ":$verify_meta_target_name",
-    ]
+    public_deps = [ ":$verify_meta_target_name" ]
   }
 
   if (build_sdk_archives) {
@@ -292,13 +264,9 @@ template("sdk") {
 
       tool = "//build/tools/tar_maker"
 
-      inputs = [
-        archive_manifest_file,
-      ]
+      inputs = [ archive_manifest_file ]
 
-      outputs = [
-        local_archive,
-      ]
+      outputs = [ local_archive ]
 
       args = [
         "-manifest",
@@ -307,42 +275,30 @@ template("sdk") {
         rebase_path(local_archive),
       ]
 
-      deps = [
-        ":$archive_manifest_target_name",
-      ]
+      deps = [ ":$archive_manifest_target_name" ]
     }
 
     copy(archive_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      sources = [
-        local_archive,
-      ]
+      sources = [ local_archive ]
 
-      outputs = [
-        "$root_out_dir/sdk/archive/$sdk_name.tar.gz",
-      ]
+      outputs = [ "$root_out_dir/sdk/archive/$sdk_name.tar.gz" ]
 
-      public_deps = [
-        ":$archive_generate_target_name",
-      ]
+      public_deps = [ ":$archive_generate_target_name" ]
     }
   } else {
     group(archive_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
 
-      deps = [
-        ":$archive_manifest_target_name",
-      ]
+      deps = [ ":$archive_manifest_target_name" ]
     }
   }
 
   group(main_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    public_deps = [
-      ":$archive_target_name",
-    ]
+    public_deps = [ ":$archive_target_name" ]
   }
 
   fidl_json_file = "$target_gen_dir/$sdk_name.fidl_json.txt"
@@ -350,12 +306,8 @@ template("sdk") {
   # Generate a helpful list of all of the JSON for the fidl in this SDK
   generated_file(fidl_json_target_name) {
     testonly = true
-    deps = [
-      ":$main_target_name",
-    ]
-    outputs = [
-      "$fidl_json_file",
-    ]
+    deps = [ ":$main_target_name" ]
+    outputs = [ "$fidl_json_file" ]
     data_keys = [ "fidl_json" ]
   }
 
@@ -367,13 +319,9 @@ template("sdk") {
 
       script = "//build/sdk/export_sdk.py"
 
-      inputs = [
-        archive_manifest_file,
-      ]
+      inputs = [ archive_manifest_file ]
 
-      outputs = [
-        stamp_file,
-      ]
+      outputs = [ stamp_file ]
 
       args = [
         "--out-dir",
@@ -384,9 +332,7 @@ template("sdk") {
         rebase_path(archive_manifest_file),
       ]
 
-      deps = [
-        ":$archive_manifest_target_name",
-      ]
+      deps = [ ":$archive_manifest_target_name" ]
     }
   }
 }
