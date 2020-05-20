@@ -14,6 +14,7 @@
 
 #include <fbl/auto_call.h>
 
+#include "constants.h"
 #include "fake_gdc.h"
 #include "fake_ge2d.h"
 #include "fake_isp.h"
@@ -25,20 +26,11 @@
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
-// NOTE: In this test, we are actually just unit testing the ControllerImpl class.
 
+// NOTE: In this test, we are actually just unit testing the ControllerImpl class.
 namespace camera {
 
 namespace {
-constexpr uint32_t kDebugConfig = 0;
-constexpr uint32_t kMonitorConfig = 1;
-constexpr uint32_t kVideoConfig = 2;
-constexpr auto kStreamTypeFR = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION;
-constexpr auto kStreamTypeDS = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION;
-constexpr auto kStreamTypeML = fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
-constexpr auto kStreamTypeVideo = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
-constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONITORING;
-constexpr auto kNumBuffers = 5;
 
 class ControllerProtocolTest : public gtest::TestLoopFixture {
  public:
@@ -70,23 +62,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
                                           const fuchsia::camera2::CameraStreamType stream_type) {
     InternalConfigInfo& config_info = internal_config_info_.configs_info.at(0);
 
-    switch (config_type) {
-      case kDebugConfig: {
-        config_info = internal_config_info_.configs_info.at(0);
-        break;
-      }
-      case kMonitorConfig: {
-        config_info = internal_config_info_.configs_info.at(1);
-        break;
-      }
-      case kVideoConfig: {
-        config_info = internal_config_info_.configs_info.at(2);
-        break;
-      }
-      default: {
-        return nullptr;
-      }
+    if (config_type >= SherlockConfigs::MAX) {
+      return nullptr;
     }
+
+    config_info = internal_config_info_.configs_info.at(config_type);
 
     for (auto& stream_info : config_info.streams_info) {
       auto supported_streams = stream_info.supported_streams;
@@ -192,37 +172,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   fuchsia::camera2::hal::StreamConfig stream_config_;
 };
 
-TEST_F(ControllerProtocolTest, GetDebugStreamConfig) {
-  EXPECT_NE(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeFR));
-  EXPECT_NE(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeDS));
-}
-
-TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
-  fuchsia::camera2::StreamPtr stream;
-  auto stream_type = kStreamTypeFR;
-  ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
-
-  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
-  EXPECT_EQ(fr_head_node->type(), NodeType::kInputStream);
-  EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
-  EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type));
-
-  auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
-  EXPECT_EQ(output_node->type(), NodeType::kOutputStream);
-  EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
-  EXPECT_TRUE(output_node->is_stream_supported(stream_type));
-
-  EXPECT_NE(nullptr, output_node->client_stream());
-
-  auto output_formats = GetOutputFormats(stream);
-  EXPECT_EQ(output_formats.size(), 1u);
-}
-
 TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamFR) {
   fuchsia::camera2::StreamPtr stream;
   auto stream_type1 = kStreamTypeDS | kStreamTypeML;
   auto stream_type2 = kStreamTypeFR | kStreamTypeML;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type2, stream));
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -249,7 +203,7 @@ TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamDS) {
   auto stream_type1 = kStreamTypeDS | kStreamTypeML;
   auto stream_type2 = kStreamTypeFR | kStreamTypeML;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type1, stream));
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   auto* gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
@@ -280,10 +234,10 @@ TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamDS) {
 TEST_F(ControllerProtocolTest, TestConfigureVideoConfigStream1) {
   auto stream_type = kStreamTypeFR | kStreamTypeML | kStreamTypeVideo;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kVideoConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::VIDEO, stream_type, stream));
 
   fuchsia::camera2::StreamPtr stream_video;
-  ASSERT_EQ(ZX_OK, SetupStream(kVideoConfig, kStreamTypeVideo, stream_video));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::VIDEO, kStreamTypeVideo, stream_video));
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   auto* gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
@@ -344,7 +298,8 @@ TEST_F(ControllerProtocolTest, TestHasStreamType) {
 }
 
 TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) {
-  auto* stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+  auto* stream_config_node =
+      GetStreamConfigNode(SherlockConfigs::MONITORING, kStreamTypeDS | kStreamTypeML);
   ASSERT_NE(nullptr, stream_config_node);
 
   StreamCreationData info;
@@ -373,9 +328,9 @@ TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) {
 }
 
 TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) {
-  auto stream_type = kStreamTypeFR;
+  auto stream_type = kStreamTypeFR | kStreamTypeML;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type, stream));
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -391,9 +346,9 @@ TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) {
 }
 
 TEST_F(ControllerProtocolTest, TestMultipleStopStreaming) {
-  auto stream_type = kStreamTypeFR;
+  auto stream_type = kStreamTypeFR | kStreamTypeML;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type, stream));
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   auto* output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -416,8 +371,8 @@ TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFRBadOrder) {
   bool stream_alive = true;
   stream2.set_error_handler([&](zx_status_t /* status*/) { stream_alive = false; });
 
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream1));
-  EXPECT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream2));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type1, stream1));
+  EXPECT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type2, stream2));
   EXPECT_FALSE(stream_alive);
 }
 
@@ -428,8 +383,8 @@ TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFR) {
   auto stream_type1 = kStreamTypeDS | kStreamTypeML;
   auto stream_type2 = kStreamTypeFR | kStreamTypeML;
 
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream2));
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream1));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type2, stream2));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type1, stream1));
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
   auto* fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -483,7 +438,7 @@ TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFR) {
 TEST_F(ControllerProtocolTest, TestInUseBufferCounts) {
   auto stream_type = kStreamTypeFR | kStreamTypeML;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type, stream));
 
   bool stream_alive = true;
   stream.set_error_handler([&](zx_status_t /*status*/) { stream_alive = false; });
@@ -538,8 +493,8 @@ TEST_F(ControllerProtocolTest, TestInUseBufferCounts) {
 }
 
 TEST_F(ControllerProtocolTest, TestOutputNode) {
-  auto stream_type = kStreamTypeFR;
-  auto* stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
+  auto stream_type = kStreamTypeDS | kStreamTypeML;
+  auto* stream_config_node = GetStreamConfigNode(SherlockConfigs::MONITORING, stream_type);
   ASSERT_NE(nullptr, stream_config_node);
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
@@ -572,7 +527,8 @@ TEST_F(ControllerProtocolTest, TestOutputNode) {
 }
 
 TEST_F(ControllerProtocolTest, TestGdcNode) {
-  auto* stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+  auto* stream_config_node =
+      GetStreamConfigNode(SherlockConfigs::MONITORING, kStreamTypeDS | kStreamTypeML);
   ASSERT_NE(nullptr, stream_config_node);
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
@@ -595,7 +551,7 @@ TEST_F(ControllerProtocolTest, TestGdcNode) {
 TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) {
   auto stream_type = kStreamTypeDS | kStreamTypeML;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type, stream));
 
   // Start streaming.
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
@@ -649,8 +605,8 @@ TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) {
   auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
   auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
 
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_fr, stream_fr));
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_ds, stream_ds));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type_fr, stream_fr));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type_ds, stream_ds));
 
   // Start streaming.
   async::PostTask(dispatcher(), [&stream_fr]() { stream_fr->Start(); });
@@ -688,10 +644,10 @@ TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
   auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
   auto ds_stream_type = kStreamTypeMonitoring;
   fuchsia::camera2::StreamPtr fr_stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, fr_stream_type, fr_stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, fr_stream_type, fr_stream));
 
   fuchsia::camera2::StreamPtr ds_stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, ds_stream_type, ds_stream));
 
   bool fr_stream_alive = true;
   fr_stream.set_error_handler([&](zx_status_t /*status*/) { fr_stream_alive = false; });
@@ -756,10 +712,10 @@ TEST_F(ControllerProtocolTest, TestFindGraphHead) {
   auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
   auto ds_stream_type = kStreamTypeMonitoring;
   fuchsia::camera2::StreamPtr fr_stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, fr_stream_type, fr_stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, fr_stream_type, fr_stream));
 
   fuchsia::camera2::StreamPtr ds_stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, ds_stream_type, ds_stream));
 
   auto result = pipeline_manager_->FindGraphHead(fr_stream_type);
   EXPECT_FALSE(result.is_error());
@@ -777,7 +733,7 @@ TEST_F(ControllerProtocolTest, TestFindGraphHead) {
 TEST_F(ControllerProtocolTest, TestResolutionChange) {
   auto ds_stream_type = kStreamTypeMonitoring;
   fuchsia::camera2::StreamPtr ds_stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, ds_stream_type, ds_stream));
 
   auto* ds_head_node = pipeline_manager_->downscaled_resolution_stream();
   auto* gdc_node = static_cast<GdcNode*>(ds_head_node->child_nodes().at(0).get());
@@ -865,8 +821,8 @@ TEST_F(ControllerProtocolTest, TestPipelineManagerShutdown) {
   auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
   auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
 
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_fr, stream_fr));
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_ds, stream_ds));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type_fr, stream_fr));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type_ds, stream_ds));
 
   // Start streaming.
   async::PostTask(dispatcher(), [&stream_fr]() { stream_fr->Start(); });
@@ -886,7 +842,7 @@ TEST_F(ControllerProtocolTest, TestPipelineManagerShutdown) {
 TEST_F(ControllerProtocolTest, TestCropRectChange) {
   auto stream_type = kStreamTypeVideo;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kVideoConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::VIDEO, stream_type, stream));
 
   // Start streaming.
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
@@ -928,7 +884,7 @@ TEST_F(ControllerProtocolTest, TestCropRectChange) {
 TEST_F(ControllerProtocolTest, TestCropRectChangeInvalidStream) {
   auto stream_type = kStreamTypeMonitoring;
   fuchsia::camera2::StreamPtr stream;
-  ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type, stream));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type, stream));
 
   // Start streaming.
   async::PostTask(dispatcher(), [&stream]() { stream->Start(); });

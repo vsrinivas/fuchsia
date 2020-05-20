@@ -23,16 +23,14 @@ namespace camera {
 // particular stream. These indexes are based on what order
 // we populate the different configurations below.
 // Following is the order of configs and streams for Sherlock.
-// Config 0: Debug configuration.
-//          Stream 0: FR
-// Config 1: Monitoring configuration.
+// Config 0: Monitoring configuration.
 //          Stream 0: ML | FR
 //          Stream 1: ML | DS
 //          Stream 2: MONITORING
-// Config 2: Video conferencing configuration.
+// Config 1: Video conferencing configuration.
 //          Stream 0: ML | FR | VIDEO
 //          Stream 1: VIDEO
-// Config 3: Video conferencing configuration.
+// Config 2: // Video conferencing configuration with extended FOV enabled.
 //          Stream 0: ML | FR | VIDEO | EXTENDED_FOV
 //          Stream 1: VIDEO | | EXTENDED_FOV
 std::vector<fuchsia::camera2::hal::Config> SherlockExternalConfigs();

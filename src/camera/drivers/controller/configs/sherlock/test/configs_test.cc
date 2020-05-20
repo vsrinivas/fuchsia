@@ -9,7 +9,7 @@
 #include "src/camera/drivers/controller/configs/sherlock/common_util.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
-#include "src/camera/drivers/controller/configs/sherlock/video_conferencing_config.h"
+#include "src/camera/drivers/controller/test/constants.h"
 
 namespace camera {
 
@@ -22,31 +22,16 @@ constexpr auto kStreamTypeVideo = fuchsia::camera2::CameraStreamType::VIDEO_CONF
 constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONITORING;
 
 TEST(ConfigTest, ExternalConfiguration) {
-  constexpr uint32_t kExpectedConfigs = 4u;
   auto external_configs = SherlockExternalConfigs();
   auto internal_configs = SherlockInternalConfigs();
 
-  EXPECT_EQ(external_configs.size(), kExpectedConfigs);
-  EXPECT_EQ(internal_configs.configs_info.size(), kExpectedConfigs);
-}
-
-TEST(ConfigTest, InternalDebugConfiguration) {
-  auto internal_configs = SherlockInternalConfigs();
-  auto debug_config = internal_configs.configs_info.at(0);
-
-  EXPECT_EQ(debug_config.streams_info.size(), 2u);
-  // 1st stream is FR.
-  EXPECT_EQ(debug_config.streams_info.at(0).input_stream_type, kStreamTypeFR);
-  // 2nd stream is DS.
-  EXPECT_EQ(debug_config.streams_info.at(1).input_stream_type, kStreamTypeDS);
-  // FR supported streams.
-  EXPECT_EQ(debug_config.streams_info.at(0).supported_streams.size(), 1u);
-  EXPECT_EQ(debug_config.streams_info.at(0).supported_streams[0].type, kStreamTypeFR);
+  EXPECT_EQ(external_configs.size(), SherlockConfigs::MAX);
+  EXPECT_EQ(internal_configs.configs_info.size(), SherlockConfigs::MAX);
 }
 
 TEST(ConfigTest, InternalMonitorConfiguration) {
   auto internal_configs = SherlockInternalConfigs();
-  auto monitor_config = internal_configs.configs_info.at(1);
+  auto monitor_config = internal_configs.configs_info.at(SherlockConfigs::MONITORING);
   auto fr = monitor_config.streams_info.at(0);
   auto ds = monitor_config.streams_info.at(1);
   EXPECT_EQ(monitor_config.streams_info.size(), 2u);
@@ -130,7 +115,7 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
 
 TEST(ConfigTest, InternalVideoConferenceConfiguration) {
   auto internal_configs = SherlockInternalConfigs();
-  auto video_config = internal_configs.configs_info.at(2);
+  auto video_config = internal_configs.configs_info.at(SherlockConfigs::VIDEO);
 
   EXPECT_EQ(video_config.streams_info.size(), 1u);
   // 1st stream is FR.

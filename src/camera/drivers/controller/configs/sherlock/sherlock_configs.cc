@@ -9,9 +9,6 @@ namespace camera {
 std::vector<fuchsia::camera2::hal::Config> SherlockExternalConfigs() {
   std::vector<fuchsia::camera2::hal::Config> configs;
 
-  // Debug configuration.
-  configs.push_back(DebugConfig());
-
   // Monitoring configuration.
   configs.push_back(MonitoringConfig());
 
@@ -28,19 +25,6 @@ InternalConfigs SherlockInternalConfigs() {
   return {
       .configs_info =
           {
-              // Debug configuration.
-              {
-                  .streams_info =
-                      {
-                          {
-                              DebugConfigFullRes(),
-                          },
-                          {
-                              DebugConfigDownScaledRes(),
-                          },
-                      },
-
-              },
               // Monitoring configuration.
               {
                   .streams_info =

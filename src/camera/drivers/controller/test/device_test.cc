@@ -10,6 +10,7 @@
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_call.h>
 
+#include "constants.h"
 #include "fake_buttons.h"
 #include "fake_sysmem.h"
 #include "src/camera/drivers/controller/controller-device.h"
@@ -154,22 +155,15 @@ TEST_F(ControllerDeviceTest, GetDeviceInfo) {
 TEST_F(ControllerDeviceTest, GetNextConfig) {
   ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
   uint32_t number_of_configs = 0;
-  constexpr uint32_t kNumConfigs = 4;
+  constexpr uint32_t kNumConfigs = 3;
   bool config_populated = false;
 
   while (number_of_configs != kNumConfigs) {
     controller_protocol_->GetNextConfig(
         [&](std::unique_ptr<fuchsia::camera2::hal::Config> config, zx_status_t status) {
           switch (number_of_configs) {
-            case 0: {
-              // Config 0 (debug)
-              ASSERT_NE(config, nullptr);
-              EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
-                        fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-              break;
-            }
-            case 1: {
-              // Config 1 (monitoring)
+            case SherlockConfigs::MONITORING: {
+              // Config 0 (monitoring)
               ASSERT_NE(config, nullptr);
               EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
@@ -181,8 +175,8 @@ TEST_F(ControllerDeviceTest, GetNextConfig) {
                         fuchsia::camera2::CameraStreamType::MONITORING);
               break;
             }
-            case 2: {
-              // Config 2 (video conferencing)
+            case SherlockConfigs::VIDEO: {
+              // Config 1 (video conferencing)
               ASSERT_NE(config, nullptr);
               EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
@@ -192,8 +186,8 @@ TEST_F(ControllerDeviceTest, GetNextConfig) {
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
               break;
             }
-            case 3: {
-              // Config 3 (video conferencing with extended FOV)
+            case SherlockConfigs::VIDEO_EXTENDED_FOV: {
+              // Config 2 (video conferencing with extended FOV)
               ASSERT_NE(config, nullptr);
               EXPECT_EQ(config->stream_configs.at(0).properties.stream_type(),
                         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
