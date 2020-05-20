@@ -57,6 +57,14 @@ type Type struct {
 	DeclType types.DeclType
 
 	IsPrimitive bool
+	IsArray     bool
+	IsVector    bool
+	IsTable     bool
+
+	// Set iff IsArray || IsVector
+	ElementType *Type
+	// Valid iff IsArray
+	ElementCount int
 }
 
 func (t Type) Identifier() string {
@@ -622,6 +630,9 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.NeedsDtor = true
+		r.IsArray = true
+		r.ElementType = &t
+		r.ElementCount = *val.ElementCount
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
@@ -631,6 +642,8 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
 		}
 		r.NeedsDtor = true
+		r.IsVector = true
+		r.ElementType = &t
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
 		if val.Nullable {
@@ -674,6 +687,9 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.UnionDeclType:
 			if declType.IsPrimitive() {
 				r.IsPrimitive = true
+			}
+			if declType == types.TableDeclType {
+				r.IsTable = true
 			}
 
 			if val.Nullable {

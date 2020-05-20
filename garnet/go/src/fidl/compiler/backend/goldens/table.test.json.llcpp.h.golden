@@ -132,6 +132,9 @@ class SimpleTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     frame_ptr_->x_.data = std::move(elem);
     if (max_ordinal_ < 1) {
@@ -140,6 +143,17 @@ class SimpleTable::Builder final {
       max_ordinal_ = 1;
     }
     return std::move(*this);
+  }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
   }
 
   Builder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
@@ -150,6 +164,17 @@ class SimpleTable::Builder final {
       max_ordinal_ = 5;
     }
     return std::move(*this);
+  }
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *frame_ptr_->y_.data;
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *frame_ptr_->y_.data;
+  }
+  bool has_y() const {
+    return max_ordinal_ >= 5 && frame_ptr_->y_.data != nullptr;
   }
 
   SimpleTable build() {
@@ -170,6 +195,9 @@ class SimpleTable::UnownedBuilder final {
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   UnownedBuilder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
     frame_.x_.data = std::move(elem);
@@ -178,6 +206,15 @@ class SimpleTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_.x_.data != nullptr; }
 
   UnownedBuilder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
@@ -187,6 +224,15 @@ class SimpleTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *frame_.y_.data;
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *frame_.y_.data;
+  }
+  bool has_y() const { return max_ordinal_ >= 5 && frame_.y_.data != nullptr; }
 
   SimpleTable build() {
     return SimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
@@ -305,6 +351,9 @@ class ReverseOrdinalTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   Builder&& set_z(::fidl::tracking_ptr<int64_t> elem) {
     frame_ptr_->z_.data = std::move(elem);
     if (max_ordinal_ < 1) {
@@ -313,6 +362,17 @@ class ReverseOrdinalTable::Builder final {
       max_ordinal_ = 1;
     }
     return std::move(*this);
+  }
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return *frame_ptr_->z_.data;
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return *frame_ptr_->z_.data;
+  }
+  bool has_z() const {
+    return max_ordinal_ >= 1 && frame_ptr_->z_.data != nullptr;
   }
 
   Builder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
@@ -324,6 +384,17 @@ class ReverseOrdinalTable::Builder final {
     }
     return std::move(*this);
   }
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *frame_ptr_->y_.data;
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *frame_ptr_->y_.data;
+  }
+  bool has_y() const {
+    return max_ordinal_ >= 2 && frame_ptr_->y_.data != nullptr;
+  }
 
   Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     frame_ptr_->x_.data = std::move(elem);
@@ -333,6 +404,17 @@ class ReverseOrdinalTable::Builder final {
       max_ordinal_ = 3;
     }
     return std::move(*this);
+  }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 3 && frame_ptr_->x_.data != nullptr;
   }
 
   ReverseOrdinalTable build() {
@@ -353,6 +435,9 @@ class ReverseOrdinalTable::UnownedBuilder final {
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   UnownedBuilder&& set_z(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
     frame_.z_.data = std::move(elem);
@@ -361,6 +446,15 @@ class ReverseOrdinalTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return *frame_.z_.data;
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return *frame_.z_.data;
+  }
+  bool has_z() const { return max_ordinal_ >= 1 && frame_.z_.data != nullptr; }
 
   UnownedBuilder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
@@ -370,6 +464,15 @@ class ReverseOrdinalTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *frame_.y_.data;
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *frame_.y_.data;
+  }
+  bool has_y() const { return max_ordinal_ >= 2 && frame_.y_.data != nullptr; }
 
   UnownedBuilder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
@@ -379,6 +482,15 @@ class ReverseOrdinalTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  bool has_x() const { return max_ordinal_ >= 3 && frame_.x_.data != nullptr; }
 
   ReverseOrdinalTable build() {
     return ReverseOrdinalTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
@@ -470,6 +582,9 @@ class OlderSimpleTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     frame_ptr_->x_.data = std::move(elem);
     if (max_ordinal_ < 1) {
@@ -478,6 +593,17 @@ class OlderSimpleTable::Builder final {
       max_ordinal_ = 1;
     }
     return std::move(*this);
+  }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
   }
 
   OlderSimpleTable build() {
@@ -498,6 +624,9 @@ class OlderSimpleTable::UnownedBuilder final {
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   UnownedBuilder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
     frame_.x_.data = std::move(elem);
@@ -506,6 +635,15 @@ class OlderSimpleTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_.x_.data != nullptr; }
 
   OlderSimpleTable build() {
     return OlderSimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
@@ -626,6 +764,9 @@ class NewerSimpleTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     frame_ptr_->x_.data = std::move(elem);
     if (max_ordinal_ < 1) {
@@ -634,6 +775,17 @@ class NewerSimpleTable::Builder final {
       max_ordinal_ = 1;
     }
     return std::move(*this);
+  }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
   }
 
   Builder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
@@ -645,6 +797,17 @@ class NewerSimpleTable::Builder final {
     }
     return std::move(*this);
   }
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *frame_ptr_->y_.data;
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *frame_ptr_->y_.data;
+  }
+  bool has_y() const {
+    return max_ordinal_ >= 5 && frame_ptr_->y_.data != nullptr;
+  }
 
   Builder&& set_z(::fidl::tracking_ptr<int64_t> elem) {
     frame_ptr_->z_.data = std::move(elem);
@@ -654,6 +817,17 @@ class NewerSimpleTable::Builder final {
       max_ordinal_ = 6;
     }
     return std::move(*this);
+  }
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return *frame_ptr_->z_.data;
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return *frame_ptr_->z_.data;
+  }
+  bool has_z() const {
+    return max_ordinal_ >= 6 && frame_ptr_->z_.data != nullptr;
   }
 
   NewerSimpleTable build() {
@@ -674,6 +848,9 @@ class NewerSimpleTable::UnownedBuilder final {
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   UnownedBuilder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
     frame_.x_.data = std::move(elem);
@@ -682,6 +859,15 @@ class NewerSimpleTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_.x_.data;
+  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_.x_.data != nullptr; }
 
   UnownedBuilder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
@@ -691,6 +877,15 @@ class NewerSimpleTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return *frame_.y_.data;
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return *frame_.y_.data;
+  }
+  bool has_y() const { return max_ordinal_ >= 5 && frame_.y_.data != nullptr; }
 
   UnownedBuilder&& set_z(::fidl::tracking_ptr<int64_t> elem) {
     ZX_ASSERT(elem);
@@ -700,6 +895,15 @@ class NewerSimpleTable::UnownedBuilder final {
     }
     return std::move(*this);
   }
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return *frame_.z_.data;
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return *frame_.z_.data;
+  }
+  bool has_z() const { return max_ordinal_ >= 6 && frame_.z_.data != nullptr; }
 
   NewerSimpleTable build() {
     return NewerSimpleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
@@ -775,6 +979,9 @@ class EmptyTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   EmptyTable build() { return EmptyTable(max_ordinal_, std::move(frame_ptr_)); }
 
  private:
@@ -790,6 +997,9 @@ class EmptyTable::UnownedBuilder final {
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   EmptyTable build() { return EmptyTable(max_ordinal_, nullptr); }
 

@@ -343,6 +343,9 @@ class ExampleTable::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   Builder&& set_member(::fidl::tracking_ptr<uint32_t> elem) {
     frame_ptr_->member_.data = std::move(elem);
     if (max_ordinal_ < 1) {
@@ -351,6 +354,17 @@ class ExampleTable::Builder final {
       max_ordinal_ = 1;
     }
     return std::move(*this);
+  }
+  const uint32_t& member() const {
+    ZX_ASSERT(has_member());
+    return *frame_ptr_->member_.data;
+  }
+  uint32_t& member() {
+    ZX_ASSERT(has_member());
+    return *frame_ptr_->member_.data;
+  }
+  bool has_member() const {
+    return max_ordinal_ >= 1 && frame_ptr_->member_.data != nullptr;
   }
 
   ExampleTable build() {
@@ -371,6 +385,9 @@ class ExampleTable::UnownedBuilder final {
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   UnownedBuilder&& set_member(::fidl::tracking_ptr<uint32_t> elem) {
     ZX_ASSERT(elem);
     frame_.member_.data = std::move(elem);
@@ -378,6 +395,17 @@ class ExampleTable::UnownedBuilder final {
       max_ordinal_ = 1;
     }
     return std::move(*this);
+  }
+  const uint32_t& member() const {
+    ZX_ASSERT(has_member());
+    return *frame_.member_.data;
+  }
+  uint32_t& member() {
+    ZX_ASSERT(has_member());
+    return *frame_.member_.data;
+  }
+  bool has_member() const {
+    return max_ordinal_ >= 1 && frame_.member_.data != nullptr;
   }
 
   ExampleTable build() {

@@ -67,3 +67,9 @@ struct FooResponse {
 protocol Baz {
     Foo(FooRequest req) -> (FooResponse res);
 };
+
+table TableWithSubTables {
+    1: SampleTable t;
+    2: vector<SampleTable> vt;
+    3: array<SampleTable>:3 at;
+};

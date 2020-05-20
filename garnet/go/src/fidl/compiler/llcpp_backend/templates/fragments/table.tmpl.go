@@ -19,7 +19,8 @@ class {{ .Name }} final {
 public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
-  {{- range .Members }}
+
+{{- range .Members }}
 {{ "" }}
     {{- range .DocComments }}
   //{{ . }}
@@ -98,6 +99,9 @@ class {{ .Name }}::Builder final {
   Builder(const Builder& other) = delete;
   Builder& operator=(const Builder& other) = delete;
 
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
   {{- range .Members }}
 {{ "" }}
     {{- range .DocComments }}
@@ -113,13 +117,46 @@ class {{ .Name }}::Builder final {
     }
     return std::move(*this);
   }
+  const {{ .Type.LLDecl }}& {{ .Name }}() const {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *frame_ptr_->{{ .Name }}_.data;
+  }
+  {{ .Type.LLDecl }}& {{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *frame_ptr_->{{ .Name }}_.data;
+  }
+  bool {{ .MethodHasName }}() const {
+    return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
+  }
+  {{- if .Type.IsTable }}
+  {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
+  }
+  {{- end }}
+  {{- if .Type.IsArray }}
+  {{- if .Type.ElementType.IsTable }}
+  ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
+  }
+  {{- end }}
+  {{- end }}
+  {{- if .Type.IsVector }}
+  {{- if .Type.ElementType.IsTable }}
+  ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
+  }
+  {{- end }}
+  {{- end }}
   {{- end }}
 
   {{ .Name }} build() {
     return {{ .Name }}(max_ordinal_, std::move(frame_ptr_));
   }
 
-  private:
+private:
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<{{ .Name }}::Frame> frame_ptr_;
 };
@@ -132,6 +169,9 @@ public:
   UnownedBuilder() noexcept = default;
   UnownedBuilder(UnownedBuilder&& other) noexcept = default;
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   {{- range .Members }}
 {{ "" }}
@@ -147,6 +187,39 @@ public:
     }
     return std::move(*this);
   }
+  const {{ .Type.LLDecl }}& {{ .Name }}() const {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *frame_.{{ .Name }}_.data;
+  }
+  {{ .Type.LLDecl }}& {{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *frame_.{{ .Name }}_.data;
+  }
+  bool {{ .MethodHasName }}() const {
+    return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
+  }
+  {{- if .Type.IsTable }}
+  {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_.{{ .Name }}_.data);
+  }
+  {{- end }}
+  {{- if .Type.IsArray }}
+  {{- if .Type.ElementType.IsTable }}
+  ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
+  }
+  {{- end }}
+  {{- end }}
+  {{- if .Type.IsVector }}
+  {{- if .Type.ElementType.IsTable }}
+  ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
+    ZX_ASSERT({{ .MethodHasName }}());
+    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_.{{ .Name }}_.data);
+  }
+  {{- end }}
+  {{- end }}
   {{- end }}
 
   {{ .Name }} build() {
