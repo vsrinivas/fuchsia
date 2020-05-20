@@ -69,7 +69,7 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 		cmd := strings.Join(command, " ")
 		logger.Tracef(ctx, "starting:\n%s", cmd)
 		if err := session.Run(cmd); err != nil {
-			errs <- fmt.Errorf("failed to run SSH command: %v", err)
+			errs <- fmt.Errorf("SSH command %v failed: %w", command, err)
 			return
 		}
 		errs <- nil
@@ -82,21 +82,19 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 		runErr = ctx.Err()
 	}
 
-	// A successful ssh.Session.Run() will close the session: no clean-up required.
-	if runErr == nil {
-		return nil
+	// A successful ssh.Session.Run() will close the session: no clean-up
+	// required.
+	if runErr != nil {
+		// This cleanup is best-effort, so failures are often not worth
+		// surfacing since they might pollute the logs.
+		if err := session.Signal(ssh.SIGKILL); err != nil {
+			logger.Tracef(ctx, "failed to send KILL signal while cleaning up SSH session: %v", err)
+		}
+		if err := session.Close(); err != nil {
+			logger.Tracef(ctx, "failed to close SSH session: %v", err)
+		}
 	}
 
-	if ctx.Err() == nil {
-		logger.Errorf(ctx, "error running command, will close ssh session: %v", runErr)
-	}
-
-	if err := session.Signal(ssh.SIGKILL); err != nil {
-		logger.Errorf(ctx, "failed to send KILL signal while cleaning up SSH session: %v", err)
-	}
-	if err := session.Close(); err != nil {
-		logger.Errorf(ctx, "failed to close SSH session: %v", err)
-	}
 	return runErr
 }
 
