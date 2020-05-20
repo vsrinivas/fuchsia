@@ -590,7 +590,7 @@ static bool pmm_node_delayed_alloc_clear_late_test() {
   return pmm_node_delayed_alloc_clear_test_helper(false);
 }
 
-static bool pmm_checker_test() {
+static bool pmm_checker_test_with_fill_size(size_t fill_size) {
   BEGIN_TEST;
 
   PmmChecker checker;
@@ -608,20 +608,34 @@ static bool pmm_checker_test() {
   EXPECT_TRUE(checker.ValidatePattern(page));
   checker.AssertPattern(page);
 
+  // Set the fill size and see that |GetFillSize| returns the size.
+  checker.SetFillSize(fill_size);
+  EXPECT_EQ(fill_size, checker.GetFillSize());
+
   // Arm the checker and see that |ValidatePattern| returns false.
   checker.Arm();
   EXPECT_TRUE(checker.IsArmed());
   EXPECT_FALSE(checker.ValidatePattern(page));
 
-  // Fill with pattern and see that it validates.
+  // Fill with pattern one less than the fill size and see that it does not pass validation.
+  memset(p, 0, fill_size - 1);
+  EXPECT_FALSE(checker.ValidatePattern(page));
+
+  // Fill with the full pattern and see that it validates.
   checker.FillPattern(page);
-  for (int i = 0; i < PAGE_SIZE; ++i) {
+  for (size_t i = 0; i < fill_size; ++i) {
     EXPECT_NE(0, p[i]);
   }
   EXPECT_TRUE(checker.ValidatePattern(page));
 
-  // Corrupt the page and see that the corruption is detected.
-  p[PAGE_SIZE - 1] = 1;
+  // Corrupt the page after the first |fill_size| bytes and see that the corruption is not detected.
+  if (fill_size < PAGE_SIZE) {
+    p[fill_size] = 1;
+    EXPECT_TRUE(checker.ValidatePattern(page));
+  }
+
+  // Corrupt the page within the first |fill_size| bytes and see that the corruption is detected.
+  p[fill_size - 1] = 1;
   EXPECT_FALSE(checker.ValidatePattern(page));
 
   // Disarm the checker and see that it now passes.
@@ -632,6 +646,34 @@ static bool pmm_checker_test() {
 
   page->set_state(VM_PAGE_STATE_ALLOC);
   pmm_free_page(page);
+
+  END_TEST;
+}
+
+static bool pmm_checker_test() {
+  BEGIN_TEST;
+
+  EXPECT_TRUE(pmm_checker_test_with_fill_size(8));
+  EXPECT_TRUE(pmm_checker_test_with_fill_size(16));
+  EXPECT_TRUE(pmm_checker_test_with_fill_size(512));
+  EXPECT_TRUE(pmm_checker_test_with_fill_size(PAGE_SIZE));
+
+  END_TEST;
+}
+static bool pmm_checker_is_valid_fill_size_test() {
+  BEGIN_TEST;
+
+  EXPECT_FALSE(PmmChecker::IsValidFillSize(0));
+  EXPECT_FALSE(PmmChecker::IsValidFillSize(7));
+  EXPECT_FALSE(PmmChecker::IsValidFillSize(9));
+  EXPECT_FALSE(PmmChecker::IsValidFillSize(PAGE_SIZE + 8));
+  EXPECT_FALSE(PmmChecker::IsValidFillSize(PAGE_SIZE * 2));
+
+  EXPECT_TRUE(PmmChecker::IsValidFillSize(8));
+  EXPECT_TRUE(PmmChecker::IsValidFillSize(16));
+  EXPECT_TRUE(PmmChecker::IsValidFillSize(24));
+  EXPECT_TRUE(PmmChecker::IsValidFillSize(512));
+  EXPECT_TRUE(PmmChecker::IsValidFillSize(PAGE_SIZE));
 
   END_TEST;
 }
@@ -3245,6 +3287,7 @@ VM_UNITTEST(pmm_node_delayed_alloc_swap_late_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_late_test)
 VM_UNITTEST(pmm_checker_test)
+VM_UNITTEST(pmm_checker_is_valid_fill_size_test)
 VM_UNITTEST(pmm_get_arena_info_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests")
 

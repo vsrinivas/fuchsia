@@ -159,7 +159,7 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACEF("free count now %" PRIu64 "\n", free_count_);
 }
 
-void PmmNode::FillFreePages() {
+void PmmNode::FillFreePagesAndArm() {
   Guard<Mutex> guard{&lock_};
 
   if (!free_fill_enabled_) {
@@ -171,6 +171,7 @@ void PmmNode::FillFreePages() {
 
   // Now that every page has been filled, we can arm the checker.
   checker_.Arm();
+  printf("PMM: pmm checker is armed, fill size is %lu\n", checker_.GetFillSize());
 }
 
 void PmmNode::CheckAllFreePages() {
@@ -195,8 +196,9 @@ void PmmNode::PoisonAllFreePages() {
 }
 #endif  // __has_feature(address_sanitizer)
 
-void PmmNode::EnableChecker() {
+void PmmNode::EnableFreePageFilling(size_t fill_size) {
   Guard<Mutex> guard{&lock_};
+  checker_.SetFillSize(fill_size);
   free_fill_enabled_ = true;
 }
 

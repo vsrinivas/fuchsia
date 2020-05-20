@@ -80,10 +80,10 @@ class PmmNode {
 
   PageQueues* GetPageQueues() { return &page_queues_; }
 
-  // Fill all free pages with a pattern.  See all |PmmChecker|.
+  // Fill all free pages with a pattern and arm the checker.  See |PmmChecker|.
   //
-  // Should be done only once early in boot.
-  void FillFreePages();
+  // This is a no-op if the checker is not enabled.  See |EnableFreePageFilling|
+  void FillFreePagesAndArm();
 
   // Synchronously walk the PMM's free list and validate each page.  This is an incredibly expensive
   // operation and should only be used for debugging purposes.
@@ -94,10 +94,14 @@ class PmmNode {
   void PoisonAllFreePages();
 #endif
 
-  // Enable the free fill checker.
-  void EnableChecker();
+  // Enable the free fill checker with the specified fill size and begin filling freed pages going
+  // forward.  See |PmmChecker| for definition of fill size.
+  //
+  // Note, pages freed piror to calling this method will remain unfilled.  To fill them, call
+  // |FillFreePagesAndArm|.
+  void EnableFreePageFilling(size_t fill_size);
 
-  // Disable the free fill checker.
+  // Disarm and disable the free fill checker.
   void DisableChecker();
 
   // Return a pointer to this object's free fill checker.

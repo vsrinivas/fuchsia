@@ -43,7 +43,7 @@
 // The (currently) one and only pmm node
 static PmmNode pmm_node;
 
-static void pmm_fill_free_pages(uint level) { pmm_node.FillFreePages(); }
+static void pmm_fill_free_pages(uint level) { pmm_node.FillFreePagesAndArm(); }
 LK_INIT_HOOK(pmm_fill, &pmm_fill_free_pages, LK_INIT_LEVEL_VM)
 
 vm_page_t* paddr_to_vm_page(paddr_t addr) { return pmm_node.PaddrToPage(addr); }
@@ -118,35 +118,50 @@ zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_c
   return pmm_node.InitReclamation(watermarks, watermark_count, debounce, callback);
 }
 
-void pmm_checker_init_from_cmdline() {
-  bool enabled = gCmdline.GetBool("kernel.pmm-checker.enable", false);
-  if (enabled) {
-    pmm_node.EnableChecker();
-  }
-}
-
 void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
 
 #if __has_feature(address_sanitizer)
 void pmm_asan_poison_all_free_pages() { pmm_node.PoisonAllFreePages(); }
 #endif
 
-static void pmm_checker_enable() {
+static void pmm_checker_enable(size_t fill_size) {
+  // We might be changing the fill size.  If we increase the fill size while the checker is active,
+  // we might spuriously assert so disable the checker.
+  pmm_node.DisableChecker();
+
   // Enable filling of pages going forward.
-  pmm_node.EnableChecker();
+  pmm_node.EnableFreePageFilling(fill_size);
 
   // From this point on, pages will be filled when they are freed.  However, the free list may still
-  // have a lot of unfilled pages so make a pass over them and fill them all.  Node, |FillFreePages|
-  // will also |Arm| the checker.
-  pmm_node.FillFreePages();
+  // have a lot of unfilled pages so make a pass over them and fill them all.
+  pmm_node.FillFreePagesAndArm();
+
+  // All free pages have now been filled with |fill_size| and the checker is armed.
 }
 
 static void pmm_checker_disable() { pmm_node.DisableChecker(); }
 
 static bool pmm_checker_is_enabled() { return pmm_node.Checker()->IsArmed(); }
 
+static size_t pmm_checker_get_fill_size() { return pmm_node.Checker()->GetFillSize(); }
+
 static void pmm_checker_print_status() {
-  printf("pmm checker %s\n", pmm_checker_is_enabled() ? "enabled" : "disabled");
+  printf("pmm checker %s, fill size is %lu\n", pmm_checker_is_enabled() ? "enabled" : "disabled",
+         pmm_checker_get_fill_size());
+}
+
+void pmm_checker_init_from_cmdline() {
+  bool enabled = gCmdline.GetBool("kernel.pmm-checker.enable", false);
+  if (enabled) {
+    static constexpr char kFillSizeFlag[] = "kernel.pmm-checker.fill-size";
+    size_t fill_size = gCmdline.GetUInt64(kFillSizeFlag, PAGE_SIZE);
+    if (!PmmChecker::IsValidFillSize(fill_size)) {
+      printf("PMM: value from %s is invalid (%lu), using PAGE_SIZE instead\n", kFillSizeFlag,
+             fill_size);
+      fill_size = PAGE_SIZE;
+    }
+    pmm_node.EnableFreePageFilling(fill_size);
+  }
 }
 
 static void pmm_dump_timer(Timer* t, zx_time_t now, void*) {
@@ -188,7 +203,10 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
              argv[0].str);
       printf("%s checker status                    : prints the status of the pmm checker\n",
              argv[0].str);
-      printf("%s checker enable                    : enables the pmm checker\n", argv[0].str);
+      printf(
+          "%s checker enable [<size>]           : enables the pmm checker with optional fill "
+          "size\n",
+          argv[0].str);
       printf("%s checker disable                   : disables the pmm checker\n", argv[0].str);
       printf("%s checker check                     : forces a check of all free pages in the pmm\n",
              argv[0].str);
@@ -283,13 +301,23 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (!strcmp(argv[1].str, "drop_user_pt")) {
     VmAspace::DropAllUserPageTables();
   } else if (!strcmp(argv[1].str, "checker")) {
-    if (argc != 3) {
+    if (argc < 3 || argc > 4) {
       goto usage;
     }
     if (!strcmp(argv[2].str, "status")) {
       pmm_checker_print_status();
     } else if (!strcmp(argv[2].str, "enable")) {
-      pmm_checker_enable();
+      size_t fill_size = PAGE_SIZE;
+      if (argc == 4) {
+        fill_size = argv[3].u;
+        if (!PmmChecker::IsValidFillSize(fill_size)) {
+          printf(
+              "error: fill size must be a multiple of 8 and be between 8 and PAGE_SIZE, "
+              "inclusive\n");
+          return ZX_ERR_INTERNAL;
+        }
+      }
+      pmm_checker_enable(fill_size);
       pmm_checker_print_status();
     } else if (!strcmp(argv[2].str, "disable")) {
       pmm_checker_disable();

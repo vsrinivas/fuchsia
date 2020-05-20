@@ -608,6 +608,12 @@ This controls whether the PMM's use-after-free checker is enabled.
 The PMM checker can be expensive and is intended for use in debug and
 development builds.  See also "k pmm checker".  Defaults to false.
 
+## kernel.pmm-checker.fill-size=\<num>
+
+This option specifies how many bytes of each free page is filled or checked when
+the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
+between 8 and PAGE_SIZE, inclusive.  Defaults to PAGE_SIZE.
+
 ## ktrace.bufsize
 
 This option specifies the size of the buffer for ktrace records, in megabytes.
