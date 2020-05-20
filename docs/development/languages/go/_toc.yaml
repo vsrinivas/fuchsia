@@ -1,4 +1,4 @@
-# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
@@ -6,3 +6,5 @@ toc:
   path: /docs/development/languages/go
 - title: "Logging"
   path: /docs/development/languages/go/logging.md
+- title: "Readability reviews"
+  path: /docs/development/languages/go/readability_reviews.md
