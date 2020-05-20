@@ -314,9 +314,8 @@ type ifState struct {
 		sync.Mutex
 		state link.State
 		// metric is used by default for routes that originate from this NIC.
-		metric     routes.Metric
-		dnsServers []tcpip.Address
-		dhcp       struct {
+		metric routes.Metric
+		dhcp   struct {
 			*dhcp.Client
 			// running must not be nil.
 			running func() bool
@@ -325,6 +324,13 @@ type ifState struct {
 			// Used to restart the DHCP client when we go from link.StateDown to
 			// link.StateStarted.
 			enabled bool
+		}
+	}
+
+	dns struct {
+		mu struct {
+			sync.Mutex
+			servers []tcpip.Address
 		}
 	}
 
@@ -579,33 +585,35 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				}
 			}
 		}
-		ifs.ns.onInterfacesChanged()
+		// Dispatch onInterfacesChanged on another goroutine to prevent a
+		// deadlock while holding ifState.mu since dhcpAcquired is called on
+		// cancellation.
+		go ifs.ns.onInterfacesChanged()
 	}
 
-	ifs.mu.Lock()
-	if updated := ifs.setDNSServersLocked(config.DNS); updated {
+	if updated := ifs.setDNSServers(config.DNS); updated {
 		syslog.Infof("NIC %s: setting DNS servers: %s", name, config.DNS)
 	}
-	ifs.mu.Unlock()
 }
 
-// setDNSServersLocked updates the receiver's dnsServers if necessary and returns
+// setDNSServers updates the receiver's dnsServers if necessary and returns
 // whether they were updated.
-func (ifs *ifState) setDNSServersLocked(servers []tcpip.Address) bool {
-	sameDNS := len(ifs.mu.dnsServers) == len(servers)
+func (ifs *ifState) setDNSServers(servers []tcpip.Address) bool {
+	ifs.dns.mu.Lock()
+	sameDNS := len(ifs.dns.mu.servers) == len(servers)
 	if sameDNS {
-		for i := range ifs.mu.dnsServers {
-			sameDNS = ifs.mu.dnsServers[i] == servers[i]
+		for i := range ifs.dns.mu.servers {
+			sameDNS = ifs.dns.mu.servers[i] == servers[i]
 			if !sameDNS {
 				break
 			}
 		}
 	}
 	if !sameDNS {
-		ifs.mu.dnsServers = servers
-		ifs.ns.dnsClient.UpdateDhcpServers(ifs.nicid, &ifs.mu.dnsServers)
+		ifs.dns.mu.servers = servers
+		ifs.ns.dnsClient.UpdateDhcpServers(ifs.nicid, &ifs.dns.mu.servers)
 	}
-
+	ifs.dns.mu.Unlock()
 	return !sameDNS
 }
 
@@ -678,7 +686,7 @@ func (ifs *ifState) stateChange(s link.State) {
 			if ifs.ns.dnsClient != nil {
 				ifs.ns.dnsClient.RemoveAllServersWithNIC(ifs.nicid)
 			}
-			ifs.setDNSServersLocked(nil)
+			ifs.setDNSServers(nil)
 
 			// TODO(crawshaw): more cleanup to be done here:
 			// 	- remove link endpoint
@@ -987,12 +995,17 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 	ifStates := make(map[tcpip.NICID]ifStateInfo)
 	for id, ni := range nicInfo {
 		ifs := ni.Context.(*ifState)
+
+		ifs.dns.mu.Lock()
+		dnsServers := ifs.dns.mu.servers
+		ifs.dns.mu.Unlock()
+
 		ifs.mu.Lock()
 		info := ifStateInfo{
 			NICInfo:     ni,
 			nicid:       ifs.nicid,
 			state:       ifs.mu.state,
-			dnsServers:  ifs.mu.dnsServers,
+			dnsServers:  dnsServers,
 			dhcpEnabled: ifs.mu.dhcp.enabled,
 		}
 		if ifs.mu.dhcp.enabled {

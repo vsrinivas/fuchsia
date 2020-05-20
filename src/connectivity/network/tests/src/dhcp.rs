@@ -63,6 +63,7 @@ async fn acquire_dhcp() -> Result {
             ],
         }],
         &["/pkg/data/test_config.json"],
+        3,
     )
     .await
 }
@@ -92,6 +93,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
             ],
         }],
         &["/pkg/data/bound_device_test_config_eth2.json"],
+        1,
     )
     .await
 }
@@ -146,6 +148,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
             "/pkg/data/bound_device_test_config_eth2.json",
             "/pkg/data/bound_device_test_config_eth3.json",
         ],
+        1,
     )
     .await
 }
@@ -164,6 +167,7 @@ async fn test_dhcp(
     name: &str,
     network_configs: &mut [DhcpTestNetwork<'_>],
     dhcpd_config_paths: &[&str],
+    cycles: u32,
 ) -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
 
@@ -260,48 +264,74 @@ async fn test_dhcp(
             .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
             .context("failed to connect to client netstack")?;
 
-        let mut address_change_stream = futures::TryStreamExt::try_filter_map(
-            client_netstack.take_event_stream(),
-            |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                futures::future::ok(
-                    interfaces.into_iter().find(|i| i.id as u64 == interface.id()).and_then(
-                        |fidl_fuchsia_netstack::NetInterface { addr, netmask, .. }| {
-                            let ipaddr = addr;
-                            match ipaddr {
-                                fidl_fuchsia_net::IpAddress::Ipv4(
-                                    fidl_fuchsia_net::Ipv4Address { addr },
-                                ) => {
-                                    if addr == std::net::Ipv4Addr::UNSPECIFIED.octets() {
-                                        None
-                                    } else {
-                                        Some((ipaddr, netmask))
+        for _ in 0..cycles {
+            let () = interface.set_link_up(true).await.context("Failed to bring link up")?;
+            let mut address_change_stream = futures::TryStreamExt::try_filter_map(
+                client_netstack.take_event_stream(),
+                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                    futures::future::ok(
+                        interfaces.into_iter().find(|i| i.id as u64 == interface.id()).and_then(
+                            |fidl_fuchsia_netstack::NetInterface { addr, netmask, .. }| {
+                                let ipaddr = addr;
+                                match ipaddr {
+                                    fidl_fuchsia_net::IpAddress::Ipv4(
+                                        fidl_fuchsia_net::Ipv4Address { addr },
+                                    ) => {
+                                        if addr == std::net::Ipv4Addr::UNSPECIFIED.octets() {
+                                            None
+                                        } else {
+                                            Some((ipaddr, netmask))
+                                        }
                                     }
+                                    fidl_fuchsia_net::IpAddress::Ipv6(
+                                        fidl_fuchsia_net::Ipv6Address { .. },
+                                    ) => None,
                                 }
-                                fidl_fuchsia_net::IpAddress::Ipv6(
-                                    fidl_fuchsia_net::Ipv6Address { .. },
-                                ) => None,
-                            }
-                        },
-                    ),
-                )
-            },
-        );
-        let address_change = futures::StreamExt::next(&mut address_change_stream);
-        let address_change = fuchsia_async::TimeoutExt::on_timeout(
-            address_change,
-            // Netstack's DHCP client retries every 3 seconds. At the time of writing, dhcpd loses
-            // the race here and only starts after the first request from the DHCP client, which
-            // results in a 3 second toll. This test typically takes ~4.5 seconds; we apply a large
-            // multiple to be safe.
-            fuchsia_async::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
-            || None,
-        );
-        let (addr, netmask) = address_change
+                            },
+                        ),
+                    )
+                },
+            );
+            let address_change = futures::StreamExt::next(&mut address_change_stream);
+            let address_change = fuchsia_async::TimeoutExt::on_timeout(
+                address_change,
+                // Netstack's DHCP client retries every 3 seconds. At the time of writing, dhcpd loses
+                // the race here and only starts after the first request from the DHCP client, which
+                // results in a 3 second toll. This test typically takes ~4.5 seconds; we apply a large
+                // multiple to be safe.
+                fuchsia_async::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
+                || None,
+            );
+            let (addr, netmask) = address_change
+                .await
+                .ok_or(anyhow::format_err!(
+                    "failed to observe DHCP acquisition on client ep {}",
+                    name
+                ))?
+                .context(format!("failed to observe DHCP acquisition on client ep {}", name))?;
+            assert_eq!(addr, want_addr);
+            assert_eq!(netmask, want_netmask);
+            // Drop so we can listen on the stream again.
+            std::mem::drop(address_change_stream);
+
+            // Set interface online signal to down and wait for address to be removed.
+            let () = interface.set_link_up(false).await.context("Failed to bring link up")?;
+            let _ifaces = futures::TryStreamExt::try_filter(
+                client_netstack.take_event_stream(),
+                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                    futures::future::ready(
+                        interfaces
+                            .into_iter()
+                            .find(|i| i.id as u64 == interface.id())
+                            .map(|i| i.addr == fidl_ip!(0.0.0.0))
+                            .unwrap_or(false),
+                    )
+                },
+            )
+            .next()
             .await
-            .ok_or(anyhow::format_err!("failed to observe DHCP acquisition on client ep {}", name))?
-            .context(format!("failed to observe DHCP acquisition on client ep {}", name))?;
-        assert_eq!(addr, want_addr);
-        assert_eq!(netmask, want_netmask);
+            .ok_or_else(|| anyhow::anyhow!("event stream ended unexpectedly"))?;
+        }
         Result::Ok(())
     })
     .await?;

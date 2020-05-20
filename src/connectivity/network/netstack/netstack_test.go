@@ -1176,7 +1176,7 @@ func TestDHCPAcquired(t *testing.T) {
 			// effect.
 			ifState.dhcpAcquired(test.oldAddr, test.newAddr, test.config)
 
-			if diff := cmp.Diff(ifState.mu.dnsServers, test.config.DNS); diff != "" {
+			if diff := cmp.Diff(ifState.dns.mu.servers, test.config.DNS); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 
@@ -1209,7 +1209,7 @@ func TestDHCPAcquired(t *testing.T) {
 			remAddr := test.newAddr
 			ifState.dhcpAcquired(remAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
 
-			if diff := cmp.Diff(ifState.mu.dnsServers, ifState.mu.dnsServers[:0]); diff != "" {
+			if diff := cmp.Diff(ifState.dns.mu.servers, ifState.dns.mu.servers[:0]); diff != "" {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 
