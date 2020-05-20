@@ -22,3 +22,5 @@ toc:
     path: /docs/concepts/build_system/zircon_gn.md
   - title: "GN build arguments"
     path: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/gen/build_arguments.md
+  - title: "GN Template Best Practices"
+    path: /docs/concepts/build_system/best_practices.md
