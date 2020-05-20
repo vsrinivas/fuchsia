@@ -13,5 +13,8 @@ zx_library("heap") {
   deps = [
     "$zx/kernel/lib/console",
     "cmpctmalloc",
+
+    # TODO(fxb/51163): Remove headers when possible.
+    "$zx/kernel/lib/instrumentation:headers",
   ]
 }

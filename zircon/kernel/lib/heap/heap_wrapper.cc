@@ -12,6 +12,7 @@
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>
 #include <lib/heap.h>
+#include <lib/instrumentation/asan.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -287,6 +288,10 @@ void* heap_page_alloc(size_t pages) {
   list_for_every_entry_safe (&list, p, temp, vm_page_t, queue_node) {
     list_delete(&p->queue_node);
     p->set_state(VM_PAGE_STATE_HEAP);
+#if __has_feature(address_sanitizer)
+    void* const vaddr = paddr_to_physmap(p->paddr());
+    asan_poison_shadow(reinterpret_cast<uintptr_t>(vaddr), PAGE_SIZE, kAsanInternalHeapMagic);
+#endif  // __has_feature(address_sanitizer)
   }
 
   LTRACEF("pages %zu: pa %#lx, va %p\n", pages, pa, paddr_to_physmap(pa));

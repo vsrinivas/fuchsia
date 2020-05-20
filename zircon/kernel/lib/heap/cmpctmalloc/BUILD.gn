@@ -28,5 +28,8 @@ zx_library("cmpctmalloc") {
       "include",
       "$zx/kernel/lib/heap/include",
     ]
+  } else if (is_kernel) {
+    # TODO(fxb/51163): Remove headers when possible.
+    deps += [ "$zx/kernel/lib/instrumentation:headers" ]
   }
 }

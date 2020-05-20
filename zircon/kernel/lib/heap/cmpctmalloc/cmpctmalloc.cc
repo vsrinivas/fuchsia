@@ -19,6 +19,14 @@
 #include <fbl/algorithm.h>
 #include <pretty/hexdump.h>
 
+#define KERNEL_ASAN (__has_feature(address_sanitizer) && _KERNEL)
+
+#if KERNEL_ASAN
+#include <lib/instrumentation/asan.h>
+#else  // !KERNEL_ASAN
+#define NO_ASAN
+#endif  // KERNEL_ASAN
+
 // Malloc implementation tuned for space.
 //
 // Allocation strategy takes place with a global mutex.  Freelist entries are
@@ -233,12 +241,14 @@ struct heap {
 // Heap static vars.
 static struct heap theheap TA_GUARDED(TheHeapLock::Get());
 
-static void dump_free(header_t* header) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void dump_free(header_t* header) TA_REQ(TheHeapLock::Get()) {
+  // This function accesses header->size so it has to be NO_ASAN
   dprintf(INFO, "\t\tbase %p, end %#" PRIxPTR ", len %#zx (%zu)\n", header,
           (uintptr_t)header + header->size, header->size, header->size);
 }
 
-static void cmpct_dump_locked() TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void cmpct_dump_locked() TA_REQ(TheHeapLock::Get()) {
+  // This function accesses free_t * that are poisoned so it has to be NO_ASAN
   dprintf(INFO, "Heap dump (using cmpctmalloc):\n");
   dprintf(INFO, "\tsize %lu, remaining %lu, cached free %lu\n", (unsigned long)theheap.size,
           (unsigned long)theheap.remaining,
@@ -318,7 +328,7 @@ static inline header_t* tag_as_free(void* left) TA_REQ(TheHeapLock::Get()) {
 }
 
 // Returns true if this header_t is marked as free.
-static inline bool is_tagged_as_free(const header_t* header) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static inline bool is_tagged_as_free(const header_t* header) TA_REQ(TheHeapLock::Get()) {
   // The free bit is stashed in the lower bit of header->left.
   return ((uintptr_t)(header->left) & FREE_BIT) != 0;
 }
@@ -327,7 +337,7 @@ static inline header_t* untag(const void* left) TA_REQ(TheHeapLock::Get()) {
   return (header_t*)((uintptr_t)left & ~HEADER_LEFT_BIT_MASK);
 }
 
-static inline header_t* right_header(header_t* header) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static inline header_t* right_header(header_t* header) TA_REQ(TheHeapLock::Get()) {
   return (header_t*)((char*)header + header->size);
 }
 
@@ -355,11 +365,12 @@ static int find_nonempty_bucket(int index) TA_REQ(TheHeapLock::Get()) {
   return -1;
 }
 
-static bool is_start_of_os_allocation(const header_t* header) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static bool is_start_of_os_allocation(const header_t* header) TA_REQ(TheHeapLock::Get()) {
   return untag(header->left) == untag(NULL);
 }
 
-static void create_free_area(void* address, void* left, size_t size) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void create_free_area(void* address, void* left, size_t size)
+    TA_REQ(TheHeapLock::Get()) {
   free_t* free_area = (free_t*)address;
   free_area->header.size = size;
   free_area->header.left = tag_as_free(left);
@@ -381,11 +392,11 @@ static void create_free_area(void* address, void* left, size_t size) TA_REQ(TheH
 #endif
 }
 
-static bool is_end_of_os_allocation(char* address) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static bool is_end_of_os_allocation(char* address) TA_REQ(TheHeapLock::Get()) {
   return ((header_t*)address)->size == 0;
 }
 
-static void free_to_os(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void free_to_os(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
   ZX_DEBUG_ASSERT(ZX_IS_PAGE_ALIGNED(ptr));
   ZX_DEBUG_ASSERT(ZX_IS_PAGE_ALIGNED(size));
   heap_page_free(ptr, size >> ZX_PAGE_SHIFT);
@@ -396,7 +407,7 @@ static void free_to_os(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
 // cached_os_alloc. |left_sentinel| is the start of the OS allocation, and
 // |total_size| is the (page-aligned) number of bytes that were originally
 // allocated from the OS.
-static void possibly_free_to_os(header_t* left_sentinel, size_t total_size)
+NO_ASAN static void possibly_free_to_os(header_t* left_sentinel, size_t total_size)
     TA_REQ(TheHeapLock::Get()) {
   if (theheap.cached_os_alloc == NULL) {
     LTRACEF("Keeping 0x%zx-byte OS alloc @%p\n", total_size, left_sentinel);
@@ -415,7 +426,7 @@ static void possibly_free_to_os(header_t* left_sentinel, size_t total_size)
 // |left| and |size| should be set to the values that the header_t would have
 // contained. This is broken out because the header_t will not contain the
 // proper size when coalescing neighboring areas.
-static void free_memory(void* address, void* left, size_t size) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void free_memory(void* address, void* left, size_t size) TA_REQ(TheHeapLock::Get()) {
   left = untag(left);
   if (ZX_IS_PAGE_ALIGNED(left) && is_start_of_os_allocation((const header_t*)left) &&
       is_end_of_os_allocation((char*)address + size)) {
@@ -429,7 +440,7 @@ static void free_memory(void* address, void* left, size_t size) TA_REQ(TheHeapLo
   }
 }
 
-static void unlink_free(free_t* free_area, int bucket) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void unlink_free(free_t* free_area, int bucket) TA_REQ(TheHeapLock::Get()) {
   theheap.remaining -= free_area->header.size;
   ZX_ASSERT(theheap.remaining < 4000000000u);
   free_t* next = free_area->next;
@@ -448,11 +459,11 @@ static void unlink_free(free_t* free_area, int bucket) TA_REQ(TheHeapLock::Get()
   }
 }
 
-static void unlink_free_unknown_bucket(free_t* free_area) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void unlink_free_unknown_bucket(free_t* free_area) TA_REQ(TheHeapLock::Get()) {
   return unlink_free(free_area, size_to_index_freeing(free_area->header.size - sizeof(header_t)));
 }
 
-static void* create_allocation_header(void* address, size_t offset, size_t size, void* left)
+NO_ASAN static void* create_allocation_header(void* address, size_t offset, size_t size, void* left)
     TA_REQ(TheHeapLock::Get()) {
   header_t* standalone = (header_t*)((char*)address + offset);
   standalone->left = untag(left);
@@ -460,13 +471,14 @@ static void* create_allocation_header(void* address, size_t offset, size_t size,
   return standalone + 1;
 }
 
-static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLock::Get()) {
   int tag = (uintptr_t)right->left & 1;
   right->left = (header_t*)(((uintptr_t)new_left & ~1) | tag);
 }
 
 #ifdef CMPCT_DEBUG
-[[maybe_unused]] static void check_free_fill(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
+[[maybe_unused]] NO_ASAN static void check_free_fill(void* ptr, size_t size)
+    TA_REQ(TheHeapLock::Get()) {
   // The first 16 bytes of the region won't have free fill due to overlap
   // with the allocator bookkeeping.
   const size_t start = sizeof(free_t) - sizeof(header_t);
@@ -502,7 +514,10 @@ static void add_to_heap(void* new_area, size_t size) TA_REQ(TheHeapLock::Get()) 
 
 // Create a new free-list entry of at least size bytes (including the
 // allocation header).  Called with the lock, apart from during init.
-static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
+  // This function accesses field members of header_t which are poisoned so it
+  // has to be NO_ASAN.
+
   // The new free list entry will have a header on each side (the
   // sentinels) so we need to grow the gross heap size by this much more.
   size += 2 * sizeof(header_t);
@@ -825,7 +840,7 @@ static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
 // Factors in the header for an allocation.
 const size_t kHeapMaxAllocSize = HEAP_LARGE_ALLOC_BYTES - sizeof(header_t);
 
-void* cmpct_alloc(size_t size) {
+NO_ASAN void* cmpct_alloc(size_t size) {
   if (size == 0u) {
     return NULL;
   }
@@ -834,6 +849,15 @@ void* cmpct_alloc(size_t size) {
   if (size > kHeapMaxAllocSize) {
     return NULL;
   }
+
+#if KERNEL_ASAN
+  // Add space at the end of the allocation for a redzone.
+  // A redzone is used to detect buffer overflows by oversizing the buffer and poisoning the
+  // excess memory. The redzone is after the buffer - before the buffer is a header_t, which
+  // is also poisoned.
+  const size_t alloc_size = size;
+  size += asan_heap_redzone_size(alloc_size);
+#endif  // KERNEL_ASAN
 
   size_t rounded_up;
   int start_bucket = size_to_index_allocating(size, &rounded_up);
@@ -879,10 +903,19 @@ void* cmpct_alloc(size_t size) {
   memset(result, ALLOC_FILL, size);
   memset(((char*)result) + size, PADDING_FILL, rounded_up - size - sizeof(header_t));
 #endif
+#if KERNEL_ASAN
+  const uintptr_t redzone_start = reinterpret_cast<uintptr_t>(result) + alloc_size;
+
+  asan_poison_shadow(reinterpret_cast<uintptr_t>(head), sizeof(header_t),
+                     kAsanHeapLeftRedzoneMagic);
+  asan_poison_shadow(redzone_start, asan_heap_redzone_size(alloc_size), kAsanHeapLeftRedzoneMagic);
+  asan_unpoison_shadow(reinterpret_cast<uintptr_t>(result), alloc_size);
+#endif  //  KERNEL_ASAN
+
   return result;
 }
 
-void* cmpct_realloc(void* payload, size_t size) {
+NO_ASAN void* cmpct_realloc(void* payload, size_t size) {
   if (payload == NULL) {
     return cmpct_alloc(size);
   }
@@ -899,7 +932,7 @@ void* cmpct_realloc(void* payload, size_t size) {
   return new_payload;
 }
 
-void cmpct_free(void* payload) {
+NO_ASAN void cmpct_free(void* payload) {
   if (payload == NULL) {
     return;
   }
@@ -911,6 +944,10 @@ void cmpct_free(void* payload) {
   size_t size = header->size;
 
   header_t* left = header->left;
+#if KERNEL_ASAN
+  asan_poison_shadow(reinterpret_cast<uintptr_t>(payload), header->size - sizeof(header_t),
+                     kAsanHeapFreeMagic);
+#endif  // KERNEL_ASAN
   if (left != NULL && is_tagged_as_free(left)) {
     // Coalesce with left free object.
     unlink_free_unknown_bucket((free_t*)left);
@@ -940,7 +977,7 @@ void cmpct_free(void* payload) {
   }
 }
 
-void* cmpct_memalign(size_t alignment, size_t size) {
+NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
   if (alignment < 8) {
     return cmpct_alloc(size);
   }
@@ -953,6 +990,11 @@ void* cmpct_memalign(size_t alignment, size_t size) {
   }
 
   LockGuard guard(TheHeapLock::Get());
+#if KERNEL_ASAN
+  // TODO(fxb/30033): Separately poison padding and the post-buffer redzone.
+  asan_poison_shadow(reinterpret_cast<uintptr_t>(unaligned), padded_size,
+                     kAsanHeapLeftRedzoneMagic);
+#endif  // KERNEL_ASAN
 
   size_t mask = alignment - 1;
   uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) + mask;
@@ -970,6 +1012,9 @@ void* cmpct_memalign(size_t alignment, size_t size) {
   }
 
   // TODO: Free the part after the aligned allocation.
+#if KERNEL_ASAN
+  asan_unpoison_shadow(reinterpret_cast<uintptr_t>(payload), size);
+#endif  // KERNEL_ASAN
   return payload;
 }
 
@@ -1003,7 +1048,7 @@ void cmpct_dump(bool panic_time) {
   }
 }
 
-void cmpct_get_info(size_t* used_bytes, size_t* free_bytes, size_t* cached_bytes) {
+NO_ASAN void cmpct_get_info(size_t* used_bytes, size_t* free_bytes, size_t* cached_bytes) {
   LockGuard guard(TheHeapLock::Get());
   if (used_bytes) {
     *used_bytes = theheap.size;

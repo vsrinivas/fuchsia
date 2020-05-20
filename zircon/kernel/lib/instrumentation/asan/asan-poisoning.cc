@@ -179,18 +179,107 @@ void asan_poison_shadow(uintptr_t address, size_t size, uint8_t value) {
   if (!g_asan_initialized.load()) {
     return;
   }
-
-  DEBUG_ASSERT(IS_ALIGNED(address, kAsanGranularity));
+  DEBUG_ASSERT(size > 0);
   DEBUG_ASSERT(address >= kAsanStartAddress);
   DEBUG_ASSERT(address + size < kAsanEndAddress);
+  DEBUG_ASSERT(value >= kAsanSmallestPoisonedValue);  // only used for poisoning.
 
-  uint8_t* const shadow_addr = addr2shadow(address);
-  __unsanitized_memset(shadow_addr, value, size >> kAsanShift);
+  uint8_t* shadow_addr_beg = addr2shadow(address);
+  uint8_t* const shadow_addr_end = addr2shadow(address + size);
+
+  const uint8_t offset = address & kAsanGranularityMask;
+  const uint8_t end_offset = (address + size) & kAsanGranularityMask;
+
+  // We want to poison less than one shadow byte. This shadow byte
+  // could be: Unpoisoned, Poisoned or Partially Poisoned.
+  // For the poisoned case, we avoid repoisoning.
+  // For the unpoisoned and partially poisoned cases, we can't leave gaps:
+  // only poison if the last byte (end_offset) is already poisoned. In that
+  // case, this might end up poisoning the entire byte, or could extend the
+  // current partially poisoned area.
+  if (shadow_addr_beg == shadow_addr_end) {
+    // If the shadow byte is already poisoned, do nothing.
+    if (shadow_addr_beg[0] >= kAsanSmallestPoisonedValue)
+      return;
+    // If the shadow byte is unpoisoned, do nothing.
+    if (shadow_addr_beg[0] == 0)
+      return;
+    // If the byte at address+size is not poisoned, do nothing: otherwise
+    // there would be an unpoisoned gap.
+    if (shadow_addr_beg[0] > end_offset)
+      return;
+
+    if (offset != 0) {
+      // Partially poison the shadow byte. Only override if we are expanding
+      // the poisoned area.
+      shadow_addr_beg[0] = ktl::min(shadow_addr_beg[0], offset);
+    } else {
+      // Poison the entire byte.
+      shadow_addr_beg[0] = value;
+    }
+    return;
+  }
+
+  // We need to check whether we are partially poisoning the first shadow
+  // byte, but only if it is not already poisoned.
+  if (offset != 0) {
+    if (shadow_addr_beg[0] == 0) {
+      shadow_addr_beg[0] = offset;
+    } else if (shadow_addr_beg[0] < kAsanSmallestPoisonedValue) {
+      // value is partially poisoned, only override if we are poisoning more.
+      shadow_addr_beg[0] = ktl::min(shadow_addr_beg[0], offset);
+    }
+    shadow_addr_beg += 1;
+    address += offset;
+    size -= offset;
+  }
+
+  __unsanitized_memset(shadow_addr_beg, value, shadow_addr_end - shadow_addr_beg);
+
+  // If the last shadow byte (shadow_addr_end) is partially poisoned, we might
+  // be completing the whole shadow byte, otherwise, don't touch it.
+  // For example, if the last byte has 2 bytes unpoisoned, but our end_offset is
+  // 3, it means that we can safely poison the entire shadow byte.
+  if (end_offset != 0) {
+    if (shadow_addr_end[0] > 0 && shadow_addr_end[0] <= end_offset) {
+      shadow_addr_end[0] = value;
+    }
+  }
+}
+
+void asan_unpoison_shadow(uintptr_t address, size_t size) {
+  // pmm_alloc_page is called before the kasan shadow map has been remapped r/w.
+  // Do not attempt to unpoison memory in that case.
+  if (!g_asan_initialized.load()) {
+    return;
+  }
+  DEBUG_ASSERT(size > 0);
+  DEBUG_ASSERT(address >= kAsanStartAddress);
+  DEBUG_ASSERT(address + size < kAsanEndAddress);
+  uint8_t* const shadow_addr_beg = addr2shadow(address);
+  uint8_t* const shadow_addr_end = addr2shadow(address + size);
+
+  __unsanitized_memset(shadow_addr_beg, 0, shadow_addr_end - shadow_addr_beg);
 
   // The last shadow byte should capture how many bytes
   // are unpoisoned at the end of the poisoned area.
-  const uint8_t remaining = size & kAsanGranularityMask;
-  if (remaining != 0 && value == 0) {
-    shadow_addr[size >> kAsanShift] = remaining;
+  const uint8_t end_offset = (address + size) & kAsanGranularityMask;
+  if (end_offset != 0) {
+    if (shadow_addr_end[0] >= kAsanSmallestPoisonedValue) {
+      // The entire byte is poisoned, unpoison up until end_offset.
+      shadow_addr_end[0] = end_offset;
+    } else if (shadow_addr_end[0] != 0) {
+      // The byte is partially poisoned. See if we can increase the unpoisoned
+      // region.
+      shadow_addr_end[0] = ktl::max(shadow_addr_end[0], end_offset);
+    }
   }
+}
+
+size_t asan_heap_redzone_size(size_t size) {
+  // The allocation end might not be aligned to an asan granule, so we add
+  // the remaining part to the redzone size so that size + redzone_size
+  // is aligned to an asan granule.
+  size_t remaining = ROUNDUP(size, kAsanGranularity) - size;
+  return kHeapRightRedzoneSize + remaining;
 }

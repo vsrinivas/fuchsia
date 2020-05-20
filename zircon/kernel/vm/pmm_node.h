@@ -136,6 +136,8 @@ class PmmNode {
 
   void AsanPoisonPage(vm_page_t*, uint8_t) TA_REQ(lock_);
 
+  void AsanUnpoisonPage(vm_page_t*) TA_REQ(lock_);
+
   fbl::Canary<fbl::magic("PNOD")> canary_;
 
   mutable DECLARE_MUTEX(PmmNode) lock_;

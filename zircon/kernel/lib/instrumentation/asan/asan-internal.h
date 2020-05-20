@@ -22,7 +22,18 @@ extern ktl::atomic<bool> g_asan_initialized;
 inline constexpr size_t kAsanShift = 3;
 inline constexpr size_t kAsanShadowSize = KERNEL_ASPACE_SIZE >> kAsanShift;
 
-// Any value in the shadow above this value is poisoned.
+// The redzone is an area of poisoned bytes added at the end of memory allocations. This allows
+// detecting out-of-bounds accesses.
+//
+// Increasing this size allows detecting out-of-bounds access that are further beyond the end of
+// the allocation, but each allocation would take more space.
+//
+// The kernel's implementation uses a fixed redzone plus a small variable block for alignment.
+// In LLVM (compiler-rt)'s implementation of the asan runtime, the redzone is adaptive depending
+// on the size of the allocation.
+inline constexpr size_t kHeapRightRedzoneSize = 16;
+
+// Any value in the shadow equal to or above this value is poisoned.
 inline constexpr uint8_t kAsanSmallestPoisonedValue = 0x08;
 
 static_assert(X86_KERNEL_KASAN_PDP_ENTRIES * 1024ul * 1024ul * 1024ul == kAsanShadowSize);
