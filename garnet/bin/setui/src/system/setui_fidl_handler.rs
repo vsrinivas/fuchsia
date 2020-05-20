@@ -78,21 +78,18 @@ pub fn spawn_setui_fidl_handler(
           #[allow(unreachable_patterns)]
           match req {
             SetUiServiceRequest::Mutate { setting_type: _, mutation, responder } => {
-              if let Mutation::AccountMutationValue(mutation_info) = mutation {
-                if let Some(operation) = mutation_info.operation {
-                  if operation == AccountOperation::SetLoginOverride {
-                    if let Some(login_override) = mutation_info.login_override {
-                      set_login_override(
-                        &context.switchboard_client,
-                        SystemLoginOverrideMode::from(login_override),
-                        responder,
-                      )
-                      .await;
+              if let Mutation::AccountMutationValue(AccountMutation {
+                operation: Some(AccountOperation::SetLoginOverride),
+                login_override: Some(login_override)
+              }) = mutation {
+                set_login_override(
+                  &context.switchboard_client,
+                  SystemLoginOverrideMode::from(login_override),
+                  responder,
+                )
+                .await;
 
-                      return Ok(None);
-                    }
-                  }
-                }
+                return Ok(None);
               }
 
               responder.send(&mut MutationResponse { return_code: ReturnCode::Failed }).ok();

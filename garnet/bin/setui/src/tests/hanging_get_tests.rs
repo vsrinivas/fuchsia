@@ -5,7 +5,7 @@
 #[cfg(test)]
 use crate::registry::device_storage::testing::*;
 use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingType, SetupInfo};
-use crate::tests::fakes::device_admin_service::DeviceAdminService;
+use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
 use fidl_fuchsia_settings::*;
@@ -31,8 +31,12 @@ async fn test_multiple_watches() {
     }
 
     let service_registry = ServiceRegistry::create();
-    let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
-    service_registry.lock().await.register_service(device_admin_service_handle.clone());
+    let hardware_power_statecontrol_service_handle =
+        Arc::new(Mutex::new(HardwarePowerStatecontrolService::new()));
+    service_registry
+        .lock()
+        .await
+        .register_service(hardware_power_statecontrol_service_handle.clone());
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry.clone()))

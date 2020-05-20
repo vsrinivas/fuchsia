@@ -6,7 +6,9 @@
 use {
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SettingType, SetupInfo},
-    crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
+    crate::tests::fakes::hardware_power_statecontrol_service::{
+        Action, HardwarePowerStatecontrolService,
+    },
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     fidl_fuchsia_settings::*,
@@ -56,8 +58,12 @@ async fn test_setup_with_reboot() {
     }
 
     let service_registry = ServiceRegistry::create();
-    let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
-    service_registry.lock().await.register_service(device_admin_service_handle.clone());
+    let hardware_power_statecontrol_service_handle =
+        Arc::new(Mutex::new(HardwarePowerStatecontrolService::new()));
+    service_registry
+        .lock()
+        .await
+        .register_service(hardware_power_statecontrol_service_handle.clone());
 
     // Handle reboot
     let env = EnvironmentBuilder::new(storage_factory)
@@ -100,7 +106,7 @@ async fn test_setup_with_reboot() {
     }
 
     // Ensure reboot was requested by the controller
-    assert!(device_admin_service_handle
+    assert!(hardware_power_statecontrol_service_handle
         .lock()
         .await
         .verify_action_sequence([Action::Reboot].to_vec()));
@@ -109,8 +115,12 @@ async fn test_setup_with_reboot() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup_no_reboot() {
     let service_registry = ServiceRegistry::create();
-    let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
-    service_registry.lock().await.register_service(device_admin_service_handle.clone());
+    let hardware_power_statecontrol_service_handle =
+        Arc::new(Mutex::new(HardwarePowerStatecontrolService::new()));
+    service_registry
+        .lock()
+        .await
+        .register_service(hardware_power_statecontrol_service_handle.clone());
 
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .settings(&[SettingType::Setup, SettingType::Power])
@@ -143,5 +153,8 @@ async fn test_setup_no_reboot() {
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
     // No reboot is called.
-    assert!(device_admin_service_handle.lock().await.verify_action_sequence([].to_vec()));
+    assert!(hardware_power_statecontrol_service_handle
+        .lock()
+        .await
+        .verify_action_sequence([].to_vec()));
 }

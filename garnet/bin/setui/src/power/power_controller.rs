@@ -6,18 +6,46 @@ use async_trait::async_trait;
 use {
     crate::registry::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::*,
+    crate::switchboard::base::{
+        SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
+    },
+    fidl_fuchsia_hardware_power_statecontrol::{RebootReason, SuspendRequest, SystemPowerState},
+    fuchsia_syslog::fx_log_err,
 };
 
-async fn reboot(service_context_handle: &ServiceContextHandle) {
-    let device_admin = service_context_handle
+async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), SwitchboardError> {
+    let hardware_power_statecontrol_admin = service_context_handle
         .lock()
         .await
-        .connect::<fidl_fuchsia_device_manager::AdministratorMarker>()
+        .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
-        .expect("connected to device manager");
+        .or_else(|_| {
+            Err(SwitchboardError::ExternalFailure {
+                setting_type: SettingType::Power,
+                dependency: "hardware_power_statecontrol_manager".to_owned(),
+                request: "connect".to_owned(),
+            })
+        })?;
 
-    device_admin.suspend(fidl_fuchsia_device_manager::SUSPEND_FLAG_REBOOT).await.ok();
+    let build_err = || SwitchboardError::ExternalFailure {
+        setting_type: SettingType::Power,
+        dependency: "hardware_power_statecontrol_manager".to_owned(),
+        request: "reboot".to_owned(),
+    };
+
+    hardware_power_statecontrol_admin
+        .suspend2(SuspendRequest {
+            state: Some(SystemPowerState::Reboot),
+            reason: Some(RebootReason::UserRequest),
+        })
+        .await
+        .map_err(|_| build_err())
+        .and_then(|r| {
+            r.map_err(|zx_status| {
+                fx_log_err!("Failed to reboot device: {}", zx_status);
+                build_err()
+            })
+        })
 }
 
 pub struct PowerController {
@@ -35,13 +63,9 @@ impl controller::Create for PowerController {
 #[async_trait]
 impl controller::Handle for PowerController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
-        #[allow(unreachable_patterns)]
         match request {
-            SettingRequest::Reboot => {
-                reboot(&self.service_context).await;
-                return Some(Ok(None));
-            }
-            _ => return None,
+            SettingRequest::Reboot => Some(reboot(&self.service_context).await.map(|_| None)),
+            _ => None,
         }
     }
 }

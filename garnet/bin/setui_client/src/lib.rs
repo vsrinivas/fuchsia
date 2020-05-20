@@ -1,11 +1,14 @@
 use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_device_manager::*,
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_devicesettings::*,
+    fidl_fuchsia_hardware_power_statecontrol::{
+        AdminMarker, RebootReason, SuspendRequest, SystemPowerState,
+    },
     fidl_fuchsia_settings::ConfigurationInterfaces,
     fidl_fuchsia_setui::LoginOverride,
     fidl_fuchsia_setui::*,
     fuchsia_component::client::connect_to_service,
+    fuchsia_syslog::fx_log_err,
     structopt::StructOpt,
 };
 
@@ -243,9 +246,22 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 let device_settings = connect_to_service::<DeviceSettingsManagerMarker>()
                     .context("Failed to connect to devicesettings service")?;
                 device_settings.set_integer("FactoryReset", 1).await?;
-                let device_admin = connect_to_service::<AdministratorMarker>()
-                    .context("Failed to connect to deviceadmin service")?;
-                device_admin.suspend(SUSPEND_FLAG_REBOOT).await?;
+                let hardware_power_statecontrol_admin = connect_to_service::<AdminMarker>()
+                    .context("Failed to connect to hardware.power.statecontrol service")?;
+                hardware_power_statecontrol_admin
+                    .suspend2(SuspendRequest {
+                        state: Some(SystemPowerState::Reboot),
+                        reason: Some(RebootReason::UserRequest),
+                    })
+                    .await
+                    .context("Failed to reboot device")?
+                    .map_err(|zx_status| {
+                        fx_log_err!(
+                            "Unexpected error from hardware.power.statecontrol::suspend2(Reboot): {}",
+                            zx_status
+                        );
+                        format_err!("Failed to reboot device")
+                    })?;
             }
         }
         SettingClient::Get { setting_type } => {

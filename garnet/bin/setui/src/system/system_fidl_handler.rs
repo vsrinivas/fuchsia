@@ -126,15 +126,13 @@ async fn request(
     description: &str,
 ) -> Result<(), ()> {
     match switchboard_client.request(setting_type, setting_request).await {
-        Ok(response_rx) => match response_rx.await {
-            Ok(_) => {
-                return Ok(());
-            }
-            Err(error) => {
+        Ok(response_rx) => response_rx
+            .await
+            .map_err(|error| error.to_string())
+            .and_then(|resp| resp.map(|_| {}).map_err(|error| error.to_string()))
+            .map_err(|error| {
                 fx_log_err!("request failed: {} error: {}", description, error);
-                return Err(());
-            }
-        },
+            }),
         Err(error) => {
             fx_log_err!("request failed: {} error: {}", description, error);
             return Err(());

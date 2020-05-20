@@ -14,8 +14,8 @@
         "services": [
             "fuchsia.bluetooth.sys.Access",
             "fuchsia.deprecatedtimezone.Timezone",
-            "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.UsageReporter",
