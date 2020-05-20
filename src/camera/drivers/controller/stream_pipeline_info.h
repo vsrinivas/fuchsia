@@ -8,6 +8,8 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 
+#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
+
 namespace camera {
 
 // |StreamCreationData| is populated runtime based on
@@ -20,12 +22,17 @@ struct StreamCreationData {
   // the requested stream |stream_index| in config |config_index|.
   InternalConfigNode node;
   // |stream_config| has the stream properties of the requested stream.
-  const fuchsia::camera2::hal::StreamConfig* stream_config;
+  fuchsia::camera2::hal::StreamConfig stream_config;
   // |image_format_index| is the output resolution index
   // passed by clients when requesting a stream.
   uint32_t image_format_index;
   // Ouput buffers received from the client.
   fuchsia::sysmem::BufferCollectionInfo_2 output_buffers;
+
+  // Returns the stream type of the requested stream.
+  fuchsia::camera2::CameraStreamType stream_type() const {
+    return stream_config.properties.stream_type();
+  }
 };
 
 }  // namespace camera

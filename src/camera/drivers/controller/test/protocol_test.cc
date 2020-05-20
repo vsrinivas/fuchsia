@@ -129,8 +129,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     async::PostTask(dispatcher(), [this, config, stream_type, &stream]() {
       auto* stream_config_node = GetStreamConfigNode(config, stream_type);
       StreamCreationData info;
-      stream_config_.properties.set_stream_type(stream_type);
-      info.stream_config = &stream_config_;
+      fuchsia::camera2::hal::StreamConfig stream_config;
+      stream_config.properties.set_stream_type(stream_type);
+      info.stream_config = std::move(stream_config);
       info.node = *stream_config_node;
       info.output_buffers = FakeBufferCollection();
       info.image_format_index = 0;
@@ -169,7 +170,6 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   ddk::GdcProtocolClient gdc_;
   ddk::Ge2dProtocolClient ge2d_;
   InternalConfigs internal_config_info_;
-  fuchsia::camera2::hal::StreamConfig stream_config_;
 };
 
 TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamFR) {
@@ -305,22 +305,22 @@ TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) {
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
   stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
-  info.stream_config = &stream_config;
+  info.stream_config = std::move(stream_config);
   info.node = *stream_config_node;
 
   // Expecting 1st node to be input node.
   EXPECT_EQ(NodeType::kInputStream, stream_config_node->type);
 
   // Using ML|DS stream in Monitor configuration for test here.
-  auto* next_node = camera::GetNextNodeInPipeline(info.stream_config->properties.stream_type(),
-                                                  *stream_config_node);
+  const auto* next_node = camera::GetNextNodeInPipeline(info.stream_config.properties.stream_type(),
+                                                        *stream_config_node);
   ASSERT_NE(nullptr, next_node);
 
   // Expecting 2nd node to be input node.
   EXPECT_EQ(NodeType::kGdc, next_node->type);
 
   next_node =
-      camera::GetNextNodeInPipeline(info.stream_config->properties.stream_type(), *next_node);
+      camera::GetNextNodeInPipeline(info.stream_config.properties.stream_type(), *next_node);
   ASSERT_NE(nullptr, next_node);
 
   // Expecting 3rd node to be input node.
@@ -499,7 +499,7 @@ TEST_F(ControllerProtocolTest, TestOutputNode) {
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
   stream_config.properties.set_stream_type(stream_type);
-  info.stream_config = &stream_config;
+  info.stream_config = std::move(stream_config);
   info.node = *stream_config_node;
 
   ControllerMemoryAllocator allocator(std::move(sysmem_allocator2_));
@@ -533,7 +533,7 @@ TEST_F(ControllerProtocolTest, TestGdcNode) {
   StreamCreationData info;
   fuchsia::camera2::hal::StreamConfig stream_config;
   stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
-  info.stream_config = &stream_config;
+  info.stream_config = std::move(stream_config);
   info.node = *stream_config_node;
   ControllerMemoryAllocator allocator(std::move(sysmem_allocator2_));
 

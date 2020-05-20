@@ -31,8 +31,7 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, const std::string& buffer_tag) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-  const auto* consumer =
-      GetNextNodeInPipeline(info->stream_config->properties.stream_type(), producer);
+  const auto* consumer = GetNextNodeInPipeline(info->stream_type(), producer);
   if (!consumer) {
     FX_LOGST(ERROR, kTag) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);

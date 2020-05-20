@@ -20,8 +20,7 @@ constexpr auto kTag = "camera_controller";
 fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
   fit::result<OutputNode*, zx_status_t> result;
-  const auto* next_node_internal =
-      GetNextNodeInPipeline(info->stream_config->properties.stream_type(), internal_node);
+  const auto* next_node_internal = GetNextNodeInPipeline(info->stream_type(), internal_node);
   if (!next_node_internal) {
     FX_LOGST(ERROR, kTag) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
@@ -64,7 +63,7 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
         // TODO(braval): Handle already configured nodes
         return result;
       }
-      output_nodes_info_[info->stream_config->properties.stream_type()] = result.value();
+      output_nodes_info_[info->stream_type()] = result.value();
       break;
     }
       // clang-format off
@@ -96,7 +95,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
   }
 
   auto* output_node = output_node_result.value();
-  auto stream_configured = info->stream_config->properties.stream_type();
+  auto stream_configured = info->stream_type();
 
   auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
     OnClientStreamDisconnect(stream_configured);
@@ -112,7 +111,7 @@ fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
 PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
                                            const InternalConfigNode& current_internal_node,
                                            ProcessNode* node) {
-  auto requested_stream_type = info->stream_config->properties.stream_type();
+  auto requested_stream_type = info->stream_type();
 
   // Validate if this node supports the requested stream type
   // to be safe.
@@ -126,8 +125,8 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
     if (child_node->is_stream_supported(requested_stream_type)) {
       // If we find a child node which supports the requested stream type,
       // we move on to that child node.
-      const auto* next_internal_node = GetNextNodeInPipeline(
-          info->stream_config->properties.stream_type(), current_internal_node);
+      const auto* next_internal_node =
+          GetNextNodeInPipeline(info->stream_type(), current_internal_node);
       if (!next_internal_node) {
         FX_LOGS(ERROR) << "Failed to get next node for requested stream";
         return fit::error(ZX_ERR_INTERNAL);
@@ -155,8 +154,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   // If the next node is an output node, we currently do not support
   // this. Currently we expect that the clients would request for streams in a fixed order.
   // TODO(42241): Remove this check when 42241 is fixed.
-  const auto* next_node_internal =
-      GetNextNodeInPipeline(info->stream_config->properties.stream_type(), result.value().first);
+  const auto* next_node_internal = GetNextNodeInPipeline(info->stream_type(), result.value().first);
   if (!next_node_internal) {
     FX_LOGS(ERROR) << "Failed to get next node";
     return ZX_ERR_INTERNAL;
@@ -176,7 +174,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   }
 
   auto* output_node = output_node_result.value();
-  auto stream_configured = info->stream_config->properties.stream_type();
+  auto stream_configured = info->stream_type();
   auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
     FX_LOGS(DEBUG) << "Stream client disconnected";
     OnClientStreamDisconnect(stream_configured);
@@ -187,7 +185,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   }
 
   // Push this new requested stream to all pre-existing nodes |configured_streams| vector
-  auto requested_stream_type = info->stream_config->properties.stream_type();
+  auto requested_stream_type = info->stream_type();
   auto* current_node = node_to_be_appended;
   while (current_node) {
     current_node->configured_streams().push_back(requested_stream_type);
@@ -212,12 +210,6 @@ void PipelineManager::ConfigureStreamPipeline(
           }
         });
 
-        // Input Validations
-        if (info.stream_config == nullptr) {
-          status = ZX_ERR_INVALID_ARGS;
-          return;
-        }
-
         // Here at top level we check what type of input stream do we have to deal with
         // TODO (45163) Refactor to reduce code duplication.
         switch (info.node.input_stream_type) {
@@ -225,7 +217,7 @@ void PipelineManager::ConfigureStreamPipeline(
             if (full_resolution_stream_) {
               // If the same stream is requested again, we return failure.
               if (HasStreamType(full_resolution_stream_->configured_streams(),
-                                info.stream_config->properties.stream_type())) {
+                                info.stream_config.properties.stream_type())) {
                 status = ZX_ERR_ALREADY_BOUND;
                 return;
               }
@@ -250,7 +242,7 @@ void PipelineManager::ConfigureStreamPipeline(
             if (downscaled_resolution_stream_) {
               // If the same stream is requested again, we return failure.
               if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
-                                info.stream_config->properties.stream_type())) {
+                                info.stream_config.properties.stream_type())) {
                 status = ZX_ERR_ALREADY_BOUND;
                 return;
               }
