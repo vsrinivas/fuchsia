@@ -5,7 +5,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
 
@@ -68,13 +68,14 @@ class ExtensionNode : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    fit::result<fidl::BindingRef, zx_status_t> result =
-        fidl::AsyncBind(loop_->dispatcher(), std::move(control_server_end_), server_.get());
+    auto result =
+        fidl::BindServer(loop_->dispatcher(), std::move(control_server_end_), server_.get());
     EXPECT_TRUE(result.is_ok());
     if (result.is_error()) {
       return nullptr;
     }
-    binding_ = std::make_unique<fidl::BindingRef>(std::move(result.value()));
+    binding_ =
+        std::make_unique<fidl::ServerBinding<llcpp::fuchsia::io::Node>>(std::move(result.value()));
     return static_cast<ServerImpl*>(server_.get());
   }
 
@@ -82,7 +83,7 @@ class ExtensionNode : public zxtest::Test {
   zx::channel control_client_end_;
   zx::channel control_server_end_;
   std::unique_ptr<TestServerBase> server_;
-  std::unique_ptr<fidl::BindingRef> binding_;
+  std::unique_ptr<fidl::ServerBinding<llcpp::fuchsia::io::Node>> binding_;
   std::unique_ptr<async::Loop> loop_;
 
 };

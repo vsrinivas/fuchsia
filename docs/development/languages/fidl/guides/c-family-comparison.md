@@ -46,7 +46,8 @@ The C bindings are deprecated in favor of [LLCPP](#llcpp).
     (write their own switch statement and invoke argument decode functions).
 *   Similar to the C language bindings but using zero-cost C++ features
     such as namespaces, string views, and array containers.
-*   Client is synchronous only. However, async client support is planned.
+*   Client supporting sync and async calls and async event handling as well as
+    pure sync client.
 
 Refer to the [LLCPP tutorial][llcpp-tutorial] to get started.
 
@@ -97,9 +98,9 @@ Notes:
    pointer goes away. In those cases, the bindings provide a
    `fidl::DecodedMessage` object to manage all handles associated with a call.
 2. The bindings library can dispatch at most one in-flight transaction.
-3. The bindings library defined in [lib/fidl-async](/zircon/system/ulib/fidl-async) can dispatch an unbounded number of in-flight transactions via `fidl::AsyncBind` defined in [lib/fidl-async/cpp/async_bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_bind.h).
-4. The bindings library [lib/fidl-async](/zircon/system/ulib/fidl-async) enables
-parallel dispatch using the `EnableNextDispatch()` API defined in
+3. The bindings library defined in [lib/fidl](/zircon/system/ulib/fidl) can dispatch an unbounded number of in-flight transactions via `fidl::BindServer` defined in [lib/fidl/llcpp/server.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h).
+4. The bindings library [lib/fidl](/zircon/system/ulib/fidl) enables parallel
+dispatch using the `EnableNextDispatch()` API defined in
 [lib/fidl/llcpp/async_transaction.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/async_transaction.h).
 
 ## Migrating From C Bindings To Low-Level C++

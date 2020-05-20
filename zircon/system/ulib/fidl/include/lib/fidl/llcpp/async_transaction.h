@@ -17,7 +17,7 @@ namespace fidl {
 
 namespace internal {
 
-// An implementation of |fidl::Transaction|. Designed to work with |fidl::AsyncBind|, which allows
+// An implementation of |fidl::Transaction|. Designed to work with |fidl::BindServer|, which allows
 // message dispatching of multiple in-flight asynchronous transactions from a multi-threaded
 // |dispatcher|. Note that |AsyncTransaction| itself assumes that only one thread at a time will act
 // on it.

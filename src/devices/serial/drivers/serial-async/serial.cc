@@ -79,15 +79,15 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
         sync_completion_signal(&device->on_unbind_);
       });
 
-  auto binding_ref =
-      fidl::AsyncBind(loop_->dispatcher(), std::move(req),
-                      static_cast<llcpp::fuchsia::hardware::serial::NewDevice::Interface*>(this),
-                      std::move(unbound_fn));
-  if (binding_ref.is_error()) {
+  auto binding =
+      fidl::BindServer(loop_->dispatcher(), std::move(req),
+                       static_cast<llcpp::fuchsia::hardware::serial::NewDevice::Interface*>(this),
+                       std::move(unbound_fn));
+  if (binding.is_error()) {
     loop_.reset();
     return;
   }
-  binding_.emplace(std::move(binding_ref.value()));
+  binding_.emplace(std::move(binding.value()));
 }
 
 void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {

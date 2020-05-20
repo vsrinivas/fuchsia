@@ -11,6 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/svc/dir.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
@@ -30,7 +31,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher
          zx::channel channel) {
         server->app_.RemoveFidlRequestHandler(channel.get(), reason);
       };
-  fidl::AsyncBind(dispatcher, zx::channel(service_request), this, std::move(on_unbound));
+  fidl::BindServer(dispatcher, zx::channel(service_request), this, std::move(on_unbound));
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {

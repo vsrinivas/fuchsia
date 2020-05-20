@@ -5,7 +5,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/ops.h>
@@ -120,13 +120,12 @@ class File : public zxtest::Test {
     if (status != ZX_OK) {
       return fit::error(status);
     }
-    fit::result<fidl::BindingRef, zx_status_t> bind_result =
-        fidl::AsyncBind(loop_->dispatcher(), std::move(server_end), server_.get());
+    auto bind_result = fidl::BindServer(loop_->dispatcher(), std::move(server_end), server_.get());
     EXPECT_TRUE(bind_result.is_ok());
     if (bind_result.is_error()) {
       return bind_result.take_error_result();
     }
-    binding_ = std::make_unique<fidl::BindingRef>(std::move(bind_result.value()));
+    binding_ = std::make_unique<fidl::ServerBinding<fio::File>>(std::move(bind_result.value()));
     return fit::ok(std::move(client_end));
   }
 
@@ -157,7 +156,7 @@ class File : public zxtest::Test {
  protected:
   zxio_storage_t file_;
   std::unique_ptr<TestServerBase> server_;
-  std::unique_ptr<fidl::BindingRef> binding_;
+  std::unique_ptr<fidl::ServerBinding<fio::File>> binding_;
   std::unique_ptr<async::Loop> loop_;
 };
 

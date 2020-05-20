@@ -8,7 +8,7 @@
 #include <fuchsia/buttons/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -225,7 +225,7 @@ class ButtonsNotifyInterface : public Buttons::Interface {
         [this](ButtonsNotifyInterface*, fidl::UnboundReason, zx_status_t, zx::channel) {
           device_->ClosingChannel(id_);
         };
-    fidl::AsyncBind(dispatcher, std::move(chan), this, std::move(unbound));
+    fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
   }
 
   uint64_t id() const { return id_; }

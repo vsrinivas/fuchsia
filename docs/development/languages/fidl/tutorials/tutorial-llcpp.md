@@ -730,7 +730,7 @@ void ScanForPlanets(ScanForPlanetsCompleter::Sync completer) override {
 ### Parallel message handling
 
 NOTE: This use-case is currently possible only using the
-[lib/fidl-async](/zircon/system/ulib/fidl-async) bindings.
+[lib/fidl](/zircon/system/ulib/fidl) bindings.
 
 By default, messages from a single binding are handled sequentially, i.e. a
 single thread attached to the dispatcher (run loop) is woken up if necessary,

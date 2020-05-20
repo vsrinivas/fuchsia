@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
@@ -58,7 +58,7 @@ class SerialDevice : public DeviceType,
   std::optional<async::Loop> loop_;
   std::optional<ReadCompleter::Async> read_completer_;
   std::optional<WriteCompleter::Async> write_completer_;
-  std::optional<fidl::BindingRef> binding_;
+  std::optional<fidl::ServerBinding<llcpp::fuchsia::hardware::serial::NewDevice>> binding_;
   sync_completion_t on_unbind_;  // Signaled on Unbind() to allow DdkRelease() to proceed.
 };
 

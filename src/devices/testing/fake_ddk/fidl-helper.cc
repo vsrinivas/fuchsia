@@ -86,12 +86,12 @@ zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op) {
     return status;
   }
 
-  auto res = fidl::AsyncBind(loop_.dispatcher(), std::move(remote), this);
+  auto res = fidl::BindServer(loop_.dispatcher(), std::move(remote), this);
   if (res.is_error()) {
     return res.error();
   }
 
-  binding_ = std::make_unique<fidl::BindingRef>(std::move(res.value()));
+  binding_ = std::make_unique<fidl::ServerBinding<FidlMessenger>>(std::move(res.value()));
   return ZX_OK;
 }
 

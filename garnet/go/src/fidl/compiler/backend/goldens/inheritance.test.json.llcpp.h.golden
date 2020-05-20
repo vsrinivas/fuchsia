@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
@@ -248,6 +249,8 @@ class super final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -474,6 +477,8 @@ class sub final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -593,6 +598,17 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
+class super::EventSender {
+ public:
+ private:
+  friend class ::fidl::ServerBinding<super>;
+
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+};
+
 struct sub::AsyncEventHandlers {};
 
 class sub::fooResponseContext : public ::fidl::internal::ResponseContext {
@@ -642,6 +658,17 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
                        ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
+};
+
+class sub::EventSender {
+ public:
+ private:
+  friend class ::fidl::ServerBinding<sub>;
+
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
 };
 
 }  // namespace json

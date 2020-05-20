@@ -6,7 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_SESSION_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/event.h>
@@ -145,10 +145,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Set by Session::Create.
   DataVmoStore::StoredVmo* data_vmo_ = nullptr;
   zx::port tx_port_;
-  fit::optional<fidl::BindingRef> binding_;
+  fit::optional<fidl::ServerBinding<netdev::Session>> binding_;
   // The control channel is only set by the session teardown process if an epitaph must be sent when
   // all the buffers are properly reclaimed. It is set to the channel that was previously bound in
-  // the `binding_` BindingRef.
+  // the `binding_` Server.
   fit::optional<zx::channel> control_channel_;
   zx::vmo vmo_descriptors_;
   fzl::VmoMapper descriptors_;

@@ -30,7 +30,7 @@ zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher, zx::channel chan
                                 fit::callback<void(StatusWatcher*)> closed_callback) {
   fbl::AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(!binding_.has_value());
-  auto result = fidl::AsyncBind(
+  auto result = fidl::BindServer(
       dispatcher, std::move(channel), this,
       fidl::OnUnboundFn<StatusWatcher>(
           [](StatusWatcher* closed, fidl::UnboundReason reason, zx_status_t, zx::channel) {

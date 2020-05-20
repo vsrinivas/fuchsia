@@ -13,3 +13,11 @@ protocol Example {
     OneWay(string in);
     -> OnEvent(string out);
 };
+
+protocol Simple {
+    /// Replies with the value requested.
+    Echo(int32 request) -> (int32 reply);
+
+    /// Never actually replies.  Just closes instead.
+    Close() -> (int32 v);
+};

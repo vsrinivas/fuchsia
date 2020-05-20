@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
@@ -563,6 +564,8 @@ class Interface final {
   // event comment #3
   static zx_status_t SendOnEventEvent(::zx::unowned_channel _chan);
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -720,6 +723,24 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
                        ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
+};
+
+class Interface::EventSender {
+ public:
+  zx_status_t OnEvent() {
+    if (auto _binding = binding_.lock()) {
+      return SendOnEventEvent(_binding->channel());
+    }
+    return ZX_ERR_CANCELED;
+  }
+
+ private:
+  friend class ::fidl::ServerBinding<Interface>;
+
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
 };
 
 }  // namespace name

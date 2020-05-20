@@ -216,7 +216,7 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
       };
 
   stream_config_unbound_.Inc();
-  stream_channel->binding = fidl::AsyncBind<audio_fidl::StreamConfig::Interface>(
+  stream_channel->binding = fidl::BindServer<audio_fidl::StreamConfig::Interface>(
       dispatcher(), std::move(stream_channel_local), stream_channel.get(), std::move(on_unbound));
   if (!stream_channel->binding.is_ok()) {
     stream_config_unbound_.Dec();
@@ -380,7 +380,7 @@ void SimpleAudioStream::CreateRingBuffer(
         };
 
     ring_buffer_unbound_.Inc();
-    ring_buffer_binding_ = fidl::AsyncBind<audio_fidl::RingBuffer::Interface>(
+    ring_buffer_binding_ = fidl::BindServer<audio_fidl::RingBuffer::Interface>(
         dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
     if (!ring_buffer_binding_.is_ok()) {
       ring_buffer_unbound_.Dec();

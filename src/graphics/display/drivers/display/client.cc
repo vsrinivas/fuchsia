@@ -33,8 +33,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
-#include "lib/fidl-async/cpp/async_bind.h"
-#include "lib/fidl-async/cpp/bind.h"
+#include "lib/fidl/llcpp/server.h"
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
 
@@ -1388,8 +1387,8 @@ zx_status_t Client::Init(zx::channel server_channel) {
     client->fidl_channel_ = std::move(ch);
   };
 
-  auto res = fidl::AsyncBind(controller_->loop().dispatcher(), std::move(server_channel), this,
-                             std::move(cb));
+  auto res = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
+                              std::move(cb));
   if (!res.is_ok()) {
     zxlogf(ERROR, "%s: Failed to bind to FIDL Server (%d)", __func__, res.error());
     return res.error();

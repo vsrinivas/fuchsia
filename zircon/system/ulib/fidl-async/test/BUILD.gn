@@ -32,7 +32,6 @@ test("fidl-async-test") {
     }
   }
   sources = [
-    "llcpp_async_bind_test.cc",
     "llcpp_bind_test.cc",
     "llcpp_channel_transaction_test.cc",
   ]

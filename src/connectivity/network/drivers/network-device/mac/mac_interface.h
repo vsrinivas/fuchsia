@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/network/llcpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 
 #include <unordered_set>
 
@@ -134,7 +134,7 @@ class MacClientInstance : public netdev::MacAddressing::Interface,
   // Pointer to parent MacInterface, not owned.
   MacInterface* const parent_;
   ClientState state_ __TA_GUARDED(parent_->lock_);
-  fit::optional<fidl::BindingRef> binding_;
+  fit::optional<fidl::ServerBinding<netdev::MacAddressing>> binding_;
 };
 
 }  // namespace internal

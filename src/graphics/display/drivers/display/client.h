@@ -39,7 +39,7 @@
 #include "id-map.h"
 #include "image.h"
 #include "layer.h"
-#include "lib/fidl-async/cpp/async_bind.h"
+#include "lib/fidl/llcpp/server.h"
 #include "lib/fidl-async/cpp/bind.h"
 #include "lib/fidl/llcpp/array.h"
 
@@ -236,7 +236,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 
-  fit::optional<fidl::BindingRef> fidl_binding_;
+  fit::optional<fidl::ServerBinding<llcpp::fuchsia::hardware::display::Controller>> fidl_binding_;
   // This is the channel returned by fidl bind during unbound
   zx::channel fidl_channel_;
   // Capture related book keeping

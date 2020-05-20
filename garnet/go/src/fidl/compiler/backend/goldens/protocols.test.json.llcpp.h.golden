@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
@@ -939,6 +940,8 @@ class ChannelProtocol final {
       ::zx::unowned_channel _chan,
       ::fidl::DecodedMessage<EventAResponse> params);
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -1711,6 +1714,8 @@ class WithAndWithoutRequestResponse final {
       ::zx::unowned_channel _chan,
       ::fidl::DecodedMessage<OnWithResponseResponse> params);
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -2180,6 +2185,8 @@ class WithErrorSyntax final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a
   // |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -2602,6 +2609,32 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
+class ChannelProtocol::EventSender {
+ public:
+  zx_status_t EventA(int64_t a, int64_t b) {
+    if (auto _binding = binding_.lock()) {
+      return SendEventAEvent(_binding->channel(), std::move(a), std::move(b));
+    }
+    return ZX_ERR_CANCELED;
+  }
+
+  zx_status_t EventA(::fidl::BytePart _buffer, int64_t a, int64_t b) {
+    if (auto _binding = binding_.lock()) {
+      return SendEventAEvent(_binding->channel(), std::move(_buffer),
+                             std::move(a), std::move(b));
+    }
+    return ZX_ERR_CANCELED;
+  }
+
+ private:
+  friend class ::fidl::ServerBinding<ChannelProtocol>;
+
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+};
+
 struct WithAndWithoutRequestResponse::AsyncEventHandlers {
   ::fit::function<void()> on_empty_response;
 
@@ -2780,6 +2813,39 @@ class WithAndWithoutRequestResponse::ClientImpl final
   AsyncEventHandlers handlers_;
 };
 
+class WithAndWithoutRequestResponse::EventSender {
+ public:
+  zx_status_t OnEmptyResponse() {
+    if (auto _binding = binding_.lock()) {
+      return SendOnEmptyResponseEvent(_binding->channel());
+    }
+    return ZX_ERR_CANCELED;
+  }
+
+  zx_status_t OnWithResponse(::fidl::StringView ret) {
+    if (auto _binding = binding_.lock()) {
+      return SendOnWithResponseEvent(_binding->channel(), std::move(ret));
+    }
+    return ZX_ERR_CANCELED;
+  }
+
+  zx_status_t OnWithResponse(::fidl::BytePart _buffer, ::fidl::StringView ret) {
+    if (auto _binding = binding_.lock()) {
+      return SendOnWithResponseEvent(_binding->channel(), std::move(_buffer),
+                                     std::move(ret));
+    }
+    return ZX_ERR_CANCELED;
+  }
+
+ private:
+  friend class ::fidl::ServerBinding<WithAndWithoutRequestResponse>;
+
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
+};
+
 struct WithErrorSyntax::AsyncEventHandlers {};
 
 class WithErrorSyntax::ResponseAsStructResponseContext
@@ -2897,6 +2963,17 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
                        ::fidl::internal::ResponseContext* context) override;
 
   AsyncEventHandlers handlers_;
+};
+
+class WithErrorSyntax::EventSender {
+ public:
+ private:
+  friend class ::fidl::ServerBinding<WithErrorSyntax>;
+
+  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncBinding> binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncBinding> binding_;
 };
 
 }  // namespace name

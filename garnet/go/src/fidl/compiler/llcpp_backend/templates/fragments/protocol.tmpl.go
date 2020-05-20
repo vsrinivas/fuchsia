@@ -405,6 +405,8 @@ class {{ .Name }} final {
     {{- end }}
   {{- end }}
 
+  class EventSender;
+
   // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;

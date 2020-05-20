@@ -24,6 +24,7 @@ const Header = `
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
@@ -101,6 +102,9 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Protocol }}
 {{ template "ClientDeclaration" . }}
+{{ "" }}
+{{ template "EventSenderDeclaration" . }}
+{{ "" }}
 {{- end }}
 {{- end }}
 {{ "" }}

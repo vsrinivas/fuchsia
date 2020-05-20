@@ -6,7 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_STATUS_WATCHER_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fit/optional.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -59,7 +59,7 @@ class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWat
   fit::optional<status_t> last_observed_ __TA_GUARDED(lock_);
   std::queue<status_t> queue_ __TA_GUARDED(lock_);
   fit::optional<WatchStatusCompleter::Async> pending_txn_ __TA_GUARDED(lock_);
-  fit::optional<fidl::BindingRef> binding_ __TA_GUARDED(lock_);
+  fit::optional<fidl::ServerBinding<netdev::StatusWatcher>> binding_ __TA_GUARDED(lock_);
   fit::callback<void(StatusWatcher*)> closed_cb_;
 };
 

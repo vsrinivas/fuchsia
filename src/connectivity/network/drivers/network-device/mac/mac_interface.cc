@@ -246,7 +246,7 @@ MacClientInstance::MacClientInstance(MacInterface* parent, mode_t default_mode)
     : parent_(parent), state_(default_mode) {}
 
 zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher, zx::channel req) {
-  auto result = fidl::AsyncBind(
+  auto result = fidl::BindServer(
       dispatcher, std::move(req), this,
       fidl::OnUnboundFn<MacClientInstance>(
           [](MacClientInstance* client_instance, fidl::UnboundReason, zx_status_t, zx::channel) {

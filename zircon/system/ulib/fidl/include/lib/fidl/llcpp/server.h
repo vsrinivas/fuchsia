@@ -2,54 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
-#define LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
+#ifndef LIB_FIDL_LLCPP_SERVER_H_
+#define LIB_FIDL_LLCPP_SERVER_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
 
 namespace fidl {
 
 // Forward declarations.
-class BindingRef;
+template <typename Protocol>
+class ServerBinding;
+
 template <typename Interface>
-fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               Interface* impl);
+fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl);
 template <typename Interface>
-fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               Interface* impl, OnUnboundFn<Interface> on_unbound);
+fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
+    OnUnboundFn<Interface> on_unbound);
 
 namespace internal {
 
-fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
+template <typename Protocol>
+fit::result<ServerBinding<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
 
 }  // namespace internal
 
-// This class abstracts a reference to a binding as described in |AsyncBind| functions below.
-class BindingRef {
+// This class owns and manages the lifetime of the server end of a channel and its binding to an
+// async_dispatcher_t* (which may be multi-threaded). See the detailed documentation on the
+// |BindServer()| APIs below.
+template <typename Protocol>
+class ServerBinding {
  public:
-  // Same as AsyncBind(async_dispatcher_t*, zx::channel, Interface*) below.
-  template <typename Interface>
-  static fit::result<BindingRef, zx_status_t> CreateAsyncBinding(async_dispatcher_t* dispatcher,
-                                                                 zx::channel channel,
-                                                                 Interface* impl) {
-    return AsyncBind(dispatcher, std::move(channel), impl);
-  }
-  // Same as AsyncBind(async_dispatcher_t*, zx::channel, Interface*, OnUnboundFn<Interface>)
-  // below.
-  template <typename Interface>
-  static fit::result<BindingRef, zx_status_t> CreateAsyncBinding(
-      async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
-      OnUnboundFn<Interface> on_unbound) {
-    return AsyncBind(dispatcher, std::move(channel), impl, std::move(on_unbound));
-  }
+  ~ServerBinding() = default;
 
   // Move only.
-  BindingRef(BindingRef&&) = default;
-  BindingRef& operator=(BindingRef&&) = default;
-  BindingRef(const BindingRef&) = delete;
-  BindingRef& operator=(const BindingRef&) = delete;
+  ServerBinding(ServerBinding&&) = default;
+  ServerBinding& operator=(ServerBinding&&) = default;
+  ServerBinding(const ServerBinding&) = delete;
+  ServerBinding& operator=(const ServerBinding&) = delete;
 
   // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
   // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
@@ -61,7 +54,7 @@ class BindingRef {
   // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
   // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
   void Unbind() {
-    if (auto binding = binding_.lock())
+    if (auto binding = event_sender_.binding_.lock())
       binding->Unbind(std::move(binding));
   }
 
@@ -71,19 +64,25 @@ class BindingRef {
   //
   // This may be called from any thread.
   void Close(zx_status_t epitaph) {
-    if (auto binding = binding_.lock())
+    if (auto binding = event_sender_.binding_.lock())
       binding->Close(std::move(binding), epitaph);
   }
 
+  // Return the interface for sending FIDL events. If the server has been unbound, calls on the
+  // interface return error with status ZX_ERR_CANCELED.
+  typename Protocol::EventSender* get() { return &event_sender_; }
+  typename Protocol::EventSender* operator->() { return &event_sender_; }
+  typename Protocol::EventSender& operator*() { return event_sender_; }
+
  private:
-  friend fit::result<BindingRef, zx_status_t> internal::AsyncTypeErasedBindServer(
+  friend fit::result<ServerBinding<Protocol>, zx_status_t> internal::TypeErasedBindServer<Protocol>(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
       internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound);
 
-  explicit BindingRef(std::weak_ptr<internal::AsyncBinding> internal_binding)
-      : binding_(std::move(internal_binding)) {}
+  explicit ServerBinding(std::weak_ptr<internal::AsyncBinding> internal_binding)
+      : event_sender_(std::move(internal_binding)) {}
 
-  std::weak_ptr<internal::AsyncBinding> binding_;
+  typename Protocol::EventSender event_sender_;
 };
 
 // Binds an implementation of a low-level C++ server interface to |channel| using a potentially
@@ -99,15 +98,15 @@ class BindingRef {
 // interface, via its C++ vtable.
 //
 // Creation:
-// - Upon success |AsyncBind| creates a binding that owns |channel|. In this case, the binding is
-//   initially kept alive even if the returned fit::result with a |BindingRef| is ignored.
-// - Upon any error creating the binding, |AsyncBind| returns a fit::error and |channel| is closed.
+// - Upon success |BindServer| creates a binding that owns |channel|. In this case, the binding is
+//   initially kept alive even if the returned fit::result with a |ServerBinding| is ignored.
+// - Upon any error creating the binding, |BindServer| returns a fit::error and |channel| is closed.
 //
 // Destruction:
-// - If the returned |BindingRef| is ignored or dropped some time during the server operation,
+// - If the returned |ServerBinding| is ignored or dropped some time during the server operation,
 //   then if some error occurs (see below) the binding will be automatically destroyed.
-// - If the returned |BindingRef| is kept but an error occurs (see below), the binding will be
-//   destroyed, though calls may still be made on the |BindingRef|.
+// - If the returned |ServerBinding| is kept but an error occurs (see below), the binding will be
+//   destroyed, though calls may still be made on the |ServerBinding|.
 // - On an error, |channel| is unbound from the dispatcher, i.e. no dispatcher threads will interact
 //   with it. Calls on inflight |Transaction|s will have no effect. If |on_unbound| is not
 //   specified, the |channel| is closed. If specified, |on_unbound| is then executed on a
@@ -116,7 +115,7 @@ class BindingRef {
 //   |on_unbound|'s scope.
 //
 // Unbind:
-// - The |BindingRef| can be used to explicitly |Unbind| the binding and retrieve the |channel|
+// - The |ServerBinding| can be used to explicitly |Unbind| the binding and retrieve the |channel|
 //   endpoint.
 // - |Unbind| is non-blocking with respect to user code paths, i.e. if it blocks, it does so on
 //   deterministic internal code paths. As such, the user may safely synchronize around an |Unbind|
@@ -143,18 +142,21 @@ class BindingRef {
 // Ordering:
 // - By default, the message dispatch function for a binding will only ever be invoked by a single
 //   |dispatcher| thread at a time.
-// - To enable more concurrency, the user may invoke |ResumeDispatch| on the
+// - To enable more concurrency, the user may invoke |EnableNextDispatch| on the
 //   |fidl::Completer<T>::Sync| from the dispatch function. This will resume the async wait on the
 //   |dispatcher| before the dispatch function returns, allowing other |dispatcher| threads to
 //   handle messages for the same binding.
-// NOTE: If a particular user does not care about ordering, they may invoke |ResumeDispatch|
+// NOTE: If a particular user does not care about ordering, they may invoke |EnableNextDispatch|
 // immediately in the message handler. However, this functionality could instead be provided as a
-// default configuration. If you have such a usecase, please contact madhaviyengar@ or yifei@.
+// default configuration. If you have such a usecase, please contact madhaviyengar@ or yifeit@.
+//
+// The following |BindServer()| APIs infer the protocol type based on the server implementation
+// which must publicly inherit from the appropriate |<Protocol_Name>::Interface| class.
 template <typename Interface>
-fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               Interface* impl) {
-  return internal::AsyncTypeErasedBindServer(dispatcher, std::move(channel), impl,
-                                       &Interface::_Outer::TypeErasedDispatch, nullptr);
+fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
+  return internal::TypeErasedBindServer<typename Interface::_Outer>(
+    dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
 }
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
@@ -163,26 +165,30 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 // NOTE: It is only safe to invoke |on_unbound| from a |dispatcher| thread. As such, if the user
 // shuts down the |dispatcher| prior to it being invoked, it will be discarded.
 template <typename Interface>
-fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               Interface* impl, OnUnboundFn<Interface> on_unbound) {
-  return internal::AsyncTypeErasedBindServer(
-      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
-      [fn = std::move(on_unbound)](void* impl, UnboundReason reason, zx_status_t status,
-                                   zx::channel channel) mutable {
-        fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
-      });
+fit::result<ServerBinding<typename Interface::_Outer>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
+    OnUnboundFn<Interface> on_unbound) {
+  return internal::TypeErasedBindServer<typename Interface::_Outer>(
+    dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
+    [fn = std::move(on_unbound)](void* impl, UnboundReason reason,
+                                 zx_status_t status,
+                                 zx::channel channel) mutable {
+      fn(static_cast<Interface*>(impl), reason, status, std::move(channel));
+    });
 }
 
 namespace internal {
 
-inline fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
+template <typename Protocol>
+fit::result<ServerBinding<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
-  auto internal_binding = AsyncBinding::CreateServerBinding(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn));
+    internal::TypeErasedServerDispatchFn dispatch_fn,
+    internal::TypeErasedOnUnboundFn on_unbound) {
+  auto internal_binding = internal::AsyncBinding::CreateServerBinding(
+      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {
-    return fit::ok(fidl::BindingRef(std::move(internal_binding)));
+    return fit::ok(fidl::ServerBinding<Protocol>(std::move(internal_binding)));
   } else {
     return fit::error(status);
   }
@@ -192,4 +198,4 @@ inline fit::result<BindingRef, zx_status_t> AsyncTypeErasedBindServer(
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
+#endif  // LIB_FIDL_LLCPP_SERVER_H_

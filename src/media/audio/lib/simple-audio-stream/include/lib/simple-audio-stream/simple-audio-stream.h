@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -363,7 +363,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                                std::move(completer));
     }
 
-    fit::result<fidl::BindingRef, zx_status_t> binding;
+    fit::result<fidl::ServerBinding<audio_fidl::StreamConfig>, zx_status_t> binding;
 
    private:
     friend class SimpleAudioStream;
@@ -423,7 +423,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_token());
   fbl::RefPtr<StreamChannel> stream_channel_ __TA_GUARDED(channel_lock_);
   fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(channel_lock_);
-  fit::result<fidl::BindingRef, zx_status_t> ring_buffer_binding_;
+  fit::result<fidl::ServerBinding<audio_fidl::RingBuffer>, zx_status_t> ring_buffer_binding_;
   refcount::BlockingRefCount stream_config_unbound_;
   refcount::BlockingRefCount ring_buffer_unbound_;
 

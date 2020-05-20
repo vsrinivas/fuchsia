@@ -6,7 +6,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -58,7 +58,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dis
         server->ot_radio_obj_.fidl_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
         server->ot_radio_obj_.fidl_impl_obj_.release();
       };
-  fidl::AsyncBind(dispatcher, std::move(channel), this, std::move(on_unbound));
+  fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
 }
 
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {

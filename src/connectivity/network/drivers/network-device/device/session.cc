@@ -194,11 +194,11 @@ zx_status_t Session::Init(netdev::Fifos* out) {
 }
 
 zx_status_t Session::Bind(zx::channel channel) {
-  auto result =
-      fidl::AsyncBind(dispatcher_, std::move(channel), this,
-                      fidl::OnUnboundFn<Session>(
-                          [](Session* self, fidl::UnboundReason reason, zx_status_t,
-                             zx::channel channel) { self->OnUnbind(reason, std::move(channel)); }));
+  auto result = fidl::BindServer(
+      dispatcher_, std::move(channel), this,
+      fidl::OnUnboundFn<Session>(
+          [](Session* self, fidl::UnboundReason reason, zx_status_t,
+             zx::channel channel) { self->OnUnbind(reason, std::move(channel)); }));
   if (result.is_ok()) {
     binding_ = result.take_value();
     return ZX_OK;

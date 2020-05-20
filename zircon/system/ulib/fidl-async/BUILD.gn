@@ -30,7 +30,6 @@ zx_library("fidl-async-cpp") {
   sdk_headers = [
     "lib/fidl-async/cpp/bind.h",
     "lib/fidl-async/cpp/channel_transaction.h",
-    "lib/fidl-async/cpp/async_bind.h",
   ]
   sources = [
     "llcpp_bind.cc",
