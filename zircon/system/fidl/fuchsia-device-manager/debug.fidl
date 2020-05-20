@@ -11,7 +11,7 @@ using zx;
 /// All methods dump ascii text into a VMO, this allows the caller the flexibility to decide
 /// how much data they want. Use the returned `written` value to read the data, no string
 /// termination is guaranteed.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol DebugDumper {
     /// Print device tree into `output`, returns bytes `written` and bytes `available` to write.
     DumpTree(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);

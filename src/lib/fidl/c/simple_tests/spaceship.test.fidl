@@ -23,7 +23,7 @@ struct PlanetData {
     array<uint8>:4 data;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol AstrometricsListener {
     OnNova();
 };
@@ -59,7 +59,7 @@ struct ZxTypes {
 const uint32 MaxStarsAdjustHeading = 64;
 const uint32 MaxStarsScanForLifeforms = 64;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol SpaceShip {
     AdjustHeading(vector<uint32>:MaxStarsAdjustHeading stars) -> (int8 result);
     ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);

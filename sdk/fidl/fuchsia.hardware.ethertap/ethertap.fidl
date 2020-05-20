@@ -41,7 +41,7 @@ struct Config {
 /// Provides control over the created tap device. The lifetime of the device itself is tied to the
 /// channel over which this protocol is served, closing a `TapDevice` channel will trigger the
 /// destruction and deallocation of the underlying tap device.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol TapDevice {
     /// Writes data to the tap device. If device is offline, data will just be discarded.
     WriteFrame(vector<uint8>:MAX_MTU data);
@@ -56,7 +56,7 @@ protocol TapDevice {
 };
 
 /// Ethertap driver interface.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol TapControl {
     /// Opens a named device with given `name` and `config`.
     /// `name` is only used for debugging purposes.

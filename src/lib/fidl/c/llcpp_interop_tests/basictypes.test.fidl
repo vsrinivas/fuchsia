@@ -13,7 +13,7 @@ struct SimpleStruct {
 };
 
 /// Test interface implemented by both C and LLCPP
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol TestInterface {
     /// Verifies that all the handles are valid channels, then returns
     /// `ZX_OK` and loops back the field member. Otherwise, returns an error.

@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.bluetooth;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Host {
     /// Connects to the host driver on the provided handle. The zircon channel
     /// is closed in the event of an error connecting to the driver. This

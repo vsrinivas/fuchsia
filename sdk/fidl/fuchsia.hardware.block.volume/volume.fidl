@@ -46,7 +46,7 @@ struct VolumeManagerInfo {
 const uint32 ALLOCATE_PARTITION_FLAG_INACTIVE = 0x00000001;
 
 /// VolumeManager controls a collection of Volumes.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol VolumeManager {
     /// Allocates a virtual partition with the requested features.
     ///
@@ -99,7 +99,7 @@ struct VsliceRange {
 };
 
 /// Volume is a partition which may access virtually-mapped blocks within a device.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Volume {
     compose partition.Partition;
 

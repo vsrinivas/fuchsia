@@ -169,6 +169,7 @@ constexpr ErrorDef<std::string, std::string, std::string, flat::Name> ErrDuplica
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<raw::Attribute> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
+constexpr ErrorDef<raw::Attribute> ErrDeprecatedAttribute("attribute '{}' is deprecated");
 constexpr ErrorDef<raw::Attribute, std::string, std::set<std::string>> ErrInvalidAttributeValue(
     "attribute '{}' has invalid value '{}', should be one of '{}'");
 constexpr ErrorDef<raw::Attribute, std::string> ErrAttributeConstraintNotSatisfied(

@@ -11,7 +11,7 @@ library fuchsia.sysmem;
 struct PixelFormat {
     PixelFormatType type;
     /// This bool effectively makes format_modifier optional, to satisfy
-    /// 'Layout = "Simple"', to satisify "FIDL Simple C Bindings".
+    /// 'ForDeprecatedCBindings', to satisify "FIDL Simple C Bindings".
     bool has_format_modifier;
     FormatModifier format_modifier;
 };

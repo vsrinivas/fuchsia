@@ -17,7 +17,7 @@ struct TestCaseResult {
     uint64 skipped;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Logger {
     /// Logs a message from the driver unit test.
     LogMessage(string:LOG_MESSAGE_MAX msg);

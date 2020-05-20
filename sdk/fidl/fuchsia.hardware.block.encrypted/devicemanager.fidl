@@ -17,7 +17,7 @@ const uint32 MAX_KEY_SIZE = 256;
 /// This protocol allows the caller to make requests to unseal the device (by
 /// providing the appropriate key) and to seal the device (rendering its
 /// contents inaccessible).
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol DeviceManager {
     /// Attempts to unseal the device by using the provided master key to unwrap
     /// the data key wrapped in the specified key slot.  If the key provided was

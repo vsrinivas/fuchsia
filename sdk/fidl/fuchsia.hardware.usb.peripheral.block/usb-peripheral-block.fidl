@@ -9,7 +9,7 @@ using zx;
 /// Represents a simulated USB block device whose cache can be controlled.
 /// This allows for integration testing of USB mass storage devices
 /// both with and without caches.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Enables writeback caching. This requires the device
     /// to be disconnected at the time of the call. Calling it when the device is connected

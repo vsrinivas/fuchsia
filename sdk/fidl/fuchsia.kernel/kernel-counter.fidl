@@ -8,7 +8,7 @@ using fuchsia.mem;
 using zx;
 
 /// Protocol for retrieving kcounter information.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol Counter {
     /// Retrives a VMO containining summarized kcounter data. The vmo returned
     /// in `buffer` is in "inspect-vmo" format, documented elsewhere.

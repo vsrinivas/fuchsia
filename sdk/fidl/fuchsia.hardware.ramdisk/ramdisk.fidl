@@ -20,7 +20,7 @@ struct BlockWriteCounts {
 };
 
 /// The protocol for interacting with a instance of a ramdisk.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Ramdisk {
     /// Sets any of the `RAMDISK_FLAG_*` flags.
     SetFlags(uint32 flags) -> (zx.status s);
@@ -60,7 +60,7 @@ struct GUID {
 
 const uint32 MAX_NAME_LENGTH = 32;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol RamdiskController {
     /// Initializes a new Ramdisk instance with the provided block size and block count.
     /// Takes an optional `type_guid`, which may be queried from the ramdisk instance.

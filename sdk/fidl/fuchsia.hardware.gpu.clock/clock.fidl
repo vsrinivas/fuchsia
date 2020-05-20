@@ -6,7 +6,7 @@ library fuchsia.hardware.gpu.clock;
 
 using zx;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Clock {
     SetFrequencySource(uint32 source) -> (zx.status s);
 };

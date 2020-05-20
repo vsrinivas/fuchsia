@@ -6,7 +6,7 @@ library fidl.test.echo;
 
 using zx;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Echo {
     Echo(handle<process> process, handle<thread> thread) -> (zx.status status);
     Ping();

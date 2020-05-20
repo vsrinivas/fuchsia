@@ -364,7 +364,7 @@ protocol NotSimple {
     Complex(vector<uint64> arg);
 };
 
-[Layout="Simple"]
+[ForDeprecatedCBindings]
 protocol YearningForSimplicity {
     compose NotSimple;
     Simple();

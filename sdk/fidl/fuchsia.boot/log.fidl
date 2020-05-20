@@ -5,14 +5,14 @@
 library fuchsia.boot;
 
 /// Protocol for providing the kernel log, readable.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol ReadOnlyLog {
     /// Get read-only handle to the kernel `log`.
     Get() -> (handle<debuglog> log);
 };
 
 /// Protocol for providing the kernel log, writable.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol WriteOnlyLog {
     /// Get write-only handle to the kernel `log`.
     Get() -> (handle<debuglog> log);

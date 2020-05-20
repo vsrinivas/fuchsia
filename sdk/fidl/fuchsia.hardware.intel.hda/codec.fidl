@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.intel.hda;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol CodecDevice {
     // Note: this method obtains a channel to the codec device which
     // communicates using a legcy custom binary serialized format.  Once the

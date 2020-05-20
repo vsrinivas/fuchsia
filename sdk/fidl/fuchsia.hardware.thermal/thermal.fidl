@@ -94,7 +94,7 @@ struct ThermalDeviceInfo {
     array<OperatingPoint>:MAX_DVFS_DOMAINS opps;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Get information about the device's current state.
     GetInfo() -> (zx.status status, ThermalInfo? info);

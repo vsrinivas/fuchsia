@@ -6,7 +6,7 @@ library fuchsia.hardware.bluetooth;
 
 /// Represents the bt-emulator device protocol. A bt-emulator device is used for configuring and
 /// publishing fake bt-hci devices.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Emulator {
     /// Opens a fake controller management channel that speaks the
     /// "//sdk/fidl/fuchsia.bluetooth.test.HciEmulator" protocol.

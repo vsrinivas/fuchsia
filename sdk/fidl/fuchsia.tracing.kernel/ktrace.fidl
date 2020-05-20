@@ -8,7 +8,7 @@ using zx;
 
 // TODO(ZX-448): Allow providing a vmo of the buffer to use.
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Controller {
     /// Start tracing.
     Start(uint32 group_mask) -> (zx.status status);

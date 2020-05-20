@@ -61,7 +61,7 @@ protocol Provider {
 /// the tracing system.
 /// Note that one property of this interface is that once registration is made
 /// the provider can drop this connection.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol Registry {
     /// Registers the trace provider.
     /// Note: Registration is asynchronous, it's only at some point after this

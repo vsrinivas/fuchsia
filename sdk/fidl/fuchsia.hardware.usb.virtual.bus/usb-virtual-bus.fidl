@@ -6,7 +6,7 @@ library fuchsia.hardware.usb.virtual.bus;
 
 using zx;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Bus {
     /// Enables the virtual bus.
     Enable() -> (zx.status status);

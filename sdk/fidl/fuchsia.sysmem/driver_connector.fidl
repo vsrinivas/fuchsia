@@ -21,8 +21,8 @@ library fuchsia.sysmem;
 /// that interface has requests that don't complete until the devhost has
 /// constraints from other participants.
 //
-// Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
-[Discoverable, Layout = "Simple"]
+// Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
+[Discoverable, ForDeprecatedCBindings]
 protocol DriverConnector {
     /// This one-way message sends in the server end of an Allocator channel.
     ///

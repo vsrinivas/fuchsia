@@ -48,7 +48,7 @@ struct WriteBytesOperation {
 /// Skip-block partitions are used when data needs to be accessible by the bootloader. The
 /// bootloader doesn't understand the more advanced FTL partitions and this data isn't written
 /// frequently enough for performance or wear-leveling to be an issue.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol SkipBlock {
     /// Returns information about the skip-block partition.
     ///

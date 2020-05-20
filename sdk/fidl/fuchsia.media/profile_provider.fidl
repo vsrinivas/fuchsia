@@ -6,7 +6,7 @@ library fuchsia.media;
 
 using zx;
 
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol ProfileProvider {
     /// Register a thread as a media thread. This notifies the media subsystem
     /// that this thread should have an elevated scheduling profile applied to

@@ -14,7 +14,7 @@ using zx;
 // WARNING: This interface is manually implemented in libldmsg.a. Please
 // update that implementation if you change this protocol.
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Loader {
     /// Cleanly shutdown the connection to the Loader service.
     Done();

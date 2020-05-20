@@ -586,6 +586,7 @@ class AttributeSchema {
     kTypeAliasDecl,
     kUnionDecl,
     kUnionMember,
+    kDeprecated,
   };
 
   AttributeSchema(const std::set<Placement>& allowed_placements,
@@ -593,6 +594,8 @@ class AttributeSchema {
                   Constraint constraint = NoOpConstraint);
 
   AttributeSchema(AttributeSchema&& schema) = default;
+
+  static AttributeSchema Deprecated();
 
   void ValidatePlacement(Reporter* reporter, const raw::Attribute& attribute,
                          Placement placement) const;

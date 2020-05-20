@@ -38,7 +38,7 @@ struct DeviceDescriptor {
 /// of the completion of various server-side events.
 /// This callback interface can be registered using the SetStateChangeListener
 /// method on the Device protocol.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Events {
     /// Invoked when a function registers
     FunctionRegistered() -> ();

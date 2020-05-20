@@ -39,7 +39,7 @@ struct DotmatrixDisplayConfig {
 /// of pixels. The display could be monochromatic or have RGB values. This
 /// protocol is NOT for a display with lots of pixels or extra hardware like an
 /// HDMI or DP display.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol DotmatrixDisplay {
     /// Get the configuration to display the screen.
     GetConfig() -> (DotmatrixDisplayConfig config);

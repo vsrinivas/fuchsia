@@ -506,39 +506,39 @@ bool incorrect_placement_layout() {
   BEGIN_TEST;
 
   TestLibrary library(R"FIDL(
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 library fidl.test;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 const int32 MyConst = 0;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 enum MyEnum {
-    [Layout = "Simple"]
+    [ForDeprecatedCBindings]
     MyMember = 5;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 struct MyStruct {
-    [Layout = "Simple"]
+    [ForDeprecatedCBindings]
     int32 MyMember;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 union MyUnion {
-    [Layout = "Simple"]
+    [ForDeprecatedCBindings]
     1: int32 MyMember;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 table MyTable {
-    [Layout = "Simple"]
+    [ForDeprecatedCBindings]
     1: int32 MyMember;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol MyProtocol {
-    [Layout = "Simple"]
+    [ForDeprecatedCBindings]
     MyMethod();
 };
 
@@ -547,7 +547,36 @@ protocol MyProtocol {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 11);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_STR_STR(errors[0]->msg.c_str(), "Layout");
+  ASSERT_STR_STR(errors[0]->msg.c_str(), "ForDeprecatedCBindings");
+
+  END_TEST;
+}
+
+bool deprecated_attributes() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+[Layout = "Simple"]
+struct MyStruct {};
+
+[Layout = "Complex"]
+protocol MyOtherProtocol {
+  MyMethod();
+};
+
+[Layout = "Simple"]
+protocol MyProtocol {
+  MyMethod();
+};
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  for (size_t i = 0; i < errors.size(); i++) {
+    ASSERT_ERR(errors[i], fidl::ErrDeprecatedAttribute);
+  }
 
   END_TEST;
 }
@@ -562,7 +591,7 @@ union U {
     1: string s;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol P {
     -> Event(U u);
 };
@@ -771,7 +800,7 @@ bool invalid_attribute_value() {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
-[Layout = "Complex"]
+[ForDeprecatedCBindings = "Complex"]
 protocol P {
     Method();
 };
@@ -869,6 +898,7 @@ RUN_TEST(syscall_transport)
 RUN_TEST(multiple_transports)
 RUN_TEST(multiple_transports_with_bogus)
 RUN_TEST(incorrect_placement_layout)
+RUN_TEST(deprecated_attributes)
 RUN_TEST(invalid_simple_union)
 RUN_TEST(constraint_only_three_members_on_struct)
 RUN_TEST(constraint_only_three_members_on_method)

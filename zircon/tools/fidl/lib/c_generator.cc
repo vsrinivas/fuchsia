@@ -363,7 +363,7 @@ void EmitMagicNumberCheck(std::ostream* file) {
   *file << kIndent << "}\n";
 }
 
-// This function assumes the |params| are part of a [Layout="Simple"] protocol.
+// This function assumes the |params| are part of a [ForDeprecatedCBindings] protocol.
 // In particular, simple protocols don't have nullable structs or nested
 // vectors. The only secondary objects they contain are top-level vectors and
 // strings.

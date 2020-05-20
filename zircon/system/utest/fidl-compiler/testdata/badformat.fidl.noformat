@@ -188,7 +188,7 @@ MethodWithAnError()   -> (    int32    a ) error             uint32
 // following example pulled from sample FIDL library
 // which used to crash the formatter
 const uint32 MAX_STRING_DESC_SIZE = 384; /// See GetStringDescriptor description below
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
 };
 

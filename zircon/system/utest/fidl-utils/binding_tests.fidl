@@ -4,7 +4,7 @@
 
 library fidl.test.fidlutils;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol BindingTestsProtocol {
     FunctionWithReply(uint64 magic) -> ();
     FunctionWithoutReply(uint64 magic);

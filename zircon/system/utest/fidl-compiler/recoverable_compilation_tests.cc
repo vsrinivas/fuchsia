@@ -83,7 +83,7 @@ bool recover_in_library_verify_attributes() {
   TestLibrary library(R"FIDL(
 library example;
 
-[Layout = "Complex"]  // Error: invalid placement & value
+[ForDeprecatedCBindings = "True"]  // Error: invalid placement & value
 union Union {
     1: string foo;
 };

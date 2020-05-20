@@ -18,7 +18,7 @@ enum Direction : uint32 {
     Right = 3;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Drawing {
     Draw(Point p, Direction d);
     DrawLots(handle<vmo> commands) -> (int32 result, Point p);

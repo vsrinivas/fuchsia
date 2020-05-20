@@ -690,10 +690,20 @@ AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
       allowed_values_(allowed_values),
       constraint_(std::move(constraint)) {}
 
+AttributeSchema AttributeSchema::Deprecated() {
+  return AttributeSchema({Placement::kDeprecated}, {});
+}
+
 void AttributeSchema::ValidatePlacement(Reporter* reporter, const raw::Attribute& attribute,
                                         Placement placement) const {
   if (allowed_placements_.size() == 0)
     return;
+
+  if (allowed_placements_.size() == 1 && *allowed_placements_.cbegin() == Placement::kDeprecated) {
+    reporter->ReportError(ErrDeprecatedAttribute, attribute.span(), attribute);
+    return;
+  }
+
   auto iter = allowed_placements_.find(placement);
   if (iter != allowed_placements_.end())
     return;
@@ -902,10 +912,11 @@ Libraries::Libraries() {
   }, {
     /* any value */
   }));
-  AddAttributeSchema("Layout", AttributeSchema({
+  AddAttributeSchema("Layout", AttributeSchema::Deprecated()),
+  AddAttributeSchema("ForDeprecatedCBindings", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
   }, {
-    "Simple",
+    "",
   },
   SimpleLayoutConstraint));
   AddAttributeSchema("MaxBytes", AttributeSchema({
@@ -2917,7 +2928,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
   return true;
 }
 
-bool HasSimpleLayout(const Decl* decl) { return decl->GetAttribute("Layout") == "Simple"; }
+bool HasSimpleLayout(const Decl* decl) { return decl->HasAttribute("ForDeprecatedCBindings"); }
 
 bool Library::CompileProtocol(Protocol* protocol_declaration) {
   MethodScope method_scope;

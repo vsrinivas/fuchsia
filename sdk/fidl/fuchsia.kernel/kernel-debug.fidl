@@ -10,7 +10,7 @@ using zx;
 const uint32 DEBUG_COMMAND_MAX = 1024;
 
 /// Acts on behalf of the caller to interact with privileged debug system calls.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol DebugBroker {
     /// Pass debug command through to the kernel shell.
     /// Look at zx_debug_send_command syscall handling to find valid values.

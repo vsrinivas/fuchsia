@@ -10,7 +10,7 @@ const uint64 MAX_NAME = 1024;
 
 /// DebugData defines the interface for instrumentation configuration and data
 /// publishing.
-[Layout = "Simple", Discoverable]
+[ForDeprecatedCBindings, Discoverable]
 protocol DebugData {
     /// The program runtime sends a string naming a `data_sink` and transfers
     /// the sole handle to a VMO containing the `data` it wants published

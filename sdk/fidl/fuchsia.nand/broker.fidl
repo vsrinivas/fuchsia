@@ -21,7 +21,7 @@ struct BrokerRequest {
 /// ever talking to the nand device, and all higher level clients have disconnected. In addition,
 /// access to raw nand is restricted from the system during production where nand-broker is not
 /// present.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Broker {
     // Retrieves the nand info from the underlying device.
     GetInfo() -> (zx.status status, fuchsia.hardware.nand.Info? info);

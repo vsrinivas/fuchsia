@@ -13,7 +13,7 @@ using zx;
 /// virtual audio service) forwards FIDL protocol requests to the virtual audio
 /// driver, which enables clients to use more full-featured (C++ based) bindings
 /// with this driver -- specifically the Control, Input and Output protocols.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Forwarder {
     SendControl(request<Control> control);
     SendInput(request<Input> input);

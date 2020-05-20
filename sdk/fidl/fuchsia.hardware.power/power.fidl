@@ -55,7 +55,7 @@ struct BatteryInfo {
     uint32 present_voltage;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Source {
     /// Get device info.
     GetPowerInfo() -> (zx.status status, SourceInfo info);

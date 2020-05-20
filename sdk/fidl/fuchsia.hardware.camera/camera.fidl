@@ -4,7 +4,7 @@
 
 library fuchsia.hardware.camera;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Note: this method obtains a channel to the capture device which
     /// communicates using a non-simple fidl interface.  Once the

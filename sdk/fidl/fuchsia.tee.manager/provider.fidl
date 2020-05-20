@@ -9,7 +9,7 @@ using fuchsia.io as io;
 /// Provider provides service access and support to the TEE driver
 /// for things like persistent storage, since the TEE may make upward RPC-like
 /// requests to the REE.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Provider {
     RequestPersistentStorage(request<io.Directory> dir);
 };

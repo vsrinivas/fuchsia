@@ -69,7 +69,7 @@ const uint32 SET_CLIENT_NAME_MAX_LEN = 16;
 ///
 /// See //zircon/system/public/zircon/device/ethernet.h for fifo entry layout
 /// and request / response message bits.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Obtain information about device
     GetInfo() -> (Info info);

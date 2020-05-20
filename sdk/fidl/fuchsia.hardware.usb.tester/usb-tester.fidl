@@ -68,7 +68,7 @@ struct IsochResult {
     uint64 num_packets;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Resets the device to firmware loader mode.
     SetModeFwloader() -> (zx.status s);

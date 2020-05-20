@@ -6,7 +6,7 @@ library fuchsia.gpu.magma;
 
 using zx;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Get a parameter.
     Query(uint64 query_id) -> (uint64 result);

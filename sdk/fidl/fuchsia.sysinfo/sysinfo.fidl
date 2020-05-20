@@ -20,7 +20,7 @@ struct InterruptControllerInfo {
     InterruptControllerType type;
 };
 
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol SysInfo {
     /// Return the hypervisor resource (with only ZX_RIGHT_TRANSFER).
     GetHypervisorResource() -> (zx.status status, handle<resource>? resource);

@@ -8,7 +8,7 @@ using zx;
 using fuchsia.hardware.pty;
 
 /// Manages virtual console sessions.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol SessionManager {
     /// Create a new virtual console session.
     // TODO(ZX-3407): Remove response status and debug why this doesn't work async when we switch

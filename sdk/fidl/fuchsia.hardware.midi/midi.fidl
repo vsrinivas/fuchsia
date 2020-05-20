@@ -12,7 +12,7 @@ struct Info {
     bool is_source;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
     /// Get information about the type of MIDI device
     GetInfo() -> (Info info);

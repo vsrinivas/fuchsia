@@ -110,7 +110,7 @@ protocol MetricEventLoggerFactory {
 };
 
 /// LoggerFactory creates Loggers.
-[Discoverable, Layout = "Simple"]
+[Discoverable, ForDeprecatedCBindings]
 protocol LoggerFactory {
     /// Creates a Logger for the project with the given ID, using the state of
     /// the metrics registry that is bundled with Cobalt. The project must be in
@@ -306,7 +306,7 @@ flexible union MetricEventPayload {
 /// This interface conforms to the Simple layout so that Simple bindings
 /// may be generated for it. For the full interfaces, see Logger and LoggerSimple
 /// below.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol LoggerBase {
     /// Logs the fact that an event has occurred.
     ///
@@ -693,7 +693,7 @@ protocol Logger {
 ///
 /// This interface conforms to the Simple layout so that Simple bindings
 /// may be generated for it.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol LoggerSimple {
     compose LoggerBase;
 

@@ -5,7 +5,7 @@
 library fidl.test.llcpp.controlflow;
 
 /// Interface for testing shutdown/epitaphs etc.
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol ControlFlow {
     /// Shutdown the server without a reply.
     /// The server should unbind the channel from the dispatch loop, closing it.

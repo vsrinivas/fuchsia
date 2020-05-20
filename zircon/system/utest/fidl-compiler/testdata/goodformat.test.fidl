@@ -191,7 +191,7 @@ protocol PCol
 const uint32 MAX_STRING_DESC_SIZE = 384;
 
 /// See GetStringDescriptor description below
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Device {
 };
 

@@ -6,7 +6,7 @@ library fidl.test.echo;
 
 const uint64 MAX_LENGTH = 1024;
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Echo {
     EchoString(string:MAX_LENGTH value) -> (string:MAX_LENGTH response);
 };

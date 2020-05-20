@@ -12,7 +12,7 @@ struct BlockRegion {
     uint64 length;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol Blobfs {
     /// Retrieve information about allocated regions on the filesystem.
     GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
@@ -36,7 +36,7 @@ enum TakeAction : uint8 {
     DELETE_AND_RETURN_ERROR = 2;
 };
 
-[Layout = "Simple"]
+[ForDeprecatedCBindings]
 protocol CorruptBlobHandler {
     /// A corruption handler may determine that a blob is sufficiently critical that returning errors
     /// to clients may lead to undesirable system configuration or behavior. In this case the handler
