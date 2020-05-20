@@ -3,10 +3,8 @@ import subprocess
 
 from env import FUCHSIA_DIR, BUILD_DIR, MODE, PLATFORM
 
-ZN_DIR = BUILD_DIR + '.zircon'
 TOPAZ_DIR = os.path.join(FUCHSIA_DIR, 'topaz')
 GO_DIR = os.path.join(FUCHSIA_DIR, 'third_party/go')
-HOST_DIR = 'host-x64-{}-{}'.format(PLATFORM, MODE)
 
 FIDLC_DIR = 'zircon/tools/fidl'
 FIDLGEN_DIR = 'garnet/go/src/fidl/compiler'
@@ -21,8 +19,7 @@ FIDLGEN_BACKEND_DIRS = [
     'tools/fidl/fidlgen_syzkaller',
 ]
 
-TEST_FIDLC = os.path.join(
-    ZN_DIR, HOST_DIR, 'obj/system/utest/fidl-compiler/fidl-compiler-test.debug')
+TEST_FIDLC = os.path.join(FUCHSIA_DIR, BUILD_DIR, 'host_x64/fidl-compiler')
 FIDLGEN_TEST_TARGETS = [
     '//garnet/go/src/fidl',
     '//tools/fidl/fidlgen_hlcpp',
@@ -53,23 +50,22 @@ GO_RUNTIME = 'third_party/go/src/syscall/zx/fidl'
 RUST_RUNTIME = 'src/lib/fidl/rust'
 DART_RUNTIME = 'topaz/public/dart/fidl/lib'
 
-BUILD_FIDLC = [
-    'fx',
-    'ninja',
-    '-C',
-    ZN_DIR,
-    os.path.join(HOST_DIR, 'obj/tools/fidl/fidlc'.format(HOST_DIR)),
-    os.path.join(HOST_DIR, 'obj/system/utest/fidl-compiler/fidl-compiler-test'),
-]
+BUILD_FIDLC = ['fx', 'build', 'zircon/tools']
+BUILD_FIDLC_TESTS = ['fx', 'ninja', '-C', BUILD_DIR, 'host_x64/fidl-compiler']
 BUILD_FIDLGEN = ['fx', 'build', 'garnet/go/src/fidl']
 BUILD_FIDLGEN_DART = ['fx', 'ninja', '-C', BUILD_DIR, 'host_x64/fidlgen_dart']
 
 
-def run(command, dry_run):
+def run(command, dry_run, exit_on_failure=False):
     if dry_run:
         print('would run: {}'.format(command))
     else:
-        subprocess.call(command)
+        retcode = subprocess.call(command)
+        if exit_on_failure and retcode:
+            print_err(
+                'Error: command failed with status {}! {}'.format(
+                    retcode, command))
+            exit(1)
 
 
 def get_changed_files():
@@ -96,3 +92,20 @@ def get_changed_files():
         files = [os.path.join('third_party/go', p) for p in files]
 
     return files
+
+
+RED = '\033[1;31m'
+YELLOW = '\033[1;33m'
+NC = '\033[0m'
+
+
+def print_err(s):
+    print_color(s, RED)
+
+
+def print_warning(s):
+    print_color(s, YELLOW)
+
+
+def print_color(s, color):
+    print('{}{}{}'.format(color, s, NC))

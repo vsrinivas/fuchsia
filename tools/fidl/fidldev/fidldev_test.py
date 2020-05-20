@@ -208,7 +208,7 @@ class TestFidlDevTest(unittest.TestCase):
     def test_fidlc_changed(self):
         mocks = {'get_changed_files': [['zircon/tools/fidl/lib/parser.cc']]}
         command = ['test', '--no-regen']
-        expected = [util.BUILD_FIDLC, util.TEST_FIDLC]
+        expected = [util.BUILD_FIDLC_TESTS, util.TEST_FIDLC]
         self.assertListEqual(get_commands(mocks, command), expected)
 
     def test_ir_changed_zircon(self):
@@ -217,7 +217,7 @@ class TestFidlDevTest(unittest.TestCase):
                 [['zircon/tools/fidl/goldens/bits.test.json.golden']]
         }
         command = ['test', '--no-regen']
-        expected = [util.BUILD_FIDLC, util.TEST_FIDLC]
+        expected = [util.BUILD_FIDLC_TESTS, util.TEST_FIDLC]
         self.assertListEqual(get_commands(mocks, command), expected)
 
     def test_ir_changed(self):

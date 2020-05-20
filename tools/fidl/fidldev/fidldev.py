@@ -43,23 +43,29 @@ Check which tests should be run:
 
     fidldev test --dry-run --no-build --no-regen
 
+Pass flags to invocations of fx test:
+
+    fidldev test --fx-test-args "-v -o --dry"
+
 """
 
 
 def test(args):
     if args.targets:
         if not args.no_regen:
-            print('explicit test targets must be used with --no-regen')
-            exit(1)
+            util.print_warning(
+                'explicit test targets provided, skipping regen...')
         test_.test_explicit(
-            args.targets, not args.no_build, args.dry_run, args.interactive)
+            args.targets, not args.no_build, args.dry_run, args.interactive,
+            args.fx_test_args)
     else:
         changed_files = util.get_changed_files()
         if not args.no_regen:
             regen.regen_changed(changed_files, not args.no_build, args.dry_run)
             changed_files = util.get_changed_files()
         test_.test_changed(
-            changed_files, not args.no_build, args.dry_run, args.interactive)
+            changed_files, not args.no_build, args.dry_run, args.interactive,
+            args.fx_test_args)
         if args.dry_run:
             print_dryrun_warning()
 
@@ -120,6 +126,13 @@ test_parser.add_argument(
     "-i",
     help="Interactively filter tests to be run",
     action="store_true",
+)
+test_parser.add_argument(
+    "--fx-test-args",
+    "-t",
+    help=
+    "Extra flags and arguments to pass to any invocations of fx test. The flag value is passed verbatim. By default, only '-v' is used.",
+    default='-v',
 )
 
 regen_parser = subparsers.add_parser("regen", help="Run regen commands")

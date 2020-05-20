@@ -6,8 +6,6 @@ if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     exit 1
 fi
 
-fx build zircon/tools
-
 FIDLC="${FUCHSIA_BUILD_DIR}.zircon/tools/fidlc"
 if [ ! -x "${FIDLC}" ]; then
     echo "error: fidlc missing; did you fx clean-build?" 1>&2

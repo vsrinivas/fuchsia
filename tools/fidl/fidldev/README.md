@@ -11,11 +11,11 @@ source of truth for FIDL code locations and tests/regen commands.
 
 This can be aliased for convenienced:
 
-    alias fidldev=$FUCHSIA_DIR/tools/fidl/fidldev.py
+    alias fidldev=$FUCHSIA_DIR/tools/fidl/fidldev/fidldev.py
 
 ## Testing fidldev:
 
-    python3 tools/fidl/fidldev_test.py -b
+    python3 tools/fidl/fidldev/fidldev_test.py -b
 
 The `-b` flag will separate stdout output when printing test results. It can
 be removed when using debugging print statements in the test itself.

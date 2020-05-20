@@ -151,6 +151,13 @@ We provide mostly one-liners to run tests for the various parts.
 When in doubt, refer to the "`Test:`" comment in the git commit message;
 we do our best to describe the commands used to validate our work there.
 
+Tests are run using the [fidldev][fidldev] tool. Examples assume that the
+`fidldev` script is somewhere on your PATH, e.g. by adding an alias:
+
+```sh
+alias fidldev=$FUCHSIA_DIR/tools/fidl/fidldev/fidldev.py
+```
+
 ### fidlc
 
 ```sh
@@ -194,28 +201,17 @@ git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
 To build and run `fidlc` tests:
 
 ```sh
-fx build zircon/tests
-$FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
+fidldev test fidlc
 ```
 
-To run a specific test case, use the `--case` flag:
+To run a specific test case, use the `--case` flag with the fidlc test binary.
+The binary can be located by running `fidldev test --dry-run --no-regen fidlc`.
 
 ```sh
-fx build zircon/tests
-$FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug -- --case attributes_tests
+$FUCHSIA_DIR/out/default/host_x64/fidl-compiler -- --case attributes_tests
 ```
 
-Alternatively, it is faster to invoke ninja targets directly:
-
-```sh
-fx ninja -C out/default.zircon \
-    host-x64-linux-clang/obj/tools/fidl/fidlc \
-    host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test
-
-./out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
-```
-
-Build and run fidl-coding-tables tests:
+Build and run `fidl-test`:
 
 Note: `--with-base` puts all zircon tests in `/boot` with the `bringup.x64`
 target, or `/system` when you the `core.x64` target.
@@ -223,14 +219,13 @@ target, or `/system` when you the `core.x64` target.
 ```sh
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
 fx build
-fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
 ```
 
-To regenerate the `fidlc` JSON goldens, ensure `fidlc` is built and up to date,
-then run:
+To regenerate the `fidlc` JSON goldens:
 
 ```sh
-fx exec $FUCHSIA_DIR/zircon/tools/fidl/testdata/regen.sh
+fidldev regen fidlc
 ```
 
 These "golden" files are examples of what kind of JSON IR `fidlc` produces and
@@ -256,12 +251,13 @@ Some example tests you can run:
 ```sh
 fx run-host-tests fidlgen_hlcpp_test
 fx run-host-tests fidlgen_golang_ir_test
+fidldev test --no-regen fidlgen
 ```
 
 To regenerate the goldens:
 
 ```sh
-fx exec garnet/go/src/fidl/compiler/backend/typestest/regen.sh
+fidldev regen fidlgen
 ```
 
 ### fidlgen_dart
@@ -281,29 +277,50 @@ $FUCHSIA_DIR/out/default/host_x64/fidlgen_dart
 Some example tests you can run:
 
 ```sh
-fx run-host-tests fidlgen_dart_backend_test
+fidldev test --no-regen fidlgen_dart
 ```
 
 To regenerate the goldens:
 
 ```sh
-fx exec topaz/bin/fidlgen_dart/regen.sh
+fidldev regen fidlgen_dart
 ```
 
-### C runtime
+### Bindings
 
-You first need to have Fuchsia running in an emulator. Here are the steps:
+`fidldev` supports tests for each of the bindings. Some of the bindings tests
+run on device and require having Fuchsia running in an emulator. Here are the
+steps:
 
 ```sh
 Tab 1> fx build && fx serve-updates
 
 Tab 2> fx qemu -kN
-
-Tab 3> fx test fidl-c-tests
 ```
 
 The `-k` flag enables KVM. It is not required, but the emulator is *much* slower
 without it. The `-N` flag enables networking.
+
+The bindings tests can then be run with fidldev:
+
+```sh
+fidldev test --no-regen hlcpp
+fidldev test --no-regen llcpp
+fidldev test --no-regen c
+fidldev test --no-regen go
+fidldev test --no-regen rust
+fidldev test --no-regen dart
+```
+
+Alternatively, run fidldev with no arguments to test files that have changed:
+
+```sh
+fidldev test
+```
+
+To run a specific test or to pass flags to a specific test, run `fidldev` with
+the `--dry-run`, `--no-build`, `--no-regen` flags to obtain the desired test
+commands.
 
 There is one test that must be run separately as a zbi test, which is the
 `fidl-test`:
@@ -324,94 +341,6 @@ Tab 1> fx build && fx qemu -kN
 
 Tab 2> fx shell
 Tab 2(shell)> runtests -t fidl-test
-```
-
-Some of the C runtime tests can run on host:
-```sh
-fx build zircon && fx run-host-tests fidl-test
-```
-This only includes a few tests, so be sure to check the output to see if it is
-running the test you care about.
-
-### C++ runtime
-
-You first need to have Fuchsia running in an emulator. Here are the steps:
-
-```sh
-Tab 1> fx build && fx serve-updates
-
-Tab 2> fx qemu -kN
-
-Tab 3> fx test fidl_tests
-```
-
-There are separate tests for LLCPP that can be run in the same way as `fidl_tests`:
-
-* fidl_llcpp_types_test
-* fidl_llcpp_conformance_test
-
-### Go runtime
-
-You first need to have Fuchsia running in an emulator. Here are the steps:
-
-```sh
-Tab 1> fx build && fx serve-updates
-
-Tab 2> fx qemu -kN
-
-Tab 3> fx test go_fidl_tests fidl_go_conformance
-```
-
-As with normal Go tests, you can pass [various flags][go-test-flags] to control
-execution, filter test cases, run benchmarks, etc. For instance:
-
-```sh
-Tab 3> fx test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*union.*'
-```
-
-An example invocation that gets CPU and memory profiles from a benchmark might look like:
-
-```sh
-Tab 3> fx test -R bench -o go_fidl_tests -- -test.run=- -test.bench=. -test.cpuprofile=/data/cpuprofile -test.memprofile=/data/memprofile
-```
-
-To get the data off of the device under test, we can use the realm name (the
-argument to the -R flag we passed above) to look for the data on disk.
-
-```sh
-Tab 3> fx scp "[$(fx get-device-addr)]:/data/r/sys/r/bench/fuchsia.com:go_fidl_tests:0#meta:go_extended_fidl_test.cmx/cpuprofile" out/cpuprofile
-```
-
-To view the profile data, you can use `pprof`.
-
-```sh
-Tab 3> go tool pprof -http:8080 out/cpuprofile
-```
-
-### Rust runtime
-
-You first need to have Fuchsia running in an emulator. Here are the steps:
-
-```sh
-Tab 1> fx build && fx serve-updates
-
-Tab 2> fx qemu -kN
-
-Tab 3> fx test rust_fidl_tests
-```
-
-### Dart runtime
-
-The Dart FIDL bindings tests are in [//topaz/bin/fidl_bindings_test/][bindings_test-dart].
-
-You first need to have Fuchsia running in an emulator. Here are the steps:
-
-```sh
-Tab 1> fx build && fx serve-updates
-
-Tab 2> fx qemu -kN
-
-Tab 3> fx test fidl_bindings_test
 ```
 
 ### Compatibility Test
@@ -711,6 +640,7 @@ fidl fmt --library my_library.fidl -i
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [fidlc-tests]: /zircon/system/utest/fidl/
+[fidldev]: /tools/fidl/fidldev/README.md
 [jsonir]: /docs/reference/fidl/language/json-ir.md
 [rtl-c]: /zircon/system/ulib/fidl/
 [rtl-cpp]: /src/lib/fidl/llcpp/tests/

@@ -30,7 +30,7 @@ TEST_GROUPS = [
     (
         'fidlc', (
             [startswith('zircon/tools/fidl')], [util.TEST_FIDLC],
-            util.BUILD_FIDLC)),
+            util.BUILD_FIDLC_TESTS)),
 
     # it's possible to be more selective on which changes map to which tests,
     # but since fidlgen tests are fast to build and run, just do a blanket
@@ -112,16 +112,17 @@ TEST_GROUPS = [
 ]
 
 
-def test_explicit(targets, build_first, dry_run, interactive):
+def test_explicit(targets, build_first, dry_run, interactive, fx_test_args):
     """ Test an explicit set of test groups """
     tests = []
     for name, test in TEST_GROUPS:
         if name in targets or 'all' in targets:
             tests.append(test)
-    run_tests(tests, build_first, dry_run, interactive)
+    run_tests(tests, build_first, dry_run, interactive, fx_test_args)
 
 
-def test_changed(changed_files, build_first, dry_run, interactive):
+def test_changed(
+        changed_files, build_first, dry_run, interactive, fx_test_args):
     """ Test relevant test groups given a set of changed files """
     tests = []
     for _, test in TEST_GROUPS:
@@ -132,7 +133,7 @@ def test_changed(changed_files, build_first, dry_run, interactive):
     run_tests(tests, build_first, dry_run, interactive)
 
 
-def run_tests(tests, build_first, dry_run, interactive):
+def run_tests(tests, build_first, dry_run, interactive, fx_test_args):
     already_built = set()
     test_targets = set()
     manual_tests = set()
@@ -140,7 +141,7 @@ def run_tests(tests, build_first, dry_run, interactive):
         if build_first and build is not None and tuple(
                 build) not in already_built:
             already_built.add(tuple(build))
-            util.run(build, dry_run)
+            util.run(build, dry_run, exit_on_failure=True)
 
         for target in targets:
             if is_manual_test(target):
@@ -159,18 +160,19 @@ def run_tests(tests, build_first, dry_run, interactive):
     for cmd in manual_tests:
         util.run(cmd, dry_run)
         # print test line that can be copied into a commit message
-        print('Test: ' + cmd)
+        # the absolute FUCHSIA_DIR paths are stripped for readability and
+        # because they are user specific
+        print('Test: ' + cmd.replace(str(util.FUCHSIA_DIR) + '/', ''))
 
     if not test_targets:
         return
-    cmd = ['fx', 'test']
+    cmd = ['fx', 'test'] + fx_test_args.split()
     if not build_first:
         cmd.append('--no-build')
     # group all tests into a single `fx test` invocation so that the summary
     # prints all results
     cmd.extend(test_targets)
     util.run(cmd, dry_run)
-    # print test line that can be copied into a commit message
     print('Test: ' + ' '.join(cmd))
 
 
