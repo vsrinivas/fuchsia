@@ -6,6 +6,7 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
 #include <lib/fidl/epitaph.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include <type_traits>
@@ -34,58 +35,71 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, 
 
 AsyncBinding::~AsyncBinding() {
   ZX_ASSERT(channel_);
-  std::scoped_lock lock(lock_);
-
-  // If the channel wasn't ever bound, just exit.
-  if (!begun_)
-    return;
-  ZX_ASSERT(unbind_);
-
-  // Send the epitaph if required.
-  if (unbind_info_.reason == UnboundReason::kClose)
-    unbind_info_.status = fidl_epitaph_write(channel_.get(), unbind_info_.status);
-
-  // If there is an unbound hook, execute it within a separate dispatcher task, as this destructor
-  // could have been invoked from anywhere.
-  if (!on_unbound_fn_)
-    return;
-  auto* unbound_task = new UnboundTask{
-      .task = {{ASYNC_STATE_INIT}, &AsyncBinding::OnUnboundTask, async_now(dispatcher_)},
-      .on_unbound_fn = std::move(on_unbound_fn_),
-      .intf = interface_,
-      .channel = std::move(channel_),
-      .status = unbind_info_.status,
-      .reason = unbind_info_.reason};
-  auto status = async_post_task(dispatcher_, &unbound_task->task);
-  // The dispatcher must not be shutdown while there are any pending unbound hooks.
-  ZX_ASSERT(status == ZX_OK);
+  if (on_delete_) {
+    if (out_channel_)
+      *out_channel_ = std::move(channel_);
+    sync_completion_signal(on_delete_);
+  }
 }
 
-void AsyncBinding::OnUnbind(zx_status_t status, UnboundReason reason) {
-  ZX_ASSERT(keep_alive_);
+void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t status,
+                            UnboundReason reason) {
+  auto binding = std::move(calling_ref);  // Move calling_ref into this scope.
 
   {
     std::scoped_lock lock(lock_);
 
-    // Indicate that no other thread should wait for unbind.
-    unbind_ = true;
+    // Only one thread should wait for unbind.
+    if (sync_unbind_)
+      return;
+    unbind_ = sync_unbind_ = true;
 
-    // If the peer was closed or unbind_info_ was otherwise not set (kUnbind is the default), update
-    // unbind_info_ with reason and status.
-    if (reason == UnboundReason::kPeerClosed || unbind_info_.reason == UnboundReason::kUnbind)
-      unbind_info_ = {reason, status};
+    // If the async_cancel_wait() in UnbindInternal() succeeded, no dispatcher thread should be able
+    // to access keep_alive_, and it must be freed.
+    if (canceled_)
+      keep_alive_ = nullptr;
+
+    // If the peer was not closed, and the user invoked Close() or there was a dispatch error,
+    // overwrite the unbound reason and recover the epitaph or error status. Note that
+    // UnboundReason::kUnbind is simply the default value for unbind_info_.reason.
+    if (reason != UnboundReason::kPeerClosed && unbind_info_.reason != UnboundReason::kUnbind) {
+      reason = unbind_info_.reason;
+      status = unbind_info_.status;
+    }
   }
 
-  // It is safe to delete the internal reference. This will trigger the destructor if there are no
-  // transient references.
-  keep_alive_ = nullptr;
+  // Stash any state required after deleting the binding.
+  auto on_unbound_fn = std::move(on_unbound_fn_);
+  auto* intf = interface_;
+
+  sync_completion_t on_delete;
+  on_delete_ = &on_delete;
+  zx::channel channel;
+  out_channel_ = &channel;
+
+  // Delete the calling reference. Wait for any transient references to be released.
+  binding = nullptr;
+  // TODO(45407): Currently, this could wait for a synchronous call from a fidl::Client<> to
+  // complete. Once it is possible to interrupt ongoing calls, do so to avoid potentially unbounded
+  // blocking here.
+  ZX_ASSERT(sync_completion_wait(&on_delete, ZX_TIME_INFINITE) == ZX_OK);
+
+  // If required, send the epitaph.
+  if (channel && reason == UnboundReason::kClose) {
+    status = fidl_epitaph_write(channel.get(), status);
+  }
+
+  // Execute the unbound hook if specified.
+  if (on_unbound_fn) {
+    on_unbound_fn(intf, reason, status, std::move(channel));
+  }
 }
 
 void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) {
   ZX_ASSERT(keep_alive_);
 
   if (status != ZX_OK)
-    return OnUnbind(status, UnboundReason::kInternalError);
+    return OnUnbind(std::move(keep_alive_), status, UnboundReason::kInternalError);
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
@@ -102,7 +116,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
       if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
         if (status == ZX_OK)
           status = ZX_ERR_INTERNAL;
-        return OnUnbind(status, UnboundReason::kInternalError);
+        return OnUnbind(std::move(keep_alive_), status, UnboundReason::kInternalError);
       }
 
       // Flag indicating whether this thread still has access to the binding.
@@ -126,7 +140,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
       return OnDispatchError(status);
   } else {
     ZX_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-    OnUnbind(ZX_ERR_PEER_CLOSED, UnboundReason::kPeerClosed);
+    OnUnbind(std::move(keep_alive_), ZX_ERR_PEER_CLOSED, UnboundReason::kPeerClosed);
   }
 }
 
@@ -148,8 +162,6 @@ zx_status_t AsyncBinding::EnableNextDispatch() {
   if (unbind_)
     return ZX_ERR_CANCELED;
   auto status = async_begin_wait(dispatcher_, this);
-  // The dispatcher must not be shutdown while there are any active bindings.
-  ZX_ASSERT(status != ZX_ERR_BAD_STATE);
   if (status != ZX_OK && unbind_info_.status == ZX_OK)
     unbind_info_ = {UnboundReason::kInternalError, status};
   return status;
@@ -178,28 +190,30 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
         unbind_info_.reason = UnboundReason::kPeerClosed;
     }
 
-    // Attempt to cancel the current wait. On failure, a dispatcher thread (possibly this thread)
-    // will invoke OnUnbind() before returning to the dispatcher.
-    auto status = async_cancel_wait(dispatcher_, this);
-    if (status != ZX_OK) {
-      // Must only fail due to the wait not being found.
-      ZX_ASSERT(status == ZX_ERR_NOT_FOUND);
+    // Attempt to add a task to unbind the channel. On failure, the dispatcher was shutdown,
+    // and another thread will do the unbinding.
+    auto* unbind_task = new UnbindTask{
+      .task = {{ASYNC_STATE_INIT}, &AsyncBinding::OnUnbindTask, async_now(dispatcher_)},
+      .binding = binding
+    };
+    if (async_post_task(dispatcher_, &unbind_task->task) != ZX_OK) {
+      delete unbind_task;
       return;
     }
-  }
 
-  // Only one thread should ever reach this point. It is safe to delete the internal reference.
-  // The destructor will run here if there are no transient references.
-  keep_alive_ = nullptr;
+    // Attempt to cancel the current wait. On failure, a dispatcher thread (possibly this thread)
+    // will invoke OnUnbind() before returning to the dispatcher.
+    canceled_ = async_cancel_wait(dispatcher_, this) == ZX_OK;
+  }
 }
 
 void AsyncBinding::OnDispatchError(zx_status_t error) {
   ZX_ASSERT(error != ZX_OK);
   if (error == ZX_ERR_CANCELED) {
-    OnUnbind(ZX_OK, UnboundReason::kUnbind);
+    OnUnbind(std::move(keep_alive_), ZX_OK, UnboundReason::kUnbind);
     return;
   }
-  OnUnbind(error, UnboundReason::kInternalError);
+  OnUnbind(std::move(keep_alive_), error, UnboundReason::kInternalError);
 }
 
 std::shared_ptr<AsyncBinding> AsyncBinding::CreateServerBinding(

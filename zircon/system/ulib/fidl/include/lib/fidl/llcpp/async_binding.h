@@ -13,7 +13,6 @@
 #include <lib/fit/result.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
-#include <zircon/assert.h>
 #include <zircon/fidl.h>
 
 #include <mutex>
@@ -93,33 +92,23 @@ class AsyncBinding : private async_wait_t {
  private:
   friend fidl::internal::AsyncTransaction;
 
-  struct UnboundTask {
+  struct UnbindTask {
     async_task_t task;
-    TypeErasedOnUnboundFn on_unbound_fn;
-    void* intf;
-    zx::channel channel;
-    zx_status_t status;
-    UnboundReason reason;
+    std::weak_ptr<AsyncBinding> binding;
   };
 
   static void OnMessage(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
-    // The dispatcher must not be shutdown while there are any active bindings.
-    ZX_DEBUG_ASSERT(status != ZX_ERR_CANCELED);
     static_cast<AsyncBinding*>(wait)->MessageHandler(status, signal);
   }
 
-  static void OnUnboundTask(async_dispatcher_t*, async_task_t* task, zx_status_t status) {
-    static_assert(std::is_standard_layout<UnboundTask>::value, "Need offsetof.");
-    static_assert(offsetof(UnboundTask, task) == 0, "Cast async_task_t* to UnboundTask*.");
-    // The dispatcher must not be shutdown while there are still bindings. With the libasync-loop
-    // implementation, this handler would execute within the calling thread, however the unbound
-    // handler is guaranteed to run in a dispatcher thread to avoid nesting user code.
-    ZX_DEBUG_ASSERT(status != ZX_ERR_CANCELED);
-    auto* unbound_task = reinterpret_cast<UnboundTask*>(task);
-    unbound_task->on_unbound_fn(unbound_task->intf, unbound_task->reason, unbound_task->status,
-                                std::move(unbound_task->channel));
-    delete unbound_task;
+  static void OnUnbindTask(async_dispatcher_t*, async_task_t* task, zx_status_t status) {
+    static_assert(std::is_standard_layout<UnbindTask>::value, "Need offsetof.");
+    static_assert(offsetof(UnbindTask, task) == 0, "Cast async_task_t* to UnbindTask*.");
+    auto* unbind_task = reinterpret_cast<UnbindTask*>(task);
+    if (auto binding = unbind_task->binding.lock())
+      binding->OnUnbind(std::move(binding), ZX_OK, UnboundReason::kUnbind);
+    delete unbind_task;
   }
 
   void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
@@ -131,8 +120,9 @@ class AsyncBinding : private async_wait_t {
   // Triggered by explicit Unbind(), channel peer closed, or other channel/dispatcher error in the
   // context of a dispatcher thread with exclusive ownership of the internal binding reference. If
   // the binding is still bound, waits for all other references to be released, sends the epitaph
-  // (except for Unbind()), and invokes the error handler if specified.
-  void OnUnbind(zx_status_t status, UnboundReason reason) __TA_EXCLUDES(lock_);
+  // (except for Unbind()), and invokes the error handler if specified. `calling_ref` is released.
+  void OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t status,
+                UnboundReason reason) __TA_EXCLUDES(lock_);
 
   // Invokes OnUnbind() with the appropriate arguments based on the status.
   void OnDispatchError(zx_status_t error);
@@ -144,6 +134,8 @@ class AsyncBinding : private async_wait_t {
   const DispatchFn dispatch_fn_;
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
   const bool is_server_;
+  sync_completion_t* on_delete_ = nullptr;
+  zx::channel* out_channel_ = nullptr;
 
   std::mutex lock_;
   struct {
@@ -152,6 +144,8 @@ class AsyncBinding : private async_wait_t {
   } unbind_info_ __TA_GUARDED(lock_) = {UnboundReason::kUnbind, ZX_OK};
   bool unbind_ __TA_GUARDED(lock_) = false;
   bool begun_ __TA_GUARDED(lock_) = false;
+  bool sync_unbind_ __TA_GUARDED(lock_) = false;
+  bool canceled_ __TA_GUARDED(lock_) = false;
 };
 
 }  // namespace internal

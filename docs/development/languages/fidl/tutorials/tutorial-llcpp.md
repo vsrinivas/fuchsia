@@ -388,17 +388,23 @@ appropriate.
 
 If you provided an unbound hook, it is executed as task on the dispatcher,
 providing a reason and error status for the unbinding. You may also recover
-ownership of the client end of the channel through the hook.
+ownership of the client end of the channel through the hook. The unbound hook is
+guaranteed to be run.
 
 #### Interaction with dispatcher
 
 All asynchronous responses, event handling, and error handling are done through
-the `async_dispatcher_t*` provided on creation of a client. You MUST ensure that
-the dispatcher remains valid as long as there are any clients bound to it.
+the `async_dispatcher_t*` provided on creation of a client. With the exception
+of the dispatcher being shutdown, you can expect that all hooks provided to the
+client APIs will be executed on a dispatcher thread (and not nested within other
+user code).
 
-If you did not provide an `OnClientUnboundFn`, invoking `client.Unbind()` is
-sufficient for it to be considered unbound. If provided, the client is only
-considered unbound once the `OnClientUnboundFn` is invoked.
+NOTE: If you shutdown the dispatcher while there are any active bindings, the
+unbound hook MAY be executed on the thread executing shutdown. As such, you MUST
+not take any locks which could be taken by hooks provided to `fidl::Client` APIs
+while executing `async::Loop::Shutdown()/async_loop_shutdown()`. (You should
+probably ensure that no locks are held around shutdown anyway since it joins all
+dispatcher threads, which may take locks in user code).
 
 #### Outgoing FIDL methods
 
