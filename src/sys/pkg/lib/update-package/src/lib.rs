@@ -7,6 +7,7 @@
 //! Typesafe wrappers around an "update" package.
 
 mod board;
+mod hash;
 mod image;
 mod images;
 mod packages;
@@ -15,13 +16,14 @@ mod util;
 
 pub use crate::{
     board::VerifyBoardError,
+    hash::HashError,
     image::{Image, OpenImageError},
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
     packages::ParsePackageError,
     update_mode::{ParseUpdateModeError, UpdateMode},
 };
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_url::pkg_url::PkgUrl};
+use {fidl_fuchsia_io::DirectoryProxy, fuchsia_merkle::Hash, fuchsia_url::pkg_url::PkgUrl};
 
 /// An open handle to an "update" package.
 #[derive(Debug)]
@@ -68,6 +70,11 @@ impl UpdatePackage {
     /// Returns the list of package urls that go in the universe of this update package.
     pub async fn packages(&self) -> Result<Vec<PkgUrl>, ParsePackageError> {
         packages::packages(&self.proxy).await
+    }
+
+    /// Returns the package hash of this update package.
+    pub async fn hash(&self) -> Result<Hash, HashError> {
+        hash::hash(&self.proxy).await
     }
 }
 

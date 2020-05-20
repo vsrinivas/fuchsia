@@ -490,7 +490,9 @@ impl UpdateApplier for RealUpdateApplier {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::errors;
     use event_queue::{ClosedClient, Notify};
+    use fuchsia_zircon as zx;
     use futures::channel::mpsc::{channel, Receiver, Sender};
     use futures::channel::oneshot;
     use futures::future::BoxFuture;
@@ -508,15 +510,17 @@ pub(crate) mod tests {
     pub const LATEST_UPDATE_PACKAGE: &str =
         "3333333333333333333333333333333333333333333333333333333333333333";
 
+    type CheckResultFactory = fn() -> Result<SystemUpdateStatus, crate::errors::Error>;
+
     #[derive(Clone)]
     pub struct FakeUpdateChecker {
-        result: Result<SystemUpdateStatus, crate::errors::Error>,
+        result: CheckResultFactory,
         call_count: Arc<AtomicU64>,
         // Taking this mutex blocks update checker.
         check_blocked: Arc<AsyncMutex<()>>,
     }
     impl FakeUpdateChecker {
-        fn new(result: Result<SystemUpdateStatus, crate::errors::Error>) -> Self {
+        fn new(result: CheckResultFactory) -> Self {
             Self {
                 result,
                 call_count: Arc::new(AtomicU64::new(0)),
@@ -524,20 +528,28 @@ pub(crate) mod tests {
             }
         }
         pub fn new_up_to_date() -> Self {
-            Self::new(Ok(SystemUpdateStatus::UpToDate {
-                system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
-                update_package: CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle"),
-            }))
+            Self::new(|| {
+                Ok(SystemUpdateStatus::UpToDate {
+                    system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                    update_package: CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle"),
+                })
+            })
         }
         pub fn new_update_available() -> Self {
-            Self::new(Ok(SystemUpdateStatus::UpdateAvailable {
-                current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
-                latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
-                latest_update_package: LATEST_UPDATE_PACKAGE.parse().expect("valid merkle"),
-            }))
+            Self::new(|| {
+                Ok(SystemUpdateStatus::UpdateAvailable {
+                    current_system_image: CURRENT_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                    latest_system_image: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
+                    latest_update_package: LATEST_UPDATE_PACKAGE.parse().expect("valid merkle"),
+                })
+            })
         }
         pub fn new_error() -> Self {
-            Self::new(Err(crate::errors::Error::ResolveUpdatePackage))
+            Self::new(|| {
+                Err(errors::Error::UpdatePackage(errors::UpdatePackage::Resolve(
+                    zx::Status::INTERNAL,
+                )))
+            })
         }
         pub fn block(&self) -> Option<futures::lock::MutexGuard<'_, ()>> {
             self.check_blocked.try_lock()
@@ -552,11 +564,11 @@ pub(crate) mod tests {
             _last_known_update_merkle: Option<&'a Hash>,
         ) -> BoxFuture<'a, Result<SystemUpdateStatus, crate::errors::Error>> {
             let check_blocked = Arc::clone(&self.check_blocked);
-            let result = self.result.clone();
+            let result = (self.result)();
             self.call_count.fetch_add(1, Ordering::SeqCst);
             async move {
                 check_blocked.lock().await;
-                result.map_err(|e| e.into())
+                result
             }
             .boxed()
         }
@@ -619,18 +631,20 @@ pub(crate) mod tests {
         }
     }
 
+    type ApplyResultFactory = fn() -> Result<(), crate::errors::Error>;
+
     #[derive(Clone)]
     pub struct FakeUpdateApplier {
-        result: Result<(), crate::errors::Error>,
+        result: ApplyResultFactory,
         call_count: Arc<AtomicU64>,
     }
     impl FakeUpdateApplier {
         pub fn new_success() -> Self {
-            Self { result: Ok(()), call_count: Arc::new(AtomicU64::new(0)) }
+            Self { result: || Ok(()), call_count: Arc::new(AtomicU64::new(0)) }
         }
         pub fn new_error() -> Self {
             Self {
-                result: Err(crate::errors::Error::SystemUpdaterFailed),
+                result: || Err(crate::errors::Error::SystemUpdaterFailed),
                 call_count: Arc::new(AtomicU64::new(0)),
             }
         }
@@ -646,7 +660,7 @@ pub(crate) mod tests {
             _initiator: Initiator,
         ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            future::ready(self.result.clone().map_err(|e| e.into())).boxed()
+            future::ready((self.result)().map_err(|e| e.into())).boxed()
         }
     }
 

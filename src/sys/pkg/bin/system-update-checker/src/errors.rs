@@ -2,63 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use thiserror::Error;
+use fuchsia_url::pkg_url::PkgUrl;
+use fuchsia_zircon as zx;
+use std::io;
 
-#[derive(Clone, Eq, PartialEq, Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("error reading /pkgfs/system/meta")]
-    ReadSystemMeta,
+    #[error("reading /pkgfs/system/meta")]
+    ReadSystemMeta(#[source] io::Error),
 
-    #[error("error parsing /pkgfs/system/meta merkle")]
-    ParseSystemMeta,
+    #[error("parsing /pkgfs/system/meta merkle")]
+    ParseSystemMeta(#[source] fuchsia_merkle::ParseHashError),
 
-    #[error("error reading update package merkle")]
-    ReadUpdateMeta,
-
-    #[error("error parsing update package merkle")]
-    ParseUpdateMeta,
-
-    #[error("error connecting to PackageResolver")]
-    ConnectPackageResolver,
-
-    #[error("error creating Directory proxy for the update package")]
-    CreateUpdatePackageDirectoryProxy,
-
-    #[error("fidl error resolving update package")]
-    ResolveUpdatePackageFidl,
-
-    #[error("error resolving update package")]
-    ResolveUpdatePackage,
-
-    #[error("error creating File endpoints for the update package's 'packages' file")]
-    CreateUpdatePackagePackagesEndpoint,
-
-    #[error("error opening the update package's 'packages' file")]
-    OpenUpdatePackagePackages,
-
-    #[error("error opening the update package's 'meta' file")]
-    OpenUpdatePackageMeta,
-
-    #[error("error converting 'packages' handle into an fd")]
-    CreatePackagesFd,
-
-    #[error("error reading line from 'packages' file")]
-    ReadPackages,
-
-    #[error("error parsing latest system image merkle: {packages_entry}")]
-    ParseLatestSystemImageMerkle { packages_entry: String },
-
-    #[error("could not find latest system image merkle in update package's 'packages' list")]
-    MissingLatestSystemImageMerkle,
-
-    #[error("error connecting to component Launcher")]
-    ConnectToLauncher,
-
-    #[error("error launching system_updater component")]
-    LaunchSystemUpdater,
-
-    #[error("error waiting for system_updater component")]
-    WaitForSystemUpdater,
+    #[error("connecting to PackageResolver")]
+    ConnectPackageResolver(#[source] anyhow::Error),
 
     #[error("system_updater component exited with failure")]
     SystemUpdaterFailed,
@@ -66,6 +23,36 @@ pub enum Error {
     #[error("system_updater component exited with success, it should have rebooted the system")]
     SystemUpdaterFinished,
 
-    #[error("error reading /pkgfs/system/data/static_packages")]
-    ReadStaticPackages,
+    #[error("reading /pkgfs/system/data/static_packages")]
+    ReadStaticPackages(#[source] io::Error),
+
+    #[error("update package")]
+    UpdatePackage(#[from] UpdatePackage),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum UpdatePackage {
+    #[error("creating Directory proxy to resolve the update package")]
+    CreateDirectoryProxy(#[source] fidl::Error),
+
+    #[error("fidl error resolving update package")]
+    ResolveFidl(#[source] fidl::Error),
+
+    #[error("resolving update package")]
+    Resolve(#[source] zx::Status),
+
+    #[error("extracting the 'packages' manifest")]
+    ExtractPackagesManifest(#[source] update_package::ParsePackageError),
+
+    #[error("could not find system_image/0 in 'packages' manifest")]
+    MissingSystemImage,
+
+    #[error("system_image/0 pkg url was not merkle pinned: {0}")]
+    UnPinnedSystemImage(PkgUrl),
+
+    #[error("parsing the system_image merkle from the 'packages' manifest")]
+    ParseSystemImageMerkle(#[source] fuchsia_merkle::ParseHashError),
+
+    #[error("extracting package hash")]
+    Hash(#[source] update_package::HashError),
 }

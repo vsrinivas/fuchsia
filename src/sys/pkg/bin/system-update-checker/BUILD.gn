@@ -13,6 +13,7 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/sysconfig-client",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
@@ -37,11 +38,11 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/forced-fdr",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/system-health-check",
+    "//src/sys/pkg/lib/update-package",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:proptest-derive",
@@ -51,6 +52,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 package("system-update-checker") {
