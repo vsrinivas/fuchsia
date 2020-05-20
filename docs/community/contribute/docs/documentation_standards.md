@@ -106,3 +106,7 @@ Tips for leaving breadcrumbs:
 - Sideways linkage: Add links to documents on subjects that help readers better understand the
   content of your document.
 
+## What implementation of Markdown does our documentation use?
+
+The documentation on Fuchsia.dev uses the
+[Hoedown Markdown Parser](https://github.com/hoedown/hoedown).
