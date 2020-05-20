@@ -35,15 +35,15 @@ TEST(LogMessageStoreTest, AddAndConsume) {
   // Set up the store to hold 2 log lines.
   LogMessageStore store(kMaxLogLineSize * 2);
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 0"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 1"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
 
   EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
 )");
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 2"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 3"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));
 
   EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 2
 [15604.000][07559][07687][] INFO: line 3
@@ -54,11 +54,11 @@ TEST(LogMessageStoreTest, DropsCorrectly) {
   // Set up the store to hold 2 log lines and the "!!! DROPPED..." string.
   LogMessageStore store(kMaxLogLineSize * 2 + kDroppedFormatStrSize);
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 0"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 1"))));
-  EXPECT_FALSE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 2"))));
-  EXPECT_FALSE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 3"))));
-  EXPECT_FALSE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 4"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
 
   EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -145,19 +145,19 @@ TEST(WriterTest, WritesMessages) {
       log_files, FileSize::Bytes(log_files.size() * (kMaxLogLineSize * 2 + kDroppedFormatStrSize)),
       &store);
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line A"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line A")));
   writer.Write();
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 0"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 1"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
   writer.Write();
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 2"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 3"))));
-  EXPECT_FALSE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 4"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
   writer.Write();
 
-  store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 5")));
+  store.Add(BuildLogMessage(FX_LOG_INFO, "line 5"));
   writer.Write();
 
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
@@ -176,13 +176,13 @@ TEST(WriterTest, WritesMessages) {
 [15604.000][07559][07687][] INFO: line 5
 )");
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 6"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 7"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 6")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 7")));
   writer.Write();
 
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 8"))));
-  EXPECT_TRUE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 9"))));
-  EXPECT_FALSE(store.Add(Format(BuildLogMessage(FX_LOG_INFO, "line 10"))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 8")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 9")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 10")));
   writer.Write();
 
   ASSERT_TRUE(reader.Concatenate(output_path));

@@ -7,8 +7,6 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/feedback/utils/log_format.h"
-
 namespace feedback {
 
 SystemLogListener::SystemLogListener(std::shared_ptr<sys::ServiceDirectory> services,
@@ -35,14 +33,14 @@ void SystemLogListener::StartListening() {
 }
 
 void SystemLogListener::Log(fuchsia::logger::LogMessage message, LogCallback received) {
-  store_->Add(Format(std::move(message)));
+  store_->Add(std::move(message));
   received();
 }
 
 void SystemLogListener::LogMany(std::vector<fuchsia::logger::LogMessage> messages,
                                 LogManyCallback received) {
   for (const auto& message : messages) {
-    store_->Add(Format(std::move(message)));
+    store_->Add(std::move(message));
   }
   received();
 }

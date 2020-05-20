@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_LOG_MESSAGE_STORE_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_DATA_SYSTEM_LOG_RECORDER_LOG_MESSAGE_STORE_H_
 
+#include <fuchsia/logger/cpp/fidl.h>
+
 #include <deque>
 #include <mutex>
 
@@ -23,7 +25,7 @@ class LogMessageStore {
 
   // Adds the log message to the store. The message will be dropped if the store does not have
   // enough capacity remaining for it and return false.
-  bool Add(std::string message);
+  bool Add(fuchsia::logger::LogMessage msg);
 
   // Consumes the contents of the store as a string. This will empty the store.
   std::string Consume();

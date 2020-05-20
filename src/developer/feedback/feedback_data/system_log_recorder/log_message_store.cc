@@ -6,6 +6,7 @@
 
 #include <lib/trace/event.h>
 
+#include "src/developer/feedback/utils/log_format.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -22,14 +23,15 @@ LogMessageStore::LogMessageStore(size_t max_capacity_bytes)
       max_capacity_bytes_(max_capacity_bytes),
       bytes_remaining_(max_capacity_bytes_) {}
 
-bool LogMessageStore::Add(std::string message) {
+bool LogMessageStore::Add(fuchsia::logger::LogMessage msg) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
+  std::string str = Format(msg);
 
   std::lock_guard<std::mutex> lk(mtx_);
 
-  if (bytes_remaining_ >= message.size()) {
-    bytes_remaining_ -= message.size();
-    queue_.push_back(std::move(message));
+  if (bytes_remaining_ >= str.size()) {
+    bytes_remaining_ -= str.size();
+    queue_.push_back(std::move(str));
     return true;
   } else {
     ++num_messages_dropped;
