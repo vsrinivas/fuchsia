@@ -123,7 +123,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // Fails when |is_waitable| reports false.
   //
   // Be sure to |RemoveObserver| before the Dispatcher is destroyed.
-  virtual zx_status_t AddObserver(StateObserver* observer);
+  zx_status_t AddObserver(StateObserver* observer);
 
   // Remove an observer.
   //
@@ -190,8 +190,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // Add an observer.
   //
   // It is an error to call this when |is_waitable| reports false.
-  void AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo)
-      TA_REQ(get_lock());
+  void AddObserverLocked(StateObserver* observer) TA_REQ(get_lock());
 
   // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
   // setting satisfiable signals should not wake anyone.)
@@ -217,8 +216,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   //
   // It is an error to call this when |is_waitable| reports false.
   template <typename LockType>
-  void AddObserverHelper(StateObserver* observer, const StateObserver::CountInfo* cinfo,
-                         Lock<LockType>* lock);
+  void AddObserverHelper(StateObserver* observer, Lock<LockType>* lock);
 
   fbl::Canary<fbl::magic("DISP")> canary_;
 

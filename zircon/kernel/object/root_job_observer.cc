@@ -50,8 +50,7 @@ __NO_RETURN void Halt() {
 
 }  // anonymous namespace
 
-StateObserver::Flags RootJobObserver::OnInitialize(zx_signals_t initial_state,
-                                                   const CountInfo* cinfo) {
+StateObserver::Flags RootJobObserver::OnInitialize(zx_signals_t initial_state) {
   if (HasChild(initial_state)) {
     panic("root-job: invalid initial state\n");
   }

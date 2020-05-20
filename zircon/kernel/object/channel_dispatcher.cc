@@ -116,15 +116,6 @@ ChannelDispatcher::~ChannelDispatcher() {
   }
 }
 
-zx_status_t ChannelDispatcher::AddObserver(StateObserver* observer) {
-  canary_.Assert();
-
-  Guard<Mutex> guard{get_lock()};
-  StateObserver::CountInfo cinfo = {{{messages_.size(), ZX_CHANNEL_READABLE}, {0u, 0u}}};
-  AddObserverLocked(observer, &cinfo);
-  return ZX_OK;
-}
-
 void ChannelDispatcher::RemoveWaiter(MessageWaiter* waiter) {
   Guard<Mutex> guard{get_lock()};
   if (!waiter->InContainer()) {

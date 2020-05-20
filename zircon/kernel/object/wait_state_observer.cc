@@ -44,8 +44,7 @@ zx_signals_t WaitStateObserver::End() {
   return target_signal_state_.load(ktl::memory_order_acquire);
 }
 
-StateObserver::Flags WaitStateObserver::OnInitialize(zx_signals_t initial_state,
-                                                     const StateObserver::CountInfo* cinfo) {
+StateObserver::Flags WaitStateObserver::OnInitialize(zx_signals_t initial_state) {
   canary_.Assert();
 
   // Save the initial state of signals.

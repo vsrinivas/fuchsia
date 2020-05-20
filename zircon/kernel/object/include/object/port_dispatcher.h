@@ -138,7 +138,7 @@ class PortObserver final : public StateObserver {
   PortObserver& operator=(const PortObserver&) = delete;
 
   // StateObserver overrides.
-  Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
+  Flags OnInitialize(zx_signals_t initial_state) final;
   Flags OnStateChange(zx_signals_t new_state) final;
   Flags OnCancel(const Handle* handle) final;
   Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) final;
@@ -146,7 +146,7 @@ class PortObserver final : public StateObserver {
 
   // The following method can only be called from
   // OnInitialize(), OnStateChange() and OnCancel().
-  Flags MaybeQueue(zx_signals_t new_state, uint64_t count);
+  Flags MaybeQueue(zx_signals_t new_state);
 
   const uint32_t options_;
   const zx_signals_t trigger_;
@@ -193,7 +193,7 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   bool can_bind_to_interrupt() const { return options_ & ZX_PORT_BIND_TO_INTERRUPT; }
   void on_zero_handles() final;
 
-  zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
+  zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed);
   zx_status_t QueueUser(const zx_port_packet_t& packet);
   bool QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp);
   zx_status_t Dequeue(const Deadline& deadline, zx_port_packet_t* packet);

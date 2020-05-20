@@ -17,7 +17,7 @@ class RootJobObserver final : public StateObserver {
   }
 
  private:
-  Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) final;
+  Flags OnInitialize(zx_signals_t initial_state) final;
   Flags OnStateChange(zx_signals_t new_state) final;
   Flags OnCancel(const Handle* handle) final;
 

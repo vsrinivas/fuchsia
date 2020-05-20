@@ -37,7 +37,7 @@ class WaitStateObserver final : public StateObserver {
   WaitStateObserver& operator=(const WaitStateObserver&) = delete;
 
   // StateObserver implementation:
-  Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) final;
+  Flags OnInitialize(zx_signals_t initial_state) final;
   Flags OnStateChange(zx_signals_t new_state) final;
   Flags OnCancel(const Handle* handle) final;
 

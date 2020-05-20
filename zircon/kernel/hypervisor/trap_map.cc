@@ -68,7 +68,7 @@ zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invali
     return ZX_ERR_NO_MEMORY;
   }
   port_packet->packet = packet;
-  zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE, 0);
+  zx_status_t status = port_->Queue(port_packet, ZX_SIGNAL_NONE);
   if (status != ZX_OK) {
     port_allocator_.Free(port_packet);
     if (status == ZX_ERR_BAD_HANDLE) {

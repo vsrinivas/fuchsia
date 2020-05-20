@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <cstdio>
-#include <string>
-#include <thread>
-
-#include <fbl/algorithm.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
@@ -15,6 +9,13 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+
+#include <atomic>
+#include <cstdio>
+#include <string>
+#include <thread>
+
+#include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -287,41 +288,32 @@ TEST(PortTest, AsyncWaitInvalidOption) {
 TEST(PortTest, ChannelAsyncWaitOnExistingStateIsNotified) {
   constexpr uint64_t kEventKey = 65667;
 
+  // Create a channel pair, and write 5 messages into it.
   zx::channel ch[2];
   ASSERT_OK(zx::channel::create(0u, &ch[0], &ch[1]));
-
   for (int ix = 0; ix != 5; ++ix) {
     ASSERT_OK(ch[0].write(0u, "123456", 6, nullptr, 0u));
   }
-
   ch[0].reset();
 
+  // Create a port, and set it up to be notified when the channel is
+  // readable or closed.
   zx::port port;
   ASSERT_OK(zx::port::create(0u, &port));
-
   ASSERT_OK(ch[1].wait_async(port, kEventKey, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                              ZX_WAIT_ASYNC_ONCE));
 
+  // Wait for a packet to be received on the port, with both the
+  // READABLE and PEER_CLOSED signals asserted.
   zx_port_packet_t packet = {};
-  int wait_count = 0;
-  uint64_t read_count = 0;
-
-  zx_status_t status;
-  while (true) {
-    status = port.wait(zx::time::infinite_past(), &packet);
-    if (status != ZX_OK) {
-      break;
-    }
-    wait_count++;
-    if (packet.signal.observed != ZX_CHANNEL_PEER_CLOSED) {
-      read_count += packet.signal.count;
-    }
-    EXPECT_NE(packet.signal.count, 0u);
-  }
-
-  EXPECT_EQ(wait_count, 1u);
+  zx_status_t status = port.wait(zx::time::infinite_past(), &packet);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(packet.signal.count, 1u);  // count is always 1.
   EXPECT_EQ(packet.signal.trigger, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  EXPECT_EQ(read_count, 5u);
+  EXPECT_EQ(packet.signal.observed, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+
+  // We don't expect any other events on the port.
+  EXPECT_EQ(port.wait(zx::time::infinite_past(), &packet), ZX_ERR_TIMED_OUT);
 }
 
 TEST(PortTest, CancelEventKey) {

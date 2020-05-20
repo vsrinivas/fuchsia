@@ -45,9 +45,7 @@ class RemovableObserver : public StateObserver {
 
  private:
   // No-op overrides of pure virtuals.
-  Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) override {
-    return 0;
-  }
+  Flags OnInitialize(zx_signals_t initial_state) override { return 0; }
   Flags OnStateChange(zx_signals_t new_state) override { return 0; }
   Flags OnCancel(const Handle* handle) override { return 0; }
   Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) override { return 0; }
@@ -62,9 +60,7 @@ bool on_initialize() {
 
   class RmOnInitialize : public RemovableObserver {
    public:
-    Flags OnInitialize(zx_signals_t initial_state, const StateObserver::CountInfo* cinfo) override {
-      return kNeedRemoval;
-    }
+    Flags OnInitialize(zx_signals_t initial_state) override { return kNeedRemoval; }
   };
 
   RmOnInitialize obs;

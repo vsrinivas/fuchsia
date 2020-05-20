@@ -19,18 +19,6 @@ class Handle;
 // Implementations must be thread compatible, but need not be thread safe.
 class StateObserver {
  public:
-  // Optional initial counts. Each object might have a different idea of them
-  // and currently we assume at most two. The state observers will iterate on
-  // the entries and might fire if |signal| matches one of their trigger signals
-  // so each entry should be associated with a unique signal or with 0 if not
-  // applicable.
-  struct CountInfo {
-    struct {
-      uint64_t count;
-      zx_signals_t signal;
-    } entry[2];
-  };
-
   StateObserver() = default;
 
   typedef unsigned Flags;
@@ -43,7 +31,7 @@ class StateObserver {
   // Note that |cinfo| might be null.
   // May return flags: kNeedRemoval
   // WARNING: This is called under Dispatcher's mutex.
-  virtual Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) = 0;
+  virtual Flags OnInitialize(zx_signals_t initial_state) = 0;
 
   // Called whenever the state changes, to give it the new state.
   // May return flags: kNeedRemoval

@@ -40,28 +40,6 @@ KCOUNTER(port_dequeue_spurious_count, "port.dequeue.spurious.count")
 KCOUNTER(dispatcher_port_create_count, "dispatcher.port.create")
 KCOUNTER(dispatcher_port_destroy_count, "dispatcher.port.destroy")
 
-// This tracks the pending signal |count| value as reported to usermode in
-// zx_packet_signal_t. This is effectively 1 except for channels.
-KCOUNTER(port_signal_pending_2_4, "port.signal.pending.count.2_4")
-KCOUNTER(port_signal_pending_5_10, "port.signal.pending.count.5_10")
-KCOUNTER(port_signal_pending_11p, "port.signal.pending.count.11p")
-
-void kcounter_record_pending_signal(uint64_t count) {
-  switch (count) {
-    case 1:
-      break;
-    case 2 ... 4:
-      kcounter_add(port_signal_pending_2_4, 1u);
-      break;
-    case 5 ... 10:
-      kcounter_add(port_signal_pending_5_10, 1u);
-      break;
-    default:
-      kcounter_add(port_signal_pending_11p, 1u);
-      break;
-  }
-}
-
 class ArenaPortAllocator final : public PortAllocator {
  public:
   zx_status_t Init();
@@ -127,26 +105,12 @@ PortObserver::PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<P
   packet.signal.trigger = trigger_;
 }
 
-StateObserver::Flags PortObserver::OnInitialize(zx_signals_t initial_state,
-                                                const StateObserver::CountInfo* cinfo) {
-  uint64_t count = 1u;
-
-  if (cinfo) {
-    for (const auto& entry : cinfo->entry) {
-      if ((entry.signal & trigger_) && (entry.count > 0u)) {
-        count = entry.count;
-        break;
-      }
-    }
-  }
-
-  kcounter_record_pending_signal(count);
-
-  return MaybeQueue(initial_state, count);
+StateObserver::Flags PortObserver::OnInitialize(zx_signals_t initial_state) {
+  return MaybeQueue(initial_state);
 }
 
 StateObserver::Flags PortObserver::OnStateChange(zx_signals_t new_state) {
-  return MaybeQueue(new_state, 1u);
+  return MaybeQueue(new_state);
 }
 
 StateObserver::Flags PortObserver::OnCancel(const Handle* handle) {
@@ -169,7 +133,7 @@ void PortObserver::OnRemoved() {
   // The |MaybeReap| call may have deleted |this|, so it is not safe to access any members now.
 }
 
-StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t count) {
+StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state) {
   // Always called with the object state lock being held.
   if ((trigger_ & new_state) == 0u)
     return 0;
@@ -182,7 +146,7 @@ StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t c
   // so |Queue| cannot fail due to the packet count.  However, the last handle to the port may have
   // been closed so it can still fail with ZX_ERR_BAD_HANDLE.  Just ignore ZX_ERR_BAD_HANDLE because
   // there is nothing to be done.
-  const zx_status_t status = port_->Queue(&packet_, new_state, count);
+  const zx_status_t status = port_->Queue(&packet_, new_state);
   DEBUG_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_BAD_HANDLE, "status %d\n", status);
 
   return kNeedRemoval;
@@ -277,7 +241,7 @@ zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
   port_packet->packet = packet;
   port_packet->packet.type = ZX_PKT_TYPE_USER;
 
-  auto status = Queue(port_packet, 0u, 0u);
+  auto status = Queue(port_packet, 0u);
   if (status != ZX_OK)
     port_packet->Free();
   return status;
@@ -309,7 +273,7 @@ bool PortDispatcher::QueueInterruptPacket(PortInterruptPacket* port_packet, zx_t
   return true;
 }
 
-zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count) {
+zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed) {
   canary_.Assert();
 
   {
@@ -327,11 +291,15 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     if (observed) {
       if (port_packet->InContainer()) {
         port_packet->packet.signal.observed |= observed;
-        // |count| is deliberately left as is.
         return ZX_OK;
       }
       port_packet->packet.signal.observed = observed;
-      port_packet->packet.signal.count = count;
+
+      // |count| previously stored the number of pending messages on
+      // a channel. It is now deprecated, but we set it to 1 for backwards
+      // compatibility, so that readers attempt to read at least 1 message and
+      // continue to make progress.
+      port_packet->packet.signal.count = 1u;
     }
     packets_.push_back(port_packet);
     if (IsDefaultAllocatedEphemeral(*port_packet)) {

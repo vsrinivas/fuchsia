@@ -122,7 +122,7 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
 // safety analysis is unable to prove that the accesses to |signals_|
 // and to |observers_| are always protected.
 template <typename LockType>
-void Dispatcher::AddObserverHelper(StateObserver* observer, const StateObserver::CountInfo* cinfo,
+void Dispatcher::AddObserverHelper(StateObserver* observer,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
@@ -132,7 +132,7 @@ void Dispatcher::AddObserverHelper(StateObserver* observer, const StateObserver:
   {
     Guard<LockType> guard{lock};
 
-    flags = observer->OnInitialize(signals_, cinfo);
+    flags = observer->OnInitialize(signals_);
     if (flags & StateObserver::kNeedRemoval) {
       observer->OnRemoved();
     } else {
@@ -143,14 +143,14 @@ void Dispatcher::AddObserverHelper(StateObserver* observer, const StateObserver:
   kcounter_add(dispatcher_observe_count, 1);
 }
 
-void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+void Dispatcher::AddObserverLocked(StateObserver* observer) {
   canary_.Assert();
 
   // Type tag and local NullLock to make lockdep happy.
   struct DispatcherAddObserverLocked {};
   DECLARE_LOCK(DispatcherAddObserverLocked, fbl::NullLock) lock;
 
-  AddObserverHelper(observer, cinfo, &lock);
+  AddObserverHelper(observer, &lock);
 }
 
 zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
@@ -158,7 +158,7 @@ zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
 
   if (!is_waitable())
     return ZX_ERR_NOT_SUPPORTED;
-  AddObserverHelper(observer, nullptr, get_lock());
+  AddObserverHelper(observer, get_lock());
   return ZX_OK;
 }
 
