@@ -7,30 +7,84 @@ import '../trace_model.dart';
 import 'common.dart';
 
 class _Results {
-  List<double> renderFrameDurations;
+  // This measures the wall time of all Scenic CPU work needed to produce a frame.
+  List<double> renderFrameCpuDurations;
+  // This measures the wall time of all Scenic CPU and GPU work needed to produce a frame.
+  List<double> renderFrameTotalDurations;
 }
 
 _Results _scenicFrameStats(Model model) {
-  final renderFrameDurations = filterEventsTyped<DurationEvent>(
-          getAllEvents(model),
-          category: 'gfx',
-          name: 'RenderFrame')
-      .map((e) => e.duration.toMillisecondsF())
-      .toList();
+  final startRenderingEvents = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'gfx',
+      name: 'ApplyScheduledSessionUpdates');
 
-  return _Results()..renderFrameDurations = renderFrameDurations;
+  final endCpuRenderingEvents =
+      startRenderingEvents.map((DurationEvent durationEvent) {
+    final followingEvents = filterEventsTyped<DurationEvent>(
+        getFollowingEvents(durationEvent),
+        category: 'gfx',
+        name: 'RenderFrame');
+    if (followingEvents.isEmpty) {
+      return null;
+    }
+    return followingEvents.first;
+  });
+
+  final endTotalRenderingEvents =
+      startRenderingEvents.map((DurationEvent durationEvent) {
+    final followingEvents = filterEventsTyped<DurationEvent>(
+        getFollowingEvents(durationEvent),
+        category: 'gfx',
+        name: 'DisplaySwapchain::OnFrameRendered');
+    if (followingEvents.isEmpty) {
+      return null;
+    }
+    return followingEvents.first;
+  });
+
+  final renderFrameCpuDurations =
+      Zip2Iterable<DurationEvent, DurationEvent, double>(
+          startRenderingEvents,
+          endCpuRenderingEvents,
+          (startRenderingEvent, endRenderingEvent) => (endRenderingEvent ==
+                  null)
+              ? null
+              : (endRenderingEvent.start +
+                      endRenderingEvent.duration -
+                      startRenderingEvent.start)
+                  .toMillisecondsF()).where((delta) => delta != null).toList();
+
+  final renderFrameTotalDurations =
+      Zip2Iterable<DurationEvent, DurationEvent, double>(
+          startRenderingEvents,
+          endTotalRenderingEvents,
+          (startRenderingEvent, endRenderingEvent) => (endRenderingEvent ==
+                  null)
+              ? null
+              : (endRenderingEvent.start - startRenderingEvent.start)
+                  .toMillisecondsF()).where((delta) => delta != null).toList();
+
+  return _Results()
+    ..renderFrameCpuDurations = renderFrameCpuDurations
+    ..renderFrameTotalDurations = renderFrameTotalDurations;
 }
 
 List<TestCaseResults> scenicFrameStatsMetricsProcessor(
     Model model, Map<String, dynamic> extraArgs) {
   final results = _scenicFrameStats(model);
-  if (results.renderFrameDurations.isEmpty) {
-    results.renderFrameDurations = [0.0];
+  if (results.renderFrameCpuDurations.isEmpty) {
+    results.renderFrameCpuDurations = [0.0];
+  }
+  if (results.renderFrameTotalDurations.isEmpty) {
+    results.renderFrameTotalDurations = [0.0];
   }
 
   return [
-    TestCaseResults(
-        'scenic_RenderFrame', Unit.milliseconds, results.renderFrameDurations),
+    TestCaseResults('scenic_render_frame_cpu', Unit.milliseconds,
+        results.renderFrameCpuDurations),
+    TestCaseResults('scenic_render_frame_total', Unit.milliseconds,
+        results.renderFrameTotalDurations),
   ];
 }
 
@@ -45,8 +99,11 @@ Scenic Frame Stats
   final results = _scenicFrameStats(model);
 
   buffer
-    ..write('render_frame_durations:\n')
-    ..write(describeValues(results.renderFrameDurations, indent: 2));
+    ..write('render_frame_cpu_durations:\n')
+    ..write(describeValues(results.renderFrameCpuDurations, indent: 2))
+    ..write('render_frame_total_durations:\n')
+    ..write(describeValues(results.renderFrameTotalDurations, indent: 2))
+    ..write('\n');
 
   return buffer.toString();
 }

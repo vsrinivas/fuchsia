@@ -420,7 +420,8 @@ void main(List<String> args) {
     final model = createModelFromJsonString(scenicTraceJsonString);
     final results = scenicFrameStatsMetricsProcessor(model, {});
 
-    expect(computeMean(results[0].values), _closeTo(1.0750221759999996));
+    expect(computeMean(results[0].values), _closeTo(4.405753983333));
+    expect(computeMean(results[1].values), _closeTo(6.072069499999));
   });
 
   test('DRM FPS metric', () async {

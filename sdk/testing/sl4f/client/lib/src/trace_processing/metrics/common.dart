@@ -204,3 +204,43 @@ String describeValues<T extends num>(List<T> values,
       'max:   ${values.isNotEmpty ? computeMax(values) : double.nan}',
       '',
     ].map((line) => '${' ' * indent}$line\n').join('');
+
+/// Iterate over a sequence of [T1]s and [T2]s by applying [_f] to pairs of
+/// elements in the sequences.
+///
+/// In other words, iterate over [x1, x2, ...] and [y1, y2, ...] like
+/// [_f(x1, y1), _f(x2, y2), ...].  Iteration stops when any [Iterable] is
+/// exhausted.
+class Zip2Iterable<T1, T2, R> extends Iterable<R> {
+  final Iterable<T1> _t1s;
+  final Iterable<T2> _t2s;
+  final R Function(T1, T2) _f;
+
+  Zip2Iterable(this._t1s, this._t2s, this._f);
+
+  @override
+  Iterator<R> get iterator =>
+      Zip2Iterator<T1, T2, R>(_t1s.iterator, _t2s.iterator, _f);
+}
+
+class Zip2Iterator<T1, T2, R> extends Iterator<R> {
+  final Iterator<T1> _t1s;
+  final Iterator<T2> _t2s;
+  final R Function(T1, T2) _f;
+
+  R _current;
+
+  Zip2Iterator(this._t1s, this._t2s, this._f);
+
+  @override
+  bool moveNext() {
+    if (!(_t1s.moveNext() && _t2s.moveNext())) {
+      return false;
+    }
+    _current = _f(_t1s.current, _t2s.current);
+    return true;
+  }
+
+  @override
+  R get current => _current;
+}
