@@ -358,7 +358,7 @@ where
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         let apps = self.app_set.to_vec().await;
-        let result = self.perform_update_check(options, self.context.clone(), apps, co).await;
+        let result = self.perform_update_check(&options, self.context.clone(), apps, co).await;
         match &result {
             Ok(result) => {
                 info!("Update check result: {:?}", result);
@@ -429,6 +429,10 @@ where
         // TODO: This is the last place we read self.state, we should see if we can find another
         // way to achieve this so that we can remove self.state entirely.
         if self.state == State::WaitingForReboot {
+            while !self.policy_engine.reboot_allowed(&options).await {
+                info!("Reboot not allowed at the moment, will try again in 30 minutes...");
+                self.timer.wait_for(Duration::from_secs(30 * 60)).await;
+            }
             info!("Rebooting the system at the end of a successful update");
             if let Err(e) = self.installer.perform_reboot().await {
                 error!("Unable to reboot the system: {}", e);
@@ -470,7 +474,7 @@ where
     /// that comprise an update check.
     async fn perform_update_check(
         &mut self,
-        options: CheckOptions,
+        options: &CheckOptions,
         context: update_check::Context,
         apps: Vec<App>,
         co: &mut async_generator::Yield<StateMachineEvent>,
@@ -930,7 +934,7 @@ where
         let apps = self.app_set.to_vec().await;
 
         async_generator::generate(move |mut co| async move {
-            self.perform_update_check(options, context, apps, &mut co).await
+            self.perform_update_check(&options, context, apps, &mut co).await
         })
         .into_complete()
         .await
@@ -2041,8 +2045,60 @@ mod tests {
 
             state_machine.run_once().await;
 
-            assert!(!state_machine.installer.reboot_called)
+            assert!(!state_machine.installer.reboot_called);
         });
+    }
+
+    #[test]
+    fn test_reboot_not_allowed() {
+        let mut pool = LocalPool::new();
+
+        let response = json!({"response":{
+          "server": "prod",
+          "protocol": "3.0",
+          "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+              "status": "ok"
+            }
+          }],
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let mock_time = MockTimeSource::new_from_now();
+        let (timer, mut timers) = BlockingTimer::new();
+        let policy_engine = MockPolicyEngine {
+            time_source: mock_time.clone(),
+            reboot_allowed: false,
+            ..MockPolicyEngine::default()
+        };
+
+        let mut state_machine = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time).build())
+                .policy_engine(policy_engine)
+                .timer(timer)
+                .build(),
+        );
+        {
+            let run_once = state_machine.run_once();
+            futures::pin_mut!(run_once);
+
+            match pool.run_until(future::select(run_once, timers.next())) {
+                future::Either::Left(((), _)) => {
+                    panic!("state_machine finished without waiting on timer")
+                }
+                future::Either::Right((blocked_timer, _)) => {
+                    assert_eq!(
+                        blocked_timer.unwrap().requested_wait(),
+                        RequestedWait::For(Duration::from_secs(30 * 60))
+                    );
+                }
+            }
+        }
+        assert!(!state_machine.installer.reboot_called);
     }
 
     #[derive(Debug)]
