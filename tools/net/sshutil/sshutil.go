@@ -131,6 +131,11 @@ func dialWithTimeout(ctx context.Context, network, addr string, config *ssh.Clie
 		conn.Close()
 		return nil, err
 	}
+	// TODO(fxb/52397): Remove after done debugging.
+	// This will hopefully print out the error that's causing the connection to be closed.
+	go func() {
+		logger.Debugf(ctx, "SSH connection closed: %v", c.Wait())
+	}()
 	if err := conn.SetDeadline(time.Time{}); err != nil {
 		c.Close()
 		return nil, err
