@@ -716,9 +716,9 @@ From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
 From //public/gn/toolchain/variants.gni:222
 
 ### zbi_compression
-This can be either "lz4f" or "zstd", optionally followed by ".LEVEL"
-where `LEVEL` can be an integer or "max".  It can also be just "LEVEL"
-to to use the default algorithm with a non-default setting.
+This can be "zstd", optionally followed by ".LEVEL" where `LEVEL` can be an
+integer or "max".  It can also be just "LEVEL" to to use the default
+algorithm with a non-default setting.
 
 The default level for each algorithm is tuned to balance compression
 speed with compression ratio.  Higher levels make image builds slower.
