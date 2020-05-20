@@ -77,7 +77,8 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     // Wait until sysctl shows that the guest_interaction_daemon is running.
     RunLoopUntil([&status, &serial]() -> bool {
       std::string output;
-      status = serial.ExecuteBlocking("systemctl is-active guest_interaction_daemon", "$", &output);
+      status = serial.ExecuteBlocking("journalctl -u guest_interaction_daemon | grep Listening",
+                                      "$", &output);
 
       // If the command cannot be executed, break out of the loop so the test can fail.
       if (status != ZX_OK) {
@@ -86,10 +87,10 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
 
       // Ensure that the output from the command indicates that guest_interaction_daemon is
       // active.
-      if (output.find("inactive") != std::string::npos) {
-        return false;
+      if (output.find("Listening") != std::string::npos) {
+        return true;
       }
-      return true;
+      return false;
     });
 
     ASSERT_EQ(status, ZX_OK);

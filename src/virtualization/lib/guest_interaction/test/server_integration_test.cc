@@ -63,9 +63,14 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
   ASSERT_EQ(status, ZX_OK);
 
+  bool connect_complete = false;
   ep->Connect(cid_, GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&status](zx_status_t connect_status) { status = connect_status; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&status] { return status == ZX_OK; }, zx::sec(5)));
+              [&connect_complete, &status](zx_status_t connect_status) {
+                status = connect_status;
+                connect_complete = true;
+              });
+  RunLoopUntil([&connect_complete] { return connect_complete; });
+  ASSERT_EQ(status, ZX_OK);
 
   int32_t vsock_fd = ConvertSocketToNonBlockingFd(std::move(local_socket));
   ASSERT_GE(vsock_fd, 0);
@@ -214,9 +219,14 @@ TEST_F(GuestInteractionTest, DISABLED_GrpcPutGetTest) {
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
   ASSERT_EQ(status, ZX_OK);
 
+  bool connect_complete = false;
   ep->Connect(cid_, GUEST_INTERACTION_PORT, std::move(remote_socket),
-              [&status](zx_status_t connect_status) { status = connect_status; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&status] { return status == ZX_OK; }, zx::sec(5)));
+              [&connect_complete, &status](zx_status_t connect_status) {
+                status = connect_status;
+                connect_complete = true;
+              });
+  RunLoopUntil([&connect_complete] { return connect_complete; });
+  ASSERT_EQ(status, ZX_OK);
 
   int32_t vsock_fd = ConvertSocketToNonBlockingFd(std::move(local_socket));
   ASSERT_GE(vsock_fd, 0);

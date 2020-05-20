@@ -563,11 +563,12 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         }
 
         if (guest.guest_image_url() == kDebianGuestUrl) {
-          // Wait for systemctl to show that the guest_discovery_service is active.
+          // Wait for journalctl to show that the guest_discovery_service is listening on the
+          // vsock.
           while (true) {
             std::string output;
             zx_status_t status = serial.ExecuteBlocking(
-                "systemctl is-active guest_interaction_daemon", "$", &output);
+                "journalctl -u guest_interaction_daemon | grep Listening", "$", &output);
             // If the command cannot be executed, break out of the loop so the test can fail.
             if (status != ZX_OK) {
               return fit::error(
@@ -576,8 +577,8 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
             }
 
             // Ensure that the output from the command indicates that guest_interaction_daemon is
-            // active.
-            if (output.find("inactive") == std::string::npos) {
+            // listening on the vsock.
+            if (output.find("Listening") != std::string::npos) {
               break;
             }
           }

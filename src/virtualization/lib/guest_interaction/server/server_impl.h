@@ -55,6 +55,7 @@ void ServerImpl<T>::Run() {
   server_ = builder.BuildAndStart();
 
   int sockfd = GetSocket();
+  std::cout << "Listening" << std::endl;
 
   new ExecCallData<T>(&service_, cq_.get());
   new GetCallData<T>(&service_, cq_.get());
