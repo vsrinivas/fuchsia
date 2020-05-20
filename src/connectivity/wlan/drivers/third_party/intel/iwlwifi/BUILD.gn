@@ -70,9 +70,9 @@ source_set("core") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/backtrace-request",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/backtrace-request",
   ]
 }
 

@@ -61,9 +61,9 @@ zx_library("ftl") {
 
   deps = [
     ":private_headers",
-    "//zircon/public/lib/backtrace-request",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    "//zircon/system/ulib/backtrace-request",
   ]
 
   if (is_fuchsia) {

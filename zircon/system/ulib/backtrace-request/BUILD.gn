@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 # SDK library to request a backtrace.
 zx_library("backtrace-request") {
   sdk = "source"
@@ -18,5 +30,4 @@ zx_library("backtrace-request-utils") {
     "lib/backtrace-request/backtrace-request-utils.h",
   ]
   sources = [ "backtrace-request-utils.cc" ]
-  deps = [ "$zx/system/ulib/zircon" ]
 }

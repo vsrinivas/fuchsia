@@ -41,12 +41,12 @@ test("debugger") {
   ]
 
   deps = [
-    "//zircon/public/lib/backtrace-request",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/unittest",
   ]

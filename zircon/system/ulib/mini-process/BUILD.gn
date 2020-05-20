@@ -38,10 +38,11 @@ if (toolchain_variant.instrumented) {
 } else {
   source_set("subprocess") {
     visibility = [ ":*" ]
+
     # TODO(44278): Revert to true when converting this file to proper GN build idioms.
     testonly = false
     sources = [ "subprocess.c" ]
-    deps = [   "//zircon/public/lib/backtrace-request" ]
+    deps = [ "//zircon/system/ulib/backtrace-request" ]
 
     configs += [
       # No real sanitizers should be enabled in this variant anyway.
