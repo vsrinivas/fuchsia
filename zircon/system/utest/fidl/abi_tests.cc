@@ -48,5 +48,9 @@ static_assert(sizeof(struct FidlCodedVector) == 24, "");
 static_assert(sizeof(struct FidlCodedString) == 8, "");
 static_assert(sizeof(struct FidlCodedHandle) == 12, "");
 
+static_assert(sizeof(struct FidlStructField) == 16, "");
+static_assert(sizeof(struct FidlTableField) == 16, "");
+static_assert(sizeof(struct FidlXUnionField) == 16, "");
+
 }  // namespace
 }  // namespace fidl
