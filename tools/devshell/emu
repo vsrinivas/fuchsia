@@ -228,7 +228,7 @@ if (( AUDIO )); then
   ARGS+=("-soundhw" "hda")
 fi
 
-FEATURES="VirtioInput,RefCountPipe"
+FEATURES="VirtioInput,GLDirectMem"
 
 if [[ "$ACCEL" == "auto" ]]; then
   if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -256,13 +256,13 @@ if [[ "$ACCEL" == "kvm" ]]; then
     exit 1
   fi
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
-  FEATURES+=",KVM,GLDirectMem"
+  FEATURES+=",KVM"
 elif [[ "$ACCEL" == "hvf" ]]; then
   ARGS+=("-enable-hvf" "-cpu" "Haswell")
-  FEATURES+=",HVF,GLDirectMem"
+  FEATURES+=",HVF"
 elif [[ "$ACCEL" == "hax" ]]; then
   ARGS+=("-enable-hax" "-cpu" "Haswell")
-  FEATURES+=",HAXM,GLDirectMem"
+  FEATURES+=",HAXM"
 elif [[ "$ACCEL" == "off" ]]; then
   case "$FUCHSIA_ARCH" in
   x64)
@@ -272,10 +272,6 @@ elif [[ "$ACCEL" == "off" ]]; then
     ARGS+=("-cpu" "cortex-a53")
     ;;
   esac
-  # disable vulkan as not useful without kvm,hvf,hax and support
-  # for coherent host visible memory.
-  VULKAN=0
-  FEATURES+=",-GLDirectMem"
 else
   fx-error Unsupported acceleration mode
   exit 1
