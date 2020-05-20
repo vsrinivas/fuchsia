@@ -59,9 +59,7 @@ where
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
                     DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                        let stream = DirectoryRequestStream::from_channel(
-                            fasync::Channel::from_channel(object.into_channel()).unwrap(),
-                        );
+                        let stream = object.into_stream().unwrap().cast_stream();
                         mock_filesystem::describe_dir(flags, &stream);
                         fasync::spawn(Arc::clone(&self).handle_stream(stream));
                     }
@@ -91,11 +89,11 @@ impl OpenFailOrTempFs {
         })
     }
 
-    fn get_fail_count(&self) -> u64 {
+    fn get_open_fail_count(&self) -> u64 {
         self.fail_count.load(std::sync::atomic::Ordering::SeqCst)
     }
 
-    fn make_succeed(&self) {
+    fn make_open_succeed(&self) {
         self.should_fail.store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
@@ -303,6 +301,97 @@ impl FailingWriteFileStreamHandler {
     }
 }
 
+/// Optionally fails renames of certain files. Otherwise, delegates
+/// DirectoryRequests to a backing tempdir.
+struct RenameFailOrTempFs {
+    fail_count: Arc<AtomicU64>,
+    files_to_fail_renames: Vec<String>,
+    should_fail: Arc<AtomicBool>,
+    tempdir: tempfile::TempDir,
+}
+
+impl RenameFailOrTempFs {
+    fn new_failing(files_to_fail_renames: Vec<String>) -> Arc<Self> {
+        Arc::new(Self {
+            fail_count: Arc::new(AtomicU64::new(0)),
+            files_to_fail_renames,
+            should_fail: Arc::new(AtomicBool::new(true)),
+            tempdir: tempfile::tempdir().expect("/tmp to exist"),
+        })
+    }
+
+    fn get_rename_fail_count(&self) -> u64 {
+        self.fail_count.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn make_rename_succeed(&self) {
+        self.should_fail.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    fn should_fail(&self) -> bool {
+        self.should_fail.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+
+impl OpenRequestHandler for RenameFailOrTempFs {
+    fn handle_open_request(
+        &self,
+        flags: u32,
+        mode: u32,
+        path: String,
+        object: ServerEnd<NodeMarker>,
+        _control_handle: DirectoryControlHandle,
+    ) {
+        // Set up proxy to tmpdir and delegate to it on success.
+        let (tempdir_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        fdio::service_connect(self.tempdir.path().to_str().unwrap(), server_end.into_channel())
+            .unwrap();
+        if !self.should_fail() {
+            tempdir_proxy.open(flags, mode, &path, object).unwrap();
+            return;
+        }
+
+        // Prepare to handle the directory requests. We must call describe_dir, which sends an
+        // OnOpen if OPEN_FLAG_DESCRIBE is set. Otherwise, the code will hang when reading from
+        // the stream.
+        let mut stream = object.into_stream().unwrap().cast_stream();
+        mock_filesystem::describe_dir(flags, &stream);
+        let fail_count = Arc::clone(&self.fail_count);
+        let files_to_fail_renames = Clone::clone(&self.files_to_fail_renames);
+
+        // Handle the directory requests.
+        fasync::spawn(async move {
+            while let Some(req) = stream.next().await {
+                match req.unwrap() {
+                    DirectoryRequest::GetAttr { responder } => {
+                        let (status, mut attrs) = tempdir_proxy.get_attr().await.unwrap();
+                        responder.send(status, &mut attrs).unwrap();
+                    }
+                    DirectoryRequest::Close { responder } => {
+                        let status = tempdir_proxy.close().await.unwrap();
+                        responder.send(status).unwrap();
+                    }
+                    DirectoryRequest::GetToken { responder } => {
+                        let (status, handle) = tempdir_proxy.get_token().await.unwrap();
+                        responder.send(status, handle).unwrap();
+                    }
+                    DirectoryRequest::Rename { src, dst, responder, .. } => {
+                        if !files_to_fail_renames.contains(&src) {
+                            panic!("unsupported rename from {} to {}", src, dst);
+                        }
+                        fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        responder.send(Status::NOT_FOUND.into_raw()).unwrap();
+                    }
+                    other => {
+                        panic!("unhandled request type for path {:?}: {:?}", path, other);
+                    }
+                }
+            }
+        });
+    }
+}
+
 async fn create_testenv_serves_repo<H: OpenRequestHandler + Send + Sync + 'static>(
     open_handler: Arc<H>,
 ) -> (TestEnv, RepositoryConfig, Package, ServedRepository) {
@@ -336,11 +425,21 @@ async fn create_testenv_serves_repo<H: OpenRequestHandler + Send + Sync + 'stati
     (env, config, pkg, served_repository)
 }
 
-// Test that when pkg-resolver can't open the file for dynamic repo configs, the resolver
-// still works
-#[fasync::run_singlethreaded(test)]
-async fn minfs_fails_create_repo_configs() {
-    let open_handler = OpenFailOrTempFs::new_failing();
+async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_failure<
+    O,
+    FailCountFn,
+    MakeSucceedFn,
+>(
+    open_handler: Arc<O>,
+    fail_count_fn: FailCountFn,
+    num_failures_before_first_restart: u64,
+    num_failures_after_first_restart: u64,
+    make_succeed_fn: MakeSucceedFn,
+) where
+    O: OpenRequestHandler + Send + Sync + 'static,
+    FailCountFn: FnOnce() -> u64 + Copy,
+    MakeSucceedFn: FnOnce(),
+{
     let (mut env, config, pkg, _served_repo) =
         create_testenv_serves_repo(Arc::clone(&open_handler)).await;
 
@@ -348,28 +447,40 @@ async fn minfs_fails_create_repo_configs() {
     env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
     let package_dir = env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_fail_count(), 3);
+    assert_eq!(fail_count_fn(), num_failures_before_first_restart);
     env.restart_pkg_resolver().await;
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
-    assert_eq!(open_handler.get_fail_count(), 5);
+    assert_eq!(fail_count_fn(), num_failures_after_first_restart);
 
-    // Now let MinFs recover and show how repo configs are saved on restart
-    open_handler.make_succeed();
+    // Now let MinFs recover and show how repo configs are saved on restart.
+    // Note we know we are not executing the failure path anymore since
+    // the failure count doesn't change.
+    make_succeed_fn();
     env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
     let package_dir = env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_fail_count(), 5);
+    assert_eq!(fail_count_fn(), num_failures_after_first_restart);
     env.restart_pkg_resolver().await;
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![config.clone()]);
 
     env.stop().await;
 }
 
-// Test that when pkg-resolver can't open the file for rewrite rules, the resolver
-// still works
-#[fasync::run_singlethreaded(test)]
-async fn minfs_fails_create_rewrite_rules() {
-    let open_handler = OpenFailOrTempFs::new_failing();
+async fn verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rule_failure<
+    O,
+    FailCountFn,
+    MakeSucceedFn,
+>(
+    open_handler: Arc<O>,
+    fail_count_fn: FailCountFn,
+    num_failures_before_first_restart: u64,
+    num_failures_after_first_restart: u64,
+    make_succeed_fn: MakeSucceedFn,
+) where
+    O: OpenRequestHandler + Send + Sync + 'static,
+    FailCountFn: FnOnce() -> u64 + Copy,
+    MakeSucceedFn: FnOnce(),
+{
     let (mut env, config, pkg, _served_repo) =
         create_testenv_serves_repo(Arc::clone(&open_handler)).await;
 
@@ -386,13 +497,15 @@ async fn minfs_fails_create_rewrite_rules() {
     let package_dir =
         env.resolve_package("fuchsia-pkg://should_be_rewritten/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_fail_count(), 4);
+    assert_eq!(fail_count_fn(), num_failures_before_first_restart);
     env.restart_pkg_resolver().await;
     assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![]);
-    assert_eq!(open_handler.get_fail_count(), 6);
+    assert_eq!(fail_count_fn(), num_failures_after_first_restart);
 
     // Now let MinFs recover and show how rewrite rules are saved on restart
-    open_handler.make_succeed();
+    // Note we know we are not executing the failure path anymore since
+    // the failure count doesn't change.
+    make_succeed_fn();
     env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
     let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
     env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
@@ -401,84 +514,139 @@ async fn minfs_fails_create_rewrite_rules() {
     let package_dir =
         env.resolve_package("fuchsia-pkg://should_be_rewritten/just_meta_far").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_fail_count(), 6);
+    assert_eq!(fail_count_fn(), num_failures_after_first_restart);
     env.restart_pkg_resolver().await;
     assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![rule.clone()]);
 
     env.stop().await;
 }
 
+// Test that when pkg-resolver can't open the file for dynamic repo configs, the resolver
+// still works.
+#[fasync::run_singlethreaded(test)]
+async fn minfs_fails_create_repo_configs() {
+    let open_handler = OpenFailOrTempFs::new_failing();
+
+    verify_pkg_resolution_succeeds_during_minfs_repo_config_failure(
+        Arc::clone(&open_handler),
+        || open_handler.get_open_fail_count(),
+        // Before the first pkg-resolver restart, we fail 3 times:
+        // * when trying to open repositories.json on start
+        // * when trying to open rewrites.json on start
+        // * when trying to open repositories.json when adding a dynamic repo config
+        3,
+        // We fail an additional 2 times after the restart to account for repositories.json
+        // and rewrites.json failing to open again on startup.
+        5,
+        || open_handler.make_open_succeed(),
+    )
+    .await;
+}
+
+// Test that when pkg-resolver can open neither the file for rewrite rules
+// NOR the file for rewrite rules, the resolver still works.
+#[fasync::run_singlethreaded(test)]
+async fn minfs_fails_create_rewrite_rules() {
+    let open_handler = OpenFailOrTempFs::new_failing();
+
+    verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rule_failure(
+        Arc::clone(&open_handler),
+        || open_handler.get_open_fail_count(),
+        // Before the first pkg-resolver restart, we fail 4 times:
+        // * when trying to open repositories.json on start
+        // * when trying to open rewrites.json on start
+        // * when trying to open repositories.json when adding a dynamic repo config
+        // * when trying to open rewrites.json when adding a dynamic rewrite rule
+        4,
+        // We fail an additional 2 times after the restart to account for repositories.json
+        // and rewrites.json failing to open again on startup.
+        6,
+        || open_handler.make_open_succeed(),
+    )
+    .await;
+}
+
 // Test that when pkg-resolver can't write to the file for dynamic repo configs,
-// package resolution still works
+// package resolution still works.
 #[fasync::run_singlethreaded(test)]
 async fn minfs_fails_write_to_repo_configs() {
     let open_handler = WriteFailOrTempFs::new_failing(vec![String::from("repositories.json.new")]);
-    let (mut env, config, pkg, _served_repo) =
-        create_testenv_serves_repo(Arc::clone(&open_handler)).await;
 
-    // Verify we can resolve the package with a broken MinFs, and that repo configs do not persist
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
-
-    let package_dir = env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
-    pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_write_fail_count(), 1);
-    env.restart_pkg_resolver().await;
-    assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
-    assert_eq!(open_handler.get_write_fail_count(), 1);
-
-    // Now let MinFs recover and show how repo configs are saved on restart
-    open_handler.make_write_succeed();
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
-    let package_dir = env.resolve_package("fuchsia-pkg://example.com/just_meta_far").await.unwrap();
-    pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_write_fail_count(), 1);
-    env.restart_pkg_resolver().await;
-    assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![config.clone()]);
-
-    env.stop().await;
+    verify_pkg_resolution_succeeds_during_minfs_repo_config_failure(
+        Arc::clone(&open_handler),
+        || open_handler.get_write_fail_count(),
+        // The only time the test should hit the write failure path is when we add a
+        // repo config when should_fail = true, in which case we fail at writing
+        // repositories.json.new.
+        1,
+        1,
+        || open_handler.make_write_succeed(),
+    )
+    .await;
 }
 
-// Test that when pkg-resolver can't write to either the file for dynamic repo configs
-// OR the file for rewrite rules, package resolution still works.
+// Test that when pkg-resolver can write to neither the file for dynamic repo configs
+// NOR the file for rewrite rules, package resolution still works.
 #[fasync::run_singlethreaded(test)]
 async fn minfs_fails_write_to_repo_configs_and_rewrite_rules() {
     let open_handler = WriteFailOrTempFs::new_failing(vec![
         String::from("repositories.json.new"),
         String::from("rewrites.json.new"),
     ]);
-    let (mut env, config, pkg, _served_repo) =
-        create_testenv_serves_repo(Arc::clone(&open_handler)).await;
 
-    // Add repo config and rewrite rules
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
-    let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
-    env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
-    let rule = Rule::new("should_be_rewritten", "example.com", "/", "/").unwrap();
-    edit_transaction.add(&mut rule.clone().into()).await.unwrap();
-    edit_transaction.commit().await.unwrap();
+    verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rule_failure(
+        Arc::clone(&open_handler),
+        || open_handler.get_write_fail_count(),
+        // The only time the test should hit the write failure path is when we add a
+        // repo config when should_fail = true, in which case we fail at writing both
+        // repositories.json.new and rewrites.json.new.
+        2,
+        2,
+        || open_handler.make_write_succeed(),
+    )
+    .await;
+}
 
-    // Verify we can resolve the package with a broken MinFs, and that rewrite rules do not persist
-    let package_dir =
-        env.resolve_package("fuchsia-pkg://should_be_rewritten/just_meta_far").await.unwrap();
-    pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_write_fail_count(), 2);
-    env.restart_pkg_resolver().await;
-    assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![]);
-    assert_eq!(open_handler.get_write_fail_count(), 2);
+// Test that when pkg-resolver can't rename file for dynamic repo configs, package resolution,
+// still works. Note this test might stop working if the pkg-resolver starts issuing Rename
+// directly to /data instead of going through std::fs::rename. If that's the case, consider
+// extending DirectoryStreamHandler to also have a RenameRequestHandler, and possibly use a
+// std::sync::Weak to coordinate between the DirectoryStreamHandler and RenameRequestHandler.
+#[fasync::run_singlethreaded(test)]
+async fn minfs_fails_rename_repo_configs() {
+    let open_handler = RenameFailOrTempFs::new_failing(vec![String::from("repositories.json.new")]);
 
-    // Now let MinFs recover and show how rewrite rules are saved on restart
-    open_handler.make_write_succeed();
-    env.proxies.repo_manager.add(config.clone().into()).await.unwrap();
-    let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
-    env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
-    edit_transaction.add(&mut rule.clone().into()).await.unwrap();
-    edit_transaction.commit().await.unwrap();
-    let package_dir =
-        env.resolve_package("fuchsia-pkg://should_be_rewritten/just_meta_far").await.unwrap();
-    pkg.verify_contents(&package_dir).await.unwrap();
-    assert_eq!(open_handler.get_write_fail_count(), 2);
-    env.restart_pkg_resolver().await;
-    assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![rule.clone()]);
+    verify_pkg_resolution_succeeds_during_minfs_repo_config_failure(
+        Arc::clone(&open_handler),
+        || open_handler.get_rename_fail_count(),
+        // The only time the test should hit the rename failure path is when we add a
+        // repo config when should_fail = true, in which case we fail at renaming
+        // repositories.json.new.
+        1,
+        1,
+        || open_handler.make_rename_succeed(),
+    )
+    .await;
+}
 
-    env.stop().await;
+// Test that when pkg-resolver can rename neither the file for dynamic repo configs
+// NOR the file for rewrite rules, package resolution still works.
+#[fasync::run_singlethreaded(test)]
+async fn minfs_fails_rename_repo_configs_and_rewrite_rules() {
+    let open_handler = RenameFailOrTempFs::new_failing(vec![
+        String::from("repositories.json.new"),
+        String::from("rewrites.json.new"),
+    ]);
+
+    verify_pkg_resolution_succeeds_during_minfs_repo_config_and_rewrite_rule_failure(
+        Arc::clone(&open_handler),
+        || open_handler.get_rename_fail_count(),
+        // The only time the test should hit the rename failure path is when we add a
+        // repo config when should_fail = true, in which case we fail at renaming both
+        // repositories.json.new and rewrites.json.new.
+        2,
+        2,
+        || open_handler.make_rename_succeed(),
+    )
+    .await;
 }
