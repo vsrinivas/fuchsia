@@ -40,7 +40,20 @@ if [[ ! -d "${imgdir}" ]]; then
   echo >&2 "Failed to create temporary directory"
   exit 1
 fi
-trap 'rm -rf "$imgdir"' EXIT
+
+function cleanup() {
+  # want to make sure we kill a long-running qemu if this shell dies.
+  local child_pids=$(jobs -p)
+  if [[ -n "${child_pids}" ]]; then
+    log "killing child processes: ${child_pids}"
+    # Note: child_pids must be expanded to args here.
+    kill ${child_pids} 2> /dev/null
+    wait 2> /dev/null
+  fi
+
+  rm -rf "${imgdir}"
+}
+trap cleanup EXIT
 
 # Copy in the OMVF_VARS.fd into our temp directory, which allows EFI data to be
 # persisted across reboots.
@@ -67,7 +80,7 @@ PARTITION_SIZE=$(( 2 * 1024 * 1024 * 1024))
   "${imgdir}/fuchsia.efi"
 
 # Start the paver in the background.
-exec "${FUCHSIA_BUILD_DIR}/pave.sh" \
+"${FUCHSIA_BUILD_DIR}/pave.sh" \
   -n 'step-atom-yard-juicy' \
   --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" \
   -1 &
@@ -84,3 +97,5 @@ exec "${FUCHSIA_BUILD_DIR}/pave.sh" \
   "--ovmf-code=${ovmf_dir}/OVMF_CODE.fd" \
   "--ovmf-vars=${imgdir}/OVMF_VARS.fd" \
   "${trailing_args[@]}"
+
+exit $?
