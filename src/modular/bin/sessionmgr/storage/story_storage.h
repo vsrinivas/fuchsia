@@ -73,19 +73,9 @@ class StoryStorage {
   // write has been received.
   void WriteModuleData(ModuleData module_data);
 
-  // Reads the ModuleData for |module_path|, calls |mutate_fn| which may modify
-  // the contents, and writes the resulting ModuleData back to storage.
-  // Completes the returned future once a notification confirming the write has
-  // been received.
-  //
-  // If there is no ModuleData for |module_path|, |mutate_fn| will be called
-  // with a null ModuleDataPtr. |mutate_fn| may initialize the ModuleDataPtr,
-  // in which case a new ModuleData record will be written.
-  //
-  // It is illegal to change ModuleDataPtr->module_path in |mutate_fn| or to
-  // reset to null an otherwise initialized ModuleDataPtr.
-  void UpdateModuleData(const std::vector<std::string>& module_path,
-                        fit::function<void(ModuleDataPtr*)> mutate_fn);
+  // Marks the ModuleData.module_deleted field to 'true' for the module at
+  // |module_path|. Returns false no module with |module_path| exists.
+  bool MarkModuleAsDeleted(const std::vector<std::string>& module_path);
 
   // Returns all ModuleData entries for all mods.
   std::vector<ModuleData> ReadAllModuleData();

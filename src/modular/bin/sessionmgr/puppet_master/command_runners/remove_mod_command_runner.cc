@@ -33,16 +33,12 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
 
     // Set the module data stopped to true, this should notify story
     // controller and perform module teardown.
-    story_storage_->UpdateModuleData(
-        mod_name, [this, flow](fuchsia::modular::ModuleDataPtr* module_data) {
-          if (!(*module_data)) {
-            result_.status = fuchsia::modular::ExecuteStatus::INVALID_MOD;
-            result_.error_message = "No module data for given name.";
-            return;
-          }
-          (*module_data)->set_module_deleted(true);
-          result_.status = fuchsia::modular::ExecuteStatus::OK;
-        });
+    if (!story_storage_->MarkModuleAsDeleted(mod_name)) {
+      result_.status = fuchsia::modular::ExecuteStatus::INVALID_MOD;
+      result_.error_message = "No module data for given name.";
+      return;
+    }
+    result_.status = fuchsia::modular::ExecuteStatus::OK;
   }
 
   StoryStorage* const story_storage_;

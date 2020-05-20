@@ -30,34 +30,18 @@ void StoryStorage::WriteModuleData(ModuleData module_data) {
   DispatchWatchers(module_data);
 }
 
-void StoryStorage::UpdateModuleData(const std::vector<std::string>& module_path,
-                                    fit::function<void(ModuleDataPtr*)> mutate_fn) {
+bool StoryStorage::MarkModuleAsDeleted(const std::vector<std::string>& module_path) {
   auto key = MakeModuleKey(module_path);
-
-  ModuleDataPtr data{};
   // Pull ModuleData out of map and clone its contents into data, if present.
   auto it = module_data_backing_storage_.find(key);
-  if (it != module_data_backing_storage_.end()) {
-    data = ModuleData::New();
-    fidl::Clone(it->second, data.get());
+  if (it == module_data_backing_storage_.end()) {
+    return false;
   }
-
-  // Call mutate_fn.
-  mutate_fn(&data);
-
-  // Write back to map.
-  if (data) {
-    bool changed = !fidl::Equals(*data, it->second);
-    auto saved = CloneOptional(data);
-    module_data_backing_storage_[key] = std::move(*saved);
-    if (changed) {
-      DispatchWatchers(*data);
-    }
-  } else {
-    auto previously_populated = it != module_data_backing_storage_.end();
-    FX_DCHECK(!previously_populated) << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
-                                        "set to null an existing ModuleData record.";
+  if (!it->second.has_module_deleted() || !it->second.module_deleted()) {
+    it->second.set_module_deleted(true);
+    DispatchWatchers(it->second);
   }
+  return true;
 }
 
 ModuleDataPtr StoryStorage::ReadModuleData(const std::vector<std::string>& module_path) {

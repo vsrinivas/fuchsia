@@ -98,68 +98,37 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   EXPECT_EQ(1, notification_count_one_change);
 }
 
-TEST_F(StoryStorageTest, UpdateModuleData) {
-  // Call UpdateModuleData() on a record that doesn't exist yet.
+TEST_F(StoryStorageTest, MarkModuleAsDeleted) {
   auto storage = CreateStorage();
 
-  bool got_notification{};
-  ModuleData notified_module_data;
+  // Try to make a non-existent module as deleted.
+  EXPECT_FALSE(storage->MarkModuleAsDeleted({"a"}));
+  
+  ModuleData module_data;
+  module_data.set_module_url("url1");
+  module_data.mutable_module_path()->push_back("a");
+  storage->WriteModuleData(Clone(module_data));
+  
+  int notification_count = 0;
+  ModuleData notified_data;
   storage->SubscribeModuleDataUpdated([&](ModuleData data) {
-    got_notification = true;
-    notified_module_data = std::move(data);
+    ++notification_count;
+    notified_data = std::move(data);
     return StoryStorage::NotificationInterest::CONTINUE;
   });
 
-  std::vector<std::string> path;
-  path.push_back("a");
+  EXPECT_TRUE(storage->MarkModuleAsDeleted(module_data.module_path()));
+  EXPECT_EQ(1, notification_count);
+  EXPECT_EQ(true, notified_data.module_deleted());
 
-  // Case 1: Don't mutate anything.
-  storage->UpdateModuleData(path, [](ModuleDataPtr* ptr) { EXPECT_FALSE(*ptr); });
+  auto read_data = storage->ReadModuleData(module_data.module_path());
+  EXPECT_TRUE(read_data);
+  EXPECT_EQ(true, read_data->module_deleted());
 
-  ModuleData read_data;
-  EXPECT_FALSE(storage->ReadModuleData(path));
-  // Since nothing changed, we should not have seen a notification.
-  EXPECT_FALSE(got_notification);
-
-  // Case 2: Initialize an otherwise empty record.
-  storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) {
-    EXPECT_FALSE(*ptr);
-
-    *ptr = ModuleData::New();
-    (*ptr)->set_module_path(path);
-    (*ptr)->set_module_url("foobar");
-  });
-
-  auto data = storage->ReadModuleData(path);
-  ASSERT_TRUE(data);
-  EXPECT_EQ(path, data->module_path());
-  EXPECT_EQ("foobar", data->module_url());
-  // Now something changed, so we should see a notification.
-  EXPECT_TRUE(got_notification);
-  EXPECT_EQ("foobar", notified_module_data.module_url());
-
-  // Case 3: Leave alone an existing record.
-  got_notification = false;
-  storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) { EXPECT_TRUE(*ptr); });
-
-  data = storage->ReadModuleData(path);
-  ASSERT_TRUE(data);
-  EXPECT_EQ("foobar", data->module_url());
-  // Now something changed, so we should see a notification.
-  EXPECT_FALSE(got_notification);
-
-  // Case 4: Mutate an existing record.
-  storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) {
-    EXPECT_TRUE(*ptr);
-    (*ptr)->set_module_url("baz");
-  });
-
-  data = storage->ReadModuleData(path);
-  ASSERT_TRUE(data);
-  EXPECT_EQ("baz", data->module_url());
-  // Now something changed, so we should see a notification.
-  EXPECT_TRUE(got_notification);
-  EXPECT_EQ("baz", notified_module_data.module_url());
+  // Marking it deleted again resulted in no change, hence expect no
+  // new notifications.
+  EXPECT_TRUE(storage->MarkModuleAsDeleted(module_data.module_path()));
+  EXPECT_EQ(1, notification_count);
 }
 
 namespace {

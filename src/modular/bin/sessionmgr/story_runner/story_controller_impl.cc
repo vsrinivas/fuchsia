@@ -625,15 +625,9 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    // Mark this module as stopped, which is a global state shared between
-    // machines to track when the module is explicitly stopped. The module will
-    // stop when ledger notifies us back about the module state change,
-    // see OnModuleDataUpdated().
-    story_storage_->UpdateModuleData(module_path_,
-                                     [flow](fuchsia::modular::ModuleDataPtr* module_data_ptr) {
-                                       FX_DCHECK(*module_data_ptr);
-                                       (*module_data_ptr)->set_module_deleted(true);
-                                     });
+    // Mark the module as deleted. The module's runtime will be torn down
+    // once the StoryStorage notifies us of the change to ModuleData.
+    FX_CHECK(story_storage_->MarkModuleAsDeleted(module_path_));
   }
 
   StoryStorage* const story_storage_;  // not owned
