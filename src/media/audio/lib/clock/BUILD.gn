@@ -6,16 +6,43 @@
 import("//build/test/test_package.gni")
 
 source_set("clock") {
+  public_deps = [
+    ":clone_mono",
+    ":pid",
+    ":utils",
+  ]
+}
+
+source_set("clone_mono") {
+  sources = [
+    "clone_mono.cc",
+    "clone_mono.h",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+
+  public_deps = [ "//zircon/public/lib/zx" ]
+}
+
+source_set("pid") {
   sources = [
     "pid_control.cc",
     "pid_control.h",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("utils") {
+  sources = [
     "utils.cc",
     "utils.h",
   ]
 
+  deps = [ "//sdk/lib/syslog/cpp" ]
+
   public_deps = [
     "//sdk/lib/media/cpp:no_converters",
-    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
@@ -28,13 +55,16 @@ executable("unittest_bin") {
   output_name = "audio-clock-lib-unittests"
 
   sources = [
+    "clone_mono_unittest.cc",
     "pid_control_unittest.cc",
     "utils_unittest.cc",
   ]
 
   deps = [
     ":clock",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/clock/testing",
   ]
 
   libs = [ "zircon" ]
