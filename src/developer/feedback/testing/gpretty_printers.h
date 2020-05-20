@@ -49,7 +49,7 @@ void PrintTo(const AnnotationOr& value, std::ostream* os) {
   if (value.HasValue()) {
     *os << "HAS VALUE : " << value.Value();
   } else {
-    *os << "MISSING : " << ToString(value.Error());
+    *os << "ERROR : " << ToString(value.Error());
   }
   *os << " }";
   *os << fostr::Outdent;

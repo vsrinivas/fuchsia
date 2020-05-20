@@ -102,7 +102,7 @@ MATCHER_P(MatchesStringBuffer, expected, "'" + std::string(expected) + "'") {
   return internal::DoStringBufferMatch(arg, expected, result_listener);
 }
 
-MATCHER(HasValue, negation ? "is missing" : "has value") {
+MATCHER(HasValue, negation ? "is error" : "has value") {
   if (arg.HasValue()) {
     return true;
   }

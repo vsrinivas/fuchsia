@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
+#include <variant>
 
 namespace feedback {
 
@@ -25,6 +26,30 @@ enum class Error {
   kBadValue,
   kFileReadFailure,
   kFileWriteFailure,
+};
+
+template <typename T>
+class ErrorOr {
+ public:
+  ErrorOr(const std::string& value) : data_(value) {}
+  ErrorOr(enum Error error) : data_(error) {}
+
+  bool HasValue() const { return data_.index() == 0; }
+
+  const std::string& Value() const {
+    FX_CHECK(HasValue());
+    return std::get<std::string>(data_);
+  }
+
+  enum Error Error() const {
+    FX_CHECK(!HasValue());
+    return std::get<enum Error>(data_);
+  }
+
+  bool operator==(const ErrorOr& other) const { return data_ == other.data_; }
+
+ private:
+  std::variant<std::string, enum Error> data_;
 };
 
 // Provide a string representation of  |error|.
