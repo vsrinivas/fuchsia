@@ -282,7 +282,7 @@ void JobDispatcher::FinishDeadTransitionUnlocked() {
     state_ = State::DEAD;
     exceptionate_.Shutdown();
     debug_exceptionate_.Shutdown();
-    UpdateStateLocked(0u, ZX_TASK_TERMINATED);
+    UpdateStateLocked(0u, ZX_JOB_TERMINATED);
   }
 
   RemoveFromJobTreesUnlocked();
