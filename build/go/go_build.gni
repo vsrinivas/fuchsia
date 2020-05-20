@@ -285,7 +285,7 @@ template("go_build") {
           "--include-dir",
           rebase_path("//zircon/system/ulib/ramdevice-client/include"),
           "--lib-dir",
-          rebase_path("gen/zircon/public/lib/ramdevice-client",
+          rebase_path("gen/zircon/system/ulib/ramdevice-client",
                       "",
                       root_build_dir),
         ]

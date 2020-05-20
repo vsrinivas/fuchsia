@@ -83,8 +83,8 @@ config("compiler") {
   lib_dirs = [
     # These libraries are required by Rust's libstd.
     "$root_build_dir/gen/zircon/public/lib/fdio",
-    "$root_build_dir/gen/zircon/public/lib/trace-engine",
-    "$root_build_dir/gen/zircon/public/lib/syslog",
+    "$root_build_dir/gen/zircon/system/ulib/trace-engine",
+    "$root_build_dir/gen/zircon/system/ulib/syslog",
   ]
 
   if (build_id_format != "") {

@@ -5,16 +5,6 @@
     "sdk": false
   },
   {
-    "label": "//zircon/system/ulib/ramdevice-client:ramdevice-client",
-    "name": "ramdevice-client",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/syslog:syslog-static",
-    "name": "syslog-static",
-    "sdk": false
-  },
-  {
     "label": "//zircon/system/ulib/trace:trace",
     "name": "trace",
     "sdk": true
