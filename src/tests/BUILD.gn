@@ -18,6 +18,7 @@ group("tests") {
 
     # fidlcat is an e2e test for all products.
     "end_to_end/fidlcat:tests",
+    "intl:tests",
     "limited_netsvc:tests",
     "microbenchmarks:tests",
     "oom:tests",

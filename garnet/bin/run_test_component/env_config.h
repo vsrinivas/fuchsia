@@ -16,10 +16,15 @@ constexpr char kLoggerTestsUrl[] =
     "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logger_integration_go_tests.cmx";
 constexpr char kAppmgrHubTestsUrl[] =
     "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/appmgr_hub_integration_tests.cmx";
+// System test that needs access to the system time zone service.
+constexpr char kTimezoneTestUrl[] =
+    "fuchsia-pkg://fuchsia.com/timezone-test#meta/timezone_bin_test.cmx";
 
-const auto kUrlMap = new std::unordered_map<std::string, run::EnvironmentType>(
-    {{kLoggerTestsUrl, run::EnvironmentType::SYS},
-     {kAppmgrHubTestsUrl, run::EnvironmentType::SYS}});
+const auto kUrlMap = new std::unordered_map<std::string, run::EnvironmentType>({
+    {kLoggerTestsUrl, run::EnvironmentType::SYS},
+    {kAppmgrHubTestsUrl, run::EnvironmentType::SYS},
+    {kTimezoneTestUrl, run::EnvironmentType::SYS},
+});
 
 class EnvironmentConfig {
  public:

@@ -1,0 +1,66 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("timezone") {
+  testonly = true
+  public_deps = [
+    ":tests",
+    "../timestamp-server-dart",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":timezone-test" ]
+}
+
+rustc_test("timezone_bin_test") {
+  edition = "2018"
+  source_root = "timezone_test.rs"
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/icu_data/rust/icu_data",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:crossbeam",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rust_icu_common",
+    "//third_party/rust_crates:rust_icu_ucal",
+    "//third_party/rust_crates:rust_icu_udat",
+    "//third_party/rust_crates:rust_icu_uloc",
+    "//third_party/rust_crates:rust_icu_ustring",
+  ]
+}
+
+test_package("timezone-test") {
+  public_deps = [
+    ":timezone_bin_test",
+    "../timestamp-server-dart",
+  ]
+  tests = [
+    {
+      name = "timezone_bin_test"
+      environments = basic_envs
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
