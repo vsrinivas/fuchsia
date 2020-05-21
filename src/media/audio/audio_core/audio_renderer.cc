@@ -8,6 +8,7 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -137,7 +138,13 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
             GainDbFsValue{volume_command.gain_db_adjustment},
             GainDbFsValue{stream_gain_db_},
         });
-
+        // TODO(51049) Logging should be removed upon creation of inspect tool or other real-time
+        // method for gain observation
+        FX_LOGS(INFO) << StreamUsage::WithRenderUsage(usage_).ToString() << " Gain(" << gain_db
+                      << "db) = "
+                      << "Vol(" << volume_command.volume << ") + GainAdjustment("
+                      << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_
+                      << "db)";
         auto& gain = link.mixer->bookkeeping().gain;
 
         REPORT(SettingRendererFinalGain(*this, gain_db));

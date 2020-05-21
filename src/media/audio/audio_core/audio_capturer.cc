@@ -8,6 +8,7 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -181,16 +182,25 @@ void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
         << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
   }
 
-  context().link_matrix().ForEachSourceLink(*this,
-                                            [this, &volume_command](LinkMatrix::LinkHandle link) {
-                                              float gain_db = link.loudness_transform->Evaluate<3>({
-                                                  VolumeValue{volume_command.volume},
-                                                  GainDbFsValue{volume_command.gain_db_adjustment},
-                                                  GainDbFsValue{stream_gain_db_.load()},
-                                              });
+  context().link_matrix().ForEachSourceLink(
+      *this, [this, &volume_command](LinkMatrix::LinkHandle link) {
+        float gain_db = link.loudness_transform->Evaluate<3>({
+            VolumeValue{volume_command.volume},
+            GainDbFsValue{volume_command.gain_db_adjustment},
+            GainDbFsValue{stream_gain_db_.load()},
+        });
+        // TODO(51049) Logging should be removed upon creation of inspect tool or other real-time
+        // method for gain observation
+        if (gain_db != 0.0) {
+          FX_LOGS(INFO) << StreamUsage::WithCaptureUsage(usage_).ToString() << " Gain(" << gain_db
+                        << "db) = "
+                        << "Vol(" << volume_command.volume << ") + GainAdjustment("
+                        << volume_command.gain_db_adjustment << "db) + StreamGain("
+                        << stream_gain_db_ << "db)";
+        }
 
-                                              link.mixer->bookkeeping().gain.SetDestGain(gain_db);
-                                            });
+        link.mixer->bookkeeping().gain.SetDestGain(gain_db);
+      });
 }
 
 void AudioCapturer::SetGain(float gain_db) {
