@@ -7,7 +7,7 @@ package filter
 import (
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/filter"
-	"netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"

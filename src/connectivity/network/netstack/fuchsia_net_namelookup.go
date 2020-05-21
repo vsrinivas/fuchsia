@@ -11,7 +11,7 @@ import (
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 
 	fidlnet "fidl/fuchsia/net"
 

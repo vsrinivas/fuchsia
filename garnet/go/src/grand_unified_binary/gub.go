@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"amber/amberctl"
-	"netstack"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
 	"system_updater"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"

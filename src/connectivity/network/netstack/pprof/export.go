@@ -15,9 +15,9 @@ import (
 	"syscall/zx"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"netstack/inspect"
 )
 
 const pprofName = "pprof"

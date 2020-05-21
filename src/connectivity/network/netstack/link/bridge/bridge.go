@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"

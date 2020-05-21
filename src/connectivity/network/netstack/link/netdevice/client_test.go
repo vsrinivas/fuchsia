@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"netstack/link"
-	"netstack/link/eth"
 
 	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net"

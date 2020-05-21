@@ -6,7 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/toolchain.gni")
 
 go_binary("netstack_service_test") {
-  gopackage = "netstack/netstack_service_test"
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/netstack_service_test"
 
   deps = [
     "../:netstack_lib",

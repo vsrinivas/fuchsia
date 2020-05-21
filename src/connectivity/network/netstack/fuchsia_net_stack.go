@@ -11,9 +11,9 @@ import (
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"netstack/fidlconv"
-	"netstack/link"
-	"netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"

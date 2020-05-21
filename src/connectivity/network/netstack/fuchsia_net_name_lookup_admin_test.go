@@ -8,8 +8,8 @@ import (
 	"context"
 	"testing"
 
-	"netstack/dns"
-	"netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"syscall/zx"
 
-	"netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
 	"fidl/fuchsia/hardware/network"
 

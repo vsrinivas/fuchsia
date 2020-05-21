@@ -9,7 +9,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"netstack_gen/link/eth"
+	"gen/netstack/link/eth"
 )
 
 /// MakeEntryFifo creates a pair of handles to a FIFO of "depth" FifoEntry

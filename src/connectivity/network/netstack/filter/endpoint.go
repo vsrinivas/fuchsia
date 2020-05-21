@@ -10,7 +10,7 @@ package filter
 import (
 	"sync/atomic"
 
-	"netstack/packetbuffer"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"

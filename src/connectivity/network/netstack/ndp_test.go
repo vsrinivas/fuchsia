@@ -7,13 +7,13 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
 	"time"
 
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/hardware/ethernet"

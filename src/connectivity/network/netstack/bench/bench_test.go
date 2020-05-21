@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"testing"
 
-	"netstack/link/eth"
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"

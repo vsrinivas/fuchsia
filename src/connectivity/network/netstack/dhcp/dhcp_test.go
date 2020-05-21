@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"netstack/packetbuffer"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"

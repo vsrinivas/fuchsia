@@ -21,10 +21,10 @@ import (
 	"syscall/zx/fidl"
 	"time"
 
-	"netstack/connectivity"
-	"netstack/dns"
-	"netstack/filter"
-	"netstack/pprof"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/connectivity"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
 	networking_metrics "networking_metrics_golib"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"

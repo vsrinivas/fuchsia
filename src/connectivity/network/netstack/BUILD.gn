@@ -120,7 +120,7 @@ test_package("netstack_gotests") {
   ]
 }
 
-generated_go("netstack_gen") {
+generated_go("gen/netstack") {
   definitions = [
     {
       src = "link/eth/handler.json"
@@ -147,10 +147,10 @@ generated_go("netstack_gen") {
 }
 
 go_library("netstack_lib") {
-  name = "netstack"
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
 
   deps = [
-    ":netstack_gen",
+    ":gen/netstack",
     ":networking_metrics_golib",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
@@ -180,27 +180,33 @@ go_library("netstack_lib") {
 }
 
 go_test("netstack_bench_test") {
-  gopackages = [ "netstack/bench" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench" ]
   deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_connectivity_test") {
-  gopackages = [ "netstack/connectivity" ]
+  gopackages = [
+    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/connectivity",
+  ]
   deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_fidlconv_test") {
-  gopackages = [ "netstack/fidlconv" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv" ]
   deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_filter_test") {
-  gopackages = [ "netstack/filter" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter" ]
   deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_link_eth_test") {
-  gopackages = [ "netstack/link/eth" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth" ]
   deps = [ ":netstack_lib" ]
 }
 
@@ -215,7 +221,8 @@ generated_go("entries_gen_test") {
 }
 
 go_test("netstack_link_fifo_test") {
-  gopackages = [ "netstack/link/fifo" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo" ]
   deps = [
     ":entries_gen_test",
     ":netstack_lib",
@@ -223,12 +230,14 @@ go_test("netstack_link_fifo_test") {
 }
 
 go_test("netstack_link_netdevice_test") {
-  gopackages = [ "netstack/link/netdevice" ]
+  gopackages = [
+    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice",
+  ]
   deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_test") {
-  gopackages = [ "netstack" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack" ]
   deps = [ ":netstack_lib" ]
 }
 

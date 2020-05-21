@@ -12,12 +12,12 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"netstack/fidlconv"
-	"netstack/link"
-	"netstack/link/eth"
-	"netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
 	fidlnet "fidl/fuchsia/net"

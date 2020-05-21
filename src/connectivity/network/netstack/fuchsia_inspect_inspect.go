@@ -12,11 +12,11 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"netstack/dhcp"
-	"netstack/link"
-	"netstack/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"

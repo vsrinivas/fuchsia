@@ -9,7 +9,7 @@ import (
 	"net"
 	"testing"
 
-	"netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 
 	fidlnet "fidl/fuchsia/net"
 

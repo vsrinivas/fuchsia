@@ -12,8 +12,8 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
-	"netstack/inspect"
 
 	fidlinspect "fidl/fuchsia/inspect"
 	"fidl/test/inspect/validate"

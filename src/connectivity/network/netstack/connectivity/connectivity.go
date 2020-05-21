@@ -12,8 +12,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"netstack/fidlconv"
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"

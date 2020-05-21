@@ -6,7 +6,7 @@ package fifo
 
 import (
 	"fmt"
-	"netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"reflect"
 	"syscall/zx"
 	"unsafe"

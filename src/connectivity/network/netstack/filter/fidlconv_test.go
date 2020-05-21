@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/filter"

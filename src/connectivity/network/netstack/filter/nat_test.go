@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"netstack/packetbuffer"
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/packetbuffer"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"

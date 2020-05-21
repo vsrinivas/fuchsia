@@ -6,8 +6,8 @@ package netstack
 
 import (
 	"context"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"net"
-	"netstack/fidlconv"
 	"syscall/zx"
 	"testing"
 

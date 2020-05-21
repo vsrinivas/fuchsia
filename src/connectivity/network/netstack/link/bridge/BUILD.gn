@@ -5,7 +5,8 @@
 import("//build/go/go_test.gni")
 
 go_test("netstack_link_bridge_test") {
-  gopackages = [ "netstack/link/bridge" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge" ]
 
   deps = [ "../../:netstack_lib" ]
 }

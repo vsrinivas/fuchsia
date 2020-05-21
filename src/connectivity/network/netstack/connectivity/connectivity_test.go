@@ -11,7 +11,7 @@ import (
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
-	"netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )

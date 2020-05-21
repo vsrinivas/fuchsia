@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
-	"netstack/fidlconv"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"

@@ -13,10 +13,10 @@ import (
 	"syscall/zx"
 	"unsafe"
 
+	"gen/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"netstack/link"
-	"netstack/link/fifo"
-	"netstack_gen/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 

@@ -14,10 +14,10 @@ import (
 	"time"
 	"unsafe"
 
-	"netstack/link/eth"
-	"netstack/link/fifo"
-	"netstack/link/fifo/testutil"
-	eth_gen "netstack_gen/link/eth"
+	eth_gen "gen/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 
 	"fidl/fuchsia/hardware/ethernet"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"

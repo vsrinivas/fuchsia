@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )

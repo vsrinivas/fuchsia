@@ -8,20 +8,14 @@ import("//build/go/toolchain.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
+go_binary("puppet") {
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
 
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
     "//src/diagnostics/inspect_validator/fidl:validate($go_toolchain)",
     "//src/lib/component",
   ]
-}
-
-go_binary("puppet") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
-
-  deps = [ ":lib" ]
 }
 
 test_package("inspect-validator-test-go") {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"

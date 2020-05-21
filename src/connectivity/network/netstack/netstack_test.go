@@ -18,12 +18,12 @@ import (
 	"fidl/fuchsia/netstack"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
-	"netstack/dhcp"
-	"netstack/dns"
-	"netstack/fidlconv"
-	"netstack/link/fifo/testutil"
-	"netstack/routes"
-	"netstack/util"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"

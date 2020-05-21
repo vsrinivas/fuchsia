@@ -14,10 +14,10 @@ import (
 	"syscall/zx/fidl"
 	"unsafe"
 
+	"gen/netstack/link/netdevice"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"netstack/link"
-	"netstack/link/fifo"
-	"netstack_gen/link/netdevice"
 
 	"fidl/fuchsia/hardware/network"
 

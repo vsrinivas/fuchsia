@@ -11,7 +11,7 @@ import (
 	"syscall/zx"
 	"testing"
 
-	"netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"

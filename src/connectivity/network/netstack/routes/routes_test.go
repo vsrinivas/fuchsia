@@ -9,7 +9,7 @@ import (
 	"net"
 	"testing"
 
-	"netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
