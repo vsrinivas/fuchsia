@@ -11,7 +11,6 @@
 #include <unordered_set>
 
 #include "src/modular/bin/sessionmgr/annotations.h"
-#include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace modular {

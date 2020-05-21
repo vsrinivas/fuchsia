@@ -12,7 +12,7 @@
 
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
-#include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
+#include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/fidl/clone.h"
 
@@ -26,7 +26,6 @@ ModuleContextImpl::ModuleContextImpl(
       session_environment_(info.session_environment),
       component_context_impl_(
           info.component_context_info,
-          EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
           EncodeModulePath(module_data_->module_path()), module_data_->module_url()) {
   info.component_context_info.agent_runner->PublishAgentServices(
       component_context_impl_.component_instance_id(), &service_provider_impl_);

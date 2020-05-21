@@ -30,16 +30,13 @@ struct ComponentContextInfo {
 // bindings into the class.
 class ComponentContextImpl : public fuchsia::modular::ComponentContext {
  public:
-  // * A component namespace identifies components whose lifetimes are related,
-  //   where all of their persisted information will live together; for modules
-  //   this is the story id, for agents it is kAgentComponentNamespace, etc.
   // * A component instance ID identifies a particular instance of a component;
   //   for modules, this is the module path in their story. For agents, it is
   //   the agent URL.
   // * A component URL is the origin from which the executable associated with
   //   the component was fetched from.
-  explicit ComponentContextImpl(const ComponentContextInfo& info, std::string component_namespace,
-                                std::string component_instance_id, std::string component_url);
+  explicit ComponentContextImpl(const ComponentContextInfo& info, std::string component_instance_id,
+                                std::string component_url);
 
   ~ComponentContextImpl() override;
 
@@ -64,7 +61,6 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   AgentRunner* const agent_runner_;
   std::vector<std::string> session_agents_;
 
-  const std::string component_namespace_;
   const std::string component_instance_id_;
   const std::string component_url_;
 

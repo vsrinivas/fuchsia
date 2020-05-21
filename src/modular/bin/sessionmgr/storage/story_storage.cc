@@ -12,7 +12,7 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
+#include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
@@ -23,7 +23,7 @@ StoryStorage::StoryStorage() {}
 
 void StoryStorage::WriteModuleData(ModuleData module_data) {
   auto module_path = fidl::Clone(module_data.module_path());
-  auto key = MakeModuleKey(module_path);
+  auto key = EncodeModulePath(module_path);
   auto saved = CloneOptional(module_data);
   module_data_backing_storage_[key] = std::move(*saved);
 
@@ -31,7 +31,7 @@ void StoryStorage::WriteModuleData(ModuleData module_data) {
 }
 
 bool StoryStorage::MarkModuleAsDeleted(const std::vector<std::string>& module_path) {
-  auto key = MakeModuleKey(module_path);
+  auto key = EncodeModulePath(module_path);
   // Pull ModuleData out of map and clone its contents into data, if present.
   auto it = module_data_backing_storage_.find(key);
   if (it == module_data_backing_storage_.end()) {
@@ -45,7 +45,7 @@ bool StoryStorage::MarkModuleAsDeleted(const std::vector<std::string>& module_pa
 }
 
 ModuleDataPtr StoryStorage::ReadModuleData(const std::vector<std::string>& module_path) {
-  auto key = MakeModuleKey(module_path);
+  auto key = EncodeModulePath(module_path);
   auto it = module_data_backing_storage_.find(key);
   ModuleDataPtr data{};
   if (it != module_data_backing_storage_.end()) {

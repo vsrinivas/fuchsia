@@ -7,7 +7,7 @@ import("//src/modular/build/tests_package.gni")
 
 hermetic_tests_package("storage_unittests") {
   deps = [
-    ":constants_and_utils_unittest",
+    ":encode_module_path_unittest",
     ":session_storage_unittest",
     ":story_storage_unittest",
   ]
@@ -21,10 +21,10 @@ group("storage") {
   ]
 }
 
-source_set("constants_and_utils") {
+source_set("encode_module_path") {
   sources = [
-    "constants_and_utils.cc",
-    "constants_and_utils.h",
+    "encode_module_path.cc",
+    "encode_module_path.h",
   ]
 
   deps = [
@@ -40,13 +40,13 @@ source_set("constants_and_utils") {
   ]
 }
 
-executable("constants_and_utils_unittest") {
+executable("encode_module_path_unittest") {
   testonly = true
 
-  sources = [ "constants_and_utils_unittest.cc" ]
+  sources = [ "encode_module_path_unittest.cc" ]
 
   deps = [
-    ":constants_and_utils",
+    ":encode_module_path",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -60,7 +60,7 @@ source_set("session_storage") {
   ]
 
   deps = [
-    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/bin/sessionmgr/storage:encode_module_path",
     "//src/modular/lib/fidl:clone",
   ]
 
@@ -102,7 +102,7 @@ source_set("story_storage") {
   deps = [
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
-    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/bin/sessionmgr/storage:encode_module_path",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:clone",
   ]

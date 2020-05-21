@@ -5,7 +5,6 @@
 #include "src/modular/bin/sessionmgr/focus.h"
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/fidl/json_xdr.h"

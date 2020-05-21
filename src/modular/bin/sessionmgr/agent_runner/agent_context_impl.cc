@@ -239,7 +239,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                                    fuchsia::modular::AppConfig agent_config,
                                    inspect::Node agent_node)
     : url_(agent_config.url),
-      component_context_impl_(info.component_context_info, kAgentComponentNamespace, url_, url_),
+      component_context_impl_(info.component_context_info, url_, url_),
       agent_runner_(info.component_context_info.agent_runner),
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)) {

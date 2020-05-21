@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
+#include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
 
 #include <string>
 #include <vector>
@@ -17,14 +17,6 @@ namespace {
 TEST(Storage, EncodeModulePath) {
   std::vector<std::string> fidl_array = {"foo", ":bar", "/baz"};
   EXPECT_EQ("foo:\\:bar:\\/baz", EncodeModulePath(fidl_array));
-}
-
-TEST(Storage, EncodeLinkPath) {
-  std::vector<std::string> fidl_array = {"foo", ":bar"};
-  fuchsia::modular::LinkPath link_path;
-  link_path.link_name = "Fred";
-  link_path.module_path = std::move(fidl_array);
-  EXPECT_EQ("foo:\\:bar/Fred", EncodeLinkPath(link_path));
 }
 
 }  // namespace

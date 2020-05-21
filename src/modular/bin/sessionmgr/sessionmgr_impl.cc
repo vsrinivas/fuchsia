@@ -24,7 +24,6 @@
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "src/modular/bin/sessionmgr/session_ctl.h"
-#include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
@@ -39,8 +38,6 @@ using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 namespace {
 
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
-
-constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
 
 // The name in the outgoing debug directory (hub) for developer session control
 // services.
@@ -275,7 +272,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                        config_.startup_agents());
 
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
-      component_context_info, kSessionShellComponentNamespace, session_shell_url.value_or(""),
+      component_context_info, session_shell_url.value_or(""),
       session_shell_url.value_or(""));
 
   OnTerminate(Reset(&session_shell_component_context_impl_));

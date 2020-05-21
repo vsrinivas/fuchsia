@@ -28,10 +28,6 @@ class ServiceProviderImpl;
 
 namespace modular {
 
-// This is the component namespace we give to all agents; used for namespacing
-// storage between different component types.
-constexpr char kAgentComponentNamespace[] = "agents";
-
 class AgentContextImpl;
 
 // This class provides a way for components to connect to agents and

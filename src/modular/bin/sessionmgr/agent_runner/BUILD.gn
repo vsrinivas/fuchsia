@@ -28,7 +28,6 @@ source_set("agent_runner") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr:component_context",
-    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/deprecated_service_provider",

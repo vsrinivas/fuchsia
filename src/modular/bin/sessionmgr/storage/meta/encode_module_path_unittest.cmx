@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/encode_module_path_unittest"
+    }
+}

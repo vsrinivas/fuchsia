@@ -26,12 +26,10 @@ void LogConnectionError(const std::string& url, const std::vector<std::string>& 
 }  // namespace
 
 ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
-                                           std::string component_namespace,
                                            std::string component_instance_id,
                                            std::string component_url)
     : agent_runner_(info.agent_runner),
       session_agents_(info.session_agents),
-      component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
   FX_DCHECK(agent_runner_);
