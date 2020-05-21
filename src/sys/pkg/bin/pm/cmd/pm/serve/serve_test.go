@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/sse"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/sse"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pmhttp"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"

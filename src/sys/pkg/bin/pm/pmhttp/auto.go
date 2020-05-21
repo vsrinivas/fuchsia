@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/sse"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/sse"
 )
 
 type RemoteAddr string
