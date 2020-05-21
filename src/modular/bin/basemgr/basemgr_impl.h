@@ -7,7 +7,6 @@
 
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
@@ -23,7 +22,6 @@
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
-#include "src/modular/bin/basemgr/session_user_provider_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
@@ -90,7 +88,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void ShowSetupOrLogin();
 
   // Invoked when a user has been logged in. Starts a new session.
-  void OnLogin(bool is_ephemeral_account);
+  void Login(bool is_ephemeral_account);
 
   // Returns the session shell config of the active session shell, or returns
   // the a default config if there is no active one.
@@ -139,9 +137,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Holds the presentation service.
   std::unique_ptr<PresentationContainer> presentation_container_;
-
-  // Manages the session-user mappings.
-  std::unique_ptr<SessionUserProviderImpl> session_user_provider_impl_;
 
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
 

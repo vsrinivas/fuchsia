@@ -32,10 +32,8 @@ executable_package("basemgr") {
     ":lib",
     ":wait_for_minfs",
     "//garnet/public/lib/json",
-    "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.setui",
@@ -101,8 +99,6 @@ source_set("lib") {
     "session_context_impl.h",
     "session_provider.cc",
     "session_provider.h",
-    "session_user_provider_impl.cc",
-    "session_user_provider_impl.h",
   ]
 
   deps = [
@@ -126,9 +122,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/lib/intl/intl_property_provider_impl",
   ]

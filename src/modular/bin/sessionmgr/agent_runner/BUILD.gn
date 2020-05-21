@@ -22,7 +22,6 @@ source_set("agent_runner") {
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -49,7 +48,6 @@ executable("agent_runner_unittest") {
     ":public",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -75,7 +73,6 @@ source_set("public") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",

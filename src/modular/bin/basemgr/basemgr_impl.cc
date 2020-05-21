@@ -145,15 +145,7 @@ void BasemgrImpl::Start() {
         ShowSetupOrLogin();
       }));
 
-  InitializeUserProvider();
-
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
-}
-
-void BasemgrImpl::InitializeUserProvider() {
-  session_user_provider_impl_ = std::make_unique<SessionUserProviderImpl>(
-      /* on_login= */
-      [this](bool is_ephemeral_account) { OnLogin(is_ephemeral_account); });
   ShowSetupOrLogin();
 }
 
@@ -169,8 +161,6 @@ void BasemgrImpl::Shutdown() {
   // |session_provider_| teardown is asynchronous because it holds the
   // sessionmgr processes.
   session_provider_.Teardown(kSessionProviderTimeout, [this] {
-    session_user_provider_impl_.reset();
-    FX_DLOGS(INFO) << "- fuchsia::modular::UserProvider down";
     StopScenic()->Then([this] {
       FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
       basemgr_debug_bindings_.CloseAll(ZX_OK);
@@ -181,9 +171,14 @@ void BasemgrImpl::Shutdown() {
 
 void BasemgrImpl::Terminate() { Shutdown(); }
 
-void BasemgrImpl::OnLogin(bool is_ephemeral_account) {
+void BasemgrImpl::Login(bool is_ephemeral_account) {
   if (state_ == State::SHUTTING_DOWN) {
     return;
+  }
+  if (is_ephemeral_account) {
+    FX_LOGS(INFO) << "Starting session with random session ID.";
+  } else {
+    FX_LOGS(INFO) << "Starting session with stable session ID.";
   }
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -251,7 +246,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
     // We no longer maintain a set of accounts within the account system,
     // and so automatically login in all circumstances.
-    session_user_provider_impl_->Login3(is_ephemeral_account_);
+    Login(is_ephemeral_account_);
   };
 
   // TODO(MF-347): Handle scenario where device settings manager channel is
@@ -287,9 +282,7 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
   session_provider_->RestartSession(std::move(on_restart_complete));
 }
 
-void BasemgrImpl::LoginAsGuest() {
-  session_user_provider_impl_->Login3(/* is_ephemeral_account */ true);
-}
+void BasemgrImpl::LoginAsGuest() { Login(/* is_ephemeral_account */ true); }
 
 void BasemgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
