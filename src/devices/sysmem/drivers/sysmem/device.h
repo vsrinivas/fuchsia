@@ -15,6 +15,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <unordered_set>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -37,6 +38,7 @@ using DdkDeviceType = ddk::Device<Device, ddk::Messageable, ddk::UnbindableNew>;
 
 class Driver;
 class BufferCollectionToken;
+class LogicalBufferCollection;
 
 class Device final : public DdkDeviceType,
                      public ddk::SysmemProtocol<Device, ddk::base_protocol>,
@@ -98,6 +100,21 @@ class Device final : public DdkDeviceType,
   const zx_device_t* device() const { return zxdev_; }
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
+  // Test hook
+  std::unordered_set<LogicalBufferCollection*>& logical_buffer_collections() {
+    return logical_buffer_collections_;
+  }
+
+  // Test hook
+  void AddLogicalBufferCollection(LogicalBufferCollection* collection) {
+    logical_buffer_collections_.insert(collection);
+  }
+
+  // Test hook
+  void RemoveLogicalBufferCollection(LogicalBufferCollection* collection) {
+    logical_buffer_collections_.erase(collection);
+  }
+
  private:
   class SecureMemConnection {
    public:
@@ -148,6 +165,8 @@ class Device final : public DdkDeviceType,
   std::unique_ptr<SecureMemConnection> secure_mem_;
 
   std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
+
+  std::unordered_set<LogicalBufferCollection*> logical_buffer_collections_;
 };
 
 }  // namespace sysmem_driver

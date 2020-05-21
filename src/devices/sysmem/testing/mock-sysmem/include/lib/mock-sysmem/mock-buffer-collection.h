@@ -48,6 +48,8 @@ class MockBufferCollection : public llcpp::fuchsia::sysmem::BufferCollection::In
   void Close(CloseCompleter::Sync _completer) override { EXPECT_TRUE(false); }
   void SetName(uint32_t priority, fidl::StringView name,
                SetNameCompleter::Sync completer) override {}
+  void SetDebugClientInfo(fidl::StringView name, uint64_t id,
+                          SetDebugClientInfoCompleter::Sync completer) override {}
 };
 
 }  // namespace mock_sysmem

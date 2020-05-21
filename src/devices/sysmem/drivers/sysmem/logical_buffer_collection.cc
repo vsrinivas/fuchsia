@@ -286,6 +286,13 @@ void LogicalBufferCollection::SetName(uint32_t priority, std::string name) {
   }
 }
 
+void LogicalBufferCollection::SetDebugTimeoutLogDeadline(int64_t deadline) {
+  creation_timer_.Cancel();
+  zx_status_t status =
+      creation_timer_.PostForTime(parent_device_->dispatcher(), zx::time(deadline));
+  ZX_ASSERT(status == ZX_OK);
+}
+
 LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_result() {
   ZX_DEBUG_ASSERT(has_allocation_result_ ||
                   (allocation_result_status_ == ZX_OK && !allocation_result_info_));
@@ -304,6 +311,10 @@ LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
     : parent_device_(parent_device), constraints_(Constraints::Null) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::LogicalBufferCollection", "this", this);
   LogInfo("LogicalBufferCollection::LogicalBufferCollection()");
+  parent_device_->AddLogicalBufferCollection(this);
+
+  zx_status_t status = creation_timer_.PostDelayed(parent_device_->dispatcher(), zx::sec(5));
+  ZX_ASSERT(status == ZX_OK);
   // nothing else to do here
 }
 
@@ -324,6 +335,7 @@ LogicalBufferCollection::~LogicalBufferCollection() {
   if (memory_allocator_) {
     memory_allocator_->RemoveDestroyCallback(reinterpret_cast<intptr_t>(this));
   }
+  parent_device_->RemoveLogicalBufferCollection(this);
 }
 
 void LogicalBufferCollection::Fail(const char* format, ...) {
@@ -464,6 +476,7 @@ void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
   // that way.
   ZX_DEBUG_ASSERT(allocation_result_status_ == ZX_OK);
 
+  creation_timer_.Cancel();
   allocation_result_status_ = status;
   // Was initialized to nullptr.
   ZX_DEBUG_ASSERT(!allocation_result_info_);
@@ -484,6 +497,7 @@ void LogicalBufferCollection::SetAllocationResult(BufferCollectionInfo info) {
   // that way.
   ZX_DEBUG_ASSERT(allocation_result_status_ == ZX_OK);
 
+  creation_timer_.Cancel();
   allocation_result_status_ = ZX_OK;
   allocation_result_info_ = std::move(info);
   has_allocation_result_ = true;
@@ -516,6 +530,8 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
   auto self = token->parent_shared();
   ZX_DEBUG_ASSERT(self.get() == this);
   auto collection = BufferCollection::Create(self);
+  collection->SetDebugClientInfo(token->debug_name().data(), token->debug_name().size(),
+                                 token->debug_id());
   collection->SetErrorHandler([this, collection_ptr = collection.get()](zx_status_t status) {
     // status passed to an error handler is never ZX_OK.  Clean close is
     // ZX_ERR_PEER_CLOSED.
@@ -1719,6 +1735,33 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // ~cooked_parent_vmo is fine, since local_child_vmo counts as a child of raw_parent_vmo for
   // ZX_VMO_ZERO_CHILDREN purposes.
   return ZX_OK;
+}
+
+void LogicalBufferCollection::CreationTimedOut(async_dispatcher_t* dispatcher,
+                                               async::TaskBase* task, zx_status_t status) {
+  if (status != ZX_OK)
+    return;
+
+  std::string name = name_ ? name_->second : "Unknown";
+
+  LogError("Allocation of %s timed out. Waiting for tokens: ", name.c_str());
+  for (auto& token : token_views_) {
+    if (token.second->debug_name() != "") {
+      LogError("Name %s id %ld", token.second->debug_name().c_str(), token.second->debug_id());
+    } else {
+      LogError("Unknown token");
+    }
+  }
+  LogError("Collections:");
+  for (auto& collection : collection_views_) {
+    const char* constraints_state = collection.second->is_set_constraints_seen() ? "set" : "unset";
+    if (collection.second->debug_name() != "") {
+      LogError("Name \"%s\" id %ld (constraints %s)", collection.second->debug_name().c_str(),
+               collection.second->debug_id(), constraints_state);
+    } else {
+      LogError("Name unknown (constraints %s)", constraints_state);
+    }
+  }
 }
 
 static int32_t clamp_difference(int32_t a, int32_t b) {

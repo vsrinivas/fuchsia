@@ -120,6 +120,20 @@ protocol BufferCollectionToken {
     /// Normally an unexpected token channel close will cause
     /// LogicalBufferCollection failure.
     Close();
+
+    /// Set information about the current client that can be used by sysmem to
+    /// help debug leaking memory and hangs waiting for constraints. |name| can
+    /// be an arbitrary string, but the current process name (see
+    /// fsl::GetCurrentProcessName()) is a good default. |id| can be an arbitrary
+    /// id, but the current process ID (see fsl::GetCurrentProcessKoid()) is a
+    /// good default.
+    SetDebugClientInfo(string:64 name, uint64 id);
+
+    /// Sysmem logs a warning if not all clients have set constraints 5 seconds
+    /// after creating a collection. Clients can call this method to change
+    /// when the log is printed. If multiple client set the deadline, it's
+    /// unspecified which deadline will take effect.
+    SetDebugTimeoutLogDeadline(zx.time deadline);
 };
 
 /// BufferCollection is a connection directly from a participant to sysmem re.
@@ -302,6 +316,9 @@ protocol BufferCollection {
     /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
     /// multiple clients set different names then the larger priority value will win.
     SetName(uint32 priority, string:64 name);
+
+    /// See BufferCollectionToken.SetClientDebugInfo.
+    SetDebugClientInfo(string:64 name, uint64 id);
 };
 
 /// This interface intentionally doesn't include any event for

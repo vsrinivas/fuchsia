@@ -57,6 +57,7 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
   void Close() override;
 
   void SetName(uint32_t priority, std::string name) override;
+  void SetDebugClientInfo(std::string name, uint64_t id) override {}
 
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;
@@ -80,6 +81,8 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken 
   void Sync(SyncCallback callback) override;
 
   void Close() override;
+  void SetDebugClientInfo(std::string name, uint64_t id) override {}
+  void SetDebugTimeoutLogDeadline(int64_t deadline) override {}
 
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollectionToken> bindings_;

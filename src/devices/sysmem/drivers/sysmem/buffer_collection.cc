@@ -57,6 +57,7 @@ const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::CheckSingleBufferAllocated>,
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::Close>,
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetName>,
+    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetDebugClientInfo>,
 };
 
 BufferCollection::~BufferCollection() {
@@ -257,6 +258,13 @@ zx_status_t BufferCollection::Close() {
 
 zx_status_t BufferCollection::SetName(uint32_t priority, const char* name_data, size_t name_size) {
   parent_->SetName(priority, std::string(name_data, name_size));
+  return ZX_OK;
+}
+
+zx_status_t BufferCollection::SetDebugClientInfo(const char* name_data, size_t name_size,
+                                                 uint64_t id) {
+  debug_name_ = std::string(name_data, name_size);
+  debug_id_ = id;
   return ZX_OK;
 }
 

@@ -46,6 +46,7 @@ class BufferCollection
   zx_status_t CheckSingleBufferAllocated(uint64_t buffer_index);
   zx_status_t Close();
   zx_status_t SetName(uint32_t priority, const char* name_data, size_t name_size);
+  zx_status_t SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id);
 
   //
   // LogicalBufferCollection uses these:
@@ -73,6 +74,9 @@ class BufferCollection
   fbl::RefPtr<LogicalBufferCollection> parent_shared();
 
   bool is_done();
+
+  const std::string& debug_name() const { return debug_name_; }
+  uint64_t debug_id() const { return debug_id_; }
 
  private:
   friend class FidlServer;
@@ -118,6 +122,9 @@ class BufferCollection
       pending_wait_for_buffers_allocated_;
 
   bool is_done_ = false;
+
+  std::string debug_name_;
+  uint64_t debug_id_;
 };
 
 }  // namespace sysmem_driver

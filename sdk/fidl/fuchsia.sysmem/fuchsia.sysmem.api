@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.sysmem/allocator.fidl": "785d6f827a4d7c31e262b87eb7b1b2cf",
-  "fidl/fuchsia.sysmem/collection.fidl": "9d86a14d6be078d268b8a41837ad01de",
+  "fidl/fuchsia.sysmem/collection.fidl": "2b883f9a8542994249ed7e7d3839def2",
   "fidl/fuchsia.sysmem/collections_deprecated.fidl": "185a8df4a5ede47f15aba7cf30276d3b",
   "fidl/fuchsia.sysmem/constraints.fidl": "6132de8586d34bccfbf9db9ac369edbd",
   "fidl/fuchsia.sysmem/driver_connector.fidl": "693ac2de1a21b33d00e79dc474279f36",

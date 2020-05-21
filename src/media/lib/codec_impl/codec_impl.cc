@@ -1690,6 +1690,8 @@ void CodecImpl::SetBufferSettingsCommon(
               break;
           }
           port_settings_[port]->buffer_collection()->SetName(11, buffer_name);
+          port_settings_[port]->buffer_collection()->SetDebugClientInfo(
+              codec_adapter_->CoreCodecGetName(), 0);
 
           port_settings_[port]->buffer_collection()->SetConstraints(
               true, std::move(buffer_collection_constraints));

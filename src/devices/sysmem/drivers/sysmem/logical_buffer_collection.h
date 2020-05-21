@@ -7,6 +7,7 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/zx/channel.h>
 
@@ -32,6 +33,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                                             llcpp::fuchsia::sysmem::ImageFormatConstraints>;
   using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
                                           llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
+  using CollectionMap = std::map<BufferCollection*, std::unique_ptr<BufferCollection>>;
 
   ~LogicalBufferCollection();
 
@@ -70,6 +72,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void OnSetConstraints();
 
   void SetName(uint32_t priority, std::string name);
+  void SetDebugTimeoutLogDeadline(int64_t deadline);
 
   struct AllocationResult {
     const fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection_info = nullptr;
@@ -78,6 +81,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   AllocationResult allocation_result();
 
   Device* parent_device() const { return parent_device_; }
+
+  const CollectionMap& collection_views() const { return collection_views_; }
 
  private:
   LogicalBufferCollection(Device* parent_device);
@@ -150,13 +155,13 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                                                   const fuchsia_sysmem_ImageFormatConstraints* b);
 
   int32_t CompareImageFormatConstraintsByIndex(uint32_t index_a, uint32_t index_b);
+  void CreationTimedOut(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
 
   Device* parent_device_ = nullptr;
 
   using TokenMap = std::map<BufferCollectionToken*, std::unique_ptr<BufferCollectionToken>>;
   TokenMap token_views_;
 
-  using CollectionMap = std::map<BufferCollection*, std::unique_ptr<BufferCollection>>;
   CollectionMap collection_views_;
 
   using ConstraintsList = std::list<Constraints>;
@@ -222,6 +227,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   };
   using ParentVmoMap = std::map<zx_handle_t, std::unique_ptr<TrackedParentVmo>>;
   ParentVmoMap parent_vmos_;
+  async::TaskMethod<LogicalBufferCollection, &LogicalBufferCollection::CreationTimedOut>
+      creation_timer_{this};
 };
 
 }  // namespace sysmem_driver

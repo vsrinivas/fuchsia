@@ -20,6 +20,9 @@ const fuchsia_sysmem_BufferCollectionToken_ops_t BufferCollectionToken::kOps = {
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::Duplicate>,
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::Sync>,
     fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::Close>,
+    fidl::Binder<BufferCollectionToken>::BindMember<&BufferCollectionToken::SetDebugClientInfo>,
+    fidl::Binder<BufferCollectionToken>::BindMember<
+        &BufferCollectionToken::SetDebugTimeoutLogDeadline>,
 };
 
 BufferCollectionToken::~BufferCollectionToken() {
@@ -110,6 +113,18 @@ void BufferCollectionToken::SetBufferCollectionRequest(zx::channel buffer_collec
 
 zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
   return std::move(buffer_collection_request_);
+}
+
+zx_status_t BufferCollectionToken::SetDebugClientInfo(const char* name_data, size_t name_size,
+                                                      uint64_t id) {
+  debug_name_ = std::string(name_data, name_size);
+  debug_id_ = id;
+  return ZX_OK;
+}
+
+zx_status_t BufferCollectionToken::SetDebugTimeoutLogDeadline(int64_t deadline) {
+  parent_->SetDebugTimeoutLogDeadline(deadline);
+  return ZX_OK;
 }
 
 BufferCollectionToken::BufferCollectionToken(Device* parent_device,

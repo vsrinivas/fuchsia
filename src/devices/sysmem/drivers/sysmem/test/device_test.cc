@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 #include <zircon/device/sysmem.h>
@@ -18,8 +19,10 @@
 #include <ddktl/protocol/platform/device.h>
 #include <zxtest/zxtest.h>
 
+#include "../buffer_collection.h"
 #include "../device.h"
 #include "../driver.h"
+#include "../logical_buffer_collection.h"
 
 namespace sysmem_driver {
 namespace {
@@ -39,8 +42,7 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     const device_fragment_t* fragments_list,
+  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev, const device_fragment_t* fragments_list,
                                      size_t fragments_count, uint32_t coresident_device_index) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -155,6 +157,46 @@ TEST_F(FakeDdkSysmem, DummySecureMem) {
 
   // This shouldn't cause a panic due to receiving peer closed.
   securemem_client.reset();
+}
+
+TEST_F(FakeDdkSysmem, NamedClient) {
+  zx::channel allocator_server, allocator_client;
+  ASSERT_OK(zx::channel::create(0u, &allocator_server, &allocator_client));
+  EXPECT_OK(
+      fuchsia_sysmem_DriverConnectorConnect(ddk_.FidlClient().get(), allocator_server.release()));
+
+  zx::channel collection_server, collection_client;
+  ASSERT_OK(zx::channel::create(0u, &collection_server, &collection_client));
+
+  // Queue up something that would be processed on the FIDL thread, so we can try to detect a
+  // use-after-free if the FidlServer outlives the sysmem device.
+  EXPECT_OK(fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator_client.get(),
+                                                                collection_server.release()));
+
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionSetDebugClientInfo(collection_client.get(), "a", 1, 5));
+
+  // Poll until a matching buffer collection is found.
+  while (true) {
+    bool found_collection = false;
+    sync_completion_t completion;
+    async::PostTask(sysmem_.dispatcher(), [&] {
+      if (sysmem_.logical_buffer_collections().size() == 1) {
+        const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
+        if (logical_collection->collection_views().size() == 1) {
+          const auto& collection = logical_collection->collection_views().begin()->second;
+          if (collection->debug_name() == "a") {
+            EXPECT_EQ(5u, collection->debug_id());
+            found_collection = true;
+          }
+        }
+      }
+      sync_completion_signal(&completion);
+    });
+
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    if (found_collection)
+      break;
+  }
 }
 
 }  // namespace
