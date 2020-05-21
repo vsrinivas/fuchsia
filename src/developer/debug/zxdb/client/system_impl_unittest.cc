@@ -8,7 +8,7 @@
 
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/frame.h"
-#include "src/developer/debug/zxdb/client/job_context_impl.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
@@ -151,8 +151,8 @@ TEST_F(SystemImplTest, FilterMatchesAndRematching) {
   MockSystemObserver system_observer(&session());
 
   constexpr uint64_t kJobKoid = 0x1234;
-  JobContextImpl job(&session().system_impl(), false);
-  job.AddJobImplForTesting(kJobKoid, "job-name");
+  Job job(&session(), false);
+  job.AttachForTesting(kJobKoid, "job-name");
   ASSERT_TRUE(sink()->attach_requests().empty());
 
   // There should be only one empty target.
@@ -209,8 +209,8 @@ TEST_F(SystemImplTest, ExistenProcessShouldCreateTarget) {
   MockSystemObserver system_observer(&session());
 
   constexpr uint64_t kJobKoid = 0x1234;
-  JobContextImpl job(&session().system_impl(), false);
-  job.AddJobImplForTesting(kJobKoid, "job-name");
+  Job job(&session(), false);
+  job.AttachForTesting(kJobKoid, "job-name");
   ASSERT_TRUE(sink()->attach_requests().empty());
 
   // Before injecting the process there should not be an event, after it there should be one.

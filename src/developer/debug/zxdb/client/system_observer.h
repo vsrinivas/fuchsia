@@ -13,14 +13,14 @@ class Breakpoint;
 class Filter;
 class Process;
 class Target;
-class JobContext;
+class Job;
 class SymbolServer;
 
 class SystemObserver {
  public:
-  // Called immediately after creation / before destruction of a job context.
-  virtual void DidCreateJobContext(JobContext* job_context) {}
-  virtual void WillDestroyJobContext(JobContext* job_context) {}
+  // Called immediately after creation / before destruction of a job.
+  virtual void DidCreateJob(Job* job) {}
+  virtual void WillDestroyJob(Job* job) {}
 
   // Called immediately after createion of a symbol server.
   virtual void DidCreateSymbolServer(SymbolServer* server) {}

@@ -236,7 +236,7 @@ TEST(CommandUtils, FormatFilter) {
             FormatFilter(&context, f).AsString());
 
   // This will be job 2 since the system should have a default job.
-  JobContext* job = session.system().CreateNewJobContext();
+  Job* job = session.system().CreateNewJob();
   f->SetJob(job);
   f->SetPattern("foo");
   EXPECT_EQ("Filter 1 pattern=foo job=2", FormatFilter(&context, f).AsString());

@@ -8,7 +8,7 @@
 #include <optional>
 
 #include "src/developer/debug/zxdb/client/client_object.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/setting_store.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -38,8 +38,8 @@ class Filter : public ClientObject {
 
   // A null job matches all attached jobs. The System should automatically delete filters explicitly
   // associated with a job when the job is deleted which should prevent this pointer from dangling.
-  void SetJob(JobContext* job);
-  JobContext* job() const { return job_ ? job_->get() : nullptr; }
+  void SetJob(Job* job);
+  Job* job() const { return job_ ? job_->get() : nullptr; }
 
   SettingStore& settings() { return settings_; }
 
@@ -70,7 +70,7 @@ class Filter : public ClientObject {
   //   2) Optional is a nullopt. This filter applies to all jobs.
   //   3) Optional contains a null pointer. This filter was meant to apply to a job that
   //      disappeared.
-  std::optional<fxl::WeakPtr<JobContext>> job_;
+  std::optional<fxl::WeakPtr<Job>> job_;
 };
 
 }  // namespace zxdb

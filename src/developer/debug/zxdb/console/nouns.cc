@@ -192,7 +192,7 @@ Examples
       Removes filter 4.
 )";
 
-void ListFilters(ConsoleContext* context, JobContext* job) {
+void ListFilters(ConsoleContext* context, Job* job) {
   int active_filter_id = context->GetActiveFilterId();
   auto filters = context->session()->system().GetFilters();
 
@@ -216,7 +216,7 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
     row.push_back(filter->pattern());
 
     if (filter->job()) {
-      auto job_id = context->IdForJobContext(filter->job());
+      auto job_id = context->IdForJob(filter->job());
       row.push_back(std::to_string(job_id));
     } else {
       row.push_back("*");
@@ -226,12 +226,12 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
   OutputBuffer out;
   if (rows.empty()) {
     if (job)
-      out.Append(fxl::StringPrintf("No filters for job %d.\n", context->IdForJobContext(job)));
+      out.Append(fxl::StringPrintf("No filters for job %d.\n", context->IdForJob(job)));
     else
       out.Append("No filters.\n");
   } else {
     if (job)
-      out.Append(fxl::StringPrintf("Filters for job %d only:\n", context->IdForJobContext(job)));
+      out.Append(fxl::StringPrintf("Filters for job %d only:\n", context->IdForJob(job)));
     FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
                  ColSpec(Align::kLeft, 0, "pattern"), ColSpec(Align::kRight, 0, "job")},
                 rows, &out);
@@ -253,7 +253,7 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     // Just "filter", this lists available filters. If a job is given, it lists only filters
     // for that job. Otherwise it lists all filters.
     if (cmd.HasNoun(Noun::kJob))
-      ListFilters(context, cmd.job_context());
+      ListFilters(context, cmd.job());
     else
       ListFilters(context, nullptr);
     return true;
@@ -383,43 +383,42 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
 // Jobs --------------------------------------------------------------------------------------------
 
-const char kJobShortHelp[] = "job / j: Select or list job contexts.";
+const char kJobShortHelp[] = "job / j: Select or list jobs.";
 const char kJobHelp[] =
     R"(job [ <id> [ <command> ... ] ]
 
   Alias: "j"
 
-  Selects or lists job contexts. A job context is attached to a Zircon job (a
-  node in the process tree) and watches for processes launched inside of it.
+  Selects or lists jobs. A job is attached to a Zircon job (a node in the
+  process tree) and watches for processes launched inside of it.
   See "help attach" on how to automatically attach to these processes.
 
-  By itself, "job" will list available job contexts with their IDs. New
-  job contexts can be created with the "new" command. This list of debugger
-  contexts is different than the list of jobs on the target system (use
-  "ps" to list all running jobs, and "attach" to attach a context to a
-  running job).
+  By itself, "job" will list available jobs with their IDs. New jobs can be
+  created with the "new" command. This list of debugger contexts is different
+  than the list of jobs on the target system (use "ps" to list all running
+  jobs, and "attach" to attach a context to a running job).
 
-  With an ID following it ("job 3"), selects that job context as the
-  current active job context. This context will apply by default for subsequent
-  commands (like "job attach").
+  With an ID following it ("job 3"), selects that job as the current active
+  job. This context will apply by default for subsequent commands (like
+  "job attach").
 
   With an ID and another command following it ("job 3 attach"), modifies the
-  job context for that command only. This allows attaching, filtering, etc.
+  job for that command only. This allows attaching, filtering, etc.
   regardless of which is the active one.
 
 Examples
 
   j
   job
-      Lists all job contexts.
+      Lists all jobs.
 
   j 2
   job 2
-      Sets job context 2 as the active one.
+      Sets job 2 as the active one.
 
   j 2 r
   job 2 attach
-      Attach to job context 2, regardless of the active one.
+      Attach to job 2, regardless of the active one.
 )";
 
 // Returns true if processing should stop (either a thread command or an error), false to continue
@@ -434,9 +433,9 @@ bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  FX_DCHECK(cmd.job_context());
-  context->SetActiveJobContext(cmd.job_context());
-  Console::get()->Output(FormatJobContext(context, cmd.job_context()));
+  FX_DCHECK(cmd.job());
+  context->SetActiveJob(cmd.job());
+  Console::get()->Output(FormatJob(context, cmd.job()));
   return true;
 }
 

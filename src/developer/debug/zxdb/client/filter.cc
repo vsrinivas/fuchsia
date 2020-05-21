@@ -64,8 +64,8 @@ void Filter::SetPattern(const std::string& pattern) {
   }
 }
 
-void Filter::SetJob(JobContext* job) {
-  std::optional<JobContext*> previous(this->job());
+void Filter::SetJob(Job* job) {
+  std::optional<Job*> previous(this->job());
 
   if (!is_valid()) {
     previous = std::nullopt;

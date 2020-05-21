@@ -330,7 +330,7 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool m
     }
   }
 
-  zxdb::JobContext* default_job = session_->system().GetJobContexts()[0];
+  zxdb::Job* default_job = session_->system().GetJobs()[0];
 
   if (!filter_set.empty() && !main_filter) {
     // We have an extra filter => wait for a main process to be started to start decoding events.

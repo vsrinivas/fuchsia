@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_detach.h"
 
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -133,10 +133,10 @@ Err RunVerbDetach(ConsoleContext* context, const Command& cmd, CommandCallback c
   }
 
   if (cmd.HasNoun(Noun::kJob)) {
-    cmd.job_context()->Detach([callback = std::move(callback)](fxl::WeakPtr<JobContext> job_context,
-                                                               const Err& err) mutable {
-      JobCommandCallback("detach", job_context, true, err, std::move(callback));
-    });
+    cmd.job()->Detach(
+        [callback = std::move(callback)](fxl::WeakPtr<Job> job, const Err& err) mutable {
+          JobCommandCallback("detach", job, true, err, std::move(callback));
+        });
     return Err();
   }
 

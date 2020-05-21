@@ -37,6 +37,7 @@ class RemoteAPITest : public TestWithLoop {
   void SetUp() override;
   void TearDown() override;
 
+  // TODO(dangyi): Use pointer instead of reference to maintain consistency with ClientObject.
   Session& session() { return *session_; }
 
   // Returns the MockRemoteAPI constructed by the default implementation of GetRemoteAPIImpl()

@@ -11,7 +11,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
 #include "src/developer/debug/zxdb/client/filter.h"
-#include "src/developer/debug/zxdb/client/job_context_impl.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -153,7 +153,7 @@ void Download::RunCB(std::shared_ptr<Download> self,
 
 SystemImpl::SystemImpl(Session* session) : System(session), symbols_(this), weak_factory_(this) {
   // Create the default job and target.
-  AddNewJobContext(std::make_unique<JobContextImpl>(this, true));
+  AddNewJob(std::make_unique<Job>(session, true));
   AddNewTarget(std::make_unique<TargetImpl>(this));
 
   // Forward all messages from the symbol index to our observers. It's OK to bind |this| because the
@@ -229,10 +229,10 @@ std::vector<Target*> SystemImpl::GetTargets() const {
   return result;
 }
 
-std::vector<JobContext*> SystemImpl::GetJobContexts() const {
-  std::vector<JobContext*> result;
-  result.reserve(job_contexts_.size());
-  for (const auto& t : job_contexts_)
+std::vector<Job*> SystemImpl::GetJobs() const {
+  std::vector<Job*> result;
+  result.reserve(jobs_.size());
+  for (const auto& t : jobs_)
     result.push_back(t.get());
   return result;
 }
@@ -410,39 +410,38 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
   return CreateNewTargetImpl(static_cast<TargetImpl*>(clone));
 }
 
-JobContext* SystemImpl::CreateNewJobContext() {
-  auto job_context = std::make_unique<JobContextImpl>(this, false);
-  JobContext* to_return = job_context.get();
-  AddNewJobContext(std::move(job_context));
+Job* SystemImpl::CreateNewJob() {
+  auto job = std::make_unique<Job>(session(), false);
+  Job* to_return = job.get();
+  AddNewJob(std::move(job));
   return to_return;
 }
 
-void SystemImpl::DeleteJobContext(JobContext* job_context) {
-  JobContextImpl* impl = static_cast<JobContextImpl*>(job_context);
-  auto found = std::find_if(job_contexts_.begin(), job_contexts_.end(),
-                            [impl](auto& cur) { return impl == cur.get(); });
-  if (found == job_contexts_.end()) {
+void SystemImpl::DeleteJob(Job* job) {
+  auto found =
+      std::find_if(jobs_.begin(), jobs_.end(), [job](auto& cur) { return job == cur.get(); });
+  if (found == jobs_.end()) {
     FX_NOTREACHED();  // Should always be found.
     return;
   }
 
   for (auto& observer : observers())
-    observer.WillDestroyJobContext(job_context);
+    observer.WillDestroyJob(job);
 
-  // Delete all filters that reference this job context. While it might be nice if the filter
+  // Delete all filters that reference this job. While it might be nice if the filter
   // registered for a notification or used a weak pointer for the job, this would imply having a
   // filter enabled/disabled state independent of the other settings which we don't have and don't
   // currently need. Without a disabled state, clearing the job on the filter will make it apply to
   // all jobs which the user does not want.
   std::vector<Filter*> filters_to_remove;
   for (auto& f : filters_) {
-    if (f->job() == job_context)
+    if (f->job() == job)
       filters_to_remove.push_back(f.get());
   }
   for (auto& f : filters_to_remove)
     DeleteFilter(f);
 
-  job_contexts_.erase(found);
+  jobs_.erase(found);
 }
 
 Breakpoint* SystemImpl::CreateNewBreakpoint() {
@@ -581,8 +580,8 @@ void SystemImpl::DidConnect() {
   // Implicitly attach a job to the root. If there was already an implicit job created (from a
   // previous connection) re-use it since there will be settings on it about what processes to
   // attach to that we want to preserve.
-  JobContextImpl* implicit_job = nullptr;
-  for (auto& job : job_contexts_) {
+  Job* implicit_job = nullptr;
+  for (auto& job : jobs_) {
     if (job->is_implicit_root()) {
       implicit_job = job.get();
       break;
@@ -591,17 +590,17 @@ void SystemImpl::DidConnect() {
 
   if (!implicit_job) {
     // No previous one, create a new implicit job.
-    auto new_job = std::make_unique<JobContextImpl>(this, true);
+    auto new_job = std::make_unique<Job>(session(), true);
     implicit_job = new_job.get();
-    AddNewJobContext(std::move(new_job));
+    AddNewJob(std::move(new_job));
   }
-  implicit_job->AttachToSystemRoot([](fxl::WeakPtr<JobContext>, const Err&) {});
+  implicit_job->AttachToSystemRoot([](fxl::WeakPtr<Job>, const Err&) {});
 }
 
 void SystemImpl::DidDisconnect() {
   for (auto& target : targets_)
     target->ImplicitlyDetach();
-  for (auto& job : job_contexts_)
+  for (auto& job : jobs_)
     job->ImplicitlyDetach();
 }
 
@@ -620,12 +619,12 @@ void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {
     observer.DidCreateTarget(for_observers);
 }
 
-void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
-  JobContext* for_observers = job_context.get();
+void SystemImpl::AddNewJob(std::unique_ptr<Job> job) {
+  Job* for_observers = job.get();
 
-  job_contexts_.push_back(std::move(job_context));
+  jobs_.push_back(std::move(job));
   for (auto& observer : observers())
-    observer.DidCreateJobContext(for_observers);
+    observer.DidCreateJob(for_observers);
 }
 
 void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
@@ -679,7 +678,7 @@ void SystemImpl::InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> serv
   AddSymbolServer(symbol_servers_.back().get());
 }
 
-void SystemImpl::OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) {
+void SystemImpl::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) {
   // Go over the targets and see if we find a valid one for each pid.
   for (uint64_t matched_pid : matched_pids) {
     bool found = false;

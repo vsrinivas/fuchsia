@@ -11,7 +11,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/map_setting_store.h"
 #include "src/developer/debug/zxdb/client/setting_store_observer.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
@@ -51,9 +51,9 @@ class System : public ClientObject {
   // default Target, which is not initially attached to anything.
   virtual std::vector<Target*> GetTargets() const = 0;
 
-  // Returns all job contexts currently in this System instance. The returned pointers are managed
+  // Returns all jobs currently in this System instance. The returned pointers are managed
   // by the System object and should not be cached once you return to the message loop.
-  virtual std::vector<JobContext*> GetJobContexts() const = 0;
+  virtual std::vector<Job*> GetJobs() const = 0;
 
   // Returns all non-internal breakpoints currently in this System instance. The returned pointers
   // are managed by the System object and should not be cached once you return to the message loop.
@@ -78,9 +78,9 @@ class System : public ClientObject {
   // target will be cloned into the new one. If clone is null, an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
 
-  // New job contexts will have no attached job.
-  virtual JobContext* CreateNewJobContext() = 0;
-  virtual void DeleteJobContext(JobContext* job_context) = 0;
+  // New jobs will have no attached job.
+  virtual Job* CreateNewJob() = 0;
+  virtual void DeleteJob(Job* job) = 0;
 
   // Creates a new breakpoint. It will have no associated process or location and will be disabled.
   virtual Breakpoint* CreateNewBreakpoint() = 0;

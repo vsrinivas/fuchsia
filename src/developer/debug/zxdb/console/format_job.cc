@@ -17,57 +17,56 @@ namespace zxdb {
 
 namespace {
 
-std::string GetJobContextName(const JobContext* job_context) {
+std::string GetJobName(const Job* job) {
   // When running, use the object name if any.
   std::string name;
-  if (job_context->GetState() == JobContext::State::kAttached)
-    name = job_context->GetJob()->GetName();
+  if (job->state() == Job::State::kAttached)
+    name = job->name();
 
   return name;
 }
 
 }  // namespace
 
-OutputBuffer FormatJobContext(ConsoleContext* context, const JobContext* job_context) {
+OutputBuffer FormatJob(ConsoleContext* context, const Job* job) {
   OutputBuffer out("Job ");
-  out.Append(Syntax::kSpecial, std::to_string(context->IdForJobContext(job_context)));
+  out.Append(Syntax::kSpecial, std::to_string(context->IdForJob(job)));
 
   out.Append(Syntax::kVariable, " state");
-  out.Append(std::string("=") +
-             FormatConsoleString(JobContextStateToString(job_context->GetState())) + " ");
+  out.Append(std::string("=") + FormatConsoleString(JobStateToString(job->state())) + " ");
 
-  if (job_context->GetState() == JobContext::State::kAttached) {
+  if (job->state() == Job::State::kAttached) {
     out.Append(Syntax::kVariable, "koid");
-    out.Append("=" + std::to_string(job_context->GetJob()->GetKoid()) + " ");
+    out.Append("=" + std::to_string(job->koid()) + " ");
   }
 
   out.Append(Syntax::kVariable, "name");
-  out.Append(std::string("=") + FormatConsoleString(GetJobContextName(job_context)));
+  out.Append(std::string("=") + FormatConsoleString(GetJobName(job)));
 
   return out;
 }
 
 OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
-  auto job_contexts = context->session()->system().GetJobContexts();
+  auto jobs = context->session()->system().GetJobs();
 
-  int active_job_context_id = context->GetActiveJobContextId();
+  int active_job_id = context->GetActiveJobId();
 
   // Sort by ID.
-  std::vector<std::pair<int, JobContext*>> id_job_contexts;
-  for (auto& job_context : job_contexts)
-    id_job_contexts.push_back(std::make_pair(context->IdForJobContext(job_context), job_context));
-  std::sort(id_job_contexts.begin(), id_job_contexts.end());
+  std::vector<std::pair<int, Job*>> id_jobs;
+  for (auto& job : jobs)
+    id_jobs.push_back(std::make_pair(context->IdForJob(job), job));
+  std::sort(id_jobs.begin(), id_jobs.end());
 
   std::string indent_str(indent, ' ');
 
   std::vector<std::vector<std::string>> rows;
-  for (const auto& pair : id_job_contexts) {
+  for (const auto& pair : id_jobs) {
     rows.emplace_back();
     std::vector<std::string>& row = rows.back();
 
     // "Current process" marker (or nothing). This pads by the indent to push
     // everything over.
-    if (pair.first == active_job_context_id)
+    if (pair.first == active_job_id)
       row.emplace_back(indent_str + GetCurrentRowMarker());
     else
       row.push_back(indent_str);
@@ -76,14 +75,14 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
     row.push_back(std::to_string(pair.first));
 
     // State and koid (if running).
-    row.push_back(JobContextStateToString(pair.second->GetState()));
-    if (pair.second->GetState() == JobContext::State::kAttached) {
-      row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetJob()->GetKoid()));
+    row.push_back(JobStateToString(pair.second->state()));
+    if (pair.second->state() == Job::State::kAttached) {
+      row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->koid()));
     } else {
       row.emplace_back();
     }
 
-    row.push_back(GetJobContextName(pair.second));
+    row.push_back(GetJobName(pair.second));
   }
 
   OutputBuffer out;
@@ -94,13 +93,13 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
   return out;
 }
 
-const char* JobContextStateToString(JobContext::State state) {
+const char* JobStateToString(Job::State state) {
   switch (state) {
-    case JobContext::State::kNone:
+    case Job::State::kNone:
       return "Not attached";
-    case JobContext::State::kAttaching:
+    case Job::State::kAttaching:
       return "Attaching";
-    case JobContext::State::kAttached:
+    case Job::State::kAttached:
       return "Attached";
   }
   FX_NOTREACHED();

@@ -102,7 +102,7 @@ bool EqualVectors(const std::vector<std::string>& a, const std::vector<std::stri
 TEST_F(FilterTest, SetFilters) {
   Filter* filter = session().system().CreateNewFilter();
 
-  auto contexts = session().system().GetJobContexts();
+  auto contexts = session().system().GetJobs();
   ASSERT_EQ(1u, contexts.size());
   auto context = contexts[0];
   bool job_context_alive;
@@ -112,11 +112,10 @@ TEST_F(FilterTest, SetFilters) {
   ASSERT_EQ(sink().filter_requests().size(), 0u);
 
   constexpr uint64_t kJobKoid = 1234;
-  context->Attach(kJobKoid,
-                  [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
-                    ctx_err = err;
-                    job_context_alive = !!ctx;
-                  });
+  context->Attach(kJobKoid, [&job_context_alive, &ctx_err](fxl::WeakPtr<Job> ctx, const Err& err) {
+    ctx_err = err;
+    job_context_alive = !!ctx;
+  });
   MessageLoop::Current()->RunUntilNoTasks();
   EXPECT_FALSE(ctx_err.has_error());
   EXPECT_TRUE(job_context_alive);
@@ -145,16 +144,16 @@ TEST_F(FilterTest, SetFilters) {
 TEST_F(FilterTest, SetSpecificFilters) {
   Filter* filter = session().system().CreateNewFilter();
 
-  auto contexts = session().system().GetJobContexts();
+  auto contexts = session().system().GetJobs();
   ASSERT_EQ(1u, contexts.size());
   auto context_a = contexts[0];
-  auto context_b = session().system().CreateNewJobContext();
+  auto context_b = session().system().CreateNewJob();
   bool job_context_alive;
   Err ctx_err;
 
   constexpr uint64_t kJobKoid1 = 1234;
   context_a->Attach(kJobKoid1,
-                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<Job> ctx, const Err& err) {
                       ctx_err = err;
                       job_context_alive = !!ctx;
                       /* MessageLoop::Current()->QuitNow(); */
@@ -165,7 +164,7 @@ TEST_F(FilterTest, SetSpecificFilters) {
 
   constexpr uint64_t kJobKoid2 = 5678;
   context_b->Attach(kJobKoid2,
-                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<Job> ctx, const Err& err) {
                       ctx_err = err;
                       job_context_alive = !!ctx;
                     });
@@ -217,10 +216,10 @@ TEST_F(FilterTest, SetExAnteFilters) {
   // There should be no filter requests yet.
   ASSERT_EQ(sink().filter_requests().size(), 0u);
 
-  auto contexts = session().system().GetJobContexts();
+  auto contexts = session().system().GetJobs();
   ASSERT_EQ(1u, contexts.size());
   auto context_a = contexts[0];
-  auto context_b = session().system().CreateNewJobContext();
+  auto context_b = session().system().CreateNewJob();
   bool job_context_alive;
   Err ctx_err;
 
@@ -229,7 +228,7 @@ TEST_F(FilterTest, SetExAnteFilters) {
 
   constexpr uint64_t kJobKoid1 = 1234;
   context_a->Attach(kJobKoid1,
-                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<Job> ctx, const Err& err) {
                       ctx_err = err;
                       job_context_alive = !!ctx;
                     });
@@ -243,7 +242,7 @@ TEST_F(FilterTest, SetExAnteFilters) {
 
   constexpr uint64_t kJobKoid2 = 5678;
   context_b->Attach(kJobKoid2,
-                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<Job> ctx, const Err& err) {
                       ctx_err = err;
                       job_context_alive = !!ctx;
                     });

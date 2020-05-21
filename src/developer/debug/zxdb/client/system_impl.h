@@ -19,7 +19,7 @@ namespace zxdb {
 
 class BreakpointImpl;
 class Download;
-class JobContextImpl;
+class Job;
 class ProcessImpl;
 class SystemSymbolsProxy;
 class TargetImpl;
@@ -42,15 +42,15 @@ class SystemImpl final : public System,
   // System implementation:
   SystemSymbols* GetSymbols() override;
   std::vector<Target*> GetTargets() const override;
-  std::vector<JobContext*> GetJobContexts() const override;
+  std::vector<Job*> GetJobs() const override;
   std::vector<Breakpoint*> GetBreakpoints() const override;
   std::vector<Filter*> GetFilters() const override;
   std::vector<SymbolServer*> GetSymbolServers() const override;
   Process* ProcessFromKoid(uint64_t koid) const override;
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
-  JobContext* CreateNewJobContext() override;
-  void DeleteJobContext(JobContext* job_context) override;
+  Job* CreateNewJob() override;
+  void DeleteJob(Job* job) override;
   Breakpoint* CreateNewBreakpoint() override;
   Breakpoint* CreateNewInternalBreakpoint() override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
@@ -82,7 +82,7 @@ class SystemImpl final : public System,
   void InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server);
 
   // Will attach to any process we are not already attached to.
-  void OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) override;
+  void OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) override;
 
   // Searches through for an open slot (Target without an attached process) or creates another one
   // if none is found. Calls attach on that target, passing |callback| into it.
@@ -90,7 +90,7 @@ class SystemImpl final : public System,
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
-  void AddNewJobContext(std::unique_ptr<JobContextImpl> job_context);
+  void AddNewJob(std::unique_ptr<Job> job);
 
   // Called when we have attempted to download debug symbols and failed. If err is set then
   // something went wrong during the attempt, otherwise the symbols simply weren't available from
@@ -143,7 +143,7 @@ class SystemImpl final : public System,
 
   std::vector<std::unique_ptr<SymbolServer>> symbol_servers_;
   std::vector<std::unique_ptr<TargetImpl>> targets_;
-  std::vector<std::unique_ptr<JobContextImpl>> job_contexts_;
+  std::vector<std::unique_ptr<Job>> jobs_;
 
   // Downloads currently in progress.
   std::map<std::pair<std::string, DebugSymbolFileType>, std::weak_ptr<Download>> downloads_;

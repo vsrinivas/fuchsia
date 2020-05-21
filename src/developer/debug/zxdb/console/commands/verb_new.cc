@@ -82,9 +82,9 @@ Err RunVerbNew(ConsoleContext* context, const Command& cmd) {
       break;
     }
     case Noun::kJob: {
-      JobContext* new_job_context = context->session()->system().CreateNewJobContext();
-      context->SetActiveJobContext(new_job_context);
-      console->Output(FormatJobContext(context, new_job_context));
+      Job* new_job = context->session()->system().CreateNewJob();
+      context->SetActiveJob(new_job);
+      console->Output(FormatJob(context, new_job));
       break;
     }
     case Noun::kProcess: {

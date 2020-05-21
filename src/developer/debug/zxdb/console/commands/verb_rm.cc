@@ -55,9 +55,9 @@ Err RunVerbRm(ConsoleContext* context, const Command& cmd) {
       break;
     }
     case Noun::kJob: {
-      if (cmd.job_context()) {
-        description = FormatJobContext(context, cmd.job_context());
-        context->session()->system().DeleteJobContext(cmd.job_context());
+      if (cmd.job()) {
+        description = FormatJob(context, cmd.job());
+        context->session()->system().DeleteJob(cmd.job());
       } else {
         return Err("No job to remove.");
       }

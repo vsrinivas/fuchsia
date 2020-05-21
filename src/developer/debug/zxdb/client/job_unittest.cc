@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/job_context_impl.h"
+#include "src/developer/debug/zxdb/client/job.h"
 
 #include <gtest/gtest.h>
 
@@ -46,13 +46,12 @@ class JobSink : public RemoteAPI {
   std::vector<uint64_t> pids_;
 
   std::vector<debug_ipc::JobFilterRequest> requests_;
-
 };
 
-class JobContextImplTest : public RemoteAPITest {
+class JobTest : public RemoteAPITest {
  public:
-  JobContextImplTest() = default;
-  ~JobContextImplTest() override = default;
+  JobTest() = default;
+  ~JobTest() override = default;
 
   JobSink* sink() { return sink_; }
 
@@ -70,11 +69,11 @@ class JobContextImplTest : public RemoteAPITest {
 class MockFilterObserver : public FilterObserver {
  public:
   struct FilterMatchResult {
-    JobContext* job;
+    Job* job;
     std::vector<uint64_t> matched_pids;
   };
 
-  void OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) override {
+  void OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) override {
     filter_matches_.push_back({job, matched_pids});
   }
 
@@ -120,8 +119,7 @@ void CompareVectors(std::vector<T> from, std::vector<T> to) {
 
 // Tests -------------------------------------------------------------------------------------------
 
-
-TEST_F(JobContextImplTest, ErrShouldNotSignal) {
+TEST_F(JobTest, ErrShouldNotSignal) {
   MockFilterObserver observer;
   session().AddFilterObserver(&observer);
 
@@ -130,8 +128,8 @@ TEST_F(JobContextImplTest, ErrShouldNotSignal) {
   sink()->set_err(Err(kError));
 
   constexpr uint64_t kJobKoid = 0x1234;
-  JobContextImpl job(&session().system_impl(), false);
-  job.AddJobImplForTesting(kJobKoid, "job-name");
+  Job job(&session(), false);
+  job.AttachForTesting(kJobKoid, "job-name");
 
   // There should be no initial requests.
   ASSERT_TRUE(sink()->requests().empty());
@@ -149,16 +147,15 @@ TEST_F(JobContextImplTest, ErrShouldNotSignal) {
   ASSERT_TRUE(observer.filter_matches().empty());
 }
 
-
-TEST_F(JobContextImplTest, NoZX_OKShouldNotSignal) {
+TEST_F(JobTest, NoZX_OKShouldNotSignal) {
   MockFilterObserver observer;
   session().AddFilterObserver(&observer);
 
   sink()->set_status(debug_ipc::kZxErrInvalidArgs);
 
   constexpr uint64_t kJobKoid = 0x1234;
-  JobContextImpl job(&session().system_impl(), false);
-  job.AddJobImplForTesting(kJobKoid, "job-name");
+  Job job(&session(), false);
+  job.AttachForTesting(kJobKoid, "job-name");
 
   // There should be no initial requests.
   ASSERT_TRUE(sink()->requests().empty());
@@ -176,7 +173,7 @@ TEST_F(JobContextImplTest, NoZX_OKShouldNotSignal) {
   ASSERT_TRUE(observer.filter_matches().empty());
 }
 
-TEST_F(JobContextImplTest, OkResponseShouldSignal) {
+TEST_F(JobTest, OkResponseShouldSignal) {
   MockFilterObserver observer;
   session().AddFilterObserver(&observer);
 
@@ -184,8 +181,8 @@ TEST_F(JobContextImplTest, OkResponseShouldSignal) {
   sink()->set_pids(pids);
 
   constexpr uint64_t kJobKoid = 0x1234;
-  JobContextImpl job(&session().system_impl(), false);
-  job.AddJobImplForTesting(kJobKoid, "job-name");
+  Job job(&session(), false);
+  job.AttachForTesting(kJobKoid, "job-name");
 
   // There should be no initial requests.
   ASSERT_TRUE(sink()->requests().empty());
@@ -229,7 +226,7 @@ TEST_F(JobContextImplTest, OkResponseShouldSignal) {
   }
 }
 
-TEST_F(JobContextImplTest, MultipleJobs) {
+TEST_F(JobTest, MultipleJobs) {
   MockFilterObserver observer;
   session().AddFilterObserver(&observer);
 
@@ -237,8 +234,8 @@ TEST_F(JobContextImplTest, MultipleJobs) {
   sink()->set_pids(pids);
 
   constexpr uint64_t kJobKoid1 = 0x1234;
-  JobContextImpl job1(&session().system_impl(), false);
-  job1.AddJobImplForTesting(kJobKoid1, "job-name1");
+  Job job1(&session(), false);
+  job1.AttachForTesting(kJobKoid1, "job-name1");
 
   ASSERT_TRUE(sink()->requests().empty());
 
@@ -260,8 +257,8 @@ TEST_F(JobContextImplTest, MultipleJobs) {
   }
 
   constexpr uint64_t kJobKoid2 = 0x5678;
-  JobContextImpl job2(&session().system_impl(), false);
-  job2.AddJobImplForTesting(kJobKoid2, "job-name2");
+  Job job2(&session(), false);
+  job2.AttachForTesting(kJobKoid2, "job-name2");
 
   // Sending a with a second job should send a request and a signal.
   job2.SendAndUpdateFilters(filters);

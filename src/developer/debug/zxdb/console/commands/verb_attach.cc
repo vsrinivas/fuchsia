@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 
 #include "src/developer/debug/zxdb/client/filter.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
@@ -90,8 +90,8 @@ Examples
 )";
 
 bool HasAttachedJob(const System* system) {
-  for (const JobContext* job : system->GetJobContexts()) {
-    if (job->GetState() == JobContext::State::kAttached)
+  for (const Job* job : system->GetJobs()) {
+    if (job->state() == Job::State::kAttached)
       return true;
   }
   return false;
@@ -125,7 +125,7 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
   if (cmd.args().size() != 1)
     return Err("Wrong number of arguments to attach.");
 
-  JobContext* job = cmd.HasNoun(Noun::kJob) && cmd.job_context() ? cmd.job_context() : nullptr;
+  Job* job = cmd.HasNoun(Noun::kJob) && cmd.job() ? cmd.job() : nullptr;
   const std::string& pattern = cmd.args()[0];
   if (!job && pattern == Filter::kAllProcessesPattern) {
     // Bad things happen if we try to attach to all processes in the system, try to make this

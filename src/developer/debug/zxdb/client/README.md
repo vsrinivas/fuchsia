@@ -79,14 +79,9 @@ Breakpoints are global and are maintained by the System. You can have process-
 and thread-specific ones but those states are a property of the breakpoint. The
 breakpoint objects themselves are still global.
 
-### JobContext / Job
+### Job
 
-This is like the Target/Process split. The JobContexts is the holder for a job
-that may or may not be attached, and the Job represents an attached job on the
-remote system.
-
-In Zircon you use attach to jobs to watch for process launches. It is like a
-breakpoint for jobs.
+Job is used to watch for process launches in Zircon.
 
 ### Filter
 

@@ -19,17 +19,16 @@ class FormatJobTest : public RemoteAPITest {};
 
 }  // namespace
 
-TEST_F(FormatJobTest, FormatJobContext) {
+TEST_F(FormatJobTest, FormatJob) {
   // There should already be one default job context.
-  session().system().CreateNewJobContext();
-  auto job_contexts = session().system().GetJobContexts();
-  EXPECT_EQ(2u, job_contexts.size());
+  session().system().CreateNewJob();
+  auto jobs = session().system().GetJobs();
+  EXPECT_EQ(2u, jobs.size());
 
   ConsoleContext context(&session());
 
   // Empty job context.
-  EXPECT_EQ("Job 1 state=\"Not attached\" name=\"\"",
-            FormatJobContext(&context, job_contexts[0]).AsString());
+  EXPECT_EQ("Job 1 state=\"Not attached\" name=\"\"", FormatJob(&context, jobs[0]).AsString());
 }
 
 }  // namespace zxdb

@@ -168,8 +168,8 @@ Err VerifySystemHasRunningProcess(System* system);
 // error.
 void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
                             const Err& err, CommandCallback callback);
-void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
-                        bool display_message_on_success, const Err& err, CommandCallback callback);
+void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_message_on_success,
+                        const Err& err, CommandCallback callback);
 
 }  // namespace zxdb
 

@@ -142,10 +142,10 @@ OutputBuffer GetJobStatus(ConsoleContext* context) {
   OutputBuffer result;
   result.Append(Syntax::kHeading, "Jobs\n");
 
-  auto jobs = context->session()->system().GetJobContexts();
+  auto jobs = context->session()->system().GetJobs();
   int attached_count = 0;
   for (const auto& j : jobs) {
-    if (j->GetState() == JobContext::State::kAttached)
+    if (j->state() == Job::State::kAttached)
       attached_count++;
   }
 

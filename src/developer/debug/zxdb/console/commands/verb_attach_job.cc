@@ -6,7 +6,6 @@
 
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -111,16 +110,13 @@ Examples
       attaches it to job 5678.
 )";
 
-bool IsJobAttachable(JobContext* job_context) {
-  return job_context->GetState() == JobContext::State::kNone;
-}
+bool IsJobAttachable(Job* job) { return job->state() == Job::State::kNone; }
 
 // Searches for an existing attached job weith the given koid.
-JobContext* GetJobAlreadyAttached(System* system, uint64_t job_koid) {
-  for (JobContext* job_context : system->GetJobContexts()) {
-    if (job_context->GetState() == JobContext::State::kAttached &&
-        job_context->GetJob()->GetKoid() == job_koid)
-      return job_context;
+Job* GetJobAlreadyAttached(System* system, uint64_t job_koid) {
+  for (Job* job : system->GetJobs()) {
+    if (job->state() == Job::State::kAttached && job->koid() == job_koid)
+      return job;
   }
   return nullptr;
 }
@@ -150,49 +146,48 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
     first_filter_index = 1;  // Filters start after the job koid.
   }
 
-  // Figure out which job context to attach.
-  JobContext* job_context = nullptr;
+  // Figure out which job to attach.
+  Job* job = nullptr;
   if (int job_index = cmd.GetNounIndex(Noun::kJob); job_index != Command::kNoIndex) {
     // User gave an explicit job to attach, it must be attachable.
-    if (!IsJobAttachable(cmd.job_context()))
+    if (!IsJobAttachable(cmd.job()))
       return Err("The requested job is already attached.");
-    job_context = cmd.job_context();
+    job = cmd.job();
   } else if (attach_to_what == kAttachKoid &&
-             (job_context = GetJobAlreadyAttached(&context->session()->system(), attach_koid))) {
+             (job = GetJobAlreadyAttached(&context->session()->system(), attach_koid))) {
     // The debugger is already attached to the requested koid, re-use it.
-  } else if (IsJobAttachable(cmd.job_context())) {
-    // Use the current job context.
-    job_context = cmd.job_context();
+  } else if (IsJobAttachable(cmd.job())) {
+    // Use the current job.
+    job = cmd.job();
   } else {
-    // Create a new job context and set it as the current one.
-    job_context = context->session()->system().CreateNewJobContext();
-    context->SetActiveJobContext(job_context);
+    // Create a new job and set it as the current one.
+    job = context->session()->system().CreateNewJob();
+    context->SetActiveJob(job);
   }
 
-  auto cb = [callback = std::move(callback)](fxl::WeakPtr<JobContext> job_context,
-                                             const Err& err) mutable {
-    JobCommandCallback("attach-job", job_context, true, err, std::move(callback));
+  auto cb = [callback = std::move(callback)](fxl::WeakPtr<Job> job, const Err& err) mutable {
+    JobCommandCallback("attach-job", job, true, err, std::move(callback));
   };
 
   switch (attach_to_what) {
     case kAttachComponentRoot:
-      job_context->AttachToComponentRoot(std::move(cb));
+      job->AttachToComponentRoot(std::move(cb));
       break;
     case kAttachSystemRoot:
-      job_context->AttachToSystemRoot(std::move(cb));
+      job->AttachToSystemRoot(std::move(cb));
       break;
     case kAttachKoid:
       // Only attach if it's not already attached. It will be attached already if an existing job
       // attachment was found with the requested koid.
-      if (job_context->GetState() == JobContext::State::kNone)
-        job_context->Attach(attach_koid, std::move(cb));
+      if (job->state() == Job::State::kNone)
+        job->Attach(attach_koid, std::move(cb));
       break;
   }
 
   // Create filters attached to this job if requested.
   for (size_t i = first_filter_index; i < cmd.args().size(); i++) {
     Filter* filter = context->session()->system().CreateNewFilter();
-    filter->SetJob(job_context);
+    filter->SetJob(job);
     filter->SetPattern(cmd.args()[i]);
 
     context->SetActiveFilter(filter);

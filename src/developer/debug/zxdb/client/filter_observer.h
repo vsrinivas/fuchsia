@@ -10,7 +10,7 @@
 namespace zxdb {
 
 class Filter;
-class JobContext;
+class Job;
 
 class FilterObserver {
  public:
@@ -21,14 +21,14 @@ class FilterObserver {
   // unless it was invalid. It is an optional containing null if the filter used to match all jobs
   // and equal to the current job if the job hasn't changed. It is a std::nullopt if the filter used
   // to be invalid.
-  virtual void DidChangeFilter(Filter* filter, std::optional<JobContext*> previous_job) {}
+  virtual void DidChangeFilter(Filter* filter, std::optional<Job*> previous_job) {}
 
   // Called when a filter has been deactivated and is about to be destroyed.
   virtual void WillDestroyFilter(Filter* filter) {}
 
   // Called when a filter request comes back with a the list of processes currently running in the
   // agent that match the filter request.
-  virtual void OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) {}
+  virtual void OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) {}
 };
 
 }  // namespace zxdb

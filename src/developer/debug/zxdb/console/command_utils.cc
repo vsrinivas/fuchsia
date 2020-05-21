@@ -17,7 +17,6 @@
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -439,7 +438,7 @@ OutputBuffer FormatFilter(const ConsoleContext* context, const Filter* filter) {
   out.Append(Syntax::kVariable, "job");
   out.Append("=");
   if (filter->job()) {
-    out.Append(std::to_string(context->IdForJobContext(filter->job())));
+    out.Append(std::to_string(context->IdForJob(filter->job())));
   } else {
     out.Append("*");
     out.Append(Syntax::kComment, " (all attached jobs)");
@@ -670,8 +669,8 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on
     callback(err);
 }
 
-void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
-                        bool display_message_on_success, const Err& err, CommandCallback callback) {
+void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_message_on_success,
+                        const Err& err, CommandCallback callback) {
   if (!display_message_on_success && !err.has_error())
     return;
 
@@ -679,13 +678,13 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
 
   OutputBuffer out;
   if (err.has_error()) {
-    if (job_context) {
-      out.Append(fxl::StringPrintf("Job %d %s failed.\n",
-                                   console->context().IdForJobContext(job_context.get()), verb));
+    if (job) {
+      out.Append(
+          fxl::StringPrintf("Job %d %s failed.\n", console->context().IdForJob(job.get()), verb));
     }
     out.Append(err);
-  } else if (job_context) {
-    out.Append(FormatJobContext(&console->context(), job_context.get()));
+  } else if (job) {
+    out.Append(FormatJob(&console->context(), job.get()));
   }
 
   console->Output(out);
