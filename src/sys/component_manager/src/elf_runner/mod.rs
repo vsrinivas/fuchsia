@@ -314,16 +314,17 @@ impl ElfRunner {
             ))
             .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
 
-        // TODO(fxb/39947): The hermetic-decompressor library used in fshost requires the ability
-        // to directly create new processes, and this policy breaks that.
-        if resolved_url != "fuchsia-boot:///#meta/fshost.cm" {
-            component_job
-                .set_policy(zx::JobPolicy::Basic(
-                    zx::JobPolicyOption::Absolute,
-                    vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
-                ))
-                .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
-        }
+        // Prevent direct creation of processes.
+        //
+        // The kernel-level mechanisms for creating processes are very low-level. We require that
+        // all processes be created via fuchsia.process.Launcher in order for the platform to
+        // maintain change-control over how processes are created.
+        component_job
+            .set_policy(zx::JobPolicy::Basic(
+                zx::JobPolicyOption::Absolute,
+                vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
+            ))
+            .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
 
         let job_dup = component_job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|e| {
             ElfRunnerError::component_job_duplication_error(resolved_url.clone(), e)
