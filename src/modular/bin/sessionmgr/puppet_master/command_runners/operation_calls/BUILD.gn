@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("operation_calls") {
-  public_deps = [
-    ":add_mod_call",
-  ]
+  public_deps = [ ":add_mod_call" ]
 }
 
 source_set("add_mod_call") {

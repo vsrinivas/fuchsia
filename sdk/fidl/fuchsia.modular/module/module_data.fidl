@@ -14,8 +14,7 @@ table ModuleData {
     /// instance calling StartModule().
     2: vector<string> module_path;
 
-    /// Contains the mapping of Mod parameter name to Link instances for this mod.
-    3: ModuleParameterMap parameter_map;
+    3: reserved;
 
     /// The way in which this Module instance was first started in the story,
     /// either by request from another Module instance (INTERNAL) or by request
@@ -61,16 +60,4 @@ enum ModuleSource {
     /// Module that was added to the story from outside the story using
     /// PuppetMaster.
     EXTERNAL = 1;
-};
-
-struct ModuleParameterMap {
-    vector<ModuleParameterMapEntry> entries;
-};
-
-struct ModuleParameterMapEntry {
-    /// A null [name] is allowed for backwards compatibility with default links.
-    /// TODO(thatguy); When no modules use null link names any more, make this
-    /// required.
-    string? name;
-    LinkPath link_path;
 };

@@ -39,7 +39,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
 
   // Write module data
   void WriteModuleData(FlowToken flow) {
-    out_module_data_.mutable_parameter_map();  // set to empty
     out_module_data_.set_module_url(add_mod_params_.intent.handler.value());
     out_module_data_.set_module_path(add_mod_params_.parent_mod_path);
     out_module_data_.mutable_module_path()->push_back(add_mod_params_.mod_name);

@@ -102,7 +102,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
   EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
   EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
-  EXPECT_EQ(0u, module_data->parameter_map().entries.size());
 }
 
 // Explicitly leave surface_parent_mod_name as null when providing the Intent.
@@ -129,7 +128,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
   EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
   EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
-  EXPECT_EQ(0u, module_data->parameter_map().entries.size());
 }
 
 TEST_F(AddModCommandRunnerTest, ExecuteNoModulesFound) {
