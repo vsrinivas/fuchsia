@@ -59,14 +59,6 @@ constexpr size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 // userboot-code.h gives details about the image's size and layout.
 extern "C" const char userboot_image[];
 
-#if DECOMPRESS_ZBI
-#include "decompress_zbi-code.h"
-extern "C" const char decompress_zbi_image[];
-#else
-constexpr const char* decompress_zbi_image = nullptr;
-constexpr size_t DECOMPRESS_ZBI_DATA_END = 0;
-#endif
-
 KCOUNTER(timeline_userboot, "boot.timeline.userboot")
 KCOUNTER(init_time, "init.userboot.time.msec")
 
@@ -188,14 +180,6 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
 }
 
 void bootstrap_vmos(Handle** handles) {
-  {
-    KernelHandle<VmObjectDispatcher> vmo_kernel_handle;
-    EmbeddedVmo decompress_zbi("lib/hermetic/decompress-zbi.so", decompress_zbi_image,
-                               DECOMPRESS_ZBI_DATA_END, &vmo_kernel_handle);
-    handles[kUserbootDecompressor] =
-        Handle::Make(ktl::move(vmo_kernel_handle), decompress_zbi.vmo_rights()).release();
-  }
-
   size_t rsize;
   void* rbase = platform_get_ramdisk(&rsize);
   if (rbase) {

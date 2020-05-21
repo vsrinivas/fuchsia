@@ -100,7 +100,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/elfload",
       "$zx/system/ulib/fidl",
-      "$zx/system/ulib/hermetic-decompressor",
       "$zx/system/ulib/ldmsg",
       "$zx/system/ulib/processargs",
       "$zx/system/ulib/zircon",
@@ -110,19 +109,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/third_party/ulib/musl/src/string:stdmem",
       "$zx/third_party/ulib/zstd:zstd-standalone",
     ]
-
-    if (zbi_compression_algorithm == "zstd") {
-      defines += [ "ZBI_COMPRESSION_MAGIC=kZstdMagic" ]
-    } else {
-      assert(zbi_compression_algorithm == "none",
-             "bad zbi_compression_algorithm=\"$zbi_compression_algorithm\"")
-    }
-
-    metadata = {
-      # Suppress the data_deps from hermetic-decompressor.
-      # Those represent the default engine service, which userboot replaces.
-      manifest_barrier = []
-    }
   }
 
   # This generated header lists all the ABI symbols in the vDSO with their

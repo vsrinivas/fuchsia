@@ -6,7 +6,6 @@
 
 #include "bootdata.h"
 
-#include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
@@ -18,47 +17,10 @@
 
 namespace {
 constexpr const char kBootfsVmoName[] = "uncompressed-bootfs";
-
-#ifdef ZBI_COMPRESSION_MAGIC
-
-class EngineService {
- public:
-  using Magic = HermeticDecompressorEngineService::Magic;
-  static constexpr Magic kMagic = HermeticDecompressorEngineService::ZBI_COMPRESSION_MAGIC;
-
-  EngineService(zx_handle_t job, zx_handle_t engine, zx_handle_t vdso)
-      : job_(job), engine_(engine), vdso_(vdso) {}
-
-  auto job() const { return zx::unowned_job{*job_}; }
-
-  zx_status_t GetEngine(Magic magic, zx::unowned_vmo* vmo) {
-    if (magic == kMagic) {
-      *vmo = zx::unowned_vmo{engine_};
-      return ZX_OK;
-    }
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  zx_status_t GetVdso(zx::unowned_vmo* vmo) {
-    *vmo = zx::unowned_vmo{vdso_->get()};
-    return ZX_OK;
-  }
-
- private:
-  zx::unowned_job job_;
-  zx::unowned_vmo engine_;
-  zx::unowned_vmo vdso_;
-};
-
-using Decompressor = HermeticDecompressorWithEngineService<EngineService>;
-
-#endif  // ZBI_COMPRESSION_MAGIC
-
 }  // namespace
 
 zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handle_t job,
-                                zx_handle_t engine_vmo, zx_handle_t vdso_vmo,
-                                zx_handle_t bootdata_vmo) {
+                                zx_handle_t vdso_vmo, zx_handle_t bootdata_vmo) {
   size_t off = 0;
   for (;;) {
     zbi_header_t bootdata;
@@ -81,7 +43,6 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
       case ZBI_TYPE_STORAGE_BOOTFS: {
         zx::vmo bootfs_vmo;
         if (bootdata.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
-#ifdef ZBI_COMPRESSION_MAGIC
           status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
           check(log, status, "cannot create BOOTFS VMO (%u bytes)", bootdata.extra);
           bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1);
@@ -89,9 +50,6 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
                                   off + sizeof(bootdata), bootdata.length, bootfs_vmo, 0,
                                   bootdata.extra);
           check(log, status, "failed to decompress BOOTFS");
-#else
-          fail(log, "userboot built without BOOTFS decompressor!");
-#endif
         } else {
           off += sizeof(bootdata);
           if (off % ZX_PAGE_SIZE == 0) {

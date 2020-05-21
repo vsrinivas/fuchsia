@@ -188,8 +188,7 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
   // We need it to load devmgr and libc from.
   // Later bootfs sections will be processed by devmgr.
   zx::vmo bootfs_vmo{bootdata_get_bootfs(log.get(), vmar_self.get(), handles[kRootJob],
-                                         handles[kUserbootDecompressor], handles[kFirstVdso],
-                                         handles[kZbi])};
+                                         handles[kFirstVdso], handles[kZbi])};
 
   // Map in the bootfs so we can look for files in it.
   struct bootfs bootfs;

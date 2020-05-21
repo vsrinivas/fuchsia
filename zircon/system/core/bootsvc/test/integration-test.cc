@@ -132,7 +132,6 @@ TEST(BootsvcIntegrationTest, BootfsExecutability) {
       "/boot/pkg/dummy_pkg/lib/dummy.so",
       "/boot/driver/fragment.so",
       "/boot/lib/dummy.so",
-      "/boot/kernel/lib/hermetic/decompress-zbi.so",
       "/boot/kernel/vdso/full",
   };
   for (const char* file : kExecutableFiles) {
