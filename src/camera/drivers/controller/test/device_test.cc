@@ -11,7 +11,6 @@
 #include <fbl/auto_call.h>
 
 #include "constants.h"
-#include "fake_buttons.h"
 #include "fake_sysmem.h"
 #include "src/camera/drivers/controller/controller-device.h"
 #include "src/camera/drivers/controller/controller-protocol.h"
@@ -23,18 +22,17 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     ddk_ = std::make_unique<fake_ddk::Bind>();
-    static constexpr const uint32_t kNumSubDevices = 2;
+    static constexpr const uint32_t kNumSubDevices = 1;
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumSubDevices],
                                                   kNumSubDevices);
     protocols[0] = fake_sysmem_.ProtocolEntry();
-    protocols[1] = fake_buttons_.ProtocolEntry();
     ddk_->SetProtocols(std::move(protocols));
     zx::event event;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
 
     controller_device_ = std::make_unique<ControllerDevice>(
         fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent,
-        fake_ddk::kFakeParent, fake_ddk::kFakeParent, std::move(event));
+        fake_ddk::kFakeParent, std::move(event));
   }
 
   void TearDown() override {
@@ -95,7 +93,6 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
   fuchsia::hardware::camera::DevicePtr camera_protocol_;
   fuchsia::camera2::hal::ControllerPtr controller_protocol_;
   FakeSysmem fake_sysmem_;
-  FakeButtons fake_buttons_;
 };
 
 // Verifies controller can start up and shut down.
@@ -255,12 +252,6 @@ TEST_F(ControllerDeviceTest, CreateStreamInvalidArgs) {
   // Not enough buffers.
   controller_protocol_->CreateStream(0, 0, 0, std::move(buffer_collection), stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
-}
-
-// Verifies sanity of returned configs.
-TEST_F(ControllerDeviceTest, RegisterMicButton) {
-  ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
-  EXPECT_EQ(ZX_OK, controller_device_->RegisterMicButtonNotification());
 }
 
 }  // namespace

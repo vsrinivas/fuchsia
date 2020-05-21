@@ -271,9 +271,6 @@ static const zx_bind_inst_t ge2d_match[] = {
 static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
-static const zx_bind_inst_t buttons_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BUTTONS),
-};
 static const device_fragment_part_t isp_fragment[] = {
     {countof(root_match), root_match},
     {countof(isp_match), isp_match},
@@ -290,14 +287,11 @@ static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-static const device_fragment_part_t buttons_fragment[] = {
-    {countof(root_match), root_match},
-    {countof(buttons_match), buttons_match},
-};
 static const device_fragment_t camera_controller_fragments[] = {
-    {countof(isp_fragment), isp_fragment},         {countof(gdc_fragment), gdc_fragment},
-    {countof(gdc_fragment), ge2d_fragment},        {countof(sysmem_fragment), sysmem_fragment},
-    {countof(buttons_fragment), buttons_fragment},
+    {countof(isp_fragment), isp_fragment},
+    {countof(gdc_fragment), gdc_fragment},
+    {countof(gdc_fragment), ge2d_fragment},
+    {countof(sysmem_fragment), sysmem_fragment},
 };
 
 constexpr pbus_mmio_t mipi_mmios[] = {

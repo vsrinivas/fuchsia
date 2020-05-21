@@ -54,7 +54,6 @@ source_set("source") {
     "stream_protocol.cc",
   ]
   public_deps = [
-    "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.camerahwaccel",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gdc",
@@ -62,7 +61,6 @@ source_set("source") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/fidl/fuchsia.buttons",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.hardware.camera",

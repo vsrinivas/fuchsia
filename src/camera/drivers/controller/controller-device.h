@@ -11,7 +11,6 @@
 #include <threads.h>
 #endif
 
-#include <fuchsia/buttons/cpp/fidl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -24,7 +23,6 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/buttons.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gdc.h>
@@ -46,13 +44,11 @@ class ControllerDevice : public ControllerDeviceType,
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc,
-                            zx_device_t* ge2d, zx_device_t* sysmem, zx_device_t* buttons,
-                            zx::event event)
+                            zx_device_t* ge2d, zx_device_t* sysmem, zx::event event)
       : ControllerDeviceType(parent),
         isp_(isp),
         gdc_(gdc),
         ge2d_(ge2d),
-        buttons_(buttons),
         shutdown_event_(std::move(event)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         sysmem_(sysmem) {}
@@ -70,14 +66,6 @@ class ControllerDevice : public ControllerDeviceType,
   // Used for tests.
   // Starts the async loop thread which is owned by the controller.
   zx_status_t StartThread();
-
-  // Registers with the buttons driver to provide notifications whenever the state of
-  // mic button changes.
-  // Camera Controller needs to pass down the event of HW mic mute (which causes sensor
-  // to power down) to entire camera stack.  This is needed to ensure that when the mic
-  // is unmuted, the sensor is re-initialized back to known settings and streaming is resumed
-  // if it was on-going when it was muted.
-  zx_status_t RegisterMicButtonNotification();
 
  private:
   void ShutDown();
@@ -98,8 +86,6 @@ class ControllerDevice : public ControllerDeviceType,
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
   ddk::Ge2dProtocolClient ge2d_;
-  ddk::ButtonsProtocolClient buttons_;
-  fuchsia::buttons::ButtonsPtr buttons_client_;
   async::Wait shutdown_waiter_;
   zx::event shutdown_event_;
   async::Loop loop_;

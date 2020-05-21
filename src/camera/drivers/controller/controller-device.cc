@@ -26,7 +26,6 @@ enum {
   FRAGMENT_GDC,
   FRAGMENT_GE2D,
   FRAGMENT_SYSMEM,
-  FRAGMENT_BUTTONS,
   FRAGMENT_COUNT,
 };
 }  // namespace
@@ -94,47 +93,6 @@ zx_status_t ControllerDevice::StartThread() {
   return loop_.StartThread("camera-controller-loop", &loop_thread_);
 }
 
-zx_status_t ControllerDevice::RegisterMicButtonNotification() {
-  auto status = buttons_.GetChannel(buttons_client_.NewRequest(loop_.dispatcher()).TakeChannel());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  buttons_client_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGST(ERROR, kTag, status) << "Buttons protocol disconnected";
-    controller_ = nullptr;
-  });
-
-  zx_status_t register_status = ZX_ERR_BAD_STATE;
-  sync_completion_t completion;
-
-  buttons_client_->RegisterNotify(
-      (1u << static_cast<uint8_t>(fuchsia::buttons::ButtonType::MUTE)),
-      [&register_status, &completion](fuchsia::buttons::Buttons_RegisterNotify_Result status) {
-        register_status = status.err();
-        sync_completion_signal(&completion);
-      });
-
-  buttons_client_.events().OnNotify = [this](fuchsia::buttons::ButtonType type, bool pressed) {
-    if (controller_) {
-      ZX_ASSERT_MSG(type == fuchsia::buttons::ButtonType::MUTE,
-                    "Unknown button type event notification");
-      if (pressed) {
-        controller_->DisableStreaming();
-        return;
-      }
-      controller_->EnableStreaming();
-    }
-  };
-
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  if (register_status != ZX_OK) {
-    FX_LOGST(ERROR, kTag) << "Error registering for mic button notification " << register_status;
-    return register_status;
-  }
-  return ZX_OK;
-}
-
 // static
 zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<ControllerDevice>* out) {
   ddk::CompositeProtocolClient composite(parent);
@@ -175,11 +133,6 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::ButtonsProtocolClient buttons(fragments[FRAGMENT_BUTTONS]);
-  if (!buttons.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_BUTTONS not available", __func__);
-    return ZX_ERR_NO_RESOURCES;
-  }
   zx::event event;
   auto status = zx::event::create(0, &event);
   if (status != ZX_OK) {
@@ -189,17 +142,11 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
 
   auto controller = std::make_unique<ControllerDevice>(
       parent, fragments[FRAGMENT_ISP], fragments[FRAGMENT_GDC], fragments[FRAGMENT_GE2D],
-      fragments[FRAGMENT_SYSMEM], fragments[FRAGMENT_BUTTONS], std::move(event));
+      fragments[FRAGMENT_SYSMEM], std::move(event));
 
   status = controller->StartThread();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not start loop thread", __func__);
-    return status;
-  }
-
-  status = controller->RegisterMicButtonNotification();
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failed to register for mic button notification";
     return status;
   }
 
