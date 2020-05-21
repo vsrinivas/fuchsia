@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/syslog/logger.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
@@ -18,6 +17,7 @@ namespace fake_ddk {
 
 zx_device_t* kFakeDevice = reinterpret_cast<zx_device_t*>(0x55);
 zx_device_t* kFakeParent = reinterpret_cast<zx_device_t*>(0xaa);
+fx_log_severity_t kMinLogSeverity = FX_LOG_INFO;
 size_t kFakeFWSize = 0x1000;
 
 zx_device_t* FakeDevice() {
@@ -447,7 +447,7 @@ zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
 
 extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
                                                      fx_log_severity_t flag) {
-  return true;
+  return flag >= fake_ddk::kMinLogSeverity;
 }
 
 extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,

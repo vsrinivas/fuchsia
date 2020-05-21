@@ -6,6 +6,7 @@
 #define SRC_DEVICES_TESTING_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FAKE_DDK_H_
 
 #include <lib/sync/completion.h>
+#include <lib/syslog/logger.h>
 
 #include <optional>
 
@@ -36,6 +37,9 @@ extern zx_device_t* kFakeParent;
 // Return above instances, after first checking that Bind() instance was initialized.
 extern zx_device_t* FakeDevice();
 extern zx_device_t* FakeParent();
+
+// The minimum log severity for drivers using the fake DDK.
+extern fx_log_severity_t kMinLogSeverity;
 
 typedef void(UnbindOp)(void* ctx);
 
