@@ -15,6 +15,26 @@ async fn input_device_add() -> Result<()> {
 
 #[fasync::run_singlethreaded]
 #[test]
+async fn input_device_initialize_gain() -> Result<()> {
+    let env = Environment::new()?;
+
+    let device = InputProxy::connect(&env)?;
+    device.add()?;
+
+    let (mute, _, gain_db) = device
+        .take_event_stream()
+        .try_filter_map(move |e| future::ready(Ok(InputEvent::into_on_set_gain(e))))
+        .try_next()
+        .await?
+        .expect("Waiting for a set gain event");
+    assert!(!mute);
+    assert_eq!(gain_db, 0.0);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+#[test]
 async fn input_device_remove() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
         assets.device.remove()?;

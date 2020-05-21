@@ -82,10 +82,9 @@ void AudioInput::OnDriverInfoFetched() {
   TRACE_DURATION("audio", "AudioInput::OnDriverInfoFetched");
   state_ = State::Idle;
 
-  uint32_t pref_fps = ProcessConfig::instance()
-                          .device_config()
-                          .input_device_profile(driver()->persistent_unique_id())
-                          .rate();
+  auto input_device_profile = ProcessConfig::instance().device_config().input_device_profile(
+      driver()->persistent_unique_id());
+  uint32_t pref_fps = input_device_profile.rate();
   uint32_t pref_chan = 1;
   fuchsia::media::AudioSampleFormat pref_fmt = fuchsia::media::AudioSampleFormat::SIGNED_16;
 
@@ -109,6 +108,10 @@ void AudioInput::OnDriverInfoFetched() {
     return;
   }
   auto& selected_format = format_result.value();
+
+  float driver_gain_db = input_device_profile.driver_gain_db();
+  AudioDeviceSettings::GainState gain_state = {.gain_db = driver_gain_db, .muted = false};
+  driver()->SetGain(gain_state, AUDIO_SGF_GAIN_VALID | AUDIO_SGF_MUTE_VALID);
 
   const auto& hw_gain = driver()->hw_gain_state();
   if (hw_gain.min_gain > hw_gain.max_gain) {
