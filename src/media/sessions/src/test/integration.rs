@@ -821,7 +821,11 @@ test!(player_paused_before_interruption_is_not_resumed_by_its_end, || async {
     Ok(())
 });
 
-test!(player_paused_during_interruption_is_not_resumed_by_its_end, || async {
+// TODO(52668) Re-enable when publish/discover race is fixed
+#[ignore]
+#[fasync::run_singlethreaded(test)]
+async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result<()> {
+    *LOGGER;
     let mut service = TestService::new()?;
     let mut player = TestPlayer::new(&service).await?;
     let (session, session_server) = create_proxy()?;
@@ -855,7 +859,7 @@ test!(player_paused_during_interruption_is_not_resumed_by_its_end, || async {
     assert!(next.is_none());
 
     Ok(())
-});
+}
 
 test!(active_session_initializes_clients_without_player, || async {
     let service = TestService::new()?;
