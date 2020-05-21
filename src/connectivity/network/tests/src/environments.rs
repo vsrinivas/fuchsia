@@ -5,12 +5,14 @@
 use crate::Result;
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack as net_stack;
-use fidl_fuchsia_net_stack_ext::FidlReturn;
+use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_environment as netemul_environment;
 use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netemul_sandbox as netemul_sandbox;
 use fuchsia_zircon as zx;
-use std::convert::TryInto;
+use futures::{FutureExt as _, TryFutureExt as _};
+use std::convert::TryInto as _;
+use std::os::unix::io::{FromRawFd as _, IntoRawFd as _};
 
 /// Helper definition to help type system identify `None` as `IntoIterator`
 /// where `Item: Into<netemul_environment::LaunchService`.
@@ -457,6 +459,36 @@ impl<'a> TestEnvironment<'a> {
         let () = interface.enable_interface().await.context("failed to enable interface")?;
         Ok(interface)
     }
+
+    /// Creates a [`socket2::Socket`] backed by the implementation of
+    /// `fuchsia.posix.socket/Provider` in this environment.
+    pub async fn socket(
+        &self,
+        domain: socket2::Domain,
+        type_: socket2::Type,
+        protocol: Option<socket2::Protocol>,
+    ) -> Result<socket2::Socket> {
+        let socket_provider = self
+            .connect_to_service::<fidl_fuchsia_posix_socket::ProviderMarker>()
+            .context("failed to connect to socket provider")?;
+        let sock = socket_provider
+            .socket2(
+                libc::c_int::from(domain).try_into().context("invalid domain")?,
+                libc::c_int::from(type_).try_into().context("invalid type")?,
+                protocol
+                    .map(libc::c_int::from)
+                    .unwrap_or(0)
+                    .try_into()
+                    .context("invalid protocol")?,
+            )
+            .await
+            .context("failed to call socket")?
+            .map_err(std::io::Error::from_raw_os_error)
+            .context("failed to create socket")?;
+
+        let fd = fdio::create_fd(sock.into()).context("failed to create raw fd")?.into_raw_fd();
+        Ok(unsafe { socket2::Socket::from_raw_fd(fd) })
+    }
 }
 
 /// A virtual Network.
@@ -688,5 +720,53 @@ impl<'a> TestInterface<'a> {
             .context("failed to start dhcp client")?;
 
         Ok(())
+    }
+}
+
+/// Trait describing UDP sockets that can be bound in a testing environment.
+pub trait EnvironmentUdpSocket: Sized {
+    /// Creates a UDP socket in `env` bound to `addr`.
+    fn bind_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
+}
+
+impl EnvironmentUdpSocket for std::net::UdpSocket {
+    fn bind_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
+        async move {
+            let domain = match &addr {
+                std::net::SocketAddr::V4(_) => socket2::Domain::ipv4(),
+                std::net::SocketAddr::V6(_) => socket2::Domain::ipv6(),
+            };
+            let sock = env
+                .socket(domain, socket2::Type::dgram(), None)
+                .await
+                .context("failed to create socket")?;
+
+            let () = sock.bind(&addr.into()).context("bind failed")?;
+
+            Result::Ok(sock.into_udp_socket())
+        }
+        .boxed_local()
+    }
+}
+
+impl EnvironmentUdpSocket for fuchsia_async::net::UdpSocket {
+    fn bind_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
+        std::net::UdpSocket::bind_in_env(env, addr)
+            .and_then(|udp| {
+                futures::future::ready(
+                    fuchsia_async::net::UdpSocket::from_socket(udp)
+                        .context("failed to create fuchsia_async socket"),
+                )
+            })
+            .boxed_local()
     }
 }

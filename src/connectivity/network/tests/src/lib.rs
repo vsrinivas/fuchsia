@@ -9,5 +9,6 @@ mod dhcp;
 mod environments;
 mod fidl;
 mod ipv6;
+mod socket;
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
