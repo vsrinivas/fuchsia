@@ -9,7 +9,6 @@ import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 
 const _timeout = Duration(seconds: 60);
-const String _trace2jsonPath = 'runtime_deps/trace2json';
 
 void main() {
   sl4f.Sl4f sl4fDriver;
@@ -34,76 +33,6 @@ void main() {
     await sl4fDriver.stopServer();
     sl4fDriver.close();
   });
-
-  group(sl4f.Sl4f, () {
-    test('trace and download', () async {
-      expect(
-          await performance.trace(
-              duration: Duration(seconds: 2), traceName: 'test-trace'),
-          equals(true));
-
-      await performance.downloadTraceFile('test-trace');
-
-      expect(
-          dumpDir.listSync().map((f) => f.path.split('/').last),
-          unorderedMatches([
-            matches(RegExp(r'-test-trace-trace.json$')),
-          ]));
-      expect(await listDir(sl4fDriver, '/tmp'),
-          isNot(contains(matches(RegExp(r'test-trace-trace.json$')))));
-    });
-
-    test('download large trace', () async {
-      // This obviously creates an invalid json file, but the act of downloading
-      // said file shouldn't care about its contents.
-      if ((await sl4fDriver.ssh.run(
-                  'dd if=/dev/zero of=/tmp/fake-large-trace.json bs=1M count=40'))
-              .exitCode !=
-          0) {
-        fail('Failed to create fake large trace file to download.');
-      }
-
-      await performance.downloadTraceFile('fake-large');
-
-      expect(
-          dumpDir.listSync().map((f) => f.path.split('/').last),
-          unorderedMatches([
-            matches(RegExp(r'-fake-large-trace.json$')),
-          ]));
-
-      final downloadedFile = dumpDir.listSync()[0];
-      final stat = await downloadedFile.stat();
-
-      expect(stat.size, equals(40 * 1024 * 1024));
-    });
-
-    test('binary trace, download, and convert', () async {
-      expect(
-          await performance.trace(
-              duration: Duration(seconds: 2),
-              traceName: 'test-binary-trace',
-              binary: true),
-          equals(true));
-
-      final fxtFile = await performance.downloadTraceFile('test-binary-trace',
-          binary: true);
-
-      expect(
-          dumpDir.listSync().map((f) => f.path.split('/').last),
-          unorderedMatches([
-            matches(RegExp(r'-test-binary-trace-trace.fxt$')),
-          ]));
-
-      await performance.convertTraceFileToJson(_trace2jsonPath, fxtFile);
-
-      expect(
-          dumpDir.listSync().map((f) => f.path.split('/').last),
-          unorderedMatches([
-            matches(RegExp(r'-test-binary-trace-trace.fxt$')),
-            matches(RegExp(r'-test-binary-trace-trace.json$')),
-          ]));
-    });
-  }, timeout: Timeout(_timeout));
 
   group(sl4f.Sl4f, () {
     test('trace via facade', () async {

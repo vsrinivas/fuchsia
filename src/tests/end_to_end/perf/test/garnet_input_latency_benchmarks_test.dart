@@ -9,6 +9,7 @@ import 'package:test/test.dart';
 import 'helpers.dart';
 
 const String _catapultConverterPath = 'runtime_deps/catapult_converter';
+const String _trace2jsonPath = 'runtime_deps/trace2json';
 
 Future<void> _killProcesses(PerfTestHelper helper) async {
   await helper.sl4fDriver.ssh.run('killall "root_presenter*"');
@@ -31,13 +32,10 @@ void _addTest(String testName, String runAppCommand) {
     await Future.delayed(Duration(seconds: 3));
 
     // Start tracing.
-    final trace = helper.performance.trace(
-        duration: Duration(seconds: 5),
-        traceName: testName,
-        categories: 'input,gfx,magma',
-        bufferSize: 36);
+    final traceSession = await helper.performance.initializeTracing(
+        categories: ['input', 'gfx', 'magma'], bufferSize: 36);
 
-    await Future.delayed(Duration(seconds: 1));
+    await traceSession.start();
 
     // Each tap will be 33.5ms apart, drifting 0.166ms against regular 60 fps
     // vsync interval. 100 taps span the entire vsync interval 1 time at 100
@@ -45,8 +43,11 @@ void _addTest(String testName, String runAppCommand) {
     await helper.sl4fDriver.ssh
         .run('/bin/input tap 500 500 --tap_event_count=100 --duration=3350');
 
-    expect(await trace, isTrue);
-    final traceFile = await helper.performance.downloadTraceFile(testName);
+    await traceSession.stop();
+
+    final fxtTraceFile = await traceSession.terminateAndDownload(testName);
+    final jsonTraceFile = await helper.performance
+        .convertTraceFileToJson(_trace2jsonPath, fxtTraceFile);
 
     final metricsSpecSet = MetricsSpecSet(
       testName: testName,
@@ -56,7 +57,7 @@ void _addTest(String testName, String runAppCommand) {
     );
 
     expect(
-        await helper.performance.processTrace(metricsSpecSet, traceFile,
+        await helper.performance.processTrace(metricsSpecSet, jsonTraceFile,
             converterPath: _catapultConverterPath),
         isNotNull);
 

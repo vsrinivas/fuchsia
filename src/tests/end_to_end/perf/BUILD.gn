@@ -44,10 +44,16 @@ foreach(target_name, test_list) {
 
 if (is_host) {
   host_test_data("runtime_deps") {
-    sources = [ "$root_out_dir/catapult_converter" ]
+    sources = [
+      "$root_out_dir/catapult_converter",
+      "$root_out_dir/trace2json",
+    ]
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-    deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
+    deps = [
+      "//garnet/bin/catapult_converter:converter_bin",
+      "//garnet/bin/trace2json:bin",
+    ]
 
     # TODO(48350): Enable host build for non-linux hosts as well.
     if (host_os == "linux") {
@@ -87,6 +93,7 @@ group("package_deps") {
     # These are used by the test runner in src/tests/benchmarks/,
     # used by the peridot-perf and fuchsia-perfcompare builders.
     "//garnet/bin/catapult_converter",
+    "//garnet/bin/trace2json:bin",
     "//src/tests/benchmarks:fuchsia_benchmarks",
     "//third_party/sbase:mkdir",
     "//third_party/sbase:rm",

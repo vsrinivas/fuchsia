@@ -11,7 +11,6 @@ import 'package:path/path.dart' as path;
 
 import 'dump.dart';
 import 'sl4f_client.dart';
-import 'storage.dart';
 import 'trace_processing/metrics_spec.dart';
 import 'trace_processing/trace_importing.dart';
 
@@ -41,10 +40,6 @@ File _replaceExtension(File file, String newExtension) {
     basePath = path.withoutExtension(basePath);
   }
   return File('$basePath.$newExtension');
-}
-
-String _traceNameToTargetPath(String traceName, String extension) {
-  return '/tmp/$traceName-trace.$extension';
 }
 
 // Chromium tracing tools requires only one "Compositor", "CrBrowserMain",
@@ -118,76 +113,6 @@ class Performance {
     _log.info('Performance: Terminating any existing trace session');
     await _sl4f
         .request('tracing_facade.Terminate', {'results_destination': 'Ignore'});
-  }
-
-  /// Starts tracing for the given [duration].
-  ///
-  /// If [binary] is true, then the trace will be captured in Fuchsia Trace
-  /// Format (by default, it is in Chrome JSON Format). If [compress] is true,
-  /// the trace will be gzip-compressed. The trace output will be saved to a
-  /// path implied by [traceName], [binary], and [compress], and can be
-  /// retrieved later via [downloadTraceFile].
-  Future<bool> trace(
-      {@required Duration duration,
-      @required String traceName,
-      String categories,
-      int bufferSize,
-      bool binary = false,
-      bool compress = false}) async {
-    // Invoke `/bin/trace record --duration=$duration --categories=$categories
-    // --output-file=$outputFile --buffer-size=$bufferSize` on the target
-    // device via ssh.
-    final durationSeconds = duration.inSeconds;
-    String command = 'trace record --duration=$durationSeconds';
-    if (categories != null) {
-      command += ' --categories=$categories';
-    }
-    if (bufferSize != null) {
-      command += ' --buffer-size=$bufferSize';
-    }
-    if (binary) {
-      command += ' --binary';
-    }
-    if (compress) {
-      command += ' --compress';
-    }
-    final String extension =
-        _traceExtension(binary: binary, compress: compress);
-    final outputFile = _traceNameToTargetPath(traceName, extension);
-    if (outputFile != null) {
-      command += ' --output-file=$outputFile';
-    }
-    final result = await _sl4f.ssh.run(command);
-    return result.exitCode == 0;
-  }
-
-  /// Copies the trace file specified by [traceName] off of the target device,
-  /// and then saves it to the dump directory.
-  ///
-  /// A [trace] call with the same [traceName], [binary], and [compress] must
-  /// have successfully completed before calling [downloadTraceFile]. The trace
-  /// file will be removed from the target device once it is downloaded.
-  ///
-  /// Returns the download trace [File].
-  Future<File> downloadTraceFile(String traceName,
-      {bool binary = false, bool compress = false}) async {
-    _log.info('Performance: Downloading trace $traceName');
-    final String extension =
-        _traceExtension(binary: binary, compress: compress);
-    final tracePath = _traceNameToTargetPath(traceName, extension);
-
-    var response = await _sl4f
-        .request('traceutil_facade.GetTraceFile', {'path': tracePath});
-    List<int> contents = base64.decode(response['data']);
-    while (response.containsKey('next_offset')) {
-      response = await _sl4f.request('traceutil_facade.GetTraceFile',
-          {'path': tracePath, 'offset': response['next_offset']});
-      contents += base64.decode(response['data']);
-    }
-
-    await Storage(_sl4f).deleteFile(tracePath);
-
-    return _dump.writeAsBytes('$traceName-trace', extension, contents);
   }
 
   /// Starts a Chrome trace from the given [webSocketUrl] with the default
@@ -274,7 +199,7 @@ class Performance {
   /// Convert the specified [traceFile] from fxt or fxt.gz to json or json.gz.
   ///
   /// In typical uses, [traceFile] should be the return value of a call to
-  /// [downloadTraceFile].
+  /// [TraceSession.terminateAndDownload].
   ///
   /// By default, this function guesses whether the input is compressed by
   /// examining [traceFile]'s extension. This can be overridden by passing a
