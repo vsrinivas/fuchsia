@@ -200,6 +200,7 @@ class AgentContextImpl::StopCall : public Operation<bool> {
     agent_context_impl_->state_ = State::TERMINATED;
     agent_context_impl_->agent_.Unbind();
     agent_context_impl_->agent_context_bindings_.CloseAll();
+    agent_context_impl_->agent_controller_bindings_.CloseAll();
     agent_context_impl_->token_manager_bindings_.CloseAll();
     agent_context_impl_->app_client_.reset();
   }

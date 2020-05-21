@@ -478,8 +478,11 @@ TEST_F(AgentRunnerTest, TerminateOnTeardown) {
   RunLoopUntil([&is_torn_down] { return is_torn_down; });
 
   // The agent should have been terminated.
-  EXPECT_FALSE(agent_controller.is_bound());
   EXPECT_FALSE(test_agent->controller_connected());
+  // Closing a channel is akin to sending a final message on that channel.
+  // Run the run loop until that message is received to see that the
+  // AgentController was indeed closed.
+  RunLoopUntil([&] { return !agent_controller.is_bound(); });
 }
 
 // Tests that AgentRunner terminates an agent component on teardown. In this case, the agent
@@ -499,21 +502,24 @@ TEST_F(AgentRunnerTest, TerminateGracefullyOnTeardown) {
   agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopUntil([&test_agent] { return !!test_agent; });
+  RunLoopUntil([&] { return !!test_agent; });
 
   EXPECT_TRUE(agent_controller.is_bound());
 
   // Teardown the agent runner.
   auto is_torn_down = false;
   agent_runner()->Teardown([&is_torn_down] { is_torn_down = true; });
-  RunLoopUntil([&is_torn_down] { return is_torn_down; });
+  RunLoopUntil([&] { return is_torn_down; });
 
   // The agent should have been instructed to tear down gracefully.
   EXPECT_TRUE(test_agent->lifecycle_terminate_called());
 
   // The agent should have been terminated.
-  EXPECT_FALSE(agent_controller.is_bound());
   EXPECT_FALSE(test_agent->controller_connected());
+  // Closing a channel is akin to sending a final message on that channel.
+  // Run the run loop until that message is received to see that the
+  // AgentController was indeed closed.
+  RunLoopUntil([&] { return !agent_controller.is_bound(); });
 }
 
 // When an agent dies and it is not listed in |restart_session_on_agent_crash|,
