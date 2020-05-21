@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <memory>
 #include <ostream>
+#include <sstream>
 #include <string_view>
 #include <unordered_set>
 #include <vector>

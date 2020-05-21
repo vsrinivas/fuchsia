@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <sstream>
 
 #include "src/lib/fxl/macros.h"
 

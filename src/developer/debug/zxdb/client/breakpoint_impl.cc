@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <map>
+#include <sstream>
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
