@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# The file to assist adding new fidl interfaces in SkipBlock service.
+# Some rust sources in vendor/google repository requires implementation
+# of all fidl interfaces in the SkipBlock service. However, currently
+# we don't have a way for cross repository submission. With the
+# feature.gni file, it is possible to add new interfaces without breaking
+# the build with the following steps.
+#
+# 1. Add implementation of the new interface in the rust sources first,
+# but exclude them from compilation using conditional compilation,
+# i.e. #[cfg(foo)]. The flag is expected to be read from feature.gni file.
+#
+# 2. Implement the fidl interface in fuchsia directory. Define the
+# required flag in feature.gni file.
+
+skip_block_features = []
