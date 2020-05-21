@@ -10,6 +10,14 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+type Event = fsnotify.Event
+
+var Create = fsnotify.Create
+var Write = fsnotify.Write
+var Remove = fsnotify.Remove
+var Rename = fsnotify.Rename
+var Chmod = fsnotify.Chmod
+
 type Watcher = fsnotify.Watcher
 
 var NewWatcher = fsnotify.NewWatcher

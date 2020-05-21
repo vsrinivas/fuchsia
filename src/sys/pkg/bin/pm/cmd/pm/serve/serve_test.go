@@ -22,12 +22,19 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )
 
+// poor mans reset, for flags used in the below tests
+func resetFlags() {
+	config.RepoDir = ""
+	*repoServeDir = ""
+	*publishList = ""
+	*portFile = ""
+}
+
+func resetServer() {
+	server = http.Server{}
+}
+
 func TestParseFlags(t *testing.T) {
-	// poor mans reset, for the cases covered below
-	resetFlags := func() {
-		config.RepoDir = ""
-		*repoServeDir = ""
-	}
 	defer resetFlags()
 	if err := ParseFlags([]string{"-repo", "amber-files"}); err != nil {
 		t.Fatal(err)
@@ -55,6 +62,8 @@ func TestParseFlags(t *testing.T) {
 }
 
 func TestServer(t *testing.T) {
+	defer resetFlags()
+	defer resetServer()
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
@@ -217,35 +226,6 @@ func TestServer(t *testing.T) {
 		}
 	})
 
-	t.Run("serves /auto and events on timestamp updates", func(t *testing.T) {
-		req, err := http.NewRequest("GET", baseURL+"/auto", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		req.Header.Set("Accept", "text/event-stream")
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer res.Body.Close()
-		cli, err := sse.New(res)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := os.Chtimes(filepath.Join(repoDir, "repository", "timestamp.json"), time.Now(), time.Now()); err != nil {
-			t.Fatal(err)
-		}
-
-		event, err := cli.ReadEvent()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got, want := event.Event, "timestamp.json"; got != want {
-			t.Errorf("got %q, want %q", got, want)
-		}
-	})
-
 	t.Run("serves package blobs", func(t *testing.T) {
 		m, err := cfg.OutputManifest()
 		if err != nil {
@@ -269,25 +249,16 @@ func TestServer(t *testing.T) {
 		}
 
 		// after building, we need to wait for publication to complete, so start a client for that
-		req, err := http.NewRequest("GET", baseURL+"/auto", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		req.Header.Set("Accept", "text/event-stream")
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer res.Body.Close()
-		cli, err := sse.New(res)
-		if err != nil {
-			t.Fatal(err)
-		}
+		cli := newTestAutoClient(t, baseURL)
+		cli.verifyNoPendingEvents()
 
 		cfg.PkgVersion = "1"
 		build.BuildTestPackage(cfg)
 
-		cli.ReadEvent()
+		event := cli.readEvent()
+		if got, want := event.Event, "timestamp.json"; got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
 
 		if !hasTarget(baseURL, "testpackage/1") {
 			t.Fatal("missing target package")
@@ -309,6 +280,148 @@ func TestServer(t *testing.T) {
 	})
 }
 
+func TestServeAuto(t *testing.T) {
+	defer resetFlags()
+	defer resetServer()
+	defer pushPopMonitorPollInterval(20 * time.Millisecond)()
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.BuildTestPackage(cfg)
+
+	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(portFileDir)
+	portFile := fmt.Sprintf("%s/%s", portFileDir, "port-file")
+
+	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	repo, err := repo.New(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.GenKeys(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.CommitUpdates(false); err != nil {
+		t.Fatal(err)
+	}
+
+	addrChan := make(chan string)
+	var w sync.WaitGroup
+	w.Add(1)
+	go func() {
+		defer w.Done()
+		err := Run(cfg, []string{"-l", "127.0.0.1:0", "-repo", repoDir, "-f", portFile}, addrChan)
+		if err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}()
+	defer func() {
+		server.Close()
+		w.Wait()
+	}()
+	addr := <-addrChan
+	baseURL := fmt.Sprintf("http://%s", addr)
+
+	t.Run("sends events on timestamp version updates", func(t *testing.T) {
+		cli := newTestAutoClient(t, baseURL)
+
+		// No initial events expected.
+		cli.verifyNoPendingEvents()
+
+		// Modifications to the file that don't change the version field are ignored
+		if err := os.Chtimes(filepath.Join(repoDir, "repository", "timestamp.json"), time.Now(), time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		cli.verifyNoPendingEvents()
+
+		// But actually changing the timestamp file does result in an event.
+		if err := repo.SetTimestampVersion(42); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		event := cli.readEvent()
+		if got, want := event.Event, "timestamp.json"; got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("recovers from deleted timestamp", func(t *testing.T) {
+		cli := newTestAutoClient(t, baseURL)
+
+		// No initial events expected.
+		cli.verifyNoPendingEvents()
+
+		// There should be a single event after committing to the repo.
+		if err := repo.CommitUpdates(false); err != nil {
+			t.Fatal(err)
+		}
+		event := cli.readEvent()
+		if event.Event != "timestamp.json" {
+			t.Fatalf("got %s, want timestamp.json", event.Event)
+		}
+		cli.verifyNoPendingEvents()
+
+		// Even if timestamp.json is somehow deleted before/during a commit.
+		if err := os.Remove(filepath.Join(repoDir, "repository", "timestamp.json")); err != nil {
+			t.Fatal(err)
+		}
+		cli.verifyNoPendingEvents()
+
+		// But re-creating it does.
+		if err := repo.CommitUpdates(false); err != nil {
+			t.Fatal(err)
+		}
+		event = cli.readEvent()
+		if event.Event != "timestamp.json" {
+			t.Fatalf("got %s, want timestamp.json", event.Event)
+		}
+
+		cli.verifyNoPendingEvents()
+	})
+
+	t.Run("recovers from moved timestamp", func(t *testing.T) {
+		cli := newTestAutoClient(t, baseURL)
+
+		// No initial events expected.
+		cli.verifyNoPendingEvents()
+
+		// Renaming the file does not trigger an event.
+		if err := os.Rename(filepath.Join(repoDir, "repository", "timestamp.json"), filepath.Join(repoDir, "repository", "timestamp2.json")); err != nil {
+			t.Fatal(err)
+		}
+		cli.verifyNoPendingEvents()
+
+		// But re-creating it does.
+		if err := repo.CommitUpdates(false); err != nil {
+			t.Fatal(err)
+		}
+		event := cli.readEvent()
+		if event.Event != "timestamp.json" {
+			t.Fatalf("got %s, want timestamp.json", event.Event)
+		}
+		cli.verifyNoPendingEvents()
+	})
+}
+
 func hasTarget(baseURL, target string) bool {
 	res, err := http.Get(baseURL + "/targets.json")
 	if err != nil {
@@ -325,4 +438,76 @@ func hasTarget(baseURL, target string) bool {
 	}
 	_, found := m.Signed.Targets[target]
 	return found
+}
+
+type eventResult struct {
+	event *sse.Event
+	err   error
+}
+
+type testAutoClient struct {
+	events chan eventResult
+	t      *testing.T
+}
+
+func newTestAutoClient(t *testing.T, baseURL string) testAutoClient {
+	req, err := http.NewRequest("GET", baseURL+"/auto", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli, err := sse.New(resp)
+	if err != nil {
+		resp.Body.Close()
+		t.Fatal(err)
+	}
+
+	events := make(chan eventResult)
+	go func() {
+		defer resp.Body.Close()
+		for {
+			event, err := cli.ReadEvent()
+			events <- eventResult{
+				event: event,
+				err:   err,
+			}
+			if err != nil {
+				close(events)
+				return
+			}
+		}
+	}()
+	return testAutoClient{
+		events: events,
+		t:      t,
+	}
+
+}
+
+func (c *testAutoClient) verifyNoPendingEvents() {
+	c.t.Helper()
+	select {
+	case res := <-c.events:
+		if res.err != nil {
+			c.t.Fatalf("Unexpected error: %v", res.err)
+		} else {
+			c.t.Fatalf("Unexpected event: %#v", *res.event)
+		}
+	case <-time.After(time.Millisecond):
+		// Give the server a bit of time to maybe send an event before deciding there isn't one
+		// to be read.
+	}
+}
+
+func (c *testAutoClient) readEvent() sse.Event {
+	c.t.Helper()
+	res := <-c.events
+	if res.err != nil {
+		c.t.Fatalf("Unexpected error: %v", res.err)
+	}
+	return *res.event
 }

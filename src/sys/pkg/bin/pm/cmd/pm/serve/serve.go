@@ -85,6 +85,8 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		return fmt.Errorf("repository at %q is not valid or could not be initialized: %s", config.RepoDir, err)
 	}
 
+	mux := http.NewServeMux()
+
 	if *auto {
 		as := pmhttp.NewAutoServer()
 
@@ -92,6 +94,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		if err != nil {
 			return fmt.Errorf("failed to initialize fsnotify: %s", err)
 		}
+		defer w.Close()
 
 		publishAll := func() {
 			if *publishList != "" {
@@ -121,23 +124,33 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		}
 
 		timestampPath := filepath.Join(*repoServeDir, "timestamp.json")
-		if err = w.Add(timestampPath); err != nil {
-			return fmt.Errorf("failed to watch %s: %s", timestampPath, err)
-		}
+		timestampMonitor := NewMetadataMonitor(timestampPath, w)
+		defer timestampMonitor.Close()
+		go func() {
+			for metadata := range timestampMonitor.Events {
+				if !*quiet {
+					log.Printf("[pm auto] notify new timestamp.json version: %v", metadata.Version)
+				}
+				as.Broadcast("timestamp.json", fmt.Sprintf("%v", metadata.Version))
+			}
+		}()
 		if *publishList != "" {
 			if err := w.Add(*publishList); err != nil {
 				return fmt.Errorf("failed to watch %s: %s", *publishList, err)
 			}
 		}
 		go func() {
+			// Drain any watch errors encountered, or the first error will block the filesystem watcher
+			// forever.
+			for err := range w.Errors {
+				log.Printf("[pm auto] watch error: %s. Events/monitors may be lost.", err)
+			}
+		}()
+		go func() {
 			for event := range w.Events {
 				switch event.Name {
 				case timestampPath:
-					fi, err := os.Stat(timestampPath)
-					if err != nil {
-						continue
-					}
-					as.Broadcast("timestamp.json", fi.ModTime().Format(http.TimeFormat))
+					timestampMonitor.HandleEvent(event)
 				case *publishList:
 					publishAll()
 				default:
@@ -152,12 +165,12 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 			}
 		}()
 
-		http.Handle("/auto", as)
+		mux.Handle("/auto", as)
 		publishAll()
 	}
 
 	dirServer := http.FileServer(http.Dir(*repoServeDir))
-	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
 			pmhttp.ServeIndex(w)
@@ -175,7 +188,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		}
 		return b
 	}, *encryptionKey)
-	http.Handle("/config.json", cs)
+	mux.Handle("/config.json", cs)
 
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.RequestURI, "/blobs") && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -188,7 +201,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 			w = gw
 		}
 		lw := &pmhttp.LoggingWriter{w, 0}
-		http.DefaultServeMux.ServeHTTP(lw, r)
+		mux.ServeHTTP(lw, r)
 		if !*quiet {
 			fmt.Printf("%s [pm serve] %d %s\n",
 				time.Now().Format("2006-01-02 15:04:05"), lw.Status, r.RequestURI)

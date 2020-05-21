@@ -14,6 +14,14 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+type Event = fsnotify.Event
+
+var Create = fsnotify.Create
+var Write = fsnotify.Write
+var Remove = fsnotify.Remove
+var Rename = fsnotify.Rename
+var Chmod = fsnotify.Chmod
+
 // TODO(raggi): implement this using the real filesystem watcher API
 type Watcher struct {
 	Events chan fsnotify.Event
