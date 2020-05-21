@@ -35,6 +35,11 @@ constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 
 const char *kEvictionCmdLineFlag = "kernel.page-scanner.enable-user-pager-eviction";
 
+// If not set on the cmdline this becomes the default zero page scans per second to target. This
+// value was chosen to consume, in the worst case, 5% CPU on a lower-end arm device. Individual
+// configurations may wish to tune this higher (or lower) as needed.
+constexpr uint64_t kDefaultZeroPageScansPerSecond = 20000;
+
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
 uint64_t zero_page_scans_per_second = 0;
@@ -303,9 +308,9 @@ static void scanner_init_func(uint level) {
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
   eviction_enabled = gCmdline.GetBool(kEvictionCmdLineFlag, false);
-  zero_page_scans_per_second =
-      gCmdline.GetUInt64("kernel.page-scanner.zero-page-scans-per-second", 0);
-  if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", false)) {
+  zero_page_scans_per_second = gCmdline.GetUInt64("kernel.page-scanner.zero-page-scans-per-second",
+                                                  kDefaultZeroPageScansPerSecond);
+  if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", true)) {
     Guard<Mutex> guard{scanner_disabled_lock::Get()};
     scanner_disable_count++;
     scanner_operation.fetch_or(kScannerOpDisable);

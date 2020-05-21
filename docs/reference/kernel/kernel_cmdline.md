@@ -439,16 +439,21 @@ terminated, or has no jobs and no processes.
 
 ## kernel.page-scanner.start-at-boot=\<bool>
 
-This option (false by default) causes the kernels active memory scanner to be
+This option (true by default) causes the kernels active memory scanner to be
 initially enabled on startup. You can also enable and disable it using the
 kernel console. If you disable the scanner, you can have additional system
 predictability since it removes time based and background memory eviction.
 
+Every action the scanner performs can be individually configured and disabled.
+If all actions are disabled then enabling the scanner has no effect.
+
 ## kernel.page-scanner.zero-page-scans-per-second=\<num>
 
-This option, zero by default, configures the maximal number of candidate pages
-the zero page scanner will consider every second. Setting to zero means no
-zero page scanning will occur.
+This option, 20000 by default, configures the maximal number of candidate pages
+the zero page scanner will consider every second.
+
+Setting to zero means no zero page scanning will occur. This can provide
+additional system predictability for benchmarking or other workloads.
 
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
