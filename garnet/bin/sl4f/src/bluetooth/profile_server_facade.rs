@@ -701,7 +701,12 @@ impl ProfileServerFacade {
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 
-        self.inner.write().l2cap_channel_holder = Some(connection_result.unwrap());
+        match connection_result {
+            Ok(r) => self.inner.write().l2cap_channel_holder = Some(r),
+            Err(e) => {
+                fx_err_and_bail!(&with_line!(tag), format!("Failed to connect with error: {:?}", e))
+            }
+        };
 
         Ok(())
     }
