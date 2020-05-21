@@ -71,6 +71,17 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
 
   // Start watching setui for current settings
   WatchSetui();
+
+  // Connects to property provider to retrieve the current locale. Also adds a handler for the event
+  // to process when the locale changes.
+  property_provider_ = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
+  property_provider_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::intl::PropertyProvider" << zx_status_get_string(status);
+  });
+  property_provider_.events().OnChange =
+      fit::bind_member(this, &App::PropertyProviderOnChangeHandler);
+  // Fetches the initial locale.
+  PropertyProviderOnChangeHandler();
 }
 
 App::~App() = default;
@@ -204,6 +215,11 @@ std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
       std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
   return std::make_unique<a11y::ScreenReader>(std::move(screen_reader_context), view_manager_,
                                               tts_manager_, gesture_listener_registry_);
+}
+
+void App::PropertyProviderOnChangeHandler() {
+  property_provider_->GetProfile(
+      [this](fuchsia::intl::Profile profile) { i18n_profile_ = std::move(profile); });
 }
 
 }  // namespace a11y_manager

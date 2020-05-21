@@ -10,6 +10,8 @@ source_set("mocks") {
     "mock_focus_chain.h",
     "mock_pointer_event_registry.cc",
     "mock_pointer_event_registry.h",
+    "mock_property_provider.cc",
+    "mock_property_provider.h",
     "mock_semantic_listener.cc",
     "mock_semantic_listener.h",
     "mock_setui_accessibility.cc",
@@ -19,6 +21,7 @@ source_set("mocks") {
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",

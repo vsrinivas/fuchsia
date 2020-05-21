@@ -17,6 +17,7 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_color_transform_handler.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_focus_chain.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_property_provider.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
@@ -45,6 +46,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_color_transform_handler_(&context_provider_),
         mock_setui_(&context_provider_),
         mock_focus_chain_(&context_provider_),
+        mock_property_provider_(&context_provider_),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       std::make_unique<MockViewSemanticsFactory>(),
                       std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
@@ -104,6 +106,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   MockColorTransformHandler mock_color_transform_handler_;
   MockSetUIAccessibility mock_setui_;
   MockFocusChain mock_focus_chain_;
+  MockPropertyProvider mock_property_provider_;
 
   a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
@@ -417,6 +420,17 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
 
   ASSERT_TRUE(mock_focus_chain_.IsRequestFocusCalled());
   EXPECT_EQ(a11y::GetKoid(view_ref_), mock_focus_chain_.GetFocusedViewKoid());
+}
+
+TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
+  // App is initialized, so it should have requested once the locale.
+  ASSERT_EQ(1, mock_property_provider_.get_profile_count());
+  mock_property_provider_.SetLocale("en-US");
+  mock_property_provider_.SendOnChangeEvent();
+  RunLoopUntilIdle();
+  // The event causes GetProfile() to be invoked again from the a11y manager side. Check if the call
+  // happened through the mock.
+  ASSERT_EQ(2, mock_property_provider_.get_profile_count());
 }
 
 // TODO(fxb/49924): Improve tests to cover what happens if services aren't available at

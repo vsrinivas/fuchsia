@@ -55,6 +55,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.accessibility.gesture",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.accessibility.tts",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.input.accessibility",

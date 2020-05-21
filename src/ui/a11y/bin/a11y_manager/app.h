@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/accessibility/gesture/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
@@ -118,8 +119,16 @@ class App {
   // Initializes the Screen Reader, instantiating its context and related services.
   std::unique_ptr<a11y::ScreenReader> InitializeScreenReader();
 
+  // |fuchsia.intl.PropertyProvider|
+  // Handler invoked when the FIDL event OnChange is called.
+  // Fetches the user's i18n profile and stores in |i18n_profile_|.
+  void PropertyProviderOnChangeHandler();
+
   // Current state of the a11y manager
   A11yManagerState state_;
+
+  // The user's i18n profile.
+  fuchsia::intl::Profile i18n_profile_;
 
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
   a11y::ViewManager* view_manager_;
@@ -158,6 +167,9 @@ class App {
 
   // Interface between Setui and a11y manager to get updates when user settings change.
   fuchsia::settings::AccessibilityPtr setui_settings_;
+
+  // Interface used to retrieve the current locale and watch when it changes.
+  fuchsia::intl::PropertyProviderPtr property_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
