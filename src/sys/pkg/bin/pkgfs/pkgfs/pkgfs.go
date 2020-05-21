@@ -25,9 +25,9 @@ import (
 	"thinfs/zircon/rpc"
 
 	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pmd/allowlist"
-	"fuchsia.googlesource.com/pmd/blobfs"
-	"fuchsia.googlesource.com/pmd/index"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/allowlist"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/blobfs"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/index"
 )
 
 // Filesystem is the top level container for a pkgfs server

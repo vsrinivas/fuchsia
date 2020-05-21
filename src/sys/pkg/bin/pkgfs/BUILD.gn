@@ -11,7 +11,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("pmd") {
-  name = "fuchsia.googlesource.com/pmd"
+  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs"
 
   deps = [
     "//garnet/go/src/far",
@@ -41,7 +41,7 @@ test_packages = [
 ]
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
-    gopackages = [ "fuchsia.googlesource.com/pmd/${testpkg}" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/${testpkg}" ]
     deps = [ ":pmd" ]
     non_go_deps = [
       "//zircon/public/lib/fdio",

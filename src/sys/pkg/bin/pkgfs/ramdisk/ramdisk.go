@@ -78,7 +78,7 @@ import (
 
 	zxio "syscall/zx/io"
 
-	"fuchsia.googlesource.com/pmd/iou"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 )
 
 type Ramdisk struct {

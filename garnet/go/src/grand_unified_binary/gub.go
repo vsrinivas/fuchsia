@@ -18,7 +18,7 @@ import (
 	"netstack"
 	"system_updater"
 
-	"fuchsia.googlesource.com/pmd/pkgsvr"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
 
 func main() {

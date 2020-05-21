@@ -12,8 +12,8 @@ import (
 	"syscall/zx"
 	"syscall/zx/fdio"
 
-	"fuchsia.googlesource.com/pmd/pkgfs"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgfs"
 )
 
 // Main starts a package server program

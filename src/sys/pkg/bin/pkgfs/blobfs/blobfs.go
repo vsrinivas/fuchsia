@@ -14,7 +14,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/zxwait"
 
-	"fuchsia.googlesource.com/pmd/iou"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 
 	"fidl/fuchsia/io"
 )
