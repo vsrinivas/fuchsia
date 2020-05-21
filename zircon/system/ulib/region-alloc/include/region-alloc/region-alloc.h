@@ -41,7 +41,7 @@
 // RegionAllocators require dynamically allocated memory in order to store the
 // bookkeeping required for managing available regions.  In order to control
 // heap fragmentation and the frequency of heap interaction, A RegionPool object
-// is used to allocate bookkeeping overhead in larger slabs which are carved up
+// may be used to allocate bookkeeping overhead in larger slabs which are carved up
 // and placed on a free list to be used by a RegionAllocator.  RegionPools are
 // created with a defined slab size as well as a maximum memory limit.  The pool
 // will initially allocate a single slab, but will attempt to grow any time
@@ -50,9 +50,10 @@
 //
 // RegionPools are ref-counted objects that may be shared by multiple
 // RegionAllocators.  This allows sub-systems which use multiple allocators to
-// impose system-wide limits on bookkeeping overhead.  A RegionPool must be
-// assigned to a RegionAllocator before it can be used, and the pool may not be
-// re-assigned while the allocator is using any bookkeeping from the pool.
+// impose system-wide limits on bookkeeping overhead.  If a RegionPool allocator
+// is to be used, it must be assigned to the RegionAllocator before any regions
+// can be added or allocated, and the pool may not be re-assigned while the
+// allocator is using any bookkeeping from the pool.
 //
 // == APIs and Object lifecycle management ==
 // Both C and C++ APIs are provided for using the RegionAllocator.  The C++ API
@@ -246,7 +247,9 @@ class RegionAllocator {
 
  public:
   class Region;
-  using RegionSlabTraits = fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
+  using RegionSlabTraits =
+      fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE, fbl::Mutex,
+                                           fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
 
   class Region
       : public ralloc_region_t,
@@ -315,9 +318,10 @@ class RegionAllocator {
     friend struct KeyTraitsSortBySize;
     friend class fbl::SlabAllocator<RegionSlabTraits>;
 
-    // Regions can only be placement new'ed by the RegionPool slab
-    // allocator.  They cannot be copied, assigned, or deleted.  Externally,
-    // they should only be handled by their unique_ptr<>s.
+    // Regions can only be either placement new'ed by the RegionPool slab
+    // allocator, or allocated directly from the heap by the RegionAllocator if
+    // no RegionPool has been configured.  They cannot be copied, assigned, or
+    // deleted.  Externally, they should only be handled by their unique_ptr<>s.
     explicit Region(RegionAllocator* owner) : owner_(owner) {}
     ~Region() = default;
     DISALLOW_COPY_ASSIGN_AND_MOVE(Region);
@@ -359,16 +363,22 @@ class RegionAllocator {
   // Set the RegionPool this RegionAllocator will obtain bookkeeping structures from.
   //
   // Possible return values
-  // ++ ZX_ERR_BAD_STATE : The RegionAllocator currently has a RegionPool
-  // assigned and currently has allocations from this pool.
+  // ++ ZX_ERR_BAD_STATE : The RegionAllocator already has bookkeeping
+  // allocations.  All allocated regions must be returned to the pool and the
+  // pool Reset before the allocator may be changed.
   zx_status_t SetRegionPool(const RegionPool::RefPtr& region_pool) __TA_EXCLUDES(alloc_lock_);
   zx_status_t SetRegionPool(RegionPool::RefPtr&& region_pool) __TA_EXCLUDES(alloc_lock_) {
     RegionPool::RefPtr ref(std::move(region_pool));
     return SetRegionPool(ref);
   }
 
-  // Reset allocator.  Returns all available regions back to the RegionPool.
-  // Has no effect on currently allocated regions.
+  bool HasRegionPool() const __TA_EXCLUDES(alloc_lock_) {
+    fbl::AutoLock alloc_lock(&alloc_lock_);
+    return (region_pool_ != nullptr);
+  }
+
+  // Reset allocator.  Releases all available regions, but has no effect on
+  // currently allocated regions.
   void Reset() __TA_EXCLUDES(alloc_lock_);
 
   // Add a region to the set of allocatable regions.
@@ -380,7 +390,6 @@ class RegionAllocator {
   // region.
   //
   // Possible return values
-  // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
   // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
   // assigned region pool to add the region.
   // ++ ZX_ERR_INVALID_ARGS : One of the following conditions applies.
@@ -396,7 +405,7 @@ class RegionAllocator {
   //
   // If allow_incomplete is false, the subtracted region must exist entirely
   // within the set of available regions.  If allow_incomplete is true, the
-  // subracted region will remove any portion of any availble region it
+  // subtracted region will remove any portion of any available region it
   // intersects with.
   //
   // Regardless of the value of the allow_incomplete flag, it is illegal to
@@ -404,7 +413,6 @@ class RegionAllocator {
   // region.
   //
   // Possible return values
-  // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
   // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
   // assigned region pool to subtract the region.
   // ++ ZX_ERR_INVALID_ARGS : One of the following conditions applies.
@@ -422,7 +430,6 @@ class RegionAllocator {
   // two.  Pass 1 if alignment does not matter.
   //
   // Possible return values
-  // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
   // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
   // assigned region pool to perform the allocation.
   // ++ ZX_ERR_INVALID_ARGS : size is zero, or alignment is not a power of two.
@@ -435,7 +442,6 @@ class RegionAllocator {
   // currently available regions.
   //
   // Possible return values
-  // ++ ZX_ERR_BAD_STATE : Allocator has no RegionPool assigned.
   // ++ ZX_ERR_NO_MEMORY : not enough bookkeeping memory available in our
   // assigned region pool to perform the allocation.
   // ++ ZX_ERR_INVALID_ARGS : The size of the requested region is zero.
@@ -531,6 +537,14 @@ class RegionAllocator {
 
   bool IntersectsLocked(const Region::WAVLTreeSortByBase& tree, const ralloc_region_t& region)
       __TA_REQUIRES(alloc_lock_);
+
+  // Create a region by allocating it from the current RegionPool, or from the
+  // heap if we have no assigned region pool.
+  Region* CreateRegion() __TA_REQUIRES(alloc_lock_);
+
+  // Destroy a region by either returning it to the current RegionPool, or to
+  // the heap if we have no assigned region pool.
+  void DestroyRegion(Region* region) __TA_REQUIRES(alloc_lock_);
 
   /* Locking notes:
    *

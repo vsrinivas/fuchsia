@@ -79,6 +79,12 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
       }
       break;
     default:
+      // If we have not assigned a region pool to our allocator yet, then we are not
+      // yet initialized and should return ZX_ERR_BAD_STATE.
+      if (!storage->rallocs[kind].HasRegionPool()) {
+        return ZX_ERR_BAD_STATE;
+      }
+
       status = storage->rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
       if (status != ZX_OK) {
         LTRACEF("%s couldn't pull the resource out of the ralloc %d\n", kLogTag, status);

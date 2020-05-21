@@ -15,24 +15,46 @@
 
 namespace {
 
+// A simple bool-like enum used to determine if generalized test helper should
+// use the heap for bookkeeping, or if it should use a RegionPool slab
+// allocator.
+enum class TestFlavor {
+  UsePool,
+  UseHeap,
+};
+
 TEST(RegionAllocCppApiTestCase, RegionPools) {
   // Create a default constructed allocator on the stack.
   RegionAllocator alloc;
 
-  {
-    // Make sure that it refuses to perform any operations because it has no
-    // RegionPool assigned to it yet.
-    RegionAllocator::Region::UPtr tmp;
-    EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.AddRegion({0u, 1u}));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.GetRegion(1, tmp));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.GetRegion({0u, 1u}, tmp));
-    EXPECT_NULL(alloc.GetRegion(1).get());
-    EXPECT_NULL(alloc.GetRegion({0u, 1u}).get());
-  }
-
   // Make a region pool to manage bookkeeping allocations.
   auto pool = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
   ASSERT_NOT_NULL(pool.get());
+
+  {
+    // Add a single region to our allocator and then get a region out of the
+    // middle of it.  Since we have not yet assigned a RegionPool, all of the
+    // bookkeeping for this will be allocated directly from the heap.
+    RegionAllocator::Region::UPtr tmp;
+    EXPECT_OK(alloc.AddRegion({0u, 1024u}));
+
+    tmp = alloc.GetRegion({128, 256});
+    EXPECT_NOT_NULL(tmp);
+
+    // Now attempt to assign a region pool to allocate from.  Since we have both
+    // active regions and active allocations, this will fail with BAD_STATE.
+    EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.SetRegionPool(pool));
+
+    // Give our allocation back and try again.  This should still fail.  We have
+    // no active allocations, but we still have region bookkeeping allocated
+    // from the heap, so we cannot change allocators yet.
+    tmp.reset();
+    EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.SetRegionPool(pool));
+
+    // Finally, release the available region bookkeeping.  This will set us up
+    // for success during the rest of the test.
+    alloc.Reset();
+  }
 
   // Assign our pool to our allocator, but hold onto the pool for now.
   ASSERT_OK(alloc.SetRegionPool(pool));
@@ -108,10 +130,14 @@ TEST(RegionAllocCppApiTestCase, RegionPools) {
   EXPECT_NULL(pool2.get());
 }
 
-TEST(RegionAllocCppApiTestCase, AllocBySize) {
-  // Make a pool and attach it to an allocator.  Then add the test regions to it.
-  RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
+void AllocBySizeHelper(TestFlavor flavor) {
+  // Make an allocator.  If we are not using the heap for bookkeeping, then make
+  // a pool and attach it to the allocator.
+  RegionAllocator alloc((flavor == TestFlavor::UsePool)
+                            ? RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE)
+                            : nullptr);
 
+  // Add our test regions.
   for (size_t i = 0; i < fbl::count_of(ALLOC_BY_SIZE_REGIONS); ++i) {
     ASSERT_OK(alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]));
   }
@@ -151,10 +177,22 @@ TEST(RegionAllocCppApiTestCase, AllocBySize) {
   // clean up, and release its bookkeeping pool reference in the process.
 }
 
-TEST(RegionAllocCppApiTestCase, AllocSpecific) {
-  // Make a pool and attach it to an allocator.  Then add the test regions to it.
-  RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
+TEST(RegionAllocCppApiTestCase, AllocBySizeFromPool) {
+  ASSERT_NO_FAILURES(AllocBySizeHelper(TestFlavor::UsePool));
+}
 
+TEST(RegionAllocCppApiTestCase, AllocBySizeFromHeap) {
+  ASSERT_NO_FAILURES(AllocBySizeHelper(TestFlavor::UseHeap));
+}
+
+void AllocSpecificHelper(TestFlavor flavor) {
+  // Make an allocator.  If we are not using the heap for bookkeeping, then make
+  // a pool and attach it to the allocator.
+  RegionAllocator alloc((flavor == TestFlavor::UsePool)
+                            ? RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE)
+                            : nullptr);
+
+  // Add our test regions.
   for (size_t i = 0; i < fbl::count_of(ALLOC_SPECIFIC_REGIONS); ++i) {
     ASSERT_OK(alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]));
   }
@@ -186,9 +224,20 @@ TEST(RegionAllocCppApiTestCase, AllocSpecific) {
   // clean up, and release its bookkeeping pool reference in the process.
 }
 
-TEST(RegionAllocCppApiTestCase, AddOverlap) {
-  // Make a pool and attach it to an allocator.  Then add the test regions to it.
-  RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
+TEST(RegionAllocCppApiTestCase, AllocSpecificFromPool) {
+  ASSERT_NO_FAILURES(AllocSpecificHelper(TestFlavor::UsePool));
+}
+
+TEST(RegionAllocCppApiTestCase, AllocSpecificFromHeap) {
+  ASSERT_NO_FAILURES(AllocSpecificHelper(TestFlavor::UseHeap));
+}
+
+void AddOverlapHelper(TestFlavor flavor) {
+  // Make an allocator.  If we are not using the heap for bookkeeping, then make
+  // a pool and attach it to the allocator.
+  RegionAllocator alloc((flavor == TestFlavor::UsePool)
+                            ? RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE)
+                            : nullptr);
 
   // Add each of the regions specified by the test and check the expected results.
   for (size_t i = 0; i < fbl::count_of(ADD_OVERLAP_TESTS); ++i) {
@@ -201,9 +250,20 @@ TEST(RegionAllocCppApiTestCase, AddOverlap) {
   }
 }
 
-TEST(RegionAllocCppApiTestCase, Subtract) {
-  // Make a pool and attach it to an allocator.  Then add the test regions to it.
-  RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
+TEST(RegionAllocCppApiTestCase, AddOverlapFromPool) {
+  ASSERT_NO_FAILURES(AddOverlapHelper(TestFlavor::UsePool));
+}
+
+TEST(RegionAllocCppApiTestCase, AddOverlapFromHeap) {
+  ASSERT_NO_FAILURES(AddOverlapHelper(TestFlavor::UseHeap));
+}
+
+void SubtractHelper(TestFlavor flavor) {
+  // Make an allocator.  If we are not using the heap for bookkeeping, then make
+  // a pool and attach it to the allocator.
+  RegionAllocator alloc((flavor == TestFlavor::UsePool)
+                            ? RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE)
+                            : nullptr);
 
   // Run the test sequence, adding and subtracting regions and verifying the results.
   for (size_t i = 0; i < fbl::count_of(SUBTRACT_TESTS); ++i) {
@@ -220,7 +280,21 @@ TEST(RegionAllocCppApiTestCase, Subtract) {
   }
 }
 
-TEST(RegionAllocCppApiTestCase, AllocatedWalk) {
+TEST(RegionAllocCppApiTestCase, SubtractFromPool) {
+  ASSERT_NO_FAILURES(SubtractHelper(TestFlavor::UsePool));
+}
+
+TEST(RegionAllocCppApiTestCase, SubtractFromHeap) {
+  ASSERT_NO_FAILURES(SubtractHelper(TestFlavor::UseHeap));
+}
+
+void AllocatedWalkHelper(TestFlavor flavor) {
+  // Make an allocator.  If we are not using the heap for bookkeeping, then make
+  // a pool and attach it to the allocator.
+  RegionAllocator alloc((flavor == TestFlavor::UsePool)
+                            ? RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE)
+                            : nullptr);
+
   const ralloc_region_t test_regions[] = {
       {.base = 0x00000000, .size = 1 << 20}, {.base = 0x10000000, .size = 1 << 20},
       {.base = 0x20000000, .size = 1 << 20}, {.base = 0x30000000, .size = 1 << 20},
@@ -230,7 +304,6 @@ TEST(RegionAllocCppApiTestCase, AllocatedWalk) {
   };
   constexpr size_t r_cnt = fbl::count_of(test_regions);
 
-  RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
   EXPECT_OK(alloc.AddRegion({.base = 0, .size = UINT64_MAX}));
 
   // Pull each region defined above out of the allocator and stash their UPtrs
@@ -270,6 +343,14 @@ TEST(RegionAllocCppApiTestCase, AllocatedWalk) {
     alloc.WalkAllocatedRegions(f);
     ASSERT_EQ(pos, end);
   }
+}
+
+TEST(RegionAllocCppApiTestCase, AllocatedWalkFromPool) {
+  ASSERT_NO_FAILURES(AllocatedWalkHelper(TestFlavor::UsePool));
+}
+
+TEST(RegionAllocCppApiTestCase, AllocatedWalkFromHeap) {
+  ASSERT_NO_FAILURES(AllocatedWalkHelper(TestFlavor::UseHeap));
 }
 
 }  // namespace

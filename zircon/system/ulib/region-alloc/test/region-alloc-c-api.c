@@ -9,6 +9,14 @@
 
 #include "common.h"
 
+// A simple bool-like enum used to determine if generalized test helper should
+// use the heap for bookkeeping, or if it should use a RegionPool slab
+// allocator.
+enum TestFlavor {
+  TestFlavorUsePool,
+  TestFlavorUseHeap,
+};
+
 TEST(RegionAllocCApiTestCase, RegionPools) {
   // Make a pool for the bookkeeping.  Do not allow it to be very large.
   // Require that this succeeds, we will not be able to run the tests without
@@ -23,16 +31,29 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
   ASSERT_NOT_NULL(alloc);
 
   {
-    // Make sure that it refuses to perform any operations because it has no
-    // RegionPool assigned to it yet.
-    const ralloc_region_t tmp = {.base = 0u, .size = 1u};
+    // Add a single region to our allocator and then get a region out of the
+    // middle of it.  Since we have not yet assigned a RegionPool, all of the
+    // bookkeeping for this will be allocated directly from the heap.
+    const ralloc_region_t tmp = {.base = 0u, .size = 1024u};
+    const ralloc_region_t req = {.base = 128u, .size = 256u};
     const ralloc_region_t* out;
 
-    EXPECT_EQ(ZX_ERR_BAD_STATE, ralloc_add_region(alloc, &tmp, false));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, ralloc_get_sized_region_ex(alloc, 1u, 1u, &out));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, ralloc_get_specific_region_ex(alloc, &tmp, &out));
-    EXPECT_NULL(ralloc_get_sized_region(alloc, 1u, 1u));
-    EXPECT_NULL(ralloc_get_specific_region(alloc, &tmp));
+    EXPECT_OK(ralloc_add_region(alloc, &tmp, false));
+    EXPECT_OK(ralloc_get_specific_region_ex(alloc, &req, &out));
+
+    // Now attempt to assign a region pool to allocate from.  Since we have both
+    // active regions and active allocations, this will fail with BAD_STATE.
+    EXPECT_EQ(ZX_ERR_BAD_STATE, ralloc_set_region_pool(alloc, pool));
+
+    // Give out allocation back and try again.  This should still fail.  We have
+    // no active allocations, but we still have region bookkeeping allocated
+    // from the heap, so we cannot change allocators yet.
+    ralloc_put_region(out);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, ralloc_set_region_pool(alloc, pool));
+
+    // Finally, release the available region bookkeeping.  This will set us up
+    // for success during the rest of the test.
+    ralloc_reset_allocator(alloc);
   }
 
   // Assign our pool to our allocator, but hold onto the pool for now.
@@ -110,17 +131,19 @@ TEST(RegionAllocCApiTestCase, RegionPools) {
   ralloc_destroy_allocator(alloc);
 }
 
-TEST(RegionAllocCApiTestCase, AllocBySize) {
-  // Make a pool and attach it to an allocator.  Then add the test regions to it.
+void AllocBySizeHelper(enum TestFlavor flavor) {
+  // Create an allocator.
   ralloc_allocator_t* alloc = NULL;
-  {
+  ASSERT_OK(ralloc_create_allocator(&alloc));
+  ASSERT_NOT_NULL(alloc);
+
+  // If this test uses a RegionPool, make one and attach it to the allocator here.
+  if (flavor == TestFlavorUsePool) {
     ralloc_pool_t* pool;
     ASSERT_OK(ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool));
     ASSERT_NOT_NULL(pool);
 
     // Create an allocator and add our region pool to it.
-    ASSERT_OK(ralloc_create_allocator(&alloc));
-    ASSERT_NOT_NULL(alloc);
     ASSERT_OK(ralloc_set_region_pool(alloc, pool));
 
     // Release our pool reference.  The allocator should be holding onto its own
@@ -128,8 +151,10 @@ TEST(RegionAllocCApiTestCase, AllocBySize) {
     ralloc_release_pool(pool);
   }
 
-  for (size_t i = 0; i < countof(ALLOC_BY_SIZE_REGIONS); ++i)
+  // Now add our test regions.
+  for (size_t i = 0; i < countof(ALLOC_BY_SIZE_REGIONS); ++i) {
     EXPECT_OK(ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i], false));
+  }
 
   // Run the alloc by size tests.  Hold onto the regions it allocates so they
   // can be cleaned up properly when the test finishes.
@@ -173,17 +198,27 @@ TEST(RegionAllocCApiTestCase, AllocBySize) {
   ralloc_destroy_allocator(alloc);
 }
 
-TEST(RegionAllocCApiTestCase, AllocSpecific) {
-  // Make a pool and attach it to an allocator.  Then add the test regions to it.
+TEST(RegionAllocCApiTestCase, AllocBySizeUsePool) {
+  ASSERT_NO_FAILURES(AllocBySizeHelper(TestFlavorUsePool));
+}
+
+TEST(RegionAllocCApiTestCase, AllocBySizeUseHeap) {
+  ASSERT_NO_FAILURES(AllocBySizeHelper(TestFlavorUseHeap));
+}
+
+void AllocSpecificHelper(enum TestFlavor flavor) {
+  // Create an allocator.
   ralloc_allocator_t* alloc = NULL;
-  {
+  ASSERT_OK(ralloc_create_allocator(&alloc));
+  ASSERT_NOT_NULL(alloc);
+
+  // If this test uses a RegionPool, make one and attach it to the allocator here.
+  if (flavor == TestFlavorUsePool) {
     ralloc_pool_t* pool;
     ASSERT_OK(ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool));
     ASSERT_NOT_NULL(pool);
 
     // Create an allocator and add our region pool to it.
-    ASSERT_OK(ralloc_create_allocator(&alloc));
-    ASSERT_NOT_NULL(alloc);
     ASSERT_OK(ralloc_set_region_pool(alloc, pool));
 
     // Release our pool reference.  The allocator should be holding onto its own
@@ -191,6 +226,7 @@ TEST(RegionAllocCApiTestCase, AllocSpecific) {
     ralloc_release_pool(pool);
   }
 
+  // Now add our test regions.
   for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i) {
     EXPECT_OK(ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], false));
   }
@@ -229,17 +265,27 @@ TEST(RegionAllocCApiTestCase, AllocSpecific) {
   ralloc_destroy_allocator(alloc);
 }
 
-TEST(RegionAllocCApiTestCase, AddOverlap) {
-  // Make a pool and attach it to an allocator.
+TEST(RegionAllocCApiTestCase, AllocSpecificUsePool) {
+  ASSERT_NO_FAILURES(AllocSpecificHelper(TestFlavorUsePool));
+}
+
+TEST(RegionAllocCApiTestCase, AllocSpecificUseHeap) {
+  ASSERT_NO_FAILURES(AllocSpecificHelper(TestFlavorUseHeap));
+}
+
+void AddOverlapHelper(enum TestFlavor flavor) {
+  // Create an allocator.
   ralloc_allocator_t* alloc = NULL;
-  {
+  ASSERT_OK(ralloc_create_allocator(&alloc));
+  ASSERT_NOT_NULL(alloc);
+
+  // If this test uses a RegionPool, make one and attach it to the allocator here.
+  if (flavor == TestFlavorUsePool) {
     ralloc_pool_t* pool;
     ASSERT_OK(ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool));
     ASSERT_NOT_NULL(pool);
 
     // Create an allocator and add our region pool to it.
-    ASSERT_OK(ralloc_create_allocator(&alloc));
-    ASSERT_NOT_NULL(alloc);
     ASSERT_OK(ralloc_set_region_pool(alloc, pool));
 
     // Release our pool reference.  The allocator should be holding onto its own
@@ -261,17 +307,27 @@ TEST(RegionAllocCApiTestCase, AddOverlap) {
   ralloc_destroy_allocator(alloc);
 }
 
-TEST(RegionAllocCApiTestCase, Subtract) {
-  // Make a pool and attach it to an allocator.
+TEST(RegionAllocCApiTestCase, AddOverlapUsePool) {
+  ASSERT_NO_FAILURES(AddOverlapHelper(TestFlavorUsePool));
+}
+
+TEST(RegionAllocCApiTestCase, AddOverlapUseHeap) {
+  ASSERT_NO_FAILURES(AddOverlapHelper(TestFlavorUseHeap));
+}
+
+void SubtractHelper(enum TestFlavor flavor) {
+  // Create an allocator.
   ralloc_allocator_t* alloc = NULL;
-  {
+  ASSERT_OK(ralloc_create_allocator(&alloc));
+  ASSERT_NOT_NULL(alloc);
+
+  // If this test uses a RegionPool, make one and attach it to the allocator here.
+  if (flavor == TestFlavorUsePool) {
     ralloc_pool_t* pool;
     ASSERT_OK(ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool));
     ASSERT_NOT_NULL(pool);
 
     // Create an allocator and add our region pool to it.
-    ASSERT_OK(ralloc_create_allocator(&alloc));
-    ASSERT_NOT_NULL(alloc);
     ASSERT_OK(ralloc_set_region_pool(alloc, pool));
 
     // Release our pool reference.  The allocator should be holding onto its own
@@ -297,6 +353,14 @@ TEST(RegionAllocCApiTestCase, Subtract) {
   ralloc_destroy_allocator(alloc);
 }
 
+TEST(RegionAllocCApiTestCase, SubtractUsePool) {
+  ASSERT_NO_FAILURES(SubtractHelper(TestFlavorUsePool));
+}
+
+TEST(RegionAllocCApiTestCase, SubtractUseHeap) {
+  ASSERT_NO_FAILURES(SubtractHelper(TestFlavorUseHeap));
+}
+
 static bool ralloc_walk_cb(const ralloc_region_t* r, void* ctx) {
   ralloc_walk_test_ctx_t* ctx_ = (ralloc_walk_test_ctx_t*)ctx;
 
@@ -313,7 +377,26 @@ static bool ralloc_walk_cb(const ralloc_region_t* r, void* ctx) {
   return (ctx_->end == -1) ? true : (ctx_->i != ctx_->end);
 }
 
-TEST(RegionAllocCApiTestCase, AllocatedWalk) {
+void AllocatedWalkHelper(enum TestFlavor flavor) {
+  // Create an allocator.
+  ralloc_allocator_t* alloc = NULL;
+  ASSERT_OK(ralloc_create_allocator(&alloc));
+  ASSERT_NOT_NULL(alloc);
+
+  // If this test uses a RegionPool, make one and attach it to the allocator here.
+  if (flavor == TestFlavorUsePool) {
+    ralloc_pool_t* pool;
+    ASSERT_OK(ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool));
+    ASSERT_NOT_NULL(pool);
+
+    // Create an allocator and add our region pool to it.
+    ASSERT_OK(ralloc_set_region_pool(alloc, pool));
+
+    // Release our pool reference.  The allocator should be holding onto its own
+    // reference at this point.
+    ralloc_release_pool(pool);
+  }
+
   const ralloc_region_t test_regions[] = {
       {.base = 0x00000000, .size = 1 << 20}, {.base = 0x10000000, .size = 1 << 20},
       {.base = 0x20000000, .size = 1 << 20}, {.base = 0x30000000, .size = 1 << 20},
@@ -323,16 +406,8 @@ TEST(RegionAllocCApiTestCase, AllocatedWalk) {
   };
   const size_t r_cnt = countof(test_regions);
 
-  // Create the pool for our allocator
-  ralloc_pool_t* pool;
-  ASSERT_OK(ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool));
-  ASSERT_NOT_NULL(pool);
-
-  // Create an allocator and add our region pool to it.
-  ralloc_allocator_t* alloc;
-  ASSERT_OK(ralloc_create_allocator(&alloc));
-  ASSERT_NOT_NULL(alloc);
-  ASSERT_OK(ralloc_set_region_pool(alloc, pool));
+  // Add a region which covers the entire address space to the allocator's
+  // available set.
   ralloc_region_t full_region = {.base = 0, .size = UINT64_MAX};
   ASSERT_OK(ralloc_add_region(alloc, &full_region, false));
 
@@ -359,10 +434,17 @@ TEST(RegionAllocCApiTestCase, AllocatedWalk) {
     ASSERT_EQ(ctx.i, ctx.end);
   }
 
-  // Clean up the allocated regions, pool, then allocator
+  // Clean up the allocated regions and allocator
   for (size_t i = 0; i < r_cnt; i++) {
     ralloc_put_region(tmp_regions[i]);
   }
-  ralloc_release_pool(pool);
   ralloc_destroy_allocator(alloc);
+}
+
+TEST(RegionAllocCApiTestCase, AllocatedWalkUsePool) {
+  ASSERT_NO_FAILURES(AllocatedWalkHelper(TestFlavorUsePool));
+}
+
+TEST(RegionAllocCApiTestCase, AllocatedWalkUseHeap) {
+  ASSERT_NO_FAILURES(AllocatedWalkHelper(TestFlavorUseHeap));
 }
