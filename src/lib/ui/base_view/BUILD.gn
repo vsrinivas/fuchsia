@@ -69,11 +69,11 @@ unittest_package("base_view_unittests") {
   tests = [
     {
       name = "base_view_unittest"
-      environments = basic_envs
+      environments = [ emu_env ]
     },
     {
       name = "math_unittest"
-      environments = basic_envs
+      environments = [ emu_env ]
     },
   ]
 }
