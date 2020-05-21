@@ -1,0 +1,50 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.views;
+
+/// A ViewRef's state of focus.
+table FocusState {
+    /// Describes if a ViewRef has gained focus (true), or lost focus (false).
+    ///
+    /// Required field.
+    1: bool focused;
+};
+
+/// A method of enabling a ViewRef creator to determine if its ViewRef has
+/// gained or lost focus in the view tree.
+///
+/// The protocol client has implicit access to the ViewRef it created; the
+/// protocol itself does not accept a ViewRef parameter. Clients, both trusted
+/// or otherwise, need access to view-focus state, so the protocol is
+/// deliberately minimal. Possession of a ViewRef (and this protocol) does not
+/// grant the power to learn about a ViewRef's focus state.
+protocol ViewRefFocused {
+    /// Sets up a callback to fire when the implicit ViewRef has gained or lost
+    /// focus. Typically, focus changes happen at a slow pace, such that every
+    /// transition is captured by the callback. However, focus changes can
+    /// happen rapidly, so the callback may "compress" focus change history into
+    /// just the latest known focus state.
+    ///
+    /// The callback reports the last focus change spanning the duration from
+    /// its issuance to the previous callback's issuance. The client may observe
+    /// any of the following four transitions:
+    /// - true -> true: The ViewRef has lost focus at least once, and has gained
+    ///   focus by the time of callback issuance.
+    /// - true -> false: The ViewRef has lost focus at least once, and has lost
+    ///   focus by the time of callback issuance.
+    /// - false -> true: The ViewRef has gained focus at least once, and has
+    ///   gained focus by the time of callback issuance.
+    /// - false -> false: The ViewRef has gained focus at least once, and has
+    ///   lost focus by the time of callback issuance.
+    ///
+    /// The client avoids "focus flapping" and always sees the latest state.
+    /// Every callback issuance is meaningful, and the client should renegotiate
+    /// focus-related services appropriately, such as IME.
+    ///
+    /// Flow control: The caller is allowed at most one in-flight |Watch| call
+    /// at at time: subsequent |Watch| calls must wait until the acknowledgment
+    /// returns. Non-compliance results in channel closure.
+    Watch() -> (FocusState state);
+};
