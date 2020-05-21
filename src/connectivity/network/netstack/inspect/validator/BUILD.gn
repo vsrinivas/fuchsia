@@ -9,7 +9,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("lib") {
-  name = "fuchsia.googlesource.com/inspect/validator"
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
 
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
@@ -19,7 +19,7 @@ go_library("lib") {
 }
 
 go_binary("puppet") {
-  gopackage = "fuchsia.googlesource.com/inspect/validator"
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
 
   deps = [ ":lib" ]
 }
