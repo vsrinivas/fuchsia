@@ -58,10 +58,9 @@ func main() {
 	flag.Usage = usage
 	var swarmingSummaryPath = flag.String("swarming-summary-json", "", "Path to the Swarming task summary file. Required.")
 	var inputSummaryPath = flag.String("test-summary-json", "", "Path to test summary file. Optional.")
-	// TODO(garymm): Store flags in vars.
-	flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
-	flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
-	flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
+	var swarmingOutputPath = flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
+	var syslogPath = flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
+	var serialLogPath = flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
 	flag.Parse()
 
 	if *help || flag.NArg() > 0 || *swarmingSummaryPath == "" {
@@ -73,20 +72,60 @@ func main() {
 		os.Exit(64)
 	}
 
-	// TODO(garymm): Use the return value to run checks.
-	_, err := loadSwarmingTaskSummary(*swarmingSummaryPath)
+	swarmingSummary, err := loadSwarmingTaskSummary(*swarmingSummaryPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	outputSummary, err := loadTestSummary(*inputSummaryPath)
+	inputSummary, err := loadTestSummary(*inputSummaryPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO(garymm): Run checks and add tests to outputSummary.
+	var serialLog []byte
+	if *serialLogPath != "" {
+		serialLog, err = ioutil.ReadFile(*serialLogPath)
+		if err != nil {
+			log.Fatalf("failed to read serial log from %s: %e", *serialLogPath, err)
+		}
+	}
 
-	jsonOutput, err := json.MarshalIndent(outputSummary, "", "  ")
+	var swarmingOutput []byte
+	if *swarmingOutputPath != "" {
+		swarmingOutput, err = ioutil.ReadFile(*swarmingOutputPath)
+		if err != nil {
+			log.Fatalf("failed to read swarming output from %s: %e", *swarmingOutputPath, err)
+		}
+	}
+
+	var syslog []byte
+	if *syslogPath != "" {
+		syslog, err = ioutil.ReadFile(*syslogPath)
+		if err != nil {
+			log.Fatalf("failed to read syslog from %s: %e", *syslogPath, err)
+		}
+	}
+
+	testingOutputs := tefmocheck.TestingOutputs{
+		TestSummary:     inputSummary,
+		SwarmingSummary: swarmingSummary,
+		SerialLog:       serialLog,
+		SwarmingOutput:  swarmingOutput,
+		Syslog:          syslog,
+	}
+
+	// These should be ordered from most specific to least specific. If an earlier
+	// check finds a failure mode, then we skip running later checks because we assume
+	// they'll add no useful information.
+	checks := []tefmocheck.FailureModeCheck{}
+	checks = append(checks, tefmocheck.StringInLogsChecks()...)
+	// TaskStateChecks should go at the end, since they're not very specific.
+	checks = append(checks, tefmocheck.TaskStateChecks...)
+
+	checkTests := tefmocheck.RunChecks(checks, &testingOutputs)
+
+	inputSummary.Tests = append(inputSummary.Tests, checkTests...)
+	jsonOutput, err := json.MarshalIndent(inputSummary, "", "  ")
 	if err != nil {
 		log.Fatalf("failed to marshal output test summary: %v", err)
 	}
