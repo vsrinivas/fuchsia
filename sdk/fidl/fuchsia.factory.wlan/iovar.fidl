@@ -1,0 +1,28 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.factory.wlan;
+
+using zx;
+
+const uint64 MAX_REQUEST_SIZE = 1024;
+const uint64 MAX_RESULT_SIZE = 4096;
+
+/// Allows the factory testing tool to communicate to the firmware via the driver using
+/// a pre-formatted command buffer to observe and/or control the WLAN hardware's behavior.
+protocol Iovar {
+
+    /// + request `iface_idx` interface index in the firmware
+    /// + request `cmd` pre-defined command index specified by the manufacturer
+    /// + request `request` additional data associated with the command
+    /// - response `result` pre-formatted response data retrieved from firmware
+    /// * error a status code indicating why the request could not be completed.
+    Get(int32 iface_idx, int32 cmd, bytes:MAX_REQUEST_SIZE request) -> (bytes:MAX_RESULT_SIZE result) error zx.status;
+
+    /// + request `iface_idx` interface index in the firmware
+    /// + request `cmd` pre-defined command index specified by the manufacturer
+    /// + request `request` additional data associated with the command
+    /// * error a status code indicating why the request could not be completed.
+    Set(int32 iface_idx, int32 cmd, bytes:MAX_REQUEST_SIZE request) -> () error zx.status;
+};
