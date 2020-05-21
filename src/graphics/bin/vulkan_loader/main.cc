@@ -29,11 +29,6 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
   void Add(const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
     outgoing->AddPublicService(fidl::InterfaceRequestHandler<fuchsia::vulkan::loader::Loader>(
         [this](fidl::InterfaceRequest<fuchsia::vulkan::loader::Loader> request) {
-          if (!logged_connection_) {
-            // TODO(fxb/50876): Remove logging once hang is debugged.
-            FX_LOGS(INFO) << "Vulkan loader received first connection";
-            logged_connection_ = true;
-          }
           bindings_.AddBinding(this, std::move(request), nullptr);
         }));
   }
@@ -41,9 +36,6 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
  private:
   // fuchsia::vulkan::loader::Loader impl
   void Get(std::string name, GetCallback callback) {
-    // TODO(fxb/50876): Remove logging once hang is debugged.
-    if (!logged_load_)
-      FX_LOGS(INFO) << "Vulkan loader starting load of " << name;
     // TODO(MA-470): Load this from a package's data directory, not /system/lib
     std::string load_path = "/system/lib/" + name;
     int fd;
@@ -61,15 +53,10 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Could not clone vmo exec: " << status;
     }
-    if (!logged_load_)
-      FX_LOGS(INFO) << "Vulkan loader finished load of " << name;
-    logged_load_ = true;
     callback(std::move(vmo));
   }
 
   fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
-  bool logged_load_ = false;
-  bool logged_connection_ = false;
 };
 
 int main(int argc, const char* const* argv) {
@@ -81,8 +68,7 @@ int main(int argc, const char* const* argv) {
   LoaderImpl loader_impl;
   loader_impl.Add(context->outgoing());
 
-  // TODO(fxb/50876): Remove logging once hang is debugged.
-  FX_LOGS(INFO) << "Vulkan loader finished initializing";
+  FX_LOGS(INFO) << "Vulkan loader initialized.";
   loop.Run();
   return 0;
 }
