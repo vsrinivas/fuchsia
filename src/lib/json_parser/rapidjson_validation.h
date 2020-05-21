@@ -5,7 +5,10 @@
 #ifndef SRC_LIB_JSON_PARSER_RAPIDJSON_VALIDATION_H_
 #define SRC_LIB_JSON_PARSER_RAPIDJSON_VALIDATION_H_
 
+#include <lib/fitx/result.h>
+
 #include <memory>
+#include <sstream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
@@ -14,23 +17,30 @@
 
 namespace json_parser {
 
-// Use `InitSchemaDeprecatedDeprecated`.
-std::unique_ptr<rapidjson::SchemaDocument> InitSchema(fxl::StringView json);
+// Error for `InitSchema` function.
+struct InitSchemaError {
+  // Offset in schema json where error occured.
+  size_t offset;
 
-// We are in the process of adding new API which will return error rather than loggign it. In the
-// meantime keep using this function.
+  // Call `rapidjson::GetParseError_En` on error code to get string representation.
+  rapidjson::ParseErrorCode code;
+
+  std::string ToString() const;
+};
+
 // Build a SchemaDocument from a json encoded string.
-// Returns null if |json| is invalid.
+fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(fxl::StringView json);
+
+// STOP. Use `InitSchema`.
 std::unique_ptr<rapidjson::SchemaDocument> InitSchemaDeprecated(fxl::StringView json);
 
-// Use `ValidateSchemaDeprecatedDeprecated`.
-bool ValidateSchema(const rapidjson::Value& value, const rapidjson::SchemaDocument& schema,
-                    fxl::StringView value_name = "");
-
-// We are in the process of adding new API which will return error rather than loggign it. In the
-// meantime keep using this function.
 // Validate that the given json value match the given schema.
-// If not empty, |value_name| is printed in the log should the validation fail.
+// Returns validation error on error.
+fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
+                                         const rapidjson::SchemaDocument& schema,
+                                         fxl::StringView value_name = "");
+
+// STOP. Use `ValidateSchema`.
 bool ValidateSchemaDeprecated(const rapidjson::Value& value,
                               const rapidjson::SchemaDocument& schema,
                               fxl::StringView value_name = "");
