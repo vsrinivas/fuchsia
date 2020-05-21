@@ -20,10 +20,19 @@ namespace blobfs {
 
 namespace {
 
-constexpr int kDefaultLevel = 3;
-
+using chunked_compression::CompressionParams;
 using chunked_compression::Status;
 using chunked_compression::ToZxStatus;
+
+constexpr int kDefaultLevel = 14;
+constexpr int kTargetFrameSize = 32 * 1024;
+
+CompressionParams DefaultParams(size_t input_size) {
+  CompressionParams params;
+  params.compression_level = kDefaultLevel;
+  params.chunk_size = CompressionParams::ChunkSizeForInputSize(input_size, kTargetFrameSize);
+  return params;
+}
 
 }  // namespace
 
@@ -37,10 +46,9 @@ zx_status_t ChunkedCompressor::Create(CompressionSettings settings, size_t input
                                       size_t* output_limit_out,
                                       std::unique_ptr<ChunkedCompressor>* out) {
   ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::CHUNKED);
-  chunked_compression::CompressionParams params;
+  CompressionParams params = DefaultParams(input_size);
   params.compression_level =
       settings.compression_level ? *(settings.compression_level) : kDefaultLevel;
-  params.chunk_size = chunked_compression::CompressionParams::ChunkSizeForInputSize(input_size);
 
   chunked_compression::StreamingChunkedCompressor compressor(params);
 
@@ -55,9 +63,11 @@ zx_status_t ChunkedCompressor::SetOutput(void* dst, size_t dst_len) {
   if (dst_len < compressor_.ComputeOutputSizeLimit(input_len_)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  if (compressor_.Init(input_len_, dst, dst_len) != chunked_compression::kStatusOk) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize compressor\n");
-    return ZX_ERR_INTERNAL;
+  Status status = compressor_.Init(input_len_, dst, dst_len);
+  if (status != chunked_compression::kStatusOk) {
+    zx_status_t zstatus = ToZxStatus(status);
+    FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", zstatus);
+    return zstatus;
   }
   return ZX_OK;
 }

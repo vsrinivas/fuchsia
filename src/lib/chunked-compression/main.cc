@@ -38,6 +38,8 @@ using chunked_compression::StreamingChunkedCompressor;
 constexpr const char kAnsiUpLine[] = "\33[A";
 constexpr const char kAnsiClearLine[] = "\33[2K\r";
 
+constexpr size_t kTargetFrameSize = 32 * 1024;
+
 // ProgressWriter writes live a progress indicator to stdout. Updates are written in-place
 // (using ANSI control codes to rewrite the current line).
 class ProgressWriter {
@@ -175,7 +177,7 @@ int Compress(const uint8_t* src, size_t sz, const char* dst_file, int level, boo
   CompressionParams params;
   params.frame_checksum = checksum;
   params.compression_level = level;
-  params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz);
+  params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz, kTargetFrameSize);
   size_t output_limit = params.ComputeOutputSizeLimit(sz);
   ChunkedCompressor compressor(params);
 
@@ -212,7 +214,7 @@ int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int l
   CompressionParams params;
   params.frame_checksum = checksum;
   params.compression_level = level;
-  params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz);
+  params.chunk_size = CompressionParams::ChunkSizeForInputSize(sz, kTargetFrameSize);
   size_t output_limit = params.ComputeOutputSizeLimit(sz);
   StreamingChunkedCompressor compressor(params);
 

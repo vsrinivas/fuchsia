@@ -39,9 +39,11 @@ struct CompressionParams {
   static int MaxCompressionLevel();
 
   // Estimates a good chunk size for the given input size.
-  static size_t ChunkSizeForInputSize(size_t len);
+  // |len| is the data input size.
+  // |target_size| is the frame size to target. A frame size greater than or equal to this
+  // will be returned (greater when the data is too large to support the target size.)
+  static size_t ChunkSizeForInputSize(size_t len, size_t target_size);
   static size_t MinChunkSize();
-  static size_t MaxChunkSize();
 };
 
 }  // namespace chunked_compression
