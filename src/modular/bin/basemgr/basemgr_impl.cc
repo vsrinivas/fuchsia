@@ -273,8 +273,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
             }
           });
 
-          session_user_provider_impl_->RemoveAllUsers(
-              [this, show_setup_or_login] { wlan_->ClearSavedNetworks(show_setup_or_login); });
+          wlan_->ClearSavedNetworks(show_setup_or_login);
         } else {
           show_setup_or_login();
         }
@@ -290,10 +289,6 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
 
 void BasemgrImpl::LoginAsGuest() {
   session_user_provider_impl_->Login3(/* is_ephemeral_account */ true);
-}
-
-void BasemgrImpl::LogoutUsers(fit::function<void()> callback) {
-  session_user_provider_impl_->RemoveAllUsers(std::move(callback));
 }
 
 void BasemgrImpl::GetPresentation(

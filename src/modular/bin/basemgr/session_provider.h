@@ -27,9 +27,6 @@ class SessionProvider {
   // functionality to SessionProvider that's outside the scope of this class.
   class Delegate {
    public:
-    // Called when SessionProvider wants to logout all users.
-    virtual void LogoutUsers(fit::function<void()> callback) = 0;
-
     // Called when a session provided by SessionProvider wants to acquire
     // presentation.
     virtual void GetPresentation(
@@ -61,7 +58,7 @@ class SessionProvider {
 
   // Callback function for session_provider to invoke when there is no active
   // session
-  void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason, bool logout_users);
+  void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason);
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|. If no session shells are running, this has no

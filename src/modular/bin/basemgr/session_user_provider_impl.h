@@ -34,8 +34,6 @@ class SessionUserProviderImpl : fuchsia::modular::UserProvider {
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void Login3(bool is_ephemeral_account) override;
 
-  void RemoveAllUsers(fit::function<void()> callback);
-
  private:
   // |fuchsia::modular::UserProvider|
   void Login(fuchsia::modular::UserLoginParams params) override;

@@ -40,7 +40,7 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
       false /* use_session_shell_for_story_shell_factory */, std::move(view_token),
       nullptr /* additional_services */, zx::channel() /* overridden_config_handle */,
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {} /* get_presentation */,
-      [](modular::SessionContextImpl::ShutDownReason, bool) {} /* done_callback */);
+      [](modular::SessionContextImpl::ShutDownReason) {} /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }
@@ -70,7 +70,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       /* get_presentation= */
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},
       /* done_callback= */
-      [&done_callback_called](modular::SessionContextImpl::ShutDownReason, bool) {
+      [&done_callback_called](modular::SessionContextImpl::ShutDownReason) {
         done_callback_called = true;
       });
 

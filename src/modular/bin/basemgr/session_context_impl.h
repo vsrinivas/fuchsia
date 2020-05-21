@@ -39,8 +39,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // (and deletion of our instance) to our owner, this is done using a callback
   // supplied in the constructor. (The alternative is to take in a
   // SessionProvider*, which seems a little specific and overscoped).
-  using OnSessionShutdownCallback =
-      fit::function<void(ShutDownReason shutdown_reason, bool logout_users)>;
+  using OnSessionShutdownCallback = fit::function<void(ShutDownReason shutdown_reason)>;
 
   // Called when sessionmgr requests to acquire the presentation.
   using GetPresentationCallback =
@@ -62,10 +61,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   ~SessionContextImpl() override = default;
 
   // This will effectively tear down the entire instance by calling
-  // |on_session_shutdown_|. If |logout_users| is true, all the users will be
-  // logged out with the assumption that all users belong to the current
-  // session.
-  void Shutdown(bool logout_users, fit::function<void()> callback);
+  // |on_session_shutdown_|.
+  void Shutdown(ShutDownReason reason, fit::function<void()> callback);
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|.

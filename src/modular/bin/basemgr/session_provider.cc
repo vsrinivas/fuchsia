@@ -19,6 +19,7 @@
 namespace modular {
 
 using intl::IntlPropertyProviderImpl;
+using ShutDownReason = SessionContextImpl::ShutDownReason;
 
 const int kMaxCrashRecoveryLimit = 3;
 
@@ -68,8 +69,8 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
   services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
   services->host_directory = dir_handle.TakeChannel();
 
-  auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason, bool logout_users) {
-    OnSessionShutdown(shutdown_reason, logout_users);
+  auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason) {
+    OnSessionShutdown(shutdown_reason);
   };
 
   // Create a config directory
@@ -106,9 +107,8 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
   }
 
   // Shutdown will execute the given |callback|, then destroy
-  // |session_context_|. Here we do not logout any users because this is part of
-  // teardown (device shutting down, going to sleep, etc.).
-  session_context_->Shutdown(/* logout_users= */ false, std::move(callback));
+  // |session_context_|.
+  session_context_->Shutdown(ShutDownReason::CRASHED, std::move(callback));
 }
 
 FuturePtr<> SessionProvider::SwapSessionShell(fuchsia::modular::AppConfig session_shell_config) {
@@ -126,11 +126,10 @@ void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) 
 
   // Shutting down a session and preserving the users effectively restarts the
   // session.
-  session_context_->Shutdown(/* logout_users= */ false, std::move(on_restart_complete));
+  session_context_->Shutdown(ShutDownReason::CRASHED, std::move(on_restart_complete));
 }
 
-void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason,
-                                        bool logout_users) {
+void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason) {
   if (shutdown_reason == SessionContextImpl::ShutDownReason::CRASHED) {
     if (session_crash_recovery_counter_ != 0) {
       zx::duration duration = zx::clock::get_monotonic() - last_crash_time_;
@@ -161,11 +160,7 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
     on_zero_sessions_();
   };
 
-  if (logout_users) {
-    delegate_->LogoutUsers([delete_session_context]() { delete_session_context(); });
-  } else {
-    delete_session_context();
-  }
+  delete_session_context();
 }
 
 }  // namespace modular

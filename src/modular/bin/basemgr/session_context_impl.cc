@@ -163,7 +163,7 @@ SessionContextImpl::SessionContextImpl(
     // apply here because sessionmgr crashed. Move |on_session_shutdown_| on to the stack before
     // invoking it, in case the |on_session_shutdown_| deletes |this|.
     auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
-    on_session_shutdown(ShutDownReason::CRASHED, /* logout_users= */ false);
+    on_session_shutdown(ShutDownReason::CRASHED);
     // Don't touch |this|.
   });
 }
@@ -187,7 +187,7 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::chann
 
 // TODO(MF-120): Replace method in favor of letting sessionmgr launch base
 // shell via SessionUserProvider.
-void SessionContextImpl::Shutdown(bool logout_users, fit::function<void()> callback) {
+void SessionContextImpl::Shutdown(ShutDownReason reason, fit::function<void()> callback) {
   shutdown_callbacks_.push_back(std::move(callback));
   if (shutdown_callbacks_.size() > 1) {
     FX_LOGS(INFO) << "fuchsia::modular::internal::SessionContext::Shutdown() "
@@ -198,22 +198,18 @@ void SessionContextImpl::Shutdown(bool logout_users, fit::function<void()> callb
   // This should prevent us from receiving any further requests.
   session_context_binding_.Unbind();
 
-  sessionmgr_app_->Teardown(
-      kSessionmgrTimeout, [weak_this = weak_factory_.GetWeakPtr(), logout_users] {
-        // One of the callbacks might delete |SessionContextImpl|, so always guard against
-        // WeakPtr<SessionContextImpl>.
-        for (const auto& callback : weak_this->shutdown_callbacks_) {
-          callback();
-          if (!weak_this) {
-            return;
-          }
-        }
-        ShutDownReason shutdown_reason =
-            logout_users ? ShutDownReason::LOGGED_OUT : ShutDownReason::CRASHED;
-
-        auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
-        on_session_shutdown(shutdown_reason, logout_users);
-      });
+  sessionmgr_app_->Teardown(kSessionmgrTimeout, [weak_this = weak_factory_.GetWeakPtr(), reason] {
+    // One of the callbacks might delete |SessionContextImpl|, so always guard against
+    // WeakPtr<SessionContextImpl>.
+    for (const auto& callback : weak_this->shutdown_callbacks_) {
+      callback();
+      if (!weak_this) {
+        return;
+      }
+    }
+    auto on_session_shutdown = std::move(weak_this->on_session_shutdown_);
+    on_session_shutdown(reason);
+  });
 }
 
 void SessionContextImpl::GetPresentation(
@@ -228,15 +224,15 @@ FuturePtr<> SessionContextImpl::SwapSessionShell(fuchsia::modular::AppConfig ses
 }
 
 void SessionContextImpl::Logout() {
-  Shutdown(/* logout_users= */ true, [] {});
+  Shutdown(ShutDownReason::LOGGED_OUT, [] {});
 }
 
 void SessionContextImpl::Restart() {
-  Shutdown(/* logout_users= */ false, [] {});
+  Shutdown(ShutDownReason::CRASHED, [] {});
 }
 
 void SessionContextImpl::Shutdown() {
-  Shutdown(/* logout_users= */ false, [] {});
+  Shutdown(ShutDownReason::CRASHED, [] {});
 }
 
 }  // namespace modular

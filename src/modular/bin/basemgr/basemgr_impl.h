@@ -107,9 +107,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void LoginAsGuest() override;
 
   // |SessionProvider::Delegate|
-  void LogoutUsers(fit::function<void()> callback) override;
-
-  // |SessionProvider::Delegate|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
   fuchsia::modular::session::ModularConfig config_;

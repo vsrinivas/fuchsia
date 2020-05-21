@@ -45,15 +45,6 @@ void SessionUserProviderImpl::Login3(bool is_ephemeral_account) {
   on_login_(is_ephemeral_account);
 }
 
-void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
-  // No action needs to be taken in response to RemoveAllUsers: Basemgr no
-  // longer maintains a set of accounts within the account system. Legacy
-  // accounts may still exist in the account system, but these do not contain
-  // any user data and therefore it is not important to remove them.
-  FX_LOGS(INFO) << "RemoveAllUsers() called. No implementation required.";
-  callback();
-}
-
 void SessionUserProviderImpl::RemoveUser(std::string account_id, RemoveUserCallback callback) {
   FX_LOGS(INFO) << "RemoveUser() is not implemented yet.";
   callback("");
