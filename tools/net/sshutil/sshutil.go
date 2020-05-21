@@ -44,7 +44,11 @@ const (
 	keepaliveOpenSSH = "keepalive@openssh.com"
 
 	// Interval between keepalive pings.
-	keepaliveInterval = 5 * time.Second
+	keepaliveInterval = 1 * time.Second
+
+	// Close the client if we don't receive a keepalive response within this
+	// amount of time.
+	keepaliveTimeout = keepaliveInterval + 5*time.Second
 )
 
 var (
@@ -221,7 +225,6 @@ func keepalive(ctx context.Context, conn net.Conn, client *ssh.Client) {
 }
 
 func emitKeepalive(conn net.Conn, client *ssh.Client) error {
-	responseTimeout := keepaliveInterval + 15*time.Second
-	conn.SetDeadline(time.Now().Add(responseTimeout))
+	conn.SetDeadline(time.Now().Add(keepaliveTimeout))
 	return CheckConnection(client)
 }
