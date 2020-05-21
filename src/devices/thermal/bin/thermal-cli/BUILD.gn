@@ -59,7 +59,7 @@ unittest_package("thermal-cli-test-package") {
   tests = [
     {
       name = "thermal-cli-test"
-      environments = basic_envs
+      environments = [ emu_env ]
     },
   ]
 }
