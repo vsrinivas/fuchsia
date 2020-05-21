@@ -51,8 +51,8 @@ TEST(LogMessageStoreTest, AddAndConsume) {
 }
 
 TEST(LogMessageStoreTest, DropsCorrectly) {
-  // Set up the store to hold 2 log lines and the "!!! DROPPED..." string.
-  LogMessageStore store(kMaxLogLineSize * 2 + kDroppedFormatStrSize);
+  // Set up the store to hold 2 log lines to test that the subsequent 3 are dropped.
+  LogMessageStore store(kMaxLogLineSize * 2);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -63,6 +63,23 @@ TEST(LogMessageStoreTest, DropsCorrectly) {
   EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
 !!! DROPPED 3 LOG MESSAGES !!!
+)");
+}
+
+TEST(LogMessageStoreTest, DropsSubsequentShorterMessages) {
+  // Even though the store could hold 2 log lines, all the lines after the first one will be
+  // dropped because the second log message is very long.
+  LogMessageStore store(kMaxLogLineSize * 2);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(
+      FX_LOG_INFO, "This is a very big message that will not fit so it should not be displayed!")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! DROPPED 4 LOG MESSAGES !!!
 )");
 }
 

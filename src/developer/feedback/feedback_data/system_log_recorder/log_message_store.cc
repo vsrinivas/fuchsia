@@ -25,15 +25,25 @@ LogMessageStore::LogMessageStore(size_t max_capacity_bytes)
 
 bool LogMessageStore::Add(fuchsia::logger::LogMessage msg) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
-  std::string str = Format(msg);
 
   std::lock_guard<std::mutex> lk(mtx_);
+
+  // Early return on full buffer.
+  if (bytes_remaining_ == 0) {
+    ++num_messages_dropped;
+    return false;
+  }
+
+  std::string str = Format(msg);
 
   if (bytes_remaining_ >= str.size()) {
     bytes_remaining_ -= str.size();
     queue_.push_back(std::move(str));
     return true;
   } else {
+    // We will drop the rest of the incoming messages until the next Consume(). This avoids trying
+    // to squeeze in a shorter message that will wrongfully appear before the DROPPED message.
+    bytes_remaining_ = 0;
     ++num_messages_dropped;
     return false;
   }
