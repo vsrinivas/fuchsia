@@ -177,7 +177,7 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
   ACPI_TABLE_HEADER* raw_table = NULL;
   ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
   if (status != AE_OK) {
-    xprintf("could not find MCFG\n");
+    xprintf("could not find MCFG");
     return ZX_ERR_NOT_FOUND;
   }
   ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
@@ -187,16 +187,16 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
       reinterpret_cast<uintptr_t>(mcfg) + mcfg->Header.Length);
   uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
   if (table_bytes % sizeof(*table_start) != 0) {
-    xprintf("MCFG has unexpected size\n");
+    xprintf("MCFG has unexpected size");
     return ZX_ERR_INTERNAL;
   }
   size_t num_entries = table_end - table_start;
   if (num_entries == 0) {
-    xprintf("MCFG has no entries\n");
+    xprintf("MCFG has no entries");
     return ZX_ERR_NOT_FOUND;
   }
   if (num_entries > 1) {
-    xprintf("MCFG has more than one entry, just taking the first\n");
+    xprintf("MCFG has more than one entry, just taking the first");
   }
 
   size_t size_per_bus =
@@ -204,7 +204,7 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
   int num_buses = table_start->EndBusNumber - table_start->StartBusNumber + 1;
 
   if (table_start->PciSegment != 0) {
-    xprintf("Non-zero segment found\n");
+    xprintf("Non-zero segment found");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -455,17 +455,17 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
   if (add_range && is_mmio && base < 1024 * 1024) {
     // The PC platform defines many legacy regions below 1MB that we do not
     // want PCIe to try to map onto.
-    xprintf("Skipping adding MMIO range, due to being below 1MB\n");
+    xprintf("Skipping adding MMIO range, due to being below 1MB");
     return AE_OK;
   }
 
-  xprintf("ACPI range modification: %sing %s %016lx %016lx\n", add_range ? "add" : "subtract",
+  xprintf("ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
           is_mmio ? "MMIO" : "PIO", base, len);
 
   zx_status_t status = zx_pci_add_subtract_io_range(ctx->pci_handle, is_mmio, base, len, add_range);
   if (status != ZX_OK) {
     if (add_range) {
-      xprintf("Failed to add range: %d\n", status);
+      xprintf("Failed to add range: %d", status);
     } else {
       // If we are subtracting a range and fail, abort.  This is bad.
       return AE_ERROR;
