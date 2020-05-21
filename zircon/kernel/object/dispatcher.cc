@@ -117,22 +117,19 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
 
 }  // namespace
 
-// Since this conditionally takes the dispatcher's |lock_|, based on
-// the type of Mutex (either Mutex or fbl::NullLock), the thread
-// safety analysis is unable to prove that the accesses to |signals_|
-// and to |observers_| are always protected.
-template <typename LockType>
-void Dispatcher::AddObserverHelper(StateObserver* observer,
-                                   Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
-  canary_.Assert();
-  ZX_DEBUG_ASSERT(is_waitable());
+zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
   DEBUG_ASSERT(observer != nullptr);
 
-  StateObserver::Flags flags;
-  {
-    Guard<LockType> guard{lock};
+  canary_.Assert();
 
-    flags = observer->OnInitialize(signals_);
+  if (!is_waitable()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  {
+    Guard<Mutex> guard{get_lock()};
+
+    StateObserver::Flags flags = observer->OnInitialize(signals_);
     if (flags & StateObserver::kNeedRemoval) {
       observer->OnRemoved();
     } else {
@@ -141,24 +138,6 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
   }
 
   kcounter_add(dispatcher_observe_count, 1);
-}
-
-void Dispatcher::AddObserverLocked(StateObserver* observer) {
-  canary_.Assert();
-
-  // Type tag and local NullLock to make lockdep happy.
-  struct DispatcherAddObserverLocked {};
-  DECLARE_LOCK(DispatcherAddObserverLocked, fbl::NullLock) lock;
-
-  AddObserverHelper(observer, &lock);
-}
-
-zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
-  canary_.Assert();
-
-  if (!is_waitable())
-    return ZX_ERR_NOT_SUPPORTED;
-  AddObserverHelper(observer, get_lock());
   return ZX_OK;
 }
 
