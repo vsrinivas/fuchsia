@@ -182,11 +182,11 @@ impl Resource {
     /// Wraps the
     /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_CPU_STATS topic.
-    pub fn cpu_stats(&self) -> Result<(usize, Vec<PerCpuStats>), Status> {
+    pub fn cpu_stats(&self) -> Result<Vec<PerCpuStats>, Status> {
         let num_cpu = unsafe { sys::zx_system_get_num_cpus() };
         let mut info = vec![PerCpuStats::default(); num_cpu as usize];
         object_get_info::<PerCpuStats>(self.as_handle_ref(), &mut info[..])
-            .map(|(actual, _)| (actual, info[..actual].to_vec()))
+            .map(|(actual, _)| info[..actual].to_vec())
     }
 
     /// Wraps the

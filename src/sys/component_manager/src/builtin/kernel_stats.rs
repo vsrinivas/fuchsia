@@ -62,9 +62,9 @@ impl BuiltinCapability for KernelStats {
                     responder.send(stats)?;
                 }
                 fkernel::StatsRequest::GetCpuStats { responder } => {
-                    let (actual_num_cpus, cpu_stats) = &self.resource.cpu_stats()?;
+                    let cpu_stats = &self.resource.cpu_stats()?;
                     let mut per_cpu_stats: Vec<fkernel::PerCpuStats> =
-                        Vec::with_capacity(*actual_num_cpus);
+                        Vec::with_capacity(cpu_stats.len());
                     for cpu_stat in cpu_stats.iter() {
                         per_cpu_stats.push(fkernel::PerCpuStats {
                             cpu_number: Some(cpu_stat.cpu_number),
@@ -85,7 +85,7 @@ impl BuiltinCapability for KernelStats {
                         });
                     }
                     let mut stats = fkernel::CpuStats {
-                        actual_num_cpus: *actual_num_cpus as u64,
+                        actual_num_cpus: per_cpu_stats.len() as u64,
                         per_cpu_stats: Some(per_cpu_stats),
                     };
                     responder.send(&mut stats)?;
