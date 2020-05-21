@@ -53,14 +53,14 @@
                             "ipv4": {
                                 "addresses": [
                                     {
-                                        "cidr_address": "192.168.3.1/24"
+                                      "cidr_address": "192.168.255.249/29"
                                     }
                                 ],
                                 "dhcp_server": {
                                     "enabled": true,
                                     "dhcp_pool": {
-                                        "start": "192.168.3.10",
-                                        "end":  "192.168.3.254",
+                                        "start": "192.168.255.250",
+                                        "end":  "192.168.255.254",
                                         "lease_time": "1d"
                                     }
                                 }
