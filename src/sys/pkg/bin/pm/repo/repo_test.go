@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/merkle"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 )
 
 type fakeTimeProvider struct {

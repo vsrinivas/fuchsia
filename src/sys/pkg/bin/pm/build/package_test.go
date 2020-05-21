@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"fuchsia.googlesource.com/merkle"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
