@@ -86,6 +86,16 @@ zx_library("zstd") {
 zx_library("zstd-standalone") {
   sources = zstd_sources + [ "zstd_common_standalone.c" ]
 
+  defines = [
+    # The dynamic dispatch between the two implementations creates writable data,
+    # which is incompatible with being linked into userboot.
+    "HUF_FORCE_DECOMPRESS_X2=",
+
+    # Removes some dead code that was causing the library to attempt to link
+    # against malloc and free.
+    "ZSTDLIB_STANDALONE=",
+  ]
+
   configs += [ ":zstd-config" ]
 
   # This code doesn't use the annotation attribute.

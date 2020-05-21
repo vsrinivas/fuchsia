@@ -78,14 +78,20 @@ if (current_toolchain == default_toolchain) {
     sources = [
       "bootdata.cc",
       "bootfs.cc",
+      "bump_allocator.cc",
+      "decompressor.cc",
       "loader-service.cc",
+      "mapper.cc",
       "option.cc",
       "start.cc",
       "userboot-elf.cc",
       "util.cc",
       "zx_panic.cc",
     ]
-    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    defines = [
+      "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"",
+      "ZSTD_STATIC_LINKING_ONLY",
+    ]
     ldflags = [ "-Wl,-e,_start" ]
     libs = [ vdso_syms_ld ]
     deps = [

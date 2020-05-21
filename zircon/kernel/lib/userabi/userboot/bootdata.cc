@@ -13,6 +13,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/syscalls.h>
 
+#include "decompressor.h"
 #include "util.h"
 
 namespace {
@@ -84,9 +85,9 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
           status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
           check(log, status, "cannot create BOOTFS VMO (%u bytes)", bootdata.extra);
           bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1);
-          status = Decompressor(job, engine_vmo, vdso_vmo)(*zx::unowned_vmo{bootdata_vmo},
-                                                           off + sizeof(bootdata), bootdata.length,
-                                                           bootfs_vmo, 0, bootdata.extra);
+          status = zbi_decompress(log, *zx::unowned_vmar(vmar_self), *zx::unowned_vmo{bootdata_vmo},
+                                  off + sizeof(bootdata), bootdata.length, bootfs_vmo, 0,
+                                  bootdata.extra);
           check(log, status, "failed to decompress BOOTFS");
 #else
           fail(log, "userboot built without BOOTFS decompressor!");
