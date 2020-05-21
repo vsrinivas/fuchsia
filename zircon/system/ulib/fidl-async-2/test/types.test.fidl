@@ -1,0 +1,29 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.types.test;
+
+struct CopyableStruct {
+    int32 x;
+};
+
+struct MoveOnlyStruct {
+    handle h;
+};
+
+const uint32 ARRAY_OF_STRUCT_COUNT = 32;
+const uint32 ARRAY_OF_INT_COUNT = 64;
+
+struct StructWithArrays {
+    array<CopyableStruct>:ARRAY_OF_STRUCT_COUNT array_of_struct;
+    array<int32>:ARRAY_OF_INT_COUNT array_of_int;
+    int32 x;
+};
+
+struct EmptyStruct {
+};
+
+struct StructWithSubStruct {
+    CopyableStruct s;
+};

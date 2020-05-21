@@ -5,12 +5,6 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/goldfish/pipe.h>
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/simple_binding.h>
@@ -18,6 +12,13 @@
 #include <lib/zx/event.h>
 #include <lib/zx/pmt.h>
 #include <stdarg.h>
+
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/goldfish/pipe.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
 
 namespace goldfish {
 
@@ -38,7 +39,7 @@ class Pipe : public FidlServer<Pipe,
  private:
   friend class FidlServer;
 
-  explicit Pipe(zx_device_t* parent);
+  explicit Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   zx_status_t SetBufferSize(uint64_t size, fidl_txn_t* txn);
   zx_status_t SetEvent(zx_handle_t event_handle);

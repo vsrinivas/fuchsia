@@ -25,9 +25,8 @@ class BufferCollection
                                       fuchsia_sysmem_BufferCollection_dispatch>,
                         vLog> {
  public:
-  using Constraints =
-      FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionConstraintsTable>;
+  using Constraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                                 llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
 
   ~BufferCollection();
 
@@ -52,9 +51,8 @@ class BufferCollection
   // LogicalBufferCollection uses these:
   //
 
-  using BufferCollectionInfo =
-      FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionInfo_2Table>;
+  using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                                          llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
   void OnBuffersAllocated();
 

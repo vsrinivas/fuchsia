@@ -4,7 +4,9 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/goldfish/c/fidl.h>
+#include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async-2/fidl_struct.h>
@@ -90,8 +92,8 @@ static bool GoldfishPipeTest() {
   const size_t kRecvOffset = kSmallSize;
   memset(send_buffer, kSentinel, kSmallSize);
   EXPECT_EQ(vmo.write(send_buffer, 0, kSmallSize), ZX_OK);
-  EXPECT_EQ(fuchsia_hardware_goldfish_PipeCall(pipe_client.get(), kSmallSize, 0, kSmallSize,
-                                               kRecvOffset, &res, &actual),
+  EXPECT_EQ(fuchsia_hardware_goldfish_PipeDoCall(pipe_client.get(), kSmallSize, 0, kSmallSize,
+                                                 kRecvOffset, &res, &actual),
             ZX_OK);
   EXPECT_EQ(res, ZX_OK);
   EXPECT_EQ(actual, kSmallSize);
@@ -108,12 +110,10 @@ BEGIN_TEST_CASE(GoldfishPipeTests)
 RUN_TEST(GoldfishPipeTest)
 END_TEST_CASE(GoldfishPipeTests)
 
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                               &fuchsia_sysmem_BufferCollectionConstraintsTable>;
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
-using BufferCollectionInfo =
-    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, &fuchsia_sysmem_BufferCollectionInfo_2Table>;
+                                               llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
+using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                                        llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
 static bool GoldfishControlTest() {
   BEGIN_TEST;

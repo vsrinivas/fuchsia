@@ -55,6 +55,10 @@ protocol Pipe {
     /// offset. Blocks if pipe device is not writable. Subsequently reads
     /// read_count bytes into the IO buffer at specified read offset.
     /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.
-    Call(uint64 count, uint64 offset, uint64 read_count, uint64 read_offset)
+    ///
+    /// The name "DoCall" (instead of "Call") is to avoid collision with LLCPP
+    /// generated code "class Call" (generated per protocol).  We don't want
+    /// this method attempting to compile as if it were a constructor.
+    DoCall(uint64 count, uint64 offset, uint64 read_count, uint64 read_offset)
         -> (zx.status res, uint64 actual);
 };

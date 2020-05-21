@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_ASYNC_2_FIDL_SERVER_H_
+#define LIB_FIDL_ASYNC_2_FIDL_SERVER_H_
 
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <stdarg.h>
 #include <zircon/assert.h>
 
 #include <memory>
 #include <set>
-#include <stdarg.h>
 
 template <typename Stub, typename Binding, auto vLogger>
 class FidlServer {
@@ -66,11 +66,6 @@ class FidlServer {
       : dispatcher_(dispatcher),
         binding_(dispatcher_, static_cast<Stub*>(this), &Stub::kOps, concurrency_cap),
         logging_prefix_(logging_prefix) {}
-
-  // This picks up async_get_default_dispatcher(), which seems fine to share
-  // with the devhost code, at least for now.
-  FidlServer(const char* logging_prefix, uint32_t concurrency_cap)
-      : FidlServer(async_get_default_dispatcher(), logging_prefix, concurrency_cap) {}
 
   ~FidlServer() {
     for (bool* canary : canaries_) {
@@ -191,3 +186,5 @@ class FidlServer {
   // TODO(dustingreen): Switch to in-band doubly-linked list for canaries.
   std::set<bool*> canaries_;
 };
+
+#endif  // LIB_FIDL_ASYNC_2_FIDL_SERVER_H_

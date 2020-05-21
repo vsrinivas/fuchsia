@@ -124,7 +124,7 @@ void RunPingPongBenchmark(zx_handle_t channel, unsigned size, unsigned iteration
   RunAndMeasure(test_name, iterations, [channel, size] {
     int32_t res;
     uint64_t actual;
-    ZX_ASSERT(fuchsia_hardware_goldfish_PipeCall(channel, size, 0, size, 0, &res, &actual) ==
+    ZX_ASSERT(fuchsia_hardware_goldfish_PipeDoCall(channel, size, 0, size, 0, &res, &actual) ==
               ZX_OK);
     ZX_ASSERT(res == ZX_OK);
     ZX_ASSERT(actual == size);

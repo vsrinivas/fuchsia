@@ -4,7 +4,6 @@
 
 #include "instance.h"
 
-#include <ddk/debug.h>
 #include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -12,6 +11,8 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/bti.h>
 #include <zircon/threads.h>
+
+#include <ddk/debug.h>
 
 #include "pipe.h"
 
@@ -55,7 +56,7 @@ zx_status_t Instance::FidlOpenPipe(zx_handle_t pipe_request_handle) {
 
   // Create and bind pipe to client thread.
   async::PostTask(client_loop_.dispatcher(), [this, request = std::move(pipe_request)]() mutable {
-    auto pipe = Pipe::Create(parent());
+    auto pipe = Pipe::Create(parent(), client_loop_.dispatcher());
     pipe->SetErrorHandler([this, pipe_ptr = pipe.get()](zx_status_t status) {
       // |status| passed to an error handler is never ZX_OK.
       // Clean close is ZX_ERR_PEER_CLOSED.
@@ -95,9 +96,6 @@ zx_status_t Instance::DdkClose(uint32_t flags) { return ZX_OK; }
 void Instance::DdkRelease() { delete this; }
 
 int Instance::ClientThread() {
-  // Set default dispatcher for FidlServer.
-  async_set_default_dispatcher(client_loop_.dispatcher());
-
   // Run until Quit() is called in dtor.
   client_loop_.Run();
 

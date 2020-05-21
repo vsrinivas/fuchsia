@@ -2,15 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
+#define LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
 
 #include <lib/fidl/coding.h>
 #include <zircon/assert.h>
 
-// TODO(dustingreen): Switch to llcpp, DecodedMessage, etc, probably.
-template <typename FidlCStruct, auto FidlCMetaTable>
+#include <type_traits>
+
+// TODO(dustingreen): Switch all client code to use llcpp directly instead of using this template.
+//
+// FidlCStruct is the FIDL C struct of a FIDL struct with [ForDeprecatedCBindings] - no OOB
+// pointers; all in-band.  Support for OOB pointers is not anticipated.
+//
+// FidlLlcppStruct is the corresponding FIDL LLCPP struct.
+//
+// New uses of FidlStruct should be limited to temporary usages which will go away after everything
+// is done moving from FIDL C to LLCPP, or from FIDL C to HLCPP.
+template <typename FidlCStruct, typename FidlLlcppStruct>
 class FidlStruct {
+  // Sanity check to try to catch passing arguments which don't correspond.
+  static_assert(sizeof(FidlCStruct) == sizeof(FidlLlcppStruct),
+                "parameters must be for same struct");
+  // FidlStruct<> isn't meant for use with FIDL types where HasPointer is true.
+  static_assert(!FidlLlcppStruct::HasPointer);
+  static constexpr bool ProvideCopyAsLlcpp_v = (FidlLlcppStruct::MaxNumHandles == 0);
+
  public:
+  using c_type = FidlCStruct;
+  using llcpp_type = FidlLlcppStruct;
+
   // These are used to select which constructor.
   enum DefaultType { Default };
   enum NullType { Null };
@@ -22,7 +43,7 @@ class FidlStruct {
   // copy the incoming struct, own the copy, and close the handles via the
   // copy.  The _dispatch() caller won't try to close the handles in its copy.
 
-  FidlStruct(const FidlCStruct& to_copy_and_own_handles)
+  explicit FidlStruct(const FidlCStruct& to_copy_and_own_handles)
       // struct copy
       : storage_(to_copy_and_own_handles), ptr_(&storage_) {
     // nothing else to do here
@@ -37,11 +58,11 @@ class FidlStruct {
   // that can get incrementally populated, with a partially-initialized struct
   // along the way that's still possible to clean up so handles get closed
   // properly even if the reply never gets fully built and/or never gets sent.
-  FidlStruct(DefaultType not_used) : ptr_(&storage_) {
+  explicit FidlStruct(DefaultType not_used) : ptr_(&storage_) {
     // nothing else to do here
   }
 
-  FidlStruct(NullType not_used) : ptr_(nullptr) {
+  explicit FidlStruct(NullType not_used) : ptr_(nullptr) {
     // nothing else to do here
   }
 
@@ -76,12 +97,17 @@ class FidlStruct {
     return ptr_;
   }
 
+  const FidlCStruct* get() const {
+    ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+    return ptr_;
+  }
+
   bool is_valid() {
     ZX_DEBUG_ASSERT_COND(!is_moved_out_);
     return !!ptr_;
   }
 
-  operator bool() {
+  operator bool() const {
     ZX_DEBUG_ASSERT_COND(!is_moved_out_);
     return !!ptr_;
   }
@@ -115,10 +141,62 @@ class FidlStruct {
     return *this;
   }
 
+  FidlLlcppStruct TakeAsLlcpp() {
+    static_assert(!FidlLlcppStruct::HasPointer);
+    constexpr size_t kSize = sizeof(FidlLlcppStruct);
+    ZX_DEBUG_ASSERT(*this);
+    // un-manage handles
+    FidlCStruct* tmp = release();
+    FidlLlcppStruct result;
+    static_assert(sizeof(*tmp) == sizeof(result));
+    memcpy(&result, tmp, kSize);
+    // handles now managed by result
+    return result;
+  }
+
+  // if (ProvideCopyAsLlcpp_v)
+  //   FidlLlcppStruct CopyAsLlcpp() {...}
+  template <typename DummyFalse = std::false_type>
+  std::enable_if_t<DummyFalse::value || ProvideCopyAsLlcpp_v, FidlLlcppStruct> CopyAsLlcpp() {
+    static_assert(std::is_same_v<DummyFalse, std::false_type>, "don't override DummyFalse");
+    static_assert(!FidlLlcppStruct::HasPointer);
+    static_assert(FidlLlcppStruct::MaxNumHandles == 0);
+    ZX_DEBUG_ASSERT(*this);
+    FidlLlcppStruct result;
+    static_assert(sizeof(*get()) == sizeof(result));
+    memcpy(&result, get(), sizeof(result));
+    // only data - no handles to manage
+    return result;
+  }
+
+  // mutable borrow
+  FidlLlcppStruct& BorrowAsLlcpp() {
+    ZX_DEBUG_ASSERT(*this);
+    return *reinterpret_cast<FidlLlcppStruct*>(ptr_);
+  }
+
+  // immutable borrow
+  const FidlLlcppStruct& BorrowAsLlcpp() const {
+    ZX_DEBUG_ASSERT(*this);
+    return *reinterpret_cast<FidlLlcppStruct*>(ptr_);
+  }
+
+  // mutable borrow without ever owning - nullptr to_borrow is fine
+  static FidlLlcppStruct* BorrowAsLlcpp(FidlCStruct* to_borrow) {
+    ZX_DEBUG_ASSERT(sizeof(FidlLlcppStruct) == sizeof(*to_borrow));
+    return reinterpret_cast<FidlLlcppStruct*>(to_borrow);
+  }
+
+  // immutable borrow without ever owning - nullptr to_borrow is fine
+  static const FidlLlcppStruct* BorrowAsLlcpp(const FidlCStruct* to_borrow) {
+    ZX_DEBUG_ASSERT(sizeof(FidlLlcppStruct) == sizeof(*to_borrow));
+    return reinterpret_cast<const FidlLlcppStruct*>(to_borrow);
+  }
+
  private:
   void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
     if (ptr_) {
-      fidl_close_handles(FidlCMetaTable, ptr_, nullptr);
+      fidl_close_handles(FidlLlcppStruct::Type, ptr_, nullptr);
     }
     if (to_copy_and_own_handles) {
       storage_ = *to_copy_and_own_handles;
@@ -144,6 +222,8 @@ class FidlStruct {
   bool is_moved_out_ = false;
 #endif
 
-  FidlStruct(FidlStruct& to_copy) = delete;
-  FidlStruct& operator=(FidlStruct& to_copy) = delete;
+  FidlStruct(const FidlStruct& to_copy) = delete;
+  FidlStruct& operator=(const FidlStruct& to_copy) = delete;
 };
+
+#endif  // LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_

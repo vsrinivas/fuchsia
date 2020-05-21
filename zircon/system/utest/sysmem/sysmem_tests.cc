@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -31,12 +32,10 @@
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                               &fuchsia_sysmem_BufferCollectionConstraintsTable>;
-extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
-using BufferCollectionInfo =
-    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, &fuchsia_sysmem_BufferCollectionInfo_2Table>;
+                                               llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
+using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                                        llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
 namespace {
 

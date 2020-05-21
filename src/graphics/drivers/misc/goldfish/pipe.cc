@@ -4,12 +4,13 @@
 
 #include "pipe.h"
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
-#include <fbl/auto_lock.h>
 #include <fuchsia/hardware/goldfish/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/bti.h>
+
+#include <ddk/debug.h>
+#include <ddk/trace/event.h>
+#include <fbl/auto_lock.h>
 
 namespace goldfish {
 namespace {
@@ -54,7 +55,8 @@ const fuchsia_hardware_goldfish_Pipe_ops_t Pipe::kOps = {
     fidl::Binder<Pipe>::BindMember<&Pipe::Call>,
 };
 
-Pipe::Pipe(zx_device_t* parent) : FidlServer("GoldfishPipe", kConcurrencyCap), pipe_(parent) {}
+Pipe::Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher)
+    : FidlServer(dispatcher, "GoldfishPipe", kConcurrencyCap), pipe_(parent) {}
 
 Pipe::~Pipe() {
   fbl::AutoLock lock(&lock_);
@@ -261,7 +263,7 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
       continue;
     }
     if (status != ZX_ERR_SHOULD_WAIT) {
-      return fuchsia_hardware_goldfish_PipeCall_reply(txn, status, 0);
+      return fuchsia_hardware_goldfish_PipeDoCall_reply(txn, status, 0);
     }
     signal_cvar_.Wait(&lock_);
   }
@@ -278,7 +280,7 @@ zx_status_t Pipe::Call(size_t count, zx_off_t offset, size_t read_count, zx_off_
     }
   }
   size_t actual_read = read_count - remaining_read;
-  return fuchsia_hardware_goldfish_PipeCall_reply(txn, status, actual_read);
+  return fuchsia_hardware_goldfish_PipeDoCall_reply(txn, status, actual_read);
 }
 
 // This function can be trusted to complete fairly quickly. It will cause a

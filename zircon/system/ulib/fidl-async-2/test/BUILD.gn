@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":fidl-struct-test-package" ]
+}
+
+test("fidl-struct-test") {
+  sources = [ "fidl_struct_test.cc" ]
+  public_deps = [
+    ":fidl.types.test_c",
+    ":fidl.types.test_llcpp",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fidl-async-2",
+  ]
+}
+
+unittest_package("fidl-struct-test-package") {
+  package_name = "fidl-struct-test"
+  deps = [ ":fidl-struct-test" ]
+
+  tests = [
+    {
+      name = "fidl-struct-test"
+      dest = "fidl-struct-test"
+    },
+  ]
+}
+
+fidl("fidl.types.test") {
+  sources = [ "types.test.fidl" ]
+}

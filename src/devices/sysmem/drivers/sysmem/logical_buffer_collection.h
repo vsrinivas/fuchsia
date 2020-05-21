@@ -26,15 +26,12 @@ class BufferCollection;
 class MemoryAllocator;
 class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> {
  public:
-  using Constraints =
-      FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionConstraintsTable>;
-  using ImageFormatConstraints =
-      FidlStruct<fuchsia_sysmem_ImageFormatConstraints,
-                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_ImageFormatConstraintsTable>;
-  using BufferCollectionInfo =
-      FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
-                 &llcpp::fuchsia::sysmem::fuchsia_sysmem_BufferCollectionInfo_2Table>;
+  using Constraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                                 llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
+  using ImageFormatConstraints = FidlStruct<fuchsia_sysmem_ImageFormatConstraints,
+                                            llcpp::fuchsia::sysmem::ImageFormatConstraints>;
+  using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                                          llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
   ~LogicalBufferCollection();
 

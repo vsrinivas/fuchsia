@@ -24,7 +24,7 @@ zx_library("fidl-async-2") {
   ]
 
   sources = []
-  public_deps = [ "//zircon/system/ulib/async-default" ]
+  public_deps = []
   deps = [
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

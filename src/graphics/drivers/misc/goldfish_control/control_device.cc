@@ -107,7 +107,8 @@ class Heap : public FidlServer<
  private:
   friend class FidlServer;
 
-  Heap(Control* control) : FidlServer("GoldfishHeap", kConcurrencyCap), control_(control) {}
+  Heap(Control* control, async_dispatcher_t* dispatcher)
+      : FidlServer(dispatcher, "GoldfishHeap", kConcurrencyCap), control_(control) {}
 
   zx_status_t AllocateVmo(uint64_t size, fidl_txn* txn) {
     BindingType::Txn::RecognizeTxn(txn);
@@ -278,7 +279,7 @@ zx_status_t Control::Bind() {
   heap_loop_.StartThread("goldfish_control_heap_thread");
   async::PostTask(heap_loop_.dispatcher(), [this, request = std::move(heap_request)]() mutable {
     // The Heap is channel-owned / self-owned.
-    Heap::CreateChannelOwned(std::move(request), this);
+    Heap::CreateChannelOwned(std::move(request), this, heap_loop_.dispatcher());
   });
 
   return DdkAdd("goldfish-control", 0, nullptr, 0, ZX_PROTOCOL_GOLDFISH_CONTROL);
