@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/dispatcher.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/process.h>
@@ -18,30 +19,20 @@ namespace audio {
 
 void SimpleAudioStream::Shutdown() {
   if (!is_shutdown_) {
-    // Run unbind hooks before shutting down the loop.
-    {
-      // Stream channel bindings need to be unbound first so no new ring buffers are created.
-      fbl::AutoLock channel_lock(&channel_lock_);
-      ScopedToken t(domain_token());
-      for (auto& channel : stream_channels_) {
-        if (channel.binding.is_ok()) {
-          channel.binding.value().Unbind();
-        }
-      }
-    }
-    stream_config_unbound_.WaitForZero();
-
-    // Now we can shutdown the ring buffer binding.
-    if (ring_buffer_binding_.is_ok()) {
-      ring_buffer_binding_.value().Unbind();
-    }
-    ring_buffer_unbound_.WaitForZero();
-
-    // Now it is safe to shutdown the dispatcher loop.
     loop_.Shutdown();
 
     // We have shutdown our loop, it is now safe to assert we are holding the domain token.
     ScopedToken t(domain_token());
+
+    {
+      // Now we explicitly destroy the channels.
+      fbl::AutoLock channel_lock(&channel_lock_);
+      DeactivateRingBufferChannel(rb_channel_.get());
+
+      stream_channels_.clear();
+      stream_channel_ = nullptr;
+    }
+
     ShutdownHook();
     is_shutdown_ = true;
   }
@@ -212,18 +203,10 @@ void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
         ScopedToken t(domain_token());
         fbl::AutoLock channel_lock(&channel_lock_);
         this->DeactivateStreamChannel(stream_channel.get());
-        stream_config_unbound_.Dec();
       };
 
-  stream_config_unbound_.Inc();
-  stream_channel->binding = fidl::BindServer<audio_fidl::StreamConfig::Interface>(
+  fidl::BindServer<audio_fidl::StreamConfig::Interface>(
       dispatcher(), std::move(stream_channel_local), stream_channel.get(), std::move(on_unbound));
-  if (!stream_channel->binding.is_ok()) {
-    stream_config_unbound_.Dec();
-    zxlogf(ERROR, "Could not create binding in %s", __PRETTY_FUNCTION__);
-    completer.Close(ZX_ERR_INTERNAL);
-    return;
-  }
 
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -376,17 +359,10 @@ void SimpleAudioStream::CreateRingBuffer(
           ScopedToken t(domain_token());
           fbl::AutoLock channel_lock(&channel_lock_);
           this->DeactivateRingBufferChannel(rb_channel_.get());
-          ring_buffer_unbound_.Dec();
         };
 
-    ring_buffer_unbound_.Inc();
-    ring_buffer_binding_ = fidl::BindServer<audio_fidl::RingBuffer::Interface>(
-        dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
-    if (!ring_buffer_binding_.is_ok()) {
-      ring_buffer_unbound_.Dec();
-      zxlogf(ERROR, "Could not create binding in %s", __PRETTY_FUNCTION__);
-      completer.Close(ZX_ERR_INTERNAL);
-    }
+    fidl::BindServer<audio_fidl::RingBuffer::Interface>(dispatcher(), std::move(ring_buffer), this,
+                                                        std::move(on_unbound));
   }
 }
 
