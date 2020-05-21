@@ -15,6 +15,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
@@ -298,7 +299,8 @@ func resolveNodename() (string, error) {
 		if ok && envNodename != "" {
 			return envNodename, nil
 		} else {
-			return "", fmt.Errorf("unimplemented: must supply nodename")
+			// Return the NodenameWildcard to discover any device.
+			return netboot.NodenameWildcard, nil
 		}
 	}
 	return nodename, nil

@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/net/ipv6"
 )
 
@@ -311,6 +312,9 @@ func (n *Client) Discover(ctx context.Context, nodename string, fuchsia bool) (*
 			ifaceName := ""
 			if target.Interface != nil {
 				ifaceName = target.Interface.Name
+			}
+			if nodename == NodenameWildcard {
+				logger.Infof(ctx, "found nodename %s", target.Nodename)
 			}
 			return &net.UDPAddr{IP: target.TargetAddress, Zone: ifaceName}, nil
 			continue
