@@ -191,7 +191,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // setting satisfiable signals should not wake anyone.)
   //
   // May only be called when |is_waitable| reports true.
-  void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
+  void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) TA_EXCL(get_lock());
   void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(get_lock());
 
   zx_signals_t GetSignalsStateLocked() const TA_REQ(get_lock()) { return signals_; }
@@ -202,10 +202,6 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
  private:
   friend class fbl::Recyclable<Dispatcher>;
   void fbl_recycle();
-
-  // The common implementation of UpdateState and UpdateStateLocked.
-  template <typename LockType>
-  void UpdateStateHelper(zx_signals_t clear_mask, zx_signals_t set_mask, Lock<LockType>* lock);
 
   fbl::Canary<fbl::magic("DISP")> canary_;
 

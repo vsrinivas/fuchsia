@@ -181,51 +181,34 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
   return false;
 }
 
-// Since this conditionally takes the dispatcher's |lock_|, based on
-// the type of Mutex (either Mutex or fbl::NullLock), the thread
-// safety analysis is unable to prove that the accesses to |signals_|
-// are always protected.
-template <typename LockType>
-void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask, zx_signals_t set_mask,
-                                   Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
-  canary_.Assert();
-  ZX_DEBUG_ASSERT(is_waitable());
-
-  {
-    Guard<LockType> guard{lock};
-
-    auto previous_signals = signals_;
-    signals_ &= ~clear_mask;
-    signals_ |= set_mask;
-
-    if (previous_signals == signals_)
-      return;
-
-    for (auto it = observers_.begin(); it != observers_.end();) {
-      StateObserver::Flags it_flags = it->OnStateChange(signals_);
-      if (it_flags & StateObserver::kNeedRemoval) {
-        auto to_remove = it;
-        ++it;
-        observers_.erase(to_remove);
-        to_remove->OnRemoved();
-      } else {
-        ++it;
-      }
-    }
-  }
-}
-
 void Dispatcher::UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) {
   canary_.Assert();
 
-  UpdateStateHelper(clear_mask, set_mask, get_lock());
+  Guard<Mutex> guard{get_lock()};
+
+  UpdateStateLocked(clear_mask, set_mask);
 }
 
 void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) {
-  canary_.Assert();
+  ZX_DEBUG_ASSERT(is_waitable());
 
-  // Type tag and local NullLock to make lockdep happy.
-  struct DispatcherUpdateStateLocked {};
-  DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
-  UpdateStateHelper(clear_mask, set_mask, &lock);
+  auto previous_signals = signals_;
+  signals_ &= ~clear_mask;
+  signals_ |= set_mask;
+
+  if (previous_signals == signals_) {
+    return;
+  }
+
+  for (auto it = observers_.begin(); it != observers_.end(); /* nothing */) {
+    StateObserver::Flags it_flags = it->OnStateChange(signals_);
+    if (it_flags & StateObserver::kNeedRemoval) {
+      auto to_remove = it;
+      ++it;
+      observers_.erase(to_remove);
+      to_remove->OnRemoved();
+    } else {
+      ++it;
+    }
+  }
 }
