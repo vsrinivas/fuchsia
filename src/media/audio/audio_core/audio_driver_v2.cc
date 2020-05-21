@@ -84,8 +84,7 @@ zx_status_t AudioDriverV2::Init(zx::channel stream_channel) {
   }
   stream_config_fidl_.set_error_handler([this](zx_status_t status) -> void {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-    ShutdownSelf("Stream channel closed unexpectedly", ZX_ERR_PEER_CLOSED);
-    FX_PLOGS(ERROR, status) << "AudioDriver failed with error: " << status;
+    ShutdownSelf("Stream channel closed unexpectedly", status);
   });
 
   cmd_timeout_.set_handler([this] {
@@ -313,8 +312,7 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
   }
   ring_buffer_fidl_.set_error_handler([this](zx_status_t status) -> void {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-    ShutdownSelf("Ring buffer channel closed unexpectedly", ZX_ERR_PEER_CLOSED);
-    FX_PLOGS(ERROR, status) << "AudioDriver failed with error: " << status;
+    ShutdownSelf("Ring buffer channel closed unexpectedly", status);
   });
 
   // Change state, setup our command timeout.
@@ -594,8 +592,8 @@ void AudioDriverV2::ShutdownSelf(const char* reason, zx_status_t status) {
   }
 
   if (reason != nullptr) {
-    FX_LOGS(INFO) << (owner_->is_input() ? " Input" : "Output") << " shutting down '" << reason
-                  << "', status:" << status;
+    FX_PLOGS(INFO, status) << (owner_->is_input() ? " Input" : "Output") << " shutting down '"
+                           << reason << "'";
   }
 
   // Our owner will call our Cleanup function within this call.
