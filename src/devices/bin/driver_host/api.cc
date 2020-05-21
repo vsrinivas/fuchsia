@@ -398,6 +398,7 @@ __EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t fla
     // If we have been invoked outside of the context of a driver, or if |flag|
     // is DDK_LOG_SERIAL, use vfprintf.
     vfprintf(stderr, msg, args);
+    fputc('\n', stderr);
   }
   va_end(args);
 }

@@ -102,14 +102,14 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
  private:
   friend std::unique_ptr<zx_driver> std::make_unique<zx_driver>();
-  explicit zx_driver(std::string_view libname);
+  zx_driver(fx_logger_t* logger, std::string_view libname);
 
   const char* name_ = nullptr;
   zx_driver_rec_t* driver_rec_ = nullptr;
   const zx_driver_ops_t* ops_ = nullptr;
   void* ctx_ = nullptr;
-  fx_logger_t* logger_ = nullptr;
 
+  fx_logger_t* logger_;
   fbl::String libname_;
   zx_status_t status_ = ZX_OK;
 };

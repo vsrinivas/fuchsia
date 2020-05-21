@@ -84,8 +84,8 @@ static const std::string kRootResourcePath =
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
   fuchsia::boot::RootJobSyncPtr root_job_ptr;
-  zx_status_t status = fdio_service_connect(kRootJobPath.c_str(),
-                            root_job_ptr.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(kRootJobPath.c_str(), root_job_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }
@@ -98,7 +98,7 @@ zx_status_t get_root_job(zx::job* root_job) {
 zx_status_t get_root_resource(zx::resource* root_resource) {
   fuchsia::boot::RootResourceSyncPtr root_resource_ptr;
   zx_status_t status = fdio_service_connect(kRootResourcePath.c_str(),
-                            root_resource_ptr.NewRequest().TakeChannel().release());
+                                            root_resource_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
   ParseArgs(argc, argv, &devmgr_args);
 
   if (driver_manager_params.verbose) {
-    FX_LOG_SET_VERBOSITY(1);
+    FX_LOG_SET_SEVERITY(ALL);
   }
   if (driver_manager_params.log_to_debuglog || devmgr_args.log_to_debuglog) {
     zx_status_t status = log_to_debuglog();

@@ -140,28 +140,28 @@ const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* const path, siz
 }
 
 zx_status_t zx_driver::Create(std::string_view libname, fbl::RefPtr<zx_driver>* out_driver) {
-  auto driver = fbl::AdoptRef(new zx_driver(libname));
-
   char process_name[ZX_MAX_NAME_LEN] = {};
   zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   const char* tags[] = {process_name, "driver"};
   fx_logger_config_t config{
-      .min_severity = FX_LOG_INFO,
+      .min_severity = FX_LOG_SEVERITY_DEFAULT,
       .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
       .log_service_channel = ZX_HANDLE_INVALID,
       .tags = tags,
       .num_tags = std::size(tags),
   };
-  zx_status_t status = fx_logger_create(&config, &driver->logger_);
+  fx_logger_t* logger;
+  zx_status_t status = fx_logger_create(&config, &logger);
   if (status != ZX_OK) {
     return status;
   }
 
-  *out_driver = std::move(driver);
+  *out_driver = fbl::AdoptRef(new zx_driver(logger, libname));
   return ZX_OK;
 }
 
-zx_driver::zx_driver(std::string_view libname) : libname_(libname) {}
+zx_driver::zx_driver(fx_logger_t* logger, std::string_view libname)
+    : logger_(logger), libname_(libname) {}
 
 zx_driver::~zx_driver() { fx_logger_destroy(logger_); }
 
@@ -664,7 +664,7 @@ int main(int argc, char** argv) {
   zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   const char* tags[] = {process_name, "device"};
   fx_logger_config_t config{
-      .min_severity = getenv_bool("devmgr.verbose", false) ? -1 /* verbosity=1 */ : FX_LOG_INFO,
+      .min_severity = getenv_bool("devmgr.verbose", false) ? FX_LOG_ALL : FX_LOG_SEVERITY_DEFAULT,
       .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
       .log_service_channel = ZX_HANDLE_INVALID,
       .tags = tags,
