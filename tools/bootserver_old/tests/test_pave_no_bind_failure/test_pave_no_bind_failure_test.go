@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"fuchsia.googlesource.com/tests/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
 )
 
 func TestPaveNoBindFailure(t *testing.T) {

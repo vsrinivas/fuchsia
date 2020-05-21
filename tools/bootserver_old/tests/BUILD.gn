@@ -43,7 +43,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/bootserver"
+    name = "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
 
     deps = [
       "//src/testing/qemu",
@@ -101,7 +101,8 @@ if (is_linux) {
 
   foreach(test_dir, test_dirs) {
     go_test("bootserver_${test_dir}") {
-      gopackages = [ "fuchsia.googlesource.com/tests/bootserver/${test_dir}" ]
+      gopackages =
+          [ "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/${test_dir}" ]
       deps = [ ":lib" ]
     }
   }

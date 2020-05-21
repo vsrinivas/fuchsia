@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/tests/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/bootserver_old/tests"
 )
 
 func TestAdvertFrequency(t *testing.T) {
