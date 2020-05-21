@@ -43,18 +43,19 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_exception_info_t*
 
   unittest_printf("wait-inf: got page fault exception\n");
 
-  zx_handle_t thread = tu_exception_get_thread(exception.get());
+  zx::thread thread;
+  ASSERT_EQ(exception.get_thread(&thread), ZX_OK);
 
-  dump_inferior_regs(thread);
+  dump_inferior_regs(thread.get());
 
   // Verify that the fault is at the PC we expected.
-  if (!test_segv_pc(thread))
+  if (!test_segv_pc(thread.get()))
     return false;
 
   // Do some tests that require a suspended inferior.
-  test_memory_ops(inferior, thread);
+  test_memory_ops(inferior, thread.get());
 
-  fix_inferior_segv(thread);
+  fix_inferior_segv(thread.get());
   // Useful for debugging, otherwise a bit too verbose.
   // dump_inferior_regs(thread);
 
@@ -63,7 +64,7 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_exception_info_t*
   // before we can increment it.
   atomic_fetch_add(segv_count, 1);
 
-  zx_handle_close(thread);
+  thread.reset();
 
   uint32_t exception_state = ZX_EXCEPTION_STATE_HANDLED;
   EXPECT_EQ(

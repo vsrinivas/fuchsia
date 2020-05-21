@@ -316,22 +316,6 @@ size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t ma
   return num_threads;
 }
 
-zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options) {
-  zx_handle_t channel = ZX_HANDLE_INVALID;
-  zx_status_t status = zx_task_create_exception_channel(task, options, &channel);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return channel;
-}
-
-zx_handle_t tu_exception_get_process(zx_handle_t exception) {
-  zx_handle_t process = ZX_HANDLE_INVALID;
-  zx_status_t status = zx_exception_get_process(exception, &process);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return process;
-}
-
 zx_status_t tu_cleanup_breakpoint(zx_handle_t thread) {
 #if defined(__x86_64__)
   // On x86, the pc is left at one past the s/w break insn,
@@ -350,14 +334,6 @@ zx_status_t tu_cleanup_breakpoint(zx_handle_t thread) {
 #else
   return ZX_ERR_NOT_SUPPORTED;
 #endif
-}
-
-zx_handle_t tu_exception_get_thread(zx_handle_t exception) {
-  zx_handle_t thread = ZX_HANDLE_INVALID;
-  zx_status_t status = zx_exception_get_thread(exception, &thread);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return thread;
 }
 
 void tu_resume_from_exception(zx_handle_t exception_handle) {

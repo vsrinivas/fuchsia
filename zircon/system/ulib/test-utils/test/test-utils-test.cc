@@ -68,7 +68,9 @@ class TestProcess {
 TEST(TestUtils, ThreadException) {
   TestProcess test_process;
   ASSERT_NO_FATAL_FAILURES(test_process.Init());
-  zx::channel exception_channel(tu_create_exception_channel(test_process.thread().get(), 0));
+
+  zx::channel exception_channel;
+  ASSERT_OK(test_process.thread().create_exception_channel(0, &exception_channel));
 
   zx_exception_info_t info;
   zx::exception exception;
@@ -78,8 +80,9 @@ TEST(TestUtils, ThreadException) {
 
   // Thread exceptions can retrieve the thread handle but not the process.
   zx::process process;
-  EXPECT_EQ(tu_get_koid(test_process.thread().get()),
-            tu_get_koid(tu_exception_get_thread(exception.get())));
+  zx::thread exception_thread;
+  ASSERT_OK(exception.get_thread(&exception_thread));
+  EXPECT_EQ(tu_get_koid(test_process.thread().get()), tu_get_koid(exception_thread.get()));
   EXPECT_NOT_OK(exception.get_process(&process));
 
   // Kill the process before the exception closes or else it will bubble up
@@ -90,8 +93,9 @@ TEST(TestUtils, ThreadException) {
 TEST(TestUtils, ProcessDebugException) {
   TestProcess test_process;
   ASSERT_NO_FATAL_FAILURES(test_process.Init());
-  zx::channel exception_channel(
-      tu_create_exception_channel(test_process.process().get(), ZX_EXCEPTION_CHANNEL_DEBUGGER));
+  zx::channel exception_channel;
+  ASSERT_OK(test_process.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                            &exception_channel));
 
   zx_exception_info_t info;
   zx::exception exception;
@@ -102,10 +106,13 @@ TEST(TestUtils, ProcessDebugException) {
   EXPECT_EQ(ZX_EXCP_THREAD_STARTING, info.type);
 
   // Process exceptions can retrieve both the thread and process handles.
-  EXPECT_EQ(tu_get_koid(test_process.thread().get()),
-            tu_get_koid(tu_exception_get_thread(exception.get())));
-  EXPECT_EQ(tu_get_koid(test_process.process().get()),
-            tu_get_koid(tu_exception_get_process(exception.get())));
+  zx::thread exception_thread;
+  ASSERT_OK(exception.get_thread(&exception_thread));
+  EXPECT_EQ(tu_get_koid(test_process.thread().get()), tu_get_koid(exception_thread.get()));
+
+  zx::process exception_process;
+  ASSERT_OK(exception.get_process(&exception_process));
+  EXPECT_EQ(tu_get_koid(test_process.process().get()), tu_get_koid(exception_process.get()));
 
   EXPECT_OK(test_process.process().kill());
 }

@@ -230,8 +230,9 @@ static void start_test_child_with_exception_channel(const zx::job& job, const st
                                                     zx::channel* out_channel) {
   springboard_t* sb =
       setup_test_child(job.get(), arg.c_str(), out_channel->reset_and_get_address());
-  out_exception_channel->reset(tu_create_exception_channel(springboard_get_process_handle(sb),
-                                                           ZX_EXCEPTION_CHANNEL_DEBUGGER));
+  ASSERT_OK(zx_task_create_exception_channel(springboard_get_process_handle(sb),
+                                             ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                             out_exception_channel->reset_and_get_address()));
   out_child->reset(tu_launch_fini(sb));
 }
 
@@ -482,10 +483,11 @@ TEST(ExceptionTest, Trigger) {
   }
 }
 
-static void __NO_RETURN test_child_exit_closing_excp_handle() {
+static void test_child_exit_closing_excp_handle() {
   // Test ZX-1544. Process termination closing the last handle of the exception
   // channel should not cause a panic.
-  tu_create_exception_channel(zx::process::self()->get(), 0);
+  zx::channel exception_channel;
+  ASSERT_OK(zx::process::self()->create_exception_channel(0, &exception_channel));
   exit(0);
 
   /* NOTREACHED */

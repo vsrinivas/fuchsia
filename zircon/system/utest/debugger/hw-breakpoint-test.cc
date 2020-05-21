@@ -142,7 +142,8 @@ bool HWBreakpointTest() {
   END_TEST;
 #endif
 
-  zx_handle_t excp_channel = tu_create_exception_channel(zx_process_self(), 0);
+  zx_handle_t excp_channel = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), 0, &excp_channel), ZX_OK);
 
   EXPECT_TRUE(test_hw_breakpoint_impl(excp_channel));
 

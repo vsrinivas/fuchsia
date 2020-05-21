@@ -162,7 +162,9 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
   data->threads = reinterpret_cast<thread_data_t*>(calloc(max_threads, sizeof(data->threads[0])));
   data->inferior = inferior;
   data->port = port;
-  data->exception_channel = tu_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER);
+  zx_status_t status = zx_task_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                        &data->exception_channel);
+  ZX_ASSERT(status == ZX_OK);
   data->max_num_threads = max_threads;
 
   // We don't need to listen for ZX_CHANNEL_PEER_CLOSED here because
@@ -300,8 +302,9 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
                            zx::exception exception) {
   BEGIN_HELPER;
 
-  zx_handle_t thread = tu_exception_get_thread(exception.get());
-  zx_info_thread_t thread_info = tu_thread_get_info(thread);
+  zx::thread thread;
+  ASSERT_EQ(exception.get_thread(&thread), ZX_OK);
+  zx_info_thread_t thread_info = tu_thread_get_info(thread.get());
   // The thread could still transition to DEAD here (if the
   // process exits), so check for either DYING or DEAD.
   EXPECT_TRUE(thread_info.state == ZX_THREAD_STATE_DYING ||
@@ -316,7 +319,6 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
   // either be DEBUGGER or NONE.
   EXPECT_TRUE(thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_NONE ||
               thread_info.wait_exception_channel_type == ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
-  zx_handle_close(thread);
 
   // A thread is gone, but we only care about the process.
   unittest_printf("wait-inf: thread %" PRIu64 " exited\n", info->tid);

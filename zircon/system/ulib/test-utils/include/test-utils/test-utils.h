@@ -107,15 +107,6 @@ zx_handle_t tu_process_get_thread(zx_handle_t process, zx_koid_t tid);
 
 size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t max_threads);
 
-// Creates an exception channel for |task| which is a job, process, or thread.
-
-zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options);
-
-// Extracts task handles from an exception.
-
-zx_handle_t tu_exception_get_process(zx_handle_t exception);
-zx_handle_t tu_exception_get_thread(zx_handle_t exception);
-
 // A ZX_EXCP_SW_BREAKPOINT requires some registers tune-up in order to be handled correctly
 // depending on the architecture. This functions takes care of the correct setup of the program
 // counter so that the exception can be resumed successfully.
