@@ -14,7 +14,7 @@ import (
 
 	"benchmark_suite"
 
-	"fuchsia.googlesource.com/benchmarking"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/benchmarking"
 )
 
 // Structure is:
