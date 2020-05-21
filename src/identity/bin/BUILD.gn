@@ -56,16 +56,6 @@ test_package("identity_bin_unittests") {
   ]
 }
 
-# Modular is included in products based on the modular framework. This is a
-# transitional set that will shrink to empty as Identity is disentangled from
-# modular.
-group("modular") {
-  public_deps = [
-    "account_handler",
-    "account_manager",
-  ]
-}
-
 # Tier 1 should be included in products that only require token management
 # without support for platform-level accounts or authentication.
 group("tier_1") {
