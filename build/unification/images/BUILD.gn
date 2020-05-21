@@ -70,10 +70,7 @@ aggregate_manifest("legacy-image") {
 # dependencies to it.
 aggregate_manifest("legacy-aux") {
   deps = [
-    ":hermetic.decompress-lz4f",
-    ":hermetic.decompress-zstd",
     ":test.sys.fdio-constructor-test",
-    ":test.sys.hermetic-compute-module-test",
     ":test.sys.libc-test",
     ":test.sys.noop-test",
     ":test.sys.noop-test.asan",
@@ -119,7 +116,6 @@ aggregate_manifest("legacy-aux") {
 aggregate_manifest("legacy-tests") {
   deps = [
     ":test.sys.fdio-constructor-test",
-    ":test.sys.hermetic-compute-module-test",
     ":test.sys.libc-test",
     ":test.sys.noop-test",
     ":test.sys.noop-test.asan",
@@ -617,7 +613,6 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/fs/metrics/test:metrics-inspect-manifest",
     "//zircon/system/ulib/fs/test_support/test:fs_test_support-manifest",
     "//zircon/system/ulib/ftl/test:ftl_test-manifest",
-    "//zircon/system/ulib/hermetic-decompressor/test:hermetic-decompressor-manifest",
     "//zircon/system/ulib/inspect/test:inspect-manifest",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-manifest",
@@ -821,7 +816,6 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/fs/metrics/test:metrics-inspect-manifest",
     "//zircon/system/ulib/fs/test_support/test:fs_test_support-manifest",
     "//zircon/system/ulib/ftl/test:ftl_test-manifest",
-    "//zircon/system/ulib/hermetic-decompressor/test:hermetic-decompressor-manifest",
     "//zircon/system/ulib/inspect/test:inspect-manifest",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-manifest",

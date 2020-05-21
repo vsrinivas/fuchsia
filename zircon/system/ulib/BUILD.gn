@@ -41,8 +41,6 @@ group("ulib") {
     "fit",
     "gfx",
     "gfx-font-data",
-    "hermetic-compute",
-    "hermetic-decompressor",
     "hwreg",
     "hwreg:hwreg-mock",
     "lazy_init",

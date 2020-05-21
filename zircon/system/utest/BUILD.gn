@@ -25,7 +25,6 @@ if (current_cpu != "") {
       "$zx/kernel/phys:tests",
       "$zx/system/ulib/c/test/noop:test",
       "$zx/system/ulib/fdio/test/constructors",
-      "$zx/system/ulib/hermetic-compute/test",
       "abi-type-validator",
       "libc",
 
