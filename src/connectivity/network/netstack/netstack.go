@@ -404,7 +404,7 @@ func (ns *Netstack) onInterfacesChanged() {
 	ns.netstackService.mu.Lock()
 	for pxy := range ns.netstackService.mu.proxies {
 		if err := pxy.OnInterfacesChanged(interfaces); err != nil {
-			syslog.Warnf("OnInterfacesChanged failed: %v", err)
+			syslog.Warnf("OnInterfacesChanged failed: %s", err)
 		}
 	}
 	ns.netstackService.mu.Unlock()
@@ -412,7 +412,7 @@ func (ns *Netstack) onInterfacesChanged() {
 
 // AddRoute adds a single route to the route table in a sorted fashion.
 func (ns *Netstack) AddRoute(r tcpip.Route, metric routes.Metric, dynamic bool) error {
-	syslog.Infof("adding route %+v metric:%d dynamic=%v", r, metric, dynamic)
+	syslog.Infof("adding route %s metric=%d dynamic=%t", r, metric, dynamic)
 	return ns.AddRoutes([]tcpip.Route{r}, metric, dynamic)
 }
 
@@ -429,7 +429,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 		if r.NIC == 0 {
 			nic, err := ns.routeTable.FindNIC(r.Gateway)
 			if err != nil {
-				return fmt.Errorf("error finding NIC for gateway %v: %s", r.Gateway, err)
+				return fmt.Errorf("error finding NIC for gateway %s: %w", r.Gateway, err)
 			}
 			r.NIC = nic
 		}
@@ -457,7 +457,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 
 // DelRoute deletes a single route from the route table.
 func (ns *Netstack) DelRoute(r tcpip.Route) error {
-	syslog.Infof("deleting route %+v", r)
+	syslog.Infof("deleting route %s", r)
 	if err := ns.routeTable.DelRoute(r); err != nil {
 		return err
 	}
@@ -480,7 +480,7 @@ func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Act
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-	syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %+v", addr.AddressWithPrefix, nic, route)
+	syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %s", addr.AddressWithPrefix, nic, route)
 
 	nicInfo, ok := ns.stack.NICInfo()[nic]
 	if !ok {
@@ -511,7 +511,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 // tcpip.NICID was found or false and an error.
 func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-	syslog.Infof("adding static IP %s to NIC %d, creating subnet route %+v with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
+	syslog.Infof("adding static IP %s to NIC %d, creating subnet route %s with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
 
 	info, ok := ns.stack.NICInfo()[nic]
 	if !ok {
@@ -534,7 +534,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 	}
 
 	if err := ns.AddRoute(route, metricNotSet, false); err != nil {
-		return false, fmt.Errorf("error adding subnet route %v to NIC ID %d: %s", route, nic, err)
+		return false, fmt.Errorf("error adding subnet route %s to NIC ID %d: %w", route, nic, err)
 	}
 
 	ns.onInterfacesChanged()
@@ -578,7 +578,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 					defaultV4Route(ifs.nicid, config.Gateway),
 					addressWithPrefixRoute(ifs.nicid, newAddr),
 				}
-				syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
+				syslog.Infof("adding routes %s with metric=<not-set> dynamic=true", rs)
 
 				if err := ifs.ns.AddRoutes(rs, metricNotSet, true /* dynamic */); err != nil {
 					syslog.Infof("error adding routes for DHCP address/gateway: %s", err)
@@ -843,7 +843,7 @@ func (ns *Netstack) addLoopback() error {
 		metricNotSet, /* use interface metric */
 		false,        /* dynamic */
 	); err != nil {
-		return fmt.Errorf("loopback: adding routes failed: %v", err)
+		return fmt.Errorf("loopback: adding routes failed: %w", err)
 	}
 
 	return nil
