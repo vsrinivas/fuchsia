@@ -91,7 +91,7 @@ test_package("example_server_unittests") {
   tests = [
     {
       name = "example_server_unittests"
-      environments = basic_envs
+      environments = [ emu_env ]
     },
   ]
 }
