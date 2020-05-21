@@ -19,6 +19,17 @@ WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
 }
 
+sys::ComponentContext* PlatformManagerImpl::GetComponentContextForProcess(void) {
+  if (!context_) {
+    context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  }
+  return context_.get();
+}
+
+void PlatformManagerImpl::SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context) {
+  context_ = std::move(context);
+}
+
 void PlatformManagerImpl::ShutdownWeaveStack(void) {
   Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_ShutdownWeaveStack();
 }

@@ -44,8 +44,6 @@ class ConfigurationManagerImpl final
   // defined on this class.
   friend class Internal::GenericConfigurationManagerImpl<ConfigurationManagerImpl>;
 
-  ConfigurationManagerImpl();
-
  private:
   // ===== Members that implement the ConfigurationManager public interface.
 
@@ -77,7 +75,6 @@ class ConfigurationManagerImpl final
 
   zx_status_t GetDeviceIdFromFactory(const char* path, uint64_t* factory_device_id);
 
-  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
   fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
@@ -89,8 +86,7 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR GetAndStoreMfrDeviceCert();
 
  public:
-  ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);
-
+  ConfigurationManagerImpl();
   // Read a file from the factory partition into |buf| up to a maximum of
   // |buf_size| bytes. If not null, the total number of bytes read in is stored
   // in *|out_len|.

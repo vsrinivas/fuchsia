@@ -6,6 +6,7 @@
 
 #include <BuildConfig.h>
 
+#include <lib/sys/cpp/component_context.h>
 #include "generic_platform_manager_impl_fuchsia.h"
 
 namespace nl {
@@ -29,6 +30,9 @@ class PlatformManagerImpl final
  public:
   // ===== Platform-specific members that may be accessed directly by the application.
  void ShutdownWeaveStack(void);
+ sys::ComponentContext* GetComponentContextForProcess(void);
+ void SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context);
+
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
 
@@ -40,6 +44,7 @@ class PlatformManagerImpl final
   friend PlatformManagerImpl& PlatformMgrImpl(void);
 
   static PlatformManagerImpl sInstance;
+  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 /**

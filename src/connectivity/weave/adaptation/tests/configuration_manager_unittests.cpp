@@ -223,7 +223,8 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   void SetUp() {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
-    cfg_mgr_ = std::make_unique<ConfigurationManagerImpl>(context_provider_.TakeContext());
+    PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
+    cfg_mgr_ = std::make_unique<ConfigurationManagerImpl>();
     EXPECT_EQ(cfg_mgr_->_Init(), WEAVE_NO_ERROR);
   }
 
@@ -237,6 +238,7 @@ class ConfigurationManagerTest : public WeaveTestFixture {
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
+  std::unique_ptr<sys::ComponentContext> context_;
 
   FakeHwinfo fake_hwinfo_;
   FakeWlanStack fake_wlan_stack_;

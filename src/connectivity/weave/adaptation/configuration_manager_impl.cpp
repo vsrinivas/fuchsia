@@ -61,26 +61,19 @@ constexpr int kWeaveCertificateMaxLength = UINT16_MAX;
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
-ConfigurationManagerImpl::ConfigurationManagerImpl() : ConfigurationManagerImpl(nullptr) {}
-
-ConfigurationManagerImpl::ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context)
-    : context_(std::move(context)),
-      device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
+ConfigurationManagerImpl::ConfigurationManagerImpl()
+   : device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
 
 WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
 
-  if (!context_) {
-    context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  }
-
-  FX_CHECK(context_->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
+  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
       << "Failed to connect to wlan service.";
-  FX_CHECK(context_->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
+  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
-  FX_CHECK(context_->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
+  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
       << "Failed to connect to weave factory data manager service.";
-  FX_CHECK(context_->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
+  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
       << "Failed to connect to factory store";
 
   err = EnvironmentConfig::Init();
