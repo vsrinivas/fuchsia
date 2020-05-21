@@ -455,6 +455,7 @@ extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t f
   va_list args;
   va_start(args, msg);
   vfprintf(stdout, msg, args);
+  putchar('\n');
   va_end(args);
 }
 
