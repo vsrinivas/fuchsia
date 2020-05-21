@@ -100,25 +100,11 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
 		}
 	}
-	addr, err := netutil.GetNodeAddress(ctx, config.Network.Nodename, false)
-	if err != nil {
-		return nil, err
-	}
-	t, err := tftp.NewClient(&net.UDPAddr{
-		IP:   addr.IP,
-		Port: tftp.ClientPort,
-		Zone: addr.Zone,
-	})
-	if err != nil {
-		return nil, err
-	}
 	return &DeviceTarget{
 		config:  config,
 		opts:    opts,
 		signers: signers,
 		serial:  s,
-		tftp:    t,
-		addr:    addr,
 	}, nil
 }
 
@@ -158,6 +144,25 @@ func (t *DeviceTarget) SSHKey() string {
 
 // Start starts the device target.
 func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
+	if t.addr == nil {
+		// Discover the node on the network and initialize a tftp client to
+		// talk to it.
+		addr, err := netutil.GetNodeAddress(ctx, t.Nodename(), false)
+		if err != nil {
+			return err
+		}
+		tftpClient, err := tftp.NewClient(&net.UDPAddr{
+			IP:   addr.IP,
+			Port: tftp.ClientPort,
+			Zone: addr.Zone,
+		})
+		if err != nil {
+			return err
+		}
+		t.tftp = tftpClient
+		t.addr = addr
+	}
+
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(t.Nodename())
 	if err != nil {
