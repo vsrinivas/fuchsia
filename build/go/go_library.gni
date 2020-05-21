@@ -11,7 +11,7 @@
 #     Defaults to the target name.
 #
 #   name_file (optional)
-#     Path to a file containing the name of the Go package..
+#     Path to a file containing the name of the Go package.
 #     This should be used when the package's name requires some computation in
 #     its own build target.
 #
@@ -47,7 +47,7 @@ template("go_library") {
     # Make name_file a system-absolute path and add it to args.
     name_args = [
       "--name-file",
-      rebase_path(invoker.name_file, ""),
+      rebase_path(invoker.name_file),
     ]
   } else {
     name_args = [
