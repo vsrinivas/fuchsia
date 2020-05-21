@@ -47,7 +47,7 @@ async fn main_inner_async() -> Result<(), Error> {
     let pkgfs_ctl =
         pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
 
-    let static_packages = get_static_packages(pkgfs_system.clone()).await?;
+    let static_packages = get_static_packages(pkgfs_system.clone()).await;
 
     let cache_cb = {
         let pkgfs_ctl = Clone::clone(&pkgfs_ctl);
@@ -98,15 +98,20 @@ async fn main_inner_async() -> Result<(), Error> {
     Ok(())
 }
 
-async fn get_static_packages(
-    pkgfs_system: pkgfs::system::Client,
-) -> Result<Arc<StaticPackages>, Error> {
-    Ok(Arc::new(if let Ok(file) = pkgfs_system.open_file("data/static_packages").await {
-        StaticPackages::deserialize(file).unwrap_or_else(|e| {
-            fx_log_err!("error deserializing data/static_packages: {:#}", anyhow!(e));
-            StaticPackages::empty()
-        })
-    } else {
+// Deserializes the static packages list. Returns an empty StaticPackages on error.
+async fn get_static_packages(pkgfs_system: pkgfs::system::Client) -> Arc<StaticPackages> {
+    Arc::new(get_static_packages_impl(pkgfs_system).await.unwrap_or_else(|e| {
+        fx_log_err!("Failed to load static packages, assumping empty: {:#}", anyhow!(e));
         StaticPackages::empty()
     }))
+}
+
+async fn get_static_packages_impl(
+    pkgfs_system: pkgfs::system::Client,
+) -> Result<StaticPackages, Error> {
+    let file = pkgfs_system
+        .open_file("data/static_packages")
+        .await
+        .context("failed to open data/static_packages from system image package")?;
+    StaticPackages::deserialize(file).context("error deserializing data/static_packages")
 }

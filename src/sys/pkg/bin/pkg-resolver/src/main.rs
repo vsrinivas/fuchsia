@@ -92,9 +92,11 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         pkgfs::needs::Client::open_from_namespace().context("error connecting to pkgfs/needs")?;
     let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
 
+    let base_package_index =
+        Arc::new(cache.base_package_index().await.context("failed to load base package index")?);
+
     // The list of cache packages from the system image, not to be confused with the PackageCache.
-    let system_cache_list = load_system_cache_list().await;
-    let system_cache_list = Arc::new(system_cache_list);
+    let system_cache_list = Arc::new(load_system_cache_list().await);
 
     let inspector = fuchsia_inspect::Inspector::new();
     let channel_inspect_state =
@@ -142,6 +144,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
     ));
     let (package_fetch_queue, package_fetcher) = resolver_service::make_package_fetch_queue(
         cache.clone(),
+        Arc::clone(&base_package_index),
         Arc::clone(&system_cache_list),
         Arc::clone(&repo_manager),
         Arc::clone(&rewrite_manager),
@@ -157,6 +160,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
         let repo_manager = Arc::clone(&repo_manager);
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let package_fetcher = Arc::clone(&package_fetcher);
+        let base_package_index = Arc::clone(&base_package_index);
         let system_cache_list = Arc::clone(&system_cache_list);
         let cobalt_sender = cobalt_sender.clone();
         let resolver_service_inspect = Arc::clone(&resolver_service_inspect_state);
@@ -167,6 +171,7 @@ async fn main_inner_async(startup_time: Instant) -> Result<(), Error> {
                     Arc::clone(&repo_manager),
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&package_fetcher),
+                    Arc::clone(&base_package_index),
                     Arc::clone(&system_cache_list),
                     stream,
                     cobalt_sender.clone(),

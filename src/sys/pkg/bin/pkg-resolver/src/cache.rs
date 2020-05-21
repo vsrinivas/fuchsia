@@ -27,20 +27,21 @@ use {
     parking_lot::Mutex,
     pkgfs::install::BlobKind,
     std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         hash::Hash,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc,
         },
     },
-    thiserror::Error,
     tuf::metadata::TargetPath,
 };
 
+mod base_package_index;
 mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
+pub type BasePackageIndex = HashMap<PkgUrl, BlobId>;
 
 /// Provides access to the package cache components.
 #[derive(Clone)]
@@ -91,6 +92,11 @@ impl PackageCache {
         }
     }
 
+    /// Loads the base package index from pkg-cache.
+    pub async fn base_package_index(&self) -> Result<BasePackageIndex, anyhow::Error> {
+        base_package_index::base_package_index_impl(self.cache.clone()).await
+    }
+
     /// Create a new blob with the given install intent.
     ///
     /// Returns None if the blob already exists and is readable.
@@ -123,7 +129,7 @@ impl PackageCache {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum PackageOpenError {
     #[error("fidl error")]
     Fidl(#[from] fidl::Error),
@@ -218,7 +224,7 @@ pub async fn cache_package<'a>(
     Ok(merkle)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum CacheError {
     #[error("fidl error")]
     Fidl(#[from] fidl::Error),
@@ -356,7 +362,7 @@ pub async fn merkle_for_url<'a>(
     res.map(|custom| (custom.merkle(), custom.size()))
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum MerkleForError {
     #[error("the package was not found in the repository")]
     NotFound,
@@ -590,7 +596,7 @@ async fn download_blob(
     Ok(())
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum FetchError {
     #[error("could not create blob")]
     CreateBlob(#[source] pkgfs::install::BlobCreateError),
