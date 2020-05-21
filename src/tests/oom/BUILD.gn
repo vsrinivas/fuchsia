@@ -20,7 +20,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/oom"
+    name = "go.fuchsia.dev/fuchsia/src/tests/oom"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -30,7 +30,7 @@ if (is_linux) {
   }
 
   go_test("oom_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/oom" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/oom" ]
     deps = [ ":lib" ]
     non_go_deps = [ ":main_zbi" ]
   }

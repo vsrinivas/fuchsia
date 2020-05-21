@@ -20,7 +20,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/reboot"
+    name = "go.fuchsia.dev/fuchsia/src/tests/reboot"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -30,7 +30,7 @@ if (is_linux) {
   }
 
   go_test("reboot_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/reboot" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/reboot" ]
     deps = [ ":lib" ]
     non_go_deps = [ ":main_zbi" ]
   }

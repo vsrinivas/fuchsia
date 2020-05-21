@@ -28,7 +28,7 @@ if (is_linux) {
   go_library("disable_syscalls_support_lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/disable_syscalls/support"
+    name = "go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
     source_dir = "//src/tests/disable_syscalls/support"
 
     deps = [ "//src/testing/qemu" ]
@@ -57,7 +57,7 @@ if (is_linux) {
     split_name = invoker.target_name
     go_library(target_name) {
       testonly = true
-      name = "fuchsia.googlesource.com/tests/disable_syscalls/$split_name"
+      name = "go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/$split_name"
       source_dir = "//src/tests/disable_syscalls/$split_name"
       deps = [
         ":disable_syscalls_support_lib",
@@ -67,7 +67,7 @@ if (is_linux) {
 
     go_test("${split_name}_test") {
       gopackages =
-          [ "fuchsia.googlesource.com/tests/disable_syscalls/$split_name" ]
+          [ "go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/$split_name" ]
       deps = [ ":$split_name" ]
       non_go_deps = [
         ":misc_tools",

@@ -20,7 +20,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/disable_shell"
+    name = "go.fuchsia.dev/fuchsia/src/tests/disable_shell"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -30,7 +30,7 @@ if (is_linux) {
   }
 
   go_test("disable_shell_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/disable_shell" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/disable_shell" ]
     deps = [ ":lib" ]
     non_go_deps = [ ":main_zbi" ]
   }

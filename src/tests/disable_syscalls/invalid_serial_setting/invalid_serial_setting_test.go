@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"fuchsia.googlesource.com/testing/qemu"
-	"fuchsia.googlesource.com/tests/disable_syscalls/support"
+	"go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
 )
 
 func TestInvalidSerialSetting(t *testing.T) {

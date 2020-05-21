@@ -20,7 +20,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/limited_netsvc"
+    name = "go.fuchsia.dev/fuchsia/src/tests/limited_netsvc"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -67,7 +67,7 @@ if (is_linux) {
 
   # TODO(scottmg): Colocate this test with netsvc when it moves out of //zircon.
   go_test("limited_netsvc_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/limited_netsvc" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/limited_netsvc" ]
     deps = [
       ":lib",
       "//tools/net/netutil",
