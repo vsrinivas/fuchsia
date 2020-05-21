@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue},
     fuchsia_async as fasync,
     fuchsia_inspect::reader::{self, NodeHierarchy, Property},
+    fuchsia_zircon as zx,
     std::{
         cmp::Reverse,
         collections::HashMap,
@@ -310,18 +311,18 @@ impl ComponentLogStats {
     }
 }
 
-impl From<NodeHierarchy> for ComponentLogStats {
-    fn from(node: NodeHierarchy) -> ComponentLogStats {
+impl From<&NodeHierarchy> for ComponentLogStats {
+    fn from(node: &NodeHierarchy) -> ComponentLogStats {
         let map = node
             .properties
-            .into_iter()
+            .iter()
             .map(|x| match x {
-                Property::Uint(name, value) => (name, value),
-                _ => (String::from(""), 0),
+                Property::Uint(name, value) => (name.as_str(), *value),
+                _ => ("", 0),
             })
             .collect::<HashMap<_, _>>();
         ComponentLogStats {
-            component_url: node.name,
+            component_url: node.name.clone(),
             log_counts: vec![
                 map["trace_logs"],
                 map["debug_logs"],
@@ -333,6 +334,51 @@ impl From<NodeHierarchy> for ComponentLogStats {
             total_logs: map["total_logs"],
         }
     }
+}
+
+trait NodeHierarchyExt {
+    fn get_child(&self, name: &str) -> Result<&NodeHierarchy, Error>;
+    fn get_property_str(&self, name: &str) -> Result<&str, Error>;
+}
+
+impl NodeHierarchyExt for NodeHierarchy {
+    fn get_child(&self, name: &str) -> Result<&NodeHierarchy, Error> {
+        self.children
+            .iter()
+            .find(|x| x.name == name)
+            .ok_or(format_err!("Failed to find {} node in the inspect hierarchy", name))
+    }
+    fn get_property_str(&self, name: &str) -> Result<&str, Error> {
+        for property in &self.properties {
+            if let Property::String(key, value) = property {
+                if key == name {
+                    return Ok(value);
+                }
+            }
+        }
+        return Err(format_err!("Failed to find string property {}", name));
+    }
+}
+
+// Extracts the component start times from the inspect hierarchy.
+fn get_component_start_times(inspect_root: &NodeHierarchy) -> Result<HashMap<&str, f64>, Error> {
+    let mut res = HashMap::new();
+    let events_node = inspect_root.get_child("event_stats")?.get_child("recent_events")?;
+
+    for event in &events_node.children {
+        // Extract the component name from the moniker. This allows us to match against the
+        // component url from log stats.
+        let moniker = event.get_property_str("moniker")?;
+        let last_slash_index = moniker.rfind("/");
+        if let Some(i) = last_slash_index {
+            let last_colon_index = moniker.rfind(":");
+            if let Some(j) = last_colon_index {
+                res.insert(&moniker[i + 1..j], event.get_property_str("@time")?.parse::<f64>()?);
+            }
+        }
+    }
+
+    Ok(res)
 }
 
 async fn print_log_stats(opt: Opt) -> Result<(), Error> {
@@ -351,23 +397,12 @@ async fn print_log_stats(opt: Opt) -> Result<(), Error> {
     fdio::service_connect(&path_str, server.into_channel())?;
     let hierarchy = reader::read_from_tree(&tree).await?;
 
-    let log_stats_node = hierarchy
-        .children
-        .into_iter()
-        .find(|x| x.name == "log_stats")
-        .ok_or(format_err!("Failed to find /log_stats node in the inspect hierarchy"))?;
-
-    let per_component_node =
-        log_stats_node.children.into_iter().find(|x| x.name == "by_component").ok_or(
-            format_err!("Failed to find /log_stats/by_component node in the inspect hierarchy"),
-        )?;
-
-    let mut stats_list = per_component_node
-        .children
-        .into_iter()
-        .map(|x| ComponentLogStats::from(x))
-        .collect::<Vec<_>>();
+    let stats_node = hierarchy.get_child("log_stats")?.get_child("by_component")?;
+    let mut stats_list =
+        stats_node.children.iter().map(|x| ComponentLogStats::from(x)).collect::<Vec<_>>();
     stats_list.sort_by_key(|x| Reverse(x.get_sort_key()));
+
+    let start_times = get_component_start_times(&hierarchy)?;
 
     // Number of fatal logs is expected to be zero. If that's not the case, report it here.
     for stats in &stats_list {
@@ -392,7 +427,9 @@ async fn print_log_stats(opt: Opt) -> Result<(), Error> {
     for i in (min_severity_int..=max_severity_int).rev() {
         table_str.push_str(&format!("{:<7}", severity_strs[i]));
     }
-    table_str.push_str(&format!("{:<7}{}\n", "Total", "Component"));
+    table_str.push_str(&format!("{:<7}{:<10}{}\n", "Total", "ERROR/h", "Component"));
+
+    let now = zx::Time::get(zx::ClockId::Monotonic).into_nanos() / 1_000_000_000;
 
     for stats in stats_list {
         let last_slash_index = stats.component_url.rfind("/");
@@ -403,7 +440,15 @@ async fn print_log_stats(opt: Opt) -> Result<(), Error> {
         for i in (min_severity_int..=max_severity_int).rev() {
             table_str.push_str(&format!("{:<7}", stats.log_counts[i]));
         }
-        table_str.push_str(&format!("{:<7}{}\n", stats.total_logs, short_name));
+        table_str.push_str(&format!("{:<7}", stats.total_logs));
+        let start_time = match start_times.get(short_name) {
+            Some(s) => *s as i64,
+            None => 0,
+        };
+        let uptime_in_hours = (now - start_time) as f64 / 60.0;
+        let error_rate = stats.get_count(LogSeverity::ERROR) as f64 / uptime_in_hours;
+        table_str.push_str(&format!("{:<10.4}", error_rate));
+        table_str.push_str(&format!("{}\n", short_name));
     }
 
     print!("{}", table_str);
