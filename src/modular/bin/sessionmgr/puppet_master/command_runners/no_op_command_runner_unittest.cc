@@ -30,7 +30,7 @@ class NoOpCommandRunnerTest : public modular_testing::TestWithSessionStorage {
     fsl::SizedVmo vmo;
     fsl::VmoFromString(value, &vmo);
     fuchsia::modular::SetLinkValue set_link_value;
-    set_link_value.path = MakeLinkPath(path_name);
+    set_link_value.path.link_name = "link";
     set_link_value.value = std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
     fuchsia::modular::StoryCommand command;
     command.set_set_link_value(std::move(set_link_value));

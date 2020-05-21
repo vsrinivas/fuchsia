@@ -73,26 +73,6 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
     return intent;
   }
 
-  // Initializes a parent mod for the mod created during the test. The goal of
-  // this mod is to test parameters of type link_name and as the
-  // surface_relation_parent_mod.
-  void InitParentMod(const std::string& mod_name, const std::string& param_name,
-                     const std::string& param_value, const std::string& link_path_name) {
-    fuchsia::modular::ModuleData module_data;
-    module_data.mutable_module_path()->push_back(mod_name);
-    module_data.set_intent(fuchsia::modular::Intent{});
-
-    fuchsia::modular::ModuleParameterMapEntry parameter_entry;
-    auto link_path = MakeLinkPath(link_path_name);
-    fidl::Clone(module_data.module_path(), &link_path.module_path);
-    parameter_entry.name = param_name;
-    fidl::Clone(link_path, &parameter_entry.link_path);
-    module_data.mutable_parameter_map()->entries.push_back(std::move(parameter_entry));
-
-    SetLinkValue(story_storage_.get(), link_path, param_value);
-    WriteModuleData(story_storage_.get(), std::move(module_data));
-  }
-
   std::unique_ptr<AddModCommandRunner> runner_;
   std::unique_ptr<SessionStorage> session_storage_;
   std::shared_ptr<StoryStorage> story_storage_;

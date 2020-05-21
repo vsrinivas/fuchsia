@@ -7,7 +7,6 @@
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
@@ -25,7 +24,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
   void Run() override {
     FlowToken flow{this, &out_result_, &out_module_data_};
 
-    // Success status by default, it will be update it if an error state is
+    // Success status by default, it will be updated it if an error state is
     // found.
     out_result_.status = fuchsia::modular::ExecuteStatus::OK;
 
@@ -35,53 +34,12 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
       return;
     }
 
-    CreateLinks(flow);
-  }
-
-  // Create module parameters info and create links.
-  void CreateLinks(FlowToken flow) {
-    CreateModuleParameterMapInfo(flow, [this, flow] {
-      if (out_result_.status != fuchsia::modular::ExecuteStatus::OK) {
-        return;
-        // Operation finishes since |flow| goes out of scope.
-      }
-      auto full_module_path = add_mod_params_.parent_mod_path;
-      full_module_path.push_back(add_mod_params_.mod_name);
-      AddInitializeChainOperation(&operation_queue_, story_storage_, std::move(full_module_path),
-                                  std::move(parameter_info_),
-                                  [this, flow](fuchsia::modular::ExecuteResult result,
-                                               fuchsia::modular::ModuleParameterMapPtr map) {
-                                    if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-                                      out_result_ = std::move(result);
-                                      return;
-                                      // Operation finishes since |flow| goes out of scope.
-                                    }
-                                    WriteModuleData(flow, std::move(map));
-                                  });
-    });
-  }
-
-  // On success, populates |parameter_info_|. On failure, |out_result_| contains
-  // error reason. Calls |done()| on completion in either case.
-  void CreateModuleParameterMapInfo(FlowToken flow, fit::function<void()> done) {
-    parameter_info_ = fuchsia::modular::CreateModuleParameterMapInfo::New();
-
-    std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntry>> did_get_entries;
-    if (add_mod_params_.intent.parameters.has_value()) {
-      FX_LOGS(WARNING) << "Intent parameters are ignored.";
-    }
-
-    Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)
-        ->Then([this, done = std::move(done),
-                flow](std::vector<fuchsia::modular::CreateModuleParameterMapEntry> entries) {
-          parameter_info_->property_info.emplace(std::move(entries));
-          done();
-        });
+    WriteModuleData(flow);
   }
 
   // Write module data
-  void WriteModuleData(FlowToken flow, fuchsia::modular::ModuleParameterMapPtr map) {
-    fidl::Clone(*map, out_module_data_.mutable_parameter_map());
+  void WriteModuleData(FlowToken flow) {
+    out_module_data_.mutable_parameter_map();  // set to empty
     out_module_data_.set_module_url(add_mod_params_.intent.handler.value());
     out_module_data_.set_module_path(add_mod_params_.parent_mod_path);
     out_module_data_.mutable_module_path()->push_back(add_mod_params_.mod_name);

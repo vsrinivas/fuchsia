@@ -5,7 +5,6 @@
 source_set("operation_calls") {
   public_deps = [
     ":add_mod_call",
-    ":initialize_chain_call",
   ]
 }
 
@@ -16,7 +15,6 @@ source_set("add_mod_call") {
   ]
 
   deps = [
-    ":initialize_chain_call",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
   ]
@@ -26,33 +24,5 @@ source_set("add_mod_call") {
     "//src/modular/bin/sessionmgr/storage:story_storage",
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:clone",
-  ]
-}
-
-source_set("initialize_chain_call") {
-  sources = [
-    "initialize_chain_call.cc",
-    "initialize_chain_call.h",
-  ]
-
-  deps = [
-    ":set_link_value_call",
-    "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fsl",
-    "//src/modular/bin/sessionmgr/storage:story_storage",
-    "//src/modular/lib/async/cpp:operation",
-  ]
-}
-
-source_set("set_link_value_call") {
-  sources = [
-    "set_link_value_call.cc",
-    "set_link_value_call.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//src/modular/bin/sessionmgr/storage:story_storage",
-    "//src/modular/lib/async/cpp:operation",
   ]
 }

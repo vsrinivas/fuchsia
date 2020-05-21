@@ -66,48 +66,6 @@ std::vector<ModuleData> StoryStorage::ReadAllModuleData() {
   return vec;
 }
 
-namespace {
-
-constexpr char kJsonNull[] = "null";
-
-}  // namespace
-
-FuturePtr<StoryStorage::Status, std::string> StoryStorage::GetLinkValue(const LinkPath& link_path) {
-  auto key = MakeLinkKey(link_path);
-  auto it = link_backing_storage_.find(key);
-  std::string val = it != link_backing_storage_.end() ? it->second : kJsonNull;
-
-  return Future<StoryStorage::Status, std::string>::CreateCompleted(
-      "StoryStorage::GetLinkValue " + key, Status::OK, std::move(val));
-}
-
-FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
-    const LinkPath& link_path, fit::function<void(fidl::StringPtr*)> mutate_fn,
-    const void* context) {
-  // nullptr is reserved for updates that came from other instances of
-  // StoryStorage.
-  FX_DCHECK(context != nullptr)
-      << "StoryStorage::UpdateLinkValue(..., context) of nullptr is reserved.";
-
-  auto key = MakeLinkKey(link_path);
-
-  // Pull exisitng link value out of backing store, if present.
-  fidl::StringPtr scratch;
-  auto it = link_backing_storage_.find(key);
-  if (it != link_backing_storage_.end()) {
-    scratch = std::move(it->second);
-  }
-
-  // Let mutate_fn update the link value
-  mutate_fn(&scratch);
-
-  // Write back to the backing store.
-  link_backing_storage_[key] = std::move(scratch.value());
-
-  // Return completed future.
-  return Future<StoryStorage::Status>::CreateCompleted("StoryStorage.UpdateLinkValue", Status::OK);
-}
-
 void StoryStorage::DispatchWatchers(ModuleData& module_data) {
   auto callbacks = std::move(module_data_updated_watchers_);
   module_data_updated_watchers_.clear();

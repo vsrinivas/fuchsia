@@ -20,54 +20,9 @@ std::shared_ptr<modular::StoryStorage> TestWithSessionStorage::GetStoryStorage(
   return story_storage;
 }
 
-void TestWithSessionStorage::SetLinkValue(modular::StoryStorage* const story_storage,
-                                          const std::string& link_name,
-                                          const std::string& link_value) {
-  SetLinkValue(story_storage, MakeLinkPath(link_name), link_value);
-}
-
-void TestWithSessionStorage::SetLinkValue(modular::StoryStorage* const story_storage,
-                                          const fuchsia::modular::LinkPath& link_path,
-                                          const std::string& link_value) {
-  bool done{};
-  int context;
-  story_storage
-      ->UpdateLinkValue(
-          link_path, [&](fidl::StringPtr* value) { *value = link_value; }, &context)
-      ->Then([&](modular::StoryStorage::Status status) {
-        ASSERT_EQ(status, modular::StoryStorage::Status::OK);
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
-}
-
 void TestWithSessionStorage::WriteModuleData(modular::StoryStorage* const story_storage,
                                              fuchsia::modular::ModuleData module_data) {
   story_storage->WriteModuleData(std::move(module_data));
-}
-
-std::string TestWithSessionStorage::GetLinkValue(modular::StoryStorage* const story_storage,
-                                                 const std::string& link_name) {
-  return GetLinkValue(story_storage, MakeLinkPath(link_name));
-}
-
-std::string TestWithSessionStorage::GetLinkValue(modular::StoryStorage* const story_storage,
-                                                 const fuchsia::modular::LinkPath& path) {
-  bool done{};
-  std::string value;
-  story_storage->GetLinkValue(path)->Then(
-      [&](modular::StoryStorage::Status status, fidl::StringPtr v) {
-        value = *v;
-        done = true;
-      });
-  RunLoopUntil([&] { return done; });
-  return value;
-}
-
-fuchsia::modular::LinkPath TestWithSessionStorage::MakeLinkPath(const std::string& name) {
-  fuchsia::modular::LinkPath path;
-  path.link_name = name;
-  return path;
 }
 
 }  // namespace modular_testing

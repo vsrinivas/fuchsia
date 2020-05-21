@@ -25,21 +25,8 @@ class TestWithSessionStorage : public gtest::RealLoopFixture {
   std::shared_ptr<modular::StoryStorage> GetStoryStorage(modular::SessionStorage* storage,
                                                          std::string story_id);
 
-  void SetLinkValue(modular::StoryStorage* story_storage, const std::string& link_name,
-                    const std::string& link_value);
-
-  void SetLinkValue(modular::StoryStorage* story_storage,
-                    const fuchsia::modular::LinkPath& link_path, const std::string& link_value);
-
   void WriteModuleData(modular::StoryStorage* story_storage,
                        fuchsia::modular::ModuleData module_data);
-
-  std::string GetLinkValue(modular::StoryStorage* story_storage,
-                           const fuchsia::modular::LinkPath& path);
-
-  std::string GetLinkValue(modular::StoryStorage* story_storage, const std::string& link_name);
-
-  fuchsia::modular::LinkPath MakeLinkPath(const std::string& name);
 
  private:
   // Implements CreateStory on behalf of protected variants
