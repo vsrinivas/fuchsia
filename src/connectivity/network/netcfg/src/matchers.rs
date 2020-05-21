@@ -15,9 +15,9 @@ pub fn config_for_device(
 ) -> fidl_fuchsia_netstack::InterfaceConfig {
     rules.iter().filter_map(|spec| matches_info(&spec, &topological_path, device_info)).fold(
         fidl_fuchsia_netstack::InterfaceConfig {
-            name: name,
+            name,
             filepath: filepath.display().to_string(),
-            metric: metric,
+            metric,
             ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
         },
         |seed, opt| match opt {
