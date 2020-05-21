@@ -38,9 +38,12 @@ class VkLoopTest {
   bool is_initialized_ = false;
   std::unique_ptr<VulkanContext> ctx_;
   VkDescriptorSet vk_descriptor_set_;
-  VkPipelineLayout vk_pipeline_layout_;
-  VkPipeline vk_compute_pipeline_;
-  VkEvent vk_event_;
+  vk::UniqueShaderModule compute_shader_module_;
+  vk::UniqueDescriptorPool descriptor_pool_;
+  vk::UniqueDescriptorSetLayout descriptor_set_layout_;
+  vk::UniquePipelineLayout vk_pipeline_layout_;
+  vk::UniquePipeline vk_compute_pipeline_;
+  vk::UniqueEvent vk_event_;
   vk::UniqueBuffer buffer_;
   vk::UniqueDeviceMemory buffer_memory_;
   vk::UniqueCommandPool command_pool_;
@@ -169,10 +172,7 @@ bool VkLoopTest::InitCommandBuffer() {
     RTN_MSG(false, "VK Error: 0x%x - Begin command buffer.\n", rv_begin);
   }
 
-  VkShaderModule compute_shader_module_;
-  VkShaderModuleCreateInfo sh_info = {};
-  sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
+  vk::ShaderModuleCreateInfo sh_info;
   std::vector<uint8_t> shader;
   {
     int fd = open("/pkg/data/vkloop.spv", O_RDONLY);
@@ -190,58 +190,50 @@ bool VkLoopTest::InitCommandBuffer() {
     sh_info.pCode = reinterpret_cast<uint32_t *>(shader.data());
   }
 
-  VkResult result;
-  if ((result = vkCreateShaderModule(device, &sh_info, NULL, &compute_shader_module_)) !=
-      VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateShaderModule failed: %d\n", result);
+  auto csm = ctx_->device()->createShaderModuleUnique(sh_info);
+  if (vk::Result::eSuccess != csm.result) {
+    RTN_MSG(false, "vkCreateShaderModule failed: %d\n", csm.result);
   }
+  compute_shader_module_ = std::move(csm.value);
 
-  VkDescriptorSetLayoutBinding descriptor_set_layout_bindings = {
-      .binding = 0,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      .descriptorCount = 1,
-      .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-      .pImmutableSamplers = nullptr};
+  vk::DescriptorSetLayoutBinding descriptor_set_layout_binding;
+  descriptor_set_layout_binding.setBinding(0)
+      .setDescriptorCount(1)
+      .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+      .setStageFlags(vk::ShaderStageFlagBits::eCompute);
 
-  VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .bindingCount = 1,
-      .pBindings = &descriptor_set_layout_bindings,
-  };
+  auto descriptor_set_layout_create_info =
+      vk::DescriptorSetLayoutCreateInfo().setBindingCount(1).setPBindings(
+          &descriptor_set_layout_binding);
 
-  VkDescriptorSetLayout descriptor_set_layout;
-
-  if ((result = vkCreateDescriptorSetLayout(device, &descriptor_set_layout_create_info, nullptr,
-                                            &descriptor_set_layout)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateDescriptorSetLayout failed: %d\n", result);
+  auto dsl = ctx_->device()->createDescriptorSetLayoutUnique(descriptor_set_layout_create_info);
+  if (vk::Result::eSuccess != dsl.result) {
+    RTN_MSG(false, "vkCreateDescriptorSetLayout failed: %d\n", dsl.result);
   }
+  descriptor_set_layout_ = std::move(dsl.value);
 
-  VkDescriptorPoolSize pool_size = {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                                    .descriptorCount = 1};
+  auto pool_size =
+      vk::DescriptorPoolSize().setType(vk::DescriptorType::eStorageBuffer).setDescriptorCount(1);
 
-  VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .maxSets = 1,
-      .poolSizeCount = 1,
-      .pPoolSizes = &pool_size};
+  auto descriptor_pool_create_info =
+      vk::DescriptorPoolCreateInfo().setMaxSets(1).setPoolSizeCount(1).setPPoolSizes(&pool_size);
 
-  VkDescriptorPool descriptor_pool;
-  if ((result = vkCreateDescriptorPool(device, &descriptor_pool_create_info, nullptr,
-                                       &descriptor_pool)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateDescriptorPool failed: %d\n", result);
+  auto dp = ctx_->device()->createDescriptorPoolUnique(descriptor_pool_create_info);
+  if (vk::Result::eSuccess != dp.result) {
+    RTN_MSG(false, "vkCreateDescriptorPool failed: %d\n", dp.result);
   }
+  descriptor_pool_ = std::move(dp.value);
 
+  VkDescriptorSetLayout dslp = descriptor_set_layout_.get();
   VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
       .pNext = nullptr,
-      .descriptorPool = descriptor_pool,
+      .descriptorPool = *descriptor_pool_,
       .descriptorSetCount = 1,
-      .pSetLayouts = &descriptor_set_layout,
+      .pSetLayouts = &dslp,
   };
 
+  VkResult result;
   if ((result = vkAllocateDescriptorSets(device, &descriptor_set_allocate_info,
                                          &vk_descriptor_set_)) != VK_SUCCESS) {
     RTN_MSG(false, "vkAllocateDescriptorSets failed: %d\n", result);
@@ -266,53 +258,41 @@ bool VkLoopTest::InitCommandBuffer() {
                          0,         // descriptorCopyCount
                          nullptr);  // pDescriptorCopies
 
-  VkPipelineLayoutCreateInfo pipeline_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .setLayoutCount = 1,
-      .pSetLayouts = &descriptor_set_layout,
-      .pushConstantRangeCount = 0,
-      .pPushConstantRanges = nullptr};
+  vk::PipelineLayoutCreateInfo pipeline_create_info;
+  pipeline_create_info.setLayoutCount = 1;
+  pipeline_create_info.pSetLayouts = &*descriptor_set_layout_;
 
-  if ((result = vkCreatePipelineLayout(device, &pipeline_create_info, nullptr,
-                                       &vk_pipeline_layout_)) != VK_SUCCESS) {
+  auto pipeline_layout = ctx_->device()->createPipelineLayoutUnique(pipeline_create_info);
+  if (vk::Result::eSuccess != pipeline_layout.result) {
     RTN_MSG(false, "vkCreatePipelineLayout failed: %d\n", result);
   }
+  vk_pipeline_layout_ = std::move(pipeline_layout.value);
 
-  VkComputePipelineCreateInfo pipeline_info = {
-      .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-      .pNext = nullptr,
-      .flags = 0,
-      .stage = {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = 0,
-                .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-                .module = compute_shader_module_,
-                .pName = "main",
-                .pSpecializationInfo = nullptr},
-      .layout = vk_pipeline_layout_,
-      .basePipelineHandle = VK_NULL_HANDLE,
-      .basePipelineIndex = 0};
+  vk::ComputePipelineCreateInfo pipeline_info;
+  pipeline_info.stage = vk::PipelineShaderStageCreateInfo{
+      {}, vk::ShaderStageFlagBits::eCompute, *compute_shader_module_, "main", nullptr};
+  pipeline_info.layout = *vk_pipeline_layout_;
 
-  if ((result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr,
-                                         &vk_compute_pipeline_)) != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateComputePipelines failed: %d\n", result);
+  auto compute_pipeline = ctx_->device()->createComputePipelineUnique(nullptr, pipeline_info);
+  if (vk::Result::eSuccess != compute_pipeline.result) {
+    RTN_MSG(false, "vkCreateComputePipelines failed: %d\n", compute_pipeline.result);
   }
+  vk_compute_pipeline_ = std::move(compute_pipeline.value);
 
   if (hang_on_event_) {
-    VkEventCreateInfo event_info = {
-        .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, .pNext = nullptr, .flags = 0};
-    if ((result = vkCreateEvent(device, &event_info, nullptr, &vk_event_)) != VK_SUCCESS) {
-      RTN_MSG(false, "vkCreateEvent failed: %d\n", result);
+    auto evt = ctx_->device()->createEventUnique(vk::EventCreateInfo());
+    if (vk::Result::eSuccess != evt.result) {
+      RTN_MSG(false, "VK Error: 0x%x - Create event.\n", evt.result);
     }
+    vk_event_ = std::move(evt.value);
 
-    vkCmdWaitEvents(*command_buffer, 1, &vk_event_, VK_PIPELINE_STAGE_HOST_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr, 0, nullptr);
+    command_buffer->waitEvents(1, &vk_event_.get(), vk::PipelineStageFlagBits::eHost,
+                               vk::PipelineStageFlagBits::eTransfer, 0, nullptr, 0, nullptr, 0,
+                               nullptr);
   } else {
-    vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, vk_compute_pipeline_);
+    vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, *vk_compute_pipeline_);
 
-    vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, vk_pipeline_layout_,
+    vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, *vk_pipeline_layout_,
                             0,  // firstSet
                             1,  // descriptorSetCount,
                             &vk_descriptor_set_,
