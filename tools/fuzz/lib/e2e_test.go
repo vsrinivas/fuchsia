@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"fuchsia.googlesource.com/fuchsia/tools/fuzz/lib"
 	"github.com/golang/glog"
+	"go.fuchsia.dev/fuchsia/tools/fuzz/lib"
 )
 
 // Runs a command and returns stdout

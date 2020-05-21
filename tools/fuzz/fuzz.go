@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"fuchsia.googlesource.com/fuchsia/tools/fuzz/lib"
+	"go.fuchsia.dev/fuchsia/tools/fuzz/lib"
 )
 
 func main() {
