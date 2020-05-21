@@ -33,6 +33,7 @@ pub mod paver;
 pub mod scenic;
 pub mod server;
 pub mod setui;
+pub mod sysinfo;
 pub mod test;
 pub mod tiles;
 pub mod traceutil;

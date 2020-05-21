@@ -50,6 +50,7 @@
             "fuchsia.settings.Setup",
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.test.manager.Harness",
             "fuchsia.tracing.controller.Controller",

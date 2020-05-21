@@ -97,6 +97,9 @@ use crate::scenic::facade::ScenicFacade;
 // SetUi related includes
 use crate::setui::facade::SetUiFacade;
 
+// SysInfo related includes
+use crate::sysinfo::facade::SysInfoFacade;
+
 // Test related includes
 use crate::test::facade::TestFacade;
 
@@ -182,6 +185,7 @@ impl Sl4f {
                 "profile_server_facade" => ProfileServerFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),
                 "setui_facade" => SetUiFacade::new(),
+                "sysinfo_facade" => SysInfoFacade::new(),
                 "test_facade" => TestFacade::new(),
                 "tiles_facade" => TilesFacade::new(),
                 "traceutil_facade" => TraceutilFacade::new(),
