@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <zircon/device/block.h>

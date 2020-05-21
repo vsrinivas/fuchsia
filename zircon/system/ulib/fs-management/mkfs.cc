@@ -10,7 +10,6 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/channel.h>
-#include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
