@@ -446,3 +446,75 @@ async fn test_close_disabled_interface() -> Result {
 async fn test_close_enabled_interface() -> Result {
     test_close_interface(true).await
 }
+
+/// Tests races between device link down and close.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_down_close_race() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("test_down_close_race")
+        .context("failed to create netstack environment")?;
+
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack")?;
+
+    for _ in 0..100u64 {
+        let dev = sandbox
+            .create_endpoint("ep")
+            .await
+            .context("failed to create endpoint")?
+            .into_interface_in_environment(&env)
+            .await
+            .context("failed to add endpoint to Netstack")?;
+
+        let () = dev.enable_interface().await.context("failed to enable interface")?;
+        let () = dev.start_dhcp().await.context("failed to start DHCP")?;
+        let () = dev.set_link_up(true).await.context("failed to bring device up")?;
+
+        let id = dev.id();
+        // Wait until the interface is installed and the link state is up.
+        let _ifaces = netstack
+            .take_event_stream()
+            .try_filter(
+                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                    futures::future::ready(interfaces.into_iter().any(|iface| {
+                        iface.id == id as u32
+                            && iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0
+                    }))
+                },
+            )
+            .try_next()
+            .await
+            .context("failed to observe event stream")?
+            .ok_or_else(|| {
+                anyhow::anyhow!("netstack stream ended unexpectedly while waiting for interface up")
+            })?;
+
+        // Here's where we cause the race. We bring the device's link down
+        // and drop it right after; the two signals will race to reach
+        // Netstack.
+        let () = dev.set_link_up(false).await.context("failed to bring link down")?;
+        std::mem::drop(dev);
+
+        // Wait until the interface is removed from Netstack cleanly.
+        let _ifaces = netstack
+            .take_event_stream()
+            .try_filter(
+                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                    futures::future::ready(
+                        !interfaces.into_iter().any(|iface| iface.id == id as u32),
+                    )
+                },
+            )
+            .try_next()
+            .await
+            .context("failed to observe event stream")?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "netstack stream ended unexpectedly while waiting for interface disappear"
+                )
+            })?;
+    }
+    Ok(())
+}

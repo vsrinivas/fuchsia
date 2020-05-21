@@ -102,23 +102,22 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 			netInterface.Features |= client.Info.Features
 		}
 
-		// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
-		// network protocol.
-		if addrWithPrefix, err := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
-			syslog.Warnf("failed to call stack.GetMainNICAddress(_): %s", err)
-		} else {
-			if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
-				addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
-			}
-			mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
-			broadaddr := []byte(addrWithPrefix.Address)
-			for i := range broadaddr {
-				broadaddr[i] |= ^mask[i]
-			}
-			netInterface.Addr = fidlconv.ToNetIpAddress(addrWithPrefix.Address)
-			netInterface.Netmask = fidlconv.ToNetIpAddress(tcpip.Address(mask))
-			netInterface.Broadaddr = fidlconv.ToNetIpAddress(tcpip.Address(broadaddr))
+		addrWithPrefix, err := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
+		if err != nil {
+			_ = syslog.Warnf("failed to call stack.GetMainNICAddress(_): %s", err)
 		}
+
+		if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
+			addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
+		}
+		mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
+		broadaddr := []byte(addrWithPrefix.Address)
+		for i := range broadaddr {
+			broadaddr[i] |= ^mask[i]
+		}
+		netInterface.Addr = fidlconv.ToNetIpAddress(addrWithPrefix.Address)
+		netInterface.Netmask = fidlconv.ToNetIpAddress(tcpip.Address(mask))
+		netInterface.Broadaddr = fidlconv.ToNetIpAddress(tcpip.Address(broadaddr))
 
 		interfaces = append(interfaces, netInterface)
 	}
