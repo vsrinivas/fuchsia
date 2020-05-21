@@ -417,20 +417,21 @@ TEST_F(SummaryUnitTest, NameMatch) {
               .vmos =
                   {
                       {.koid = 1, .name = "blob-12a", .committed_bytes = 100},
-                      {.koid = 2, .name = "blob-de", .committed_bytes = 100},
-                      {.koid = 3, .name = "pthread_t:0x59853000/TLS=0x548", .committed_bytes = 100},
-                      {.koid = 4, .name = "thrd_t:0x59853000/TLS=0x548", .committed_bytes = 100},
-                      {.koid = 5, .name = "data:libfoo.so", .committed_bytes = 100},
-                      {.koid = 6, .name = "", .committed_bytes = 100},
-                      {.koid = 7, .name = "scudo:primary", .committed_bytes = 100},
-                      {.koid = 8, .name = "scudo:secondary", .committed_bytes = 100},
-                      {.koid = 9, .name = "foo", .committed_bytes = 100},
-                      {.koid = 10, .name = "initial-thread", .committed_bytes = 100},
-                      {.koid = 11, .name = "libfoo.so.1", .committed_bytes = 100},
+                      {.koid = 2, .name = "blob-merkle-12a", .committed_bytes = 100},
+                      {.koid = 3, .name = "blob-de", .committed_bytes = 100},
+                      {.koid = 4, .name = "pthread_t:0x59853000/TLS=0x548", .committed_bytes = 100},
+                      {.koid = 5, .name = "thrd_t:0x59853000/TLS=0x548", .committed_bytes = 100},
+                      {.koid = 6, .name = "data:libfoo.so", .committed_bytes = 100},
+                      {.koid = 7, .name = "", .committed_bytes = 100},
+                      {.koid = 8, .name = "scudo:primary", .committed_bytes = 100},
+                      {.koid = 9, .name = "scudo:secondary", .committed_bytes = 100},
+                      {.koid = 10, .name = "foo", .committed_bytes = 100},
+                      {.koid = 11, .name = "initial-thread", .committed_bytes = 100},
+                      {.koid = 12, .name = "libfoo.so.1", .committed_bytes = 100},
                   },
               .processes =
                   {
-                      {.koid = 2, .name = "p1", .vmos = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}},
+                      {.koid = 2, .name = "p1", .vmos = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}},
                   },
           });
   Summary s(c, Summary::kNameMatches);
@@ -442,10 +443,11 @@ TEST_F(SummaryUnitTest, NameMatch) {
   EXPECT_EQ(2U, ps.koid());
   EXPECT_STREQ("p1", ps.name().c_str());
   Sizes sizes = ps.sizes();
-  EXPECT_EQ(1100U, sizes.private_bytes);
+  EXPECT_EQ(1200U, sizes.private_bytes);
 
-  EXPECT_EQ(7U, ps.name_to_sizes().size());
+  EXPECT_EQ(8U, ps.name_to_sizes().size());
   EXPECT_EQ(200U, ps.GetSizes("[blobs]").private_bytes);
+  EXPECT_EQ(100U, ps.GetSizes("[blob-merkles]").private_bytes);
   EXPECT_EQ(300U, ps.GetSizes("[stacks]").private_bytes);
   EXPECT_EQ(100U, ps.GetSizes("[data]").private_bytes);
   EXPECT_EQ(100U, ps.GetSizes("[unnamed]").private_bytes);
