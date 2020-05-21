@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	"fuchsia.googlesource.com/host_target_testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
 
-	systemTestConfig "fuchsia.googlesource.com/system_tests/config"
+	systemTestConfig "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/config"
 )
 
 type config struct {

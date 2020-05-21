@@ -8,8 +8,8 @@ import (
 	"context"
 	"fmt"
 
-	"fuchsia.googlesource.com/host_target_testing/device"
-	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )

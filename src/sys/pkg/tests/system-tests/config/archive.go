@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/host_target_testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
 )
 
 type ArchiveConfig struct {

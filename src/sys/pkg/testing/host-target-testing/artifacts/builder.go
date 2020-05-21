@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"fuchsia.googlesource.com/host_target_testing/util"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 )
 
 // Builder allows fetching build information from a specific builder.

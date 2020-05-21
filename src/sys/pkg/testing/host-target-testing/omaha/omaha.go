@@ -14,7 +14,7 @@ import (
 	"regexp"
 	"strings"
 
-	//	"fuchsia.googlesource.com/host_target_testing/avb/avb"
+	//	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb/avb"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"

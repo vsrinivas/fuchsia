@@ -11,9 +11,9 @@ import (
 	"os"
 	"os/exec"
 
-	"fuchsia.googlesource.com/host_target_testing/device"
-	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/sl4f"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
 )
 
 // RunScript runs a script on the device and returns the result. It's possible

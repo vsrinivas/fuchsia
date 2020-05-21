@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"fuchsia.googlesource.com/host_target_testing/packages"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
 
 	"golang.org/x/crypto/ssh"
 )

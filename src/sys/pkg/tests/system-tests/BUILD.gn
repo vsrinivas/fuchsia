@@ -36,7 +36,7 @@ if (is_host) {
 
   go_library("system_tests_lib") {
     testonly = true
-    name = "fuchsia.googlesource.com/system_tests"
+    name = "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests"
     deps = [
       "//src/sys/pkg/testing/host-target-testing",
       "//tools/lib/color",
@@ -52,21 +52,25 @@ if (is_host) {
   }
 
   go_test("system_tests_reboot") {
-    gopackages = [ "fuchsia.googlesource.com/system_tests/reboot_test" ]
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/reboot_test" ]
     disabled = true
     deps = [ ":system_tests_lib" ]
     non_go_deps = [ "//garnet/bin/sl4f" ]
   }
 
   go_test("system_tests_tracking") {
-    gopackages = [ "fuchsia.googlesource.com/system_tests/tracking_test" ]
+    gopackages = [
+      "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/tracking_test",
+    ]
     disabled = true
     deps = [ ":system_tests_lib" ]
     non_go_deps = [ "//garnet/bin/sl4f" ]
   }
 
   go_test("system_tests_upgrade") {
-    gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/upgrade_test" ]
     disabled = true
     deps = [ ":system_tests_lib" ]
     non_go_deps = [ "//garnet/bin/sl4f" ]

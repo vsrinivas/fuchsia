@@ -7,7 +7,7 @@ import("//build/go/go_test.gni")
 
 go_library("host-target-testing") {
   testonly = true
-  name = "fuchsia.googlesource.com/host_target_testing"
+  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing"
   deps = [
     "//garnet/go/src/far:far",
     "//src/sys/pkg/bin/pm:pm_lib",
@@ -26,7 +26,7 @@ test_packages = [
 ]
 foreach(testpkg, test_packages) {
   go_test("host-target-testing-${testpkg}-test") {
-    gopackages = [ "fuchsia.googlesource.com/host_target_testing/${testpkg}" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/${testpkg}" ]
     deps = [ ":host-target-testing" ]
   }
 }
@@ -38,7 +38,8 @@ copy("copy_avbtool") {
 }
 
 go_test("host-target-testing-avb-test") {
-  gopackages = [ "fuchsia.googlesource.com/host_target_testing/avb" ]
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb" ]
   deps = [ ":host-target-testing" ]
   non_go_deps = [ ":copy_avbtool" ]
 }

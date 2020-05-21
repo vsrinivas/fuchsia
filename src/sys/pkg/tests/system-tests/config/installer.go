@@ -11,10 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/host_target_testing/artifacts"
-	"fuchsia.googlesource.com/host_target_testing/avb"
-	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/updater"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
 )
 
 type InstallerMode = string

@@ -10,8 +10,8 @@ import (
 	"log"
 	"time"
 
-	"fuchsia.googlesource.com/host_target_testing/artifacts"
-	"fuchsia.googlesource.com/host_target_testing/device"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
 )
 
 func PaveDevice(

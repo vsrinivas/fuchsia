@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"fuchsia.googlesource.com/host_target_testing/artifacts"
-	"fuchsia.googlesource.com/host_target_testing/packages"
-	"fuchsia.googlesource.com/host_target_testing/sl4f"
-	"fuchsia.googlesource.com/host_target_testing/updater"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
