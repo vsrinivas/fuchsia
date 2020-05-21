@@ -73,25 +73,37 @@ LastRebootInfoProvider::LastRebootInfoProvider(async_dispatcher_t* dispatcher,
 
 namespace {
 
-std::string ToString(RebootReason reboot_reason) {
-  switch (reboot_reason) {
-    case RebootReason::GENERIC_GRACEFUL:
-      return "generic graceful";
-    case RebootReason::COLD:
-      return "cold";
-    case RebootReason::BRIEF_POWER_LOSS:
-      return "brief loss of power";
-    case RebootReason::BROWNOUT:
-      return "brownout";
-    case RebootReason::KERNEL_PANIC:
-      return "kernel panic";
-    case RebootReason::SYSTEM_OUT_OF_MEMORY:
-      return "system out of memory";
-    case RebootReason::HARDWARE_WATCHDOG_TIMEOUT:
-      return "hardware watchdog timeout";
-    case RebootReason::SOFTWARE_WATCHDOG_TIMEOUT:
-      return "software watchdog timeout";
+std::string GetReason(const LastReboot& last_reboot) {
+  if (last_reboot.has_reason()) {
+    switch (last_reboot.reason()) {
+      case RebootReason::GENERIC_GRACEFUL:
+        return "graceful";
+      case RebootReason::COLD:
+        return "cold";
+      case RebootReason::BRIEF_POWER_LOSS:
+        return "brief loss of power";
+      case RebootReason::BROWNOUT:
+        return "brownout";
+      case RebootReason::KERNEL_PANIC:
+        return "kernel panic";
+      case RebootReason::SYSTEM_OUT_OF_MEMORY:
+        return "system out of memory";
+      case RebootReason::HARDWARE_WATCHDOG_TIMEOUT:
+        return "hardware watchdog timeout";
+      case RebootReason::SOFTWARE_WATCHDOG_TIMEOUT:
+        return "software watchdog timeout";
+      default:
+        if (!last_reboot.has_graceful()) {
+          return "unknown";
+        } else if (last_reboot.graceful()) {
+          return "graceful";
+        } else {
+          return "ungraceful";
+        }
+    }
   }
+  FX_CHECK(last_reboot.has_graceful());
+  return (last_reboot.graceful()) ? "graceful" : "ungraceful";
 }
 
 }  // namespace
@@ -100,10 +112,9 @@ void LastRebootInfoProvider::GetLastReboot() {
   last_reboot_info_ptr_->Get([this](LastReboot last_reboot) {
     std::map<AnnotationKey, std::string> last_reboot_annotations;
 
-    if (last_reboot.has_reason()) {
-      last_reboot_annotations.insert(
-          {kAnnotationSystemLastRebootReason, ToString(last_reboot.reason())});
-    };
+    if (last_reboot.has_reason() || last_reboot.has_graceful()) {
+      last_reboot_annotations.insert({kAnnotationSystemLastRebootReason, GetReason(last_reboot)});
+    }
 
     if (last_reboot.has_uptime()) {
       const auto uptime = FormatDuration(zx::nsec(last_reboot.uptime()));

@@ -305,7 +305,7 @@ TEST_F(DatastoreTest, GetAnnotations_LastRebootInfo) {
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
-                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("generic graceful")),
+                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
                   Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
               }));
 

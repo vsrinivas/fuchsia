@@ -89,12 +89,83 @@ TEST_F(LastRebootInfoProviderTest, Success_ReasonAndUptimeReturned) {
       kAnnotationSystemLastRebootUptime,
   });
   EXPECT_THAT(result, ElementsAreArray({
-                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("generic graceful")),
+                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
                           Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
                       }));
 }
 
-TEST_F(LastRebootInfoProviderTest, Succeed_NoReasonReturned) {
+TEST_F(LastRebootInfoProviderTest, Succeed_NoUptimeReturned) {
+  LastReboot last_reboot;
+  last_reboot.set_reason(kRebootReason);
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result,
+              ElementsAreArray({
+                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
+                  Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(Error::kMissingValue)),
+              }));
+}
+
+TEST_F(LastRebootInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
+  LastReboot last_reboot;
+  last_reboot.set_reason(kRebootReason);
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      "not-returned-by-last-reboot-reason-provider",
+  });
+  EXPECT_TRUE(result.empty());
+}
+
+TEST_F(LastRebootInfoProviderTest, Success_GracefulWithoutReason) {
+  const auto uptime_str = FormatDuration(kUptime);
+  ASSERT_TRUE(uptime_str.has_value());
+
+  LastReboot last_reboot;
+  last_reboot.set_graceful(true).set_uptime(kUptime.get());
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result, ElementsAreArray({
+                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
+                          Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
+                      }));
+}
+
+TEST_F(LastRebootInfoProviderTest, Success_UngracefulWithoutReason) {
+  const auto uptime_str = FormatDuration(kUptime);
+  ASSERT_TRUE(uptime_str.has_value());
+
+  LastReboot last_reboot;
+  last_reboot.set_graceful(false).set_uptime(kUptime.get());
+
+  SetUpLastRebootInfoProviderServer(
+      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
+
+  const auto result = GetLastRebootReason({
+      kAnnotationSystemLastRebootReason,
+      kAnnotationSystemLastRebootUptime,
+  });
+  EXPECT_THAT(result, ElementsAreArray({
+                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("ungraceful")),
+                          Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
+                      }));
+}
+
+TEST_F(LastRebootInfoProviderTest, Success_NoReasonOrGraceful) {
   const auto uptime_str = FormatDuration(kUptime);
   ASSERT_TRUE(uptime_str.has_value());
 
@@ -113,37 +184,6 @@ TEST_F(LastRebootInfoProviderTest, Succeed_NoReasonReturned) {
                   Pair(kAnnotationSystemLastRebootReason, AnnotationOr(Error::kMissingValue)),
                   Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
               }));
-}
-
-TEST_F(LastRebootInfoProviderTest, Succeed_NoUptimeReturned) {
-  LastReboot last_reboot;
-  last_reboot.set_reason(kRebootReason);
-
-  SetUpLastRebootInfoProviderServer(
-      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
-
-  const auto result = GetLastRebootReason({
-      kAnnotationSystemLastRebootReason,
-      kAnnotationSystemLastRebootUptime,
-  });
-  EXPECT_THAT(result,
-              ElementsAreArray({
-                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("generic graceful")),
-                  Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(Error::kMissingValue)),
-              }));
-}
-
-TEST_F(LastRebootInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
-  LastReboot last_reboot;
-  last_reboot.set_reason(kRebootReason);
-
-  SetUpLastRebootInfoProviderServer(
-      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
-
-  const auto result = GetLastRebootReason({
-      "not-returned-by-last-reboot-reason-provider",
-  });
-  EXPECT_TRUE(result.empty());
 }
 
 TEST_F(LastRebootInfoProviderTest, Check_CobaltLogsTimeout) {
