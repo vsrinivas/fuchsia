@@ -39,6 +39,7 @@ zx_library("paver") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//src/devices/lib/amlogic",
     "//src/lib/ddk",
+    "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -60,7 +61,6 @@ zx_library("paver") {
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
-    "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 }

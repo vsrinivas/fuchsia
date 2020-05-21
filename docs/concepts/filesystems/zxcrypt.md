@@ -9,7 +9,7 @@ bound, the zxcrypt device will publish another block device in the device tree t
 interact with normally.
 
 ## Usage
-zxcrypt contains both a [driver](/src/devices/block/drivers/zxcrypt) and [library](/zircon/system/ulib/zxcrypt)
+zxcrypt contains both a [driver](/src/devices/block/drivers/zxcrypt) and [library](/src/security/zxcrypt)
 Provided by libzxcrypt.so are four functions for managing zxcrypt devices.  Each takes one or more
 `zxcrypt_key_t` keys, which associates the key data, length, and slot in the case of multiple keys.
 * The __zxcrypt_format__ function takes an open block device, and writes the necessary encrypted

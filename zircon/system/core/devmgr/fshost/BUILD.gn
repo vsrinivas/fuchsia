@@ -107,6 +107,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
+    "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
@@ -122,7 +123,6 @@ source_set("block-watcher") {
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
 

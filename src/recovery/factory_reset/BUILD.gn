@@ -128,6 +128,7 @@ test("factory_reset_unittests") {
     ":lib",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/lib/fxl/test:gtest_main",
+    "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
@@ -138,7 +139,6 @@ test("factory_reset_unittests") {
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
-    "//zircon/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
 }
 
