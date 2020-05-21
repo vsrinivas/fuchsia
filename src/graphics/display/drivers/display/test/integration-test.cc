@@ -45,9 +45,11 @@ class IntegrationTest : public TestBase {
 
   bool primary_client_connected() {
     fbl::AutoLock l(controller()->mtx());
+    if (!controller()->primary_client_) {
+      return false;
+    }
     fbl::AutoLock cl(&controller()->primary_client_->mtx_);
-    return (controller()->primary_client_ &&
-            controller()->primary_client_ == controller()->active_client_ &&
+    return (controller()->primary_client_ == controller()->active_client_ &&
             // DC processed the EnableVsync request. We can now expect vsync events.
             controller()->primary_client_->enable_vsync_);
   }
@@ -109,9 +111,12 @@ class IntegrationTest : public TestBase {
 };
 
 TEST_F(IntegrationTest, ClientsCanBail) {
-  TestFidlClient client(sysmem_.get());
-  ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
-  ASSERT_TRUE(client.Bind(dispatcher()));
+  for (size_t i = 0; i < 100; i++) {
+    RunLoopWithTimeoutOrUntil([this]() { return !primary_client_connected(); }, zx::sec(1));
+    TestFidlClient client(sysmem_.get());
+    ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
+    ASSERT_TRUE(client.Bind(dispatcher()));
+  }
 }
 
 TEST_F(IntegrationTest, MustUseUniqueEvenIDs) {

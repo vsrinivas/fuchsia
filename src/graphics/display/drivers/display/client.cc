@@ -1374,13 +1374,17 @@ zx_status_t Client::Init(zx::channel server_channel) {
 
   server_handle_ = server_channel.get();
 
-  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnboundReason reason, zx_status_t,
+  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnboundReason reason, zx_status_t status,
                                     zx::channel ch) {
     sync_completion_signal(client->fidl_unbound());
     // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we should
     // TearDown() so that no further tasks are scheduled on the controller loop.
-    if (reason != fidl::UnboundReason::kUnbind) {
-      client->TearDown();
+    switch (reason) {
+      case fidl::UnboundReason::kUnbind:
+      case fidl::UnboundReason::kClose:
+        break;
+      default:
+        client->TearDown();
     }
     // fidl_channel_ is the zx::channel alias of server_channel_. Hold on to it so that
     // OnDisplayVsync works until this client is destroyed.
@@ -1676,9 +1680,11 @@ void ClientProxy::DdkRelease() {
         delete this;
       });
 
-  // We should be able to post tasks to the loop since DdkRelease on client should be called before
-  // controller loop is shutdown.
+  // The controller loop is shut down in Controller::DdkRelease, so it is safe to post tasks here.
   this->handler_.CancelFidlBind();
+  // The unbind function will run on the controller loop, but it will not be scheduled until all
+  // references are dropped. Wait for the handler to actually run.
+  sync_completion_wait(handler_.fidl_unbound(), ZX_TIME_INFINITE);
   auto status = task->Post(controller_->loop().dispatcher());
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
