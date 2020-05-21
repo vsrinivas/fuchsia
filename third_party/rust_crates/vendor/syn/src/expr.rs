@@ -15,7 +15,7 @@ ast_enum_of_structs! {
     /// A Rust expression.
     ///
     /// *This type is available if Syn is built with the `"derive"` or `"full"`
-    /// feature.*
+    /// feature, but most of the variants are not available unless "full" is enabled.*
     ///
     /// # Syntax tree enums
     ///
@@ -1210,8 +1210,11 @@ pub(crate) fn requires_terminator(expr: &Expr) -> bool {
 pub(crate) mod parsing {
     use super::*;
 
+    use crate::parse::discouraged::Speculative;
     use crate::parse::{Parse, ParseStream, Result};
     use crate::path;
+
+    crate::custom_keyword!(raw);
 
     // When we're parsing expressions which occur before blocks, like in an if
     // statement's condition, we cannot parse a struct literal.
@@ -1465,24 +1468,41 @@ pub(crate) mod parsing {
     // box <trailer>
     #[cfg(feature = "full")]
     fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
-        // TODO: optimize using advance_to
+        let begin = input.fork();
         let ahead = input.fork();
-        ahead.call(Attribute::parse_outer)?;
+        let attrs = ahead.call(Attribute::parse_outer)?;
         if ahead.peek(Token![&])
             || ahead.peek(Token![box])
             || ahead.peek(Token![*])
             || ahead.peek(Token![!])
             || ahead.peek(Token![-])
         {
-            let attrs = input.call(Attribute::parse_outer)?;
+            input.advance_to(&ahead);
             if input.peek(Token![&]) {
-                Ok(Expr::Reference(ExprReference {
-                    attrs,
-                    and_token: input.parse()?,
-                    raw: Reserved::default(),
-                    mutability: input.parse()?,
-                    expr: Box::new(unary_expr(input, allow_struct)?),
-                }))
+                let and_token: Token![&] = input.parse()?;
+                let raw: Option<raw> = if input.peek(raw)
+                    && (input.peek2(Token![mut]) || input.peek2(Token![const]))
+                {
+                    Some(input.parse()?)
+                } else {
+                    None
+                };
+                let mutability: Option<Token![mut]> = input.parse()?;
+                if raw.is_some() && mutability.is_none() {
+                    input.parse::<Token![const]>()?;
+                }
+                let expr = Box::new(unary_expr(input, allow_struct)?);
+                if raw.is_some() {
+                    Ok(Expr::Verbatim(verbatim::between(begin, input)))
+                } else {
+                    Ok(Expr::Reference(ExprReference {
+                        attrs,
+                        and_token,
+                        raw: Reserved::default(),
+                        mutability,
+                        expr,
+                    }))
+                }
             } else if input.peek(Token![box]) {
                 Ok(Expr::Box(ExprBox {
                     attrs,
@@ -1503,12 +1523,12 @@ pub(crate) mod parsing {
 
     #[cfg(not(feature = "full"))]
     fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
-        // TODO: optimize using advance_to
         let ahead = input.fork();
-        ahead.call(Attribute::parse_outer)?;
+        let attrs = ahead.call(Attribute::parse_outer)?;
         if ahead.peek(Token![*]) || ahead.peek(Token![!]) || ahead.peek(Token![-]) {
+            input.advance_to(&ahead);
             Ok(Expr::Unary(ExprUnary {
-                attrs: input.call(Attribute::parse_outer)?,
+                attrs,
                 op: input.parse()?,
                 expr: Box::new(unary_expr(input, allow_struct)?),
             }))
@@ -1934,7 +1954,7 @@ pub(crate) mod parsing {
             return parse_expr(input, expr, allow_struct, Precedence::Any);
         };
 
-        if input.peek(Token![.]) || input.peek(Token![?]) {
+        if input.peek(Token![.]) && !input.peek(Token![..]) || input.peek(Token![?]) {
             expr = trailer_helper(input, expr)?;
 
             attrs.extend(expr.replace_attrs(Vec::new()));
@@ -2428,6 +2448,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     impl Parse for FieldValue {
         fn parse(input: ParseStream) -> Result<Self> {
+            let attrs = input.call(Attribute::parse_outer)?;
             let member: Member = input.parse()?;
             let (colon_token, value) = if input.peek(Token![:]) || !member.is_named() {
                 let colon_token: Token![:] = input.parse()?;
@@ -2445,7 +2466,7 @@ pub(crate) mod parsing {
             };
 
             Ok(FieldValue {
-                attrs: Vec::new(),
+                attrs,
                 member,
                 colon_token,
                 expr: value,
@@ -2462,24 +2483,22 @@ pub(crate) mod parsing {
         let content;
         let brace_token = braced!(content in input);
         let inner_attrs = content.call(Attribute::parse_inner)?;
+        let attrs = private::attrs(outer_attrs, inner_attrs);
 
         let mut fields = Punctuated::new();
-        loop {
-            let attrs = content.call(Attribute::parse_outer)?;
-            // TODO: optimize using advance_to
-            if content.fork().parse::<Member>().is_err() {
-                if attrs.is_empty() {
-                    break;
-                } else {
-                    return Err(content.error("expected struct field"));
-                }
+        while !content.is_empty() {
+            if content.peek(Token![..]) {
+                return Ok(ExprStruct {
+                    attrs,
+                    brace_token,
+                    path,
+                    fields,
+                    dot2_token: Some(content.parse()?),
+                    rest: Some(Box::new(content.parse()?)),
+                });
             }
 
-            fields.push(FieldValue {
-                attrs,
-                ..content.parse()?
-            });
-
+            fields.push(content.parse()?);
             if !content.peek(Token![,]) {
                 break;
             }
@@ -2487,21 +2506,13 @@ pub(crate) mod parsing {
             fields.push_punct(punct);
         }
 
-        let (dot2_token, rest) = if fields.empty_or_trailing() && content.peek(Token![..]) {
-            let dot2_token: Token![..] = content.parse()?;
-            let rest: Expr = content.parse()?;
-            (Some(dot2_token), Some(Box::new(rest)))
-        } else {
-            (None, None)
-        };
-
         Ok(ExprStruct {
-            attrs: private::attrs(outer_attrs, inner_attrs),
+            attrs,
             brace_token,
             path,
             fields,
-            dot2_token,
-            rest,
+            dot2_token: None,
+            rest: None,
         })
     }
 

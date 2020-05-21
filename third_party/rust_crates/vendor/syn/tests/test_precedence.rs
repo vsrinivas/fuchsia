@@ -14,20 +14,18 @@
 //!    spans.
 //! 5. Compare the expressions with one another, if they are not equal fail.
 
+extern crate rustc_ast;
 extern crate rustc_data_structures;
-extern crate smallvec;
-extern crate syntax;
-extern crate syntax_pos;
+extern crate rustc_span;
 
 mod features;
 
 use quote::quote;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
-use smallvec::smallvec;
-use syntax::ast;
-use syntax::ptr::P;
-use syntax_pos::edition::Edition;
+use rustc_ast::ast;
+use rustc_ast::ptr::P;
+use rustc_span::edition::Edition;
 use walkdir::{DirEntry, WalkDir};
 
 use std::fs::File;
@@ -167,7 +165,7 @@ fn test_expressions(exprs: Vec<syn::Expr>) -> (usize, usize) {
     let mut passed = 0;
     let mut failed = 0;
 
-    syntax::with_globals(Edition::Edition2018, || {
+    rustc_ast::with_globals(Edition::Edition2018, || {
         for expr in exprs {
             let raw = quote!(#expr).to_string();
 
@@ -210,16 +208,60 @@ fn libsyntax_parse_and_rewrite(input: &str) -> Option<P<ast::Expr>> {
 ///
 /// This method operates on libsyntax objects.
 fn libsyntax_brackets(mut libsyntax_expr: P<ast::Expr>) -> Option<P<ast::Expr>> {
+    use rustc_ast::ast::{
+        Block, BorrowKind, Expr, ExprKind, Field, MacCall, Pat, Stmt, StmtKind, Ty,
+    };
+    use rustc_ast::mut_visit::MutVisitor;
+    use rustc_data_structures::map_in_place::MapInPlace;
     use rustc_data_structures::thin_vec::ThinVec;
-    use smallvec::SmallVec;
+    use rustc_span::DUMMY_SP;
     use std::mem;
-    use syntax::ast::{Expr, ExprKind, Field, Mac, Pat, Stmt, StmtKind, Ty};
-    use syntax::mut_visit::{noop_visit_expr, MutVisitor};
-    use syntax_pos::DUMMY_SP;
 
     struct BracketsVisitor {
         failed: bool,
     };
+
+    fn flat_map_field<T: MutVisitor>(mut f: Field, vis: &mut T) -> Vec<Field> {
+        if f.is_shorthand {
+            noop_visit_expr(&mut f.expr, vis);
+        } else {
+            vis.visit_expr(&mut f.expr);
+        }
+        vec![f]
+    }
+
+    fn flat_map_stmt<T: MutVisitor>(stmt: Stmt, vis: &mut T) -> Vec<Stmt> {
+        let kind = match stmt.kind {
+            // Don't wrap toplevel expressions in statements.
+            StmtKind::Expr(mut e) => {
+                noop_visit_expr(&mut e, vis);
+                StmtKind::Expr(e)
+            }
+            StmtKind::Semi(mut e) => {
+                noop_visit_expr(&mut e, vis);
+                StmtKind::Semi(e)
+            }
+            s => s,
+        };
+
+        vec![Stmt { kind, ..stmt }]
+    }
+
+    fn noop_visit_expr<T: MutVisitor>(e: &mut Expr, vis: &mut T) {
+        use rustc_ast::mut_visit::{noop_visit_expr, visit_opt, visit_thin_attrs};
+        match &mut e.kind {
+            ExprKind::AddrOf(BorrowKind::Raw, ..) => {}
+            ExprKind::Struct(path, fields, expr) => {
+                vis.visit_path(path);
+                fields.flat_map_in_place(|field| flat_map_field(field, vis));
+                visit_opt(expr, |expr| vis.visit_expr(expr));
+                vis.visit_id(&mut e.id);
+                vis.visit_span(&mut e.span);
+                visit_thin_attrs(&mut e.attrs, vis);
+            }
+            _ => noop_visit_expr(e, vis),
+        }
+    }
 
     impl MutVisitor for BracketsVisitor {
         fn visit_expr(&mut self, e: &mut P<Expr>) {
@@ -241,13 +283,12 @@ fn libsyntax_brackets(mut libsyntax_expr: P<ast::Expr>) -> Option<P<ast::Expr>> 
             }
         }
 
-        fn flat_map_field(&mut self, mut f: Field) -> SmallVec<[Field; 1]> {
-            if f.is_shorthand {
-                noop_visit_expr(&mut f.expr, self);
-            } else {
-                self.visit_expr(&mut f.expr);
-            }
-            SmallVec::from([f])
+        fn visit_block(&mut self, block: &mut P<Block>) {
+            self.visit_id(&mut block.id);
+            block
+                .stmts
+                .flat_map_in_place(|stmt| flat_map_stmt(stmt, self));
+            self.visit_span(&mut block.span);
         }
 
         // We don't want to look at expressions that might appear in patterns or
@@ -261,24 +302,7 @@ fn libsyntax_brackets(mut libsyntax_expr: P<ast::Expr>) -> Option<P<ast::Expr>> 
             let _ = ty;
         }
 
-        fn flat_map_stmt(&mut self, stmt: Stmt) -> SmallVec<[Stmt; 1]> {
-            let kind = match stmt.kind {
-                // Don't wrap toplevel expressions in statements.
-                StmtKind::Expr(mut e) => {
-                    noop_visit_expr(&mut e, self);
-                    StmtKind::Expr(e)
-                }
-                StmtKind::Semi(mut e) => {
-                    noop_visit_expr(&mut e, self);
-                    StmtKind::Semi(e)
-                }
-                s => s,
-            };
-
-            smallvec![Stmt { kind, ..stmt }]
-        }
-
-        fn visit_mac(&mut self, mac: &mut Mac) {
+        fn visit_mac(&mut self, mac: &mut MacCall) {
             // By default when folding over macros, libsyntax panics. This is
             // because it's usually not what you want, you want to run after
             // macro expansion. We do want to do that (syn doesn't do macro
@@ -354,7 +378,10 @@ fn collect_exprs(file: syn::File) -> Vec<syn::Expr> {
     struct CollectExprs(Vec<Expr>);
     impl Fold for CollectExprs {
         fn fold_expr(&mut self, expr: Expr) -> Expr {
-            self.0.push(expr);
+            match expr {
+                Expr::Verbatim(tokens) if tokens.is_empty() => {}
+                _ => self.0.push(expr),
+            }
 
             Expr::Tuple(ExprTuple {
                 attrs: vec![],

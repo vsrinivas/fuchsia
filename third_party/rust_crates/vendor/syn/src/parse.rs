@@ -266,10 +266,10 @@ pub struct ParseBuffer<'a> {
 
 impl<'a> Drop for ParseBuffer<'a> {
     fn drop(&mut self) {
-        if !self.is_empty() {
+        if let Some(unexpected_span) = span_of_unexpected_ignoring_nones(self.cursor()) {
             let (inner, old_span) = inner_unexpected(self);
             if old_span.is_none() {
-                inner.set(Unexpected::Some(self.cursor().span()));
+                inner.set(Unexpected::Some(unexpected_span));
             }
         }
     }
@@ -374,20 +374,6 @@ pub(crate) fn advance_step_cursor<'c, 'a>(proof: StepCursor<'c, 'a>, to: Cursor<
     unsafe { mem::transmute::<Cursor<'c>, Cursor<'a>>(to) }
 }
 
-fn skip(input: ParseStream) -> bool {
-    input
-        .step(|cursor| {
-            if let Some((_lifetime, rest)) = cursor.lifetime() {
-                Ok((true, rest))
-            } else if let Some((_token, rest)) = cursor.token_tree() {
-                Ok((true, rest))
-            } else {
-                Ok((false, *cursor))
-            }
-        })
-        .unwrap()
-}
-
 pub(crate) fn new_parse_buffer(
     scope: Span,
     cursor: Cursor,
@@ -437,6 +423,23 @@ fn inner_unexpected(buffer: &ParseBuffer) -> (Rc<Cell<Unexpected>>, Option<Span>
 
 pub(crate) fn get_unexpected(buffer: &ParseBuffer) -> Rc<Cell<Unexpected>> {
     cell_clone(&buffer.unexpected).unwrap()
+}
+
+fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<Span> {
+    if cursor.eof() {
+        return None;
+    }
+    while let Some((inner, _span, rest)) = cursor.group(Delimiter::None) {
+        if let Some(unexpected) = span_of_unexpected_ignoring_nones(inner) {
+            return Some(unexpected);
+        }
+        cursor = rest;
+    }
+    if cursor.eof() {
+        None
+    } else {
+        Some(cursor.span())
+    }
 }
 
 impl<'a> ParseBuffer<'a> {
@@ -598,14 +601,17 @@ impl<'a> ParseBuffer<'a> {
     /// }
     /// ```
     pub fn peek2<T: Peek>(&self, token: T) -> bool {
-        let ahead = self.fork();
-        skip(&ahead) && ahead.peek(token)
+        let _ = token;
+        self.cursor().skip().map_or(false, T::Token::peek)
     }
 
     /// Looks at the third-next token in the parse stream.
     pub fn peek3<T: Peek>(&self, token: T) -> bool {
-        let ahead = self.fork();
-        skip(&ahead) && skip(&ahead) && ahead.peek(token)
+        let _ = token;
+        self.cursor()
+            .skip()
+            .and_then(Cursor::skip)
+            .map_or(false, T::Token::peek)
     }
 
     /// Parses zero or more occurrences of `T` separated by punctuation of type
@@ -989,6 +995,18 @@ impl<'a> ParseBuffer<'a> {
         Ok(node)
     }
 
+    /// Returns the `Span` of the next token in the parse stream, or
+    /// `Span::call_site()` if this parse stream has completely exhausted its
+    /// input `TokenStream`.
+    pub fn span(&self) -> Span {
+        let cursor = self.cursor();
+        if cursor.eof() {
+            self.scope
+        } else {
+            crate::buffer::open_span_of_group(cursor)
+        }
+    }
+
     /// Provides low-level access to the token representation underlying this
     /// parse stream.
     ///
@@ -1116,6 +1134,7 @@ pub trait Parser: Sized {
 
     // Not public API.
     #[doc(hidden)]
+    #[cfg(any(feature = "full", feature = "derive"))]
     fn __parse_scoped(self, scope: Span, tokens: TokenStream) -> Result<Self::Output> {
         let _ = scope;
         self.parse2(tokens)
@@ -1123,6 +1142,7 @@ pub trait Parser: Sized {
 
     // Not public API.
     #[doc(hidden)]
+    #[cfg(any(feature = "full", feature = "derive"))]
     fn __parse_stream(self, input: ParseStream) -> Result<Self::Output> {
         input.parse().and_then(|tokens| self.parse2(tokens))
     }
@@ -1146,14 +1166,15 @@ where
         let state = tokens_to_parse_buffer(&buf);
         let node = self(&state)?;
         state.check_unexpected()?;
-        if state.is_empty() {
-            Ok(node)
+        if let Some(unexpected_span) = span_of_unexpected_ignoring_nones(state.cursor()) {
+            Err(Error::new(unexpected_span, "unexpected token"))
         } else {
-            Err(state.error("unexpected token"))
+            Ok(node)
         }
     }
 
     #[doc(hidden)]
+    #[cfg(any(feature = "full", feature = "derive"))]
     fn __parse_scoped(self, scope: Span, tokens: TokenStream) -> Result<Self::Output> {
         let buf = TokenBuffer::new2(tokens);
         let cursor = buf.begin();
@@ -1161,23 +1182,26 @@ where
         let state = new_parse_buffer(scope, cursor, unexpected);
         let node = self(&state)?;
         state.check_unexpected()?;
-        if state.is_empty() {
-            Ok(node)
+        if let Some(unexpected_span) = span_of_unexpected_ignoring_nones(state.cursor()) {
+            Err(Error::new(unexpected_span, "unexpected token"))
         } else {
-            Err(state.error("unexpected token"))
+            Ok(node)
         }
     }
 
     #[doc(hidden)]
+    #[cfg(any(feature = "full", feature = "derive"))]
     fn __parse_stream(self, input: ParseStream) -> Result<Self::Output> {
         self(input)
     }
 }
 
+#[cfg(any(feature = "full", feature = "derive"))]
 pub(crate) fn parse_scoped<F: Parser>(f: F, scope: Span, tokens: TokenStream) -> Result<F::Output> {
     f.__parse_scoped(scope, tokens)
 }
 
+#[cfg(any(feature = "full", feature = "derive"))]
 pub(crate) fn parse_stream<F: Parser>(f: F, input: ParseStream) -> Result<F::Output> {
     f.__parse_stream(input)
 }

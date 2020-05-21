@@ -1,4 +1,3 @@
-use std;
 use std::fmt::{self, Debug, Display};
 use std::iter::FromIterator;
 use std::slice;
@@ -247,6 +246,17 @@ pub fn new_at<T: Display>(scope: Span, cursor: Cursor, message: T) -> Error {
     } else {
         let span = crate::buffer::open_span_of_group(cursor);
         Error::new(span, message)
+    }
+}
+
+#[cfg(all(feature = "parsing", any(feature = "full", feature = "derive")))]
+pub fn new2<T: Display>(start: Span, end: Span, message: T) -> Error {
+    Error {
+        messages: vec![ErrorMessage {
+            start_span: ThreadBound::new(start),
+            end_span: ThreadBound::new(end),
+            message: message.to_string(),
+        }],
     }
 }
 

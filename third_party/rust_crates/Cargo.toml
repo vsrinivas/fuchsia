@@ -40,11 +40,11 @@ crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
 csv = "1.0.7"
 difference = "2.0.0"
-futures = { version = "0.3.4", features = ["io-compat"] }
-futures-executor = "0.3.4"
-futures-io = "0.3.4"
-futures-test = "0.3.4"
-futures-util = { version = "0.3.4", features = ["io-compat"] }
+futures = { version = "0.3.5", features = ["io-compat"] }
+futures-executor = "0.3.5"
+futures-io = "0.3.5"
+futures-test = "0.3.5"
+futures-util = { version = "0.3.5", features = ["io-compat"] }
 glob = "0.3.0"
 heck = "0.3.1"
 itertools = "0.8"
@@ -144,7 +144,7 @@ num-bigint = { version = "0.2", features = ["rand"] }
 openat = "0.1.17"
 owning_ref = "0.4.0"
 pin-project = "0.4.6"
-pin-utils = "=0.1.0-alpha.4"
+pin-utils = "0.1.0"
 pretty = "0.5.2"
 prettytable-rs = "0.8.0"
 proc-macro-nested = "0.1.4"
@@ -394,7 +394,7 @@ env_vars = [ "CARGO_PKG_VERSION=\\\"0.19.2\\\"" ]
 [[gn.crate.rayon-core."1.7.0"]]
 [[gn.crate.rust_icu_sys."0.2.2"]]
 [[gn.crate.rust_icu_uloc."0.2.2"]]
-[[gn.crate.syn."1.0.11"]]
+[[gn.crate.syn."1.0.21"]]
 [[gn.crate.test-case."1.0.0"]]
 [[gn.crate.wasm-bindgen-shared."0.2.60"]]
 # Do not quote, this is embedded directly in .wasm sections and is needed by wasm-bindgen.

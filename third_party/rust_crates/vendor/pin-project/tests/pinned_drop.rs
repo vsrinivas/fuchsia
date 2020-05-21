@@ -1,4 +1,3 @@
-#![warn(unsafe_code)]
 #![warn(rust_2018_idioms, single_use_lifetimes)]
 #![allow(dead_code)]
 
@@ -8,26 +7,26 @@ use std::pin::Pin;
 #[test]
 fn safe_project() {
     #[pin_project(PinnedDrop)]
-    pub struct Foo<'a> {
+    pub struct Struct<'a> {
         was_dropped: &'a mut bool,
         #[pin]
         field: u8,
     }
 
     #[pinned_drop]
-    impl PinnedDrop for Foo<'_> {
+    impl PinnedDrop for Struct<'_> {
         fn drop(self: Pin<&mut Self>) {
             **self.project().was_dropped = true;
         }
     }
 
     let mut was_dropped = false;
-    drop(Foo { was_dropped: &mut was_dropped, field: 42 });
+    drop(Struct { was_dropped: &mut was_dropped, field: 42 });
     assert!(was_dropped);
 }
 
 #[test]
-fn test_mut_argument() {
+fn mut_self_argument() {
     #[pin_project(PinnedDrop)]
     struct Struct {
         data: usize,
@@ -42,7 +41,7 @@ fn test_mut_argument() {
 }
 
 #[test]
-fn test_self_in_vec() {
+fn self_in_vec() {
     #[pin_project(PinnedDrop)]
     struct Struct {
         data: usize,
@@ -57,7 +56,7 @@ fn test_self_in_vec() {
 }
 
 #[test]
-fn test_self_in_macro_containing_fn() {
+fn self_in_macro_containing_fn() {
     #[pin_project(PinnedDrop)]
     pub struct Struct {
         data: usize,
@@ -77,13 +76,13 @@ fn test_self_in_macro_containing_fn() {
                     pub fn f(self) {}
                 }
             });
-            self.data;
+            let _ = self.data;
         }
     }
 }
 
 #[test]
-fn test_call_self() {
+fn self_call() {
     #[pin_project(PinnedDrop)]
     pub struct Struct {
         data: usize,
@@ -113,7 +112,68 @@ fn test_call_self() {
 }
 
 #[test]
-fn test_self_match() {
+fn self_expr() {
+    #[pin_project(PinnedDrop)]
+    pub struct Struct {
+        x: usize,
+    }
+
+    #[pinned_drop]
+    impl PinnedDrop for Struct {
+        fn drop(mut self: Pin<&mut Self>) {
+            let _: Self = Self { x: 0 };
+        }
+    }
+
+    #[pin_project(PinnedDrop)]
+    pub struct TupleStruct(usize);
+
+    #[pinned_drop]
+    impl PinnedDrop for TupleStruct {
+        fn drop(mut self: Pin<&mut Self>) {
+            let _: Self = Self(0);
+        }
+    }
+}
+
+#[rustversion::since(1.37)]
+#[test]
+fn self_expr_enum() {
+    #[pin_project(PinnedDrop)]
+    pub enum Enum {
+        StructVariant { x: usize },
+        TupleVariant(usize),
+    }
+
+    #[pinned_drop]
+    impl PinnedDrop for Enum {
+        fn drop(mut self: Pin<&mut Self>) {
+            let _: Self = Self::StructVariant { x: 0 };
+            let _: Self = Self::TupleVariant(0);
+        }
+    }
+}
+
+#[test]
+fn self_pat() {
+    #[pin_project(PinnedDrop)]
+    pub struct Struct {
+        x: usize,
+    }
+
+    #[pinned_drop]
+    impl PinnedDrop for Struct {
+        #[allow(irrefutable_let_patterns)]
+        #[allow(clippy::match_single_binding)]
+        fn drop(mut self: Pin<&mut Self>) {
+            match *self {
+                Self { x: _ } => {}
+            }
+            if let Self { x: _ } = *self {}
+            let Self { x: _ } = *self;
+        }
+    }
+
     #[pin_project(PinnedDrop)]
     pub struct TupleStruct(usize);
 
@@ -125,7 +185,51 @@ fn test_self_match() {
                 Self(_) => {}
             }
             if let Self(_) = *self {}
-            let _: Self = Self(0);
+            let Self(_) = *self;
+        }
+    }
+}
+
+#[rustversion::since(1.37)]
+#[test]
+fn self_pat_enum() {
+    #[pin_project(PinnedDrop)]
+    pub enum Enum {
+        StructVariant { x: usize },
+        TupleVariant(usize),
+    }
+
+    #[pinned_drop]
+    impl PinnedDrop for Enum {
+        fn drop(mut self: Pin<&mut Self>) {
+            match *self {
+                Self::StructVariant { x: _ } => {}
+                Self::TupleVariant(_) => {}
+            }
+            if let Self::StructVariant { x: _ } = *self {}
+            if let Self::TupleVariant(_) = *self {}
+        }
+    }
+}
+
+// See also `ui/pinned_drop/self.rs`.
+#[rustversion::since(1.40)] // https://github.com/rust-lang/rust/pull/64690
+#[test]
+fn self_in_macro_def() {
+    #[pin_project(PinnedDrop)]
+    pub struct Struct {
+        x: usize,
+    }
+
+    #[pinned_drop]
+    impl PinnedDrop for Struct {
+        fn drop(self: Pin<&mut Self>) {
+            macro_rules! t {
+                () => {{
+                    let _ = self;
+                }};
+            }
+            t!();
         }
     }
 }

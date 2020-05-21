@@ -2,7 +2,7 @@
 //!
 //! ## Examples
 //!
-//! [`pin_project`] attribute creates a projection struct covering all the fields.
+//! [`pin_project`] attribute creates a projection type covering all the fields of struct or enum.
 //!
 //! ```rust
 //! use pin_project::pin_project;
@@ -34,14 +34,15 @@
 
 #![no_std]
 #![recursion_limit = "256"]
-#![doc(html_root_url = "https://docs.rs/pin-project/0.4.6")]
+#![doc(html_root_url = "https://docs.rs/pin-project/0.4.17")]
 #![doc(test(
     no_crate_inject,
     attr(deny(warnings, rust_2018_idioms, single_use_lifetimes), allow(dead_code))
 ))]
-#![warn(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
-#![warn(clippy::all)]
+#![warn(clippy::all, clippy::default_trait_access)]
+// mem::take and #[non_exhaustive] requires Rust 1.40
+#![allow(clippy::mem_replace_with_default, clippy::manual_non_exhaustive)]
 #![allow(clippy::needless_doctest_main)]
 
 #[doc(inline)]
@@ -56,6 +57,9 @@ pub use pin_project_internal::project;
 #[doc(inline)]
 pub use pin_project_internal::project_ref;
 
+#[doc(inline)]
+pub use pin_project_internal::project_replace;
+
 /// A trait used for custom implementations of [`Unpin`].
 /// This trait is used in conjunction with the `UnsafeUnpin`
 /// argument to [`pin_project`]
@@ -67,16 +71,16 @@ pub use pin_project_internal::project_ref;
 /// It turns out that using pin projections, which requires unsafe code,
 /// imposes additional requirements on an [`Unpin`] impl. Normally, all of this
 /// unsafety is contained within this crate, ensuring that it's impossible for
-/// you to violate any of the guarnatees required by pin projection.
+/// you to violate any of the guarantees required by pin projection.
 ///
 /// However, things change if you want to provide a custom [`Unpin`] impl
 /// for your `#[pin_project]` type. As stated in [the Rust
 /// documentation](https://doc.rust-lang.org/nightly/std/pin/index.html#projections-and-structural-pinning),
-/// you must be sure to only implement [`Unpin`] when all of your `#[pin]` fields (i.e. struturally
-/// pinend fields) are also [`Unpin`].
+/// you must be sure to only implement [`Unpin`] when all of your `#[pin]` fields (i.e. structurally
+/// pinned fields) are also [`Unpin`].
 ///
 /// To help highlight this unsafety, the `UnsafeUnpin` trait is provided.
-/// Implementing this trait is logically equivalent to implemnting [`Unpin`] -
+/// Implementing this trait is logically equivalent to implementing [`Unpin`] -
 /// this crate will generate an [`Unpin`] impl for your type that 'forwards' to
 /// your `UnsafeUnpin` impl. However, this trait is `unsafe` - since your type
 /// uses structural pinning (otherwise, you wouldn't be using this crate!),
@@ -85,14 +89,14 @@ pub use pin_project_internal::project_ref;
 ///
 /// Note that if you specify `#[pin_project(UnsafeUnpin)]`, but do *not*
 /// provide an impl of `UnsafeUnpin`, your type will never implement [`Unpin`].
-/// This is effectly the same thing as adding a [`PhantomPinned`] to your type
+/// This is effectively the same thing as adding a [`PhantomPinned`] to your type
 ///
 /// Since this trait is `unsafe`, impls of it will be detected by the `unsafe_code` lint,
 /// and by tools like `cargo geiger`.
 ///
 /// ## Examples
 ///
-/// An `UnsafeUnpin` impl which, in addition to requiring that structually pinned
+/// An `UnsafeUnpin` impl which, in addition to requiring that structurally pinned
 /// fields be [`Unpin`], imposes an additional requirement:
 ///
 /// ```rust
@@ -110,34 +114,31 @@ pub use pin_project_internal::project_ref;
 ///
 /// [`PhantomPinned`]: core::marker::PhantomPinned
 /// [`pin_project`]: attr.pin_project.html
-#[allow(unsafe_code)]
 pub unsafe trait UnsafeUnpin {}
 
 // Not public API.
 #[doc(hidden)]
 pub mod __private {
     use super::UnsafeUnpin;
-    use core::{marker::PhantomData, pin::Pin};
+    use core::{marker::PhantomData, mem::ManuallyDrop, pin::Pin, ptr};
 
     #[doc(hidden)]
     pub use pin_project_internal::__PinProjectInternalDerive;
 
-    // It is safe to implement PinnedDrop::drop, but it is not safe to call it.
-    // This is because destructors can be called multiple times (double dropping
-    // is unsound: rust-lang/rust#62360).
+    // Implementing `PinnedDrop::drop` is safe, but calling it is not safe.
+    // This is because destructors can be called multiple times in safe code and
+    // [double dropping is unsound](https://github.com/rust-lang/rust/pull/62360).
     //
-    // Ideally, it would be desirable to be able to prohibit manual calls in the
-    // same way as Drop::drop, but the library cannot. So, by using macros and
-    // replacing them with private traits, we prevent users from calling
-    // PinnedDrop::drop.
+    // Ideally, it would be desirable to be able to forbid manual calls in
+    // the same way as [`Drop::drop`], but the library cannot do it. So, by using
+    // macros and replacing them with private traits, we prevent users from
+    // calling `PinnedDrop::drop`.
     //
-    // Users can implement `Drop` safely using `#[pinned_drop]`.
+    // Users can implement [`Drop`] safely using `#[pinned_drop]` and can drop a
+    // type that implements `PinnedDrop` using the [`drop`] function safely.
     // **Do not call or implement this trait directly.**
     #[doc(hidden)]
     pub trait PinnedDrop {
-        // Since calling it twice on the same object would be UB,
-        // this method is unsafe.
-        #[allow(unsafe_code)]
         #[doc(hidden)]
         unsafe fn drop(self: Pin<&mut Self>);
     }
@@ -183,14 +184,13 @@ pub mod __private {
     // This will cause rust to reject any other Unpin impls for MyStruct<T>, since it will
     // assume that our generated impl could potentially apply in any situation.
     //
-    // This acheives the desired effect - when the user writes `#[pin_project(UnsafeUnpin)]`,
+    // This achieves the desired effect - when the user writes `#[pin_project(UnsafeUnpin)]`,
     // the user must either provide no impl of `UnsafeUnpin` (which is equivalent
     // to making the type never implement Unpin), or provide an impl of `UnsafeUnpin`.
     // It is impossible for them to provide an impl of `Unpin`
     #[doc(hidden)]
     pub struct Wrapper<'a, T: ?Sized>(PhantomData<&'a ()>, T);
 
-    #[allow(unsafe_code)]
     unsafe impl<T: ?Sized> UnsafeUnpin for Wrapper<'_, T> where T: UnsafeUnpin {}
 
     // This is an internal helper struct used by `pin-project-internal`.
@@ -200,4 +200,40 @@ pub mod __private {
     pub struct AlwaysUnpin<'a, T: ?Sized>(PhantomData<&'a ()>, PhantomData<T>);
 
     impl<T: ?Sized> Unpin for AlwaysUnpin<'_, T> {}
+
+    // This is an internal helper used to ensure a value is dropped.
+    #[doc(hidden)]
+    pub struct UnsafeDropInPlaceGuard<T: ?Sized>(pub *mut T);
+
+    impl<T: ?Sized> Drop for UnsafeDropInPlaceGuard<T> {
+        fn drop(&mut self) {
+            unsafe {
+                ptr::drop_in_place(self.0);
+            }
+        }
+    }
+
+    // This is an internal helper used to ensure a value is overwritten without
+    // its destructor being called.
+    #[doc(hidden)]
+    pub struct UnsafeOverwriteGuard<T> {
+        pub value: ManuallyDrop<T>,
+        pub target: *mut T,
+    }
+
+    impl<T> Drop for UnsafeOverwriteGuard<T> {
+        fn drop(&mut self) {
+            unsafe {
+                ptr::write(self.target, ptr::read(&*self.value));
+            }
+        }
+    }
+}
+
+// Not public API.
+// See tests/overwriting_core_crate.rs for more.
+#[doc(hidden)]
+pub mod __reexport {
+    #[doc(hidden)]
+    pub use core::{marker, mem, ops, pin, ptr};
 }
