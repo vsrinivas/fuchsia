@@ -90,7 +90,6 @@ PARTITION_SIZE=$(( 2 * 1024 * 1024 * 1024))
   -a "${FUCHSIA_ARCH}" \
   -q "${qemu_dir}" \
   -N \
-  -k \
   -d \
   -D "${imgdir}/fuchsia.efi" \
   --diskfmt=raw \
