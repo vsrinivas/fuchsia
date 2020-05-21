@@ -17,6 +17,7 @@
 
 namespace libdriver_integration_test {
 
+async::Loop IntegrationTest::loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 IntegrationTest::IsolatedDevmgr IntegrationTest::devmgr_;
 
 void IntegrationTest::SetUpTestCase() { DoSetup(false /* should_create_composite */); }
@@ -54,69 +55,66 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
     return ZX_OK;
   };
 
-  zx_status_t status = IsolatedDevmgr::Create(std::move(args), &IntegrationTest::devmgr_);
+  zx_status_t status =
+      IsolatedDevmgr::Create(std::move(args), loop_.dispatcher(), &IntegrationTest::devmgr_);
   ASSERT_EQ(status, ZX_OK) << "failed to create IsolatedDevmgr";
+
+  IntegrationTest::devmgr_.SetExceptionCallback(DevmgrException);
 }
 
-void IntegrationTest::TearDownTestCase() { IntegrationTest::devmgr_.reset(); }
+void IntegrationTest::TearDownTestCase() {
+  IntegrationTest::devmgr_.reset();
+}
 
-IntegrationTest::IntegrationTest()
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), devmgr_exception_(this) {}
+IntegrationTest::IntegrationTest() {}
 
 void IntegrationTest::SetUp() {
   // We do this in SetUp() rather than the ctor, since gtest cannot assert in
   // ctors.
-  zx_status_t status =
-      devmgr_.containing_job().create_exception_channel(0, &devmgr_exception_channel_);
-  ASSERT_EQ(status, ZX_OK) << "failed to create isolated devmgr exception channel";
-
-  devmgr_exception_.set_object(devmgr_exception_channel_.get());
-  devmgr_exception_.set_trigger(ZX_CHANNEL_READABLE);
-  status = devmgr_exception_.Begin(loop_.dispatcher());
-  ASSERT_EQ(status, ZX_OK) << "failed to watch isolated devmgr for crashes: "
-                           << zx_status_get_string(status);
 
   fdio_t* io = fdio_unsafe_fd_to_io(IntegrationTest::devmgr_.devfs_root().get());
-  status = devfs_.Bind(zx::channel(fdio_service_clone(fdio_unsafe_borrow_channel(io))),
-                       loop_.dispatcher());
+  zx::channel chan(fdio_service_clone(fdio_unsafe_borrow_channel(io)));
+  zx_status_t status = devfs_.Bind(std::move(chan), IntegrationTest::loop_.dispatcher());
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK) << "failed to connect to devfs";
 }
 
-IntegrationTest::~IntegrationTest() = default;
+IntegrationTest::~IntegrationTest() {
+  IntegrationTest::loop_.Quit();
+  IntegrationTest::loop_.ResetQuit();
+}
 
-void IntegrationTest::DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                      zx_status_t status, const zx_packet_signal_t* signal) {
+void IntegrationTest::DevmgrException() {
   // Log an error in the currently running test
   ADD_FAILURE() << "Crash inside devmgr job";
-  loop_.Quit();
+  IntegrationTest::loop_.Quit();
 }
 
 void IntegrationTest::RunPromise(Promise<void> promise) {
-  async::Executor executor(loop_.dispatcher());
+  async::Executor executor(IntegrationTest::loop_.dispatcher());
 
   auto new_promise = promise.then([&](Promise<void>::result_type& result) {
     if (result.is_error()) {
       ADD_FAILURE() << result.error();
     }
-    loop_.Quit();
+    IntegrationTest::loop_.Quit();
     return result;
   });
 
   executor.schedule_task(std::move(new_promise));
 
-  zx_status_t status = loop_.Run();
+  zx_status_t status = IntegrationTest::loop_.Run();
   ASSERT_EQ(status, ZX_ERR_CANCELED);
 }
 
 IntegrationTest::Promise<void> IntegrationTest::CreateFirstChild(
     std::unique_ptr<RootMockDevice>* root_mock_device, std::unique_ptr<MockDevice>* child_device) {
-  return ExpectBind(root_mock_device, [this, root_mock_device, child_device](
-                                          HookInvocation record, Completer<void> completer) {
+  return ExpectBind(root_mock_device, [root_mock_device, child_device](HookInvocation record,
+                                                                       Completer<void> completer) {
     ActionList actions;
-    actions.AppendAddMockDevice(loop_.dispatcher(), (*root_mock_device)->path(), "first_child",
-                                std::vector<zx_device_prop_t>{}, ZX_OK, std::move(completer),
-                                child_device);
+    actions.AppendAddMockDevice(IntegrationTest::loop_.dispatcher(), (*root_mock_device)->path(),
+                                "first_child", std::vector<zx_device_prop_t>{}, ZX_OK,
+                                std::move(completer), child_device);
     actions.AppendReturnStatus(ZX_OK);
     return actions;
   });
@@ -141,8 +139,8 @@ IntegrationTest::Promise<void> IntegrationTest::ExpectBind(
   fit::bridge<void, Error> bridge;
   auto bind_hook =
       std::make_unique<BindOnce>(std::move(bridge.completer), std::move(actions_callback));
-  zx_status_t status =
-      RootMockDevice::Create(devmgr_, loop_.dispatcher(), std::move(bind_hook), root_mock_device);
+  zx_status_t status = RootMockDevice::Create(devmgr_, IntegrationTest::loop_.dispatcher(),
+                                              std::move(bind_hook), root_mock_device);
   PROMISE_ASSERT(ASSERT_EQ(status, ZX_OK));
   return bridge.consumer.promise_or(::fit::error("bind abandoned"));
 }
@@ -206,7 +204,8 @@ IntegrationTest::Promise<void> IntegrationTest::ExpectRelease(
 
 IntegrationTest::Promise<void> IntegrationTest::DoOpen(
     const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client) {
-  fidl::InterfaceRequest<fuchsia::io::Node> server(client->NewRequest(loop_.dispatcher()));
+  fidl::InterfaceRequest<fuchsia::io::Node> server(
+      client->NewRequest(IntegrationTest::IntegrationTest::loop_.dispatcher()));
   PROMISE_ASSERT(ASSERT_TRUE(server.is_valid()));
 
   PROMISE_ASSERT(ASSERT_EQ(client->events().OnOpen, nullptr));
@@ -370,7 +369,7 @@ void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
 
 IntegrationTest::Promise<void> IntegrationTest::DoWaitForPath(const std::string& path) {
   fit::bridge<void, Error> bridge;
-  WaitForPath(devfs_, loop_.dispatcher(), path, std::move(bridge.completer));
+  WaitForPath(devfs_, IntegrationTest::loop_.dispatcher(), path, std::move(bridge.completer));
   return bridge.consumer.promise_or(::fit::error("WaitForPath abandoned"));
 }
 

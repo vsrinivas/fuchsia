@@ -133,16 +133,12 @@ class IntegrationTest : public testing::Test {
   using IsolatedDevmgr = devmgr_integration_test::IsolatedDevmgr;
   static IsolatedDevmgr devmgr_;
 
-  async::Loop loop_;
+  static async::Loop loop_;
   fidl::InterfacePtr<fuchsia::io::Directory> devfs_;
 
  private:
   // Function that will be called whenever we see an exception from devmgr
-  void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                       const zx_packet_signal_t* signal);
-
-  zx::channel devmgr_exception_channel_;
-  async::WaitMethod<IntegrationTest, &IntegrationTest::DevmgrException> devmgr_exception_;
+  static void DevmgrException();
 };
 
 }  // namespace libdriver_integration_test

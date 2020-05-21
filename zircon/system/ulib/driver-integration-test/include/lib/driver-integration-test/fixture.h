@@ -6,6 +6,7 @@
 #define LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fit/function.h>
 
 #include <ddk/metadata/test.h>
 #include <fbl/string.h>
@@ -42,6 +43,14 @@ class IsolatedDevmgr {
     // If set to true, the netsvc will be disabled.
     bool disable_netsvc = true;
   };
+
+  // Notifies if driver manager job has an exception.
+  void SetExceptionCallback(fit::closure callback) {
+    devmgr_.SetExceptionCallback(std::move(callback));
+  }
+
+  // Returns true if any process in driver manager process crashes.
+  bool crashed() const { return devmgr_.crashed(); }
 
   // Launch a new isolated devmgr.  The instance will be destroyed when
   // |*out|'s dtor runs.

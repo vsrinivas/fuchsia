@@ -4,6 +4,7 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/exception/llcpp/fidl.h>
 #include <fuchsia/process/c/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -17,9 +18,11 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/zx/exception.h>
 #include <stdint.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/exception.h>
 
 #include <map>
 #include <thread>
@@ -116,6 +119,83 @@ struct IsolatedDevmgr::SvcLoopState {
   fs::SynchronousVfs vfs{loop.dispatcher()};
   async::Wait bootsvc_wait;
 };
+
+struct IsolatedDevmgr::ExceptionLoopState {
+  ExceptionLoopState(async_dispatcher_t* dispatcher, zx::channel exception_channel)
+      : dispatcher_(dispatcher),
+        exception_channel_(std::move(exception_channel)),
+        watcher_(this, exception_channel_.get(), ZX_CHANNEL_READABLE) {
+    if (dispatcher_ == nullptr) {
+      loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
+      dispatcher_ = loop_->dispatcher();
+    }
+    watcher_.Begin(dispatcher_);
+  }
+  ~ExceptionLoopState() {
+    // We must shut down the loop before we operate on watcher_ in order to prevent
+    // concurrent access to them. If dispatcher is passed in, this should be done beforehand.
+    if (loop_) {
+      loop_->Shutdown();
+    }
+  }
+
+  void HandleException() {
+    printf("Handling devmgr exception\n");
+    zx_exception_info_t info;
+    zx::exception exception;
+    zx_status_t status = exception_channel_.read(0, &info, exception.reset_and_get_address(),
+                                                 sizeof(info), 1, nullptr, nullptr);
+    if (status != ZX_OK) {
+      return;
+    }
+
+    // Send exceptions to the ambient fuchsia.exception.Handler.
+    zx::channel local, remote;
+    status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return;
+    }
+    status = fdio_service_connect(llcpp::fuchsia::exception::Handler::Name, remote.release());
+    ::llcpp::fuchsia::exception::Handler::SyncClient handler(std::move(local));
+    ::llcpp::fuchsia::exception::ExceptionInfo einfo;
+    einfo.process_koid = info.pid;
+    einfo.thread_koid = info.tid;
+    einfo.type = static_cast<::llcpp::fuchsia::exception::ExceptionType>(info.type);
+    handler.OnException(std::move(exception), einfo);
+  }
+
+  void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                       const zx_packet_signal_t* signal) {
+    if (status == ZX_ERR_CANCELED) {
+      return;
+    }
+    crashed_ = true;
+    HandleException();
+    if (exception_callback_) {
+      exception_callback_();
+    }
+  }
+
+  std::optional<async::Loop> loop_;
+  async_dispatcher_t* dispatcher_ = nullptr;
+
+  zx::channel exception_channel_;
+  std::atomic<bool> crashed_ = false;
+  fit::closure exception_callback_;
+  async::WaitMethod<ExceptionLoopState, &ExceptionLoopState::DevmgrException> watcher_;
+};
+
+zx_status_t IsolatedDevmgr::SetupExceptionLoop(async_dispatcher_t* dispatcher,
+                                               zx::channel exception_channel) {
+  exception_loop_state_ =
+      std::make_unique<ExceptionLoopState>(dispatcher, std::move(exception_channel));
+
+  if (dispatcher == nullptr) {
+    return exception_loop_state_->loop_->StartThread("isolated-devmgr-exceptionloop");
+  } else {
+    return ZX_OK;
+  }
+}
 
 // Create and host a /svc directory for the devcoordinator process we're creating.
 // TODO(fxb/35991): IsolatedDevmgr and devmgr_launcher should be rewritten to make use of
@@ -216,7 +296,8 @@ IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
     : job_(std::move(other.job_)),
       svc_root_dir_(std::move(other.svc_root_dir_)),
       devfs_root_(std::move(other.devfs_root_)),
-      svc_loop_state_(std::move(other.svc_loop_state_)) {}
+      svc_loop_state_(std::move(other.svc_loop_state_)),
+      exception_loop_state_(std::move(other.exception_loop_state_)) {}
 
 __EXPORT
 IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
@@ -225,6 +306,7 @@ IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
   devfs_root_ = std::move(other.devfs_root_);
   svc_root_dir_ = std::move(other.svc_root_dir_);
   svc_loop_state_ = std::move(other.svc_loop_state_);
+  exception_loop_state_ = std::move(other.exception_loop_state_);
   return *this;
 }
 
@@ -242,6 +324,12 @@ void IsolatedDevmgr::Terminate() {
 
 __EXPORT
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
+  return Create(std::move(args), nullptr, out);
+}
+
+__EXPORT
+zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_t* dispatcher,
+                                   IsolatedDevmgr* out) {
   zx::channel svc_client, svc_server;
   zx_status_t status = zx::channel::create(0, &svc_client, &svc_server);
   if (status != ZX_OK) {
@@ -271,6 +359,14 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
     return status;
   }
 
+  zx::channel exception_channel;
+  devmgr.containing_job().create_exception_channel(0, &exception_channel);
+
+  status = devmgr.SetupExceptionLoop(dispatcher, std::move(exception_channel));
+  if (status != ZX_OK) {
+    return status;
+  }
+
   status = devmgr.SetupSvcLoop(std::move(svc_server), std::move(fshost_outgoing_client),
                                std::move(get_boot_item), std::move(boot_args));
   if (status != ZX_OK) {
@@ -288,5 +384,11 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
   *out = std::move(devmgr);
   return ZX_OK;
 }
+
+__EXPORT void IsolatedDevmgr::SetExceptionCallback(fit::closure exception_callback) {
+  exception_loop_state_->exception_callback_ = std::move(exception_callback);
+}
+
+__EXPORT bool IsolatedDevmgr::crashed() const { return exception_loop_state_->crashed_; }
 
 }  // namespace devmgr_integration_test

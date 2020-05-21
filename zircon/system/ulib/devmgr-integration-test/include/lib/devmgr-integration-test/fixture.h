@@ -5,7 +5,9 @@
 #ifndef LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 #define LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/devmgr-launcher/launch.h>
+#include <lib/fit/function.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
 
@@ -34,7 +36,10 @@ class IsolatedDevmgr {
 
   // Launch a new isolated devmgr.  The instance will be destroyed when
   // |*out|'s dtor runs.
+  // |dispatcher| let's you choose which async loop the exception handler runs on.
   static zx_status_t Create(devmgr_launcher::Args args, IsolatedDevmgr* out);
+  static zx_status_t Create(devmgr_launcher::Args args, async_dispatcher_t* dispatcher,
+                            IsolatedDevmgr* out);
 
   // Get a fd to the root of the isolate devmgr's devfs.  This fd
   // may be used with openat() and fdio_watch_directory().
@@ -42,6 +47,12 @@ class IsolatedDevmgr {
   const zx::channel& svc_root_dir() const { return svc_root_dir_; }
 
   zx::channel TakeSvcRootDir() { return std::move(svc_root_dir_); }
+
+  // Notifies if driver manager job has an exception.
+  void SetExceptionCallback(fit::closure exception_callback);
+
+  // Returns true if any process in driver manager process crashes.
+  bool crashed() const;
 
   // Borrow the handle to the job containing the isolated devmgr.  This may be
   // used for things like binding to an exception port.
@@ -57,6 +68,9 @@ class IsolatedDevmgr {
   zx_status_t SetupSvcLoop(zx::channel bootsvc_server, zx::channel fshost_outgoing_client,
                            GetBootItemFunction get_boot_item,
                            std::map<std::string, std::string>&& boot_args);
+
+  struct ExceptionLoopState;
+  zx_status_t SetupExceptionLoop(async_dispatcher_t* dispatcher, zx::channel exception_channel);
 
   // If |job_| exists, terminate it.
   void Terminate();
@@ -75,6 +89,9 @@ class IsolatedDevmgr {
 
   // Opaque state associated with the async_loop_
   std::unique_ptr<SvcLoopState> svc_loop_state_;
+
+  // Opaque state associated with the async_loop_
+  std::unique_ptr<ExceptionLoopState> exception_loop_state_;
 };
 
 // Wait for |file| to appear in |dir|, and open it when it does.

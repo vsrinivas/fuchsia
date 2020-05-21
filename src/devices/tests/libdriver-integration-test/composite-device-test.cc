@@ -102,7 +102,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
           .and_then([&]() -> Promise<void> {
             composite_test.Bind(client.Unbind().TakeChannel());
 
-            auto bind_callback = [this, &composite_mock, &composite_child_device](
+            auto bind_callback = [&composite_mock, &composite_child_device](
                                      HookInvocation record, Completer<void> completer) {
               // Create a test child that we can monitor for hooks.
               ActionList actions;

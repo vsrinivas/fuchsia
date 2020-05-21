@@ -26,6 +26,8 @@ zx_library("devmgr-integration-test") {
     "launcher.cc",
   ]
   public_deps = [
+    "//zircon/public/lib/async",
+
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
     "//zircon/system/ulib/devmgr-launcher",
 
@@ -41,6 +43,7 @@ zx_library("devmgr-integration-test") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//src/lib/ddk",
     "//zircon/public/lib/fdio",

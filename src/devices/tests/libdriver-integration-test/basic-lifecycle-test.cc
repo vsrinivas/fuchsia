@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
 #include <memory>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include "integration-test.h"
 
@@ -73,21 +74,20 @@ TEST_F(BasicLifecycleTest, BindThenOpenRemoveAndClose) {
                              actions.AppendReturnStatus(ZX_OK);
                              return actions;
                            });
-            auto expect_unbind =
-                ExpectUnbind(mock_child_device,
-                             [](HookInvocation record, Completer<void> completer) {
-                               ActionList actions;
-                               actions.AppendUnbindReply(std::move(completer));
-                               return actions;
-                             });
+            auto expect_unbind = ExpectUnbind(mock_child_device,
+                                              [](HookInvocation record, Completer<void> completer) {
+                                                ActionList actions;
+                                                actions.AppendUnbindReply(std::move(completer));
+                                                return actions;
+                                              });
             return expect_open.and_then(std::move(expect_unbind))
                 .and_then(std::move(wait_for_open));
           })
           .and_then([&]() {
             // Close the newly opened connection
             client.Unbind();
-            return ExpectClose(mock_child_device, [](HookInvocation record,
-                                                     uint32_t flags, Completer<void> completer) {
+            return ExpectClose(mock_child_device, [](HookInvocation record, uint32_t flags,
+                                                     Completer<void> completer) {
               completer.complete_ok();
               ActionList actions;
               actions.AppendReturnStatus(ZX_OK);

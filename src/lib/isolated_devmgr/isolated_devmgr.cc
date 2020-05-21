@@ -5,17 +5,14 @@
 #include "isolated_devmgr.h"
 
 #include <fcntl.h>
-#include <fuchsia/exception/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/exception.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
-#include <zircon/syscalls/exception.h>
 
 #include <ddk/platform-defs.h>
 #include <libzbi/zbi-cpp.h>
@@ -31,35 +28,6 @@ zx_status_t IsolatedDevmgr::WaitForFile(const char* path) {
 void IsolatedDevmgr::Connect(zx::channel req) {
   fdio_cpp::UnownedFdioCaller fd(devmgr_.devfs_root().get());
   fdio_service_clone_to(fd.borrow_channel(), req.release());
-}
-
-void IsolatedDevmgr::HandleException() {
-  FX_LOGS(INFO) << "Handling devmgr exception";
-  zx_exception_info_t info;
-  zx::exception exception;
-  zx_status_t status = devmgr_exception_channel_.read(0, &info, exception.reset_and_get_address(),
-                                                      sizeof(info), 1, nullptr, nullptr);
-  if (status != ZX_OK) {
-    return;
-  }
-
-  // send exceptions to the ambient fuchsia.exception.Handler
-  fuchsia::exception::HandlerSyncPtr handler;
-  sys::ComponentContext::CreateAndServeOutgoingDirectory()->svc()->Connect(handler.NewRequest());
-  fuchsia::exception::ExceptionInfo einfo;
-  einfo.process_koid = info.pid;
-  einfo.thread_koid = info.tid;
-  einfo.type = static_cast<fuchsia::exception::ExceptionType>(info.type);
-  handler->OnException(std::move(exception), einfo);
-}
-
-void IsolatedDevmgr::DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                     zx_status_t status, const zx_packet_signal_t* signal) {
-  HandleException();
-
-  if (exception_callback_) {
-    exception_callback_();
-  }
 }
 
 namespace {
@@ -178,10 +146,11 @@ std::unique_ptr<IsolatedDevmgr> IsolatedDevmgr::Create(
     };
   }
 
-  zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
+  zx_status_t status =
+      devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), dispatcher, &devmgr);
 
   if (status == ZX_OK) {
-    return std::make_unique<IsolatedDevmgr>(dispatcher, std::move(devmgr));
+    return std::make_unique<IsolatedDevmgr>(std::move(devmgr));
   } else {
     FX_LOGS(ERROR) << "Failed to create devmgr: " << zx_status_get_string(status);
     return nullptr;

@@ -15,7 +15,6 @@ source_set("src") {
   public_deps = [ "//zircon/system/ulib/devmgr-integration-test" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl",

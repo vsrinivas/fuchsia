@@ -17,15 +17,7 @@ namespace isolated_devmgr {
 
 class IsolatedDevmgr {
  public:
-  using ExceptionCallback = fit::function<void()>;
-  IsolatedDevmgr(async_dispatcher_t* dispatcher, devmgr_integration_test::IsolatedDevmgr devmgr)
-      : devmgr_(std::move(devmgr)), watcher_(this) {
-    devmgr_.containing_job().create_exception_channel(0, &devmgr_exception_channel_);
-
-    watcher_.set_object(devmgr_exception_channel_.get());
-    watcher_.set_trigger(ZX_CHANNEL_READABLE);
-    watcher_.Begin(dispatcher);
-  }
+  IsolatedDevmgr(devmgr_integration_test::IsolatedDevmgr devmgr) : devmgr_(std::move(devmgr)) {}
 
   ~IsolatedDevmgr() = default;
 
@@ -36,7 +28,7 @@ class IsolatedDevmgr {
   void Connect(zx::channel req);
   zx_status_t WaitForFile(const char* path);
 
-  void SetExceptionCallback(ExceptionCallback cb) { exception_callback_ = std::move(cb); }
+  void SetExceptionCallback(fit::closure cb) { devmgr_.SetExceptionCallback(std::move(cb)); }
 
   struct ExtraArgs {
     // A list of vid/pid/did triplets to spawn in their own devhosts.
@@ -49,14 +41,7 @@ class IsolatedDevmgr {
       async_dispatcher_t* dispatcher = nullptr);
 
  private:
-  void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                       const zx_packet_signal_t* signal);
-  void HandleException();
-
-  ExceptionCallback exception_callback_;
   devmgr_integration_test::IsolatedDevmgr devmgr_;
-  zx::channel devmgr_exception_channel_;
-  async::WaitMethod<IsolatedDevmgr, &IsolatedDevmgr::DevmgrException> watcher_;
 };
 }  // namespace isolated_devmgr
 
