@@ -8,7 +8,7 @@ import (
 
 	"thinfs/fs"
 
-	"fuchsia.googlesource.com/far"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 )
 
 func newMetaFar(blob string, fs *Filesystem) *metaFar {

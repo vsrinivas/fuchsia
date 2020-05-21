@@ -16,7 +16,7 @@ import (
 
 	"thinfs/fs"
 
-	"fuchsia.googlesource.com/far"
+	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 

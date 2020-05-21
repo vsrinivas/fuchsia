@@ -9,11 +9,11 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("far") {
-  name = "fuchsia.googlesource.com/far"
+  name = "go.fuchsia.dev/fuchsia/garnet/go/src/far"
 }
 
 go_test("go_far_test") {
-  gopackages = [ "fuchsia.googlesource.com/far" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/garnet/go/src/far" ]
 
   deps = [ ":far" ]
 }
