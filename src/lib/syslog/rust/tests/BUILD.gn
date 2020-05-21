@@ -33,7 +33,7 @@ test_package("fuchsia-syslog-integration-tests") {
   tests = [
     {
       name = "panic_is_logged"
-      environment = basic_envs
+      environment = [ emu_env ]
     },
   ]
 }
