@@ -13,7 +13,7 @@ import (
 	"syscall/zx"
 	"unsafe"
 
-	"fuchsia.googlesource.com/syslog"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 	"netstack/link"
 	"netstack/link/fifo"
 	"netstack_gen/link/eth"

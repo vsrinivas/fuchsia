@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"fidl/fuchsia/logger"
-	"fuchsia.googlesource.com/syslog"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )
 
 var pid = uint64(os.Getpid())

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"fuchsia.googlesource.com/syslog"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"netstack/util"
 

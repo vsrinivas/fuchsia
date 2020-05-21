@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/syslog"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	networking_metrics "networking_metrics_golib"
 

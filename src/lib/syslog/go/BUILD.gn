@@ -9,7 +9,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("go") {
-  name = "fuchsia.googlesource.com/syslog"
+  name = "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
   deps = [
     "//sdk/fidl/fuchsia.logger($go_toolchain)",
     "//src/lib/component($go_toolchain)",
@@ -18,7 +18,7 @@ go_library("go") {
 }
 
 go_test("syslog_test") {
-  gopackages = [ "fuchsia.googlesource.com/syslog" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/syslog/go" ]
   deps = [ ":go" ]
 }
 

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"syscall/zx/fidl"
 
-	"fuchsia.googlesource.com/syslog"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 	"netstack/dns"
 
 	"fidl/fuchsia/net/name"

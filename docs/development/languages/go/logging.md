@@ -44,7 +44,7 @@ Initializing without any tags will default to using the process name.
 ```golang
 import (
     "go.fuchsia.dev/fuchsia/src/lib/component"
-    "fuchsia.googlesource.com/syslog"
+    syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )
 
 func main() {

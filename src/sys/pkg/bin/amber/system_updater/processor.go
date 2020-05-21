@@ -24,8 +24,8 @@ import (
 	"fidl/fuchsia/paver"
 	"fidl/fuchsia/pkg"
 
-	"fuchsia.googlesource.com/syslog"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )
 
 // When this suffix is found in the "images" file, it indicates a typed image

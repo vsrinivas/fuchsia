@@ -12,8 +12,8 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
-	"fuchsia.googlesource.com/syslog"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 	"netstack/fidlconv"
 	"netstack/link"
 	"netstack/link/eth"

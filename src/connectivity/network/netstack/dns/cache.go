@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/syslog"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"golang.org/x/net/dns/dnsmessage"
 )
