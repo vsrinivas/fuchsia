@@ -16,7 +16,8 @@ declare_args() {
   if (is_fuchsia) {
     # TODO(45047): Temporary until all lsan bugs are filed and marked with
     # deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
-    asan_default_options = "detect_leaks=0"
+    # TODO(52369): Temporary until asan runtime decommits large allocations.
+    asan_default_options = "detect_leaks=0:clear_shadow_mmap_threshold=16384"
   }
 
   # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
