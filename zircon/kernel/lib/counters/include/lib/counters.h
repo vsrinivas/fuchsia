@@ -52,8 +52,13 @@ class CounterDesc {
   size_t size() const { return end() - begin(); }
 
   constexpr auto VmoData() const { return &vmo_begin_; }
+
   size_t VmoDataSize() const {
     return (reinterpret_cast<uintptr_t>(vmo_end_) - reinterpret_cast<uintptr_t>(&vmo_begin_));
+  }
+
+  size_t VmoContentSize() const {
+    return (reinterpret_cast<uintptr_t>(end_) - reinterpret_cast<uintptr_t>(&vmo_begin_));
   }
 
  private:
@@ -76,6 +81,10 @@ class CounterArena {
 
   size_t VmoDataSize() const {
     return (reinterpret_cast<uintptr_t>(arena_page_end_) - reinterpret_cast<uintptr_t>(arena_));
+  }
+
+  size_t VmoContentSize() const {
+    return (reinterpret_cast<uintptr_t>(arena_end_) - reinterpret_cast<uintptr_t>(arena_));
   }
 
  private:

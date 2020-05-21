@@ -119,7 +119,7 @@ class UserbootImage : private RoDso {
 fbl::RefPtr<VmObject> kcounters_vmo_ref;
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
-zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
+zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly, uint64_t content_size,
                            fbl::RefPtr<VmObjectDispatcher>* disp_ptr, Handle** ptr) {
   if (!vmo)
     return ZX_ERR_NO_MEMORY;
@@ -127,6 +127,7 @@ zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
   KernelHandle<VmObjectDispatcher> vmo_kernel_handle;
   zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &vmo_kernel_handle, &rights);
   if (result == ZX_OK) {
+    vmo_kernel_handle.dispatcher()->SetContentSize(content_size);
     if (disp_ptr)
       *disp_ptr = vmo_kernel_handle.dispatcher();
     if (readonly)
@@ -157,7 +158,7 @@ void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) {
 }
 
 // Converts platform crashlog into a VMO
-zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
+zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
   size_t size = platform_recover_crashlog(0, NULL, NULL);
   fbl::RefPtr<VmObject> crashlog_vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &crashlog_vmo);
@@ -173,6 +174,7 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
   crashlog_vmo->set_name(kCrashlogVmoName, sizeof(kCrashlogVmoName) - 1);
   mexec_stash_crashlog(crashlog_vmo);
   *out = ktl::move(crashlog_vmo);
+  *out_size = size;
 
   // Now that we have recovered the old crashlog, enable crashlog uptime
   // updates.  This will cause systems with a RAM based crashlog to periodically
@@ -205,19 +207,22 @@ void bootstrap_vmos(Handle** handles) {
   zx_status_t status = VmObjectPaged::CreateFromWiredPages(rbase, rsize, true, &rootfs_vmo);
   ASSERT(status == ZX_OK);
   rootfs_vmo->set_name(kZbiVmoName, sizeof(kZbiVmoName) - 1);
-  status = get_vmo_handle(rootfs_vmo, false, nullptr, &handles[kZbi]);
+  status = get_vmo_handle(rootfs_vmo, false, rsize, nullptr, &handles[kZbi]);
   ASSERT(status == ZX_OK);
 
   // Crashlog.
   fbl::RefPtr<VmObject> crashlog_vmo;
-  status = crashlog_to_vmo(&crashlog_vmo);
+  size_t crashlog_size;
+  status = crashlog_to_vmo(&crashlog_vmo, &crashlog_size);
   ASSERT(status == ZX_OK);
-  status = get_vmo_handle(crashlog_vmo, true, nullptr, &handles[kCrashlog]);
+  status = get_vmo_handle(crashlog_vmo, true, crashlog_size, nullptr, &handles[kCrashlog]);
   ASSERT(status == ZX_OK);
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
   ASSERT(!crypto::entropy::entropy_was_lost);
-  status = get_vmo_handle(crypto::entropy::entropy_vmo, true, nullptr, &handles[kEntropyTestData]);
+  status =
+      get_vmo_handle(crypto::entropy::entropy_vmo, true, crypto::entropy::entropy_vmo_content_size,
+                     nullptr, &handles[kEntropyTestData]);
   ASSERT(status == ZX_OK);
 #endif
 
@@ -228,7 +233,8 @@ void bootstrap_vmos(Handle** handles) {
   ASSERT(status == ZX_OK);
   kcountdesc_vmo->set_name(counters::DescriptorVmo::kVmoName,
                            sizeof(counters::DescriptorVmo::kVmoName) - 1);
-  status = get_vmo_handle(ktl::move(kcountdesc_vmo), true, nullptr, &handles[kCounterNames]);
+  status = get_vmo_handle(ktl::move(kcountdesc_vmo), true, CounterDesc().VmoContentSize(), nullptr,
+                          &handles[kCounterNames]);
   ASSERT(status == ZX_OK);
 
   // kcounters live data.
@@ -238,7 +244,8 @@ void bootstrap_vmos(Handle** handles) {
   ASSERT(status == ZX_OK);
   kcounters_vmo_ref = kcounters_vmo;
   kcounters_vmo->set_name(counters::kArenaVmoName, sizeof(counters::kArenaVmoName) - 1);
-  status = get_vmo_handle(ktl::move(kcounters_vmo), true, nullptr, &handles[kCounters]);
+  status = get_vmo_handle(ktl::move(kcounters_vmo), true, CounterArena().VmoContentSize(), nullptr,
+                          &handles[kCounters]);
   ASSERT(status == ZX_OK);
 
   status = InstrumentationData::GetVmos(&handles[kFirstInstrumentationData]);

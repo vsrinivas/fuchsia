@@ -36,6 +36,7 @@ size_t entropy_len;
 }  // namespace
 
 fbl::RefPtr<VmObject> entropy_vmo;
+size_t entropy_vmo_content_size;
 bool entropy_was_lost = false;
 
 static void SetupEntropyVmo(uint level) {
@@ -44,13 +45,12 @@ static void SetupEntropyVmo(uint level) {
     entropy_was_lost = true;
     return;
   }
-  size_t actual;
-  if (entropy_vmo->Write(entropy_buf, 0, entropy_len, &actual) != ZX_OK) {
+  if (entropy_vmo->Write(entropy_buf, 0, entropy_len, &entropy_vmo_content_size) != ZX_OK) {
     printf("entropy-boot-test: Failed to write to entropy_vmo (data lost)\n");
     entropy_was_lost = true;
     return;
   }
-  if (actual < entropy_len) {
+  if (entropy_vmo_content_size < entropy_len) {
     printf("entropy-boot-test: partial write to entropy_vmo (data lost)\n");
     entropy_was_lost = true;
     return;

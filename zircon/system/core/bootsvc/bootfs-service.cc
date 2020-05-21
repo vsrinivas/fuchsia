@@ -273,6 +273,18 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
       continue;
     }
 
+    // If the VMO has a precise content size set, use that as the file size.
+    uint64_t content_size;
+    status = vmo->get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+    if (status != ZX_OK) {
+      printf("bootsvc: vmo.get_property on %s %u: %s\n", debug_type_name, i,
+             zx_status_get_string(status));
+      continue;
+    }
+    if (content_size != 0) {
+      size = content_size;
+    }
+
     if (!strcmp(name + kVmoSubdirLen, "crashlog")) {
       // the crashlog has a special home
       strcpy(name, kLastPanicFilePath);
