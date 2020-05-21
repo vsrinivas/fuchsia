@@ -56,6 +56,9 @@ impl<C: StackContext> StackFidlWorker<C> {
 
     async fn handle_request(&self, req: StackRequest) {
         match req {
+            StackRequest::AddInterface { responder, .. } => {
+                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+            }
             StackRequest::AddEthernetInterface { topological_path, device, responder } => {
                 responder_send!(
                     responder,

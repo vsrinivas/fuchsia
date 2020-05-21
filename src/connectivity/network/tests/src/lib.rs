@@ -5,6 +5,7 @@
 #![cfg(test)]
 
 mod dhcp;
+#[macro_use]
 mod environments;
 mod fidl;
 mod ipv6;

@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"syscall/zx/fidl"
@@ -14,8 +15,11 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
@@ -100,19 +104,46 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	return out
 }
 
-func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceWithCtxInterface) stack.StackAddEthernetInterfaceResult {
-	var result stack.StackAddEthernetInterfaceResult
+func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.DeviceDefinition) stack.StackAddInterfaceResult {
 
-	ifs, err := ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device)
-	if err != nil {
-		result.SetErr(stack.ErrorInternal)
-		return result
+	var namePrefix string
+	var ep tcpipstack.LinkEndpoint
+	var controller link.Controller
+
+	switch device.Which() {
+	case stack.DeviceDefinitionEthernet:
+		client, err := netdevice.NewMacAddressingClient(context.Background(), &device.Ethernet.NetworkDevice, &device.Ethernet.Mac, &netdevice.SimpleSessionConfigFactory{
+			FrameTypes: []network.FrameType{network.FrameTypeEthernet},
+		})
+		if err != nil {
+			_ = syslog.Warnf("failed to create network device client for Ethernet interface: %s", err)
+			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+		}
+		ep = eth.NewLinkEndpoint(client)
+		controller = client
+		namePrefix = "eth"
+	case stack.DeviceDefinitionIp:
+		client, err := netdevice.NewClient(context.Background(), &device.Ip, &netdevice.SimpleSessionConfigFactory{
+			FrameTypes: []network.FrameType{network.FrameTypeIpv4, network.FrameTypeIpv6},
+		})
+		if err != nil {
+			_ = syslog.Warnf("failed to create network device client for IP interface: %s", err)
+			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+		}
+		ep = client
+		controller = client
+		namePrefix = "ip"
+	default:
+		_ = syslog.Errorf("unsupported device definition: %d", device.Which())
+		return stack.StackAddInterfaceResultWithErr(stack.ErrorInvalidArgs)
 	}
 
-	result.SetResponse(stack.StackAddEthernetInterfaceResponse{
-		Id: uint64(ifs.nicid),
-	})
-	return result
+	ifs, err := ns.addEndpoint(makeEndpointName(namePrefix, config.GetNameWithDefault("")), ep, controller, true /* doFilter */, routes.Metric(config.GetMetricWithDefault(0)), false /* enabled */)
+	if err != nil {
+		_ = syslog.Errorf("ns.addEndpoint failed: %s", err)
+		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+	}
+	return stack.StackAddInterfaceResultWithResponse(stack.StackAddInterfaceResponse{Id: uint64(ifs.nicid)})
 }
 
 func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResult {
@@ -333,7 +364,22 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 }
 
 func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string, device ethernet.DeviceWithCtxInterface) (stack.StackAddEthernetInterfaceResult, error) {
-	return ni.ns.addInterface(topologicalPath, device), nil
+	var result stack.StackAddEthernetInterfaceResult
+
+	ifs, err := ni.ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device)
+	if err != nil {
+		result.SetErr(stack.ErrorInternal)
+		return result, nil
+	}
+
+	result.SetResponse(stack.StackAddEthernetInterfaceResponse{
+		Id: uint64(ifs.nicid),
+	})
+	return result, nil
+}
+
+func (ni *stackImpl) AddInterface(_ fidl.Context, config stack.InterfaceConfig, device stack.DeviceDefinition) (stack.StackAddInterfaceResult, error) {
+	return ni.ns.addInterface(config, device), nil
 }
 
 func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.StackDelEthernetInterfaceResult, error) {

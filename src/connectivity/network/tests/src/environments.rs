@@ -36,6 +36,13 @@ impl NetstackVersion {
             }
         }
     }
+
+    pub fn get_name(&self) -> &'static str {
+        match self {
+            NetstackVersion::Netstack2 => "ns2",
+            NetstackVersion::Netstack3 => "ns3",
+        }
+    }
 }
 
 /// Known services used in tests.
@@ -65,7 +72,7 @@ impl KnownServices {
                 <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                 fuchsia_component::fuchsia_single_component_package_url!("stash")),
             KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                              v.get_url()),
+                                                 v.get_url()),
             KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
@@ -116,8 +123,6 @@ impl<'a> From<&'a KnownServices> for netemul_environment::LaunchService {
     }
 }
 
-// TODO(gongt) Use an attribute macro to reduce the boilerplate of running the
-// same test for both N2 and N3.
 /// Abstraction for a Fuchsia component which offers network stack services.
 pub trait Netstack: Copy + Clone {
     /// The Netstack version.
@@ -151,6 +156,27 @@ impl Netstack for Netstack3 {
 #[must_use]
 pub struct TestSandbox {
     sandbox: netemul_sandbox::SandboxProxy,
+}
+
+/// Abstraction for different endpoint backing types.
+pub trait Endpoint: Copy + Clone {
+    const NETEMUL_BACKING: netemul_network::EndpointBacking;
+}
+
+#[derive(Copy, Clone)]
+pub enum Ethernet {}
+
+impl Endpoint for Ethernet {
+    const NETEMUL_BACKING: netemul_network::EndpointBacking =
+        netemul_network::EndpointBacking::Ethertap;
+}
+
+#[derive(Copy, Clone)]
+pub enum NetworkDevice {}
+
+impl Endpoint for NetworkDevice {
+    const NETEMUL_BACKING: netemul_network::EndpointBacking =
+        netemul_network::EndpointBacking::NetworkDevice;
 }
 
 impl TestSandbox {
@@ -284,20 +310,32 @@ impl TestSandbox {
     }
 
     /// Creates a new unattached endpoint with default configurations and `name`.
-    pub async fn create_endpoint(&self, name: impl Into<String>) -> Result<TestEndpoint<'_>> {
+    pub async fn create_endpoint<E, S>(&self, name: S) -> Result<TestEndpoint<'_>>
+    where
+        S: Into<String>,
+        E: Endpoint,
+    {
+        self.create_endpoint_with(
+            name,
+            fidl_fuchsia_netemul_network::EndpointConfig {
+                mtu: 1500,
+                mac: None,
+                backing: E::NETEMUL_BACKING,
+            },
+        )
+        .await
+    }
+
+    /// Creates a new unattached endpoint with the provided configuration.
+    pub async fn create_endpoint_with(
+        &self,
+        name: impl Into<String>,
+        mut config: fidl_fuchsia_netemul_network::EndpointConfig,
+    ) -> Result<TestEndpoint<'_>> {
         let name = name.into();
         let epm = self.get_endpoint_manager()?;
-        let (status, endpoint) = epm
-            .create_endpoint(
-                &name,
-                &mut fidl_fuchsia_netemul_network::EndpointConfig {
-                    mtu: 1500,
-                    mac: None,
-                    backing: fidl_fuchsia_netemul_network::EndpointBacking::Ethertap,
-                },
-            )
-            .await
-            .context("create_endpoint FIDL error")?;
+        let (status, endpoint) =
+            epm.create_endpoint(&name, &mut config).await.context("create_endpoint FIDL error")?;
         let () = zx::Status::ok(status).context("create_endpoint failed")?;
         let endpoint = endpoint
             .ok_or_else(|| anyhow::anyhow!("create_endpoint didn't return a valid endpoint"))?
@@ -307,10 +345,11 @@ impl TestSandbox {
 
     /// Helper function to create a new Netstack environment and connect to a
     /// netstack service on it.
-    pub fn new_netstack<N, S>(&self, name: &'static str) -> Result<(TestEnvironment<'_>, S::Proxy)>
+    pub fn new_netstack<N, S, T>(&self, name: T) -> Result<(TestEnvironment<'_>, S::Proxy)>
     where
         N: Netstack,
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
+        T: Into<String>,
     {
         let env = self
             .create_netstack_environment::<N, _>(name)
@@ -322,16 +361,19 @@ impl TestSandbox {
 
     /// Helper function to create a new Netstack environment and a new
     /// unattached endpoint.
-    pub async fn new_netstack_and_device<N, S>(
+    pub async fn new_netstack_and_device<N, E, S, T>(
         &self,
-        name: &'static str,
+        name: T,
     ) -> Result<(TestEnvironment<'_>, S::Proxy, TestEndpoint<'_>)>
     where
         N: Netstack,
+        E: Endpoint,
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
+        T: Into<String> + Copy,
     {
-        let (env, stack) = self.new_netstack::<N, S>(name)?;
-        let endpoint = self.create_endpoint(name).await.context("failed to create endpoint")?;
+        let (env, stack) = self.new_netstack::<N, S, _>(name)?;
+        let endpoint =
+            self.create_endpoint::<E, _>(name).await.context("failed to create endpoint")?;
         Ok((env, stack, endpoint))
     }
 }
@@ -388,14 +430,18 @@ impl<'a> TestEnvironment<'a> {
     /// Note that this environment needs a Netstack for this operation to
     /// succeed. See [`TestSandbox::create_netstack_environment`] to create an
     /// environment with all the Netstack services.
-    pub async fn join_network(
+    pub async fn join_network<E, S>(
         &self,
         network: &TestNetwork<'a>,
-        ep_name: impl Into<String>,
+        ep_name: S,
         config: InterfaceConfig,
-    ) -> Result<TestInterface<'a>> {
+    ) -> Result<TestInterface<'a>>
+    where
+        E: Endpoint,
+        S: Into<String>,
+    {
         let endpoint =
-            network.create_endpoint(ep_name).await.context("failed to create endpoint")?;
+            network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
         let interface =
             endpoint.into_interface_in_environment(self).await.context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
@@ -434,10 +480,14 @@ impl<'a> TestNetwork<'a> {
     }
 
     /// Creates a new endpoint with `name` attached to this network.
-    pub async fn create_endpoint(&self, name: impl Into<String>) -> Result<TestEndpoint<'a>> {
+    pub async fn create_endpoint<E, S>(&self, name: S) -> Result<TestEndpoint<'a>>
+    where
+        E: Endpoint,
+        S: Into<String>,
+    {
         let ep = self
             .sandbox
-            .create_endpoint(name)
+            .create_endpoint::<E, _>(name)
             .await
             .with_context(|| format!("failed to create endpoint for network {}", self.name))?;
         let () = self.attach_endpoint(&ep).await.with_context(|| {
@@ -510,9 +560,32 @@ impl<'a> TestEndpoint<'a> {
     /// Adds this endpoint to `stack`, returning the interface identifier.
     pub async fn add_to_stack(&self, stack: &net_stack::StackProxy) -> Result<u64> {
         Ok(match self.get_device().await.context("get_device failed")? {
-            netemul_network::DeviceConnection::Ethernet(eth) => stack.add_ethernet_interface(&self.name, eth).await.squash_result()?,
+            netemul_network::DeviceConnection::Ethernet(eth) => {
+                stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
+            }
             netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
-                todo!("(48907) Support NetworkDevice version of integration tests. Got unexpected NetworkDevice {:?}", netdevice)
+                let netdevice: fidl_fuchsia_hardware_network::DeviceInstanceProxy =
+                    netdevice.into_proxy()?;
+                let (device, device_server_end) = fidl::endpoints::create_endpoints::<
+                    fidl_fuchsia_hardware_network::DeviceMarker,
+                >()?;
+                let (mac, mac_server_end) = fidl::endpoints::create_endpoints::<
+                    fidl_fuchsia_hardware_network::MacAddressingMarker,
+                >()?;
+                let () = netdevice.get_device(device_server_end)?;
+                let () = netdevice.get_mac_addressing(mac_server_end)?;
+                stack
+                    .add_interface(
+                        net_stack::InterfaceConfig { name: None, topopath: None, metric: None },
+                        &mut net_stack::DeviceDefinition::Ethernet(
+                            net_stack::EthernetDeviceDefinition {
+                                network_device: device,
+                                mac: mac,
+                            },
+                        ),
+                    )
+                    .await
+                    .squash_result()?
             }
         })
     }

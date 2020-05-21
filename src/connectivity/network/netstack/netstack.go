@@ -869,18 +869,22 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	}, b, b, false, defaultInterfaceMetric, false /* enabled */)
 }
 
+func makeEndpointName(prefix, config_name string) func(nicid tcpip.NICID) string {
+	return func(nicid tcpip.NICID) string {
+		if len(config_name) == 0 {
+			return fmt.Sprintf("%s%d", prefix, nicid)
+		}
+		return config_name
+	}
+}
+
 func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, device ethernet.DeviceWithCtx) (*ifState, error) {
 	client, err := eth.NewClient("netstack", topopath, config.Filepath, device)
 	if err != nil {
 		return nil, err
 	}
 
-	return ns.addEndpoint(func(nicid tcpip.NICID) string {
-		if len(config.Name) == 0 {
-			return fmt.Sprintf("eth%d", nicid)
-		}
-		return config.Name
-	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), false /* enabled */)
+	return ns.addEndpoint(makeEndpointName("eth", config.Name), eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), false /* enabled */)
 }
 
 // addEndpoint creates a new NIC with stack.Stack.

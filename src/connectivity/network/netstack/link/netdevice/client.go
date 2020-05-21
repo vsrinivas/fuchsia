@@ -173,7 +173,7 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 			case header.IPv6ProtocolNumber:
 				frameType = network.FrameTypeIpv6
 			default:
-				_ = syslog.ErrorTf(tag, "Can't identify outgoing packet type")
+				_ = syslog.ErrorTf(tag, "can't identify outgoing packet type")
 			}
 		}
 
@@ -462,7 +462,7 @@ func (c *Client) resetDescriptor(descriptor *bufferDescriptor) {
 
 // NewClient creates a new client from a provided network device interface.
 func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, sessionConfigFactory SessionConfigFactory) (*Client, error) {
-	_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "Creating network device client")
+	_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "creating network device client")
 
 	deviceInfo, err := dev.GetInfo(ctx)
 	if err != nil {

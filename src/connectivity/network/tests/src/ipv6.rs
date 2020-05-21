@@ -21,6 +21,7 @@ use futures::stream::{FusedStream, TryStream, TryStreamExt};
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
+use netstack_testing_macros::*;
 use packet::serialize::{InnerPacketBuilder, Serializer};
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
 use packet_formats::icmp::ndp::{
@@ -82,22 +83,26 @@ const TEST_MAC_ADDR: Mac = Mac::new([0x02, 0x00, 0x00, 0x00, 0x00, 0x01]);
 /// Returns the network, environment, netstack client, interface (added to the
 /// netstack) and a fake endpoint used to read and write raw ethernet packets.
 /// The interface will be up when `setup_network` returns successfully.
-async fn setup_network(
+async fn setup_network<E, S>(
     sandbox: &TestSandbox,
-    name: impl Copy + Into<String>,
+    name: S,
 ) -> Result<(
     TestNetwork<'_>,
     TestEnvironment<'_>,
     netstack::NetstackProxy,
     TestInterface<'_>,
     TestFakeEndpoint<'_>,
-)> {
+)>
+where
+    E: Endpoint,
+    S: Copy + Into<String>,
+{
     let network = sandbox.create_network(name).await.context("failed to create network")?;
     let environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(name, &[])
         .context("failed to create netstack environment")?;
     let iface = environment
-        .join_network(&network, name, InterfaceConfig::None)
+        .join_network::<E, _>(&network, name, InterfaceConfig::None)
         .await
         .context("failed to configure networking")?;
     let fake_ep = network.create_fake_endpoint()?;
@@ -233,15 +238,16 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
 
 /// Test that across netstack runs, a device will initially be assigned the same
 /// IPv6 addresses.
-#[fasync::run_singlethreaded(test)]
-async fn consistent_initial_ipv6_addrs() -> Result {
+#[endpoint_variants_test]
+async fn consistent_initial_ipv6_addrs<E: Endpoint>() -> Result {
     let name = "consistent_initial_ipv6_addrs";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let env = sandbox
         .create_environment(name, &[KnownServices::SecureStash])
         .context("failed to create environment")?;
     let launcher = env.get_launcher().context("failed to get launcher")?;
-    let endpoint = sandbox.create_endpoint(name).await.context("failed to create endpoint")?;
+    let endpoint =
+        sandbox.create_endpoint::<Ethernet, _>(name).await.context("failed to create endpoint")?;
 
     // Make sure netstack uses the same addresses across runs for a device.
     let first_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
@@ -263,12 +269,12 @@ async fn consistent_initial_ipv6_addrs() -> Result {
 
 /// Tests that `EXPECTED_ROUTER_SOLICIATIONS` Router Solicitation messages are transmitted
 /// when the interface is brought up.
-#[fasync::run_singlethreaded(test)]
-async fn sends_router_solicitations() -> Result {
+#[endpoint_variants_test]
+async fn sends_router_solicitations<E: Endpoint>() -> Result {
     let name = "sends_router_solicitations";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, _netstack, _iface, fake_ep) =
-        setup_network(&sandbox, name).await?;
+        setup_network::<E, _>(&sandbox, name).await?;
 
     // Make sure exactly `EXPECTED_ROUTER_SOLICIATIONS` RS messages are transmited
     // by the netstack.
@@ -365,11 +371,12 @@ async fn sends_router_solicitations() -> Result {
 }
 
 /// Tests that both stable and temporary SLAAC addresses are generated for a SLAAC prefix.
-#[fasync::run_singlethreaded(test)]
-async fn slaac_with_privacy_extensions() -> Result {
+#[endpoint_variants_test]
+async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
     let name = "slaac_with_privacy_extensions";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
-    let (_network, _environment, netstack, iface, fake_ep) = setup_network(&sandbox, name).await?;
+    let (_network, _environment, netstack, iface, fake_ep) =
+        setup_network::<E, _>(&sandbox, name).await?;
 
     // Wait for a Router Solicitation.
     //
@@ -602,11 +609,12 @@ async fn fail_dad_with_na(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<
 ///
 /// If no remote node has any interest in an address the netstack is attempting to assign to
 /// an interface, DAD should succeed.
-#[fasync::run_singlethreaded(test)]
-async fn duplicate_address_detection() -> Result {
+#[endpoint_variants_test]
+async fn duplicate_address_detection<E: Endpoint>() -> Result {
     let name = "duplicate_address_detection";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
-    let (_network, _environment, netstack, iface, fake_ep) = setup_network(&sandbox, name).await?;
+    let (_network, _environment, netstack, iface, fake_ep) =
+        setup_network::<E, _>(&sandbox, name).await?;
 
     // Add an address and expect it to fail DAD because we simulate another node
     // performing DAD at the same time.

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
-use net_declare::fidl_ip;
-
 use anyhow::Context as _;
+use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
+use futures::TryStreamExt as _;
+use net_declare::fidl_ip;
+use netstack_testing_macros::*;
 
 use crate::environments::*;
 use crate::Result;
-use futures::TryStreamExt as _;
 
 /// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
 /// if given an invalid interface id.
@@ -18,7 +18,7 @@ async fn set_interface_status_unknown_interface() -> Result {
     let name = "set_interface_status";
     let sandbox = TestSandbox::new()?;
     let (_env, netstack) =
-        sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker>(name)?;
+        sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)?;
 
     let interfaces = netstack.get_interfaces2().await.context("failed to call get_interfaces2")?;
     let next_id =
@@ -78,7 +78,9 @@ async fn add_ethernet_device() -> Result {
     let name = "add_ethernet_device";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_env, netstack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, fidl_fuchsia_netstack::NetstackMarker>(name)
+        .new_netstack_and_device::<Netstack2, Ethernet, fidl_fuchsia_netstack::NetstackMarker, _>(
+            name,
+        )
         .await?;
 
     let id = netstack
@@ -111,10 +113,13 @@ async fn add_ethernet_device() -> Result {
     Ok::<(), anyhow::Error>(())
 }
 
-async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
+#[netstack_variants_test]
+async fn add_ethernet_interface<N: Netstack>() -> Result {
+    let name = format!("add_ethernet_interface_{}", N::VERSION.get_name());
     let sandbox = TestSandbox::new()?;
-    let (_env, stack, device) =
-        sandbox.new_netstack_and_device::<N, fidl_fuchsia_net_stack::StackMarker>(name).await?;
+    let (_env, stack, device) = sandbox
+        .new_netstack_and_device::<N, Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(&name)
+        .await?;
     let id = device.add_to_stack(&stack).await?;
     let interface = stack
         .list_interfaces()
@@ -132,22 +137,12 @@ async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn add_ethernet_interface_n2() -> Result {
-    add_ethernet_interface::<Netstack2>("add_ethernet_interface_n2").await
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn add_ethernet_interface_n3() -> Result {
-    add_ethernet_interface::<Netstack3>("add_ethernet_interface_n3").await
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
 async fn add_del_interface_address() -> Result {
     let name = "add_del_interface_address";
 
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_env, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(name)
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .context("failed to create environment")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
@@ -199,7 +194,7 @@ async fn add_remove_interface_address_errors() -> Result {
 
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (env, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(name)
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .context("failed to create environment")?;
     let netstack = env
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
@@ -263,10 +258,12 @@ async fn add_remove_interface_address_errors() -> Result {
     Ok(())
 }
 
-async fn get_interface_info_not_found<N: Netstack>(name: &'static str) -> Result {
+#[netstack_variants_test]
+async fn get_interface_info_not_found<N: Netstack>() -> Result {
+    let name = format!("get_interface_info_not_found_{}", N::VERSION.get_name());
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_env, stack) = sandbox
-        .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker>(name)
+        .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(&name)
         .context("failed to create environment")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
@@ -278,22 +275,12 @@ async fn get_interface_info_not_found<N: Netstack>(name: &'static str) -> Result
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn get_interface_info_not_found_n2() -> Result {
-    get_interface_info_not_found::<Netstack2>("get_interface_info_not_found_n2").await
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn get_interface_info_not_found_n3() -> Result {
-    get_interface_info_not_found::<Netstack3>("get_interface_info_not_found_n3").await
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
 async fn disable_interface_loopback() -> Result {
     let name = "disable_interface_loopback";
 
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_env, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(name)
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .context("failed to create environment")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
@@ -318,11 +305,11 @@ async fn disable_interface_loopback() -> Result {
 }
 
 /// Tests fuchsia.net.stack/Stack.del_ethernet_interface.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_remove_interface() -> Result {
+#[endpoint_variants_test]
+async fn test_remove_interface<E: Endpoint>() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_env, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(
+        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
             "test_remove_interface",
         )
         .await
@@ -344,11 +331,11 @@ async fn test_remove_interface() -> Result {
 }
 
 /// Tests that adding an interface causes an interface changed event.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_add_interface_causes_interfaces_changed() -> Result {
+#[endpoint_variants_test]
+async fn test_add_interface_causes_interfaces_changed<E: Endpoint>() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (env, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(
+        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
             "test_remove_interface",
         )
         .await
@@ -382,10 +369,10 @@ async fn test_add_interface_causes_interfaces_changed() -> Result {
 /// Tests that if a device closes (is removed from the system), the
 /// corresponding Netstack interface is deleted.
 /// if `enabled` is `true`, enables the interface before closing the device.
-async fn test_close_interface(enabled: bool) -> Result {
+async fn test_close_interface<E: Endpoint>(enabled: bool) -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (env, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, fidl_fuchsia_net_stack::StackMarker>(
+        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
             "test_remove_interface",
         )
         .await
@@ -437,19 +424,19 @@ async fn test_close_interface(enabled: bool) -> Result {
     Ok(())
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_close_disabled_interface() -> Result {
-    test_close_interface(false).await
+#[endpoint_variants_test]
+async fn test_close_disabled_interface<E: Endpoint>() -> Result {
+    test_close_interface::<E>(false).await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_close_enabled_interface() -> Result {
-    test_close_interface(true).await
+#[endpoint_variants_test]
+async fn test_close_enabled_interface<E: Endpoint>() -> Result {
+    test_close_interface::<E>(true).await
 }
 
 /// Tests races between device link down and close.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_down_close_race() -> Result {
+#[endpoint_variants_test]
+async fn test_down_close_race<E: Endpoint>() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let env = sandbox
         .create_netstack_environment::<Netstack2, _>("test_down_close_race")
@@ -461,7 +448,7 @@ async fn test_down_close_race() -> Result {
 
     for _ in 0..100u64 {
         let dev = sandbox
-            .create_endpoint("ep")
+            .create_endpoint::<E, _>("ep")
             .await
             .context("failed to create endpoint")?
             .into_interface_in_environment(&env)

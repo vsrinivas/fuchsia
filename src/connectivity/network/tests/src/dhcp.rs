@@ -9,6 +9,7 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 
 use crate::environments::*;
 use crate::Result;
+use netstack_testing_macros::*;
 
 /// Endpoints in DHCP tests are either
 /// 1. attached to the server stack, which will have DHCP servers serving on them.
@@ -38,9 +39,9 @@ struct DhcpTestNetwork<'a> {
 }
 
 // TODO(tamird): could this be done with a single stack and bridged interfaces?
-#[fuchsia_async::run_singlethreaded(test)]
-async fn acquire_dhcp() -> Result {
-    test_dhcp(
+#[endpoint_variants_test]
+async fn acquire_dhcp<E: Endpoint>() -> Result {
+    test_dhcp::<E>(
         "acquire_dhcp",
         &mut [DhcpTestNetwork {
             name: "net",
@@ -68,9 +69,9 @@ async fn acquire_dhcp() -> Result {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
-    test_dhcp(
+#[endpoint_variants_test]
+async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>() -> Result {
+    test_dhcp::<E>(
         "acquire_dhcp_with_dhcpd_bound_device",
         &mut [DhcpTestNetwork {
             name: "net",
@@ -98,9 +99,9 @@ async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn acquire_dhcp_with_multiple_network() -> Result {
-    test_dhcp(
+#[endpoint_variants_test]
+async fn acquire_dhcp_with_multiple_network<E: Endpoint>() -> Result {
+    test_dhcp::<E>(
         "acquire_dhcp_with_dhcpd_bound_device",
         &mut [
             DhcpTestNetwork {
@@ -163,7 +164,7 @@ async fn acquire_dhcp_with_multiple_network() -> Result {
 ///
 /// DHCP clients are started on each client endpoint, attempt to acquire
 /// addresses through DHCP and compare them to expected address.
-async fn test_dhcp(
+async fn test_dhcp<E: Endpoint>(
     name: &str,
     network_configs: &mut [DhcpTestNetwork<'_>],
     dhcpd_config_paths: &[&str],
@@ -214,7 +215,7 @@ async fn test_dhcp(
                     };
 
                     let interface = test_environment
-                        .join_network(network_ref, *name, config)
+                        .join_network::<E, _>(network_ref, *name, config)
                         .await
                         .context("failed to create endpoint")?;
 
@@ -341,8 +342,8 @@ async fn test_dhcp(
 
 /// Tests that Netstack exposes DNS servers discovered through DHCP and
 /// `dns_resolver` loads them into its name servers configuration.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_discovered_dns() -> Result {
+#[endpoint_variants_test]
+async fn test_discovered_dns<E: Endpoint>() -> Result {
     const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
     /// DNS server served by DHCP.
     const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.56);
@@ -386,7 +387,7 @@ async fn test_discovered_dns() -> Result {
         .context("failed to create client environment")?;
 
     let _server_iface = server_environment
-        .join_network(
+        .join_network::<E, _>(
             &network,
             "server-ep",
             InterfaceConfig::StaticIp(fidl_fuchsia_net_stack::InterfaceAddress {
@@ -399,7 +400,7 @@ async fn test_discovered_dns() -> Result {
 
     let dhcp_server = server_environment
         .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
-        .context("failed to connext to DHCP server")?;
+        .context("failed to connect to DHCP server")?;
 
     let () = dhcp_server
         .set_option(&mut fidl_fuchsia_net_dhcp::Option_::DomainNameServer(vec![DHCP_DNS_SERVER]))
@@ -424,7 +425,7 @@ async fn test_discovered_dns() -> Result {
 
     // Start networking on client environment.
     let client_iface = client_environment
-        .join_network(&network, "client-ep", InterfaceConfig::Dhcp)
+        .join_network::<E, _>(&network, "client-ep", InterfaceConfig::Dhcp)
         .await
         .context("failed to configure client networking")?;
 
