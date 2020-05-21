@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <protocol_request.test.json.h>
 namespace test {
 namespace name {
 namespace testing {

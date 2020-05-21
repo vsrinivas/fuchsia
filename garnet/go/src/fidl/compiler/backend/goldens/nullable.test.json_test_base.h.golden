@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <nullable.test.json.h>
 namespace fidl {
 namespace test {
 namespace nullable {

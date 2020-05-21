@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <handles_in_types.test.json.h>
 namespace test {
 namespace name {
 namespace testing {}  // namespace testing

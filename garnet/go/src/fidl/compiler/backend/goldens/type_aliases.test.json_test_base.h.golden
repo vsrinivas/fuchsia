@@ -3,7 +3,7 @@
 #pragma once
 
 #include <someotherlibrary/cpp/fidl.h>
-
+#include <type_aliases.test.json.h>
 namespace example {
 namespace testing {}  // namespace testing
 }  // namespace example

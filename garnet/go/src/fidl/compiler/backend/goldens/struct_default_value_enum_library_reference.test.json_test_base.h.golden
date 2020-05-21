@@ -3,7 +3,7 @@
 #pragma once
 
 #include <dependent/cpp/fidl.h>
-
+#include <struct_default_value_enum_library_reference.test.json.h>
 namespace example {
 namespace testing {}  // namespace testing
 }  // namespace example

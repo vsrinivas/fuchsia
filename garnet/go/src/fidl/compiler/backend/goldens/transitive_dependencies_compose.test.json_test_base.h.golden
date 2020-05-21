@@ -4,7 +4,7 @@
 
 #include <bottom/cpp/fidl.h>
 #include <middle/cpp/fidl.h>
-
+#include <transitive_dependencies_compose.test.json.h>
 namespace top {
 namespace testing {
 

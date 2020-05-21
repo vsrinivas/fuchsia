@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <union_sandwich.test.json.h>
 namespace test {
 namespace fidl {
 namespace unionsandwich {

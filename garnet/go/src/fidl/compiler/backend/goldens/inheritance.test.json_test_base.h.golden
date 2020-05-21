@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <inheritance.test.json.h>
 namespace fidl {
 namespace test {
 namespace json {

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <bits.test.json.h>
 namespace fidl {
 namespace test {
 namespace json {

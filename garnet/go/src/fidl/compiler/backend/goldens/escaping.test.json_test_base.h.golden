@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <escaping.test.json.h>
 namespace escapeme {
 namespace testing {}  // namespace testing
 }  // namespace escapeme

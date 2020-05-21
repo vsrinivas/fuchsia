@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <request_flexible_envelope.test.json.h>
 namespace fidl {
 namespace test {
 namespace json {

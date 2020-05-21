@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <bindings_denylist.test.json.h>
 namespace test {
 namespace name {
 namespace testing {}  // namespace testing

@@ -14,6 +14,8 @@ const testBaseTemplate = `
 #include <{{ . }}>
 {{ end -}}
 
+#include <{{ .PrimaryHeader }}>
+
 {{- range .Library }}
 namespace {{ . }} {
 {{- end }}

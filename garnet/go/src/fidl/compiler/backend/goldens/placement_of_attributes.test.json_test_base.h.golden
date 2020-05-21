@@ -3,7 +3,7 @@
 #pragma once
 
 #include <exampleusing/cpp/fidl.h>
-
+#include <placement_of_attributes.test.json.h>
 namespace example {
 namespace testing {
 

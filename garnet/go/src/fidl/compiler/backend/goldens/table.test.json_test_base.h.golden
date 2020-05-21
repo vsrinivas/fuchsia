@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <table.test.json.h>
 namespace fidl {
 namespace test {
 namespace json {
