@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/netutil"
+	"go.fuchsia.dev/fuchsia/tools/whereiscl/netutil"
 )
 
 const fuchsiaURL = "https://fuchsia.googlesource.com"

@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"testing"
 
-	th "fuchsia.googlesource.com/fuchsia/tools/whereiscl/testhelper"
 	"github.com/google/go-cmp/cmp"
+	th "go.fuchsia.dev/fuchsia/tools/whereiscl/testhelper"
 )
 
 func TestGetGIStatus_passed(t *testing.T) {

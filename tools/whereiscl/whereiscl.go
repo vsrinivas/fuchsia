@@ -14,7 +14,7 @@ import (
 	"log"
 	"os"
 
-	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
+	"go.fuchsia.dev/fuchsia/tools/whereiscl/lib"
 )
 
 var gitRevision = flag.String("rev", "", "git revision (anything that 'git rev-parse' can parse)")

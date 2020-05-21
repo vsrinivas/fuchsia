@@ -16,7 +16,7 @@ import (
 	"regexp"
 	"strings"
 
-	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/netutil"
+	"go.fuchsia.dev/fuchsia/tools/whereiscl/netutil"
 )
 
 const fuchsiaReviewURL = "https://fuchsia-review.googlesource.com"
