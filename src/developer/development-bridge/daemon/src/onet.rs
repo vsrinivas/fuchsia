@@ -12,15 +12,19 @@ use {
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
     futures::channel::oneshot,
     futures::future::FutureExt,
-    futures::io::{AsyncReadExt, AsyncWriteExt},
     std::io,
-    std::io::{Read, Write},
+    std::os::unix::io::{FromRawFd, IntoRawFd},
     std::process::{Child, Stdio},
     std::sync::Arc,
     std::time::Duration,
 };
 
+fn async_from_sync<S: IntoRawFd>(sync: S) -> async_std::fs::File {
+    unsafe { async_std::fs::File::from_raw_fd(sync.into_raw_fd()) }
+}
+
 type ThreadHandle = std::thread::JoinHandle<Result<(), Error>>;
+type TaskHandle = async_std::task::JoinHandle<Result<(), Error>>;
 
 pub struct HostPipeConnection {
     // Uses a std::thread handle for now as hoist::spawn() only returns a
@@ -33,9 +37,10 @@ pub struct HostPipeConnection {
 
 struct HostPipeChild {
     inner: Child,
+    // These are wrapped in Option so drop(&mut self) can consume them
     cancel_tx: Option<oneshot::Sender<()>>,
-    writer_handle: Option<ThreadHandle>,
-    reader_handle: Option<ThreadHandle>,
+    writer_handle: Option<TaskHandle>,
+    reader_handle: Option<TaskHandle>,
 }
 
 impl HostPipeChild {
@@ -47,20 +52,37 @@ impl HostPipeChild {
             .stdin(Stdio::piped())
             .spawn()
             .context("running target overnet pipe")?;
-        let (pipe_rx, pipe_tx) =
+        let (mut pipe_rx, mut pipe_tx) =
             futures::AsyncReadExt::split(overnet_pipe().context("creating local overnet pipe")?);
         let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
-        let writer_handle = Some(spawn_copy_target_stdout_to_pipe(
-            inner.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?,
-            pipe_tx,
-        )?);
-        let reader_handle = Some(spawn_copy_pipe_to_target_stdin(
-            pipe_rx,
-            cancel_rx,
-            inner.stdin.take().ok_or(anyhow!("unable to get stdin from target pipe"))?,
-        )?);
-        let cancel_tx = Some(cancel_tx);
-        Ok(HostPipeChild { inner, cancel_tx, writer_handle, reader_handle })
+
+        let stdout_pipe =
+            inner.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?;
+        let writer_handle = async_std::task::spawn(async move {
+            async_std::io::copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await?;
+            log::info!("exiting onet pipe writer task (client -> ascendd)");
+            Ok(())
+        });
+
+        let stdin_pipe =
+            inner.stdin.take().ok_or(anyhow!("unable to get stdin from target pipe"))?;
+        let reader_handle = async_std::task::spawn(async move {
+            let mut stdin_pipe = async_from_sync(stdin_pipe);
+            let mut cancel_rx = cancel_rx.fuse();
+            futures::select! {
+                copy_res = async_std::io::copy(&mut pipe_rx, &mut stdin_pipe).fuse() => copy_res?,
+                _ = cancel_rx => 0,
+            };
+            log::info!("exiting onet pipe reader task (ascendd -> client)");
+            Ok(())
+        });
+
+        Ok(HostPipeChild {
+            inner,
+            cancel_tx: Some(cancel_tx),
+            writer_handle: Some(writer_handle),
+            reader_handle: Some(reader_handle),
+        })
     }
 
     pub fn kill(&mut self) -> io::Result<()> {
@@ -78,29 +100,19 @@ impl HostPipeChild {
 
 impl Drop for HostPipeChild {
     fn drop(&mut self) {
+        let cancel_tx = self.cancel_tx.take().expect("cancel_tx is gone");
+        let reader_handle = self.reader_handle.take().expect("reader_handle is gone");
+        let writer_handle = self.writer_handle.take().expect("writer_handle is gone");
+
         // Ignores whether the receiver has been closed, this is just to
         // un-stick it from an attempt at reading from Ascendd.
-        let _ = self
-            .cancel_tx
-            .take()
-            .expect("invariant violated, child should always be some before drop")
-            .send(());
-        let reader_result = self
-            .reader_handle
-            .take()
-            .expect("invariant violated, child should always have reader handle")
-            .join()
-            .unwrap();
-        let writer_result = self
-            .writer_handle
-            .take()
-            .expect("invariant violated, child should always have writer handle")
-            .join()
-            .unwrap();
+        let _ = cancel_tx.send(());
+        let reader_result = futures::executor::block_on(reader_handle).unwrap();
+        let writer_result = futures::executor::block_on(writer_handle).unwrap();
         log::trace!(
             "Dropped HostPipeChild. Writer result: '{:?}'; reader result: '{:?}'",
             writer_result,
-            reader_result
+            reader_result,
         );
     }
 }
@@ -211,71 +223,6 @@ fn overnet_pipe() -> Result<fidl::AsyncSocket, Error> {
     Ok(local_socket)
 }
 
-fn spawn_copy_target_stdout_to_pipe(
-    mut stdout_pipe: std::process::ChildStdout,
-    mut pipe_tx: futures::io::WriteHalf<fidl::AsyncSocket>,
-) -> Result<ThreadHandle, Error> {
-    let handle = std::thread::Builder::new()
-        .spawn(move || -> Result<(), Error> {
-            let mut buf = [0u8; 4096];
-            loop {
-                let n = stdout_pipe.read(&mut buf)?;
-                if n == 0 {
-                    break;
-                }
-                futures::executor::block_on(pipe_tx.write_all(&buf[..n]))?;
-            }
-
-            log::info!("exiting onet pipe thread writer (client -> ascendd)");
-            Ok(())
-        })
-        .context("spawning blocking thread")?;
-
-    Ok(handle)
-}
-
-// This attr is here because `cancel_rx` (below) needs to be mut, but the
-// compiler is not able to figure this out how the variable is used when placed
-// in a `select!` invocation. If the `mut` is removed then the compiler will
-// complain that `cancel_rx` needs to be mut, but once the `mut` is added the
-// compiler will complain that `cancel_rx` does not need to be `mut`.
-#[allow(unused_mut)]
-fn spawn_copy_pipe_to_target_stdin(
-    mut pipe_rx: futures::io::ReadHalf<fidl::AsyncSocket>,
-    mut cancel_rx: oneshot::Receiver<()>,
-    mut stdin_pipe: std::process::ChildStdin,
-) -> Result<ThreadHandle, Error> {
-    // Spawns new thread to avoid blocking executor on stdin_pipe and stdout_pipe.
-    let handle = std::thread::Builder::new()
-        .spawn(move || -> Result<(), Error> {
-            let mut buf = [0u8; 4096];
-            let mut cancel_rx = cancel_rx.fuse();
-            loop {
-                let n = match futures::executor::block_on(async {
-                    futures::select! {
-                        n = pipe_rx.read(&mut buf).fuse() => n.context("host-pipe reading from ascendd"),
-                        res = cancel_rx => match res {
-                            Ok(_) => Ok(0),
-                            Err(e) => Err(e).context("host-pipe reading from shutdown channel"),
-                        },
-                    }
-                })? {
-                    0 => break,
-                    n => n,
-                };
-                match stdin_pipe.write_all(&buf[..n]) {
-                    Ok(_) => (),
-                    Err(_) => break,
-                };
-            }
-            log::info!("exiting onet pipe thread reader (ascendd -> client)");
-            Ok(())
-        })
-        .context("spawning blocking thread")?;
-
-    Ok(handle)
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -287,23 +234,19 @@ mod test {
         /// closing. The reader and writer handles don't do anything other than
         /// spin until they receive a message to stop.
         pub fn fake_new(child: Child) -> Self {
-            let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
-            let (other_cancel_tx, mut other_cancel_rx) = oneshot::channel::<()>();
+            let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
+            let (other_cancel_tx, other_cancel_rx) = oneshot::channel::<()>();
             Self {
                 inner: child,
                 cancel_tx: Some(cancel_tx),
-                writer_handle: Some(std::thread::spawn(move || {
-                    while cancel_rx.try_recv().context("host-pipe fake test writer")?.is_none() {}
+                writer_handle: Some(async_std::task::spawn(async move {
+                    cancel_rx.await.context("host-pipe fake test writer")?;
                     other_cancel_tx.send(()).unwrap();
-                    Result::<(), Error>::Ok(())
+                    Ok(())
                 })),
-                reader_handle: Some(std::thread::spawn(move || {
-                    while other_cancel_rx
-                        .try_recv()
-                        .context("host-pipe fake test reader")?
-                        .is_none()
-                    {}
-                    Result::<(), Error>::Ok(())
+                reader_handle: Some(async_std::task::spawn(async move {
+                    other_cancel_rx.await.context("host-pipe fake test writer")?;
+                    Ok(())
                 })),
             }
         }
