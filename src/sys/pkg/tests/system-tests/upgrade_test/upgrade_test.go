@@ -203,8 +203,17 @@ func initializeDevice(
 	}
 
 	if build != nil {
-		if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
-			return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
+		// Only pave if the device is not running the expected version.
+		upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if up to date during initialization: %w", err)
+		}
+		if upToDate {
+			logger.Infof(ctx, "device already up to date")
+		} else {
+			if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
+				return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
+			}
 		}
 	}
 
