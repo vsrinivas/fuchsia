@@ -792,7 +792,7 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock_NoTransferRightShouldCauseNo
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
 
-  // ... and set it on this capturer.
+  // ... and set it on this renderer.
   audio_renderer_->SetReferenceClock(std::move(dupe_clock));
   zx::clock received_clock = GetAndValidateReferenceClock();
   clock::testing::VerifySame(orig_clock, received_clock);
@@ -824,9 +824,6 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock_NoDuplicateRightShouldDiscon
 
   audio_renderer_->SetReferenceClock(std::move(dupe_clock));
 
-  audio_renderer_->GetReferenceClock(
-      CompletionCallback([](zx::clock clock) { zx::clock received_clock = std::move(clock); }));
-
   ExpectDisconnect();
 }
 
@@ -836,9 +833,6 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock_NoReadRightShouldDisconnect)
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_READ, &dupe_clock), ZX_OK);
 
   audio_renderer_->SetReferenceClock(std::move(dupe_clock));
-
-  audio_renderer_->GetReferenceClock(
-      CompletionCallback([](zx::clock clock) { zx::clock received_clock = std::move(clock); }));
 
   ExpectDisconnect();
 }
