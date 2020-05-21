@@ -44,8 +44,9 @@ class Vfs;
 struct vdircookie_t;
 
 inline bool vfs_valid_name(fbl::StringPiece name) {
-  return name.length() <= NAME_MAX && memchr(name.data(), '/', name.length()) == nullptr &&
-         name != "." && name != "..";
+  return name.length() > 0 && name.length() <= NAME_MAX &&
+      memchr(name.data(), '/', name.length()) == nullptr &&
+      name != "." && name != "..";
 }
 
 // The VFS interface declares a default abstract Vnode class with

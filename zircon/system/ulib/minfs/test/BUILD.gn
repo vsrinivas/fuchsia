@@ -12,6 +12,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
@@ -227,4 +228,15 @@ migrated_manifest("minfs-power-manifest") {
 
 migrated_manifest("minfs-host-manifest") {
   deps = [ ":minfs-host" ]
+}
+
+fuzzer("minfs-fuzzer") {
+  sources = [ "unit/fuzz.cc" ]
+  deps = [
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/minfs",
+  ]
+  include_dirs = [ "$zx/system/ulib/minfs" ]
 }

@@ -598,7 +598,10 @@ fail:
 
 zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
   TRACE_DURATION("minfs", "Directory::Create", "name", name);
-  ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
+
+  if (!fs::vfs_valid_name(name)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   bool success = false;
   fs::Ticker ticker(fs_->StartTicker());
