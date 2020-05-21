@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::serialization::{json::SerializableHierarchyFields, utils::format_parts, *},
+    crate::serialization::{serialize::SerializableHierarchyFields, utils::format_parts, *},
     anyhow::Error,
     serde::ser::{Serialize, SerializeMap, SerializeStruct, Serializer},
     serde_json::{

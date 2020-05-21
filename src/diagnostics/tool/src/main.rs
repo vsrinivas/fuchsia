@@ -12,7 +12,7 @@ use {
         self,
         serialization::{
             json::{JsonNodeHierarchySerializer, RawJsonNodeHierarchySerializer},
-            HierarchyDeserializer, HierarchySerializer,
+            HierarchyDeserializer,
         },
         InspectHierarchyMatcher, NodeHierarchy,
     },
@@ -220,8 +220,7 @@ fn filter_json_schema_by_selectors(
                         &inspect_matcher,
                     ) {
                         Ok(Some(filtered)) => {
-                            let serialized_hierarchy =
-                                RawJsonNodeHierarchySerializer::serialize(filtered);
+                            let serialized_hierarchy = serde_json::to_value(filtered).unwrap();
                             value[payload_key] = serialized_hierarchy;
                             Some(value)
                         }

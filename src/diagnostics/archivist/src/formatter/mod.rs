@@ -3,14 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect_node_hierarchy::{
-        serialization::{HierarchySerializer, RawJsonNodeHierarchySerializer},
-        NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::NodeHierarchy,
     fuchsia_zircon::Time,
     lazy_static::lazy_static,
     serde::{self, ser::SerializeSeq, Serialize, Serializer},
-    serde_json::Value,
 };
 
 lazy_static! {
@@ -89,7 +85,7 @@ pub struct InspectMetadata {
 }
 
 #[derive(Serialize, Debug)]
-pub struct JsonSchema {
+pub struct Schema<Key: AsRef<str>> {
     /// Enum specifying that this schema is encoding data.
     pub data_source: DataSource,
 
@@ -100,25 +96,27 @@ pub struct JsonSchema {
     pub moniker: String,
 
     /// Payload containing diagnostics data, if the payload exists, else None.
-    pub payload: Option<Value>,
+    pub payload: Option<NodeHierarchy<Key>>,
 
     /// Schema version.
     pub version: u64,
 }
 
-impl JsonSchema {
+type InspectSchema = Schema<String>;
+
+impl Schema<String> {
     pub fn for_lifecycle_event(
         moniker: String,
         lifecycle_event_type: LifecycleEventType,
         timestamp: Time,
         errors: Vec<Error>,
-    ) -> JsonSchema {
+    ) -> Schema<String> {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
         let lifecycle_event_metadata =
             LifecycleEventMetadata { timestamp, lifecycle_event_type, errors: errors_opt };
 
-        JsonSchema {
+        Schema {
             moniker,
             version: *SCHEMA_VERSION,
             data_source: DataSource::LifecycleEvent,
@@ -133,18 +131,16 @@ impl JsonSchema {
         timestamp: Time,
         filename: String,
         errors: Vec<Error>,
-    ) -> JsonSchema {
-        let node_hierarchy_json_encoding_opt = inspect_hierarchy
-            .map(|inspect_hierarchy| RawJsonNodeHierarchySerializer::serialize(inspect_hierarchy));
+    ) -> InspectSchema {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
         let inspect_metadata = InspectMetadata { timestamp, filename, errors: errors_opt };
 
-        JsonSchema {
+        Schema {
             moniker,
             version: *SCHEMA_VERSION,
             data_source: DataSource::Inspect,
-            payload: node_hierarchy_json_encoding_opt,
+            payload: inspect_hierarchy,
             metadata: Metadata::Inspect(inspect_metadata),
         }
     }
@@ -166,7 +162,7 @@ mod tests {
         );
 
         hierarchy.sort();
-        let json_schema = JsonSchema::for_inspect(
+        let json_schema = Schema::for_inspect(
             "a/b/c/d".to_string(),
             Some(hierarchy),
             Time::from_nanos(123456),
@@ -205,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_errorful_json_inspect_formatting() {
-        let json_schema = JsonSchema::for_inspect(
+        let json_schema = Schema::for_inspect(
             "a/b/c/d".to_string(),
             None,
             Time::from_nanos(123456),
@@ -240,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_canonicol_json_lifecycle_event_formatting() {
-        let json_schema = JsonSchema::for_lifecycle_event(
+        let json_schema = Schema::for_lifecycle_event(
             "a/b/c/d".to_string(),
             LifecycleEventType::DiagnosticsReady,
             Time::from_nanos(123456),
@@ -274,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_errorful_json_lifecycle_event_formatting() {
-        let json_schema = JsonSchema::for_lifecycle_event(
+        let json_schema = Schema::for_lifecycle_event(
             "a/b/c/d".to_string(),
             LifecycleEventType::DiagnosticsReady,
             Time::from_nanos(123456),

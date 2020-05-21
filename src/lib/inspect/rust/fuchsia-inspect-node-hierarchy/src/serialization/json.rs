@@ -4,23 +4,13 @@
 
 use {
     crate::{
-        serialization::{HierarchyDeserializer, HierarchySerializer},
-        ArrayBucket, ArrayFormat, ArrayValue, NodeHierarchy, Property,
+        serialization::HierarchyDeserializer, ArrayFormat, ArrayValue, NodeHierarchy, Property,
     },
     anyhow::{bail, format_err, Error},
-    base64,
     lazy_static::lazy_static,
     paste,
-    serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer},
-    serde_json::{
-        self, json,
-        ser::{PrettyFormatter, Serializer as JsonSerializer},
-        Map, Value,
-    },
-    std::{
-        fmt::Debug,
-        str::{self, FromStr},
-    },
+    serde_json::{self, Map, Value},
+    std::{fmt::Debug, str::FromStr},
 };
 
 /// Allows to serialize a `NodeHierarchy` into a Serde JSON Value.
@@ -28,32 +18,6 @@ pub struct JsonNodeHierarchySerializer {}
 
 /// Allows to serialize a `NodeHierarchy` into a Serde JSON Value.
 pub struct RawJsonNodeHierarchySerializer {}
-
-/// Implements serialization of a `NodeHierarchy` into a Serde JSON Value.
-impl<Key: AsRef<str>> HierarchySerializer<Key> for RawJsonNodeHierarchySerializer {
-    type Type = serde_json::Value;
-
-    fn serialize(hierarchy: NodeHierarchy<Key>) -> serde_json::Value {
-        json!(JsonSerializableNodeHierarchy { hierarchy })
-    }
-}
-
-/// Implements serialization of a `NodeHierarchy` into a String.
-impl<Key> HierarchySerializer<Key> for JsonNodeHierarchySerializer
-where
-    Key: AsRef<str>,
-{
-    type Type = Result<String, anyhow::Error>;
-
-    fn serialize(hierarchy: NodeHierarchy<Key>) -> Result<String, anyhow::Error> {
-        let mut bytes = vec![];
-        let mut serializer =
-            JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
-        let value = json!(JsonSerializableNodeHierarchy { hierarchy });
-        value.serialize(&mut serializer)?;
-        Ok(str::from_utf8(&bytes)?.to_string())
-    }
-}
 
 /// Implements deserialization of a `NodeHierarchy` from a String.
 impl<Key> HierarchyDeserializer<Key> for JsonNodeHierarchySerializer
@@ -83,147 +47,6 @@ where
 
     fn deserialize(data: serde_json::Value) -> Result<NodeHierarchy<Key>, Error> {
         deserialize_json(data)
-    }
-}
-
-/// A wrapper of a Node hierarchy that allows to serialize it as JSON.
-struct JsonSerializableNodeHierarchy<Key> {
-    /// The hierarchy that will be serialized.
-    pub hierarchy: NodeHierarchy<Key>,
-}
-
-impl<Key> Serialize for JsonSerializableNodeHierarchy<Key>
-where
-    Key: AsRef<str>,
-{
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut s = serializer.serialize_map(Some(1))?;
-        let name = self.hierarchy.name.clone();
-        s.serialize_entry(&name, &SerializableHierarchyFields { hierarchy: &self.hierarchy })?;
-        s.end()
-    }
-}
-
-// The following wrapping structs are used to implement Serialize on them given
-// that it's not possible to implement traits for structs in other crates.
-
-pub(in crate) struct SerializableHierarchyFields<'a, Key> {
-    pub(in crate) hierarchy: &'a NodeHierarchy<Key>,
-}
-
-struct SerializableArrayValue<'a, T> {
-    array: &'a ArrayValue<T>,
-}
-
-struct SerializableArrayBucket<'a, T> {
-    bucket: &'a ArrayBucket<T>,
-}
-
-impl<'a, Key> Serialize for SerializableHierarchyFields<'a, Key>
-where
-    Key: AsRef<str>,
-{
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let items = self.hierarchy.properties.len() + self.hierarchy.children.len();
-        let mut s = serializer.serialize_map(Some(items))?;
-        for property in self.hierarchy.properties.iter() {
-            let name = property.name();
-            let _ = match property {
-                Property::String(_, value) => s.serialize_entry(name, &value)?,
-                Property::Int(_, value) => s.serialize_entry(name, &value)?,
-                Property::Uint(_, value) => s.serialize_entry(name, &value)?,
-                Property::Double(_, value) => s.serialize_entry(name, &value)?,
-                Property::Bool(_, value) => s.serialize_entry(name, &value)?,
-                Property::Bytes(_, array) => {
-                    s.serialize_entry(name, &format!("b64:{}", base64::encode(&array)))?
-                }
-                Property::DoubleArray(_, array) => {
-                    let wrapped_value = SerializableArrayValue { array };
-                    s.serialize_entry(name, &wrapped_value)?;
-                }
-                Property::IntArray(_, array) => {
-                    let wrapped_value = SerializableArrayValue { array };
-                    s.serialize_entry(name, &wrapped_value)?;
-                }
-                Property::UintArray(_, array) => {
-                    let wrapped_value = SerializableArrayValue { array };
-                    s.serialize_entry(name, &wrapped_value)?;
-                }
-            };
-        }
-        for child in self.hierarchy.children.iter() {
-            s.serialize_entry(&child.name, &SerializableHierarchyFields { hierarchy: child })?;
-        }
-        s.end()
-    }
-}
-
-macro_rules! impl_serialize_for_array_value {
-    ($($type:ty,)*) => {
-        $(
-            impl<'a> Serialize for SerializableArrayValue<'a, $type> {
-                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    match self.array.buckets() {
-                        Some(buckets) => {
-                            let mut s = serializer.serialize_map(Some(1))?;
-                            let wrapped_buckets = buckets
-                                .iter()
-                                .map(|bucket| SerializableArrayBucket { bucket })
-                                .collect::<Vec<SerializableArrayBucket<'_, $type>>>();
-                            s.serialize_entry("buckets", &wrapped_buckets)?;
-                            s.end()
-                        }
-                        None => {
-                            let mut s = serializer.serialize_seq(Some(self.array.values.len()))?;
-                            for value in self.array.values.iter() {
-                                s.serialize_element(&value)?;
-                            }
-                            s.end()
-                        }
-                    }
-                }
-            }
-        )*
-    }
-}
-
-macro_rules! impl_serialize_for_array_bucket {
-    ($($type:ty,)*) => {
-        $(
-            impl<'a> Serialize for SerializableArrayBucket<'a, $type> {
-                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    let mut s = serializer.serialize_map(Some(3))?;
-                    s.serialize_entry("floor", &self.bucket.floor)?;
-                    s.serialize_entry("upper_bound", &self.bucket.upper)?;
-                    s.serialize_entry("count", &self.bucket.count)?;
-                    s.end()
-                }
-            }
-        )*
-    }
-}
-
-impl_serialize_for_array_value![i64, u64, f64,];
-impl_serialize_for_array_bucket![i64, u64,];
-
-impl<'a> Serialize for SerializableArrayBucket<'a, f64> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut s = serializer.serialize_map(Some(3))?;
-        let parts = [
-            ("floor", self.bucket.floor),
-            ("upper_bound", self.bucket.upper),
-            ("count", self.bucket.count),
-        ];
-        for (entry_key, value) in parts.iter() {
-            if *value == std::f64::MAX || *value == std::f64::INFINITY {
-                s.serialize_entry(entry_key, "Infinity")?;
-            } else if *value == std::f64::MIN || *value == std::f64::NEG_INFINITY {
-                s.serialize_entry(entry_key, "-Infinity")?;
-            } else {
-                s.serialize_entry(entry_key, value)?;
-            }
-        }
-        s.end()
     }
 }
 
@@ -716,10 +539,10 @@ mod tests {
 
     #[test]
     fn serialize_json() {
-        let hierarchy = test_hierarchy();
+        let mut hierarchy = test_hierarchy();
+        hierarchy.sort();
         let expected = expected_json();
-        let result =
-            JsonNodeHierarchySerializer::serialize(hierarchy).expect("failed to serialize");
+        let result = serde_json::to_string_pretty(&hierarchy).expect("failed to serialize");
         assert_eq!(result, expected);
     }
 
@@ -749,8 +572,8 @@ mod tests {
     #[test]
     fn reversible_deserialize() -> Result<(), Error> {
         let mut original_hierarchy = get_unambigious_deserializable_hierarchy();
-        let result = JsonNodeHierarchySerializer::serialize(original_hierarchy.clone())
-            .expect("failed to format hierarchy");
+        let result =
+            serde_json::to_string(&original_hierarchy).expect("failed to format hierarchy");
         let mut parsed_hierarchy = JsonNodeHierarchySerializer::deserialize(result)?;
         parsed_hierarchy.sort();
         original_hierarchy.sort();
@@ -846,61 +669,61 @@ mod tests {
 
     fn expected_json() -> String {
         r#"{
-    "root": {
-        "a": {
-            "bytes": "b64:BfGr",
-            "double": 2.5,
-            "histogram": {
-                "buckets": [
-                    {
-                        "count": 1.0,
-                        "floor": "-Infinity",
-                        "upper_bound": 0.0
-                    },
-                    {
-                        "count": 3.0,
-                        "floor": 0.0,
-                        "upper_bound": 2.0
-                    },
-                    {
-                        "count": 4.0,
-                        "floor": 2.0,
-                        "upper_bound": "Infinity"
-                    }
-                ]
-            }
-        },
-        "array": [
-            0,
-            2,
-            4
-        ],
-        "b": {
-            "histogram": {
-                "buckets": [
-                    {
-                        "count": 4,
-                        "floor": -9223372036854775808,
-                        "upper_bound": 0
-                    },
-                    {
-                        "count": 1,
-                        "floor": 0,
-                        "upper_bound": 2
-                    },
-                    {
-                        "count": 3,
-                        "floor": 2,
-                        "upper_bound": 9223372036854775807
-                    }
-                ]
-            },
-            "int": -2,
-            "string": "some value"
-        },
-        "bool_false": false,
-        "bool_true": true
+  "root": {
+    "array": [
+      0,
+      2,
+      4
+    ],
+    "bool_false": false,
+    "bool_true": true,
+    "a": {
+      "bytes": "b64:BfGr",
+      "double": 2.5,
+      "histogram": {
+        "buckets": [
+          {
+            "count": 1.0,
+            "floor": "-Infinity",
+            "upper_bound": 0.0
+          },
+          {
+            "count": 3.0,
+            "floor": 0.0,
+            "upper_bound": 2.0
+          },
+          {
+            "count": 4.0,
+            "floor": 2.0,
+            "upper_bound": "Infinity"
+          }
+        ]
+      }
+    },
+    "b": {
+      "histogram": {
+        "buckets": [
+          {
+            "count": 4,
+            "floor": -9223372036854775808,
+            "upper_bound": 0
+          },
+          {
+            "count": 1,
+            "floor": 0,
+            "upper_bound": 2
+          },
+          {
+            "count": 3,
+            "floor": 2,
+            "upper_bound": 9223372036854775807
+          }
+        ]
+      },
+      "int": -2,
+      "string": "some value"
     }
+  }
 }"#
         .to_string()
     }

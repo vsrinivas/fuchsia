@@ -38,14 +38,8 @@ pub use crate::serialization::json::*;
 
 pub mod deprecated_json;
 pub mod json;
+mod serialize;
 mod utils;
-
-/// Implementers of this trait will provide different ways of formatting an
-/// inspect hierarchy.
-pub trait HierarchySerializer<Key> {
-    type Type;
-    fn serialize(hierarchy: NodeHierarchy<Key>) -> Self::Type;
-}
 
 /// Implementers of this trait will be able to convert an `Object` type data format that
 /// is encoding a diagnostics data hierarchy into a NodeHierarchy.
