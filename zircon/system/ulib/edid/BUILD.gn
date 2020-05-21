@@ -29,7 +29,7 @@ zx_library("edid") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
   ]
+  public_deps = [ "//zircon/public/lib/hwreg" ]
 }
