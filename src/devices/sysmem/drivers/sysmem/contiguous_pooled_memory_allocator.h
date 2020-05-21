@@ -56,7 +56,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void TraceObserverCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal);
   void DumpPoolStats();
-  void TracePoolSize();
+  void TracePoolSize(bool initial_trace);
   Owner* const parent_device_{};
   const char* const allocation_name_{};
   const uint64_t pool_id_{};
@@ -69,6 +69,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t size_{};
   bool is_cpu_accessible_{};
   bool is_ready_{};
+
+  uint64_t high_water_mark_{};
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,

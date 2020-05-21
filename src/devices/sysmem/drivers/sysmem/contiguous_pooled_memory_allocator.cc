@@ -173,7 +173,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
     return status;
   }
 
-  TracePoolSize();
+  TracePoolSize(false);
 
   // The result_parent_vmo created here is a VMO window to a sub-region of contiguous_vmo_.
   status = contiguous_vmo_.create_child(ZX_VMO_CHILD_SLICE, region->base, size, &result_parent_vmo);
@@ -213,7 +213,7 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   ZX_ASSERT(it != regions_.end());
   regions_.erase(it);
   parent_vmo.reset();
-  TracePoolSize();
+  TracePoolSize(false);
 }
 
 void ContiguousPooledMemoryAllocator::set_ready() { is_ready_ = true; }
@@ -229,7 +229,7 @@ void ContiguousPooledMemoryAllocator::TraceObserverCallback(async_dispatcher_t* 
   trace_observer_event_.signal(ZX_EVENT_SIGNALED, 0);
   // We don't care if tracing was enabled or disabled - if the category is now disabled, the trace
   // will just be ignored anyway.
-  TracePoolSize();
+  TracePoolSize(true);
 
   trace_notify_observer_updated(trace_observer_event_.get());
   wait_.Begin(dispatcher);
@@ -259,13 +259,22 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
   }
 }
 
-void ContiguousPooledMemoryAllocator::TracePoolSize() {
+void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
   uint64_t used_size = 0;
   region_allocator_.WalkAllocatedRegions([&used_size](const ralloc_region_t* r) -> bool {
     used_size += r->size;
     return true;
   });
   TRACE_COUNTER("gfx", "Contiguous pool size", pool_id_, "size", used_size);
+  bool trace_high_water_mark = initial_trace;
+  if (used_size > high_water_mark_) {
+    high_water_mark_ = used_size;
+    trace_high_water_mark = true;
+  }
+  if (trace_high_water_mark) {
+    TRACE_INSTANT("gfx", "Increased high water mark", TRACE_SCOPE_THREAD, "allocation_name",
+                  allocation_name_, "size", high_water_mark_);
+  }
 }
 
 }  // namespace sysmem_driver
