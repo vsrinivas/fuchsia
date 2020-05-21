@@ -418,16 +418,34 @@ impl MockRebootService {
 
     async fn run_reboot_service(
         self: Arc<Self>,
-        mut stream: fidl_fuchsia_device_manager::AdministratorRequestStream,
+        mut stream: fidl_fuchsia_hardware_power_statecontrol::AdminRequestStream,
     ) -> Result<(), Error> {
         while let Some(event) = stream.try_next().await? {
-            let fidl_fuchsia_device_manager::AdministratorRequest::Suspend { flags, responder } =
-                event;
-            eprintln!("TEST: Got reboot request with flags {:?}", flags);
-            *self.called.lock() += 1;
-            responder.send(Status::OK.into_raw())?;
+            match event {
+                fidl_fuchsia_hardware_power_statecontrol::AdminRequest::Suspend2 {
+                    request,
+                    responder,
+                } => {
+                    assert_eq!(
+                        request.state,
+                        Some(fidl_fuchsia_hardware_power_statecontrol::SystemPowerState::Reboot)
+                    );
+                    assert_eq!(
+                        request.reason,
+                        Some(fidl_fuchsia_hardware_power_statecontrol::RebootReason::SystemUpdate)
+                    );
+                    eprintln!(
+                        "TEST: Got reboot request with state {:?} and reason {:?}",
+                        request.state, request.reason
+                    );
+                    *self.called.lock() += 1;
+                    responder.send(&mut Ok(()))?;
+                }
+                _ => {
+                    panic!("unhandled RebootService method {:?}", event);
+                }
+            }
         }
-
         Ok(())
     }
 }

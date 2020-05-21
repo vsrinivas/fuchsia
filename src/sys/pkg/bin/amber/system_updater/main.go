@@ -14,7 +14,7 @@ import (
 	"syscall/zx/fidl"
 	"time"
 
-	devmgr "fidl/fuchsia/device/manager"
+	pwrctl "fidl/fuchsia/hardware/power/statecontrol"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/space"
 
@@ -210,18 +210,23 @@ func SendReboot() {
 	}
 
 	err = fdio.ServiceConnect(
-		"/svc/fuchsia.device.manager.Administrator", zx.Handle(channel_remote))
+		"/svc/fuchsia.hardware.power.statecontrol.Admin", zx.Handle(channel_remote))
 	if err != nil {
-		syslog.Errorf("error connecting to devmgr service: %s", err)
+		syslog.Errorf("error connecting to pwrctl service: %s", err)
 		return
 	}
 
-	var administrator = devmgr.AdministratorWithCtxInterface(
+	var admin = pwrctl.AdminWithCtxInterface(
 		fidl.ChannelProxy{Channel: zx.Channel(channel_local)})
-	var status int32
-	status, err = administrator.Suspend(context.Background(), devmgr.SuspendFlagReboot)
-	if err != nil || status != 0 {
-		syslog.Errorf("error sending restart to Administrator: %s status: %d", err, status)
+
+	var request pwrctl.SuspendRequest
+	request.SetState(pwrctl.SystemPowerStateReboot)
+	request.SetReason(pwrctl.RebootReasonSystemUpdate)
+
+	var result pwrctl.AdminSuspend2Result
+	result, err = admin.Suspend2(context.Background(), request)
+	if err != nil || result.Which() == pwrctl.AdminSuspend2ResultErr {
+		syslog.Errorf("error sending restart to Admin: %s error: %d", err, result.Err)
 	}
 }
 
