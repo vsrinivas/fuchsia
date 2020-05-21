@@ -24,6 +24,8 @@ use stream_processor_test::*;
 
 #[test]
 fn h264_stream_output_generated() -> Result<()> {
+    const WIDTH: u32 = 320;
+    const HEIGHT: u32 = 240;
     let mut exec = fasync::Executor::new()?;
 
     let test_case = H264EncoderTestCase {
@@ -33,11 +35,11 @@ fn h264_stream_output_generated() -> Result<()> {
                 has_format_modifier: false,
                 format_modifier: sysmem::FormatModifier { value: 0 },
             },
-            coded_width: 320,
-            coded_height: 240,
-            bytes_per_row: 320,
-            display_width: 320,
-            display_height: 240,
+            coded_width: WIDTH,
+            coded_height: HEIGHT,
+            bytes_per_row: WIDTH,
+            display_width: WIDTH,
+            display_height: HEIGHT,
             layers: 0,
             color_space: sysmem::ColorSpace { type_: sysmem::ColorSpaceType::Rec709 },
             has_pixel_aspect_ratio: false,
@@ -47,7 +49,7 @@ fn h264_stream_output_generated() -> Result<()> {
         num_frames: 6,
         settings: Rc::new(move || -> EncoderSettings {
             EncoderSettings::H264(H264EncoderSettings {
-                bit_rate: Some(200000),
+                bit_rate: Some(2000000),
                 frame_rate: Some(30),
                 gop_size: Some(2),
                 ..H264EncoderSettings::empty()
@@ -65,9 +67,10 @@ fn h264_stream_output_generated() -> Result<()> {
             H264NalKind::NonIDR,
             H264NalKind::NonIDR,
         ]),
+        decode_output: true,
+        normalized_sad_threshold: Some(10.0),
         output_file: None,
     };
-
     exec.run_singlethreaded(test_case.run())?;
     Ok(())
 }

@@ -16,7 +16,9 @@ pub struct VideoFrame {
 }
 
 impl VideoFrame {
-    pub fn create(format: sysmem::ImageFormat2, _step: usize) -> Self {
+    /// Generates a frame with specified `format`.
+    /// `step` is for diagonally shifting the checkerboard pattern.
+    pub fn create(format: sysmem::ImageFormat2, step: usize) -> Self {
         // For 4:2:0 YUV, the UV data is 1/2 the size of the Y data,
         // so the size of the frame is 3/2 the size of the Y plane.
         let width = format.bytes_per_row as usize;
@@ -39,9 +41,11 @@ impl VideoFrame {
                     x_on = !x_on;
                 }
                 let (luma, u, v) = if x_on { (255, 128, 128) } else { (0, 128, 128) };
-                data[y * width + x] = luma;
-                data[height * width + (y / 2) * width + (x / 2) * 2] = u;
-                data[height * width + (y / 2) * width + (x / 2) * 2 + 1] = v;
+                let y_s = (y + step) % height;
+                let x_s = (x + step) % width;
+                data[y_s * width + x_s] = luma;
+                data[height * width + (y_s / 2) * width + (x_s / 2) * 2] = u;
+                data[height * width + (y_s / 2) * width + (x_s / 2) * 2 + 1] = v;
             }
         }
 

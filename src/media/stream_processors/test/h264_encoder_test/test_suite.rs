@@ -74,6 +74,8 @@ impl OutputValidator for H264NalValidator {
 
 pub struct H264DecoderValidator {
     num_frames: usize,
+    input_stream: Rc<VideoFrameStream>,
+    normalized_sad_threshold: f64,
 }
 
 #[async_trait(?Send)]
@@ -107,7 +109,33 @@ impl OutputValidator for H264DecoderValidator {
             ));
         }
 
+        let input_frames = self.input_stream.stream();
+        for (frame_number, (input_frame, output_frame)) in
+            input_frames.zip(decoded_frames).enumerate()
+        {
+            let sad = Self::normalized_sad(&input_frame.data, &output_frame.data);
+            if sad > self.normalized_sad_threshold {
+                return Err(format_err!(
+                    "SAD threshold {} exceeded: {}, frame {}",
+                    self.normalized_sad_threshold,
+                    sad,
+                    frame_number
+                ));
+            }
+        }
+
         Ok(())
+    }
+}
+
+impl H264DecoderValidator {
+    fn normalized_sad(input: &[u8], output: &[u8]) -> f64 {
+        let mut sad = 0.0;
+        for (i_p, o_p) in input.iter().zip(output.iter()) {
+            sad += (*i_p as f64 - *o_p as f64).abs();
+        }
+
+        sad / input.len() as f64
     }
 }
 
@@ -117,28 +145,40 @@ pub struct H264EncoderTestCase {
     // This is a function because FIDL unions are not Copy or Clone.
     pub settings: Rc<dyn Fn() -> EncoderSettings>,
     pub expected_nals: Option<Vec<H264NalKind>>,
+    // If set, computes the Sum of Absolute Differences of each input to output frame and fails
+    // validation of the normalized value is greater than this threshold.
+    pub normalized_sad_threshold: Option<f64>,
+    pub decode_output: bool,
     pub output_file: Option<&'static str>,
 }
 
 impl H264EncoderTestCase {
     pub async fn run(self) -> Result<()> {
+        // This threshold is not meant to be hit.
+        const MAX_NORMALIZED_SAD: f64 = 0xffff as f64;
+
         let stream = self.create_test_stream()?;
-        let nal_validator = Rc::new(H264NalValidator {
+        let mut validators: Vec<Rc<dyn OutputValidator>> = vec![Rc::new(H264NalValidator {
             expected_nals: self.expected_nals.clone(),
             output_file: self.output_file,
-        });
-        let decode_validator = Rc::new(H264DecoderValidator { num_frames: self.num_frames });
+        })];
 
-        let eos_validator = Rc::new(TerminatesWithValidator {
+        if self.decode_output {
+            validators.push(Rc::new(H264DecoderValidator {
+                num_frames: self.num_frames,
+                input_stream: stream.clone(),
+                normalized_sad_threshold: self
+                    .normalized_sad_threshold
+                    .unwrap_or(MAX_NORMALIZED_SAD),
+            }));
+        }
+
+        validators.push(Rc::new(TerminatesWithValidator {
             expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
-        });
+        }));
 
-        let case = TestCase {
-            name: "Terminates with EOS test",
-            stream,
-            validators: vec![nal_validator, decode_validator, eos_validator],
-            stream_options: None,
-        };
+        let case =
+            TestCase { name: "Terminates with EOS test", stream, validators, stream_options: None };
 
         let spec = TestSpec {
             cases: vec![case],

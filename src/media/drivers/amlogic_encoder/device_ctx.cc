@@ -900,7 +900,7 @@ void DeviceCtx::ReferenceBuffersConfig() {
   HcodecDbkRCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
   HcodecDbkWCanvasAddr::Get().FromValue(dblk_buf_canvas_).WriteTo(&dosbus_);
 
-  HcodecAnc0BufferId::Get().FromValue(ref_buf_canvas_).WriteTo(&dosbus_);
+  HcodecAnc0CanvasAddr::Get().FromValue(ref_buf_canvas_).WriteTo(&dosbus_);
   HcodecVlcHcmdConfig::Get().FromValue(0).WriteTo(&dosbus_);
 
   HcodecMemOffsetReg::Get().FromValue(assit_->phys_base()).WriteTo(&dosbus_);
@@ -1006,7 +1006,7 @@ void DeviceCtx::Config(bool idr) {
   HcodecHdecMcOmemAuto::Get()
       .FromValue(0)
       .set_use_omem_mb_xy(1)
-      .set_omem_max_mb_x(pic_width_in_mb)
+      .set_omem_max_mb_x(pic_width_in_mb - 1)
       .WriteTo(&dosbus_);
 
   HcodecVlcAdvConfig::Get()
