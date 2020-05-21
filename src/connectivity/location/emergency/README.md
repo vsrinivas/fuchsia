@@ -2,7 +2,7 @@
 
 This component provides an Emergency Location Service. The service passively
 waits for Wifi scan results (via the
-`fuchsia.location.sensor.WifiBaseStationWatcher` protocol), as well as Emergency
+`fuchsia.location.sensor.WlanBaseStationWatcher` protocol), as well as Emergency
 Location requests (via the `fuchsia.location.position.EmergencyProvider`
 protocol). When an `EmergencyProvider` request arrives, this component uses the
 Google Maps API to resolve cached scan results to the current position.

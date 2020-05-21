@@ -30,7 +30,7 @@ use {
         stream::{FuturesOrdered, FuturesUnordered},
     },
     log::{error, info},
-    scan::handle_scan,
+    scan::{get_successful_scan_observers, perform_scan},
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -209,9 +209,9 @@ async fn serve_provider_requests(
                     pending_con_reqs.push(connect_result_fut);
                 }
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
-                    pending_scans.push(handle_scan(
+                    pending_scans.push(perform_scan(
                         Arc::clone(&client),
-                        output_iterator));
+                        output_iterator, get_successful_scan_observers));
                 }
                 InternalMsg::NewDisconnectWatcher(network_id, credential) => {
                     pending_disconnect_monitors.push(wait_for_disconnection(Arc::clone(&client), update_sender.clone(), network_id, credential));
