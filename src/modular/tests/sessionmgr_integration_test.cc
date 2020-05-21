@@ -256,4 +256,36 @@ TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {
   ASSERT_EQ(2, launch_count);
 }
 
+TEST_F(SessionmgrIntegrationTest, RestartSessionOnSessionAgentCrash) {
+  static const auto kFakeAgentUrl =
+      modular_testing::TestHarnessBuilder::GenerateFakeUrl("test_agent");
+
+  // Configure sessiomgr to restart the session when the agent terminates.
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.mutable_sessionmgr_config()->set_session_agents({kFakeAgentUrl});
+  spec.mutable_sessionmgr_config()->set_restart_session_on_agent_crash({kFakeAgentUrl});
+
+  modular_testing::TestHarnessBuilder builder(std::move(spec));
+  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
+  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
+  auto fake_agent =
+      std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
+          .url = kFakeAgentUrl,
+          .sandbox_services = modular_testing::FakeAgent::GetDefaultSandboxServices()});
+  builder.InterceptComponent(fake_agent->BuildInterceptOptions());
+
+  builder.BuildAndRun(test_harness());
+
+  // Wait for the session to start.
+  RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+
+  // Terminate the agent.
+  fake_agent->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
+  RunLoopUntil([&] { return !fake_agent->is_running(); });
+
+  // The session and agent should have restarted.
+  RunLoopUntil([&] { return !session_shell->is_running(); });
+  RunLoopUntil([&] { return session_shell->is_running() && fake_agent->is_running(); });
+}
+
 }  // namespace

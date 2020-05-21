@@ -42,7 +42,7 @@ class VisibleStoriesHandler;
 
 class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        fuchsia::modular::SessionShellContext,
-                       fuchsia::modular::SessionRestartController {
+                       public fuchsia::modular::SessionRestartController {
  public:
   SessionmgrImpl(sys::ComponentContext* component_context,
                  fuchsia::modular::session::SessionmgrConfig config, inspect::Node object);

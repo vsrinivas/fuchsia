@@ -223,6 +223,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   agent_entry.set_service_name(agent_service_name);
   agent_entry.set_agent_url(agent_url);
   sessionmgr_config.mutable_agent_service_index()->push_back(std::move(agent_entry));
+  sessionmgr_config.mutable_restart_session_on_agent_crash()->push_back(agent_url);
 
   modular::ModularConfigReader::GetConfigAsString(&basemgr_config, &sessionmgr_config);
 
@@ -257,6 +258,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   EXPECT_EQ("arg2", sessionmgr_config.component_args().at(0).args().at(0));
   EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(agent_url, sessionmgr_config.agent_service_index().at(0).agent_url());
+  EXPECT_EQ(agent_url, sessionmgr_config.restart_session_on_agent_crash().at(0));
 }
 
 // Test that ModularConfigReader accepts JSON documents that contain comments

@@ -259,6 +259,11 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kSessionAgents, data->mutable_session_agents(),
                         has_session_agents, default_agents);
 
+  bool has_restart_session_on_agent_crash = data->has_restart_session_on_agent_crash();
+  xdr->FieldWithDefault(modular_config::kRestartSessionOnAgentCrash,
+                        data->mutable_restart_session_on_agent_crash(),
+                        has_restart_session_on_agent_crash, default_agents);
+
   std::vector<fuchsia::modular::session::AppConfig> default_component_args;
   bool has_component_args = data->has_component_args();
   xdr->FieldWithDefault(modular_config::kComponentArgs, data->mutable_component_args(),

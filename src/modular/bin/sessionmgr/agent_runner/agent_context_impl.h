@@ -46,8 +46,13 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // Starts the agent specified in |agent_config| and provides it:
   //  1) AgentContext service
   //  2) A set of services from |info.agent_services_factory| for this agent's url.
-  explicit AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
-                            inspect::Node agent_node);
+  //
+  // If |session_restart_on_crash_controller| is not null, it will be used to restart the session
+  // when the agent unexpectedly terminates.
+  explicit AgentContextImpl(
+      const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
+      inspect::Node agent_node,
+      fuchsia::modular::SessionRestartController* session_restart_on_crash_controller = nullptr);
   ~AgentContextImpl() override;
 
   // Stops the running agent, irrespective of whether there are active
@@ -164,6 +169,12 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   AgentServicesFactory* const agent_services_factory_;  // Not owned.
 
   inspect::Node agent_node_;
+
+  // Optional controller used to restart the session when this agent unexpectedly terminates.
+  // If this is a nullptr, the session will not be restarted.
+  //
+  // Not owned.
+  fuchsia::modular::SessionRestartController* session_restart_on_crash_controller_;
 
   State state_ = State::INITIALIZING;
 

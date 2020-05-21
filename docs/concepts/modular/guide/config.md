@@ -56,6 +56,9 @@ The file may contain (non-standard JSON) C-style comments
         "service_name": "fuchsia.modular.SomeServiceName",
         "agent_url": "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
       }
+    ],
+    "restart_session_on_agent_crash": [
+      "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
     ]
   }
 }
@@ -148,3 +151,7 @@ The file may contain (non-standard JSON) C-style comments
     - `service_name`: The name of a service offered by a session agent.
     - `agent_url`: A fuchsia component url that specifies which agent will
       provide the named service.
+- `restart_session_on_agent_crash`: array (optional)
+  - A list of agent URLs that will cause the session to be restarted
+    when they terminate unexpectedly. If an agent is not in this list,
+    sessionmgr will restart it individually, preserving the session.

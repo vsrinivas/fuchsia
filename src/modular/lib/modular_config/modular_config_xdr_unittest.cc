@@ -98,7 +98,8 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
       "startup_agents": null,
       "session_agents": null,
       "component_args": null,
-      "agent_service_index": null
+      "agent_service_index": null,
+      "restart_session_on_agent_crash": null
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -124,6 +125,7 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
 
   EXPECT_EQ(0u, read_config.startup_agents().size());
   EXPECT_EQ(0u, read_config.session_agents().size());
+  EXPECT_EQ(0u, read_config.restart_session_on_agent_crash().size());
 }
 
 // Tests that values are set correctly for SessionmgrConfig when reading JSON and
@@ -161,6 +163,9 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
           "service_name": "fuchsia.modular.ModularConfigXdrTest",
           "agent_url": "fuchsia-pkg://example.com/test_agent#meta/test_agent.cmx"
         }
+      ],
+      "restart_session_on_agent_crash": [
+        "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
       ]
     })";
   rapidjson::Document expected_json_doc;
@@ -182,6 +187,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   agent_entry.set_service_name(kAgentServiceName);
   agent_entry.set_agent_url(kAgentUrl);
   write_config.mutable_agent_service_index()->push_back(std::move(agent_entry));
+  write_config.mutable_restart_session_on_agent_crash()->push_back(kSessionAgentUrl);
 
   // Serialize the config to JSON.
   rapidjson::Document write_config_json_doc;
@@ -207,6 +213,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   EXPECT_EQ(kAgentComponentArg, read_config.component_args().at(0).args().at(0));
   EXPECT_EQ(kAgentServiceName, read_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(kAgentUrl, read_config.agent_service_index().at(0).agent_url());
+  EXPECT_EQ(kSessionAgentUrl, read_config.restart_session_on_agent_crash().at(0));
 }
 
 // Tests that the cloud provider field is read and written correctly when it's not set to the

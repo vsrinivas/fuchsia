@@ -32,16 +32,19 @@ class AgentContextImpl;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
-// If sessionmgr_context is provided, services from that context can be exposed to agents.
+//
+// If |sessionmgr_context| is provided, services from that context can be exposed to agents.
 // This is used to make the fuchsia::intl::PropertyProvider available, which may not be necessary
 // for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
   AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
               inspect::Node* session_inspect_node,
+              fuchsia::modular::SessionRestartController* session_restart_controller,
               std::map<std::string, std::string> agent_service_index = {},
               std::vector<std::string> session_agents = {},
-              sys::ComponentContext* const sessionmgr_context = nullptr);
+              std::vector<std::string> restart_session_on_agent_crash = {},
+              sys::ComponentContext* sessionmgr_context = nullptr);
   ~AgentRunner();
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
@@ -129,12 +132,24 @@ class AgentRunner {
   // Not owned. This is the parent node to the agent nodes.
   inspect::Node* session_inspect_node_;
 
+  // The protocol by which AgentRunner restarts the session when an agent listed in
+  // |restart_session_on_agent_crash_| terminates.
+  //
+  // Not owned.
+  fuchsia::modular::SessionRestartController* session_restart_controller_;
+
   // Services mapped to agents that provide those services. Used when a service is requested
   // without specifying the handling agent. May be empty.
   std::map<std::string, std::string> agent_service_index_;
 
   // The session agents specified in the modular configuration.
   std::vector<std::string> session_agents_;
+
+  // The agent URLs specified in the Modular configuration that should trigger
+  // a session restart on termination.
+  //
+  // This requires that |session_context_| is not a nullptr.
+  std::vector<std::string> restart_session_on_agent_crash_;
 
   // The sys::ComponentContext in which SessionmgrImpl was launched (also needed by agents).
   // AgentContext will use this to re-expose services from the "sys" Realm, like

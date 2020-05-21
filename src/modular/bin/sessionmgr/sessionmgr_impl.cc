@@ -257,9 +257,10 @@ void SessionmgrImpl::InitializeAgentRunner() {
   }
   agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
-  agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), startup_agent_launcher_.get(),
-                                      &inspect_root_node_, std::move(agent_service_index),
-                                      config_.session_agents(), sessionmgr_context_));
+  agent_runner_.reset(new AgentRunner(
+      agent_runner_launcher_.get(), startup_agent_launcher_.get(), &inspect_root_node_,
+      /*session_restart_controller=*/this, std::move(agent_service_index), config_.session_agents(),
+      config_.restart_session_on_agent_crash(), sessionmgr_context_));
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
 

@@ -57,6 +57,7 @@ constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
 constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
 constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
+constexpr char kRestartSessionOnAgentCrash[] = "restart_session_on_agent_crash";
 
 // Inspect property constants
 constexpr char kInspectModuleSource[] = "module_source";

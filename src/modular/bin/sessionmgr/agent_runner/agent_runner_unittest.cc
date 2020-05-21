@@ -78,6 +78,21 @@ static zx_koid_t get_object_koid(zx_handle_t handle) {
   return info.koid;
 }
 
+// A fake |SessionRestartController| that invokes a callback on |Restart()|.
+class FakeSessionRestartController : public fuchsia::modular::SessionRestartController {
+ public:
+  using OnRestartCallback = fit::function<void()>;
+
+  explicit FakeSessionRestartController(OnRestartCallback on_restart_callback)
+      : on_restart_callback_(std::move(on_restart_callback)) {}
+
+  // |fuchsia::modular::SessionRestartController|
+  void Restart() override { on_restart_callback_(); }
+
+ private:
+  OnRestartCallback on_restart_callback_;
+};
+
 class TestAgent : fuchsia::modular::Agent,
                   fuchsia::modular::Lifecycle,
                   public fuchsia::sys::ComponentController {
@@ -172,6 +187,7 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
 
   void TearDown() override {
     agent_runner_.reset();
+    session_restart_controller_.reset();
 
     gtest::RealLoopFixture::TearDown();
   }
@@ -179,14 +195,31 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
  protected:
   modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
+      if (session_restart_controller_ == nullptr) {
+        set_on_session_restart_callback([] {});
+      }
+
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, /*agent_services_factory=*/nullptr, &node_, std::move(agent_service_index_));
+          &launcher_, /*agent_services_factory=*/nullptr, &node_, session_restart_controller_.get(),
+          std::move(agent_service_index_),
+          /*session_agents=*/std::vector<std::string>(),
+          std::move(restart_session_on_agent_crash_));
     }
     return agent_runner_.get();
   }
 
   void set_agent_service_index(std::map<std::string, std::string> agent_service_index) {
     agent_service_index_ = std::move(agent_service_index);
+  }
+
+  void set_restart_session_on_agent_crash(std::vector<std::string> restart_session_on_agent_crash) {
+    restart_session_on_agent_crash_ = std::move(restart_session_on_agent_crash);
+  }
+
+  void set_on_session_restart_callback(
+      FakeSessionRestartController::OnRestartCallback on_session_restart_callback) {
+    session_restart_controller_ =
+        std::make_unique<FakeSessionRestartController>(std::move(on_session_restart_callback));
   }
 
   template <typename Interface>
@@ -276,6 +309,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<modular::AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;
+  std::vector<std::string> restart_session_on_agent_crash_;
+  std::unique_ptr<fuchsia::modular::SessionRestartController> session_restart_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };
@@ -479,6 +514,74 @@ TEST_F(AgentRunnerTest, TerminateGracefullyOnTeardown) {
   // The agent should have been terminated.
   EXPECT_FALSE(agent_controller.is_bound());
   EXPECT_FALSE(test_agent->controller_connected());
+}
+
+// When an agent dies and it is not listed in |restart_session_on_agent_crash|,
+// the session should not be restarted.
+TEST_F(AgentRunnerTest, NoSessionRestartOnCrash) {
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent =
+            std::make_unique<TestAgent>(std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  // The session should not be restarted due to an agent termination.
+  set_restart_session_on_agent_crash({});
+  set_on_session_restart_callback(
+      [] { FX_NOTREACHED() << "SessionRestartController.Restart() was unexpectedly called"; });
+
+  fuchsia::sys::ServiceProviderPtr incoming_services;
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
+                                 agent_controller.NewRequest());
+  RunLoopUntil([&test_agent] { return !!test_agent; });
+
+  // Terminate the agent.
+  test_agent->KillApplication();
+
+  // Teardown the session.
+  auto is_torn_down = false;
+  agent_runner()->Teardown([&is_torn_down] { is_torn_down = true; });
+  RunLoopUntil([&is_torn_down] { return is_torn_down; });
+}
+
+// When an agent dies and it is listed in |restart_session_on_agent_crash|,
+// the session should restarted.
+TEST_F(AgentRunnerTest, SessionRestartOnCrash) {
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&test_agent](fuchsia::sys::LaunchInfo launch_info,
+                                   fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent =
+            std::make_unique<TestAgent>(std::move(launch_info.directory_request), std::move(ctrl));
+      });
+
+  // The session should be restarted when the agent terminates.
+  set_restart_session_on_agent_crash({kTestAgentUrl});
+
+  auto is_restart_called = false;
+  set_on_session_restart_callback([&is_restart_called] { is_restart_called = true; });
+
+  fuchsia::sys::ServiceProviderPtr incoming_services;
+  fuchsia::modular::AgentControllerPtr agent_controller;
+  agent_runner()->ConnectToAgent("requestor_url", kTestAgentUrl, incoming_services.NewRequest(),
+                                 agent_controller.NewRequest());
+  RunLoopUntil([&test_agent] { return !!test_agent; });
+
+  // The agent is now running, so the session should not have been restarted yet.
+  EXPECT_FALSE(is_restart_called);
+
+  // Terminate the agent.
+  test_agent->KillApplication();
+
+  RunLoopUntil([&is_restart_called] { return is_restart_called; });
+
+  // Teardown the session.
+  auto is_torn_down = false;
+  agent_runner()->Teardown([&is_torn_down] { is_torn_down = true; });
+  RunLoopUntil([&is_torn_down] { return is_torn_down; });
 }
 
 }  // namespace modular_testing

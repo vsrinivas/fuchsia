@@ -123,6 +123,11 @@ table SessionmgrConfig {
     /// that service. Used by the Session Manager to implement
     /// `ComponentContext` method ConnectToAgentService().
     10: vector<AgentServiceIndexEntry> agent_service_index;
+
+    /// A list of agent URLs that will cause the session to be restarted
+    /// when they terminate. If an agent is not in this list, sessionmgr will
+    /// restart it individually, preserving the session.
+    11: vector<string:fuchsia.io.MAX_PATH>:MAX restart_session_on_agent_crash;
 };
 
 /// Used to pass around configuration references to apps such as base shell,
