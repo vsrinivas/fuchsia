@@ -7,7 +7,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("xhci-rewrite") {
+driver_module("xhci") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -35,6 +35,7 @@ driver_module("xhci-rewrite") {
     "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/dma-buffer",
+    "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/usb/lib/usb",
@@ -176,7 +177,7 @@ test("xhci-transfer-ring-unittest") {
 }
 
 migrated_manifest("xhci-manifest") {
-  deps = [ ":xhci-rewrite" ]
+  deps = [ ":xhci" ]
 }
 
 unittest_package("xhci-unittest-package") {
