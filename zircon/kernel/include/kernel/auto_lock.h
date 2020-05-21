@@ -15,18 +15,17 @@
 
 class TA_SCOPED_CAP AutoSpinLockNoIrqSave {
  public:
-  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLockNoIrqSave(spin_lock_t* lock) TA_ACQ(lock)
+  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLockNoIrqSave(SpinLock* lock) TA_ACQ(lock)
       : spinlock_(lock) {
     DEBUG_ASSERT(lock);
-    spin_lock(spinlock_);
+    spinlock_->Acquire();
   }
-  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLockNoIrqSave(SpinLock* lock) TA_ACQ(lock)
-      : AutoSpinLockNoIrqSave(lock->GetInternal()) {}
+
   ~AutoSpinLockNoIrqSave() TA_REL() { release(); }
 
   void release() TA_REL() {
     if (spinlock_) {
-      spin_unlock(spinlock_);
+      spinlock_->Release();
       spinlock_ = nullptr;
     }
   }
@@ -35,23 +34,22 @@ class TA_SCOPED_CAP AutoSpinLockNoIrqSave {
   DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLockNoIrqSave);
 
  private:
-  spin_lock_t* spinlock_;
+  SpinLock* spinlock_;
 };
 
 class TA_SCOPED_CAP AutoSpinLock {
  public:
-  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLock(spin_lock_t* lock) TA_ACQ(lock)
+  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock)
       : spinlock_(lock) {
     DEBUG_ASSERT(lock);
-    spin_lock_irqsave(spinlock_, state_);
+    spinlock_->AcquireIrqSave(state_);
   }
-  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock)
-      : AutoSpinLock(lock->GetInternal()) {}
+
   ~AutoSpinLock() TA_REL() { release(); }
 
   void release() TA_REL() {
     if (spinlock_) {
-      spin_unlock_irqrestore(spinlock_, state_);
+      spinlock_->ReleaseIrqRestore(state_);
       spinlock_ = nullptr;
     }
   }
@@ -60,7 +58,7 @@ class TA_SCOPED_CAP AutoSpinLock {
   DISALLOW_COPY_ASSIGN_AND_MOVE(AutoSpinLock);
 
  private:
-  spin_lock_t* spinlock_;
+  SpinLock* spinlock_;
   spin_lock_saved_state_t state_;
 };
 

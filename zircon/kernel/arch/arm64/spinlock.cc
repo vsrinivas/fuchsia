@@ -12,7 +12,7 @@
 // implementing the locks themselves.  Without this, the header-level
 // annotations cause Clang to detect violations.
 
-void arch_spin_lock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
+void arch_spin_lock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   unsigned long val = arch_curr_cpu_num() + 1;
   uint64_t temp;
 
@@ -29,7 +29,7 @@ void arch_spin_lock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) + 1);
 }
 
-int arch_spin_trylock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
+bool arch_spin_trylock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   unsigned long val = arch_curr_cpu_num() + 1;
   uint64_t out;
 
@@ -45,10 +45,10 @@ int arch_spin_trylock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   if (out == 0) {
     WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) + 1);
   }
-  return (int)out;
+  return out;
 }
 
-void arch_spin_unlock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
+void arch_spin_unlock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) - 1);
   __atomic_store_n(&lock->value, 0UL, __ATOMIC_SEQ_CST);
 }

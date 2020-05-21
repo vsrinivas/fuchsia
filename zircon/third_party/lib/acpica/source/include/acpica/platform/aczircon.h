@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_THIRD_PARTY_LIB_ACPICA_SOURCE_INCLUDE_ACPICA_PLATFORM_ACZIRCON_H_
+#define ZIRCON_THIRD_PARTY_LIB_ACPICA_SOURCE_INCLUDE_ACPICA_PLATFORM_ACZIRCON_H_
 
 #include <stdbool.h>
 
-#include <kernel/spinlock.h>
+#include <arch/spinlock.h>
 
 /*
  * Settings described in section 7 of
@@ -21,7 +22,7 @@
 #error Unexpected architecture
 #endif
 
-#define ACPI_FLUSH_CPU_CACHE() __asm__ volatile ("wbinvd")
+#define ACPI_FLUSH_CPU_CACHE() __asm__ volatile("wbinvd")
 
 // Use the standard library headers
 #define ACPI_USE_STANDARD_HEADERS
@@ -32,7 +33,7 @@
 
 // Specify the types Zircon uses for various common objects
 #define ACPI_CPU_FLAGS spin_lock_saved_state_t
-#define ACPI_SPINLOCK spin_lock_t*
+#define ACPI_SPINLOCK arch_spin_lock_t *
 
 // Borrowed from aclinuxex.h
 
@@ -46,3 +47,5 @@ __END_CDECLS
 
 #define ACPI_ACQUIRE_GLOBAL_LOCK(FacsPtr, Acq) Acq = _acpica_acquire_global_lock(FacsPtr)
 #define ACPI_RELEASE_GLOBAL_LOCK(FacsPtr, Pnd) Pnd = _acpica_release_global_lock(FacsPtr)
+
+#endif  // ZIRCON_THIRD_PARTY_LIB_ACPICA_SOURCE_INCLUDE_ACPICA_PLATFORM_ACZIRCON_H_

@@ -185,7 +185,7 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     // make this check, we could see the following sequence of events between
     // two CPUs and incorrectly conclude we are holding the thread lock:
     // C2: Acquire thread_lock
-    // C1: Running this thread, evaluate spin_lock_holder_cpu(&thread_lock) -> C2
+    // C1: Running this thread, evaluate thread_lock.HolderCpu() -> C2
     // C1: Context switch away
     // C2: Release thread_lock
     // C2: Context switch to this thread
