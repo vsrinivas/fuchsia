@@ -166,8 +166,8 @@ TEST_F(ReporterTest, AddRemoveDevices) {
                   NodeMatches(NameMatches("renderers")), NodeMatches(NameMatches("capturers")))));
 }
 
-// Tests the initial state of added devices.
-TEST_F(ReporterTest, DeviceInitialState) {
+// Tests methods that change device metrics.
+TEST_F(ReporterTest, DeviceMetrics) {
   testing::FakeAudioOutput output_device(&threading_model(), &context().device_manager(),
                                          &context().link_matrix());
   testing::FakeAudioInput input_device(&threading_model(), &context().device_manager(),
@@ -193,6 +193,15 @@ TEST_F(ReporterTest, DeviceInitialState) {
                         UintIs("agc enabled", 0), UintIs("underflows", 0)))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
+
+  under_test_.OutputUnderflow(output_device, zx::msec(1), zx::time());
+
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("output devices")),
+          ChildrenMatch(Contains(NodeMatches(AllOf(
+              NameMatches("output_device"), PropertyList(Contains(UintIs("underflows", 1)))))))))));
 }
 
 // Tests method SettingDeviceGainInfo.

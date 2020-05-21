@@ -125,6 +125,10 @@ class Reporter {
   void InitInspect();
   void InitCobalt();
 
+  void OutputUnderflowColbolt(const AudioDevice& device, zx::duration output_duration_missed,
+                              zx::time uptime_to_underflow);
+  void OutputUnderflowInspect(const AudioDevice& device);
+
   struct Device {
     Device(inspect::Node node) : node_(std::move(node)) {
       gain_db_ = node_.CreateDouble("gain db", 0.0);

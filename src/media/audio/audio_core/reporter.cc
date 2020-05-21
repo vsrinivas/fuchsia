@@ -397,6 +397,13 @@ std::string Reporter::NextCapturerName() {
 
 void Reporter::OutputUnderflow(const AudioDevice& device, zx::duration output_underflow_duration,
                                zx::time uptime_to_underflow) {
+  OutputUnderflowColbolt(device, output_underflow_duration, uptime_to_underflow);
+  OutputUnderflowInspect(device);
+}
+
+void Reporter::OutputUnderflowColbolt(const AudioDevice& device,
+                                      zx::duration output_underflow_duration,
+                                      zx::time uptime_to_underflow) {
   // Bucket this into exponentially-increasing time since system boot.
   // By default, bucket the overflow into the last bucket
 
@@ -438,7 +445,9 @@ void Reporter::OutputUnderflow(const AudioDevice& device, zx::duration output_un
           FX_PLOGS(ERROR, fidl::ToUnderlying(status)) << "Cobalt logger returned an error";
         }
       });
+}
 
+void Reporter::OutputUnderflowInspect(const AudioDevice& device) {
   Device* d = device.is_output() ? FindOutput(device) : nullptr;
   if (d == nullptr) {
     FX_LOGS(ERROR) << kDeviceNotFound;
