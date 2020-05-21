@@ -9,9 +9,9 @@
 
 namespace media::audio::clock {
 
-void CloneMonotonicInto(zx::clock* clock_out, bool writable = false);
+void CloneMonotonicInto(zx::clock* clock_out, bool adjustable = false);
 
-zx::clock WritableCloneOfMonotonic();
+zx::clock AdjustableCloneOfMonotonic();
 zx::clock CloneOfMonotonic();
 
 }  // namespace media::audio::clock

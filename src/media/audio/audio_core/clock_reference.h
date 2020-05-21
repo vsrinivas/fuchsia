@@ -10,18 +10,16 @@
 
 namespace media::audio {
 
+// In addition to being copyable, ClockReference abstracts clock rate-adjustment. An _adjustable_
+// ClockReference allows its clock to be rate-adjusted; a _readonly_ ClockReference does not.
 class ClockReference {
  public:
-  static ClockReference MakeWritable(zx::clock& clock) { return ClockReference(&clock, true); }
+  static ClockReference MakeAdjustable(zx::clock& clock) { return ClockReference(&clock, true); }
   static ClockReference MakeReadonly(zx::clock& clock) { return ClockReference(&clock, false); }
 
   ClockReference() : ClockReference(nullptr, false) {}
-  ClockReference(const ClockReference& copied) : ClockReference(copied.clock_, copied.writable_) {}
-  ClockReference& operator=(const ClockReference& copied) {
-    clock_ = copied.clock_;
-    writable_ = copied.writable_;
-    return *this;
-  }
+  ClockReference(const ClockReference&) = default;
+  ClockReference& operator=(const ClockReference&) = default;
 
   zx::time Read() const {
     FX_DCHECK(clock_) << "Null clock ref cannot be read";
@@ -38,13 +36,14 @@ class ClockReference {
 
   bool is_valid() const { return (clock_ != nullptr && clock_->is_valid()); }
   explicit operator bool() const { return is_valid(); }
-  bool writable() const { return writable_; }
+  bool adjustable() const { return adjustable_; }
 
  private:
-  ClockReference(const zx::clock* clock, bool writable) : clock_(clock), writable_(writable) {}
+  ClockReference(const zx::clock* clock, bool adjustable)
+      : clock_(clock), adjustable_(adjustable) {}
 
   const zx::clock* clock_;
-  bool writable_;
+  bool adjustable_;
 };
 
 }  // namespace media::audio

@@ -71,8 +71,8 @@ TEST(ClockUtilsTest, DuplicateClockCanBeRead) {
   EXPECT_GT(now2, now);
 }
 
-// The duplicate clock should not be writable.
-TEST(ClockUtilsTest, DuplicateClockCannotBeWritten) {
+// The duplicate clock should not be adjustable.
+TEST(ClockUtilsTest, DuplicateClockCannotBeAdjusted) {
   zx::clock ref_clock, dupe_clock;
   zx_time_t now;
 

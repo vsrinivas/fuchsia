@@ -12,12 +12,12 @@
 
 namespace media::audio::clock {
 
-TEST(CloneMonoTest, WritableCloneIsSameAsClockMonotonic) {
-  auto writable_clock = WritableCloneOfMonotonic();
-  EXPECT_TRUE(writable_clock.is_valid());
+TEST(CloneMonoTest, AdjustableCloneIsSameAsClockMonotonic) {
+  auto adjustable_clock = AdjustableCloneOfMonotonic();
+  EXPECT_TRUE(adjustable_clock.is_valid());
 
-  testing::VerifyAdvances(writable_clock);
-  testing::VerifyIsSystemMonotonic(writable_clock);
+  testing::VerifyAdvances(adjustable_clock);
+  testing::VerifyIsSystemMonotonic(adjustable_clock);
 }
 
 TEST(CloneMonoTest, ReadableCloneIsSameAsClockMonotonic) {
@@ -28,11 +28,11 @@ TEST(CloneMonoTest, ReadableCloneIsSameAsClockMonotonic) {
   testing::VerifyIsSystemMonotonic(readable_clock);
 }
 
-TEST(CloneMonoTest, WritableClockCanBeAdjusted) {
-  auto writable_clock = WritableCloneOfMonotonic();
-  EXPECT_TRUE(writable_clock.is_valid());
+TEST(CloneMonoTest, AdjustableClockCanBeAdjusted) {
+  auto adjustable_clock = AdjustableCloneOfMonotonic();
+  EXPECT_TRUE(adjustable_clock.is_valid());
 
-  testing::VerifyCanBeRateAdjusted(writable_clock);
+  testing::VerifyCanBeRateAdjusted(adjustable_clock);
 }
 
 TEST(CloneMonoTest, ReadonlyClockCannotBeAdjusted) {

@@ -52,8 +52,8 @@ AudioDriverV1::AudioDriverV1(AudioDevice* owner, DriverTimeoutHandler timeout_ha
   // We create the clock as a clone of MONOTONIC, but once the driver provides details (such as the
   // clock domain), this may become a recovered clock, based on DMA progress across the ring buffer.
   // TODO(mpuryear): Clocks should be per-domain not per-driver; default is the MONO domain's clock.
-  ref_clock_ = audio::clock::WritableCloneOfMonotonic();
-  FX_DCHECK(ref_clock_.is_valid()) << "WritableCloneOfMonotonic failed";
+  ref_clock_ = audio::clock::AdjustableCloneOfMonotonic();
+  FX_DCHECK(ref_clock_.is_valid()) << "AdjustableCloneOfMonotonic failed";
 
   // This utility function also strips off the WRITE right.
   auto status = audio::clock::DuplicateClock(ref_clock_, &read_only_clock_);

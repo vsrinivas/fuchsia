@@ -17,10 +17,10 @@ namespace {
 // Verify copy ctor and copy assignment
 TEST(ClockReferenceTest, ClockRefsAreCopyable) {
   // These two clocks may be precisely in-sync, but they are not the same object.
-  auto clock = clock::WritableCloneOfMonotonic();
+  auto clock = clock::AdjustableCloneOfMonotonic();
   auto clock2 = clock::CloneOfMonotonic();
 
-  auto clock_ref = ClockReference::MakeWritable(clock);
+  auto clock_ref = ClockReference::MakeAdjustable(clock);
 
   ClockReference copied_clock_ref(clock_ref);
   EXPECT_EQ(clock_ref.get().get_handle(), copied_clock_ref.get().get_handle());
