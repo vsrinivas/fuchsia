@@ -8,6 +8,7 @@
 extern crate anyhow;
 
 pub mod audio;
+pub mod backlight;
 pub mod basemgr;
 pub mod battery_simulator;
 pub mod bluetooth;

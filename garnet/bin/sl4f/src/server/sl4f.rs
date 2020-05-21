@@ -22,6 +22,9 @@ use crate::server::sl4f_types::{
 // Audio related includes
 use crate::audio::facade::AudioFacade;
 
+// Backlight related includes
+use crate::backlight::facade::BacklightFacade;
+
 // Session related includes
 use crate::basemgr::facade::BaseManagerFacade;
 
@@ -149,6 +152,7 @@ impl Sl4f {
             hashmap!(
                 "audio_facade" => AudioFacade::new()?,
                 "avdtp_facade" => AvdtpFacade::new(),
+                "backlight_facade" => BacklightFacade::new(),
                 "basemgr_facade" => BaseManagerFacade::new(),
                 "battery_simulator" => BatterySimulatorFacade::new(),
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
