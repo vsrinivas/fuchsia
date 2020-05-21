@@ -54,7 +54,7 @@ program. The example uses the following templates:
 *   [`fuchsia_component.gni`](/src/sys/build/fuchsia_component.gni)
 *   [`fuchsia_package.gni`](/src/sys/build/fuchsia_package.gni)
 
-```
+```gn
 import("//src/sys/build/components.gni")
 
 executable("my_program") {
@@ -79,7 +79,7 @@ fuchsia_package("my-package") {
 
 The file `my_program.cmx` should include at least the following:
 
-```
+```json
 {
     "program": {
         "binary": "bin/my_program"
@@ -145,7 +145,7 @@ integration tests -- tests where other components in addition to the test itself
 participate in the test. See [below](#unit-tests) for templates that specialize
 in unit testing.
 
-```
+```gn
 import("//src/sys/build/fuchsia_test_package.gni")
 
 fuchsia_component("my-test-component") {
@@ -206,38 +206,34 @@ Note the following details:
 To simplify defining components in commonly used languages, simplified templates
 are provided.
 
-<section class="tabs">
+* {C++}
 
-#### C++ {.new-tab}
+   ```gn
+   import("//src/sys/build/components.gni")
 
-[`fuchsia_cpp_component.gni`](/src/sys/build/fuchsia_cpp_component.gni)
+   fuchsia_cpp_component("my-component") {
+     sources = [ "main.cc" ]
+     deps = [ ... ]
+   }
+   ```
 
-```
-import("//src/sys/build/components.gni")
+   See also: [`fuchsia_cpp_component.gni`](/src/sys/build/fuchsia_cpp_component.gni)
 
-fuchsia_cpp_component("my-component") {
-  sources = [ "main.cc" ]
-  deps = [ ... ]
-}
-```
+   Additional [`executable()`][executable] parameters may be provided.
 
-Additional [`executable()`][executable] parameters may be provided.
+* {Rust}
 
-#### Rust {.new-tab}
+   ```gn
+   import("//src/sys/build/components.gni")
 
-[`fuchsia_rust_component.gni`](/src/sys/build/fuchsia_rust_component.gni)
+   fuchsia_rust_component("my-component") {
+     deps = [ ... ]
+   }
+   ```
 
-```
-import("//src/sys/build/components.gni")
+   See also: [`fuchsia_rust_component.gni`](/src/sys/build/fuchsia_rust_component.gni)
 
-fuchsia_rust_component("my-component") {
-  deps = [ ... ]
-}
-```
-
-Additional [`rustc_binary()`][rustc-binary] parameters may be provided.
-
-</section>
+   Additional [`rustc_binary()`][rustc-binary] parameters may be provided.
 
 Support for additional languages may be added upon request.
 
@@ -246,39 +242,35 @@ Support for additional languages may be added upon request.
 Since unit tests are very common, simplified templates are provided to define
 them.
 
-<section class="tabs">
+* {C++}
 
-#### C++ {.new-tab}
+   ```gn
+   import("//src/sys/build/components.gni")
 
-[`fuchsia_cpp_unittest.gni`](/src/sys/build/fuchsia_cpp_unittest.gni)
+   fuchsia_cpp_unittest("my-unittest") {
+     sources = [ "my_unittest.cc" ]
+     deps = [ ... ]
+   }
+   ```
 
-```
-import("//src/sys/build/components.gni")
+   See also: [`fuchsia_cpp_unittest.gni`](/src/sys/build/fuchsia_cpp_unittest.gni)
 
-fuchsia_cpp_unittest("my-unittest") {
-  sources = [ "my_unittest.cc" ]
-  deps = [ ... ]
-}
-```
+   Additional [`executable()`][executable] parameters may be provided.
 
-Additional [`executable()`][executable] parameters may be provided.
+* {Rust}
 
-#### Rust {.new-tab}
+   ```gn
+   import("//src/sys/build/fuchsia_cpp_unittest.gni")
 
-[`fuchsia_rust_unittest.gni`](/src/sys/build/fuchsia_rust_unittest.gni)
+   fuchsia_rust_unittest("my-unittest") {
+     # Alternatively put sources under `src/` and remove the line above
+     deps = [ ... ]
+   }
+   ```
 
-```
-import("//src/sys/build/fuchsia_cpp_unittest.gni")
+   See also: [`fuchsia_rust_unittest.gni`](/src/sys/build/fuchsia_rust_unittest.gni)
 
-fuchsia_rust_unittest("my-unittest") {
-  # Alternatively put sources under `src/` and remove the line above
-  deps = [ ... ]
-}
-```
-
-Additional [`rustc_test()`][rustc-test] parameters may be provided.
-
-</section>
+   Additional [`rustc_test()`][rustc-test] parameters may be provided.
 
 Support for additional languages may be added upon request.
 
@@ -288,6 +280,44 @@ component that are typically sufficient to run a "pure" unit test that tests
 algorithms or business logic. In order to provide a component manifest, specify
 a `manifest` parameter with a path to the manifest file.
 
+### Additional packaged resources
+
+In the [example above](#defining) you saw the use of `resources` in a component
+definition. The same syntax applies to all component templates. Resources
+included in a component definition will be included in any package that depends
+on that component. Any number of resources can be specified in a component
+target definition.
+
+Sometimes it's useful to define resources outside of a component definition. For
+instance, you may want to define resources and allow multiple components to
+depend on them. For this, use
+[`fuchsia_resources.gni`](/src/sys/build/fuchsia_resources.gni). For instance:
+
+{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{% verbatim %}
+
+```gn
+fuchsia_resources("roboto_family") {
+  sources = [
+    "Roboto-Black.ttf",
+    "Roboto-Bold.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Thin.ttf",
+  ]
+  destination = "data/fonts/{{source_file_part}}"
+}
+```
+
+{# Re-enable variable substition #}
+{% endverbatim %}
+
+In the example above, six files are provided to be packaged under `data/fonts/`,
+producing the paths `data/fonts/Roboto-Black.ttf`,
+`data/fonts/Roboto-Bold.ttf`, etc'. The format for `destination` accepts [GN
+source expansion placeholders][source-expansion-placeholders].
+
 ## Troubleshooting
 
 ### Listing the contents of a package
@@ -296,13 +326,13 @@ Packages are described by a package manifest, which is a text file where every
 line follows this structure:
 
 ```
-<packaged path>=<source file path>
+<packaged-path>=<source-file-path>
 ```
 
 To find the package manifest for a `fuchsia_package()` target, use the following
 command:
 
-```
+```bash
 fx gn outputs out/default <package_target>_manifest
 ```
 
@@ -326,4 +356,5 @@ See also:
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
+[source-expansion-placeholders]: https://gn.googlesource.com/gn/+/master/docs/reference.md#placeholders
 [working-with-packages]: /docs/development/sdk/documentation/packages.md
