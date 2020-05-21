@@ -6,7 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("lib") {
-  name = "fuchsia.googlesource.com/grand_unified_binary"
+  name = "go.fuchsia.dev/fuchsia/garnet/go/src/grand_unified_binary"
 
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
@@ -17,7 +17,7 @@ go_library("lib") {
 }
 
 go_binary("grand_unified_binary") {
-  gopackage = "fuchsia.googlesource.com/grand_unified_binary"
+  gopackage = "go.fuchsia.dev/fuchsia/garnet/go/src/grand_unified_binary"
 
   deps = [ ":lib" ]
 }
