@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use crate::agent::base::{
-    AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
+    AgentError, Context as AgentContext, Descriptor, Invocation, InvocationResult, Lifespan,
 };
 use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
 use crate::agent::volume_change_earcons_handler::{
     listen_to_audio_events, watch_background_usage, VolumeChangeEarconsHandler,
 };
+use crate::blueprint_definition;
 use crate::internal::agent::Payload;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::ListenSession;
@@ -20,6 +21,8 @@ use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::{atomic::AtomicBool, Arc};
+
+blueprint_definition!(Descriptor::Component("earcons_agent"), EarconsAgent::create);
 
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.
@@ -61,8 +64,8 @@ impl SwitchboardListenSessionHolder {
 }
 
 impl EarconsAgent {
-    pub fn create(mut context: AgentContext) {
-        let mut agent = Self {
+    async fn create(mut context: AgentContext) {
+        let mut agent = EarconsAgent {
             priority_stream_playing: Arc::new(AtomicBool::new(false)),
             sound_player_connection: Arc::new(Mutex::new(None)),
         };

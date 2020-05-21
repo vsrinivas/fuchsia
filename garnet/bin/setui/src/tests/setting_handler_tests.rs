@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #[cfg(test)]
 use {
-    crate::agent::restore_agent::RestoreAgent,
+    crate::agent::restore_agent,
     crate::internal::handler::{message, Address, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::registry::base::{Command, ContextBuilder, State},
@@ -22,7 +22,6 @@ use {
     futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::StreamExt,
     std::marker::PhantomData,
-    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_setting_handler_test_environment";
@@ -123,7 +122,7 @@ async fn verify_handler<C: Control + Sync + Send + 'static>(should_succeed: bool
         should_succeed,
         EnvironmentBuilder::new(InMemoryStorageFactory::create())
             .handler(SettingType::Unknown, Box::new(Handler::<Controller<C>>::spawn))
-            .agents(&[Arc::new(RestoreAgent::create)])
+            .agents(&[restore_agent::blueprint::create()])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await
@@ -141,7 +140,7 @@ async fn verify_data_handler<C: Control + Sync + Send + 'static>(should_succeed:
                     DataHandler::<DoNotDisturbInfo, DataController<C, DoNotDisturbInfo>>::spawn,
                 ),
             )
-            .agents(&[Arc::new(RestoreAgent::create)])
+            .agents(&[restore_agent::blueprint::create()])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await

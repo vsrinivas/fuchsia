@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::agent::restore_agent::RestoreAgent,
+    crate::agent::restore_agent,
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
@@ -255,7 +255,7 @@ async fn test_volume_restore() {
 
     assert!(EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .agents(&[Arc::new(RestoreAgent::create)])
+        .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Audio])
         .spawn_nested(ENV_NAME)
         .await
@@ -357,7 +357,7 @@ async fn test_persisted_values_applied_at_start() {
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
-        .agents(&[Arc::new(RestoreAgent::create)])
+        .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Audio])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

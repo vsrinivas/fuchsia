@@ -8,6 +8,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use core::fmt::Debug;
 use futures::channel::mpsc::UnboundedSender;
+use futures::future::BoxFuture;
 use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
@@ -25,6 +26,12 @@ pub enum AgentError {
     UnhandledLifespan,
     #[error("Unexpected Error")]
     UnexpectedError,
+}
+
+/// Identification for the agent used for logging purposes.
+#[derive(Clone)]
+pub enum Descriptor {
+    Component(&'static str),
 }
 
 /// TODO(b/52428): Move lifecycle stage context contents here.
@@ -72,9 +79,53 @@ pub struct Invocation {
     pub service_context: ServiceContextHandle,
 }
 
+/// Blueprint defines an interface provided to the authority for constructing
+/// a given agent.
+pub trait Blueprint {
+    /// Returns the Agent descriptor to be associated with components used
+    /// by this agent, such as logging.
+    fn get_descriptor(&self) -> Descriptor;
+
+    /// Uses the supplied context to create agent.
+    fn create(&self, context: Context) -> BoxFuture<'static, ()>;
+}
+
+pub type BlueprintHandle = Arc<dyn Blueprint + Send + Sync>;
+
 /// Entity for registering agents. It is responsible for signaling
 /// Stages based on the specified lifespan.
 #[async_trait]
 pub trait Authority {
-    async fn register(&mut self, generator: GenerateAgent) -> Result<(), Error>;
+    async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error>;
+}
+
+#[macro_export]
+macro_rules! blueprint_definition {
+    ($descriptor:stmt, $create:expr) => {
+        pub mod blueprint {
+            #[allow(unused_imports)]
+            use super::*;
+            use crate::agent::base;
+            use futures::future::BoxFuture;
+            use std::sync::Arc;
+
+            pub fn create() -> base::BlueprintHandle {
+                Arc::new(BlueprintImpl)
+            }
+
+            struct BlueprintImpl;
+
+            impl base::Blueprint for BlueprintImpl {
+                fn get_descriptor(&self) -> base::Descriptor {
+                    $descriptor
+                }
+
+                fn create(&self, context: base::Context) -> BoxFuture<'static, ()> {
+                    Box::pin(async move {
+                        $create(context).await;
+                    })
+                }
+            }
+        }
+    };
 }

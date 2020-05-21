@@ -7,7 +7,10 @@ use {
     crate::accessibility::spawn_accessibility_fidl_handler,
     crate::account::account_controller::AccountController,
     crate::agent::authority_impl::AuthorityImpl,
-    crate::agent::base::{Authority, GenerateAgent, InitializationContext, Lifespan, RunContext},
+    crate::agent::base::{
+        Authority, BlueprintHandle as AgentBlueprintHandle, InitializationContext, Lifespan,
+        RunContext,
+    },
     crate::audio::audio_controller::AudioController,
     crate::audio::spawn_audio_fidl_handler,
     crate::device::device_controller::DeviceController,
@@ -124,7 +127,7 @@ impl Environment {
 /// and ultimately spawns an environment based on them.
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
-    agents: Vec<GenerateAgent>,
+    agent_blueprints: Vec<AgentBlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
@@ -140,7 +143,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     pub fn new(storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             configuration: None,
-            agents: vec![],
+            agent_blueprints: vec![],
             storage_factory: storage_factory,
             generate_service: None,
             handlers: HashMap::new(),
@@ -175,9 +178,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         })
     }
 
-    /// Agents to participate
-    pub fn agents(mut self, agents: &[GenerateAgent]) -> EnvironmentBuilder<T> {
-        self.agents.append(&mut agents.to_vec());
+    pub fn agents(mut self, blueprints: &[AgentBlueprintHandle]) -> EnvironmentBuilder<T> {
+        self.agent_blueprints.append(&mut blueprints.to_vec());
         self
     }
 
@@ -215,7 +217,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         if create_environment(
             service_dir,
             settings,
-            self.agents,
+            self.agent_blueprints,
             service_context,
             Arc::new(Mutex::new(handler_factory)),
         )
@@ -351,7 +353,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
-    agents: Vec<GenerateAgent>,
+    agent_blueprints: Vec<AgentBlueprintHandle>,
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
@@ -455,9 +457,9 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         });
     }
 
-    for generate_agent in agents {
-        if agent_authority.register(generate_agent).await.is_err() {
-            fx_log_err!("failed to register agent");
+    for blueprint in agent_blueprints {
+        if agent_authority.register(blueprint).await.is_err() {
+            fx_log_err!("failed to register agent via blueprint");
         }
     }
 

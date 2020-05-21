@@ -1,7 +1,7 @@
 #[cfg(test)]
 use {
-    crate::agent::earcons_agent::EarconsAgent,
-    crate::agent::restore_agent::RestoreAgent,
+    crate::agent::earcons_agent,
+    crate::agent::restore_agent,
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
@@ -107,7 +107,7 @@ async fn create_environment(
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
-        .agents(&[Arc::new(RestoreAgent::create), Arc::new(EarconsAgent::create)])
+        .agents(&[restore_agent::blueprint::create(), earcons_agent::blueprint::create()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

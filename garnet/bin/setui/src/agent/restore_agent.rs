@@ -2,25 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Lifespan};
 /// The Restore Agent is responsible for signaling to all components to restore
 /// external sources to the last known value. It is invoked during startup.
-use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Lifespan};
+use crate::blueprint_definition;
 use crate::internal::agent::Payload;
 use crate::message::base::MessageEvent;
 use crate::switchboard::base::{SettingRequest, SwitchboardError};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 
+blueprint_definition!(
+    crate::agent::base::Descriptor::Component("restore_agent"),
+    crate::agent::restore_agent::RestoreAgent::create
+);
+
 #[derive(Debug)]
 pub struct RestoreAgent;
 
 impl RestoreAgent {
-    pub fn new() -> RestoreAgent {
-        RestoreAgent {}
-    }
-
-    pub fn create(mut context: Context) {
-        let mut agent = RestoreAgent::new();
+    async fn create(mut context: Context) {
+        let mut agent = RestoreAgent;
 
         fasync::spawn(async move {
             while let Ok(event) = context.receptor.watch().await {

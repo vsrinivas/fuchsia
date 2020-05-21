@@ -100,7 +100,7 @@ fn process_payload(
 
 #[async_trait]
 impl Authority for AuthorityImpl {
-    async fn register(&mut self, generate: GenerateAgent) -> Result<(), Error> {
+    async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error> {
         let create_result = self.messenger_factory.create(MessengerType::Unbound).await;
 
         if create_result.is_err() {
@@ -110,7 +110,7 @@ impl Authority for AuthorityImpl {
         let (messenger, receptor) = create_result?;
         let signature = messenger.get_signature();
 
-        generate(Context { receptor: receptor });
+        blueprint.create(Context { receptor: receptor }).await;
 
         self.agent_signatures.push(signature);
 

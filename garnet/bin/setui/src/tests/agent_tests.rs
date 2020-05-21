@@ -15,6 +15,7 @@ use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
 use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use rand::Rng;
@@ -30,6 +31,24 @@ type AckSender = futures::channel::oneshot::Sender<InvocationResult>;
 enum LifespanTarget {
     Initialization,
     Service,
+}
+
+struct TestAgentBlueprint {
+    generate: Arc<dyn Fn(Context) + Send + Sync>,
+    descriptor: Descriptor,
+}
+
+impl Blueprint for TestAgentBlueprint {
+    fn get_descriptor(&self) -> Descriptor {
+        self.descriptor.clone()
+    }
+
+    fn create(&self, context: Context) -> BoxFuture<'static, ()> {
+        let generate_fn = self.generate.clone();
+        Box::pin(async move {
+            (generate_fn)(context);
+        })
+    }
 }
 
 /// Agent provides a test agent to interact with the authority impl. It is
@@ -79,7 +98,7 @@ impl TestAgent {
         id: u32,
         lifespan_target: LifespanTarget,
         callback: CallbackSender,
-    ) -> (Arc<Mutex<TestAgent>>, GenerateAgent) {
+    ) -> (Arc<Mutex<TestAgent>>, BlueprintHandle) {
         let agent = Arc::new(Mutex::new(TestAgent {
             id: id,
             last_invocation: None,
@@ -88,23 +107,26 @@ impl TestAgent {
         }));
 
         let agent_clone = agent.clone();
-        let generate = Arc::new(move |mut context: Context| {
-            let agent = agent_clone.clone();
-            fasync::spawn(async move {
-                while let Ok((payload, client)) = context.receptor.next_payload().await {
-                    if let agent::Payload::Invocation(invocation) = payload {
-                        client
-                            .reply(agent::Payload::Complete(
-                                agent.lock().await.handle(invocation).await,
-                            ))
-                            .send()
-                            .ack();
+        let blueprint = Arc::new(TestAgentBlueprint {
+            descriptor: Descriptor::Component("test"),
+            generate: Arc::new(move |mut context: Context| {
+                let agent = agent_clone.clone();
+                fasync::spawn(async move {
+                    while let Ok((payload, client)) = context.receptor.next_payload().await {
+                        if let agent::Payload::Invocation(invocation) = payload {
+                            client
+                                .reply(agent::Payload::Complete(
+                                    agent.lock().await.handle(invocation).await,
+                                ))
+                                .send()
+                                .ack();
+                        }
                     }
-                }
-            });
+                });
+            }),
         });
 
-        (agent.clone(), generate)
+        (agent.clone(), blueprint)
     }
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::restore_agent::RestoreAgent;
+use crate::agent::restore_agent;
 use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::switchboard::base::{
     SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
@@ -42,7 +42,7 @@ async fn verify_restore_handling(
                     }
                 })),
             )
-            .agents(&[Arc::new(RestoreAgent::create)])
+            .agents(&[restore_agent::blueprint::create()])
             .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await

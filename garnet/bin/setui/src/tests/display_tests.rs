@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::agent::restore_agent::RestoreAgent,
+    crate::agent::restore_agent,
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::{DisplayInfo, SettingType},
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -15,7 +15,6 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::prelude::*,
-    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_display_test_environment";
@@ -137,7 +136,7 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .agents(&[Arc::new(RestoreAgent::create)])
+        .agents(&[restore_agent::blueprint::create()])
         .settings(&[SettingType::Display])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
