@@ -161,7 +161,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   }
 
   if (next_node_internal->type == NodeType::kOutputStream) {
-    FX_LOGS(ERROR)
+    FX_LOGS(WARNING)
         << "Cannot create this stream due to unexpected ordering of stream create requests";
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -224,7 +224,7 @@ void PipelineManager::ConfigureStreamPipeline(
               // We will now append the requested stream to the existing graph.
               status = AppendToExistingGraph(&info, full_resolution_stream_.get(), stream);
               if (status != ZX_OK) {
-                FX_PLOGST(ERROR, kTag, status) << "AppendToExistingGraph failed";
+                FX_PLOGST(DEBUG, kTag, status) << "AppendToExistingGraph failed";
                 return;
               }
               return;

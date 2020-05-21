@@ -231,13 +231,13 @@ zx_status_t Ge2dNode::OnSetCropRect(float x_min, float y_min, float x_max, float
   }
 
   if (x_max < x_min) {
-    FX_LOGST(ERROR, kTag) << "Invalid crop parameters: x_max(" << x_min << ") < x_min(" << x_min
+    FX_LOGST(DEBUG, kTag) << "Invalid crop parameters: x_max(" << x_min << ") < x_min(" << x_min
                           << ")";
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (y_max < y_min) {
-    FX_LOGST(ERROR, kTag) << "Invalid crop parameters: y_max(" << y_min << ") < y_min(" << y_min
+    FX_LOGST(DEBUG, kTag) << "Invalid crop parameters: y_max(" << y_min << ") < y_min(" << y_min
                           << ")";
     return ZX_ERR_INVALID_ARGS;
   }

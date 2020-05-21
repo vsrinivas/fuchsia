@@ -82,27 +82,27 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
 
   // Input Validations
   if (config_index >= configs_.size()) {
-    FX_LOGST(ERROR, kTag) << "Invalid config index " << config_index;
+    FX_LOGST(DEBUG, kTag) << "Invalid config index " << config_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& config = configs_[config_index];
 
   if (stream_index >= config.stream_configs.size()) {
-    FX_LOGST(ERROR, kTag) << "Invalid stream index " << stream_index;
+    FX_LOGST(DEBUG, kTag) << "Invalid stream index " << stream_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& stream_config = config.stream_configs[stream_index];
 
   if (image_format_index >= stream_config.image_formats.size()) {
-    FX_LOGST(ERROR, kTag) << "Invalid image format index " << image_format_index;
+    FX_LOGST(DEBUG, kTag) << "Invalid image format index " << image_format_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
 
   if (buffer_collection.buffer_count == 0) {
-    FX_LOGST(ERROR, kTag) << "Invalid buffer count " << buffer_collection.buffer_count;
+    FX_LOGST(DEBUG, kTag) << "Invalid buffer count " << buffer_collection.buffer_count;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
@@ -111,7 +111,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   InternalConfigInfo* internal_config;
   status = GetInternalConfiguration(config_index, &internal_config);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Unable to get Internal configuration";
+    FX_PLOGST(DEBUG, kTag, status) << "Unable to get Internal configuration";
     return;
   }
 
@@ -119,7 +119,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   auto* stream_config_node =
       GetStreamConfigNode(internal_config, stream_config.properties.stream_type());
   if (stream_config_node == nullptr) {
-    FX_LOGST(ERROR, kTag) << "Unable to get Internal stream config node";
+    FX_LOGST(DEBUG, kTag) << "Unable to get Internal stream config node";
     return;
   }
 

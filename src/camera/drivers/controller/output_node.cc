@@ -20,7 +20,7 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
     async_dispatcher_t* dispatcher, StreamCreationData* info, ProcessNode* parent_node,
     const InternalConfigNode& internal_output_node) {
   if (dispatcher == nullptr || info == nullptr || parent_node == nullptr) {
-    FX_LOGST(ERROR, kTag) << "Invalid input parameters";
+    FX_LOGST(DEBUG, kTag) << "Invalid input parameters";
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 

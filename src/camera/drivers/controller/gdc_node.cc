@@ -43,7 +43,7 @@ const char* ToConfigFileName(const camera::GdcConfig& config_type) {
 fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
     zx_device_t* device, const camera::GdcConfig& config_type) {
   if (config_type == GdcConfig::INVALID) {
-    FX_LOGST(ERROR, kTag) << "Invalid GDC configuration type";
+    FX_LOGST(DEBUG, kTag) << "Invalid GDC configuration type";
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
