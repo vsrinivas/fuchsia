@@ -119,6 +119,7 @@ fn test_signed_int_positive() -> TestCase {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&[]).unwrap();
     let Opt { puppet_url } = argh::from_env();
 
     let launcher = launcher().unwrap();
@@ -147,5 +148,6 @@ async fn main() -> Result<(), Error> {
         actual.push((test_name, buffer));
     }
     assert_eq!(expected, actual);
+    log::info!("Ran {:?} tests successfully", arr.len());
     Ok(())
 }
