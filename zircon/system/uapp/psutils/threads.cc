@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/zx/process.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,10 +18,12 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
-#include <fbl/vector.h>
+#include <vector>
+
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
 #include <task-utils/get.h>
+#include <task-utils/walker.h>
 
 static int verbosity_level = 0;
 
@@ -195,14 +198,72 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
   inspector_dso_free_list(dso_list);
 }
 
+void dump_process(zx_koid_t pid, zx::unowned_process process) {
+  char process_name[ZX_MAX_NAME_LEN];
+  auto status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  if (status != ZX_OK) {
+    strlcpy(process_name, "unknown", sizeof(process_name));
+  }
+
+  // We skip printing serial console's stack as this will cause a hang.
+  if (strcmp(process_name, "console.cm") == 0) {
+    printf("Skipping backtrace of thread in process %" PRIu64 ": %s\n", pid, process_name);
+    return;
+  }
+
+  printf("Backtrace of threads of process %" PRIu64 ": %s\n", pid, process_name);
+
+  dump_all_threads(pid, process->get());
+}
+
+int dump_process(zx_koid_t pid) {
+  zx::process process;
+  zx_obj_type_t type;
+  auto status = get_task_by_koid(pid, &type, process.reset_and_get_address());
+  if (status != ZX_OK) {
+    print_zx_error(status, "unable to get a handle to %" PRIu64, pid);
+    return 1;
+  }
+
+  if (type != ZX_OBJ_TYPE_PROCESS) {
+    print_error("PID %" PRIu64 " is not a process. Threads can only be dumped from processes", pid);
+    return 1;
+  }
+
+  dump_process(pid, zx::unowned(process));
+  return 0;
+}
+
+int dump_all_processes() {
+  auto process_callback = [](void* ctx, int depth, zx_handle_t process, zx_koid_t koid,
+                             zx_koid_t parent_koid) {
+    // Attempting to dump our own process will result in a hang, so we skip it.
+    if (process != *zx::process::self()) {
+      dump_process(koid, zx::unowned_process(process));
+    }
+    return ZX_OK;
+  };
+
+  auto status = walk_root_job_tree(/*job_callback=*/nullptr, process_callback,
+                                   /*thread_callback=*/nullptr, /*ctx=*/nullptr);
+  if (status != ZX_OK) {
+    fprintf(stderr, "ERROR: unable to walk root job tree: %s", zx_status_get_string(status));
+    return 1;
+  }
+
+  return 0;
+}
+
 void usage(FILE* f) {
-  fprintf(f, "Usage: threads [options] pid\n");
+  fprintf(f, "Usage: threads [options] [pid]\n");
   fprintf(f, "Options:\n");
-  fprintf(f, "  -v[n] = set verbosity level to N\n");
+  fprintf(f, "  -v[n]           = set verbosity level to N\n");
+  fprintf(f, "  --all-processes = dump stacks for all processes currently running."
+          "This will hang if not invoked via serial console.\n");
 }
 
 int main(int argc, char** argv) {
-  zx_status_t status;
+  bool all_processes = false;
   zx_koid_t pid = ZX_KOID_INVALID;
 
   int i;
@@ -212,6 +273,8 @@ int main(int argc, char** argv) {
       if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
         usage(stdout);
         return 0;
+      } else if (strcmp(arg, "--all-processes") == 0) {
+        all_processes = true;
       } else if (strncmp(arg, "-v", 2) == 0) {
         if (arg[2] != '\0') {
           verbosity_level = atoi(arg + 2);
@@ -226,17 +289,6 @@ int main(int argc, char** argv) {
       break;
     }
   }
-  if (i == argc || i + 1 != argc) {
-    usage(stderr);
-    return 1;
-  }
-  char* endptr;
-  const char* pidstr = argv[i];
-  pid = strtoull(pidstr, &endptr, 0);
-  if (!(pidstr[0] != '\0' && *endptr == '\0')) {
-    fprintf(stderr, "ERROR: invalid pid: %s", pidstr);
-    return 1;
-  }
 
   inspector_set_verbosity(verbosity_level);
 
@@ -246,29 +298,22 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  zx_handle_t process;
-  zx_obj_type_t type;
-  status = get_task_by_koid(pid, &type, &process);
-  if (status < 0) {
-    print_zx_error(status, "unable to get a handle to %" PRIu64, pid);
+  if (all_processes) {
+    return dump_all_processes();
+  }
+
+  if (i == argc || i + 1 != argc) {
+    usage(stderr);
     return 1;
   }
 
-  if (type != ZX_OBJ_TYPE_PROCESS) {
-    print_error("PID %" PRIu64 " is not a process. Threads can only be dumped from processes", pid);
+  char* endptr;
+  const char* pidstr = argv[i];
+  pid = strtoull(pidstr, &endptr, 0);
+  if (!(pidstr[0] != '\0' && *endptr == '\0')) {
+    fprintf(stderr, "ERROR: invalid pid: %s", pidstr);
     return 1;
   }
 
-  char process_name[ZX_MAX_NAME_LEN];
-  status = zx_object_get_property(process, ZX_PROP_NAME, process_name, sizeof(process_name));
-  if (status < 0) {
-    strlcpy(process_name, "unknown", sizeof(process_name));
-  }
-
-  printf("Backtrace of threads of process %" PRIu64 ": %s\n", pid, process_name);
-
-  dump_all_threads(pid, process);
-  zx_handle_close(process);
-
-  return 0;
+  return dump_process(pid);
 }
