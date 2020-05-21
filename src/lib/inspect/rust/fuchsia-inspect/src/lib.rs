@@ -33,9 +33,10 @@ use {
     std::{
         cmp::max,
         default::Default,
+        fmt::Debug,
         sync::{
             atomic::{AtomicUsize, Ordering},
-            Arc,
+            Arc, Weak,
         },
     },
     vfs::{
@@ -79,11 +80,11 @@ pub struct Inspector {
 
 /// Holds a list of inspect types that won't change.
 #[derive(Derivative)]
-#[derivative(Clone, Debug, PartialEq, Eq)]
+#[derivative(Debug, PartialEq, Eq)]
 struct ValueList {
     #[derivative(PartialEq = "ignore")]
     #[derivative(Debug = "ignore")]
-    values: Arc<Mutex<Option<InspectTypeList>>>,
+    values: Mutex<Option<InspectTypeList>>,
 }
 
 impl Default for ValueList {
@@ -97,7 +98,7 @@ type InspectTypeList = Vec<Box<dyn InspectType>>;
 impl ValueList {
     /// Creates a new empty value list.
     pub fn new() -> Self {
-        Self { values: Arc::new(Mutex::new(None)) }
+        Self { values: Mutex::new(None) }
     }
 
     /// Stores an inspect type that won't change.
@@ -172,9 +173,9 @@ impl Inspector {
     pub fn copy_vmo_data(&self) -> Option<Vec<u8>> {
         self.root_node
             .inner
-            .as_ref()
-            .map(|inner| {
-                let state = inner.state.lock();
+            .inner_ref()
+            .map(|inner_ref| {
+                let state = inner_ref.state.lock();
                 Some(state.heap.bytes())
             })
             .unwrap_or(None)
@@ -212,7 +213,7 @@ impl Inspector {
     }
 
     fn state(&self) -> Option<Arc<Mutex<State>>> {
-        self.root().inner.as_ref().map(|inner| inner.state.clone())
+        self.root().inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
     }
 
     /// Creates a new No-Op inspector
@@ -252,29 +253,157 @@ trait InspectTypeInternal {
     fn is_valid(&self) -> bool;
 }
 
-/// A type that is owned by inspect nodes and properties, sharing ownership of
-/// the inspect VMO heap, and with numerical pointers to the location in the
-/// heap in which it resides.
-#[derive(Debug)]
-struct InnerRef {
-    /// Index of the block in the VMO.
-    block_index: u32,
+/// An inner type of all inspect nodes and properties. Each variant implies a
+/// different relationship with the underlying inspect VMO.
+#[derive(Debug, Derivative)]
+#[derivative(Default)]
+enum Inner<T: InnerType> {
+    /// The node or property is not attached to the inspect VMO.
+    #[derivative(Default)]
+    None,
 
-    /// Reference to the VMO heap.
-    state: Arc<Mutex<State>>,
+    /// The node or property is attached to the inspect VMO, iff its strong
+    /// reference is still alive.
+    Weak(Weak<InnerRef<T>>),
+
+    /// The node or property is attached to the inspect VMO.
+    Strong(Arc<InnerRef<T>>),
+}
+
+impl<T: InnerType> Inner<T> {
+    /// Create a new Inner with the desired block index within the inspect VMO
+    fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
+        Self::Strong(Arc::new(InnerRef { state, block_index, data: T::Data::default() }))
+    }
+
+    /// Returns true if the number of strong references to this node or property
+    /// is greater than 0.
+    fn is_valid(&self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Weak(weak_ref) => weak_ref.strong_count() > 0,
+            Self::Strong(_) => true,
+        }
+    }
+
+    /// Returns a `Some(Arc<InnerRef>)` iff the node or property is currently
+    /// attached to inspect, or `None` otherwise. Weak pointers are upgraded
+    /// if possible, but their lifetime as strong references are expected to be
+    /// short.
+    fn inner_ref(&self) -> Option<Arc<InnerRef<T>>> {
+        match self {
+            Self::None => None,
+            Self::Weak(weak_ref) => weak_ref.upgrade(),
+            Self::Strong(inner_ref) => Some(Arc::clone(inner_ref)),
+        }
+    }
+
+    /// Make a weak reference.
+    fn clone_weak(&self) -> Self {
+        match self {
+            Self::None => Self::None,
+            Self::Weak(weak_ref) => Self::Weak(weak_ref.clone()),
+            Self::Strong(inner_ref) => Self::Weak(Arc::downgrade(inner_ref)),
+        }
+    }
 }
 
 /// Inspect API types implement Eq,PartialEq returning true all the time so that
 /// structs embedding inspect types can derive these traits as well.
 /// IMPORTANT: Do not rely on these traits implementations for real comparisons
 /// or validation tests, instead leverage the reader.
-impl PartialEq for InnerRef {
-    fn eq(&self, _other: &InnerRef) -> bool {
+impl<T: InnerType> PartialEq for Inner<T> {
+    fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
 
-impl Eq for InnerRef {}
+impl<T: InnerType> Eq for Inner<T> {}
+
+/// A type that is owned by inspect nodes and properties, sharing ownership of
+/// the inspect VMO heap, and with numerical pointers to the location in the
+/// heap in which it resides.
+#[derive(Debug)]
+struct InnerRef<T: InnerType> {
+    /// Index of the block in the VMO.
+    block_index: u32,
+
+    /// Reference to the VMO heap.
+    state: Arc<Mutex<State>>,
+
+    /// Associated data for this type.
+    data: T::Data,
+}
+
+impl<T: InnerType> Drop for InnerRef<T> {
+    /// InnerRef has a manual drop impl, to guarantee a single deallocation in
+    /// the case of multiple strong references.
+    fn drop(&mut self) {
+        T::free(&mut *self.state.lock(), self.block_index).unwrap();
+    }
+}
+
+/// De-allocation behavior and associated data for an inner type.
+trait InnerType {
+    /// Associated data stored on the InnerRef
+    type Data: Default + Debug;
+
+    /// De-allocation behavior for when the InnerRef gets dropped
+    fn free(state: &mut State, block_index: u32) -> Result<(), Error>;
+}
+
+#[derive(Default, Debug)]
+struct InnerNodeType;
+
+impl InnerType for InnerNodeType {
+    // Each node has a list of recorded values.
+    type Data = ValueList;
+
+    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
+        if block_index == 0 {
+            return Ok(());
+        }
+        state
+            .free_value(block_index)
+            .map_err(|err| err.context(format!("Failed to free node index={}", block_index)))
+    }
+}
+
+#[derive(Default, Debug)]
+struct InnerValueType;
+
+impl InnerType for InnerValueType {
+    type Data = ();
+    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
+        state
+            .free_value(block_index)
+            .map_err(|err| err.context(format!("Failed to free value index={}", block_index)))
+    }
+}
+
+#[derive(Default, Debug)]
+struct InnerPropertyType;
+
+impl InnerType for InnerPropertyType {
+    type Data = ();
+    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
+        state
+            .free_property(block_index)
+            .map_err(|err| err.context(format!("Failed to free property index={}", block_index)))
+    }
+}
+
+#[derive(Default, Debug)]
+struct InnerLazyNodeType;
+
+impl InnerType for InnerLazyNodeType {
+    type Data = ();
+    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
+        state
+            .free_lazy_node(block_index)
+            .map_err(|err| err.context(format!("Failed to free lazy node index={}", block_index)))
+    }
+}
 
 /// Utility for generating the implementation of all inspect types (including the struct):
 ///  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
@@ -282,7 +411,7 @@ impl Eq for InnerRef {}
 ///  - All Inspect Types derive PartialEq, Eq. This generates the dummy implementation
 ///    for the wrapped type.
 macro_rules! inspect_type_impl {
-    ($(#[$attr:meta])* struct $name:ident $($field:ident : $field_type:ty = $field_init:expr,)*) => {
+    ($(#[$attr:meta])* struct $name:ident, $type:ident) => {
         paste::item! {
             $(#[$attr])*
             /// NOTE: do not rely on PartialEq implementation for true comparison.
@@ -291,22 +420,21 @@ macro_rules! inspect_type_impl {
             /// NOTE: Operations on a Default value are no-ops.
             #[derive(Debug, PartialEq, Eq, Default)]
             pub struct $name {
-                inner: Option<InnerRef>,
-                $($field: $field_type,)*
+                inner: Inner<$type>,
             }
 
             #[cfg(test)]
             impl $name {
                 #[allow(missing_docs)]
                 pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
-                    self.inner.as_ref().and_then(|inner| {
-                        inner.state.lock().heap.get_block(inner.block_index).ok()
+                    self.inner.inner_ref().and_then(|inner_ref| {
+                        inner_ref.state.lock().heap.get_block(inner_ref.block_index).ok()
                     })
                 }
 
                 #[allow(missing_docs)]
                 pub fn block_index(&self) -> u32 {
-                    self.inner.as_ref().unwrap().block_index
+                    self.inner.inner_ref().unwrap().block_index
                 }
             }
 
@@ -315,19 +443,16 @@ macro_rules! inspect_type_impl {
             impl InspectTypeInternal for $name {
                 fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
                     Self {
-                        inner: Some(InnerRef {
-                            state, block_index,
-                        }),
-                        $($field: $field_init,)*
+                        inner: Inner::new(state, block_index),
                     }
                 }
 
                 fn is_valid(&self) -> bool {
-                    self.inner.is_some()
+                    self.inner.is_valid()
                 }
 
                 fn new_no_op() -> Self {
-                    Self { inner: None, $($field: $field_init,)* }
+                    Self { inner: Inner::None }
                 }
             }
         }
@@ -345,12 +470,12 @@ macro_rules! create_numeric_property_fn {
             #[allow(missing_docs)]
             pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
                 -> [<$name_cap Property>] {
-                    self.inner.as_ref().and_then(|inner| {
-                        inner.state
+                    self.inner.inner_ref().and_then(|inner_ref| {
+                        inner_ref.state
                             .lock()
-                            .[<create_ $name _metric>](name.as_ref(), value, inner.block_index)
+                            .[<create_ $name _metric>](name.as_ref(), value, inner_ref.block_index)
                             .map(|block| {
-                                [<$name_cap Property>]::new(inner.state.clone(), block.index())
+                                [<$name_cap Property>]::new(inner_ref.state.clone(), block.index())
                             })
                             .ok()
                     })
@@ -381,12 +506,12 @@ macro_rules! create_array_property_fn {
 
             fn [<create_ $name _array_internal>](&self, name: impl AsRef<str>, slots: usize, format: ArrayFormat)
                 -> [<$name_cap ArrayProperty>] {
-                    self.inner.as_ref().and_then(|inner| {
-                        inner.state
+                    self.inner.inner_ref().and_then(|inner_ref| {
+                        inner_ref.state
                             .lock()
-                            .[<create_ $name _array>](name.as_ref(), slots, format, inner.block_index)
+                            .[<create_ $name _array>](name.as_ref(), slots, format, inner_ref.block_index)
                             .map(|block| {
-                                [<$name_cap ArrayProperty>]::new(inner.state.clone(), block.index())
+                                [<$name_cap ArrayProperty>]::new(inner_ref.state.clone(), block.index())
                             })
                             .ok()
                     })
@@ -476,17 +601,17 @@ macro_rules! create_lazy_property_fn {
             #[must_use]
             pub fn [<create_lazy_ $fn_suffix>]<F>(&self, name: impl AsRef<str>, callback: F) -> LazyNode
             where F: Fn() -> BoxFuture<'static, Result<Inspector, Error>> + Sync + Send + 'static {
-                self.inner.as_ref().and_then(|inner| {
-                    inner
+                self.inner.inner_ref().and_then(|inner_ref| {
+                    inner_ref
                         .state
                         .lock()
                         .create_lazy_node(
                             name.as_ref(),
-                            inner.block_index,
+                            inner_ref.block_index,
                             LinkNodeDisposition::$disposition,
                             callback,
                         )
-                        .map(|block| LazyNode::new(inner.state.clone(), block.index()))
+                        .map(|block| LazyNode::new(inner_ref.state.clone(), block.index()))
                         .ok()
                 })
                 .unwrap_or(LazyNode::new_no_op())
@@ -504,13 +629,14 @@ macro_rules! create_lazy_property_fn {
 
 inspect_type_impl!(
     /// Inspect API Node data type.
-    struct Node
-    recorded_values : ValueList = ValueList::new(),
+    struct Node,
+    InnerNodeType
 );
 
 inspect_type_impl!(
     /// Inspect API Lazy Node data type.
-    struct LazyNode
+    struct LazyNode,
+    InnerLazyNodeType
 );
 
 impl Node {
@@ -518,17 +644,24 @@ impl Node {
         Node::new(state, 0)
     }
 
+    /// Create a weak reference to the original node. All operations on a weak
+    /// reference have identical semantics to the original node for as long
+    /// as the original node is live. After that, all operations are no-ops.
+    pub fn clone_weak(&self) -> Node {
+        Self { inner: self.inner.clone_weak() }
+    }
+
     /// Add a child to this node.
     #[must_use]
     pub fn create_child(&self, name: impl AsRef<str>) -> Node {
         self.inner
-            .as_ref()
-            .and_then(|inner| {
-                inner
+            .inner_ref()
+            .and_then(|inner_ref| {
+                inner_ref
                     .state
                     .lock()
-                    .create_node(name.as_ref(), inner.block_index)
-                    .map(|block| Node::new(inner.state.clone(), block.index()))
+                    .create_node(name.as_ref(), inner_ref.block_index)
+                    .map(|block| Node::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
             .unwrap_or(Node::new_no_op())
@@ -536,7 +669,7 @@ impl Node {
 
     /// Keeps track of the given property for the lifetime of the node.
     pub fn record(&self, property: impl InspectType + 'static) {
-        self.recorded_values.record(property);
+        self.inner.inner_ref().map(|inner_ref| inner_ref.data.record(property));
     }
 
     // Add a lazy node property to this node:
@@ -593,18 +726,18 @@ impl Node {
     #[must_use]
     pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
         self.inner
-            .as_ref()
-            .and_then(|inner| {
-                inner
+            .inner_ref()
+            .and_then(|inner_ref| {
+                inner_ref
                     .state
                     .lock()
                     .create_property(
                         name.as_ref(),
                         value.as_ref().as_bytes(),
                         PropertyFormat::String,
-                        inner.block_index,
+                        inner_ref.block_index,
                     )
-                    .map(|block| StringProperty::new(inner.state.clone(), block.index()))
+                    .map(|block| StringProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
             .unwrap_or(StringProperty::new_no_op())
@@ -620,18 +753,18 @@ impl Node {
     #[must_use]
     pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
         self.inner
-            .as_ref()
-            .and_then(|inner| {
-                inner
+            .inner_ref()
+            .and_then(|inner_ref| {
+                inner_ref
                     .state
                     .lock()
                     .create_property(
                         name.as_ref(),
                         value.as_ref(),
                         PropertyFormat::Bytes,
-                        inner.block_index,
+                        inner_ref.block_index,
                     )
-                    .map(|block| BytesProperty::new(inner.state.clone(), block.index()))
+                    .map(|block| BytesProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
             .unwrap_or(BytesProperty::new_no_op())
@@ -647,13 +780,13 @@ impl Node {
     #[must_use]
     pub fn create_bool(&self, name: impl AsRef<str>, value: bool) -> BoolProperty {
         self.inner
-            .as_ref()
-            .and_then(|inner| {
-                inner
+            .inner_ref()
+            .and_then(|inner_ref| {
+                inner_ref
                     .state
                     .lock()
-                    .create_bool(name.as_ref(), value, inner.block_index)
-                    .map(|block| BoolProperty::new(inner.state.clone(), block.index()))
+                    .create_bool(name.as_ref(), value, inner_ref.block_index)
+                    .map(|block| BoolProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
             .unwrap_or(BoolProperty::new_no_op())
@@ -663,34 +796,6 @@ impl Node {
     pub fn record_bool(&self, name: impl AsRef<str>, value: bool) {
         let property = self.create_bool(name, value);
         self.record(property);
-    }
-}
-
-impl Drop for Node {
-    fn drop(&mut self) {
-        self.inner.as_ref().map(|inner| {
-            // This is the special "root" node. Do not delete.
-            if inner.block_index == 0 {
-                return;
-            }
-            inner
-                .state
-                .lock()
-                .free_value(inner.block_index)
-                .expect(&format!("Failed to free node index={}", inner.block_index));
-        });
-    }
-}
-
-impl Drop for LazyNode {
-    fn drop(&mut self) {
-        self.inner.as_ref().map(|inner| {
-            inner
-                .state
-                .lock()
-                .free_lazy_node(inner.block_index)
-                .expect(&format!("failed to free lazy node index={}", inner.block_index));
-        });
     }
 }
 
@@ -728,30 +833,12 @@ macro_rules! numeric_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::item! {
             fn $fn_name(&self, value: $type) {
-                if let Some(ref inner) = self.inner {
-                    inner.state.lock().[<$fn_name _ $name _metric>](inner.block_index, value)
+                if let Some(ref inner_ref) = self.inner.inner_ref() {
+                    inner_ref.state.lock().[<$fn_name _ $name _metric>](inner_ref.block_index, value)
                         .unwrap_or_else(|e| {
                             fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
                 }
-            }
-        }
-    };
-}
-
-/// Utility for generting a Drop implementation for numeric and array properties.
-///     `name`: the name of the struct of the property for which Drop will be implemented.
-macro_rules! drop_value_impl {
-    ($name:ident) => {
-        impl Drop for $name {
-            fn drop(&mut self) {
-                self.inner.as_ref().map(|inner| {
-                    inner
-                        .state
-                        .lock()
-                        .free_value(inner.block_index)
-                        .expect(&format!("Failed to free property index={}", inner.block_index));
-                });
             }
         }
     };
@@ -766,7 +853,8 @@ macro_rules! numeric_property {
         paste::item! {
             inspect_type_impl!(
                 /// Inspect API Numeric Property data type.
-                struct [<$name_cap Property>]
+                struct [<$name_cap Property>],
+                InnerValueType
             );
 
             impl<'t> Property<'t> for [<$name_cap Property>] {
@@ -781,15 +869,13 @@ macro_rules! numeric_property {
                 numeric_property_fn!(subtract, $type, $name);
 
                 fn get(&self) -> Result<$type, Error> {
-                    if let Some(ref inner) = self.inner {
-                        inner.state.lock().[<get_ $name _metric>](inner.block_index)
+                    if let Some(ref inner_ref) = self.inner.inner_ref() {
+                        inner_ref.state.lock().[<get_ $name _metric>](inner_ref.block_index)
                     } else {
                         Err(format_err!("Property is No-Op"))
                     }
                 }
             }
-
-            drop_value_impl!([<$name_cap Property>]);
         }
     };
 }
@@ -807,30 +893,20 @@ macro_rules! property {
         paste::item! {
             inspect_type_impl!(
                 /// Inspect API Property data type.
-                struct [<$name Property>]
+                struct [<$name Property>],
+                InnerPropertyType
             );
 
             impl<'t> Property<'t> for [<$name Property>] {
                 type Type = &'t $type;
 
                 fn set(&'t self, value: &'t $type) {
-                    if let Some(ref inner) = self.inner {
-                        inner.state.lock().set_property(inner.block_index, $bytes)
+                    if let Some(ref inner_ref) = self.inner.inner_ref() {
+                        inner_ref.state.lock().set_property(inner_ref.block_index, $bytes)
                             .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
                     }
                 }
 
-            }
-
-            impl Drop for [<$name Property>] {
-                fn drop(&mut self) {
-                    self.inner.as_ref().map(|inner| {
-                        inner.state
-                            .lock()
-                            .free_property(inner.block_index)
-                            .expect(&format!("Failed to free property index={}", inner.block_index));
-                    });
-                }
             }
         }
     };
@@ -841,22 +917,21 @@ property!(Bytes, [u8], value);
 
 inspect_type_impl!(
     /// Inspect API Bool Property data type.
-    struct BoolProperty
+    struct BoolProperty,
+    InnerValueType
 );
 
 impl<'t> Property<'t> for BoolProperty {
     type Type = bool;
 
     fn set(&self, value: bool) {
-        if let Some(ref inner) = self.inner {
-            inner.state.lock().set_bool(inner.block_index, value).unwrap_or_else(|e| {
+        if let Some(ref inner_ref) = self.inner.inner_ref() {
+            inner_ref.state.lock().set_bool(inner_ref.block_index, value).unwrap_or_else(|e| {
                 fx_log_err!("Failed to set property. Error: {:?}", e);
             });
         }
     }
 }
-
-drop_value_impl!(BoolProperty);
 
 #[allow(missing_docs)]
 pub trait ArrayProperty {
@@ -884,8 +959,8 @@ macro_rules! array_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::item! {
             fn $fn_name(&self, index: usize, value: $type) {
-                if let Some(ref inner) = self.inner {
-                    inner.state.lock().[<$fn_name _array_ $name _slot>](inner.block_index, index, value)
+                if let Some(ref inner_ref) = self.inner.inner_ref() {
+                    inner_ref.state.lock().[<$fn_name _array_ $name _slot>](inner_ref.block_index, index, value)
                         .unwrap_or_else(|e| {
                             fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
@@ -903,7 +978,8 @@ macro_rules! array_property {
         paste::item! {
             inspect_type_impl!(
                 /// Inspect API Array Property data type.
-                struct [<$name_cap ArrayProperty>]
+                struct [<$name_cap ArrayProperty>],
+                InnerValueType
             );
 
             impl [<$name_cap ArrayProperty>] {
@@ -917,16 +993,14 @@ macro_rules! array_property {
                 array_property_fn!(subtract, $type, $name);
 
                 fn clear(&self) {
-                    if let Some(ref inner) = self.inner {
-                        inner.state.lock().clear_array(inner.block_index, 0)
+                    if let Some(ref inner_ref) = self.inner.inner_ref() {
+                        inner_ref.state.lock().clear_array(inner_ref.block_index, 0)
                             .unwrap_or_else(|e| {
                                 fx_log_err!("Failed to clear property. Error: {:?}", e);
                             });
                     }
                 }
             }
-
-            drop_value_impl!([<$name_cap ArrayProperty>]);
         }
     };
 }
@@ -965,9 +1039,9 @@ macro_rules! histogram_property {
                 }
 
                 fn clear(&self) {
-                    if let Some(ref inner) = self.array.inner {
+                    if let Some(ref inner_ref) = self.array.inner.inner_ref() {
                         // Ensure we don't delete the array slots that contain histogram metadata.
-                        inner.state.lock().clear_array(inner.block_index, $clear_start_index)
+                        inner_ref.state.lock().clear_array(inner_ref.block_index, $clear_start_index)
                             .unwrap_or_else(|e| {
                                 fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                             });
@@ -1169,7 +1243,7 @@ mod tests {
         // Note, the small size we request should be rounded up to a full 4kB page.
         let (vmo, root_node) = Inspector::new_root(100).unwrap();
         assert_eq!(vmo.get_size().unwrap(), 4096);
-        let inner = root_node.inner.as_ref().unwrap();
+        let inner = root_node.inner.inner_ref().unwrap();
         assert_eq!(inner.block_index, 0);
     }
 
@@ -1194,6 +1268,54 @@ mod tests {
             assert_eq!(node_block.child_count().unwrap(), 1);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn node_no_op_clone_weak() {
+        let default = Node::default();
+        assert!(!default.is_valid());
+        let weak = default.clone_weak();
+        assert!(!weak.is_valid());
+        let _ = weak.create_child("child");
+        std::mem::drop(default);
+        let _ = weak.create_uint("age", 1337);
+        assert!(!weak.is_valid());
+    }
+
+    #[test]
+    fn node_clone_weak() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
+        let node_weak = node.clone_weak();
+        let node_weak_2 = node_weak.clone_weak(); // Weak from another weak
+
+        let node_block = node.get_block().unwrap();
+        assert_eq!(node_block.block_type(), BlockType::NodeValue);
+        assert_eq!(node_block.child_count().unwrap(), 0);
+        let node_weak_block = node.get_block().unwrap();
+        assert_eq!(node_weak_block.block_type(), BlockType::NodeValue);
+        assert_eq!(node_weak_block.child_count().unwrap(), 0);
+        let node_weak_2_block = node.get_block().unwrap();
+        assert_eq!(node_weak_2_block.block_type(), BlockType::NodeValue);
+        assert_eq!(node_weak_2_block.child_count().unwrap(), 0);
+
+        let child_from_strong = node.create_child("child");
+        let child = node_weak.create_child("child_1");
+        let child_2 = node_weak_2.create_child("child_2");
+        std::mem::drop(node_weak_2);
+        assert_eq!(node_weak_block.child_count().unwrap(), 3);
+        std::mem::drop(child_from_strong);
+        assert_eq!(node_weak_block.child_count().unwrap(), 2);
+        std::mem::drop(child);
+        assert_eq!(node_weak_block.child_count().unwrap(), 1);
+        assert!(node_weak.is_valid());
+        assert!(child_2.is_valid());
+        std::mem::drop(node);
+        assert!(!node_weak.is_valid());
+        let _ = node_weak.create_child("orphan");
+        let _ = child_2.create_child("orphan");
     }
 
     #[test]
@@ -1698,6 +1820,42 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             b: 2u64,
         });
+    }
+
+    #[test]
+    fn record_weak() {
+        let inspector = Inspector::new();
+        let main = inspector.root().create_child("main");
+        let main_weak = main.clone_weak();
+        let property = main_weak.create_uint("a", 1);
+
+        // Ensure either the weak or strong reference can be used for recording
+        main_weak.record_uint("b", 2);
+        main.record_uint("c", 3);
+        {
+            let child = main_weak.create_child("child");
+            child.record(property);
+            child.record_double("c", 3.14);
+            assert_inspect_tree!(inspector, root: { main: {
+                a: 1u64,
+                b: 2u64,
+                c: 3u64,
+                child: {
+                    c: 3.14,
+                }
+            }});
+        }
+        // `child` went out of scope, meaning it was deleted.
+        // Property `a` should be gone as well, given that it was being tracked by `child`.
+        assert_inspect_tree!(inspector, root: { main: {
+            b: 2u64,
+            c: 3u64
+        }});
+        std::mem::drop(main);
+        // Recording after dropping a strong reference is a no-op
+        main_weak.record_double("d", 1.0);
+        // Verify that dropping a strong reference cleans up the state
+        assert_inspect_tree!(inspector, root: { });
     }
 
     #[fasync::run_singlethreaded(test)]
