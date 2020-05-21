@@ -18,6 +18,7 @@ pub mod device;
 pub mod diagnostics;
 pub mod factory_store;
 pub mod file;
+pub mod gpio;
 pub mod hardware_power_statecontrol;
 pub mod hwinfo;
 pub mod i2c;

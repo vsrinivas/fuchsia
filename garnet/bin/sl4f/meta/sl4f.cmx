@@ -8,6 +8,7 @@
             "class/input-report",
             "class/light",
             "class/wlanphy",
+            "sys/platform",
             "wifi"
         ],
         "features": [
@@ -27,6 +28,7 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.hardware.gpio.Gpio",
             "fuchsia.hardware.i2c",
             "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",

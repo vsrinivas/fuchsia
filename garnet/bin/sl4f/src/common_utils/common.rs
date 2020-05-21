@@ -4,8 +4,11 @@
 
 use anyhow::{format_err, Error};
 use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon::Status;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use serde_json::Value;
+use std::fs::read_dir;
+use std::path::{Path, PathBuf};
 
 pub mod macros {
     pub use crate::fx_err_and_bail;
@@ -106,4 +109,18 @@ where
         *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
         Ok(proxy)
     }
+}
+
+pub fn find_file(dir: &Path, pattern: &str) -> Result<PathBuf, Status> {
+    for entry in read_dir(dir)? {
+        let path = entry?.path();
+        if path.ends_with(pattern) {
+            return Ok(path);
+        }
+
+        if let Ok(res) = find_file(&path, pattern) {
+            return Ok(res);
+        }
+    }
+    Err(Status::INTERNAL)
 }

@@ -55,6 +55,9 @@ use crate::factory_store::facade::FactoryStoreFacade;
 // File related includes
 use crate::file::facade::FileFacade;
 
+// Gpio related includes
+use crate::gpio::facade::GpioFacade;
+
 // Device Manager related includes
 use crate::hardware_power_statecontrol::facade::HardwarePowerStatecontrolFacade;
 
@@ -164,6 +167,7 @@ impl Sl4f {
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),
                 "gatt_server_facade" => GattServerFacade::new(),
+                "gpio_facade" => GpioFacade::new(),
                 "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
                 "i2c_facade" => I2cFacade::new(),
