@@ -15,8 +15,8 @@ import (
 
 	"encoding/json"
 
-	"fuchsia.googlesource.com/pm/ignores"
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/ignores"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 // Manifest describes the list of files that are to become the contents of a package

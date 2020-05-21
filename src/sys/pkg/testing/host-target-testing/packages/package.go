@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/far"
-	"fuchsia.googlesource.com/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 )
 
 type FileData []byte

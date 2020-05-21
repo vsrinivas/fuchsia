@@ -17,7 +17,7 @@ import (
 	"thinfs/fs"
 
 	"fuchsia.googlesource.com/far"
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 const (

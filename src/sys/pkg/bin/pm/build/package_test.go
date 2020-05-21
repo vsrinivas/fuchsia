@@ -17,7 +17,7 @@ import (
 	"testing"
 
 	"fuchsia.googlesource.com/merkle"
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 func TestInit(t *testing.T) {

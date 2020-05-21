@@ -19,9 +19,9 @@ import (
 	"strings"
 
 	"fuchsia.googlesource.com/far"
-	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pm/repo"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 func TestAdd(t *testing.T) {

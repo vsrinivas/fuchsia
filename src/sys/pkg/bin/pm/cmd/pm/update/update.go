@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 )
 
 const usage = `Usage: %s update

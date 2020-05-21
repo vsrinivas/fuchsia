@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 // Config contains global build configuration for other build commands

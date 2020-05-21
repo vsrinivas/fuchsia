@@ -17,7 +17,7 @@ import (
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/merkle"
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 // PackageManifest is the json structure representation of a full package

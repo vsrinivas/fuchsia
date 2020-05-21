@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 // StaticIndex is an index of packages that can not change. It is intended for

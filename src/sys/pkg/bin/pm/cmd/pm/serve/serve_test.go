@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/pmhttp"
-	"fuchsia.googlesource.com/pm/repo"
 	"fuchsia.googlesource.com/sse"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pmhttp"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )
 
 func TestParseFlags(t *testing.T) {

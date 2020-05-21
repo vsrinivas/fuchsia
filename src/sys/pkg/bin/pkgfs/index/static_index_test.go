@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 func TestStatic(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/pm/repo"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 )
 

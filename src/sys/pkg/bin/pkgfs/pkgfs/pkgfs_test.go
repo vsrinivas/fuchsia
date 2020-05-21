@@ -24,9 +24,9 @@ import (
 
 	zxio "syscall/zx/io"
 
-	"fuchsia.googlesource.com/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/iou"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/ramdisk"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 )
 
 // Adding a file to /in writes the file to blobfs

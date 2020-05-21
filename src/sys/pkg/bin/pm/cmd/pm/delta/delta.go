@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"fuchsia.googlesource.com/pm/build"
 	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 )
 
 const usage = `Usage: %s delta [OPTIONS] SOURCE_SNAPSHOT TARGET_SNAPSHOT

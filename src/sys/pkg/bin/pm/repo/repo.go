@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/merkle"
-	"fuchsia.googlesource.com/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 
 	tuf "github.com/flynn/go-tuf"
 )

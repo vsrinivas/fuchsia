@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/far"
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 type packagedItem struct {

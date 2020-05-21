@@ -22,8 +22,8 @@ import (
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/merkle"
-	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 const metaFar = "meta.far"

@@ -11,7 +11,7 @@ import (
 	"os"
 	"sync"
 
-	"fuchsia.googlesource.com/pm/pkg"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
 // DynamicIndex provides concurrency safe access to a dynamic index of packages and package metadata

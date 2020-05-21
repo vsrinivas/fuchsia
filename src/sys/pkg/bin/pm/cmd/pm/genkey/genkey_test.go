@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fuchsia.googlesource.com/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 )
 
 func TestRun(t *testing.T) {

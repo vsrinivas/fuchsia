@@ -17,7 +17,7 @@ import (
 	"sort"
 	"strings"
 
-	"fuchsia.googlesource.com/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 )
 
 const usage = `Usage: %s snapshot

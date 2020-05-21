@@ -19,10 +19,10 @@ import (
 	"sync"
 	"time"
 
-	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/fswatch"
-	"fuchsia.googlesource.com/pm/pmhttp"
-	"fuchsia.googlesource.com/pm/repo"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/fswatch"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pmhttp"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 )
 
 // server is a default http server only parameterized for tests.

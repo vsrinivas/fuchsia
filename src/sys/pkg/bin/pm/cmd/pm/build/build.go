@@ -15,9 +15,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/cmd/pm/seal"
-	"fuchsia.googlesource.com/pm/cmd/pm/update"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/cmd/pm/seal"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/cmd/pm/update"
 )
 
 const usage = `Usage: %s build
