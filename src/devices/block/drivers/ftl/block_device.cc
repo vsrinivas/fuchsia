@@ -282,12 +282,6 @@ bool BlockDevice::InitFtl() {
     zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count,
            stats.garbage_level);
     wear_count_ = inspector_.GetRoot().CreateUint("wear_count", stats.wear_count);
-    if (stats.wear_count) {
-      // TODO(35898): Remove this code when troubleshooting is over.
-      for (uint32_t i = 0; i < fbl::count_of(stats.wear_histogram); i++) {
-        zxlogf(INFO, "FTL: Wear bucket %02u: %04u", i, stats.wear_histogram[i]);
-      }
-    }
   }
 
   zxlogf(INFO, "FTL: InitFtl ok");
