@@ -5,7 +5,7 @@
 package basic
 
 import (
-	"fuchsia.googlesource.com/testing/fuzzing/go/fuzzing"
+	fuzzing "go.fuchsia.dev/fuchsia/src/testing/fuzzing/go"
 )
 
 func init() {

@@ -9,7 +9,7 @@ group("go") {
 }
 
 go_library("fuzzing") {
-  name = "fuchsia.googlesource.com/testing/fuzzing/go/fuzzing"
+  name = "go.fuchsia.dev/fuchsia/src/testing/fuzzing/go"
   sources = [
     "disabled.go",
     "enabled.go",
