@@ -118,6 +118,12 @@ while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
                 exit 1
             fi
             DO_KVM=1
+            if [[ ! -w "/dev/kvm" ]]; then
+                echo "To use KVM acceleration, adjust permissions to /dev/kvm using:"
+                echo
+                echo "sudo chmod 666 /dev/kvm"
+                exit 1
+            fi
             ;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
