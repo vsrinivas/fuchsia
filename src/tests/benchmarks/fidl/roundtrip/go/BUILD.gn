@@ -12,7 +12,7 @@ go_library("lib") {
   name = "fidl_benchmark"
   deps = [
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
     "//src/tests/benchmarks/fidl/roundtrip/fidl:fidl.benchmarks($go_toolchain)",
   ]
 }

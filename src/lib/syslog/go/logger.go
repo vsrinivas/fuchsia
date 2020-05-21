@@ -18,7 +18,7 @@ import (
 	"syscall/zx"
 	"unicode/utf8"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fuchsia/logger"
 

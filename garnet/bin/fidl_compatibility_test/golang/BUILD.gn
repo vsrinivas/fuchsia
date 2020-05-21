@@ -23,7 +23,7 @@ go_library("lib") {
   deps = [
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
   ]
 }
 

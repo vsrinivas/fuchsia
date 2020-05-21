@@ -12,6 +12,6 @@ go_binary("netstack_service_test") {
     "../:netstack_lib",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
   ]
 }

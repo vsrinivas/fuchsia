@@ -538,12 +538,10 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
             std::make_unique<internal::NodeConnection>(this, std::move(vnode), protocol, *options);
         return ZX_OK;
       case VnodeProtocol::kDatagramSocket:
-        // The posix socket protocol is used by netstack and served through the
-        // src/lib/component/go library.
+        // The posix socket protocol is served by netstack.
         ZX_PANIC("fuchsia.posix.socket/DatagramSocket is not implemented");
       case VnodeProtocol::kStreamSocket:
-        // The posix socket protocol is used by netstack and served through the
-        // src/lib/component/go library.
+        // The posix socket protocol is served by netstack.
         ZX_PANIC("fuchsia.posix.socket/StreamSocket is not implemented");
     }
 #ifdef __GNUC__

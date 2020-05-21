@@ -18,7 +18,7 @@ go_test("fake_clock_test") {
   gopackages = [ "fake_clock" ]
   deps = [
     ":fake_clock",
-    "//src/lib/component/go",
+    "//src/lib/component",
     "//src/lib/fake-clock/fidl($go_toolchain)",
   ]
   non_go_deps = [ "//src/lib/fake-clock/lib" ]

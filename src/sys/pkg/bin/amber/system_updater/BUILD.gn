@@ -18,7 +18,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.space($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
     "//src/lib/syslog/go",
     "//src/sys/pkg/bin/amber:metrics_lib",
     "//zircon/system/fidl/fuchsia-io($go_toolchain)",

@@ -13,7 +13,7 @@ import (
 	"syscall/zx/zxwait"
 	"testing"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/bindingstest"
 )

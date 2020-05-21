@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall/zx"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	"netstack/fidlconv"
 
 	netfidl "fidl/fuchsia/net"

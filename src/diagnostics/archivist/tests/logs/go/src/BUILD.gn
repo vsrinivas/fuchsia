@@ -19,7 +19,7 @@ go_library("logs_integration_go_tests_lib") {
   name = "logs_integration_tests"
 
   deps = [
-    "//src/lib/component/go",
+    "//src/lib/component",
     "//src/lib/syslog/go",
   ]
 }

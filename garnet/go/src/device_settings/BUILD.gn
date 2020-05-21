@@ -19,7 +19,7 @@ go_test("device_settings_integration_test") {
     ":device_settings",
     "//sdk/fidl/fuchsia.devicesettings($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
   ]
 }
 

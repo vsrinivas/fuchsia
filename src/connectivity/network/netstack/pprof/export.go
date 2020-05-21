@@ -15,8 +15,8 @@ import (
 	"syscall/zx"
 	"time"
 
-	"fuchsia.googlesource.com/component"
 	"fuchsia.googlesource.com/syslog"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	"netstack/inspect"
 )
 

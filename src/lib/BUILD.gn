@@ -56,7 +56,7 @@ group("tests") {
     "chunked-compression:tests",
     "cmx:tests",
     "cobalt:tests",
-    "component/go:tests",
+    "component:tests",
     "containers/cpp:tests",
     "cstr:tests",
     "directed_graph:tests",

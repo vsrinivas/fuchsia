@@ -27,8 +27,8 @@ import (
 	"netstack/pprof"
 	networking_metrics "networking_metrics_golib"
 
-	"fuchsia.googlesource.com/component"
 	"fuchsia.googlesource.com/syslog"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"

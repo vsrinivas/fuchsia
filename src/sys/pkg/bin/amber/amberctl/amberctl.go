@@ -32,7 +32,7 @@ import (
 	"fidl/fuchsia/update"
 
 	"amber/urlscope"
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
 
 const usage = `usage: %s <command> [opts]

@@ -16,7 +16,7 @@ import (
 	"syscall/zx/zxwait"
 	"testing"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	mock_clock "fidl/fuchsia/testing"
 )

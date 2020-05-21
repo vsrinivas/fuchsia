@@ -14,7 +14,7 @@ go_library("lib") {
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
     "//src/diagnostics/inspect_validator/fidl:validate($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
   ]
 }
 

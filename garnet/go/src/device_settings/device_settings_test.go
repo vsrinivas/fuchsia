@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fuchsia/devicesettings"
 )

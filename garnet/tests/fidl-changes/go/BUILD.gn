@@ -18,6 +18,6 @@ go_library("fidl_changes_go_lib") {
     "//garnet/tests/fidl-changes:fidl.test.after($go_toolchain)",
     "//garnet/tests/fidl-changes:fidl.test.before($go_toolchain)",
     "//garnet/tests/fidl-changes:fidl.test.during($go_toolchain)",
-    "//src/lib/component/go",
+    "//src/lib/component",
   ]
 }

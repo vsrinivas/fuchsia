@@ -18,8 +18,8 @@ import (
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/space"
 
-	"fuchsia.googlesource.com/component"
 	"fuchsia.googlesource.com/syslog"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	"metrics"
 )
 

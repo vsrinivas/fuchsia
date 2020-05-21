@@ -12,7 +12,7 @@ import (
 
 	"fidl/fuchsia/power"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
 
 type WatcherMock struct {

@@ -18,7 +18,7 @@ import (
 	"time"
 	"unsafe"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	"thinfs/fs"
 
 	"fidl/fuchsia/io"

@@ -7,8 +7,8 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/test/test_package.gni")
 
-go_library("go") {
-  name = "fuchsia.googlesource.com/component"
+go_library("component") {
+  name = "go.fuchsia.dev/fuchsia/src/lib/component"
 
   deps = [
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
@@ -17,9 +17,9 @@ go_library("go") {
 }
 
 go_test("component_test") {
-  gopackages = [ "fuchsia.googlesource.com/component" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/lib/component" ]
   deps = [
-    ":go",
+    ":component",
     "//third_party/go/src/syscall/zx/fidl/bindingstest($go_toolchain)",
   ]
 }

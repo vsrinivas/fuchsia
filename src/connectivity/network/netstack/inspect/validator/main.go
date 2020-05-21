@@ -12,7 +12,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	"netstack/inspect"
 
 	fidlinspect "fidl/fuchsia/inspect"

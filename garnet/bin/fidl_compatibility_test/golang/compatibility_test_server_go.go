@@ -12,7 +12,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fidl/test/compatibility"
 	"fidl/fuchsia/io"

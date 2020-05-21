@@ -13,7 +13,7 @@ The necessary packages can be included with an addition to `deps` in `BUILD.gn`:
 
 ```
 deps = [
-    "//src/lib/component/go",
+    "//src/lib/component",
     "//src/lib/syslog/go",
 ]
 ```
@@ -43,7 +43,7 @@ Initializing without any tags will default to using the process name.
 
 ```golang
 import (
-    "fuchsia.googlesource.com/component"
+    "go.fuchsia.dev/fuchsia/src/lib/component"
     "fuchsia.googlesource.com/syslog"
 )
 

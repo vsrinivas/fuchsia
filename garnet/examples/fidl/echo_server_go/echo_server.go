@@ -11,7 +11,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
-	"fuchsia.googlesource.com/component"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fidl/examples/echo"
 )

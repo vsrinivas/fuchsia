@@ -8,8 +8,8 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
-	"fuchsia.googlesource.com/component"
 	"fuchsia.googlesource.com/syslog"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fuchsia/net/filter"
 )
