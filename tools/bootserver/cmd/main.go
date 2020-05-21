@@ -6,18 +6,23 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
+
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -25,6 +30,7 @@ const (
 	defaultTftpWindowSize         = 256
 	defaultMicrosecBetweenPackets = 20
 	nodenameEnvVar                = "ZIRCON_NODENAME"
+	retryDelay                    = time.Second
 )
 
 // Firmware arguments have variable names based on their type e.g.:
@@ -66,6 +72,10 @@ var (
 	failFastZedbootVersionMismatch bool
 	imageManifest                  string
 	mode                           bootserver.Mode
+
+	// errIncompleteTransfer represents a failure to transfer pave images
+	// to the device.
+	errIncompleteTransfer = errors.New("transfer incomplete")
 )
 
 func init() {
@@ -91,16 +101,16 @@ func init() {
 	flag.StringVar(&imageManifest, "images", "", "use an image manifest to pave")
 	flag.Var(&mode, "mode", "bootserver modes: either pave, netboot, or pave-zedboot")
 
+	flag.StringVar(&authorizedKeys, "authorized-keys", "", "use the supplied file as an authorized_keys file")
 	flag.StringVar(&boardName, "board_name", "", "name of the board files are meant for")
+	flag.BoolVar(&bootOnce, "1", true, "only boot once, then exit")
+	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
 
 	//  TODO(fxbug.dev/38517): Implement the following unsupported flags.
-	flag.BoolVar(&bootOnce, "1", false, "only boot once, then exit")
 	flag.StringVar(&bootIpv6, "a", "", "only boot device with this IPv6 address")
 	flag.IntVar(&tftpBlockSize, "b", defaultTftpBlockSize, "tftp block size")
 	flag.IntVar(&packetInterval, "i", defaultMicrosecBetweenPackets, "number of microseconds between packets; ignored with --tftp")
 	flag.IntVar(&windowSize, "w", defaultTftpWindowSize, "tftp window size, ignored with --netboot")
-	flag.StringVar(&authorizedKeys, "authorized-keys", "", "use the supplied file as an authorized_keys file")
-	flag.BoolVar(&failFast, "fail-fast", false, "exit on first error")
 	// We currently always default to tftp
 	flag.BoolVar(&useNetboot, "netboot", false, "use the netboot protocol")
 	flag.BoolVar(&useTftp, "tftp", true, "use the tftp protocol (default)")
@@ -268,10 +278,10 @@ func populateReaders(imgs []bootserver.Image) (func() error, error) {
 	return closeFunc, nil
 }
 
-func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string) error {
+func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	addr, err := netutil.GetNodeAddress(ctx, nodename, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   addr.IP,
@@ -280,7 +290,7 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 	}
 	client, err := tftp.NewClient(udpAddr)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
 	}
 
 	if boardName != "" {
@@ -289,8 +299,10 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 		}
 	}
 
-	// TODO(fxbug.dev/38517): Create ssh signers if an authorized key file was provided along with the image manifest.
-	return bootserver.Boot(ctx, client, imgs, cmdlineArgs, nil)
+	if err := bootserver.Boot(ctx, client, imgs, cmdlineArgs, signers); err != nil {
+		return fmt.Errorf("%w: %v", errIncompleteTransfer, err)
+	}
+	return nil
 }
 
 func resolveNodename() (string, error) {
@@ -336,7 +348,35 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 	if err != nil {
 		return err
 	}
-	return connectAndBoot(ctx, n, imgs, cmdlineArgs)
+
+	var signers []ssh.Signer
+	if authorizedKeys != "" {
+		p, err := ioutil.ReadFile(authorizedKeys)
+		if err != nil {
+			return fmt.Errorf("could not read SSH key file %q: %v", authorizedKeys, err)
+		}
+		signer, err := ssh.ParsePrivateKey(p)
+		if err != nil {
+			return err
+		}
+		signers = append(signers, signer)
+	}
+
+	// Keep discovering and booting devices.
+	for {
+		err = connectAndBoot(ctx, n, imgs, cmdlineArgs, signers)
+		if !(err == nil || errors.Is(err, errIncompleteTransfer)) {
+			// Exit early for any error other than an errIncompleteTransfer.
+			return err
+		} else if bootOnce || (failFast && err != nil) {
+			// Exit after booting first device or if boot failed.
+			return err
+		} else if err != nil {
+			// Error is an errIncompleteTransfer. Retry after some delay.
+			logger.Errorf(ctx, err.Error())
+			time.Sleep(retryDelay)
+		}
+	}
 }
 
 func main() {
