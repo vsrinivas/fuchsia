@@ -7,6 +7,8 @@ use {
     crate::target::Target,
     anyhow::anyhow,
     anyhow::{Context, Error},
+    async_std::io::prelude::BufReadExt,
+    async_std::prelude::StreamExt,
     ffx_core::constants,
     ffx_core::constants::SOCKET,
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
@@ -41,6 +43,7 @@ struct HostPipeChild {
     cancel_tx: Option<oneshot::Sender<()>>,
     writer_handle: Option<TaskHandle>,
     reader_handle: Option<TaskHandle>,
+    logger_handle: Option<TaskHandle>,
 }
 
 impl HostPipeChild {
@@ -50,6 +53,7 @@ impl HostPipeChild {
             .await?
             .stdout(Stdio::piped())
             .stdin(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()
             .context("running target overnet pipe")?;
         let (mut pipe_rx, mut pipe_tx) =
@@ -77,11 +81,23 @@ impl HostPipeChild {
             Ok(())
         });
 
+        let stderr_pipe =
+            inner.stderr.take().ok_or(anyhow!("unable to stderr from target pipe"))?;
+        let logger_handle = async_std::task::spawn(async move {
+            let stderr_pipe = async_from_sync(stderr_pipe);
+            let mut stderr_lines = async_std::io::BufReader::new(stderr_pipe).lines();
+            while let Some(line) = stderr_lines.next().await {
+                log::info!("SSH stderr: {}", line?);
+            }
+            Ok(())
+        });
+
         Ok(HostPipeChild {
             inner,
             cancel_tx: Some(cancel_tx),
             writer_handle: Some(writer_handle),
             reader_handle: Some(reader_handle),
+            logger_handle: Some(logger_handle),
         })
     }
 
@@ -103,16 +119,19 @@ impl Drop for HostPipeChild {
         let cancel_tx = self.cancel_tx.take().expect("cancel_tx is gone");
         let reader_handle = self.reader_handle.take().expect("reader_handle is gone");
         let writer_handle = self.writer_handle.take().expect("writer_handle is gone");
+        let logger_handle = self.logger_handle.take().expect("logger_handle is gone");
 
         // Ignores whether the receiver has been closed, this is just to
         // un-stick it from an attempt at reading from Ascendd.
         let _ = cancel_tx.send(());
         let reader_result = futures::executor::block_on(reader_handle).unwrap();
         let writer_result = futures::executor::block_on(writer_handle).unwrap();
+        let logger_result = futures::executor::block_on(logger_handle).unwrap();
         log::trace!(
-            "Dropped HostPipeChild. Writer result: '{:?}'; reader result: '{:?}'",
+            "Dropped HostPipeChild. Writer result: '{:?}'; reader result: '{:?}'; logger result: '{:?}'",
             writer_result,
             reader_result,
+            logger_result,
         );
     }
 }
@@ -248,6 +267,7 @@ mod test {
                     other_cancel_rx.await.context("host-pipe fake test writer")?;
                     Ok(())
                 })),
+                logger_handle: Some(async_std::task::spawn(async { Ok(()) })),
             }
         }
     }
