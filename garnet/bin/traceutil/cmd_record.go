@@ -14,8 +14,8 @@ import (
 	"path"
 	"time"
 
-	"fuchsia.googlesource.com/fuchsia/garnet/bin/traceutil/zedmon"
 	"github.com/google/subcommands"
+	"go.fuchsia.dev/fuchsia/garnet/bin/traceutil/zedmon"
 )
 
 type cmdRecord struct {
