@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/qemu"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )

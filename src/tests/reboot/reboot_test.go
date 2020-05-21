@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fuchsia.googlesource.com/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/qemu"
 )
 
 func zbiPath(t *testing.T) string {

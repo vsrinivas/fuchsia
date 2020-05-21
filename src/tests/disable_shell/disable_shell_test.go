@@ -7,11 +7,12 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"fuchsia.googlesource.com/testing/qemu"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/src/testing/qemu"
 )
 
 func zbiPath(t *testing.T) string {

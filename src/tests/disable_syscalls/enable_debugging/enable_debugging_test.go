@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"fuchsia.googlesource.com/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/qemu"
 	"go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
 )
 

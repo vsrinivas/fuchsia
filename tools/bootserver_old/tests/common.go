@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"fuchsia.googlesource.com/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/qemu"
 )
 
 // The default nodename given to an target with the default QEMU MAC address.
