@@ -245,6 +245,49 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   server->DdkRelease();
 }
 
+TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  auto builder = audio_fidl::GainState::UnownedBuilder();
+  fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
+  builder.set_gain_db(fidl::unowned_ptr(&target_gain));
+  auto status =
+      audio_fidl::StreamConfig::Call::SetGain(zx::unowned_channel(ch->channel), builder.build());
+  ASSERT_OK(status.status());
+
+  // One watch for initial reply.
+  auto gain_state =
+      audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
+  ASSERT_OK(gain_state.status());
+  ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
+
+  // A second watch with no reply since there is no change of gain.
+  auto f = [](void* arg) -> int {
+    auto ch = static_cast<audio_fidl::Device::ResultOf::GetChannel*>(arg);
+    audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel((*ch)->channel));
+    return 0;
+  };
+  thrd_t th;
+  ASSERT_OK(thrd_create_with_name(&th, f, &ch, "test-thread"));
+
+  // We want the watch to be started before we reset the channel triggering a deactivation.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  ch->channel.reset();
+
+  int result = -1;
+  thrd_join(th, &result);
+  ASSERT_EQ(result, 0);
+  server->DdkUnbindDeprecated();
+  EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
+}
+
 TEST(SimpleAudioTest, SetAndGetAgc) {
   fake_ddk::Bind tester;
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
@@ -657,6 +700,64 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   server->DdkRelease();
 }
 
+TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  // We get 2 channels from the one FIDL channel acquired via FidlClient() using GetChannel.
+  audio_fidl::Device::ResultOf::GetChannel ch1 = client.GetChannel();
+  audio_fidl::Device::ResultOf::GetChannel ch2 = client.GetChannel();
+  ASSERT_EQ(ch1.status(), ZX_OK);
+  ASSERT_EQ(ch2.status(), ZX_OK);
+
+  auto prop1 = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch1->channel));
+  auto prop2 = audio_fidl::StreamConfig::Call::GetProperties(zx::unowned_channel(ch2->channel));
+  ASSERT_OK(prop1.status());
+  ASSERT_OK(prop2.status());
+
+  ASSERT_EQ(prop1->properties.plug_detect_capabilities(),
+            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+  ASSERT_EQ(prop2->properties.plug_detect_capabilities(),
+            audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
+
+  // Watch each channel for initial reply.
+  auto state1 = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch1->channel));
+  auto state2 = audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel(ch2->channel));
+  ASSERT_OK(state1.status());
+  ASSERT_OK(state2.status());
+  ASSERT_FALSE(state1->plug_state.plugged());
+  ASSERT_FALSE(state2->plug_state.plugged());
+
+  // Secondary watches with no reply since there is no change of plug detect state.
+  auto f = [](void* arg) -> int {
+    audio_fidl::Device::ResultOf::GetChannel* ch =
+        static_cast<audio_fidl::Device::ResultOf::GetChannel*>(arg);
+    audio_fidl::StreamConfig::Call::WatchPlugState(zx::unowned_channel((*ch)->channel));
+    return 0;
+  };
+  thrd_t th1;
+  ASSERT_OK(thrd_create_with_name(&th1, f, &ch1, "test-thread-1"));
+  thrd_t th2;
+  ASSERT_OK(thrd_create_with_name(&th2, f, &ch2, "test-thread-2"));
+
+  // We want the watches to be started before we reset the channels triggering deactivations.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  ch1->channel.reset();
+  ch2->channel.reset();
+
+  int result = -1;
+  thrd_join(th1, &result);
+  ASSERT_EQ(result, 0);
+  result = -1;
+  thrd_join(th2, &result);
+  ASSERT_EQ(result, 0);
+  server->DdkUnbindDeprecated();
+  EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
+}
+
 TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   fake_ddk::Bind tester;
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
@@ -799,8 +900,8 @@ TEST(SimpleAudioTest, RingBufferTests) {
   ASSERT_OK(rb.status());
 
   constexpr uint32_t kNumberOfPositionNotifications = 5;
-  // Buffer is set to hold 1 second, with 10 x kNumberOfPositionNotifications notifications
-  // per ring buffer (i.e. per second) we limit the time waiting in the loop below to ~100ms.
+  // Buffer is set to hold at least 1 second, with kNumberOfPositionNotifications notifications
+  // per ring buffer (i.e. per second) we set the time waiting for the watch below to 200ms+.
 
   auto vmo = audio_fidl::RingBuffer::Call::GetVmo(
       zx::unowned_channel(local), MockSimpleAudio::kTestFrameRate, kNumberOfPositionNotifications);
@@ -815,6 +916,57 @@ TEST(SimpleAudioTest, RingBufferTests) {
 
   auto stop = audio_fidl::RingBuffer::Call::Stop(zx::unowned_channel(local));
   ASSERT_OK(stop.status());
+  server->DdkUnbindDeprecated();
+  EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
+}
+
+TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  audio_fidl::Device::SyncClient client(std::move(tester.FidlClient()));
+  audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
+  auto builder = audio_fidl::Format::UnownedBuilder();
+  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
+  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(zx::unowned_channel(ch->channel),
+                                                             builder.build(), std::move(remote));
+  ASSERT_OK(rb.status());
+
+  constexpr uint32_t kNumberOfPositionNotifications = 5;
+  // Buffer is set to hold at least 1 second, with kNumberOfPositionNotifications notifications
+  // per ring buffer (i.e. per second) the time waiting before getting a position reply is 200ms+.
+
+  auto vmo = audio_fidl::RingBuffer::Call::GetVmo(
+      zx::unowned_channel(local), MockSimpleAudio::kTestFrameRate, kNumberOfPositionNotifications);
+  ASSERT_OK(vmo.status());
+
+  auto start = audio_fidl::RingBuffer::Call::Start(zx::unowned_channel(local));
+  ASSERT_OK(start.status());
+
+  // Watch position notifications.
+  auto f = [](void* arg) -> int {
+    auto ch = static_cast<zx::channel*>(arg);
+    audio_fidl::RingBuffer::Call::WatchClockRecoveryPositionInfo(zx::unowned_channel(*ch));
+    return 0;
+  };
+  thrd_t th;
+  ASSERT_OK(thrd_create_with_name(&th, f, &local, "test-thread"));
+
+  // We want the watch to be started before we reset the channel triggering a deactivation.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  local.reset();
+  ch->channel.reset();
+
+  int result = -1;
+  thrd_join(th, &result);
+  ASSERT_EQ(result, 0);
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
