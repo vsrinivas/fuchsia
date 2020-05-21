@@ -117,12 +117,14 @@ func ValidateDevice(
 	// At the this point the system should have been updated to the target
 	// system version. Confirm the update by fetching the device's current
 	// /system/meta, and making sure it is the correct version.
-	upToDate, err := IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
-	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %w", err)
-	}
-	if !upToDate {
-		return fmt.Errorf("system version failed to update to %q", expectedSystemImageMerkle)
+	if expectedSystemImageMerkle != "" {
+		upToDate, err := IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+		if err != nil {
+			return fmt.Errorf("failed to check if device is up to date: %w", err)
+		}
+		if !upToDate {
+			return fmt.Errorf("system version failed to update to %q", expectedSystemImageMerkle)
+		}
 	}
 
 	// Make sure the device doesn't have any broken static packages.

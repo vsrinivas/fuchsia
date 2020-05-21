@@ -188,14 +188,20 @@ func initializeDevice(
 
 	startTime := time.Now()
 
-	repo, err := build.GetPackageRepository(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error getting downgrade repository: %w", err)
-	}
+	var repo *packages.Repository
+	var expectedSystemImageMerkle string
+	var err error
 
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
-	if err != nil {
-		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
+	if build != nil {
+		repo, err = build.GetPackageRepository(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error getting downgrade repository: %w", err)
+		}
+
+		expectedSystemImageMerkle, err = repo.LookupUpdateSystemImageMerkle()
+		if err != nil {
+			return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
+		}
 	}
 
 	if err := script.RunScript(ctx, device, repo, nil, c.beforeInitScript); err != nil {
@@ -245,7 +251,9 @@ func initializeDevice(
 		expectedConfig,
 		true,
 	); err != nil {
-		rpcClient.Close()
+		if rpcClient != nil {
+			rpcClient.Close()
+		}
 		return nil, fmt.Errorf("failed to validate during initialization: %w", err)
 	}
 
