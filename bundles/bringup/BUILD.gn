@@ -100,7 +100,7 @@ group("tests") {
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-package",
     "//zircon/system/utest/entropy:entropy-package",
     "//zircon/system/utest/errno:errno-package",
-    "//zircon/system/utest/ethernet:ethernet-package",
+    "//src/connectivity/ethernet/tests/ethernet:ethernet-package",
     "//zircon/system/utest/events:events-package",
     "//zircon/system/utest/exception:exception-package",
     "//zircon/system/utest/exit:exit-package",

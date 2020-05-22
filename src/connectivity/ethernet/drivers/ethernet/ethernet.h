@@ -179,7 +179,7 @@ class EthDev : public EthDevType,
   // How many multicast addresses to remember before punting and turning on multicast-promiscuous.
   // TODO(eventually): enable deleting addresses.
   // If this value is changed, change the EthernetMulticastPromiscOnOverflow() test in
-  //   zircon/system/utest/ethernet/ethernet.cpp.
+  //   src/connectivity/ethernet/tests/ethernet/ethernet.cpp.
   static constexpr uint32_t kMulticastListLimit = 32;
 
   static constexpr uint32_t kFailureReportRate = 50;
