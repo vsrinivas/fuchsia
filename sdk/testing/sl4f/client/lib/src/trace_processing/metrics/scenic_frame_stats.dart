@@ -7,10 +7,16 @@ import '../trace_model.dart';
 import 'common.dart';
 
 class _Results {
-  // This measures the wall time of all Scenic CPU work needed to produce a frame.
+  // This measures the wall time of all Scenic CPU work needed to produce a
+  // frame.
   List<double> renderFrameCpuDurations;
-  // This measures the wall time of all Scenic CPU and GPU work needed to produce a frame.
+  // This measures the wall time of all Scenic CPU and GPU work needed to
+  // produce a frame.
   List<double> renderFrameTotalDurations;
+  // This measures the wall time of all ("gfx", "RenderFrame") events.  Note
+  // that the event does not cover all of the time that it takes Scenic to
+  // render a frame.
+  List<double> renderFrameEventDurations;
 }
 
 _Results _scenicFrameStats(Model model) {
@@ -67,7 +73,9 @@ _Results _scenicFrameStats(Model model) {
 
   return _Results()
     ..renderFrameCpuDurations = renderFrameCpuDurations
-    ..renderFrameTotalDurations = renderFrameTotalDurations;
+    ..renderFrameTotalDurations = renderFrameTotalDurations
+    ..renderFrameEventDurations =
+        endCpuRenderingEvents.map((e) => e.duration.toMillisecondsF()).toList();
 }
 
 List<TestCaseResults> scenicFrameStatsMetricsProcessor(
@@ -79,12 +87,17 @@ List<TestCaseResults> scenicFrameStatsMetricsProcessor(
   if (results.renderFrameTotalDurations.isEmpty) {
     results.renderFrameTotalDurations = [0.0];
   }
+  if (results.renderFrameEventDurations.isEmpty) {
+    results.renderFrameEventDurations = [0.0];
+  }
 
   return [
     TestCaseResults('scenic_render_frame_cpu', Unit.milliseconds,
         results.renderFrameCpuDurations),
     TestCaseResults('scenic_render_frame_total', Unit.milliseconds,
         results.renderFrameTotalDurations),
+    TestCaseResults('scenic_RenderFrame', Unit.milliseconds,
+        results.renderFrameEventDurations),
   ];
 }
 
@@ -103,6 +116,8 @@ Scenic Frame Stats
     ..write(describeValues(results.renderFrameCpuDurations, indent: 2))
     ..write('render_frame_total_durations:\n')
     ..write(describeValues(results.renderFrameTotalDurations, indent: 2))
+    ..write('("gfx", "RenderFrame") event durations:\n')
+    ..write(describeValues(results.renderFrameEventDurations, indent: 2))
     ..write('\n');
 
   return buffer.toString();
