@@ -5,10 +5,11 @@
 ### asan_default_options
 TODO(45047): Temporary until all lsan bugs are filed and marked with
 deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
+TODO(52369): Temporary until asan runtime decommits large allocations.
 
-**Current value (from the default):** `"detect_leaks=0"`
+**Current value (from the default):** `"detect_leaks=0:clear_shadow_mmap_threshold=16384"`
 
-From //public/gn/config/instrumentation/BUILD.gn:19
+From //public/gn/config/instrumentation/BUILD.gn:20
 
 ### assert_level
 Controls which asserts are enabled.
@@ -447,7 +448,7 @@ function.
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //public/gn/config/instrumentation/BUILD.gn:29
+From //public/gn/config/instrumentation/BUILD.gn:30
 
 ### use_ccache
 Set to true to enable compiling with ccache.
