@@ -19,16 +19,14 @@ const (
 )
 
 var (
-	ctx              *component.Context
-	logger           *cobalt.LoggerWithCtxInterface
-	setTargetChannel chan string
+	ctx    *component.Context
+	logger *cobalt.LoggerWithCtxInterface
 )
 
 // Register uses an app context to connect to the cobalt service and configure the sw_delivery project
 func Register(c *component.Context) {
 	ctx = c
 	ensureConnection()
-	setTargetChannel = startReleaseChannelUpdater(ctx)
 }
 
 type errCobalt cobalt.Status

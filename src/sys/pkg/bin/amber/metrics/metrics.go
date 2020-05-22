@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"log"
 	"time"
 )
 
@@ -47,16 +46,6 @@ func StatusFromError(err error) Status {
 // Log synchronously submits the given metric to cobalt
 func Log(metric Metric) {
 	metric.log()
-}
-
-// SetTargetChannel asynchronously tells cobalt which channel is configured for updates.
-func SetTargetChannel(targetChannel string) {
-	if setTargetChannel == nil {
-		log.Print("SetTargetChannel() called before metrics.Register(), release channel info won't be sent to cobalt.")
-		return
-	}
-	setTargetChannel <- targetChannel
-	writeTargetChannel(targetChannel)
 }
 
 // Metric is a cobalt metric that can be submitted to cobalt
