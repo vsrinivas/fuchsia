@@ -51,11 +51,12 @@ Pass flags to invocations of fx test:
 
 
 def test(args):
+    success = True
     if args.targets:
         if not args.no_regen:
             util.print_warning(
                 'explicit test targets provided, skipping regen...')
-        test_.test_explicit(
+        success = test_.test_explicit(
             args.targets, not args.no_build, args.dry_run, args.interactive,
             args.fx_test_args)
     else:
@@ -63,11 +64,13 @@ def test(args):
         if not args.no_regen:
             regen.regen_changed(changed_files, not args.no_build, args.dry_run)
             changed_files = util.get_changed_files()
-        test_.test_changed(
+        success = test_.test_changed(
             changed_files, not args.no_build, args.dry_run, args.interactive,
             args.fx_test_args)
         if args.dry_run:
             print_dryrun_warning()
+    if not success:
+        sys.exit(1)
 
 
 def regen_cmd(args):

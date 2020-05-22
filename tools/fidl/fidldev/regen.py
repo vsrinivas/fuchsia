@@ -10,24 +10,29 @@ GO_BINDINGS_REGEN = 'third_party/go/regen-fidl'
 
 def regen_fidlc_goldens(build_first, dry_run):
     if build_first:
-        util.run(util.BUILD_FIDLC, dry_run)
-    util.run(path_to_regen_command(FIDLC_REGEN), dry_run)
+        util.run(util.BUILD_FIDLC, dry_run, exit_on_failure=True)
+    util.run(path_to_regen_command(FIDLC_REGEN), dry_run, exit_on_failure=True)
 
 
 def regen_fidlgen_goldens(build_first, dry_run):
     if build_first:
-        util.run(util.BUILD_FIDLGEN, dry_run)
-    util.run(path_to_regen_command(FIDLGEN_REGEN), dry_run)
+        util.run(util.BUILD_FIDLGEN, dry_run, exit_on_failure=True)
+    util.run(
+        path_to_regen_command(FIDLGEN_REGEN), dry_run, exit_on_failure=True)
 
 
 def regen_fidlgendart_goldens(build_first, dry_run):
     if build_first:
-        util.run(util.BUILD_FIDLGEN_DART, dry_run)
-    util.run(path_to_regen_command(FIDLGEN_DART_REGEN), dry_run)
+        util.run(util.BUILD_FIDLGEN_DART, dry_run, exit_on_failure=True)
+    util.run(
+        path_to_regen_command(FIDLGEN_DART_REGEN),
+        dry_run,
+        exit_on_failure=True)
 
 
-def regen_go_bindings(build_first, dry_run):
-    util.run(path_to_regen_command(GO_BINDINGS_REGEN), dry_run)
+def regen_go_bindings(build_first, dry_run, exit_on_failure=True):
+    util.run(
+        path_to_regen_command(GO_BINDINGS_REGEN), dry_run, exit_on_failure=True)
 
 
 def path_to_regen_command(path):

@@ -57,15 +57,21 @@ BUILD_FIDLGEN_DART = ['fx', 'ninja', '-C', BUILD_DIR, 'host_x64/fidlgen_dart']
 
 
 def run(command, dry_run, exit_on_failure=False):
+    """
+    Run the given command, returning True if it completed successfuly. If
+    dry_run is true, just prints rather than running. If exit_on_failure is
+    true, exits instead of returning False.
+    """
     if dry_run:
         print('would run: {}'.format(command))
-    else:
-        retcode = subprocess.call(command)
-        if exit_on_failure and retcode:
-            print_err(
-                'Error: command failed with status {}! {}'.format(
-                    retcode, command))
-            exit(1)
+        return True
+    retcode = subprocess.call(command)
+    success = retcode == 0
+    if exit_on_failure and not success:
+        print_err(
+            'Error: command failed with status {}! {}'.format(retcode, command))
+        exit(1)
+    return success
 
 
 def get_changed_files():

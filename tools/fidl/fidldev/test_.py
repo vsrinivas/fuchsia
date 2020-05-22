@@ -118,7 +118,7 @@ def test_explicit(targets, build_first, dry_run, interactive, fx_test_args):
     for name, test in TEST_GROUPS:
         if name in targets or 'all' in targets:
             tests.append(test)
-    run_tests(tests, build_first, dry_run, interactive, fx_test_args)
+    return run_tests(tests, build_first, dry_run, interactive, fx_test_args)
 
 
 def test_changed(
@@ -130,7 +130,7 @@ def test_changed(
         for file_ in changed_files:
             if any(p(file_) for p in predicates):
                 tests.append(test)
-    run_tests(tests, build_first, dry_run, interactive)
+    return run_tests(tests, build_first, dry_run, interactive, fx_test_args)
 
 
 def run_tests(tests, build_first, dry_run, interactive, fx_test_args):
@@ -157,23 +157,25 @@ def run_tests(tests, build_first, dry_run, interactive, fx_test_args):
         manual_tests = interactive_filter(manual_tests)
         test_targets = interactive_filter(test_targets)
 
+    success = True
     for cmd in manual_tests:
-        util.run(cmd, dry_run)
+        success = success and util.run(cmd, dry_run)
         # print test line that can be copied into a commit message
         # the absolute FUCHSIA_DIR paths are stripped for readability and
         # because they are user specific
         print('Test: ' + cmd.replace(str(util.FUCHSIA_DIR) + '/', ''))
 
-    if not test_targets:
-        return
-    cmd = ['fx', 'test'] + fx_test_args.split()
-    if not build_first:
-        cmd.append('--no-build')
-    # group all tests into a single `fx test` invocation so that the summary
-    # prints all results
-    cmd.extend(test_targets)
-    util.run(cmd, dry_run)
-    print('Test: ' + ' '.join(cmd))
+    if test_targets:
+        cmd = ['fx', 'test'] + fx_test_args.split()
+        if not build_first:
+            cmd.append('--no-build')
+        # group all tests into a single `fx test` invocation so that the summary
+        # prints all results
+        cmd.extend(test_targets)
+        success = success and util.run(cmd, dry_run)
+        print('Test: ' + ' '.join(cmd))
+
+    return success
 
 
 def interactive_filter(test_targets):
