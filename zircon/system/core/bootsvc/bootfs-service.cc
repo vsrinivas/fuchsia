@@ -62,7 +62,10 @@ static bool PathInExecutablePackageDirectory(const char* path) {
 // Other top-level directories in bootfs that are allowed to contain executable files (i.e. files
 // for which bootfs should allow opening with OPEN_RIGHT_EXECUTABLE).
 static constexpr const char* kExecutableDirectories[] = {
-    "bin/", "driver/", "lib/", "kernel/lib/", "kernel/vdso/", "test/",
+    "bin/",
+    "driver/",
+    "lib/",
+    "test/",
 };
 
 static bool PathInExecutableDirectory(const char* path) {
@@ -288,20 +291,6 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
     if (!strcmp(name + kVmoSubdirLen, "crashlog")) {
       // the crashlog has a special home
       strcpy(name, kLastPanicFilePath);
-    }
-
-    // If this should be an executable file, we duplicate a new handle with ZX_RIGHT_EXECUTE to use
-    // below. If the VMO is still owned, we simply replace it; no need to keep the old handle. In
-    // either case, the new VMO handle is owned.
-    if (PathInExecutableDirectory(name)) {
-      zx::unowned_vmo old_vmo((owned_vmo.is_valid()) ? owned_vmo.get() : vmo->get());
-      status = DuplicateAsExecutable(*old_vmo, &owned_vmo);
-      if (status != ZX_OK) {
-        printf("bootfs: failed to create executable handle for %s %i: %s", debug_type_name, i,
-               zx_status_get_string(status));
-        continue;
-      }
-      vmo = zx::unowned_vmo(owned_vmo);
     }
 
     if (owned_vmo.is_valid()) {
