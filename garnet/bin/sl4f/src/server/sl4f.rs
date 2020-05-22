@@ -124,6 +124,9 @@ use crate::webdriver::facade::WebdriverFacade;
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
+// Wlan DeprecatedConfiguration related includes
+use crate::wlan_deprecated::facade::WlanDeprecatedConfigurationFacade;
+
 // WlanPhy related includes
 use crate::wlan_phy::facade::WlanPhyFacade;
 
@@ -195,6 +198,7 @@ impl Sl4f {
                 "webdriver_facade" => WebdriverFacade::new(),
                 "wlan" => WlanFacade::new()?,
                 "wlan_ap_policy" => WlanApPolicyFacade::new()?,
+                "wlan_deprecated" => WlanDeprecatedConfigurationFacade::new()?,
                 "wlan_phy" => WlanPhyFacade::new()?,
                 "wlan_policy" => WlanPolicyFacade::new()?,
             )
