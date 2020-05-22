@@ -531,10 +531,6 @@ func (f *fileWrapper) SetFlags(_ fidl.Context, inFlags uint32) (int32, error) {
 	return int32(errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags)))), nil
 }
 
-func (f *fileWrapper) GetVmo(_ fidl.Context, flags uint32) (int32, zx.VMO, error) {
-	return int32(zx.ErrNotSupported), zx.VMO(zx.HandleInvalid), nil
-}
-
 func (f *fileWrapper) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }
