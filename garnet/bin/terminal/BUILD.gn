@@ -87,9 +87,9 @@ package("terminal") {
   ]
 }
 
-config_data("tiles_with_terminal_config") {
+config_data("tiles_config") {
   for_pkg = "sysmgr"
-  sources = [ "config/tiles_with_terminal.config" ]
+  sources = [ "config/tiles.config" ]
 }
 
 zircon_extras_manifest("terminal_tests_zircon_deps.manifest") {
