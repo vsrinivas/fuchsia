@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CLIENT_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -210,14 +211,14 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
   sync_completion_t fidl_unbound_;
 
-  zx::channel sysmem_allocator_;
+  llcpp::fuchsia::sysmem::Allocator::SyncClient sysmem_allocator_;
 
   struct Collections {
     // Sent to the hardware driver.
-    zx::channel driver;
+    llcpp::fuchsia::sysmem::BufferCollection::SyncClient driver;
     // If the VC is using this, |kernel| is the collection used for setting
     // it as kernel framebuffer.
-    zx::channel kernel;
+    llcpp::fuchsia::sysmem::BufferCollection::SyncClient kernel;
   };
   std::map<uint64_t, Collections> collection_map_;
 
