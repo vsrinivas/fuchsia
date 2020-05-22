@@ -16,6 +16,14 @@ source_set("options") {
   public = [ "options.h" ]
 }
 
+source_set("partition") {
+  public = [ "partition.h" ]
+  deps = [
+    ":address-descriptor",
+    "//src/storage/volume_image:volume-descriptor",
+  ]
+}
+
 source_set("fvm-test") {
   testonly = true
   sources = [ "address_descriptor_test.cc" ]
