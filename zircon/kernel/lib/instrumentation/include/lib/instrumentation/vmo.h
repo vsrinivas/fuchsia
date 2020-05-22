@@ -31,6 +31,7 @@ class InstrumentationData {
     kLlvmProfileVmo,
     kSancovVmo,
     kSancovCountsVmo,
+    kSymbolizer,  // Must be last.
     kVmoCount,
   };
 
@@ -50,7 +51,7 @@ class InstrumentationData {
   Vmo which() const { return static_cast<Vmo>(this - &instances_[0]); }
 
   zx_status_t Create();
-  void Publish();
+  bool Publish(FILE*);
   zx_status_t GetVmo(Handle**);
 #endif
 };
