@@ -18,8 +18,10 @@ namespace interpreter {
 // Defines an isolate. Each isolate is completely independent from the others.
 class Isolate {
  public:
-  Isolate() : thread_(std::make_unique<Thread>(this)) {}
+  explicit Isolate(Interpreter* interpreter)
+      : interpreter_(interpreter), thread_(std::make_unique<Thread>(this)) {}
 
+  Interpreter* interpreter() const { return interpreter_; }
   Scope* global_scope() { return &global_scope_; }
   ExecutionScope* global_execution_scope() { return &global_execution_scope_; }
 
@@ -44,7 +46,11 @@ class Isolate {
     thread_->Execute(context, std::move(code));
   }
 
+  void Shutdown() { global_scope_.Shutdown(&global_execution_scope_); }
+
  private:
+  // The interpreter which owns this isolate.
+  Interpreter* const interpreter_;
   // Global scope for the isolate. Holds the global variable definitions.
   Scope global_scope_;
   // Global execution scope for the isolate. Holds the storage (the values) for the variables.

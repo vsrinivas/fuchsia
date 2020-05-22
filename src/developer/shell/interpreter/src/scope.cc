@@ -15,6 +15,17 @@
 namespace shell {
 namespace interpreter {
 
+void Scope::Shutdown(ExecutionScope* execution_scope) {
+  for (const auto& variable : variables_) {
+    if (variable.second->index() < execution_scope->size()) {
+      // If the variable has been allocated, clear the variable. For reference counted objects, that
+      // also releases the object.
+      variable.second->Clear(execution_scope);
+    }
+  }
+  variables_.clear();
+}
+
 void StringConcatenation(Thread* thread, uint64_t count) {
   FX_DCHECK(thread->stack_size() >= count);
   size_t string_size = 0;
@@ -31,7 +42,7 @@ void StringConcatenation(Thread* thread, uint64_t count) {
     value->Release();
   }
   thread->Consume(count);
-  auto result = new String(std::move(string));
+  auto result = new String(thread->isolate()->interpreter(), std::move(string));
   thread->Push(reinterpret_cast<uint64_t>(result));
 }
 

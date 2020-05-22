@@ -234,6 +234,12 @@ protocol Shell {
     /// - `name` the name of the variable to load.
     LoadGlobal(string:MAX name) -> (vector<Node>:MAX nodes);
 
+    /// Delete the current interpreter. The server will close the other side of the channel.
+    ///
+    /// - `errors` all the errors found by the interpreter during the shutdown (it should be
+    ///   empty).
+    Shutdown() -> (vector<string:MAX>:MAX errors);
+
     /// Called each time the shell detects an error. This method can be called several times.
     /// The execution is done (started with ExecuteExecutionContext) when OnExecutionDone is
     /// received by the client.

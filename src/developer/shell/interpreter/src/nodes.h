@@ -131,6 +131,10 @@ class Type {
   // Loads the current value of the variable stored at |index| in |scope| into |value|.
   virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;
 
+  // Clear the current value of the variable stored at |index| in |scope|. This also deallocate the
+  // data for reference counted values.
+  virtual void ClearVariable(ExecutionScope* scope, size_t index) const;
+
   // Returns a reference to this if the object is of type ObjectType.
   virtual TypeObject* AsTypeObject() { return nullptr; }
 };

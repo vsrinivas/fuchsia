@@ -65,6 +65,11 @@ void Type::LoadVariable(const ExecutionScope* scope, size_t index, Value* value)
   FX_LOGS(FATAL) << "Can't load variable of type " << *this;
 }
 
+void Type::ClearVariable(ExecutionScope* scope, size_t index) const {
+  size_t size = Size();
+  memset(scope->Data(index, size), 0, size);
+}
+
 // - Node ------------------------------------------------------------------------------------------
 
 Node::Node(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)

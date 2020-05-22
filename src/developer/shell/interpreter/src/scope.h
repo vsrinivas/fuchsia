@@ -7,7 +7,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <cstdint>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -33,6 +33,10 @@ class Variable {
   const std::string& name() const { return name_; }
   size_t index() const { return index_; }
   const Type* type() const { return type_.get(); }
+
+  // Clear the variable for this execution scope. For reference counted objects, that also releases
+  // the object.
+  void Clear(ExecutionScope* scope) { type_->ClearVariable(scope, index_); }
 
  private:
   // Id of the node which defines the variable.
@@ -84,6 +88,9 @@ class Scope {
     return returned_value;
   }
 
+  // Shutdown the scope. That releases all the allocated objects.
+  void Shutdown(ExecutionScope* execution_scope);
+
  private:
   void AlignIndex(size_t size) { current_index_ = (current_index_ + (size - 1)) & ~(size - 1); }
 
@@ -99,6 +106,9 @@ class Scope {
 class ExecutionScope {
  public:
   ExecutionScope() = default;
+
+  // Returns the size of the allocated global data.
+  size_t size() const { return data_.size(); }
 
   // Resizes the storage to be able to store the newly created variables.
   void Resize(size_t new_size) {

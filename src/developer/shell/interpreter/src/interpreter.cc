@@ -57,6 +57,28 @@ void ExecutionContext::Compile(code::Code* code) {
   code->Ret();
 }
 
+void Interpreter::Shutdown(std::vector<std::string>* errors) {
+  // Destroy any pending execution context.
+  contexts_.clear();
+  // Shutdown the isolate. That frees all the global data.
+  isolate_->Shutdown();
+  // Checks that we don't have any undeleted object (would be a memory leak).
+  if (string_count_ != 0) {
+    if (string_count_ == 1) {
+      (*errors).emplace_back("1 string not freed.");
+    } else {
+      (*errors).emplace_back(std::to_string(string_count_) + " strings not freed.");
+    }
+  }
+  if (object_count_ != 0) {
+    if (object_count_ == 1) {
+      (*errors).emplace_back("1 object not freed.");
+    } else {
+      (*errors).emplace_back(std::to_string(string_count_) + " objects not freed.");
+    }
+  }
+}
+
 ExecutionContext* Interpreter::AddContext(uint64_t context_id) {
   auto context = GetContext(context_id);
   if (context != nullptr) {

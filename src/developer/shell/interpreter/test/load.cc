@@ -48,7 +48,7 @@ TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
 
   ASSERT_CALL_OK(shell().AddNodes(context_1->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context_1->id));
-  Finish(kExecute);
+  Run(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context_1->GetResult());
 

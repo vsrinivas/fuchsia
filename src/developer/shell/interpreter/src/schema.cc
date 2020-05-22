@@ -49,7 +49,7 @@ std::unique_ptr<Type> ObjectSchema::GetType(std::shared_ptr<ObjectSchema> schema
 Object* ObjectSchema::AllocateObject(std::shared_ptr<ObjectSchema> schema) {
   size_t size = schema->AsObjectSchema()->AllocationSize();
   uint8_t* buf = new uint8_t[size]();
-  return new (buf) Object(schema);
+  return new (buf) Object(schema->interpreter(), schema);
 }
 
 void ObjectSchema::FreeObject(Object* val) const {

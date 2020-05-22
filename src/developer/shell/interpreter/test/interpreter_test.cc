@@ -40,6 +40,48 @@ InterpreterTest::InterpreterTest()
 }
 
 void InterpreterTest::Finish(FinishAction action) {
+  std::vector<std::string> no_errors;
+  Finish(action, no_errors);
+}
+
+void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>& expected_errors) {
+  Run(action);
+  // Shutdown the interpreter (that also closes the channel => we can't use it anymore after this
+  // call).
+  auto errors = shell().Shutdown();
+  // Checks if the errors are what we expected.
+  bool ok = true;
+  if (expected_errors.size() != errors->errors.count()) {
+    ok = false;
+  } else {
+    for (size_t i = 0; i < expected_errors.size(); ++i) {
+      if (expected_errors[i] != std::string(errors->errors[i].data(), errors->errors[i].size())) {
+        ok = false;
+        break;
+      }
+    }
+  }
+  if (!ok) {
+    std::cout << "Shutdown incorrect\n";
+    if (!expected_errors.empty()) {
+      std::cout << "Expected:\n";
+      for (const auto& error : expected_errors) {
+        std::cout << "  " << error << '\n';
+      }
+      if (errors->errors.empty()) {
+        std::cout << "Got no error\n";
+      } else {
+        std::cout << "Got:\n";
+      }
+    }
+    for (const auto& error : errors->errors) {
+      std::cout << "  " << std::string(error.data(), error.size()) << '\n';
+    }
+    ASSERT_TRUE(ok);
+  }
+}
+
+void InterpreterTest::Run(FinishAction action) {
   llcpp::fuchsia::shell::Shell::EventHandlers handlers;
   bool done = false;
   enum Errs : zx_status_t { kNoContext = 1, kNoResult, kWrongAction };
@@ -98,9 +140,7 @@ void InterpreterTest::Finish(FinishAction action) {
         return kNoContext;
       }
       context->result = result;
-      if (globals_to_load_.empty() || (result != llcpp::fuchsia::shell::ExecuteResult::OK)) {
-        return ZX_OK;
-      } else {
+      if (!globals_to_load_.empty() && (result == llcpp::fuchsia::shell::ExecuteResult::OK)) {
         // Now that the execution is finished, loads all the global variables we asked using
         // LoadGlobal.
         for (const auto& global : globals_to_load_) {

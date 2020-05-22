@@ -487,6 +487,21 @@ void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync comp
   completer.Reply(helper.nodes());
 }
 
+void Service::Shutdown(ShutdownCompleter::Sync completer) {
+  // Shutdown the interpreter. If we have some memory leaks, this will generate errors.
+  std::vector<std::string> errors;
+  interpreter_->Shutdown(&errors);
+  // Send the potential errors to the caller.
+  std::vector<fidl::StringView> error_view;
+  for (const auto& error : errors) {
+    error_view.emplace_back(fidl::unowned_ptr(error.c_str()), error.size());
+  }
+  completer.Reply(fidl::unowned_vec(error_view));
+  // Erase the service. That also closes the handle which means that if the client sends a request
+  // after the shutdown, it will receive a ZX_ERR_PEER_CLOSED.
+  server_->EraseService(this);
+}
+
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                                 uint64_t node_node_id,
                                 const llcpp::fuchsia::shell::IntegerLiteral& node, bool root_node) {

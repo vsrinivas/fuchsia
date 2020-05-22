@@ -101,7 +101,7 @@ class StringLiteral : public Expression {
  public:
   StringLiteral(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
                 std::string_view value)
-      : Expression(interpreter, file_id, node_id), string_(value) {}
+      : Expression(interpreter, file_id, node_id), string_(interpreter, value) {}
 
   String* string() const { return string_.data(); }
 

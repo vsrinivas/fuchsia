@@ -7,10 +7,90 @@
 #include <cstdint>
 #include <string>
 
+#include "src/developer/shell/interpreter/src/interpreter.h"
 #include "src/developer/shell/interpreter/src/schema.h"
 
 namespace shell {
 namespace interpreter {
+
+String::String(Interpreter* interpreter, std::string_view value)
+    : ReferenceCounted(interpreter), value_(value) {
+  interpreter_->increment_string_count();
+}
+
+String::String(Interpreter* interpreter, std::string&& value)
+    : ReferenceCounted(interpreter), value_(std::move(value)) {
+  interpreter_->increment_string_count();
+}
+
+String::~String() { interpreter_->decrement_string_count(); }
+
+Object::Object(Interpreter* interpreter, const std::shared_ptr<ObjectSchema> schema)
+    : ReferenceCounted(interpreter), schema_(schema) {
+  interpreter_->increment_object_count();
+}
+
+const std::shared_ptr<ObjectSchema> Object::schema() { return schema_; }
+
+std::unique_ptr<Value> Object::GetField(ObjectFieldSchema* field) const {
+  FX_DCHECK(field != nullptr) << "Invalid field pointer passed to getfield";
+  uint64_t offset = field->offset();
+  std::unique_ptr<Value> v = std::make_unique<Value>();
+  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(this) + offset;
+  // TODO: We need to factorize this code with Type::LoadVariable.  This probably involves
+  // merging ValueKind and TypeKind.
+  switch (field->type()->Kind()) {
+    case Type::TypeKind::kInt8:
+      v->SetInt8(*reinterpret_cast<const int8_t*>(ptr));
+      break;
+    case Type::TypeKind::kUint8:
+      v->SetUint8(*reinterpret_cast<const uint8_t*>(ptr));
+      break;
+    case Type::TypeKind::kInt16:
+      v->SetInt16(*reinterpret_cast<const int16_t*>(ptr));
+      break;
+    case Type::TypeKind::kUint16:
+      v->SetUint16(*reinterpret_cast<const uint16_t*>(ptr));
+      break;
+    case Type::TypeKind::kInt32:
+      v->SetInt32(*reinterpret_cast<const int32_t*>(ptr));
+      break;
+    case Type::TypeKind::kUint32:
+      v->SetUint32(*reinterpret_cast<const uint32_t*>(ptr));
+      break;
+    case Type::TypeKind::kInt64:
+      v->SetInt64(*reinterpret_cast<const int64_t*>(ptr));
+      break;
+    case Type::TypeKind::kUint64:
+      v->SetUint64(*reinterpret_cast<const uint64_t*>(ptr));
+      break;
+    case Type::TypeKind::kString:
+      v->SetString(const_cast<String*>(reinterpret_cast<const String*>(ptr)));
+      break;
+    case Type::TypeKind::kObject:
+      v->SetObject(const_cast<Object*>(reinterpret_cast<const Object*>(ptr)));
+      break;
+    default:
+      FX_NOTREACHED() << "Unknown type in getfield";
+      // Assert unknown type.
+      break;
+  }
+  return v;
+}
+
+void Object::SetField(ObjectFieldSchema* field, uint64_t value) {
+  const Type* field_type = field->type();
+  const void* dest = reinterpret_cast<const uint8_t*>(this) + field->offset();
+  FX_DCHECK(field_type->Size() <= sizeof(uint64_t))
+      << "Big value in stack.  "
+         "Can't assign that to object field yet.  File a bug.";
+  memcpy(const_cast<void*>(dest), &value, field_type->Size());
+}
+
+void Object::Free() {
+  interpreter_->decrement_object_count();
+  schema()->AsObjectSchema()->FreeObject(this);
+}
 
 void Value::Set(const Value& value) {
   // For types which need to take a reference, we take the reference before we release the old
@@ -88,65 +168,6 @@ void Value::Release() {
       break;
   }
 }
-
-const std::shared_ptr<ObjectSchema> Object::schema() { return schema_; }
-
-std::unique_ptr<Value> Object::GetField(ObjectFieldSchema* field) const {
-  FX_DCHECK(field != nullptr) << "Invalid field pointer passed to getfield";
-  uint64_t offset = field->offset();
-  std::unique_ptr<Value> v = std::make_unique<Value>();
-  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(this) + offset;
-  // TODO: We need to factorize this code with Type::LoadVariable.  This probably involves
-  // merging ValueKind and TypeKind.
-  switch (field->type()->Kind()) {
-    case Type::TypeKind::kInt8:
-      v->SetInt8(*reinterpret_cast<const int8_t*>(ptr));
-      break;
-    case Type::TypeKind::kUint8:
-      v->SetUint8(*reinterpret_cast<const uint8_t*>(ptr));
-      break;
-    case Type::TypeKind::kInt16:
-      v->SetInt16(*reinterpret_cast<const int16_t*>(ptr));
-      break;
-    case Type::TypeKind::kUint16:
-      v->SetUint16(*reinterpret_cast<const uint16_t*>(ptr));
-      break;
-    case Type::TypeKind::kInt32:
-      v->SetInt32(*reinterpret_cast<const int32_t*>(ptr));
-      break;
-    case Type::TypeKind::kUint32:
-      v->SetUint32(*reinterpret_cast<const uint32_t*>(ptr));
-      break;
-    case Type::TypeKind::kInt64:
-      v->SetInt64(*reinterpret_cast<const int64_t*>(ptr));
-      break;
-    case Type::TypeKind::kUint64:
-      v->SetUint64(*reinterpret_cast<const uint64_t*>(ptr));
-      break;
-    case Type::TypeKind::kString:
-      v->SetString(const_cast<String*>(reinterpret_cast<const String*>(ptr)));
-      break;
-    case Type::TypeKind::kObject:
-      v->SetObject(const_cast<Object*>(reinterpret_cast<const Object*>(ptr)));
-      break;
-    default:
-      FX_NOTREACHED() << "Unknown type in getfield";
-      // Assert unknown type.
-      break;
-  }
-  return v;
-}
-
-void Object::SetField(ObjectFieldSchema* field, uint64_t value) {
-  const Type* field_type = field->type();
-  const void* dest = reinterpret_cast<const uint8_t*>(this) + field->offset();
-  FX_DCHECK(field_type->Size() <= sizeof(uint64_t))
-      << "Big value in stack.  "
-         "Can't assign that to object field yet.  File a bug.";
-  memcpy(const_cast<void*>(dest), &value, field_type->Size());
-}
-
-void Object::Free() { schema()->AsObjectSchema()->FreeObject(this); }
 
 }  // namespace interpreter
 }  // namespace shell

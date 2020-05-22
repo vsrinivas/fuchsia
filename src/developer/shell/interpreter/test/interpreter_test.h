@@ -55,7 +55,12 @@ class InterpreterTest : public ::testing::Test {
   void SetUp() override;
 
   enum FinishAction { kError, kDump, kExecute, kTextResult };
+  // Execute the action and then shutdown the interpreter. After that, we can't do anything else.
   void Finish(FinishAction action);
+  void Finish(FinishAction action, const std::vector<std::string>& expected_errors);
+  // Execute the action. We can have several calls to Run. The last action must be executed using
+  // Finish.
+  void Run(FinishAction action);
 
   InterpreterTestContext* CreateContext();
   InterpreterTestContext* GetContext(uint64_t context_id);

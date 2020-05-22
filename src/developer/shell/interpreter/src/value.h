@@ -16,10 +16,13 @@ namespace interpreter {
 template <typename Type, typename ContainerType>
 class Container;
 
+class Interpreter;
 class ObjectSchema;
 class ObjectFieldSchema;
 class Schema;
 class Thread;
+class TypeObject;
+class TypeString;
 class Value;
 
 enum class ValueType {
@@ -51,16 +54,20 @@ enum class ValueType {
 // Base class for all reference counted objects.
 class ReferenceCountedBase {
   friend class ExecutionScope;
+  friend class TypeObject;
+  friend class TypeString;
   friend void StringConcatenation(Thread* thread, uint64_t count);
 
  protected:
-  ReferenceCountedBase() = default;
+  explicit ReferenceCountedBase(Interpreter* interpreter) : interpreter_(interpreter) {}
   ReferenceCountedBase(const ReferenceCountedBase&) = delete;
   ReferenceCountedBase(ReferenceCountedBase&&) = delete;
   virtual ~ReferenceCountedBase() = default;
 
   ReferenceCountedBase& operator=(const ReferenceCountedBase&) = delete;
   ReferenceCountedBase& operator=(ReferenceCountedBase&&) = delete;
+
+  size_t reference_count() const { return reference_count_; }
 
  protected:
   // Adds a reference to this value.
@@ -85,6 +92,8 @@ class ReferenceCountedBase {
   // Does the hard work of freeing this object.  Override if you have special semantics when
   // freeing.
   virtual void Free() { delete this; }
+
+  Interpreter* const interpreter_;
 };
 
 // Base class for all reference counted objects.
@@ -92,11 +101,12 @@ template <typename Type>
 class ReferenceCounted : public ReferenceCountedBase {
   template <typename ObjectType, typename ContainerType>
   friend class Container;
+  friend class StringContainer;
 
   friend class Value;
 
  protected:
-  ReferenceCounted() = default;
+  explicit ReferenceCounted(Interpreter* interpreter) : ReferenceCountedBase(interpreter) {}
   ReferenceCounted(const ReferenceCounted<Type>&) = delete;
   ReferenceCounted(ReferenceCounted<Type>&&) = delete;
 
@@ -118,7 +128,7 @@ class ReferenceCounted : public ReferenceCountedBase {
 template <typename Type, typename ContainerType>
 class Container {
  protected:
-  explicit Container(Type* data) : data_(data->Use()) {}
+  explicit Container(Type* data) : data_(data) {}
   Container(const ContainerType& from) : data_(from.data_->Use()) {}
   Container(ContainerType&& from) : data_(std::move(from.data_)) {}
   ~Container() { data_->Release(); }
@@ -141,8 +151,9 @@ class Container {
 // Defines a string. The value is not mutable.
 class String : public ReferenceCounted<String> {
  public:
-  explicit String(std::string_view value) : value_(value) {}
-  explicit String(std::string&& value) : value_(std::move(value)) {}
+  String(Interpreter* interpreter, std::string_view value);
+  String(Interpreter* interpreter, std::string&& value);
+  virtual ~String();
 
   const std::string& value() const { return value_; }
   size_t size() const { return value_.size(); }
@@ -153,7 +164,7 @@ class String : public ReferenceCounted<String> {
 
 class Object : public ReferenceCounted<Object> {
  public:
-  explicit Object(const std::shared_ptr<ObjectSchema> schema) : schema_(schema) {}
+  Object(Interpreter* interpreter, const std::shared_ptr<ObjectSchema> schema);
 
   const std::shared_ptr<ObjectSchema> schema();
 
@@ -171,8 +182,9 @@ class Object : public ReferenceCounted<Object> {
 // Helper class for strings. This automatically manages the references.
 class StringContainer : public Container<String, StringContainer> {
  public:
-  explicit StringContainer(std::string_view value) : Container(new String(value)) {}
-  explicit StringContainer(String* string) : Container(string) {}
+  StringContainer(Interpreter* interpreter, std::string_view value)
+      : Container(new String(interpreter, value)) {}
+  explicit StringContainer(String* string) : Container(string->Use()) {}
   StringContainer(const StringContainer& from) : Container(from) {}
   StringContainer(StringContainer&& from) : Container(from) {}
 };
@@ -271,9 +283,9 @@ class Value {
     FX_DCHECK(type_ == ValueType::kString);
     return string_;
   }
-  void SetString(std::string_view value) {
+  void SetString(Interpreter* interpreter, std::string_view value) {
     // Creates the new value before releasing the old one to avoid potential use after free problem.
-    String* string = new String(value);
+    String* string = new String(interpreter, value);
     Release();
     type_ = ValueType::kString;
     string_ = string;

@@ -72,10 +72,19 @@ class ExecutionContext {
 // However, execution contexts from an interpreter share the same data.
 class Interpreter {
  public:
-  Interpreter() : isolate_(std::make_unique<Isolate>()) {}
+  Interpreter() : isolate_(std::make_unique<Isolate>(this)) {}
   virtual ~Interpreter() = default;
 
   Isolate* isolate() const { return isolate_.get(); }
+
+  size_t string_count() const { return string_count_; }
+  void increment_string_count() { ++string_count_; }
+  void decrement_string_count() { --string_count_; }
+  size_t object_count() const { return object_count_; }
+  void increment_object_count() { ++object_count_; }
+  void decrement_object_count() { --object_count_; }
+
+  void Shutdown(std::vector<std::string>* errors);
 
   // Called when the interpreter encouter an error.
   virtual void EmitError(ExecutionContext* context, std::string error_message) = 0;
@@ -179,6 +188,11 @@ class Interpreter {
   // ObjectSchema destructor unregisters ObjectFieldSchemas from the nodes_ above, so it has to be
   // destructed first.
   std::map<std::pair<uint64_t, uint64_t>, std::shared_ptr<ObjectSchema>> object_schemas_;
+
+  // The current allocated string count.
+  size_t string_count_ = 0;
+  // The current allocated object count.
+  size_t object_count_ = 0;
 };
 
 }  // namespace interpreter

@@ -71,7 +71,7 @@ std::unique_ptr<Type> TypeString::Duplicate() const { return std::make_unique<Ty
 void TypeString::Dump(std::ostream& os) const { os << "string"; }
 
 void TypeString::GenerateDefaultValue(ExecutionContext* context, code::Code* code) const {
-  StringContainer string("");
+  StringContainer string(context->interpreter(), "");
   code->StringLiteral(string.data());
 }
 
@@ -102,8 +102,16 @@ bool TypeString::GenerateAddition(ExecutionContext* context, code::Code* code,
 }
 
 void TypeString::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
-  auto data = reinterpret_cast<String* const*>(scope->Data(index, sizeof(String*)));
+  String* const* data = scope->Data<String*>(index);
   value->SetString(*data);
+}
+
+void TypeString::ClearVariable(ExecutionScope* scope, size_t index) const {
+  String** data = scope->Data<String*>(index);
+  if (*data != nullptr) {
+    (*data)->Release();
+    *data = nullptr;
+  }
 }
 
 // - type int --------------------------------------------------------------------------------------
@@ -298,8 +306,16 @@ Variable* TypeObject::CreateVariable(ExecutionContext* context, Scope* scope, No
 }
 
 void TypeObject::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
-  auto data = reinterpret_cast<Object* const*>(scope->Data(index, sizeof(Object*)));
+  Object* const* data = scope->Data<Object*>(index);
   value->SetObject(*data);
+}
+
+void TypeObject::ClearVariable(ExecutionScope* scope, size_t index) const {
+  Object** data = scope->Data<Object*>(index);
+  if (*data != nullptr) {
+    (*data)->Release();
+    *data = nullptr;
+  }
 }
 
 }  // namespace interpreter

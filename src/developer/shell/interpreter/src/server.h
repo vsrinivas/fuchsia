@@ -22,6 +22,7 @@ namespace shell {
 namespace interpreter {
 namespace server {
 
+class Server;
 class Service;
 
 // Holds a context at the server level.
@@ -170,8 +171,8 @@ class ServerInterpreter : public Interpreter {
 // Defines a connection from a client to the interpreter.
 class Service final : public llcpp::fuchsia::shell::Shell::Interface {
  public:
-  explicit Service(zx_handle_t handle)
-      : handle_(handle), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
+  Service(Server* server, zx_handle_t handle)
+      : server_(server), handle_(handle), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
 
   Interpreter* interpreter() const { return interpreter_.get(); }
 
@@ -185,6 +186,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void ExecuteExecutionContext(uint64_t context_id,
                                ExecuteExecutionContextCompleter::Sync completer) override;
   void LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) override;
+  void Shutdown(ShutdownCompleter::Sync completer) override;
 
   // Helpers to be able to send events to the client.
   zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,
@@ -250,6 +252,8 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                    const llcpp::fuchsia::shell::Addition& node, bool root_node);
 
+  // The server which created this service and which owns it.
+  Server* const server_;
   // The handle to communicate with the client.
   zx_handle_t handle_;
   // The interpreter associated with this service. An interpreter can only be associated to one
@@ -263,8 +267,19 @@ class Server {
  public:
   Server();
 
+  // Erase a service previously created with AddConnection. This closes the connection.
+  void EraseService(Service* service) {
+    for (auto ref = services_.begin(); ref != services_.end(); ++ref) {
+      if ((*ref).get() == service) {
+        services_.erase(ref);
+        return;
+      }
+    }
+  }
+
+  // Create a Service for an incoming connection.
   Service* AddConnection(zx_handle_t handle) {
-    auto service = std::make_unique<Service>(handle);
+    auto service = std::make_unique<Service>(this, handle);
     auto result = service.get();
     services_.emplace_back(std::move(service));
     return result;
