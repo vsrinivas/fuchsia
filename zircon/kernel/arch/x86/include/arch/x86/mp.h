@@ -63,8 +63,13 @@ struct x86_percpu {
   /* Whether blocking is disallowed.  See arch_blocking_disallowed(). */
   uint32_t blocking_disallowed;
 
-  /* Memory for IPI-free rescheduling of idle CPUs with monitor/mwait. */
-  volatile uint8_t *monitor;
+  union {
+    /* Memory for IPI-free rescheduling of idle CPUs with monitor/mwait. */
+    volatile uint8_t *monitor;
+    /* Interlock to avoid HLT on idle CPUs without monitor/mwait. */
+    /* halt_interlock is never used on CPUs that have enabled monitor/mwait for idle. */
+    volatile int halt_interlock;
+  };
 
   /* Supported mwait C-states for idle CPUs. */
   X86IdleStates *idle_states;

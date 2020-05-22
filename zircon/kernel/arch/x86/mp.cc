@@ -327,6 +327,17 @@ void arch_mp_reschedule(cpu_mask_t mask) {
     }
   } else {
     needs_ipi = mask;
+    // We are attempting to wake the set up CPUs in |mask| and cause them to schedule a new thread.
+    // Before a target CPU executes the halt instruction, it clears the |halt_interlock| flag;
+    // set the halt_interlock flag here to avoid the target CPU entering the halt state - this
+    // prevents an unnecessary halt instruction.
+    while (mask) {
+      cpu_num_t cpu_id = lowest_cpu_set(mask);
+      cpu_mask_t cpu_mask = cpu_num_to_mask(cpu_id);
+      struct x86_percpu* percpu = cpu_id ? &ap_percpus[cpu_id - 1] : &bp_percpu;
+      atomic_store_relaxed(&percpu->halt_interlock, 1);
+      mask &= ~cpu_mask;
+    }
   }
 
   if (needs_ipi) {
@@ -343,8 +354,8 @@ void arch_prepare_current_cpu_idle_state(bool idle) {
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {
+  struct x86_percpu* percpu = x86_get_percpu();
   if (use_monitor) {
-    struct x86_percpu* percpu = x86_get_percpu();
     for (;;) {
       while (*percpu->monitor) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
@@ -369,6 +380,19 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
     }
   } else {
     for (;;) {
+      LocalTraceDuration trace{"idle"_stringref};
+      constexpr int kPauseIterations = 3000;
+      // Clear the halt_interlock flag and spin for a little bit, in case a wakeup happens very
+      // shortly before we decide to go to sleep. If the halt_interlock flag is set, another CPU
+      // has tried to wake us, avoid the halt instruction.
+      atomic_store_relaxed(&percpu->halt_interlock, 0);
+      for (int i = 0; i < kPauseIterations; i++) {
+        arch::Yield();
+      }
+      if (atomic_load_relaxed(&percpu->halt_interlock)) {
+        continue;
+      }
+
       x86_idle();
     }
   }
