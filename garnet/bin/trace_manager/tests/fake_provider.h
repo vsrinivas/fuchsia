@@ -9,10 +9,10 @@
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/trace-engine/buffer_internal.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
 
 #include <gtest/gtest.h>
-#include <trace-provider/provider.h>
 #include <trace-reader/reader.h>
 
 namespace tracing {

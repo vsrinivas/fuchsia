@@ -14,6 +14,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/time.h>
@@ -27,7 +28,6 @@
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
-#include <trace/event.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/printer.h"

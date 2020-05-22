@@ -13,10 +13,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 
 #include <memory>
-
-#include <trace/event.h>
 
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 

@@ -11,10 +11,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/trace/event.h>
 
 #include <utility>
-
-#include <trace/event.h>
 
 #include "fbl/ref_ptr.h"
 #include "src/sys/appmgr/job_provider_impl.h"

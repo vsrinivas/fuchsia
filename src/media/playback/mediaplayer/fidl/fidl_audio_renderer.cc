@@ -5,9 +5,8 @@
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
-
-#include <trace/event.h>
 
 #include "lib/async/default.h"
 #include "lib/fostr/indent.h"

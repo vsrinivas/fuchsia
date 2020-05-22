@@ -5,12 +5,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
-
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

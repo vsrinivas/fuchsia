@@ -4,7 +4,7 @@
 
 #include "src/sys/appmgr/cache_control.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/sys/appmgr/storage_watchdog.h"
 

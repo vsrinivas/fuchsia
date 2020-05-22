@@ -5,12 +5,11 @@
 #include "src/media/audio/audio_core/mix_stage.h"
 
 #include <lib/fit/defer.h>
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
 #include <limits>
 #include <memory>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/intermediate_buffer.h"

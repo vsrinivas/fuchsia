@@ -13,10 +13,10 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
-#include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"

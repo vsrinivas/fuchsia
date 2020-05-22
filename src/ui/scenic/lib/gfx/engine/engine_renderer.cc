@@ -5,8 +5,7 @@
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "src/ui/lib/escher/impl/image_cache.h"

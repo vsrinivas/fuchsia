@@ -4,11 +4,10 @@
 #include "src/media/audio/audio_core/audio_output.h"
 
 #include <lib/fit/defer.h>
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
 #include <limits>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/base_renderer.h"

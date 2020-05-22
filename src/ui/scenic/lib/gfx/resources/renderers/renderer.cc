@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/lib/escher/scene/model.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"

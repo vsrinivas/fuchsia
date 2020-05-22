@@ -4,12 +4,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-provider/provider.h>
 
 #include <memory>
 #include <utility>
 
 #include <blobfs/mount.h>
-#include <trace-provider/provider.h>
 
 #include "runner.h"
 

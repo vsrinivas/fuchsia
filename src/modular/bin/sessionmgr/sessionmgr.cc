@@ -10,8 +10,7 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"

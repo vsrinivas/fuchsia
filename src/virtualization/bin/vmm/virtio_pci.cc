@@ -5,9 +5,9 @@
 #include "src/virtualization/bin/vmm/virtio_pci.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <stdio.h>
 
-#include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
 #include "src/virtualization/bin/vmm/bits.h"

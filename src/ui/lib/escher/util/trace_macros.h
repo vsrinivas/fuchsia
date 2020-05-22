@@ -10,7 +10,7 @@
 #include "src/lib/fxl/build_config.h"
 
 #ifdef OS_FUCHSIA
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "trace-vthread/event_vthread.h"
 #else

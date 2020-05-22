@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_TRACE_H_
+#define FS_TRACE_H_
 
 #include <stdio.h>
 
 #ifdef __Fuchsia__
-#include <trace/event.h>
+#include <lib/trace/event.h>
 #else
 // TODO(ZX-1407): If ulib/trace defines a no-op
 // version of these macros, we won't need to.
@@ -29,3 +30,5 @@
 #define FS_TRACE_INFO(fmt...) printf(fmt)
 #define FS_TRACE_WARN(fmt...) fprintf(stderr, fmt)
 #define FS_TRACE_ERROR(fmt...) fprintf(stderr, fmt)
+
+#endif  // FS_TRACE_H_

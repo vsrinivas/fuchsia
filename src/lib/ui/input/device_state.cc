@@ -9,9 +9,8 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
-
-#include <trace/event.h>
 
 namespace {
 int64_t InputEventTimestampNow() { return zx::clock::get_monotonic().get(); }

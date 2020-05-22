@@ -9,10 +9,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
-
-#include <trace/event.h>
 
 namespace cobalt {
 

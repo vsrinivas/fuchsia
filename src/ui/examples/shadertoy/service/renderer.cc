@@ -4,7 +4,7 @@
 
 #include "src/ui/examples/shadertoy/service/renderer.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/examples/shadertoy/service/compiler.h"
 #include "src/ui/lib/escher/impl/command_buffer.h"

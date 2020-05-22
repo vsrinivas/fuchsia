@@ -1,6 +1,7 @@
 #include "src/developer/memory/monitor/metrics.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/time.h>
 
 #include <algorithm>
@@ -8,7 +9,6 @@
 #include <string>
 
 #include <src/lib/cobalt/cpp/cobalt_event_builder.h>
-#include <trace/event.h>
 
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"

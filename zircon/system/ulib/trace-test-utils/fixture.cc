@@ -4,23 +4,23 @@
 
 #include "trace-test-utils/fixture.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/trace-provider/handler.h>
+#include <lib/zx/event.h>
 #include <regex.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
-#include <utility>
-
 #include <zircon/assert.h>
+
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/zx/event.h>
-#include <trace-provider/handler.h>
 #include <trace-reader/reader.h>
 #include <trace-reader/reader_internal.h>
 #include <trace-test-utils/compare_records.h>

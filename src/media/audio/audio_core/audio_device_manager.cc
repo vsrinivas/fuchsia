@@ -6,10 +6,9 @@
 
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/trace/event.h>
 
 #include <string>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/base_capturer.h"

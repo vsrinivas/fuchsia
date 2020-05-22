@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/event.h>
 #include <zircon/status.h>
@@ -16,8 +17,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
-
-#include <trace/event.h>
 
 #include "src/lib/files/file.h"
 

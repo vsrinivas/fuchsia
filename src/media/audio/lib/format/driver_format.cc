@@ -5,11 +5,11 @@
 #include "src/media/audio/lib/format/driver_format.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <map>
 
 #include <audio-proto-utils/format-utils.h>
-#include <trace/event.h>
 
 namespace media::audio {
 

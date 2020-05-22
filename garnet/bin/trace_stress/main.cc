@@ -7,6 +7,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
+#include <lib/trace/observer.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,10 +17,6 @@
 #include <zircon/status.h>
 
 #include <memory>
-
-#include <trace-provider/provider.h>
-#include <trace/event.h>
-#include <trace/observer.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"

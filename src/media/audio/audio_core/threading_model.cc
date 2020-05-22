@@ -10,12 +10,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <mutex>
 #include <string>
 #include <unordered_map>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/utils.h"
 

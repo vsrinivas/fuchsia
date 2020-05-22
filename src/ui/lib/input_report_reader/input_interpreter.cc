@@ -7,12 +7,11 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <trace/event.h>
 
 #include "src/lib/fxl/arraysize.h"
 

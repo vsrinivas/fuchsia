@@ -2,30 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/thermal/c/fidl.h>
-#include <fuchsia/boot/c/fidl.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/system.h>
-
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-
-#include <lib/fdio/watcher.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/cpp/caller.h>
-#include <lib/zx/channel.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
-
 #include <cpuid.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <inttypes.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/watcher.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/system.h>
 
 static zx_handle_t root_resource;
 

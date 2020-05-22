@@ -46,7 +46,7 @@ zx_library("trace-vthread") {
   ]
   sources = []
   public_deps = [
-    # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
+    # <trace-vthread/internal/event_vthread.h> has #include <lib/trace/event_args.h>.
     "//zircon/system/ulib/trace",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
@@ -70,7 +70,7 @@ zx_library("trace-vthread-with-static-engine") {
   ]
   sources = []
   public_deps = [
-    # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
+    # <trace-vthread/internal/event_vthread.h> has #include <lib/trace/event_args.h>.
     "//zircon/system/ulib/trace:trace-with-static-engine",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.

@@ -6,11 +6,10 @@
 
 #include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/status.h>
 
 #include <utility>
-
-#include <trace/event.h>
 
 #include "lib/fdio/fd.h"
 #include "lib/fidl/cpp/optional.h"

@@ -6,12 +6,11 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/fit/defer.h>
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
 #include <algorithm>
 #include <iomanip>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"

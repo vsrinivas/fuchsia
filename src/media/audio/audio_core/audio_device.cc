@@ -5,8 +5,7 @@
 #include "src/media/audio/audio_core/audio_device.h"
 
 #include <lib/fit/bridge.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"

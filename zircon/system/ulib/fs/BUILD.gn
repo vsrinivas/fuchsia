@@ -103,7 +103,7 @@ zx_library("fs") {
       # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
       "//zircon/system/fidl/fuchsia-io:llcpp",
 
-      # <fs/trace.h> has #include <trace/event.h>.
+      # <fs/trace.h> has #include <lib/trace/event.h>.
       "//zircon/system/ulib/trace",
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.

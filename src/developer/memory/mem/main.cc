@@ -4,16 +4,15 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-provider/fdio_connect.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/observer.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
-
-#include <trace-provider/fdio_connect.h>
-#include <trace-provider/provider.h>
-#include <trace/observer.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"

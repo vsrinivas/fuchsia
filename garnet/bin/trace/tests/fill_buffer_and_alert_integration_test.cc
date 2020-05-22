@@ -5,12 +5,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <memory>
-
-#include <trace/event.h>
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 

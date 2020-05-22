@@ -5,8 +5,7 @@
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace scheduling {
 

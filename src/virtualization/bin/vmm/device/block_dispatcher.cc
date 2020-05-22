@@ -5,10 +5,10 @@
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/vmo.h>
 
 #include <bitmap/rle-bitmap.h>
-#include <trace/event.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"

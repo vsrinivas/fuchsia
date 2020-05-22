@@ -5,8 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 
 #include "garnet/bin/cpuperf_provider/app.h"
 #include "garnet/lib/perfmon/controller.h"

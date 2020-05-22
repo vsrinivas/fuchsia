@@ -4,7 +4,7 @@
 
 #include "src/ui/examples/shadertoy/service/imagepipe_shadertoy.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/examples/shadertoy/service/renderer.h"
 #include "src/ui/lib/escher/flib/fence.h"

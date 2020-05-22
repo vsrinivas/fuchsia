@@ -5,9 +5,9 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-provider/provider.h>
 #include <zircon/device/ethernet.h>
 
-#include <trace-provider/provider.h>
 #include <virtio/net.h>
 
 #include "src/virtualization/bin/vmm/device/test_with_device.h"

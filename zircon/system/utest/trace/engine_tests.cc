@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/trace-engine/handler.h>
+#include <lib/trace/event.h>
 #include <lib/zx/event.h>
 #include <threads.h>
 
@@ -15,7 +16,6 @@
 #include <fbl/vector.h>
 #include <trace-test-utils/fixture.h>
 #include <trace-test-utils/squelch.h>
-#include <trace/event.h>
 
 #include "fixture_macros.h"
 

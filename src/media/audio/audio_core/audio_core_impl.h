@@ -7,8 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/context.h"
 

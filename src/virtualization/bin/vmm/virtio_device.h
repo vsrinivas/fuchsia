@@ -7,10 +7,9 @@
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/trace-engine/types.h>
+#include <lib/trace/event.h>
 
 #include <atomic>
-
-#include <trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/virtualization/bin/vmm/device/config.h"

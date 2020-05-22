@@ -10,6 +10,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
@@ -18,7 +19,6 @@
 #include <memory>
 
 #include <task-utils/walker.h>
-#include <trace/event.h>
 
 namespace memory {
 

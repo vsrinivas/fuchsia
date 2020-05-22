@@ -8,11 +8,10 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <memory>
 #include <vector>
-
-#include <trace/event.h>
 
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/input/helper.h"

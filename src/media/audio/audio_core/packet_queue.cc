@@ -5,10 +5,9 @@
 #include "src/media/audio/audio_core/packet_queue.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <iomanip>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/lib/format/format.h"

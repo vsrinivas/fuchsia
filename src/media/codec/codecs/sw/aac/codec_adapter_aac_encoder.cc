@@ -5,8 +5,7 @@
 #include "codec_adapter_aac_encoder.h"
 
 #include <lib/async/cpp/task.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "chunk_input_stream.h"
 #include "output_sink.h"

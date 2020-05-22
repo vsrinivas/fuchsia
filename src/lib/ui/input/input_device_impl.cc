@@ -5,8 +5,7 @@
 #include "src/lib/ui/input/input_device_impl.h"
 
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace ui_input {
 

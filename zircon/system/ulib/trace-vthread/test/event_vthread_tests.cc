@@ -7,12 +7,12 @@
 #include <lib/trace-engine/context.h>
 #include <lib/trace-engine/handler.h>
 #include <lib/trace-engine/types.h>
+#include <lib/trace-provider/handler.h>
 #include <stddef.h>
 
 #include <array>
 #include <memory>
 
-#include <trace-provider/handler.h>
 #include <trace-test-utils/compare_records.h>
 #include <trace-test-utils/read_records.h>
 #include <unittest/unittest.h>

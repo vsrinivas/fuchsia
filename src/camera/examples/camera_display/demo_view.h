@@ -8,13 +8,13 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 
 #include <map>
 #include <random>
 
 #include <src/lib/ui/base_view/base_view.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/camera/examples/camera_display/stream_provider/stream_provider.h"

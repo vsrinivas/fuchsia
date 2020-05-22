@@ -8,11 +8,11 @@
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/global.h>
+#include <lib/trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
 #include <src/lib/files/directory.h>
-#include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/sys/appmgr/appmgr.h"

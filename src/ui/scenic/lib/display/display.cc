@@ -5,9 +5,8 @@
 #include "src/ui/scenic/lib/display/display.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/syscalls.h>
-
-#include <trace/event.h>
 
 namespace scenic_impl {
 namespace display {

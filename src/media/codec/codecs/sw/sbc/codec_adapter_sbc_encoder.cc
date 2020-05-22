@@ -5,8 +5,7 @@
 #include "codec_adapter_sbc_encoder.h"
 
 #include <lib/media/codec_impl/codec_buffer.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace {
 

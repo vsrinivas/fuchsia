@@ -6,8 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 
 #include "src/developer/memory/monitor/monitor.h"
 #include "src/lib/fxl/command_line.h"

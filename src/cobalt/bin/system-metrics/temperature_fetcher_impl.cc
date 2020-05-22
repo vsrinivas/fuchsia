@@ -9,13 +9,13 @@
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <stdio.h>
 #include <zircon/status.h>
 
 #include <cmath>
 
 #include <fbl/unique_fd.h>
-#include <trace/event.h>
 
 namespace cobalt {
 

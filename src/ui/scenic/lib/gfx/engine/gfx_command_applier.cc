@@ -7,12 +7,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/zx/eventpair.h>
 
 #include <cmath>
-
-#include <trace/event.h>
 
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"

@@ -7,14 +7,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
 #include <optional>
-
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"

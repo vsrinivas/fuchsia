@@ -7,8 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace scenic_impl {
 

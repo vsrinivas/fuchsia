@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdarg.h>
-#include <trace/event.h>
-
 #include "tracer.h"
+
+#include <lib/trace/event.h>
+#include <stdarg.h>
+
 #include "utils.h"
 
 zx_status_t Tracer::Start() {

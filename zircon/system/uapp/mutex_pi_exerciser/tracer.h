@@ -8,12 +8,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/trace-engine/types.h>
+#include <lib/trace-provider/provider.h>
 #include <stdio.h>
 
 #include <memory>
 
 #include <fbl/macros.h>
-#include <trace-provider/provider.h>
 
 class Tracer {
  public:

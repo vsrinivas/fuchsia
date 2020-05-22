@@ -10,12 +10,11 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace/observer.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <trace/observer.h>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/monitor/high_water.h"

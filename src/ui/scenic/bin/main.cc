@@ -6,11 +6,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/thread.h>
 
 #include <memory>
-
-#include <trace-provider/provider.h>
 
 #include "lib/inspect/cpp/inspect.h"
 #include "lib/sys/inspect/cpp/component.h"

@@ -7,11 +7,11 @@
 
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <vector>
 
 #include <fbl/ref_ptr.h>
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/mix_stage.h"

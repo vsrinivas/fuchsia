@@ -4,7 +4,7 @@
 
 #include "src/cobalt/bin/app/metric_event_logger_impl.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/cobalt/bin/app/utils.h"
 

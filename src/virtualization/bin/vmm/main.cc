@@ -17,6 +17,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/trace-provider/provider.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +32,6 @@
 #include <atomic>
 #include <unordered_map>
 #include <vector>
-
-#include <trace-provider/provider.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"

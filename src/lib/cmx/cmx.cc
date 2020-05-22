@@ -4,12 +4,12 @@
 
 #include "src/lib/cmx/cmx.h"
 
+#include <lib/trace/event.h>
+
 #include <algorithm>
 #include <regex>
 #include <sstream>
 #include <string>
-
-#include <trace/event.h>
 
 #include "rapidjson/document.h"
 #include "src/lib/fxl/strings/substitute.h"

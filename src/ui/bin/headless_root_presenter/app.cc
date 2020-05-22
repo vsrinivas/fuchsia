@@ -9,9 +9,8 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/status.h>
-
-#include <trace/event.h>
 
 namespace headless_root_presenter {
 

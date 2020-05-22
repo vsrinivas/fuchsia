@@ -9,10 +9,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace-provider/provider.h>
 
 #include <memory>
-
-#include <trace-provider/provider.h>
 
 #include "src/ui/examples/escher/common/demo_harness.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"

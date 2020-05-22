@@ -8,12 +8,11 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <cstring>
 #include <functional>
 #include <utility>
-
-#include <trace/event.h>
 
 namespace callback {
 

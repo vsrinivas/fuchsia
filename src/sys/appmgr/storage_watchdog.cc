@@ -9,11 +9,11 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/trace/event.h>
 #include <sys/types.h>
 
 #include <src/lib/files/directory.h>
 #include <src/lib/files/path.h>
-#include <trace/event.h>
 
 #include "src/lib/fxl/strings/concatenate.h"
 

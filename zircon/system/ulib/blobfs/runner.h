@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 
 #include <blobfs/mount.h>
@@ -14,7 +15,6 @@
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <trace/event.h>
 
 #include "blobfs.h"
 

@@ -7,12 +7,11 @@
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/trace-provider/provider.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 #include <random>
-
-#include <trace-provider/provider.h>
 
 #include "codec_factory_impl.h"
 #include "src/lib/fsl/io/device_watcher.h"

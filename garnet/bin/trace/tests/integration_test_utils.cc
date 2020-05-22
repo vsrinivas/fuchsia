@@ -9,6 +9,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
+#include <lib/trace/observer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -20,8 +22,6 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 #include <trace-reader/file_reader.h>
-#include <trace/event.h>
-#include <trace/observer.h>
 
 #include "garnet/bin/trace/spec.h"
 

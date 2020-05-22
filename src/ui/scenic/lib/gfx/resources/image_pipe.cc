@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"

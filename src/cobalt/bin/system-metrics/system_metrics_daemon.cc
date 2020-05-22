@@ -15,6 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 #include <sys/statvfs.h>
 #include <zircon/status.h>
@@ -24,8 +25,6 @@
 #include <numeric>
 #include <thread>
 #include <vector>
-
-#include <trace/event.h>
 
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"

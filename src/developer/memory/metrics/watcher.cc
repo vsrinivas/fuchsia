@@ -5,11 +5,10 @@
 #include "src/developer/memory/metrics/watcher.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <unistd.h>
-
-#include <trace/event.h>
 
 namespace memory {
 

@@ -6,12 +6,12 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 
 #include <cstdlib>
 
 #include <audio-proto-utils/format-utils.h>
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/format/driver_format.h"

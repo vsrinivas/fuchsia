@@ -5,10 +5,9 @@
 #include "src/media/audio/audio_core/ring_buffer.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <memory>
-
-#include <trace/event.h>
 
 namespace media::audio {
 namespace {

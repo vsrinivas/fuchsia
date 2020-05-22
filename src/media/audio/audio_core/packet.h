@@ -7,12 +7,12 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <stdint.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/format/frames.h"

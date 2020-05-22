@@ -11,11 +11,12 @@
 #ifndef ZIRCON_SYSTEM_UTEST_TRACE_EVENT_TESTS_COMMON_H_
 #define ZIRCON_SYSTEM_UTEST_TRACE_EVENT_TESTS_COMMON_H_
 
-#include <trace/event.h>
-#include <trace/event_args.h>
+#include <lib/trace/event.h>
+#include <lib/trace/event_args.h>
+#include <zircon/syscalls.h>
+
 #include <trace-test-utils/fixture.h>
 #include <unittest/unittest.h>
-#include <zircon/syscalls.h>
 
 #ifdef __cplusplus
 #include <fbl/string.h>

@@ -6,9 +6,9 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/trace/event.h>
 
 #include <fbl/auto_call.h>
-#include <trace/event.h>
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/fence.h"

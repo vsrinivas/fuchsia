@@ -5,8 +5,7 @@
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
 #include <lib/async/cpp/task.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace media::audio {
 

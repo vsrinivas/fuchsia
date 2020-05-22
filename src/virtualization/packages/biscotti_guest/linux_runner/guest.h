@@ -11,13 +11,12 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace/event.h>
 #include <lib/virtualization/scenic_wayland_dispatcher.h>
 #include <zircon/types.h>
 
 #include <deque>
 #include <memory>
-
-#include <trace/event.h>
 
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/linux_component.h"

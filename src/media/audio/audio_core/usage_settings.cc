@@ -4,7 +4,7 @@
 
 #include "src/media/audio/audio_core/usage_settings.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/mixer/gain.h"
 

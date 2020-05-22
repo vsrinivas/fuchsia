@@ -7,7 +7,7 @@
 #include "lib/syslog/logger.h"
 
 #ifndef NTRACE
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 #endif
 
 #include "src/media/audio/audio_core/audio_core_impl.h"

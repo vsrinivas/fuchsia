@@ -8,11 +8,10 @@
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/syscalls.h>
 
 #include <functional>
-
-#include <trace/event.h>
 
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 

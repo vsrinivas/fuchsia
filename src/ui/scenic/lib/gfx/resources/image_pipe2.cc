@@ -6,8 +6,7 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/flib/fence.h"

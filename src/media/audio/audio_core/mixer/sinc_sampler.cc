@@ -3,10 +3,10 @@
 
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
 
+#include <lib/trace/event.h>
+
 #include <algorithm>
 #include <limits>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/mixer/channel_strip.h"
 #include "src/media/audio/audio_core/mixer/constants.h"

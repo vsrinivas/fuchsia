@@ -6,10 +6,9 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/trace-provider/fdio_connect.h>
+#include <lib/trace-provider/provider.h>
 #include <zircon/status.h>
-
-#include <trace-provider/fdio_connect.h>
-#include <trace-provider/provider.h>
 
 #include "src/devices/lib/log/log.h"
 

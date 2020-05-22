@@ -9,8 +9,7 @@
 
 #if MAGMA_ENABLE_TRACING
 #include <lib/async-loop/cpp/loop.h>
-
-#include <trace/observer.h>
+#include <lib/trace/observer.h>
 #endif
 
 #include <memory>

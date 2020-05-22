@@ -11,6 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
+#include <lib/trace-provider/provider.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -32,7 +33,6 @@
 #include <fs/trace.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
-#include <trace-provider/provider.h>
 
 namespace {
 
@@ -40,7 +40,7 @@ int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) 
   if (options.readonly_after_initialization) {
     return minfs::Fsck(std::move(bc), minfs::FsckOptions());
   }
-  return minfs::Fsck(std::move(bc), minfs::FsckOptions{ .repair = true });
+  return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
 }
 
 using minfs::ServeLayout;
@@ -168,11 +168,10 @@ int main(int argc, char** argv) {
       Command{"check", Fsck, "check filesystem integrity"},
       Command{"fsck", Fsck, "check filesystem integrity"},
       Command{"mount",
-          [](std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-            return Mount(std::move(bc), options);
-          },
-          "mount and serve the filesystem"}
-  };
+              [](std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
+                return Mount(std::move(bc), options);
+              },
+              "mount and serve the filesystem"}};
 
   while (true) {
     static struct option opts[] = {

@@ -4,8 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 
 #include "garnet/bin/ktrace_provider/app.h"
 #include "src/lib/fxl/command_line.h"

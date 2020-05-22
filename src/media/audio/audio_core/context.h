@@ -8,8 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/sys/cpp/component_context.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "benchmarks.h"
-
 #include <stdio.h>
 
+#include "benchmarks.h"
+
 #define NTRACE
+#include <lib/trace/event.h>
+
 #include <trace-vthread/event_vthread.h>
-#include <trace/event.h>
 
 #include "runner.h"
 

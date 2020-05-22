@@ -12,7 +12,7 @@
 #include <functional>
 
 #if MAGMA_ENABLE_TRACING
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "trace-vthread/event_vthread.h"
 #define TRACE_NONCE_DECLARE(x) uint64_t x = TRACE_NONCE()

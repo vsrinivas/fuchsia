@@ -4,9 +4,9 @@
 
 #include "src/developer/memory/metrics/digest.h"
 
-#include <regex>
+#include <lib/trace/event.h>
 
-#include <trace/event.h>
+#include <regex>
 
 namespace memory {
 

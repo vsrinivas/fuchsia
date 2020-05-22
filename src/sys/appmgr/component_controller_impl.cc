@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
@@ -26,7 +27,6 @@
 #include <fs/remote_dir.h>
 #include <fs/service.h>
 #include <task-utils/walker.h>
-#include <trace/event.h>
 
 #include "fbl/ref_ptr.h"
 #include "lib/inspect/service/cpp/service.h"

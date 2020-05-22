@@ -5,8 +5,7 @@
 #include "src/cobalt/bin/system-metrics/activity_listener.h"
 
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace cobalt {
 

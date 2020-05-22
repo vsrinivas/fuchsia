@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/audio_input.h"
 
-#include <algorithm>
+#include <lib/trace/event.h>
 
-#include <trace/event.h>
+#include <algorithm>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/process_config.h"

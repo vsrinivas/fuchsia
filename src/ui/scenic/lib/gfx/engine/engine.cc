@@ -6,13 +6,12 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
 #include <set>
 #include <string>
 #include <unordered_set>
-
-#include <trace/event.h>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"

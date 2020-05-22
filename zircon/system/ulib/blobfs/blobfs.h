@@ -15,6 +15,7 @@
 #include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
@@ -39,7 +40,6 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <storage/operation/unbuffered_operations_builder.h>
-#include <trace/event.h>
 
 #include "allocator/allocator.h"
 #include "allocator/extent-reserver.h"

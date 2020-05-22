@@ -5,6 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/trace/event.h>
 
 #include <algorithm>
 #include <iostream>
@@ -13,8 +15,6 @@
 
 #include <gtest/gtest.h>
 #include <openssl/sha.h>
-#include <trace-provider/provider.h>
-#include <trace/event.h>
 
 #include "src/camera/examples/camera_display/stream_provider/stream_provider.h"
 

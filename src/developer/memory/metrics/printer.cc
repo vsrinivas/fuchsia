@@ -4,10 +4,10 @@
 
 #include "src/developer/memory/metrics/printer.h"
 
+#include <lib/trace/event.h>
+
 #include <algorithm>
 #include <cstdint>
-
-#include <trace/event.h>
 
 namespace memory {
 

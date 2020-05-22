@@ -20,7 +20,7 @@
 #if VK_USE_PLATFORM_FUCHSIA
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
-#include <trace-provider/provider.h>
+#include <lib/trace-provider/provider.h>
 #endif
 
 //

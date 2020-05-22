@@ -9,10 +9,9 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <utility>
-
-#include <trace/event.h>
 
 namespace modular {
 

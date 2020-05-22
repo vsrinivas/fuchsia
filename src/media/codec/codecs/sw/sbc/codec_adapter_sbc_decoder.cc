@@ -5,10 +5,9 @@
 #include "codec_adapter_sbc_decoder.h"
 
 #include <lib/media/codec_impl/codec_buffer.h>
+#include <lib/trace/event.h>
 
 #include <iomanip>
-
-#include <trace/event.h>
 
 #include "fuchsia/media/cpp/fidl.h"
 #include "oi_codec_sbc.h"

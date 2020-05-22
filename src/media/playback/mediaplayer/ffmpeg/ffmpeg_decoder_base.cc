@@ -6,8 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"

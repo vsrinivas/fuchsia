@@ -4,13 +4,12 @@
 
 #include "src/ui/scenic/lib/gfx/screenshotter.h"
 
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
 #include <functional>
 #include <utility>
 #include <vector>
-
-#include <trace/event.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"

@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

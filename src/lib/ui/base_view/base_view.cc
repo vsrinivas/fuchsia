@@ -6,11 +6,10 @@
 
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
-
-#include <trace/event.h>
 
 namespace scenic {
 

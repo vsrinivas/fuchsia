@@ -6,10 +6,9 @@
 #define GARNET_BIN_CPUPERF_PROVIDER_APP_H_
 
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace/observer.h>
 
 #include <memory>
-
-#include <trace/observer.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/controller.h"

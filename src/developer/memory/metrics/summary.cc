@@ -4,9 +4,9 @@
 
 #include "src/developer/memory/metrics/summary.h"
 
-#include <unordered_set>
+#include <lib/trace/event.h>
 
-#include <trace/event.h>
+#include <unordered_set>
 
 namespace memory {
 

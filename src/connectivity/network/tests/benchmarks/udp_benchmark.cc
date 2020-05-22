@@ -4,11 +4,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-provider/provider.h>
 #include <zircon/syscalls.h>
 
 #include <array>
-
-#include <trace-provider/provider.h>
 
 #include "util.h"
 

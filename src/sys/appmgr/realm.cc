@@ -14,6 +14,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/process.h>
 #include <lib/zx/status.h>
 #include <unistd.h>
@@ -26,8 +27,6 @@
 #include <algorithm>
 #include <memory>
 #include <utility>
-
-#include <trace/event.h>
 
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/cmx/program.h"

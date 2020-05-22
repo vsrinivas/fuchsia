@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_HANDLER_H_
+#define ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_HANDLER_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/trace-provider/handler.h>
+#include <lib/zx/event.h>
 #include <stdio.h>
-
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <fbl/array.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/zx/event.h>
-#include <trace-provider/handler.h>
 
 class BenchmarkHandler : public trace::TraceHandler {
  public:
@@ -120,3 +120,5 @@ class BenchmarkHandler : public trace::TraceHandler {
   fbl::Array<uint8_t> const buffer_;
   zx::event observer_event_;
 };
+
+#endif  // ZIRCON_SYSTEM_UAPP_TRACE_BENCHMARK_HANDLER_H_

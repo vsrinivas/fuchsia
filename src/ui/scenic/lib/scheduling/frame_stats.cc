@@ -7,14 +7,13 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 #include <math.h>
 
 #include <chrono>
 #include <list>
 #include <string>
-
-#include <trace/event.h>
 
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 

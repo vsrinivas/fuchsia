@@ -1,6 +1,6 @@
 #include "src/cobalt/bin/app/logger_impl.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/cobalt/bin/app/utils.h"
 

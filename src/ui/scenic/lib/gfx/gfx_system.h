@@ -5,9 +5,9 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_GFX_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_GFX_GFX_SYSTEM_H_
 
-#include <memory>
+#include <lib/trace/event.h>
 
-#include <trace/event.h>
+#include <memory>
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"

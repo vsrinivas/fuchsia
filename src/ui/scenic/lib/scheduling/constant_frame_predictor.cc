@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace scheduling {
 

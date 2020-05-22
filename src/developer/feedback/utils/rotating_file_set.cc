@@ -5,12 +5,11 @@
 #include "src/developer/feedback/utils/rotating_file_set.h"
 
 #include <assert.h>
+#include <lib/trace/event.h>
 #include <sys/stat.h>
 
 #include <fstream>
 #include <sstream>
-
-#include <trace/event.h>
 
 namespace feedback {
 

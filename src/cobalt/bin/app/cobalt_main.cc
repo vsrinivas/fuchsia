@@ -13,6 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>
@@ -24,8 +25,6 @@
 #include <string>
 #include <thread>
 #include <utility>
-
-#include <trace-provider/provider.h>
 
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/lib/files/file.h"

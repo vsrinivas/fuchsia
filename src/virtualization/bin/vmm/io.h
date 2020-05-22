@@ -6,7 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_IO_H_
 
 #include <lib/async/cpp/trap.h>
-#include <trace/event.h>
+#include <lib/trace/event.h>
 #include <zircon/types.h>
 
 class Guest;

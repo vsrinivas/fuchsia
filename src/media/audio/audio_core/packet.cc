@@ -6,8 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 namespace media::audio {
 

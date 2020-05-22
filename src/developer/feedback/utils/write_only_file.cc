@@ -5,9 +5,8 @@
 #include "src/developer/feedback/utils/write_only_file.h"
 
 #include <fcntl.h>
+#include <lib/trace/event.h>
 #include <unistd.h>
-
-#include <trace/event.h>
 
 namespace feedback {
 

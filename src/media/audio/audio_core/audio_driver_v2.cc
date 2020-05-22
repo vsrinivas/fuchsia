@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 #include <lib/async/cpp/time.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
@@ -10,7 +11,6 @@
 #include <iomanip>
 
 #include <audio-proto-utils/format-utils.h>
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/lib/clock/clone_mono.h"

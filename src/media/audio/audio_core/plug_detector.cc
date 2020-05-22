@@ -9,6 +9,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
-#include <trace/event.h>
 
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/media/audio/audio_core/reporter.h"

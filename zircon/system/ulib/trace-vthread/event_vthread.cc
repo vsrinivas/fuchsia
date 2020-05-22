@@ -4,9 +4,8 @@
 
 #include "trace-vthread/event_vthread.h"
 
+#include <lib/trace/event.h>
 #include <zircon/syscalls.h>
-
-#include <trace/event.h>
 
 namespace {
 

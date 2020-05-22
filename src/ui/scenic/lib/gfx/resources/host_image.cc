@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
 
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "lib/images/cpp/images.h"
 #include "src/ui/lib/escher/impl/naive_image.h"

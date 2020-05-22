@@ -4,9 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_device_settings.h"
 
+#include <lib/trace/event.h>
 #include <lib/zx/clock.h>
-
-#include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
 

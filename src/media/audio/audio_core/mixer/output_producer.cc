@@ -5,13 +5,12 @@
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <type_traits>
-
-#include <trace/event.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "src/media/audio/audio_core/mixer/constants.h"

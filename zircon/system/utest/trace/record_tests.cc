@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <lib/trace-engine/instrumentation.h>
+#include <lib/trace/event.h>
 #include <zircon/syscalls.h>
 
 #include <array>
@@ -13,7 +14,6 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <trace-test-utils/fixture.h>
-#include <trace/event.h>
 
 #include "fixture_macros.h"
 
