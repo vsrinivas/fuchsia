@@ -120,23 +120,17 @@ test_package("cobalt_tests_do_not_run_manually") {
       environments = [
         {
           dimensions = {
+            device_type = "Astro"
+          }
+          tags = [ "cobalt-prober" ]
+        },
+        {
+          dimensions = {
             device_type = "Intel NUC Kit NUC7i5DNHE"
           }
           tags = [ "cobalt-prober" ]
         },
       ]
-
-      # Internet access on QEMU is currently only supported on arm64.
-      if (target_cpu == "arm64") {
-        environments += [
-          {
-            dimensions = {
-              device_type = "QEMU"
-            }
-            tags = [ "cobalt-prober" ]
-          },
-        ]
-      }
     },
   ]
 }
