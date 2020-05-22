@@ -5,6 +5,8 @@
 #ifndef LIB_FIT_IN_PLACE_INTERNAL_H_
 #define LIB_FIT_IN_PLACE_INTERNAL_H_
 
+#include <cstddef>
+
 namespace fit {
 
 // Tag for requesting in-place initialization.
