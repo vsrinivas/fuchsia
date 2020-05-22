@@ -237,6 +237,15 @@ are provided.
 
 Support for additional languages may be added upon request.
 
+Note the following details:
+
+*   These templates fuse the roles of the target that defines the executable
+    program with that of `fuchsia_component()`. A `fuchsia_package()` or
+    `fuchsia_test_package()` target is still required.
+
+*   The executable will be packaged under the path `bin/`, and named after the
+    target or `output_name` if it is defined.
+
 ### Unit tests {#unit-tests}
 
 Since unit tests are very common, simplified templates are provided to define
@@ -274,11 +283,35 @@ them.
 
 Support for additional languages may be added upon request.
 
-In the example above, the unit tests don't specify a component manifest. One is
-then generated for them, which requests very trivial capabilities for the
-component that are typically sufficient to run a "pure" unit test that tests
-algorithms or business logic. In order to provide a component manifest, specify
-a `manifest` parameter with a path to the manifest file.
+Note the following details:
+
+*   These templates fuse the roles of the target that defines the executable
+    program with that of `fuchsia_component()` and `fuchsia_test_package()`.
+
+*   The executable will be packaged under the path `test/`, and named after the
+    target or `output_name` if it is defined.
+
+*   In the examples above, the targets don't specify a component manifest. One
+    is then generated for them. The generated manifest requests very trivial
+    capabilities for the component that are typically sufficient to run a
+    "pure" unit test that exercises algorithms or business logic.
+
+*   In order to provide a component manifest, specify a `manifest` parameter
+    with a path to the manifest file.
+
+*   One way to find the generated component manifest file is as follows:
+    ```bash
+    fx gn outputs out/default <unittest_target>_generated_manifest
+    ```
+
+    To print it directly:
+    ```bash
+    cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
+    ```
+
+    This command will not work if `manifest` is provided (i.e. there is no
+    generated manifest). Instead an error will be printed stating that the
+    target was not found.
 
 ### Additional packaged resources
 
@@ -329,11 +362,17 @@ line follows this structure:
 <packaged-path>=<source-file-path>
 ```
 
-To find the package manifest for a `fuchsia_package()` target, use the following
-command:
+To find the package manifest for a `fuchsia_package()` or
+`fuchsia_test_package()` target, use the following command:
 
 ```bash
 fx gn outputs out/default <package_target>_manifest
+```
+
+Combine this with another command to print the package manifest:
+
+```bash
+cat out/default/`fx gn outputs out/default <package_target>_manifest`
 ```
 
 See also:
