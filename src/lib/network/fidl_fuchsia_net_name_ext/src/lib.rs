@@ -107,6 +107,12 @@ impl CloneExt for fname::DnsServer_ {
     }
 }
 
+impl<T: CloneExt> CloneExt for Vec<T> {
+    fn clone(&self) -> Self {
+        self.iter().map(CloneExt::clone).collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use fidl_fuchsia_net as fnet;

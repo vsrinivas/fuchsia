@@ -308,8 +308,12 @@ impl NetCfg {
     /// Returns a client for a `fuchsia.net.name.DnsServerWatcher` from the
     /// netstack.
     pub fn get_netstack_dns_server_watcher(&mut self) -> error::Result<DnsServerWatcherProxy> {
-        let (dns_server_watcher, dns_server_watcher_req) =
-            fidl::endpoints::create_proxy::<DnsServerWatcherMarker>().unwrap();
+        let (dns_server_watcher, dns_server_watcher_req) = fidl::endpoints::create_proxy::<
+            DnsServerWatcherMarker,
+        >()
+        .map_err(|e| error::Service::FidlError {
+            msg: format!("error creating dns server watcher: {}", e),
+        })?;
         let () = self.stack.get_dns_server_watcher(dns_server_watcher_req).map_err(|e| {
             error::Service::FidlError { msg: format!("error getting dns server watcher: {}", e) }
         })?;
@@ -988,7 +992,11 @@ impl NetCfg {
     }
 
     /// Sets the DNS resolvers.
-    pub async fn set_dns_resolvers(&mut self, servers: Vec<DnsServer_>) -> error::Result<()> {
+    pub async fn set_dns_resolvers<I>(&mut self, servers: I) -> error::Result<()>
+    where
+        I: IntoIterator<Item = DnsServer_>,
+        <I as IntoIterator>::IntoIter: ExactSizeIterator,
+    {
         self.lookup_admin
             .set_dns_servers(&mut servers.into_iter())
             .await

@@ -88,18 +88,6 @@ impl From<netconfig::DnsPolicy> for DnsPolicy {
     }
 }
 
-/// A manual implementation of `Clone`.
-pub trait CloneExt {
-    /// Returns a cloned copy.
-    fn clone(&self) -> Self;
-}
-
-impl CloneExt for Vec<fname::DnsServer_> {
-    fn clone(&self) -> Vec<fname::DnsServer_> {
-        self.iter().map(|d| d.clone()).collect()
-    }
-}
-
 #[derive(Debug)]
 struct DnsConfig {
     id: ElementId,
@@ -775,14 +763,14 @@ impl DeviceState {
         &mut self,
         servers: Vec<fname::DnsServer_>,
     ) -> error::Result<ElementId> {
-        if servers.len() == self.dns_config.servers.len()
-            && !servers.iter().zip(&self.dns_config.servers).any(|(a, b)| a != b)
-        {
+        if servers == self.dns_config.servers {
             // No change needed.
             return Ok(self.dns_config.id);
         }
         // Just return the error, nothing to undo.
-        self.hal.set_dns_resolvers(servers.clone()).await?;
+        //
+        // NB: iter().map(...) is used over clone() to avoid allocating a vector.
+        self.hal.set_dns_resolvers(servers.iter().map(|s| (*s).clone())).await?;
         self.dns_config.id.version = self.version;
         self.dns_config.servers = servers;
         self.version += 1;
