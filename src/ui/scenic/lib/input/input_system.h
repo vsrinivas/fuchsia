@@ -91,6 +91,8 @@ class InputSystem : public System,
            accessibility_pointer_event_listener().is_bound();
   }
 
+  bool IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t koid) const;
+
   std::map<scheduling::SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
     return hard_keyboard_requested_;
   }

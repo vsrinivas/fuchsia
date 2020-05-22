@@ -390,10 +390,16 @@ void InputSystem::InjectTouchEventHitTested(
     const fuchsia::ui::input::PointerEvent& context_space_event, zx_koid_t context,
     zx_koid_t target, bool parallel_dispatch) {
   FX_DCHECK(scene_graph_);
+  const gfx::ViewTree& view_tree = scene_graph_->view_tree();
+
   FX_DCHECK(context_space_event.type == PointerEventType::TOUCH);
   const uint32_t pointer_id = context_space_event.pointer_id;
   const Phase pointer_phase = context_space_event.phase;
-  const bool a11y_enabled = IsA11yListenerEnabled();
+
+  // The a11y listener is only enabled if the root view is the context. This will later be handled
+  // implicitly by scene graph structure when gesture disambiguation is implemented.
+  // TODO(52134): Remove when gesture disambiguation makes it obsolete.
+  const bool a11y_enabled = IsA11yListenerEnabled() && IsOwnedByRootSession(view_tree, context);
 
   std::optional<glm::mat4> context_to_world = GetViewToWorldTransform(context);
   FX_DCHECK(context_to_world);
@@ -412,7 +418,7 @@ void InputSystem::InjectTouchEventHitTested(
 
   if (pointer_phase == Phase::ADD) {
     gfx::ViewHitAccumulator accumulator;
-    scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &accumulator);
+    view_tree.HitTestFrom(target, world_space_ray, &accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
@@ -488,7 +494,7 @@ void InputSystem::InjectTouchEventHitTested(
       // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
       // will keep going until we find a hit with a valid owning View.
       gfx::TopHitAccumulator top_hit;
-      scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &top_hit);
+      view_tree.HitTestFrom(target, world_space_ray, &top_hit);
 
       if (top_hit.hit()) {
         view_ref_koid = top_hit.hit()->view_ref_koid;
@@ -538,6 +544,8 @@ void InputSystem::InjectTouchEventHitTested(
 void InputSystem::InjectMouseEventHitTested(
     const fuchsia::ui::input::PointerEvent& context_space_event, zx_koid_t context,
     zx_koid_t target) {
+  FX_DCHECK(scene_graph_);
+  const gfx::ViewTree& view_tree = scene_graph_->view_tree();
   FX_DCHECK(context_space_event.type == PointerEventType::MOUSE);
   const uint32_t device_id = context_space_event.device_id;
   const Phase pointer_phase = context_space_event.phase;
@@ -562,7 +570,7 @@ void InputSystem::InjectMouseEventHitTested(
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &top_hit);
+    view_tree.HitTestFrom(target, world_space_ray, &top_hit);
 
     std::vector</*view_ref_koids*/ zx_koid_t> hit_views;
     if (top_hit.hit()) {
@@ -604,7 +612,7 @@ void InputSystem::InjectMouseEventHitTested(
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    scene_graph_->view_tree().HitTestFrom(target, world_space_ray, &top_hit);
+    view_tree.HitTestFrom(target, world_space_ray, &top_hit);
 
     if (top_hit.hit()) {
       const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;
@@ -687,6 +695,12 @@ void InputSystem::RequestFocusChange(zx_koid_t view) {
       << "User has authority to request focus change, but the only valid rejection is when the "
          "requested view may not receive focus. Error code: "
       << static_cast<int>(status);
+}
+
+bool InputSystem::IsOwnedByRootSession(const gfx::ViewTree& view_tree, zx_koid_t koid) const {
+  const zx_koid_t root_koid = focus_chain_root();
+  return root_koid != ZX_KOID_INVALID &&
+         view_tree.SessionIdOf(koid) == view_tree.SessionIdOf(root_koid);
 }
 
 // TODO(48150): Delete when we delete the PointerCapture functionality.
