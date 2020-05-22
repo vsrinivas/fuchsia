@@ -33,17 +33,28 @@
 //! * Modifies the router state byt accessinc netcfg.
 //! * Updates local state.
 
-use crate::event::Event;
-use anyhow::{Context as _, Error};
+use std::cmp::Ordering;
+use std::collections::HashSet;
+
+use fidl_fuchsia_net_name as fname;
+use fidl_fuchsia_net_name_ext::{CloneExt as _, IntoExt as _};
 use fidl_fuchsia_router_config::{
     Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
     SecurityFeatures,
 };
+
+use anyhow::{Context as _, Error};
 use futures::channel::mpsc;
 use futures::StreamExt;
 use network_manager_core::{
-    hal::NetCfg, lifmgr::LIFType, packet_filter::PacketFilter, portmgr::PortId, DeviceState,
+    hal::NetCfg, lifmgr::LIFType, packet_filter::PacketFilter, portmgr::PortId, CloneExt as _,
+    DeviceState,
 };
+
+use crate::dns_server_watcher::{DnsServerWatcher, DnsServerWatcherEvent, DnsServerWatcherSource};
+use crate::event::Event;
+
+pub(crate) const DEFAULT_DNS_PORT: u16 = 53;
 
 macro_rules! router_error {
     ($code:ident, $desc:expr) => {
@@ -70,10 +81,114 @@ macro_rules! internal_error {
     };
 }
 
+trait FromExt<T> {
+    fn from(f: T) -> Self;
+}
+
+impl FromExt<fidl_fuchsia_net::IpAddress> for fname::DnsServer_ {
+    /// Convert a [`fidl_fuchsia_net::IpAddress`] to a [`fname::DnsServer_`].
+    ///
+    /// The returned `fname::DnsServer_` will have its source set to static.
+    fn from(f: fidl_fuchsia_net::IpAddress) -> fname::DnsServer_ {
+        let socket_addr = match f {
+            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+                    address: addr,
+                    port: DEFAULT_DNS_PORT,
+                })
+            }
+            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                fidl_fuchsia_net::SocketAddress::Ipv6(fidl_fuchsia_net::Ipv6SocketAddress {
+                    address: addr,
+                    port: DEFAULT_DNS_PORT,
+                    zone_index: 0,
+                })
+            }
+        };
+
+        fname::DnsServer_ {
+            address: Some(socket_addr),
+            source: Some(fname::DnsServerSource::StaticSource(fname::StaticDnsServerSource {})),
+        }
+    }
+}
+
+/// The DNS servers learned from all sources.
+#[derive(Default)]
+struct DnsServers {
+    /// DNS servers obtained from the netstack.
+    netstack: Vec<fname::DnsServer_>,
+}
+
+impl DnsServers {
+    /// Returns a consolidated list of servers.
+    ///
+    /// The servers will be returned deduplicated by their address and sorted by the source
+    /// that each server was learned from. The servers will be sorted in most to least
+    /// preferred order, with the most preferred server first. The preference of the servers
+    /// is NDP, DHCPv4, DHCPv6 then Static, where NDP is the most preferred.
+    ///
+    /// Note, if multiple `fname::DnsServer_`s have the same address but different sources, only
+    /// the `fname::DnsServer_` with the most prefered source will be present in the consolidated
+    /// list of servers.
+    fn consolidated(&self) -> Vec<fname::DnsServer_> {
+        let mut set = HashSet::new();
+        let mut servers = self.netstack.clone();
+        servers.sort_by(DnsServers::ordering);
+
+        servers
+            .iter()
+            .filter(move |s| set.insert(s.address))
+            .map(fname::DnsServer_::clone)
+            .collect()
+    }
+
+    /// Returns the ordering of [`fname::DnsServer_`]s.
+    ///
+    /// The ordering in greatest to least order is NDP, DHCPv4, DHCPv6 then Static.
+    /// An unspecified source will be treated as a static address.
+    fn ordering(a: &fname::DnsServer_, b: &fname::DnsServer_) -> Ordering {
+        let a_source = a
+            .source
+            .as_ref()
+            .map(|a| a.clone())
+            .unwrap_or(fname::StaticDnsServerSource {}.into_ext());
+        let b_source = b
+            .source
+            .as_ref()
+            .map(|a| a.clone())
+            .unwrap_or(fname::StaticDnsServerSource {}.into_ext());
+
+        macro_rules! compare {
+            ($a:ident, $b:ident, $is:path) => {
+                if let $is(_) = $a {
+                    return Ordering::Less;
+                }
+                if let $is(_) = $b {
+                    return Ordering::Greater;
+                }
+            };
+        }
+
+        if a_source == b_source {
+            return Ordering::Equal;
+        }
+
+        compare!(a_source, b_source, fname::DnsServerSource::Ndp);
+        compare!(a_source, b_source, fname::DnsServerSource::Dhcp);
+        compare!(a_source, b_source, fname::DnsServerSource::Dhcpv6);
+        compare!(a_source, b_source, fname::DnsServerSource::StaticSource);
+
+        // Should never end up here as the equality check for sources was done earlier.
+        unreachable!("a and b's sources should not be equal; a = {:?}, b = {:?}", a, b)
+    }
+}
+
 /// The event loop.
 pub struct EventLoop {
     event_recv: mpsc::UnboundedReceiver<Event>,
     device: DeviceState,
+    dns_servers: DnsServers,
 }
 
 impl EventLoop {
@@ -99,9 +214,15 @@ impl EventLoop {
         let event_worker = crate::event_worker::EventWorker;
         event_worker.spawn(streams, event_send.clone());
         let oir_worker = crate::oir_worker::OirWorker;
-        oir_worker.spawn(event_send);
+        oir_worker.spawn(event_send.clone());
 
-        Ok(EventLoop { event_recv, device })
+        let netstack_dns_watcher = DnsServerWatcher::new(
+            DnsServerWatcherSource::Netstack,
+            device.get_netstack_dns_server_watcher()?,
+        );
+        netstack_dns_watcher.spawn(event_send);
+
+        Ok(EventLoop { event_recv, device, dns_servers: Default::default() })
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
@@ -125,9 +246,27 @@ impl EventLoop {
                 Some(Event::StackEvent(event)) => self.handle_stack_event(event).await,
                 Some(Event::NetstackEvent(event)) => self.handle_netstack_event(event).await,
                 Some(Event::OIR(event)) => self.handle_oir_event(event).await,
+                Some(Event::DnsServerWatcher(event)) => {
+                    self.handle_dns_server_watcher_event(event).await
+                }
                 None => return Err(anyhow::format_err!("Stream of events ended unexpectedly")),
             }
         }
+    }
+
+    async fn handle_dns_server_watcher_event(&mut self, event: DnsServerWatcherEvent) {
+        let DnsServerWatcherEvent { source, servers } = event;
+
+        match source {
+            DnsServerWatcherSource::Netstack => self.dns_servers.netstack = servers,
+        }
+
+        let () = self
+            .device
+            .set_dns_resolvers(self.dns_servers.consolidated())
+            .await
+            .map(|_| ())
+            .unwrap_or_else(|err| warn!("error setting dns servers: {:?}", err));
     }
 
     async fn handle_stack_event(&mut self, event: fidl_fuchsia_net_stack::StackEvent) {
@@ -241,14 +380,17 @@ impl EventLoop {
                 info!("{:?}", reservation_id);
                 responder.send(not_supported!())
             }
-            RouterAdminRequest::SetDnsResolver { mut config, responder } => {
+            RouterAdminRequest::SetDnsResolver { config, responder } => {
                 info!("{:?}", config);
                 match self
                     .device
-                    .set_dns_resolver(
-                        &mut config.search.servers,
-                        config.search.domain_name,
-                        config.policy,
+                    .set_dns_resolvers(
+                        config
+                            .search
+                            .servers
+                            .into_iter()
+                            .map(<fname::DnsServer_ as FromExt<fidl_fuchsia_net::IpAddress>>::from)
+                            .collect::<Vec<_>>(),
                     )
                     .await
                 {
@@ -657,5 +799,115 @@ impl EventLoop {
             })
             .collect();
         responder.send(&mut ports.iter_mut()).context("Error sending a response").unwrap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::dns::*;
+
+    #[test]
+    fn test_dnsservers_consolidation() {
+        // Simple deduplication and sorting of repeated `DnsServer_`.
+        let servers = DnsServers {
+            netstack: vec![
+                DHCP_SERVER,
+                DHCPV6_SERVER,
+                NDP_SERVER,
+                STATIC_SERVER,
+                NDP_SERVER,
+                DHCPV6_SERVER,
+                DHCP_SERVER,
+                STATIC_SERVER,
+            ],
+        };
+        assert_eq!(
+            servers.consolidated(),
+            vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER]
+        );
+
+        // Deduplication and sorting of same address across different sources.
+
+        // DHCPv6 is not as preferred as NDP so this should not be in the consolidated
+        // list.
+        let mut dhcpv6_with_ndp_address = NDP_SERVER;
+        dhcpv6_with_ndp_address.source =
+            Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
+                source_interface: Some(3),
+            }));
+        let servers = DnsServers {
+            netstack: vec![
+                dhcpv6_with_ndp_address.clone(),
+                DHCP_SERVER,
+                DHCPV6_SERVER,
+                NDP_SERVER,
+                STATIC_SERVER,
+            ],
+        };
+        let expected = vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER];
+        assert_eq!(servers.consolidated(), expected);
+        let servers = DnsServers {
+            netstack: vec![
+                DHCP_SERVER,
+                DHCPV6_SERVER,
+                NDP_SERVER,
+                STATIC_SERVER,
+                dhcpv6_with_ndp_address,
+            ],
+        };
+        assert_eq!(servers.consolidated(), expected);
+
+        // NDP is more preferred than DHCPv6 so `DHCPV6_SERVER` should not be in the consolidated
+        // list.
+        let mut ndp_with_dhcpv6_address = DHCPV6_SERVER;
+        ndp_with_dhcpv6_address.source =
+            Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
+                source_interface: Some(3),
+            }));
+        let servers = DnsServers {
+            netstack: vec![
+                ndp_with_dhcpv6_address.clone(),
+                DHCP_SERVER,
+                DHCPV6_SERVER,
+                STATIC_SERVER,
+            ],
+        };
+        let expected = vec![ndp_with_dhcpv6_address.clone(), DHCP_SERVER, STATIC_SERVER];
+        assert_eq!(servers.consolidated(), expected);
+        let servers = DnsServers {
+            netstack: vec![DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, ndp_with_dhcpv6_address],
+        };
+        assert_eq!(servers.consolidated(), expected);
+    }
+
+    #[test]
+    fn test_dns_servers_ordering() {
+        assert_eq!(DnsServers::ordering(&NDP_SERVER, &NDP_SERVER), Ordering::Equal);
+        assert_eq!(DnsServers::ordering(&DHCP_SERVER, &DHCP_SERVER), Ordering::Equal);
+        assert_eq!(DnsServers::ordering(&DHCPV6_SERVER, &DHCPV6_SERVER), Ordering::Equal);
+        assert_eq!(DnsServers::ordering(&STATIC_SERVER, &STATIC_SERVER), Ordering::Equal);
+        assert_eq!(
+            DnsServers::ordering(&UNSPECIFIED_SOURCE_SERVER, &UNSPECIFIED_SOURCE_SERVER),
+            Ordering::Equal
+        );
+        assert_eq!(
+            DnsServers::ordering(&STATIC_SERVER, &UNSPECIFIED_SOURCE_SERVER),
+            Ordering::Equal
+        );
+
+        let servers =
+            [NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, UNSPECIFIED_SOURCE_SERVER];
+        // We don't compare the last two servers in the list because their ordering is equal
+        // w.r.t. eachother.
+        for (i, a) in servers[..servers.len() - 2].iter().enumerate() {
+            for b in servers[i + 1..].iter() {
+                assert_eq!(DnsServers::ordering(a, b), Ordering::Less);
+            }
+        }
+
+        let mut servers = vec![DHCPV6_SERVER, DHCP_SERVER, STATIC_SERVER, NDP_SERVER];
+        servers.sort_by(DnsServers::ordering);
+        assert_eq!(servers, vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER]);
     }
 }

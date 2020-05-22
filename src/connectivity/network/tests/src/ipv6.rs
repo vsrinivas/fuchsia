@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::{Debug, Display};
-use std::marker::Unpin;
+use std::fmt::Debug;
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
@@ -17,7 +16,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::{self, Context};
 use futures::future::{self, Future, FutureExt, TryFutureExt};
-use futures::stream::{FusedStream, TryStream, TryStreamExt};
+use futures::stream::TryStreamExt;
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
@@ -35,8 +34,9 @@ use packet_formats::ipv6::Ipv6PacketBuilder;
 use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
 use zerocopy::ByteSlice;
 
+use crate::constants::{eth as eth_consts, ipv6 as ipv6_consts};
 use crate::environments::*;
-use crate::Result;
+use crate::*;
 
 /// As per [RFC 4861] sections 4.1-4.5, NDP packets MUST have a hop limit of 255.
 ///
@@ -61,21 +61,6 @@ const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1
 
 /// Extra time to use when waiting for an async event to occur.
 const ASYNC_EVENT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
-
-/// Timeout to use when waiting for an interface to come up.
-const INTERFACE_UP_EVENT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
-
-const TEST_PREFIX: net_types_ip::Subnet<net_types_ip::Ipv6Addr> = unsafe {
-    net_types_ip::Subnet::new_unchecked(
-        net_types_ip::Ipv6Addr::new([
-            0x20, 0x01, 0xf1, 0xf0, 0x40, 0x60, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
-        ]),
-        64,
-    )
-};
-const TEST_LINK_LOCAL_ADDR: net_types_ip::Ipv6Addr =
-    net_types_ip::Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
-const TEST_MAC_ADDR: Mac = Mac::new([0x02, 0x00, 0x00, 0x00, 0x00, 0x01]);
 
 /// Sets up an environment with a network used for tests requiring manual packet
 /// inspection and transmission.
@@ -111,7 +96,12 @@ where
     let netstack = environment
         .connect_to_service::<netstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
-    let () = wait_for_interface_up(netstack.take_event_stream(), iface.id()).await?;
+    let () = wait_for_interface_up(
+        netstack.take_event_stream(),
+        iface.id(),
+        DEFAULT_INTERFACE_UP_EVENT_TIMEOUT,
+    )
+    .await?;
 
     return Ok((network, environment, netstack, iface, fake_ep));
 }
@@ -121,7 +111,7 @@ where
 /// Given the source and destination MAC and IP addresses, NDP message and
 /// options, the full NDP packet (including IPv6 and Ethernet headers) will be
 /// transmitted to the fake endpoint's network.
-fn write_ndp_message<
+pub(super) fn write_ndp_message<
     B: ByteSlice + Debug,
     M: IcmpMessage<net_types_ip::Ipv6, B, Code = IcmpUnusedCode> + Debug,
 >(
@@ -143,37 +133,6 @@ fn write_ndp_message<
         .unwrap_b();
     let () = ep.write(ser.as_ref())?;
     Ok(())
-}
-
-/// Returns when an interface is up or `INTERFACE_UP_EVENT_TIMEOUT` time units have passed.
-async fn wait_for_interface_up<
-    S: Unpin + FusedStream + TryStreamExt<Ok = netstack::NetstackEvent>,
->(
-    events: S,
-    id: u64,
-) -> Result
-where
-    <S as TryStream>::Error: Display,
-{
-    events
-        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            if let Some(netstack::NetInterface { flags, .. }) =
-                interfaces.iter().find(|i| u64::from(i.id) == id)
-            {
-                if flags & netstack::NET_INTERFACE_FLAG_UP != 0 {
-                    return future::ok(Some(()));
-                }
-            }
-
-            future::ok(None)
-        })
-        .try_next()
-        .map_err(|e| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
-        .on_timeout(INTERFACE_UP_EVENT_TIMEOUT.after_now(), || {
-            Err(anyhow::anyhow!("timed out waiting for interface up event"))
-        })
-        .await?
-        .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
 }
 
 /// Launches a new netstack with the endpoint and returns the IPv6 addresses
@@ -396,7 +355,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
         })
         .try_next()
         .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
-        .on_timeout(INTERFACE_UP_EVENT_TIMEOUT.after_now(), || {
+        .on_timeout(ASYNC_EVENT_TIMEOUT.after_now(), || {
             Err(anyhow::anyhow!("timed out waiting for RS packet"))
         })
         .await?
@@ -412,18 +371,18 @@ async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
         0,     /* retransmit_timer */
     );
     let pi = PrefixInformation::new(
-        TEST_PREFIX.prefix(),  /* prefix_length */
-        false,                 /* on_link_flag */
-        true,                  /* autonomous_address_configuration_flag */
-        99999,                 /* valid_lifetime */
-        99999,                 /* preferred_lifetime */
-        TEST_PREFIX.network(), /* prefix */
+        ipv6_consts::PREFIX.prefix(),  /* prefix_length */
+        false,                         /* on_link_flag */
+        true,                          /* autonomous_address_configuration_flag */
+        99999,                         /* valid_lifetime */
+        99999,                         /* preferred_lifetime */
+        ipv6_consts::PREFIX.network(), /* prefix */
     );
     let options = [NdpOption::PrefixInformation(&pi)];
     let () = write_ndp_message::<&[u8], _>(
-        TEST_MAC_ADDR,
+        eth_consts::MAC_ADDR,
         Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        TEST_LINK_LOCAL_ADDR,
+        ipv6_consts::LINK_LOCAL_ADDR,
         net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         ra,
         &options,
@@ -445,7 +404,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
 
                 for ip in ipv6addrs {
                     if let net::IpAddress::Ipv6(a) = ip.addr {
-                        if TEST_PREFIX.contains(&net_types_ip::Ipv6Addr::new(a.addr)) {
+                        if ipv6_consts::PREFIX.contains(&net_types_ip::Ipv6Addr::new(a.addr)) {
                             slaac_addrs += 1;
                         }
                     }
@@ -470,7 +429,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
         .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
 }
 
-/// Adds `TEST_LINK_LOCAL_ADDR` to the interface and makes sure a Neighbor Solicitation
+/// Adds `ipv6_consts::LINK_LOCAL_ADDR` to the interface and makes sure a Neighbor Solicitation
 /// message is transmitted by the netstack for DAD.
 ///
 /// Calls `fail_dad_fn` after the DAD message is observed so callers can simulate a remote
@@ -488,7 +447,7 @@ async fn add_address_for_dad<
     let () = iface
         .add_ip_addr(net_stack::InterfaceAddress {
             ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
-                addr: TEST_LINK_LOCAL_ADDR.ipv6_bytes(),
+                addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
             }),
             prefix_len: 64,
         })
@@ -508,7 +467,7 @@ async fn add_address_for_dad<
                 .map_or(None, |(_src_mac, dst_mac, src_ip, dst_ip, ttl, message, _code)| {
                     // If the NS is not for the address we just added, this is for some
                     // other address. We ignore it as it is not relevant to our test.
-                    if message.target_address() != &TEST_LINK_LOCAL_ADDR {
+                    if message.target_address() != &ipv6_consts::LINK_LOCAL_ADDR {
                         return None;
                     }
 
@@ -521,14 +480,14 @@ async fn add_address_for_dad<
         .on_timeout(ASYNC_EVENT_TIMEOUT.after_now(), || {
             Err(anyhow::anyhow!(
                 "timed out waiting for a neighbor solicitation targetting {}",
-                TEST_LINK_LOCAL_ADDR
+                ipv6_consts::LINK_LOCAL_ADDR
             ))
         })
         .await?
         .ok_or(anyhow::anyhow!("failed to get next OnData event"))?;
 
     let (dst_mac, src_ip, dst_ip, ttl) = ret;
-    let expected_dst = TEST_LINK_LOCAL_ADDR.to_solicited_node_address();
+    let expected_dst = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
     assert_eq!(src_ip, net_types_ip::Ipv6::UNSPECIFIED_ADDRESS);
     assert_eq!(dst_ip, expected_dst.get());
     assert_eq!(dst_mac, Mac::from(&expected_dst));
@@ -539,7 +498,7 @@ async fn add_address_for_dad<
     Ok(())
 }
 
-/// Makes sure that `TEST_LINK_LOCAL_ADDR` is not assigned to the interface after the
+/// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
 /// DAD resolution time.
 ///
 /// Used by `duplicate_address_detection`.
@@ -552,7 +511,7 @@ async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
 
     let addr = net_stack::InterfaceAddress {
         ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
-            addr: TEST_LINK_LOCAL_ADDR.ipv6_bytes(),
+            addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
         }),
         prefix_len: 64,
     };
@@ -561,18 +520,18 @@ async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
     Ok(())
 }
 
-/// Transmits a Neighbor Solicitation message and expects `TEST_LINK_LOCAL_ADDR` to not
+/// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR` to not
 /// be assigned to the interface after the normal resolution time for DAD.
 ///
 /// Used by `duplicate_address_detection`.
 async fn fail_dad_with_ns(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
-    let snmc = TEST_LINK_LOCAL_ADDR.to_solicited_node_address();
+    let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
     let () = write_ndp_message::<&[u8], _>(
-        TEST_MAC_ADDR,
+        eth_consts::MAC_ADDR,
         Mac::from(&snmc),
         net_types_ip::Ipv6::UNSPECIFIED_ADDRESS,
         snmc.get(),
-        NeighborSolicitation::new(TEST_LINK_LOCAL_ADDR),
+        NeighborSolicitation::new(ipv6_consts::LINK_LOCAL_ADDR),
         &[],
         fake_ep,
     )?;
@@ -580,23 +539,23 @@ async fn fail_dad_with_ns(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<
     check_address_failed_dad(iface).await
 }
 
-/// Transmits a Neighbor Advertisement message and expects `TEST_LINK_LOCAL_ADDR` to not
+/// Transmits a Neighbor Advertisement message and expects `ipv6_consts::LINK_LOCAL_ADDR` to not
 /// be assigned to the interface after the normal resolution time for DAD.
 ///
 /// Used by `duplicate_address_detection`.
 async fn fail_dad_with_na(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
     let () = write_ndp_message::<&[u8], _>(
-        TEST_MAC_ADDR,
+        eth_consts::MAC_ADDR,
         Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        TEST_LINK_LOCAL_ADDR,
+        ipv6_consts::LINK_LOCAL_ADDR,
         net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
         NeighborAdvertisement::new(
             false, /* router_flag */
             false, /* solicited_flag */
             false, /* override_flag */
-            TEST_LINK_LOCAL_ADDR,
+            ipv6_consts::LINK_LOCAL_ADDR,
         ),
-        &[NdpOption::TargetLinkLayerAddress(&TEST_MAC_ADDR.bytes())],
+        &[NdpOption::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
         fake_ep,
     )?;
 
@@ -634,7 +593,7 @@ async fn duplicate_address_detection<E: Endpoint>() -> Result {
             {
                 for ip in ipv6addrs {
                     if let net::IpAddress::Ipv6(a) = ip.addr {
-                        if TEST_LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(a.addr) {
+                        if ipv6_consts::LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(a.addr) {
                             return future::ok(Some(()));
                         }
                     }
@@ -652,7 +611,7 @@ async fn duplicate_address_detection<E: Endpoint>() -> Result {
             || {
                 Err(anyhow::anyhow!(
                     "timed out waiting for the address {} to be assigned",
-                    TEST_LINK_LOCAL_ADDR
+                    ipv6_consts::LINK_LOCAL_ADDR
                 ))
             },
         )

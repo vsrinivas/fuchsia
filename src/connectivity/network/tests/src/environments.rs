@@ -4,6 +4,7 @@
 
 use crate::Result;
 use anyhow::Context as _;
+use fidl_fuchsia_net_filter;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_environment as netemul_environment;
@@ -53,6 +54,7 @@ pub enum KnownServices {
     Stack(NetstackVersion),
     Netstack(NetstackVersion),
     SocketProvider(NetstackVersion),
+    Filter(NetstackVersion),
     Stash,
     MockCobalt,
     SecureStash,
@@ -74,6 +76,8 @@ impl KnownServices {
                 <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                 fuchsia_component::fuchsia_single_component_package_url!("stash")),
             KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                                 v.get_url()),
+            KnownServices::Filter(v) => (<fidl_fuchsia_net_filter::FilterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                                  v.get_url()),
             KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
@@ -255,6 +259,7 @@ impl TestSandbox {
         self.create_environment(
             name,
             [
+                KnownServices::Filter(N::VERSION),
                 KnownServices::Stack(N::VERSION),
                 KnownServices::Netstack(N::VERSION),
                 KnownServices::SocketProvider(N::VERSION),

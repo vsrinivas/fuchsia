@@ -12,12 +12,15 @@ extern crate fuchsia_syslog as syslog;
 extern crate log;
 use argh::FromArgs;
 
+mod dns_server_watcher;
 mod event;
 mod event_worker;
 mod eventloop;
 mod fidl_worker;
 mod oir_worker;
 mod overnet_worker;
+#[cfg(test)]
+mod test_util;
 
 use crate::eventloop::EventLoop;
 

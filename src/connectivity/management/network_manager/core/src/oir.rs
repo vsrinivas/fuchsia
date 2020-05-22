@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_hardware_ethernet_ext;
+
 use crate::error;
 
 const INTF_METRIC_WLAN: u32 = 90;

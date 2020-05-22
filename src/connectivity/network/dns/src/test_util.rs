@@ -4,40 +4,52 @@
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_name as name;
-use net_declare::fidl_socket_addr;
 
-pub(crate) fn get_server_address(srv: net::SocketAddress) -> net::IpAddress {
-    match srv {
-        net::SocketAddress::Ipv4(addr) => net::IpAddress::Ipv4(addr.address),
-        net::SocketAddress::Ipv6(addr) => net::IpAddress::Ipv6(addr.address),
-    }
-}
+use crate::DEFAULT_PORT;
 
-pub(crate) const DEFAULT_SERVER_A: net::SocketAddress = fidl_socket_addr!(8.8.8.8:53);
-pub(crate) const DEFAULT_SERVER_B: net::SocketAddress =
-    fidl_socket_addr!([2001:4860:4860::8888]:53);
-pub(crate) const DYNAMIC_SERVER_A: net::SocketAddress = fidl_socket_addr!(8.8.4.4:53);
-pub(crate) const DYNAMIC_SERVER_B: net::SocketAddress =
-    fidl_socket_addr!([2001:4860:4860::4444]:53);
-
-pub(crate) fn to_static_server(address: net::SocketAddress) -> name::DnsServer_ {
-    name::DnsServer_ {
-        address: Some(address),
-        source: Some(name::DnsServerSource::StaticSource(name::StaticDnsServerSource {})),
-    }
-}
-
-pub(crate) fn to_discovered_server(address: net::SocketAddress) -> name::DnsServer_ {
-    // Mock the source based on the address version.
-    name::DnsServer_ {
-        address: Some(address),
-        source: Some(match &address {
-            net::SocketAddress::Ipv4(_) => {
-                name::DnsServerSource::Dhcp(name::DhcpDnsServerSource { source_interface: Some(1) })
-            }
-            net::SocketAddress::Ipv6(_) => {
-                name::DnsServerSource::Ndp(name::NdpDnsServerSource { source_interface: Some(1) })
-            }
-        }),
-    }
-}
+pub const STATIC_SERVER: name::DnsServer_ = name::DnsServer_ {
+    address: Some(net::SocketAddress::Ipv4(net::Ipv4SocketAddress {
+        address: net::Ipv4Address { addr: [8, 8, 8, 8] },
+        port: DEFAULT_PORT,
+    })),
+    source: Some(name::DnsServerSource::StaticSource(name::StaticDnsServerSource {})),
+};
+pub const DHCP_SERVER: name::DnsServer_ = name::DnsServer_ {
+    address: Some(net::SocketAddress::Ipv4(net::Ipv4SocketAddress {
+        address: net::Ipv4Address { addr: [8, 8, 4, 4] },
+        port: DEFAULT_PORT,
+    })),
+    source: Some(name::DnsServerSource::Dhcp(name::DhcpDnsServerSource {
+        source_interface: Some(1),
+    })),
+};
+pub const NDP_SERVER: name::DnsServer_ = name::DnsServer_ {
+    address: Some(net::SocketAddress::Ipv6(net::Ipv6SocketAddress {
+        address: net::Ipv6Address {
+            addr: [
+                0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x44, 0x44,
+            ],
+        },
+        port: DEFAULT_PORT,
+        zone_index: 2,
+    })),
+    source: Some(name::DnsServerSource::Ndp(name::NdpDnsServerSource {
+        source_interface: Some(2),
+    })),
+};
+pub const DHCPV6_SERVER: name::DnsServer_ = name::DnsServer_ {
+    address: Some(net::SocketAddress::Ipv6(net::Ipv6SocketAddress {
+        address: net::Ipv6Address {
+            addr: [
+                0x20, 0x02, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x44, 0x44,
+            ],
+        },
+        port: DEFAULT_PORT,
+        zone_index: 3,
+    })),
+    source: Some(name::DnsServerSource::Dhcpv6(name::Dhcpv6DnsServerSource {
+        source_interface: Some(3),
+    })),
+};

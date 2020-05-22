@@ -26,6 +26,8 @@ use {
     crate::config::InterfaceType,
     crate::lifmgr::{LIFProperties, LIFType},
     crate::portmgr::PortId,
+    fidl_fuchsia_net_name as fname,
+    fidl_fuchsia_net_name_ext::CloneExt as _,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
     fidl_fuchsia_router_config as netconfig,
     std::sync::atomic::{AtomicUsize, Ordering},
@@ -86,10 +88,22 @@ impl From<netconfig::DnsPolicy> for DnsPolicy {
     }
 }
 
+/// A manual implementation of `Clone`.
+pub trait CloneExt {
+    /// Returns a cloned copy.
+    fn clone(&self) -> Self;
+}
+
+impl CloneExt for Vec<fname::DnsServer_> {
+    fn clone(&self) -> Vec<fname::DnsServer_> {
+        self.iter().map(|d| d.clone()).collect()
+    }
+}
+
 #[derive(Debug)]
 struct DnsConfig {
     id: ElementId,
-    servers: Vec<fidl_fuchsia_net::IpAddress>,
+    servers: Vec<fname::DnsServer_>,
     domain: Option<String>,
     policy: DnsPolicy,
 }
@@ -101,14 +115,27 @@ impl From<&DnsConfig> for netconfig::DnsResolverConfig {
             policy: c.policy.into(),
             search: netconfig::DnsSearch {
                 domain_name: c.domain.clone(),
-                servers: c.servers.clone(),
+                servers: c
+                    .servers
+                    .iter()
+                    .filter_map(|s| {
+                        s.address.map(|a| match a {
+                            fidl_fuchsia_net::SocketAddress::Ipv4(addr) => {
+                                fidl_fuchsia_net::IpAddress::Ipv4(addr.address)
+                            }
+                            fidl_fuchsia_net::SocketAddress::Ipv6(addr) => {
+                                fidl_fuchsia_net::IpAddress::Ipv6(addr.address)
+                            }
+                        })
+                    })
+                    .collect::<Vec<_>>(),
             },
         }
     }
 }
 
 impl DeviceState {
-    //! Create an empty DeviceState.
+    /// Create an empty DeviceState.
     pub fn new(hal: hal::NetCfg, packet_filter: packet_filter::PacketFilter) -> Self {
         let v = 0;
         DeviceState {
@@ -142,6 +169,13 @@ impl DeviceState {
             info!("Successfully loaded configuration!");
             Ok(())
         }
+    }
+
+    /// Returns a client for a `fuchsia.net.name.DnsServerWatcher` from the netstack.
+    pub fn get_netstack_dns_server_watcher(
+        &mut self,
+    ) -> error::Result<fname::DnsServerWatcherProxy> {
+        self.hal.get_netstack_dns_server_watcher()
     }
 
     /// Returns the underlying event streams associated with the open channels to fuchsia.net.stack
@@ -733,34 +767,24 @@ impl DeviceState {
         })
     }
 
-    pub async fn set_dns_resolver(
+    /// Sets the DNS servers for name resolution.
+    ///
+    /// `servers` must be sorted in priority order, with the most preferred server at the front
+    /// of the list.
+    pub async fn set_dns_resolvers(
         &mut self,
-        servers: &mut [fidl_fuchsia_net::IpAddress],
-        domain: Option<String>,
-        policy: netconfig::DnsPolicy,
+        servers: Vec<fname::DnsServer_>,
     ) -> error::Result<ElementId> {
-        if domain.is_some() {
-            //TODO(dpradilla): lift this restriction.
-            warn!("setting the dns search domain name is not supported {:?}", domain);
-            return Err(error::NetworkManager::Service(error::Service::NotSupported));
-        }
-        let p = if policy == netconfig::DnsPolicy::NotSet {
-            DnsPolicy::default()
-        } else {
-            DnsPolicy::from(policy)
-        };
-        // Keeping dns_config sorted.
-        servers.sort();
         if servers.len() == self.dns_config.servers.len()
-            && servers.iter().zip(&self.dns_config.servers).all(|(a, b)| a == b)
+            && !servers.iter().zip(&self.dns_config.servers).any(|(a, b)| a != b)
         {
             // No change needed.
             return Ok(self.dns_config.id);
         }
         // Just return the error, nothing to undo.
-        self.hal.set_dns_resolver(servers, domain.clone(), p).await?;
+        self.hal.set_dns_resolvers(servers.clone()).await?;
         self.dns_config.id.version = self.version;
-        self.dns_config.servers = servers.to_vec();
+        self.dns_config.servers = servers;
         self.version += 1;
         Ok(self.dns_config.id)
     }

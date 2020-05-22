@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     dns::{
         async_resolver::{Handle, Resolver},
-        policy::{ServerConfigPolicy, ServerList},
+        policy::{ServerConfigSink, ServerList},
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
@@ -357,21 +357,31 @@ async fn run_name_lookup<T: ResolverLookup>(
 
 /// Serves `stream` and forwards received configurations to `sink`.
 async fn run_lookup_admin(
-    sink: mpsc::Sender<dns::policy::ServerConfig>,
+    sink: mpsc::Sender<dns::policy::DnsServersListConfig>,
     policy_state: Arc<dns::policy::ServerConfigState>,
     stream: LookupAdminRequestStream,
 ) -> Result<(), anyhow::Error> {
     stream
         .try_filter_map(|req| async {
             match req {
-                LookupAdminRequest::SetDefaultDnsServers { servers, responder } => {
+                // TODO(51998, 52055): deprecate `SetDefaultDnsServers` and use `SetDnsServers`
+                // to configure the DNS servers to use with name resolution.
+                LookupAdminRequest::SetDefaultDnsServers { responder, .. } => {
+                    let () = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+                    Ok(None)
+                }
+                LookupAdminRequest::SetDnsServers { servers, responder } => {
                     let (mut response, ret) = if servers.iter().any(|s| {
-                        let net_ext::IpAddress(ip) = s.clone().into();
-                        ip.is_multicast() || ip.is_unspecified()
+                        // Addresses must be provided, and provided addresses must not be
+                        // an unspecified or multicast address.
+                        s.address.map_or(true, |a| {
+                            let ip = net_ext::SocketAddress::from(a).0.ip();
+                            ip.is_multicast() || ip.is_unspecified()
+                        })
                     }) {
                         (Err(zx::Status::INVALID_ARGS.into_raw()), None)
                     } else {
-                        (Ok(()), Some(dns::policy::ServerConfig::DefaultServers(servers)))
+                        (Ok(()), Some(servers))
                     };
                     let () = responder.send(&mut response)?;
                     Ok(ret)
@@ -393,7 +403,7 @@ async fn run_lookup_admin(
 /// [`dns::policy::ServerConfiguration`].
 ///
 /// The returned `sender` is used to publish configuration changes to a `Sink`
-/// composed of [`dns::policy::ServerConfigPolicy`] and
+/// composed of [`dns::policy::ServerConfigSink`] and
 /// [`SharedResolverConfigSink`], which will set the consolidated configuration
 /// on `resolver`.
 ///
@@ -402,13 +412,13 @@ fn create_policy_fut<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     config_state: Arc<dns::policy::ServerConfigState>,
 ) -> (
-    mpsc::Sender<dns::policy::ServerConfig>,
+    mpsc::Sender<dns::policy::DnsServersListConfig>,
     impl futures::Future<Output = Result<(), anyhow::Error>> + '_,
 ) {
     // Create configuration channel pair. A small buffer in the channel allows
     // for multiple configurations coming in rapidly to be flushed together.
     let (servers_config_sink, servers_config_source) = mpsc::channel(10);
-    let policy = ServerConfigPolicy::new_with_state(
+    let policy = ServerConfigSink::new_with_state(
         SharedResolverConfigSink::new(&resolver)
             .sink_map_err(never::Never::into_any::<anyhow::Error>),
         config_state,
@@ -477,19 +487,6 @@ async fn main() -> Result<(), Error> {
     let config_state = Arc::new(dns::policy::ServerConfigState::new());
     let (servers_config_sink, policy_fut) = create_policy_fut(&resolver, config_state.clone());
 
-    let dns_watcher = {
-        let stack =
-            fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()?;
-        let (proxy, req) = fidl::endpoints::create_proxy::<fname::DnsServerWatcherMarker>()?;
-        let () = stack.get_dns_server_watcher(req)?;
-        dns::util::new_dns_server_stream(proxy)
-    };
-
-    let dns_watcher_fut = dns_watcher
-        .map_ok(|servers| dns::policy::ServerConfig::DynamicServers(servers))
-        .map_err(anyhow::Error::from)
-        .forward(servers_config_sink.clone().sink_map_err(anyhow::Error::from));
-
     let mut fs = ServiceFs::new_local();
 
     let inspector = fuchsia_inspect::component::inspector();
@@ -520,7 +517,7 @@ async fn main() -> Result<(), Error> {
         })
         .map(Ok);
 
-    let ((), (), ()) = futures::future::try_join3(policy_fut, serve_fut, dns_watcher_fut).await?;
+    let ((), ()) = futures::future::try_join(policy_fut, serve_fut).await?;
     Ok(())
 }
 
@@ -528,12 +525,11 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
+    use dns::test_util::*;
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::assert_inspect_tree;
-    use net_declare::{
-        fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_socket_addr, std_ip, std_ip_v4, std_ip_v6,
-    };
+    use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip_v4, std_ip_v6};
     use std::net::SocketAddr;
     use std::{
         net::{IpAddr, Ipv4Addr, Ipv6Addr},
@@ -558,9 +554,6 @@ mod tests {
     // IPv6 address returned by mock lookup.
     const IPV6_HOST: Ipv6Addr = std_ip_v6!(abcd::2);
 
-    const IPV4_NAMESERVER: IpAddr = std_ip!(1.8.8.1);
-    const IPV6_NAMESERVER: IpAddr = std_ip!(0001:12cf:12cf::1);
-
     // host which has IPv4 address only.
     const REMOTE_IPV4_HOST: &str = "www.foo.com";
     // host which has IPv6 address only.
@@ -569,35 +562,6 @@ mod tests {
     const REMOTE_IPV6_HOST_EXTRA: &str = "www.bar2.com";
     // host which has IPv4 and IPv6 address if reset name servers.
     const REMOTE_IPV4_IPV6_HOST: &str = "www.foobar.com";
-
-    const STATIC_SERVER_IPV4: fnet::Ipv4Address = fidl_ip_v4!(8.8.8.8);
-
-    const DHCP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-        address: Some(fidl_socket_addr!(8.8.4.4:53)),
-        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-            source_interface: Some(1),
-        })),
-    };
-    const NDP_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-        address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-            address: fidl_ip_v6!(2001:4860:4860::4444),
-            port: DEFAULT_PORT,
-            zone_index: 2,
-        })),
-        source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
-            source_interface: Some(2),
-        })),
-    };
-    const DHCPV6_SERVER: fname::DnsServer_ = fname::DnsServer_ {
-        address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
-            address: fidl_ip_v6!(2002:4860:4860::4444),
-            port: DEFAULT_PORT,
-            zone_index: 3,
-        })),
-        source: Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
-            source_interface: Some(3),
-        })),
-    };
 
     async fn setup_namelookup_service() -> fnet::NameLookupProxy {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
@@ -857,7 +821,7 @@ mod tests {
         async fn run_config_sink<F, Fut>(&self, f: F)
         where
             Fut: futures::Future<Output = ()>,
-            F: FnOnce(mpsc::Sender<dns::policy::ServerConfig>) -> Fut,
+            F: FnOnce(mpsc::Sender<dns::policy::DnsServersListConfig>) -> Fut,
         {
             let (sink, policy_fut) =
                 create_policy_fut(&self.shared_resolver, self.config_state.clone());
@@ -985,37 +949,69 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_server_names() {
         let env = TestEnvironment::new();
-        // Assert that mock config has no servers originally.
 
-        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
-
-        env.run_admin(|proxy| async move {
-            let v4: fnet::IpAddress = net_ext::IpAddress(IPV4_NAMESERVER).into();
-            let v6: fnet::IpAddress = net_ext::IpAddress(IPV6_NAMESERVER).into();
-            let () = proxy
-                .set_default_dns_servers(&mut vec![v4, v6].iter_mut())
-                .await
-                .expect("Failed to call SetDefaultDnsServers")
-                .expect("SetDefaultDnsServers error");
-        })
-        .await;
-
-        let to_server_configs = |addr: IpAddr| -> [NameServerConfig; 2] {
-            let socket_addr = SocketAddr::new(addr, DEFAULT_PORT);
+        let to_server_configs = |socket_addr: SocketAddr| -> [NameServerConfig; 2] {
             [
                 NameServerConfig { socket_addr, protocol: Protocol::Udp, tls_dns_name: None },
                 NameServerConfig { socket_addr, protocol: Protocol::Tcp, tls_dns_name: None },
             ]
         };
 
+        // Assert that mock config has no servers originally.
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
+
+        // Set servers.
+        env.run_admin(|proxy| async move {
+            let () = proxy
+                .set_dns_servers(&mut vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER].into_iter())
+                .await
+                .expect("Failed to call SetDnsServers")
+                .expect("SetDnsServers error");
+        })
+        .await;
         assert_eq!(
             env.shared_resolver.read().config.name_servers().to_vec(),
-            to_server_configs(IPV4_NAMESERVER)
-                .iter()
-                .chain(to_server_configs(IPV6_NAMESERVER).iter())
-                .cloned()
+            vec![DHCP_SERVER, NDP_SERVER, DHCPV6_SERVER]
+                .into_iter()
+                .map(|s| net_ext::SocketAddress::from(s.address.unwrap()).0)
+                .flat_map(|x| to_server_configs(x).to_vec().into_iter())
                 .collect::<Vec<_>>()
         );
+
+        // Clear servers.
+        env.run_admin(|proxy| async move {
+            let () = proxy
+                .set_dns_servers(&mut vec![].into_iter())
+                .await
+                .expect("Failed to call SetDnsServers")
+                .expect("SetDnsServers error");
+        })
+        .await;
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), Vec::new());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_default_server_names_error() {
+        let env = TestEnvironment::new();
+
+        // Assert that mock config has no servers originally.
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
+
+        env.run_admin(|proxy| async move {
+            // Attempt to set bad addresses.
+
+            // SetDefaultDnsServers is not supported.
+            let status = proxy
+                .set_default_dns_servers(&mut vec![fidl_ip!(224.0.0.1)].iter_mut())
+                .await
+                .expect("Failed to call SetDefaultDnsServers")
+                .expect_err("SetDefaultDnsServers should fail for not supported method");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::NOT_SUPPORTED);
+        })
+        .await;
+
+        // Assert that config didn't change.
+        assert_eq!(env.shared_resolver.read().config.name_servers().to_vec(), vec![]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1027,23 +1023,59 @@ mod tests {
         env.run_admin(|proxy| async move {
             // Attempt to set bad addresses.
 
+            // `None` address not allowed.
+            let status = proxy
+                .set_dns_servers(
+                    &mut vec![fname::DnsServer_ {
+                        address: None,
+                        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
+                            source_interface: Some(1),
+                        })),
+                    }]
+                    .into_iter(),
+                )
+                .await
+                .expect("Failed to call SetDnsServers")
+                .expect_err("SetDnsServers should fail for multicast address");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
+
             // Multicast not allowed.
             let status = proxy
-                .set_default_dns_servers(&mut vec![fidl_ip!(224.0.0.1)].iter_mut())
+                .set_dns_servers(
+                    &mut vec![fname::DnsServer_ {
+                        address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+                            address: fnet::Ipv4Address { addr: [224, 0, 0, 1] },
+                            port: DEFAULT_PORT,
+                        })),
+                        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
+                            source_interface: Some(1),
+                        })),
+                    }]
+                    .into_iter(),
+                )
                 .await
-                .expect("Failed to call SetDefaultDnsServers")
-                .expect_err("SetDefaultDnsServers should fail for multicast address");
+                .expect("Failed to call SetDnsServers")
+                .expect_err("SetDnsServers should fail for multicast address");
             assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
 
             // Unspecified not allowed.
             let status = proxy
-                .set_default_dns_servers(
-                    &mut vec![fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: [0u8; 16] })]
-                        .iter_mut(),
+                .set_dns_servers(
+                    &mut vec![fname::DnsServer_ {
+                        address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+                            address: fnet::Ipv6Address { addr: [0; 16] },
+                            port: DEFAULT_PORT,
+                            zone_index: 0,
+                        })),
+                        source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
+                            source_interface: Some(1),
+                        })),
+                    }]
+                    .into_iter(),
                 )
                 .await
-                .expect("Failed to call SetDefaultDnsServers")
-                .expect_err("SetDefaultDnsServers should fail for unspecified address");
+                .expect("Failed to call SetDnsServers")
+                .expect_err("SetDnsServers should fail for unspecified address");
             assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
         })
         .await;
@@ -1057,17 +1089,7 @@ mod tests {
         let env = TestEnvironment::new();
         env.run_config_sink(|mut sink| async move {
             let () = sink
-                .send(dns::policy::ServerConfig::DefaultServers(
-                    vec![STATIC_SERVER_IPV4.into_ext()],
-                ))
-                .await
-                .unwrap();
-            let () = sink
-                .send(dns::policy::ServerConfig::DynamicServers(vec![
-                    NDP_SERVER,
-                    DHCP_SERVER,
-                    DHCPV6_SERVER,
-                ]))
+                .send(vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER])
                 .await
                 .unwrap();
         })
@@ -1075,23 +1097,7 @@ mod tests {
 
         env.run_admin(|proxy| async move {
             let servers = proxy.get_dns_servers().await.expect("Failed to get DNS servers");
-            assert_eq!(
-                servers,
-                vec![
-                    NDP_SERVER,
-                    DHCP_SERVER,
-                    DHCPV6_SERVER,
-                    fname::DnsServer_ {
-                        address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
-                            address: STATIC_SERVER_IPV4,
-                            port: DEFAULT_PORT
-                        })),
-                        source: Some(fname::DnsServerSource::StaticSource(
-                            fname::StaticDnsServerSource {}
-                        )),
-                    }
-                ]
-            )
+            assert_eq!(servers, vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER])
         })
         .await;
     }
@@ -1107,17 +1113,7 @@ mod tests {
         });
         env.run_config_sink(|mut sink| async move {
             let () = sink
-                .send(dns::policy::ServerConfig::DefaultServers(
-                    vec![STATIC_SERVER_IPV4.into_ext()],
-                ))
-                .await
-                .unwrap();
-            let () = sink
-                .send(dns::policy::ServerConfig::DynamicServers(vec![
-                    NDP_SERVER,
-                    DHCP_SERVER,
-                    DHCPV6_SERVER,
-                ]))
+                .send(vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER])
                 .await
                 .unwrap();
         })

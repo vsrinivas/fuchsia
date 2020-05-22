@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::DEFAULT_PORT;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_name as name;
 use futures::sink::Sink;
@@ -89,48 +88,28 @@ impl TryFrom<name::DnsServer_> for Server {
     }
 }
 
-/// A piece of configuration used in [`ServerConfigPolicy`].
-pub enum ServerConfig {
-    /// A list of default servers specified only by their IP addresses.
-    ///
-    /// The specified servers are assumed to operate on [`DEFAULT_PORT`] and not
-    /// bound to any devices.
-    DefaultServers(Vec<net::IpAddress>),
-    /// A list of dynamically discovered servers.
-    ///
-    /// Dynamically discovered servers take precedence over default servers in
-    /// the consolidated list provided by [`ServerConfigPolicy`].
-    DynamicServers(Vec<name::DnsServer_>),
-}
+/// The list of DNS servers used in [`ServerConfigSink`].
+pub type DnsServersListConfig = Vec<name::DnsServer_>;
 
-/// Holds current [`ServerConfigPolicy`] state.
+/// Holds current [`ServerConfigSink`] state.
 #[derive(Debug)]
 struct ServerConfigInner {
-    default_servers: ServerList,
-    dynamic_servers: ServerList,
+    servers: ServerList,
 }
 
-/// Provides shared access to [`ServerConfigPolicy`]'s state.
+/// Provides shared access to [`ServerConfigSink`]'s state.
 #[derive(Debug)]
 pub struct ServerConfigState(Mutex<ServerConfigInner>);
 
 impl ServerConfigState {
     /// Creates a new empty `ServerConfigState`.
     pub fn new() -> Self {
-        Self(Mutex::new(ServerConfigInner {
-            default_servers: Vec::new(),
-            dynamic_servers: Vec::new(),
-        }))
+        Self(Mutex::new(ServerConfigInner { servers: Vec::new() }))
     }
 
-    /// Sets the default servers.
-    fn set_default_servers(&self, default_servers: impl IntoIterator<Item = Server>) {
-        self.0.lock().default_servers = default_servers.into_iter().collect();
-    }
-
-    /// Sets the dynamic servers.
-    fn set_dynamic_servers(&self, dynamic_servers: impl IntoIterator<Item = Server>) {
-        self.0.lock().dynamic_servers = dynamic_servers.into_iter().collect();
+    /// Sets the servers.
+    fn set_servers(&self, servers: impl IntoIterator<Item = Server>) {
+        self.0.lock().servers = servers.into_iter().collect();
     }
 
     /// Consolidates the current configuration into a vector of [`Server`]s in
@@ -144,147 +123,105 @@ impl ServerConfigState {
     pub fn consolidate_map<T: 'static, F: Fn(&Server) -> T>(&self, f: F) -> Vec<T> {
         let mut set = HashSet::new();
         let inner = self.0.lock();
-        inner
-            .dynamic_servers
-            .iter()
-            .chain(inner.default_servers.iter())
-            .filter(move |s| set.insert(s.address))
-            .map(f)
-            .collect()
+        inner.servers.iter().filter(move |s| set.insert(s.address)).map(f).collect()
     }
 }
 
 /// A handler for configuring name servers.
 ///
-/// `ServerConfigPolicy` takes configurations in the form of
+/// `ServerConfigSink` takes configurations in the form of
 /// [`ServerConfiguration`] and applies a simple policy to consolidate the
 /// configurations into a single list of servers to use when resolving names
 /// through DNS:
-///   - [`ServerConfiguration::DynamicServers`] have higher priority.
-///   - [`ServerConfiguration::DefaultServers`] have lower priority.
 ///   - Any duplicates will be discarded.
 ///
-/// `ServerConfigPolicy` is instantiated with a [`Sink`] `S` whose `Item` is
+/// `ServerConfigSink` is instantiated with a [`Sink`] `S` whose `Item` is
 /// [`ServerList`]. The `Sink` will receive consolidated configurations
 /// sequentially. Every new item received by `S` is a fully assembled
 /// [`ServerList`], it may discard any previous configurations it received.
 ///
-/// `ServerConfigPolicy` itself is a [`Sink`] that takes [`ServerConfiguration`]
+/// `ServerConfigSink` itself is a [`Sink`] that takes [`ServerConfiguration`]
 /// items, consolidates all configurations using the policy described above and
 /// forwards the result to `S`.
-pub struct ServerConfigPolicy<S> {
+pub struct ServerConfigSink<S> {
     state: Arc<ServerConfigState>,
     changes_sink: S,
 }
 
-fn map_ip_to_default_socket_address(ip: net::IpAddress) -> net::SocketAddress {
-    match ip {
-        net::IpAddress::Ipv4(ip) => {
-            net::SocketAddress::Ipv4(net::Ipv4SocketAddress { address: ip, port: DEFAULT_PORT })
-        }
-        net::IpAddress::Ipv6(ip) => net::SocketAddress::Ipv6(net::Ipv6SocketAddress {
-            address: ip,
-            port: DEFAULT_PORT,
-            zone_index: 0,
-        }),
-    }
-}
+impl<S> Unpin for ServerConfigSink<S> where S: Unpin {}
 
-impl<S> Unpin for ServerConfigPolicy<S> where S: Unpin {}
-
-impl<S: Sink<ServerList> + Unpin> ServerConfigPolicy<S> {
-    /// Creates a new [`ServerConfigPolicy`] that provides consolidated
+impl<S: Sink<ServerList> + Unpin> ServerConfigSink<S> {
+    /// Creates a new [`ServerConfigSink`] that provides consolidated
     /// [`ServerList`]s to `changes_sink`.
     pub fn new(changes_sink: S) -> Self {
         Self::new_with_state(changes_sink, Arc::new(ServerConfigState::new()))
     }
 
-    /// Creates a new [`ServerConfigPolicy`] with the provided `initial_state`.
+    /// Creates a new [`ServerConfigSink`] with the provided `initial_state`.
     ///
     /// NOTE: `state` will not be reported to `changes_sink`.
     pub fn new_with_state(changes_sink: S, initial_state: Arc<ServerConfigState>) -> Self {
         Self { changes_sink, state: initial_state }
     }
 
-    /// Shorthand to update the default servers.
+    /// Shorthand to update the servers.
     ///
-    /// Equivalent to [`Sink::send`] with  [`ServerConfiguration::DefaultServers`].
-    pub async fn set_default_servers(
+    /// Equivalent to [`Sink::send`] with  [`ServerConfig`].
+    pub async fn set_servers(
         &mut self,
-        default_servers: impl IntoIterator<Item = net::IpAddress>,
-    ) -> Result<(), ServerConfigPolicyError<S::Error>> {
-        self.send(ServerConfig::DefaultServers(default_servers.into_iter().collect())).await
-    }
-
-    /// Shorthand to update the dynamic servers.
-    ///
-    /// Equivalent to [`Sink::send`] with  [`ServerConfiguration::DynamicServers`].
-    pub async fn set_dynamic_servers(
-        &mut self,
-        dynamic_servers: impl IntoIterator<Item = Server>,
-    ) -> Result<(), ServerConfigPolicyError<S::Error>> {
-        self.send(ServerConfig::DynamicServers(
-            dynamic_servers.into_iter().map(Into::into).collect(),
-        ))
-        .await
+        servers: impl IntoIterator<Item = Server>,
+    ) -> Result<(), ServerConfigSinkError<S::Error>> {
+        self.send(servers.into_iter().map(Into::into).collect()).await
     }
 
     /// Gets a [`ServerConfigState`] which provides shared access to this
-    /// [`ServerConfigPolicy`]'s internal state.
+    /// [`ServerConfigSink`]'s internal state.
     pub fn state(&self) -> Arc<ServerConfigState> {
         self.state.clone()
     }
 }
 
 #[derive(Debug)]
-pub enum ServerConfigPolicyError<E> {
+pub enum ServerConfigSinkError<E> {
     InvalidArg,
     SinkError(E),
 }
 
-impl<S: Sink<ServerList> + Unpin> Sink<ServerConfig> for ServerConfigPolicy<S> {
-    type Error = ServerConfigPolicyError<S::Error>;
+impl<S: Sink<ServerList> + Unpin> Sink<DnsServersListConfig> for ServerConfigSink<S> {
+    type Error = ServerConfigSinkError<S::Error>;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Pin::new(&mut self.get_mut().changes_sink)
             .poll_ready(cx)
-            .map_err(ServerConfigPolicyError::SinkError)
+            .map_err(ServerConfigSinkError::SinkError)
     }
 
-    fn start_send(self: Pin<&mut Self>, item: ServerConfig) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, item: DnsServersListConfig) -> Result<(), Self::Error> {
         let me = self.get_mut();
-        match item {
-            ServerConfig::DefaultServers(srv) => {
-                me.state.set_default_servers(srv.into_iter().map(|s| Server {
-                    address: map_ip_to_default_socket_address(s),
-                    source: name::DnsServerSource::StaticSource(name::StaticDnsServerSource {}),
-                }));
-            }
-            ServerConfig::DynamicServers(srv) => me.state.set_dynamic_servers(
-                srv.into_iter()
-                    .try_fold(Vec::new(), |mut acc, s| {
-                        acc.push(Server::try_from(s)?);
-                        Ok(acc)
-                    })
-                    .map_err(|MissingAddressError {}| ServerConfigPolicyError::InvalidArg)?,
-            ),
-        }
+        me.state.set_servers(
+            item.into_iter()
+                .try_fold(Vec::new(), |mut acc, s| {
+                    acc.push(Server::try_from(s)?);
+                    Ok(acc)
+                })
+                .map_err(|MissingAddressError {}| ServerConfigSinkError::InvalidArg)?,
+        );
 
         Pin::new(&mut me.changes_sink)
             .start_send(me.state.consolidate())
-            .map_err(ServerConfigPolicyError::SinkError)
+            .map_err(ServerConfigSinkError::SinkError)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Pin::new(&mut self.get_mut().changes_sink)
             .poll_flush(cx)
-            .map_err(ServerConfigPolicyError::SinkError)
+            .map_err(ServerConfigSinkError::SinkError)
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Pin::new(&mut self.get_mut().changes_sink)
             .poll_close(cx)
-            .map_err(ServerConfigPolicyError::SinkError)
+            .map_err(ServerConfigSinkError::SinkError)
     }
 }
 
@@ -292,100 +229,49 @@ impl<S: Sink<ServerList> + Unpin> Sink<ServerConfig> for ServerConfigPolicy<S> {
 mod tests {
     use super::*;
     use crate::test_util::*;
+    use fidl_fuchsia_net_name as fname;
     use fuchsia_async as fasync;
     use futures::StreamExt;
     use std::convert::TryInto;
 
-    fn to_static_dns_server_list(l: impl IntoIterator<Item = net::SocketAddress>) -> ServerList {
-        l.into_iter().map(|s| to_static_server(s).try_into().unwrap()).collect()
+    fn to_static_dns_server_list(l: impl IntoIterator<Item = fname::DnsServer_>) -> ServerList {
+        l.into_iter().map(|s| s.try_into().unwrap()).collect()
     }
 
     #[test]
     fn test_consolidate() {
-        let policy = ServerConfigPolicy::new(futures::sink::drain());
+        let policy = ServerConfigSink::new(futures::sink::drain());
 
-        let test = |default: Vec<net::SocketAddress>,
-                    dynamic: Vec<net::SocketAddress>,
-                    expected: Vec<net::SocketAddress>| {
-            policy.state.set_default_servers(to_static_dns_server_list(default));
-            policy.state.set_dynamic_servers(to_static_dns_server_list(dynamic));
+        let test = |servers: Vec<fname::DnsServer_>, expected: Vec<fname::DnsServer_>| {
+            policy.state.set_servers(to_static_dns_server_list(servers));
             assert_eq!(policy.state.consolidate(), to_static_dns_server_list(expected));
         };
 
         // Empty inputs become empty output.
-        test(vec![], vec![], vec![]);
+        test(vec![], vec![]);
 
         // Empty ordering is respected.
-        test(
-            vec![DEFAULT_SERVER_A, DEFAULT_SERVER_B],
-            vec![DYNAMIC_SERVER_A, DYNAMIC_SERVER_B],
-            vec![DYNAMIC_SERVER_A, DYNAMIC_SERVER_B, DEFAULT_SERVER_A, DEFAULT_SERVER_B],
-        );
+        test(vec![DHCP_SERVER, NDP_SERVER], vec![DHCP_SERVER, NDP_SERVER]);
 
         // Duplicates are removed.
-        test(
-            vec![DEFAULT_SERVER_A],
-            vec![DYNAMIC_SERVER_A, DEFAULT_SERVER_A],
-            vec![DYNAMIC_SERVER_A, DEFAULT_SERVER_A],
-        );
+        test(vec![DHCP_SERVER, DHCP_SERVER, NDP_SERVER], vec![DHCP_SERVER, NDP_SERVER]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_configuration_sink() {
-        let (mut src_snd, src_rcv) = futures::channel::mpsc::channel::<ServerConfig>(1);
+        let (mut src_snd, src_rcv) = futures::channel::mpsc::channel::<DnsServersListConfig>(1);
         let (dst_snd, mut dst_rcv) = futures::channel::mpsc::channel::<ServerList>(1);
-        let policy = ServerConfigPolicy::new(dst_snd);
+        let policy = ServerConfigSink::new(dst_snd);
 
         let combined = src_rcv.map(Result::Ok).forward(policy);
 
         let (combined_result, mut dst_rcv) = futures::future::join(combined, async move {
-            // Set some default servers.
-            let () = src_snd
-                .send(ServerConfig::DefaultServers(vec![
-                    get_server_address(DEFAULT_SERVER_A),
-                    get_server_address(DEFAULT_SERVER_B),
-                ]))
-                .await
-                .expect("Failed to send message");
+            // Set a server.
+            let () = src_snd.send(vec![DHCPV6_SERVER]).await.expect("Failed to send message");
 
             let config = dst_rcv.next().await.expect("Destination stream shouldn't end");
 
-            assert_eq!(config, to_static_dns_server_list(vec![DEFAULT_SERVER_A, DEFAULT_SERVER_B]));
-
-            // Set a dynamic server.
-            let () = src_snd
-                .send(ServerConfig::DynamicServers(vec![to_discovered_server(DYNAMIC_SERVER_A)
-                    .try_into()
-                    .unwrap()]))
-                .await
-                .expect("Failed to send message");
-
-            let config = dst_rcv.next().await.expect("Destination stream shouldn't end");
-
-            assert_eq!(
-                config,
-                vec![
-                    to_discovered_server(DYNAMIC_SERVER_A).try_into().unwrap(),
-                    to_static_server(DEFAULT_SERVER_A).try_into().unwrap(),
-                    to_static_server(DEFAULT_SERVER_B).try_into().unwrap()
-                ]
-            );
-
-            // Change the default servers.
-            let () = src_snd
-                .send(ServerConfig::DefaultServers(vec![get_server_address(DEFAULT_SERVER_A)]))
-                .await
-                .expect("Failed to send message");
-
-            let config = dst_rcv.next().await.expect("Destination stream shouldn't end");
-
-            assert_eq!(
-                config,
-                vec![
-                    to_discovered_server(DYNAMIC_SERVER_A).try_into().unwrap(),
-                    to_static_server(DEFAULT_SERVER_A).try_into().unwrap()
-                ]
-            );
+            assert_eq!(config, vec![DHCPV6_SERVER.try_into().unwrap()]);
 
             dst_rcv
         })

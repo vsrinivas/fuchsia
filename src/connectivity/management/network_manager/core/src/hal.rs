@@ -9,11 +9,13 @@ use {
     crate::error,
     crate::lifmgr::{self, DhcpAddressPool, LIFProperties},
     crate::oir,
-    crate::DnsPolicy,
     anyhow::{Context as _, Error},
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcp::{self as fnetdhcp, Server_Marker, Server_Proxy},
-    fidl_fuchsia_net_name::{LookupAdminMarker, LookupAdminProxy},
+    fidl_fuchsia_net_name::{
+        DnsServerWatcherMarker, DnsServerWatcherProxy, DnsServer_, LookupAdminMarker,
+        LookupAdminProxy,
+    },
     fidl_fuchsia_net_stack::{
         self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
         StackProxy,
@@ -301,6 +303,17 @@ impl NetCfg {
         let lookup_admin = connect_to_service::<LookupAdminMarker>()
             .context("network_manager failed to connect to lookup admin")?;
         Ok(NetCfg { stack, netstack, lookup_admin, dhcp_server: None })
+    }
+
+    /// Returns a client for a `fuchsia.net.name.DnsServerWatcher` from the
+    /// netstack.
+    pub fn get_netstack_dns_server_watcher(&mut self) -> error::Result<DnsServerWatcherProxy> {
+        let (dns_server_watcher, dns_server_watcher_req) =
+            fidl::endpoints::create_proxy::<DnsServerWatcherMarker>().unwrap();
+        let () = self.stack.get_dns_server_watcher(dns_server_watcher_req).map_err(|e| {
+            error::Service::FidlError { msg: format!("error getting dns server watcher: {}", e) }
+        })?;
+        Ok(dns_server_watcher)
     }
 
     /// Returns event streams for fuchsia.fnet.stack and fuchsia.netstack.
@@ -974,27 +987,19 @@ impl NetCfg {
         }
     }
 
-    /// Sets the DNS resolver.
-    pub async fn set_dns_resolver(
-        &mut self,
-        servers: &mut [fnet::IpAddress],
-        _domains: Option<String>,
-        _policy: DnsPolicy,
-    ) -> error::Result<()> {
+    /// Sets the DNS resolvers.
+    pub async fn set_dns_resolvers(&mut self, servers: Vec<DnsServer_>) -> error::Result<()> {
         self.lookup_admin
-            .set_default_dns_servers(&mut servers.iter_mut())
+            .set_dns_servers(&mut servers.into_iter())
             .await
             .with_context(|| "failed setting interface state".to_string())
             .and_then(|r| {
                 r.map_err(|status| {
-                    anyhow::anyhow!(
-                        "set_default_dns_servers returned {:?}",
-                        zx::Status::from_raw(status)
-                    )
+                    anyhow::anyhow!("set_dns_servers returned {:?}", zx::Status::from_raw(status))
                 })
             })
             .map_err(|e| {
-                error!("set_dns_resolver error {:?}", e);
+                error!("set_dns_resolvers error {:?}", e);
                 error::NetworkManager::Hal(error::Hal::OperationFailed)
             })
     }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::dns_server_watcher::DnsServerWatcherEvent;
 use fidl_fuchsia_router_config::{RouterAdminRequest, RouterStateRequest};
 
 /// The events that can trigger an action in the event loop.
@@ -17,4 +18,12 @@ pub enum Event {
     NetstackEvent(fidl_fuchsia_netstack::NetstackEvent),
     /// An event indicating Insertion/Removal of a port.
     OIR(network_manager_core::oir::OIRInfo),
+    /// An event with new DNS servers.
+    DnsServerWatcher(DnsServerWatcherEvent),
+}
+
+impl From<DnsServerWatcherEvent> for Event {
+    fn from(e: DnsServerWatcherEvent) -> Event {
+        Event::DnsServerWatcher(e)
+    }
 }

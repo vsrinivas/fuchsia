@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -46,6 +47,16 @@ func (dns *nameLookupAdminImpl) SetDefaultDnsServers(_ fidl.Context, servers []n
 	// NOTE(brunodalbo) we're not bothering checking for invalid server addresses here in expectation that this
 	// implementation will move to dns_resolver.
 	return name.LookupAdminSetDefaultDnsServersResultWithResponse(name.LookupAdminSetDefaultDnsServersResponse{}), nil
+}
+
+// SetDnsServers implements name.LookupAdminWithCtx.SetDnsServers.
+//
+// This method does nothing as netstack learns DNS servers itself and configures
+// the in-netstack DNS client directly. We're not bothering with a full implementation
+// here in expectation that dns_resolver will be used for name resolution.
+func (*nameLookupAdminImpl) SetDnsServers(fidl.Context, []name.DnsServer) (name.LookupAdminSetDnsServersResult, error) {
+	syslog.ErrorTf(tag, "SetDnsServers not implemented")
+	return name.LookupAdminSetDnsServersResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: "name.LookupAdminWithCtx.SetDnsServers"}
 }
 
 func (dns *nameLookupAdminImpl) GetDnsServers(fidl.Context) ([]name.DnsServer, error) {
