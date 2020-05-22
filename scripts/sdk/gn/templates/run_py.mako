@@ -109,7 +109,7 @@ class GnTester(object):
     def _build_test_project(self, arch):
         """Builds the test project for given architecture."""
         self._invoke_gn(arch)
-        self._invoke_ninja(arch)
+        self._invoke_ninja(arch, explain=False)
         print "Test project for %s built successfully" % arch
 
     def _invoke_gn(self, arch, additional_args=""):
@@ -130,25 +130,30 @@ class GnTester(object):
         print 'Running gn gen: "%s"' % ' '.join(invocation)
         self._run_cmd(invocation, cwd=self.proj_dir)
 
-    def _invoke_ninja(self, arch):
+    def _invoke_ninja(self, arch, explain=True, targets=["default", "tests"]):
         """Invokes Ninja to build default and tests targets.
 
         Args:
            arch: The target architecture to build.
+
+        Returns:
+            tuple of (stdout, stderr)
         """
         invocation = [
             # Invoke the ninja binary
-            self.ninja,
-            "-d",
-            "explain",
+            self.ninja
+        ]
+        if explain:
+            invocation += [
+                "-d",
+                "explain",
+            ]
+        invocation += [
             # Add Ninja flag to command e.g. `-C`
             "-C",
             # Add output directory to command
-            os.path.join(self.out_dir, arch),
-            # Build the default and test targets
-            "default",
-            "tests"
-        ]
+            os.path.join(self.out_dir, arch)
+        ] + targets
         print 'Running ninja: "%s"' % ' '.join(invocation)
         return self._run_cmd(invocation, cwd=self.proj_dir)
 
@@ -156,19 +161,15 @@ class GnTester(object):
         print('Running package dep file verification test')
         # Build test project
         self._build_test_project(arch)
-        # Verify package dep file for built project
 
-        expected = set([
-            'gen/tests/package/package/test_component_no_ext_v1.cmx',
-            'gen/tests/package/package/test_component_no_ext_v1_renamed.cmx',
+        # Verify package dep file for built project
+        expected = {
             'gen/tests/package/package/test_component_renamed.cm',
             'gen/tests/package/package/test_component_renamed.cmx',
             'gen/tests/package/package/original.cmx', 'lib/libfdio.so',
-            '../../tests/package/meta/test_component_no_ext_v1',
-            'lib/libunwind.so.1', '../../tests/package/meta/original.cmx',
-            '../../tests/package/meta/test_component.cmx', 'lib/libc++abi.so.1',
-            'hello_bin', 'lib/ld.so.1', 'lib/libc++.so.2'
-        ])
+            'lib/libunwind.so.1', 'lib/libc++abi.so.1', 'hello_bin',
+            'lib/ld.so.1', 'lib/libc++.so.2'
+        }
 
         dep_filepath = os.path.join(
             self.out_dir, arch, "gen", "tests", "package", "package_stamp.d")
@@ -176,16 +177,19 @@ class GnTester(object):
             dep_file_contents = dep_file.read()
             parts = dep_file_contents.split(':')
             if len(parts) != 2:
-                raise AssertionError('Expected file: deps, but got %s' % dep_file_contents)
-            actual = set(parts[1].split(' '))
-            missing = [ dep.strip() for dep in expected if dep.strip() and dep.strip() not in actual]
-            unexpected = [ dep.strip() for dep in actual if dep.strip() and dep.strip() not in expected]
+                raise AssertionError(
+                    'Expected file: deps, but got %s' % dep_file_contents)
+            actual = {p.strip() for p in parts[1].split(' ') if p.strip()}
+            missing = expected - actual
+            unexpected = actual - expected
 
             if len(missing) > 0:
-                raise AssertionError('missing dependencies: %s in actual %s' % (missing, actual))
+                raise AssertionError(
+                    'missing dependencies: %s in actual %s' % (missing, actual))
             if len(unexpected) > 0:
-               raise AssertionError('unexpected dependencies: %s from expected %s' % (unexpected, expected))
-
+                raise AssertionError(
+                    'unexpected dependencies: %s from expected %s' %
+                    (unexpected, expected))
 
     def _verify_rebuild_noop(self, arch):
         """Builds each architecture twice, confirming the second is a noop."""
@@ -210,7 +214,7 @@ class GnTester(object):
         self._host_tests(arch)
         # Build test project a second time but with the rename flag.
         self._invoke_gn(arch, additional_args="do_rename_test=true")
-        (stdout, stderr) = self._invoke_ninja(arch)
+        (stdout, stderr) = self._invoke_ninja(arch, explain=False)
         self._host_tests(arch)
 
     def _verify_cmx_touch(self, arch):
@@ -238,7 +242,7 @@ class GnTester(object):
 
         # Verify touching the manifest source *and* overriding the name
         self._invoke_gn(arch, additional_args="do_rename_test=true")
-        self._invoke_ninja(arch)
+        self._invoke_ninja(arch, explain=False)
         self._host_tests(arch)
 
         if os.path.exists(fname):
@@ -256,9 +260,21 @@ class GnTester(object):
             msg += '"%s"' % stdout
             raise AssertionError(msg)
 
+    def _verify_invalid_cmx(self, arch):
+        """Run gn gen and then run ninja and expect it to fail."""
+        self._invoke_gn(arch)
+        try:
+            (stdout, stderr) = self._invoke_ninja(
+                arch, explain=False, targets=['invalid_cmx_test'])
+        except AssertionError:
+            return
+        raise AssertionError(
+            "Expected build error on cmx validation, but no exception caught")
+
     def _run_build_tests(self):
         """Run the build tests, once per architecture."""
         for arch in ARCHES:
+            self._run_test("_verify_invalid_cmx", arch)
             self._run_test("_build_test_project", arch)
             self._run_test("_host_tests", arch)
             self._run_test("_verify_package_depfile", arch)

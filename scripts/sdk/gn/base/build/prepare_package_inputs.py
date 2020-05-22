@@ -169,17 +169,18 @@ def _write_gn_deps_file(
 
 
 def _write_meta_package_manifest(
-        manifest, manifest_path, app_name, out_dir, package_version):
+        manifest_entries, manifest_path, app_name, out_dir, package_version):
     # Write meta/package manifest file and add to archive manifest.
     meta_package = os.path.join(os.path.dirname(manifest_path), 'package')
     with open(meta_package, 'w') as package_json:
         json_payload = {'version': package_version, 'name': app_name}
         json.dump(json_payload, package_json)
         package_json_filepath = os.path.relpath(package_json.name, out_dir)
-        manifest.write('meta/package=%s\n' % package_json_filepath)
+        manifest_entries['meta/package'] = package_json_filepath
 
 
-def _write_component_manifest(manifest, component_info, manifest_path, out_dir):
+def _write_component_manifest(
+        manifest_entries, component_info, manifest_path, out_dir):
     """Copy component manifest files and add to archive manifest.
 
     Raises an exception if a component uses a unknown manifest version.
@@ -199,15 +200,15 @@ def _write_component_manifest(manifest, component_info, manifest_path, out_dir):
             component_manifest.get('output_name') + extension)
         shutil.copy(component_manifest.get('source'), manifest_dest_file_path)
 
-        manifest.write(
-            'meta/%s=%s\n' % (
-                os.path.basename(manifest_dest_file_path),
-                os.path.relpath(manifest_dest_file_path, out_dir)))
-        return manifest_dest_file_path
+        manifest_entries[
+            'meta/%s' %
+            os.path.basename(manifest_dest_file_path)] = os.path.relpath(
+                manifest_dest_file_path, out_dir)
+    return manifest_dest_file_path
 
 
 def _write_package_manifest(
-        manifest, expanded_files, out_dir, exclude_file, root_dir,
+        manifest_entries, expanded_files, out_dir, exclude_file, root_dir,
         component_info):
     """Writes the package manifest for a Fuchsia package
 
@@ -232,7 +233,7 @@ def _write_package_manifest(
     for resource in _get_resource_items(component_info):
         relative_src_file = os.path.relpath(resource.get('source'), out_dir)
         resource_path = make_package_path(relative_src_file, roots)
-        manifest.write('%s=%s\n' % (resource.get('dest'), relative_src_file))
+        manifest_entries[resource.get('dest')] = relative_src_file
         excluded_files_set.add(resource_path)
 
     for current_file in expanded_files:
@@ -244,7 +245,7 @@ def _write_package_manifest(
         if in_package_path in excluded_files_set:
             excluded_files_set.remove(in_package_path)
         else:
-            manifest.write('%s=%s\n' % (in_package_path, current_file))
+            manifest_entries[in_package_path] = current_file
 
     # Check to make sure we saw all expected files to
     if excluded_files_set:
@@ -257,17 +258,25 @@ def _build_manifest(args):
     expanded_files = _get_expanded_files(args.runtime_deps_file)
     component_info = _parse_component(args.json_file)
     component_manifests = []
+
+    # Collect the manifest entries in a map since duplication happens
+    # because of runtime libraries.
+    manifest_entries = {}
+    _write_meta_package_manifest(
+        manifest_entries, args.manifest_path, args.app_name, args.out_dir,
+        args.package_version)
+    for component_item in component_info:
+        _write_package_manifest(
+            manifest_entries, expanded_files, args.out_dir, args.exclude_file,
+            args.root_dir, component_item)
+        component_manifests.append(
+            _write_component_manifest(
+                manifest_entries, component_item, args.manifest_path,
+                args.out_dir))
+
     with open(args.manifest_path, 'w') as manifest:
-        _write_meta_package_manifest(
-            manifest, args.manifest_path, args.app_name, args.out_dir,
-            args.package_version)
-        for component_item in component_info:
-            _write_package_manifest(
-                manifest, expanded_files, args.out_dir, args.exclude_file,
-                args.root_dir, component_item)
-            component_manifests.append(
-                _write_component_manifest(
-                    manifest, component_item, args.manifest_path, args.out_dir))
+        for (k, v) in manifest_entries.items():
+            manifest.write('%s=%s\n' % (k, v))
 
     binaries = [f for f in expanded_files if _is_binary(f)]
     _write_build_ids_txt(binaries, args.build_ids_file)

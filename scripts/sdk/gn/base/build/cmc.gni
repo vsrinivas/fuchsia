@@ -4,32 +4,110 @@
 
 import("config/config.gni")
 
+# Internal template for the cmc tool.
+#
+# Invokes cmc
+#
+# Example:
+#
+# ```
+# _cmc_tool("validate_cmx") {
+#   inputs = [ manifest ]
+#   outputs = [ stamp_file ]
+#
+#   args = [
+#      "--stamp",
+#      rebase_path(stamp_file, root_build_dir),
+#      "validate",
+#      rebase_path(invoker.manifest),
+#   ]
+# }
+# ```
+#
+# Parameters:
+#
+#  inputs (required)
+#    List of files that are input for cmc.
+#    Type: list(path)
+#
+#  outputs (required)
+#    List paths that are output for the run of cmc.
+#    Type: list(path)
+#
+#  args (required)
+#    List command line args  for  cmc.
+#    Type: list(path)
+#
+#  deps
+#  public_deps
+#  testonly
+#  visibility
+#
+template("_cmc_tool") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    script = "${fuchsia_sdk}/build/gn_run_binary.py"
+    _cmc_tool_path = "${fuchsia_sdk}/tools/cmc"
+
+    assert(defined(invoker.inputs), "inputs is a required parameter.")
+    assert(defined(invoker.outputs), "outputs is a required parameter.")
+    assert(defined(invoker.args), "args is a required parameter.")
+
+    inputs =
+        [
+          _cmc_tool_path,
+
+          # Depend on the SDK hash, to ensure rebuild if the SDK tools change.
+          fuchsia_sdk_manifest_file,
+        ] + invoker.inputs
+
+    outputs = invoker.outputs
+
+    args = [ rebase_path(_cmc_tool_path, root_build_dir) ] + invoker.args
+  }
+}
+
 # Compiles a Components Framework v2 manifest (.cml) file to .cm
 #
 # The compiled manifest will be pretty-printed if is_debug is true.
 #
-# Parameters
+# Example:
 #
-#   manifest
-#     Required: The input Component Framework v2 manifest source (.cml) file.
+# ```
+# cmc_compile(_compiled_manifest_target) {
+#      forward_variables_from(invoker, [ "deps" ])
+#      manifest = rebase_path(manifest)
+# }
+# ```
+#
+# Parameters:
+#
+#   manifest (required)
+#     The input Component Framework v2 manifest source (.cml) file.
 #     The file must have the extension ".cml".
 #
-#   output_name:
-#     Optional: Name of the output file to generate. Defaults to $target_name.
+#   output_name (optional)
+#     Name of the output file to generate. Defaults to $target_name.
 #     This should not include a file extension (.cm)
 #
 #   deps
 #   public_deps
 #   testonly
 #   visibility
-#     Optional: Standard GN meaning.
+#
 template("cmc_compile") {
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
 
-  action(target_name) {
+  _cmc_tool(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -40,19 +118,12 @@ template("cmc_compile") {
                            ])
     assert(defined(manifest), "manifest file required")
 
-    script = "${fuchsia_sdk}/build/gn_run_binary.py"
-
-    inputs = [
-      # Depend on the SDK hash, to ensure rebuild if the SDK tools change.
-      fuchsia_sdk_manifest_file,
-      manifest,
-    ]
+    inputs = [ manifest ]
 
     output_file = "$target_out_dir/$output_name.cm"
     outputs = [ output_file ]
 
     args = [
-      rebase_path("${fuchsia_sdk}/tools/cmc", root_build_dir),
       "compile",
       "--output",
       rebase_path(output_file, root_build_dir),
@@ -62,5 +133,46 @@ template("cmc_compile") {
     if (is_debug) {
       args += [ "--pretty" ]
     }
+  }
+}
+
+# Validates a component manifest file
+#
+# The cmc_validate template will ensure that a given cmx file is conformant to
+# the cmx schema, as defined by //src/sys/cmc/schema.json. A stamp file is
+# generated to mark that a given cmx file has passed.
+#
+# Parameters:
+#
+#   manifest (required)
+#     [file] The path to the cmx file that is to be validated
+#
+#   deps
+#   testonly
+#   visibility
+#
+template("cmc_validate") {
+  _cmc_tool(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "manifest",
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    assert(defined(manifest), "manifest file required")
+
+    inputs = [ manifest ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "validate",
+      rebase_path(invoker.manifest),
+    ]
   }
 }

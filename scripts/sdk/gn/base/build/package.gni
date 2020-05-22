@@ -51,7 +51,7 @@ template("fuchsia_package") {
   # output values
   _pkg_out_dir = "${target_gen_dir}/${package_name}"
   _runtime_deps_file = "$_pkg_out_dir/${package_name}.runtime_deps"
-  _archive_manifest = "$_pkg_out_dir/${package_name}.archive_manifest"
+  _archive_manifest = "$_pkg_out_dir/${package_name}.manifest"
   _build_ids_file = "$_pkg_out_dir/ids.txt"
   _package_file = "$_pkg_out_dir/package"
   _fidl_json_refs_file = "${fidl_ref_out_dir}/${package_name}_all_fidl_refs.txt"

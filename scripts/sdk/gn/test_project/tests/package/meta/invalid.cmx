@@ -1,0 +1,6 @@
+{
+    "invalid-field": "any value",
+    "program": {
+        "binary": "hello_bin"
+    }
+}

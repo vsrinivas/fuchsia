@@ -9,6 +9,8 @@ import("config/config.gni")
 # Parameters
 #   package_name - defaults to target_name
 #   archive_manifest - required
+#   version [optional]
+#     The package version. Defaults to 0.
 #   command - the packaging step to perform valid steps are build, archive
 #
 # Forwarded parameters
@@ -38,10 +40,14 @@ template("fuchsia_pm_tool") {
            "invalid command. valid commands are ${_valid_commands}")
     command = invoker.command
 
+    package_name = target_name
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
-    } else {
-      package_name = target_name
+    }
+
+    version = "0"
+    if (defined(invoker.version)) {
+      version = invoker.version
     }
 
     # tool path
@@ -63,6 +69,8 @@ template("fuchsia_pm_tool") {
       _pkg_output_manifest = "${_pkg_out_dir}/package_manifest.json"
       outputs = [
         _meta_far_file,
+        "${_pkg_out_dir}/meta/contents",
+        "${_meta_far_file}.merkle",
         _pkg_output_manifest,
       ]
       depfile = "${_meta_far_file}.d"
@@ -79,13 +87,17 @@ template("fuchsia_pm_tool") {
       rebase_path(_pkg_out_dir, root_build_dir),
       "-m",
       rebase_path(archive_manifest, root_build_dir),
+      "-n",
+      package_name,
+      "-version",
+      version,
     ]
     if (command == "build") {
       args += [
         command,
-        "-depfile",
         "-output-package-manifest",
         rebase_path(_pkg_output_manifest, root_build_dir),
+        "-depfile",
       ]
     } else if (command == "archive") {
       args += [
