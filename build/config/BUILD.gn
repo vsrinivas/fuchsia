@@ -64,6 +64,7 @@ config("rust_target") {
 config("rust_panic_abort") {
   rustflags = [
     "-Cpanic=abort",
+    "-Cforce-unwind-tables=yes",
     "-Zpanic_abort_tests",
   ]
 }
