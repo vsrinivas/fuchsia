@@ -510,6 +510,16 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
                     Some(cml::EnvironmentExtends::None) => cm::EnvironmentExtends::None,
                     None => cm::EnvironmentExtends::None,
                 },
+                runners: env
+                    .runners
+                    .as_ref()
+                    .map(|runners| {
+                        runners
+                            .iter()
+                            .map(translate_runner_registration)
+                            .collect::<Result<Vec<_>, Error>>()
+                    })
+                    .transpose()?,
                 resolvers: env
                     .resolvers
                     .as_ref()
@@ -524,6 +534,16 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
             })
         })
         .collect()
+}
+
+fn translate_runner_registration(
+    reg: &cml::RunnerRegistration,
+) -> Result<cm::RunnerRegistration, Error> {
+    Ok(cm::RunnerRegistration {
+        source_name: cm::Name::new(reg.runner.to_string())?,
+        source: extract_single_offer_source(reg)?,
+        target_name: cm::Name::new(reg.r#as.as_ref().unwrap_or(&reg.runner).to_string())?,
+    })
 }
 
 fn translate_resolver_registration(
@@ -1920,18 +1940,24 @@ mod tests {
     ]
 }"#,
         },
-        test_compile_environment_with_resolver => {
+        test_compile_environment_with_runner_and_resolver => {
             input = json!({
                 "environments": [
                     {
                         "name": "myenv",
+                        "runners": [
+                            {
+                                "runner": "dart",
+                                "from": "realm",
+                            }
+                        ],
                         "resolvers": [
                             {
                                 "resolver": "pkg_resolver",
                                 "from": "realm",
                                 "scheme": "fuchsia-pkg",
                             }
-                        ]
+                        ],
                     },
                 ],
             }),
@@ -1940,6 +1966,15 @@ mod tests {
         {
             "name": "myenv",
             "extends": "none",
+            "runners": [
+                {
+                    "source_name": "dart",
+                    "source": {
+                        "realm": {}
+                    },
+                    "target_name": "dart"
+                }
+            ],
             "resolvers": [
                 {
                     "resolver": "pkg_resolver",
@@ -1947,6 +1982,39 @@ mod tests {
                         "realm": {}
                     },
                     "scheme": "fuchsia-pkg"
+                }
+            ]
+        }
+    ]
+}"#,
+        },
+        test_compile_environment_with_runner_alias => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "runners": [
+                            {
+                                "runner": "dart",
+                                "from": "realm",
+                                "as": "my-dart",
+                            }
+                        ],
+                    },
+                ],
+            }),
+            output = r#"{
+    "environments": [
+        {
+            "name": "myenv",
+            "extends": "none",
+            "runners": [
+                {
+                    "source_name": "dart",
+                    "source": {
+                        "realm": {}
+                    },
+                    "target_name": "my-dart"
                 }
             ]
         }

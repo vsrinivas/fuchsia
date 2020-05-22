@@ -164,12 +164,24 @@ pub struct Environment {
     pub name: Name,
     pub extends: EnvironmentExtends,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub runners: Option<Vec<RunnerRegistration>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub resolvers: Option<Vec<ResolverRegistration>>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename(serialize = "__stop_timeout_ms", deserialize = "__stop_timeout_ms")
     )]
     pub stop_timeout_ms: Option<u32>,
+}
+
+/// A registration of a runner capability. See [`RunnerRegistration`].
+///
+/// [`RunnerRegistration`]: ../../fidl_fuchsia_sys2/struct.RunnerRegistration.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RunnerRegistration {
+    pub source_name: Name,
+    pub source: Ref,
+    pub target_name: Name,
 }
 
 /// A registration of a resolver capability to a particular URL scheme. See [`ResolverRegistration`].

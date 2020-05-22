@@ -928,6 +928,61 @@
               8000
             ]
           },
+          "runners": {
+            "type": "array",
+            "title": "The runners registered with this environment",
+            "description": "The runners that are available from this environment",
+            "items": {
+              "type": "object",
+              "required": [
+                "runner",
+                "from"
+              ],
+              "properties": {
+                "runner": {
+                  "title": "Runner source name",
+                  "description": "The name of the runner capability as it's exposed or offered to or defined by this component.",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/name-clause"
+                    }
+                  ],
+                  "examples": [
+                    "pkg_runner"
+                  ]
+                },
+                "from": {
+                  "title": "Runner source component",
+                  "description": "The component which offers, exposes, or defines this runner capability.",
+                  "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/relative-ref-clause"
+                    }
+                  ],
+                  "examples": [
+                    "realm",
+                    "self",
+                    "#gtest-runner"
+                  ]
+                },
+                "as": {
+                  "title": "Runner target name",
+                  "description": "The name by which the runner will be made available in the environment. Defaults to \"runner\".",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/name-clause"
+                    }
+                  ],
+                  "examples": [
+                    "realm",
+                    "self",
+                    "#packagefs"
+                  ]
+                }
+              }
+            }
+          },
           "resolvers": {
             "type": "array",
             "title": "The resolvers registered with this environment",
@@ -967,7 +1022,7 @@
                 },
                 "from": {
                   "title": "The resolver source component",
-                  "description": "The component which offers or exposes this resolver capability.",
+                  "description": "The component which offers, exposes, or defines this resolver capability.",
                   "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
                   "allOf": [
                     {

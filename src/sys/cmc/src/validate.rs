@@ -49,6 +49,7 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
         all_children: HashMap::new(),
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
+        all_runners: HashSet::new(),
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
     };
@@ -139,6 +140,7 @@ struct ValidationContext<'a> {
     all_children: HashMap<&'a cml::Name, &'a cml::Child>,
     all_collections: HashSet<&'a cml::Name>,
     all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::Ref>,
+    all_runners: HashSet<&'a cml::Name>,
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
 }
@@ -308,6 +310,7 @@ impl<'a> ValidationContext<'a> {
         }
         self.all_collections = self.document.all_collection_names().into_iter().collect();
         self.all_storage_and_sources = self.document.all_storage_and_sources();
+        self.all_runners = self.document.all_runner_names().into_iter().collect();
         self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
 
@@ -610,8 +613,10 @@ impl<'a> ValidationContext<'a> {
             if *offer.from.one().unwrap() == cml::Ref::Self_ {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
-                       "Resolver \"{}\" is offered from self, so it must be declared in \"resolvers\"", resolver_name
-                   )));
+                        "Resolver \"{}\" is offered from self, so it must be declared in \
+                       \"resolvers\"",
+                        resolver_name
+                    )));
                 }
             }
         }
@@ -886,6 +891,43 @@ impl<'a> ValidationContext<'a> {
                 }
             }
             Some(cml::EnvironmentExtends::Realm) | None => {}
+        }
+
+        if let Some(runners) = &environment.runners {
+            let mut used_names = HashMap::new();
+            for registration in runners {
+                // Validate that this name is not already used.
+                let name = registration.r#as.as_ref().unwrap_or(&registration.runner);
+                if let Some(previous_runner) = used_names.insert(name, &registration.runner) {
+                    return Err(Error::validate(format!(
+                        "Duplicate runners registered under name \"{}\": \"{}\" and \"{}\".",
+                        name, &registration.runner, previous_runner
+                    )));
+                }
+
+                // Ensure that the environment is defined in `runners` if it comes from `self`.
+                if registration.from == cml::Ref::Self_
+                    && !self.all_runners.contains(&registration.runner)
+                {
+                    return Err(Error::validate(format!(
+                        "Runner \"{}\" registered in environment is not in \"runners\"",
+                        &registration.runner,
+                    )));
+                }
+
+                self.validate_component_ref(
+                    &format!("\"{}\" runner source", &registration.runner),
+                    &registration.from,
+                )?;
+
+                // Ensure there are no cycles, such as a resolver in an environment being assigned
+                // to a child which the resolver depends on.
+                if let cml::Ref::Named(child_name) = &registration.from {
+                    let source = DependencyNode::Child(child_name.as_str());
+                    let target = DependencyNode::Environment(environment.name.as_str());
+                    strong_dependencies.add_edge(source, target);
+                }
+            }
         }
 
         if let Some(resolvers) = &environment.resolvers {
@@ -2564,6 +2606,159 @@ mod tests {
                 "This property is required at /environments/0/name",
             ))),
         },
+
+        test_cml_environment_with_runners => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "dart",
+                                "from": "realm",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Ok(()),
+        },
+        test_cml_environment_with_runners_alias => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "dart",
+                                "from": "realm",
+                                "as": "my-dart",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Ok(()),
+        },
+        test_cml_environment_with_runners_missing => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "dart",
+                                "from": "self",
+                            }
+                        ]
+                    }
+                ],
+                "runners": [
+                     {
+                         "name": "dart",
+                         "path": "/svc/fuchsia.component.Runner",
+                         "from": "realm"
+                     }
+                ],
+            }),
+            result = Ok(()),
+        },
+        test_cml_environment_with_runners_bad_name => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "elf",
+                                "from": "realm",
+                                "as": "#elf",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Err(Error::validate_schema(
+                CML_SCHEMA, "Pattern condition is not met at /environments/0/runners/0/as",
+            )),
+        },
+        test_cml_environment_with_runners_duplicate_name => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "dart",
+                                "from": "realm",
+                            },
+                            {
+                                "runner": "other-dart",
+                                "from": "realm",
+                                "as": "dart",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Err(Error::validate(concat!(
+                "Duplicate runners registered under name \"dart\": \"other-dart\" and \"dart\"."
+            ))),
+        },
+        test_cml_environment_with_runner_from_missing_child => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "elf",
+                                "from": "#missing_child",
+                            }
+                        ]
+                    }
+                ]
+            }),
+            result = Err(Error::validate(
+                "\"elf\" runner source \"#missing_child\" does not appear in \"children\""
+            )),
+        },
+        test_cml_environment_with_runner_cycle => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "runners": [
+                            {
+                                "runner": "elf",
+                                "from": "#child",
+                                "as": "my-elf",
+                            }
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://child",
+                        "environment": "#my_env",
+                    }
+                ]
+            }),
+            result = Err(Error::validate(concat!(
+                "Strong dependency cycles were found. Break the cycle by removing a dependency \
+                or marking an offer as weak. Cycles: \
+                {{child child -> environment my_env -> child child}}"
+            ))),
+        },
+
         test_cml_environment_with_resolvers => {
             input = json!({
                 "environments": [
@@ -2672,10 +2867,12 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate(concat!(
-                "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {{child child -> environment my_env -> child child}}"
+                "Strong dependency cycles were found. Break the cycle by removing a dependency \
+                or marking an offer as weak. \
+                Cycles: {{child child -> environment my_env -> child child}}"
             ))),
         },
-        test_cml_environment_with_resolver_cycle_multiple_components => {
+        test_cml_environment_with_cycle_multiple_components => {
             input = json!({
                 "environments": [
                     {
@@ -2711,7 +2908,8 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate(concat!(
-                "Strong dependency cycles were found. Break the cycle by removing a dependency or marking an offer as weak. Cycles: {{child a -> child b -> environment my_env -> child a}}"
+                "Strong dependency cycles were found. Break the cycle by removing a dependency \
+                or marking an offer as weak. Cycles: {{child a -> child b -> environment my_env -> child a}}"
             ))),
         },
 
