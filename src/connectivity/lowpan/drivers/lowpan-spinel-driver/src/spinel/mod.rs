@@ -26,5 +26,8 @@ pub use enums::*;
 pub mod types;
 pub use types::*;
 
+pub mod prop_returning;
+pub use prop_returning::*;
+
 #[cfg(test)]
 pub mod mock;

@@ -21,6 +21,10 @@ async fn test_spinel_lowpan_driver() {
         for i in 1u8..32 {
             traceln!("app_task: Iteration {}", i);
 
+            let channels = driver.get_supported_channels().await;
+            traceln!("app_task: Supported channels: {:?}", channels);
+            assert_eq!(channels.map(|_| ()), Ok(()));
+
             traceln!("app_task: Attempting a reset...");
             assert_eq!(driver.reset().await, Ok(()));
             traceln!("app_task: Did reset!");

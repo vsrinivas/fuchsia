@@ -42,7 +42,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                         x.is_initializing() || !x.connectivity_state.is_active_and_ready()
                     });
 
-                    self.online_task().boxed().cancel_upon(exit_criteria.boxed(), Ok(())).await?;
+                    self.online_task()
+                        .boxed()
+                        .map(|x| match x {
+                            Err(err) if err.is::<Canceled>() => Ok(()),
+                            other => other,
+                        })
+                        .cancel_upon(exit_criteria.boxed(), Ok(()))
+                        .map_err(|x| x.context("offline_task"))
+                        .await?;
 
                     fx_log_info!("main_task: online_task terminated");
                 }
@@ -54,7 +62,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                         x.is_initializing() || x.connectivity_state.is_active_and_ready()
                     });
 
-                    self.offline_task().boxed().cancel_upon(exit_criteria.boxed(), Ok(())).await?;
+                    self.offline_task()
+                        .boxed()
+                        .map(|x| match x {
+                            Err(err) if err.is::<Canceled>() => Ok(()),
+                            other => other,
+                        })
+                        .cancel_upon(exit_criteria.boxed(), Ok(()))
+                        .map_err(|x| x.context("offline_task"))
+                        .await?;
 
                     fx_log_info!("main_task: offline_task terminated");
                 }
@@ -63,7 +79,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                     fx_log_info!("main_task: Uninitialized, starting initialization task");
 
                     // We are not initialized, start the init task.
-                    self.init_task().await?;
+                    self.init_task().map_err(|x| x.context("init_task")).await?;
                 }
             }
         }
@@ -78,7 +94,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     async fn online_task(&self) -> Result<(), Error> {
         fx_log_info!("online_loop: Entered");
 
-        // TODO: Bring up the network interface and mesh stack.
+        // Bring up the network interface.
+        self.frame_handler
+            .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), true).verify())
+            .await?;
+
+        // Bring up the mesh stack.
+        self.frame_handler
+            .send_request(CmdPropValueSet(PropNet::StackUp.into(), true).verify())
+            .await?;
 
         futures::future::pending().await
     }
@@ -92,7 +116,13 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     async fn offline_task(&self) -> Result<(), Error> {
         fx_log_info!("offline_loop: Entered");
 
-        // TODO: Bring down mesh stack and network interface
+        // Bring down the mesh stack.
+        self.frame_handler.send_request(CmdPropValueSet(PropNet::StackUp.into(), false)).await?;
+
+        // Bring down the network interface.
+        self.frame_handler
+            .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), false))
+            .await?;
 
         futures::future::pending().await
     }

@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::prelude::*;
 use crate::spinel::*;
+use futures::prelude::*;
 
 use anyhow::Error;
+use fasync::Time;
+use lowpan_driver_common::{FutureExt as _, ZxResult};
+use spinel_pack::TryOwnedUnpack;
 
 /// Miscellaneous private methods
 impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
@@ -19,6 +24,32 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
         self.driver_state.lock().prepare_for_init();
         self.driver_state_change.trigger();
+    }
+
+    /// Decorates the given future with error mapping,
+    /// reset handling, and a standard timeout.
+    pub(super) fn apply_standard_combinators<'a, F>(
+        &'a self,
+        future: F,
+    ) -> impl Future<Output = ZxResult<F::Ok>> + 'a
+    where
+        F: TryFuture<Error = Error> + Unpin + Send + 'a,
+        <F as TryFuture>::Ok: Send,
+    {
+        future
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+            .cancel_upon(self.ncp_did_reset.wait(), Err(ZxStatus::CANCELED))
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
+    }
+
+    /// Returns a future that gets a property and returns the value.
+    pub(super) fn get_property_simple<T: TryOwnedUnpack + 'static, P: Into<Prop>>(
+        &self,
+        prop: P,
+    ) -> impl Future<Output = ZxResult<T::Unpacked>> + '_ {
+        self.apply_standard_combinators(
+            self.frame_handler.send_request(CmdPropValueGet(prop.into()).returning::<T>()).boxed(),
+        )
     }
 }
 

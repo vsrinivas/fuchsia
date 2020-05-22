@@ -37,7 +37,26 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     async fn get_supported_channels(&self) -> ZxResult<Vec<ChannelInfo>> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        use fidl_fuchsia_lowpan::ChannelInfo;
+
+        fx_log_info!("Got get_supported_channels command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        let results = self.get_property_simple::<Vec<u8>, _>(PropPhy::ChanSupported).await?;
+
+        // TODO: Actually calculate all of the fields for channel info struct
+
+        Ok(results
+            .into_iter()
+            .map(|x| ChannelInfo {
+                id: Some(x.to_string()),
+                index: Some(u16::from(x)),
+                masked_by_regulatory_domain: Some(false),
+                ..ChannelInfo::empty()
+            })
+            .collect())
     }
 
     fn watch_device_state(&self) -> BoxStream<'_, ZxResult<DeviceState>> {

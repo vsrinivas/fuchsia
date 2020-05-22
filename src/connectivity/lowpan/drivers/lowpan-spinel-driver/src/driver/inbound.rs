@@ -111,6 +111,9 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                     // I/O errors are fatal.
                     err if err.is::<std::io::Error>() => Err(err),
 
+                    // Cancelled errors are ignored at this level.
+                    err if err.is::<Canceled>() => Ok(()),
+
                     // Other error cases may be added here in the future.
 
                     // Non-I/O errors cause a reset.
@@ -121,7 +124,10 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                     }
                 })
             });
-        futures::stream::select(wrapped_future, self.take_main_task().boxed().into_stream())
+        futures::stream::select(
+            wrapped_future,
+            self.take_main_task().boxed().map_err(|x| x.context("main_task")).into_stream(),
+        )
     }
 }
 

@@ -85,7 +85,28 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             self.driver_state_change.trigger();
         }
 
-        // TODO: Get NCP information and synchronize our state with it.
+        traceln!("init_task: Sending get protocol version request...");
+
+        let protocol_version =
+            self.get_property_simple::<ProtocolVersion, _>(Prop::ProtocolVersion).await?;
+
+        traceln!("init_task: Protocol version = {:?}", protocol_version);
+
+        match protocol_version {
+            ProtocolVersion(PROTOCOL_MAJOR_VERSION, minor) if minor >= PROTOCOL_MINOR_VERSION => {
+                fx_log_info!("init_task: Protocol Version: {}.{}", PROTOCOL_MAJOR_VERSION, minor);
+            }
+            ProtocolVersion(major, minor) => {
+                fx_log_err!("init_task: Unsupported Protocol Version: {}.{}", major, minor);
+                Err(format_err!("Unsupported Protocol Version: {}.{}", major, minor))?
+            }
+        };
+
+        traceln!("init_task: Sending get NCP version request...");
+
+        let ncp_version = self.get_property_simple::<String, _>(Prop::NcpVersion).await?;
+
+        fx_log_info!("init_task: NCP Version: {:?}", ncp_version);
 
         fx_log_info!("init_task: Finally updating driver state to initialized");
 
