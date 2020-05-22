@@ -36,9 +36,9 @@ fn test_string() -> TestCase {
     let mut expected_time_stamp = vec![0xC, 0, 0, 0, 0, 0, 0, 0];
     // 3: represents the size of argument
     // 6: represents the value type
-    // 5: represents the key size/length
-    // 0x80: represents one bit for NameRef
-    let mut expected_arg_header = vec![0x36, 0, 0x5, 0x80, 0, 0, 0, 0];
+    // 5, 0x80: string ref for NameRef
+    // second 5, 0x80: string ref for ValueRef
+    let mut expected_arg_header = vec![0x36, 0, 0x5, 0x80, 0x5, 0x80, 0, 0];
     // Representation of "hello"
     let mut expected_arg_name = vec![0x68, 0x65, 0x6C, 0x6C, 0x6F, 0, 0, 0];
     // Representation of "world"

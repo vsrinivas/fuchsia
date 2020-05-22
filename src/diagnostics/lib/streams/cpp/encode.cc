@@ -66,6 +66,7 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
   size_t arg_size = s_size + 1;  // 1 is for the header size
 
   int type = 0;
+  uint64_t value_ref = 0;
   switch (value.Which()) {
     case fuchsia::diagnostics::stream::Value::Tag::kSignedInt:
       type = 3;
@@ -85,6 +86,7 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
     case fuchsia::diagnostics::stream::Value::Tag::kText:
       type = 6;
       arg_size += write_string(value.text(), out);
+      value_ref = (1 << 15) | value.text().length();
       break;
 
     case fuchsia::diagnostics::stream::Value::Tag::kUnknown:
@@ -95,7 +97,8 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
   uint64_t header = ArgumentFields::Type::Make(type) | ArgumentFields::SizeWords::Make(arg_size) |
                     ArgumentFields::NameRefVal::Make(name.length()) |
                     ArgumentFields::NameRefMSB::Make(name.length() > 0 ? 1 : 0) |
-                    ArgumentFields::Reserved::Make(0);
+                    ArgumentFields::ValueRef::Make(value_ref) | ArgumentFields::Reserved::Make(0);
+
   std::memcpy(out->data() + header_idx, &header, WORD_SIZE);
   return arg_size;
 }

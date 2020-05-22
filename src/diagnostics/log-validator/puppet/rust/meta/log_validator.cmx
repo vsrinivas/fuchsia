@@ -1,0 +1,16 @@
+{
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/log-validator-test-rust#meta/log_validator_rust_puppet.cmx"
+        ],
+        "binary": "test/log_validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

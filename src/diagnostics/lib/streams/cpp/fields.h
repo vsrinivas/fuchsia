@@ -45,6 +45,7 @@ struct ArgumentFields {
   using SizeWords = Field<4, 15>;
   using NameRefVal = Field<16, 30>;
   using NameRefMSB = Field<31, 31>;
+  using ValueRef = Field<32, 47>;
   using Reserved = Field<32, 63>;
 };
 #endif  // SRC_DIAGNOSTICS_LIB_STREAMS_CPP_FIELDS_H_

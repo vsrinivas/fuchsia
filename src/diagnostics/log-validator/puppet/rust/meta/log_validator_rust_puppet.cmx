@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/log_validator_rust_puppet"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

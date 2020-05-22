@@ -48,9 +48,9 @@ TEST(StreamsRecordEncoder, WriteRecordString) {
   std::vector<uint8_t> expected_time_stamp({0x5, 0, 0, 0, 0, 0, 0, 0});
   // 3: represents the size of argument
   // 6: represents the value type
-  // 5: represents the key size/length
-  // 0x80: represents one bit for NameRef
-  std::vector<uint8_t> expected_arg_header({0x36, 0, 0x5, 0x80, 0, 0, 0, 0});
+  // 5, 0x80: represents the key stringref
+  // second 5, 0x80: represents the value stringref
+  std::vector<uint8_t> expected_arg_header({0x36, 0, 0x5, 0x80, 0x5, 0x80, 0, 0});
   std::vector<uint8_t> expected_arg_name({'w', 'o', 'r', 'l', 'd', 0, 0, 0});
   std::vector<uint8_t> expected_text_value({'h', 'e', 'l', 'l', 'o', 0, 0, 0});
 
