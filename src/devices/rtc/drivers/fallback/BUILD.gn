@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("fallback") {
@@ -24,4 +25,28 @@ driver_module("fallback") {
 
 migrated_manifest("fallback-manifest") {
   deps = [ ":fallback" ]
+}
+
+test("fallback-rtc") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "fallback-rtc"
+  test_group = "ddk"
+  sources = [ "fallback-rtc-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/rtc",
+  ]
+}
+
+migrated_manifest("fallback-rtc-manifest") {
+  deps = [ ":fallback-rtc" ]
 }
