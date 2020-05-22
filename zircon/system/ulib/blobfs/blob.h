@@ -50,7 +50,7 @@ class Blobfs;
 using digest::Digest;
 using digest::MerkleTreeVerifier;
 
-typedef uint32_t BlobFlags;
+typedef uint16_t BlobFlags;
 
 // clang-format off
 
@@ -252,11 +252,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   Blobfs* const blobfs_;
   BlobFlags flags_ = {};
 
-  // This object is not generally threadsafe but a few small things are done on the journal thread.
-  // This mutex protects such data.
-  std::mutex mutex_;
+  bool tearing_down_ = false;
 
-  enum class SyncingState {
+  enum class SyncingState : char {
     // The Blob is being streamed and it is not possible to generate the merkle root and metadata at
     // this point.
     kDataIncomplete,
@@ -271,6 +269,12 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // This value is marked kDone on the journal's background thread but read on the main thread so
   // is protected by the mutex.
   SyncingState syncing_state_ __TA_GUARDED(mutex_) = SyncingState::kDataIncomplete;
+
+  uint32_t map_index_ = 0;
+
+  // This object is not generally threadsafe but a few small things are done on the journal thread.
+  // This mutex protects such data.
+  std::mutex mutex_;
 
   // VMO mappings for the blob's merkle tree and data.
   // Data is stored in a separate VMO from the merkle tree for several reasons:
@@ -296,8 +300,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx::event readable_event_ = {};
 
   uint32_t fd_count_ = 0;
-  uint32_t map_index_ = 0;
-  bool tearing_down_ = false;
 
   // TODO(smklein): We are only using a few of these fields, such as:
   // - blob_size

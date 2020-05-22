@@ -111,8 +111,8 @@ Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
       blobfs_(bs),
       flags_(kBlobStateReadable),
       syncing_state_(SyncingState::kDone),
-      clone_watcher_(this),
       map_index_(node_index),
+      clone_watcher_(this),
       inode_(inode) {}
 
 zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
