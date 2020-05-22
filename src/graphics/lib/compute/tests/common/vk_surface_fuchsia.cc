@@ -25,13 +25,11 @@ vk_physical_device_supports_presentation(VkInstance       instance,
   return true;
 }
 
-vk_surface_requirements_t
-vk_surface_get_requirements(bool disable_vsync)
+void
+vk_surface_get_requirements(bool disable_vsync, vk_surface_requirements_t * reqs)
 {
-  vk_surface_requirements_t reqs = {
-    .num_layers     = 1,
-    .num_extensions = 1,
-  };
+  reqs->num_layers     = 1;
+  reqs->num_extensions = 1;
 
   const char * layer_name = disable_vsync ? "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present"
                                           : "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
@@ -40,14 +38,12 @@ vk_surface_get_requirements(bool disable_vsync)
 #error "Please increment MAX_VK_SURFACE_REQUIREMENTS_STORAGE to at least 2"
 #endif
 
-  auto * storage = reinterpret_cast<const char **>(reqs.storage);
+  auto * storage = reinterpret_cast<const char **>(reqs->storage);
   storage[0]     = layer_name;
   storage[1]     = VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME;
 
-  reqs.layer_names     = storage;
-  reqs.extension_names = storage + 1;
-
-  return reqs;
+  reqs->layer_names     = storage;
+  reqs->extension_names = storage + 1;
 }
 
 //

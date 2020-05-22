@@ -875,7 +875,7 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
       // For now, only use the layer allowing presenting to the framebuffer
       // directly (another layer is provided to display in a window, but this one
       // is far more work to get everything working).
-      surface_requirements = vk_surface_get_requirements(config->disable_swapchain_present);
+      vk_surface_get_requirements(config->disable_swapchain_present, &surface_requirements);
 
       const vk_surface_requirements_t * reqs = &surface_requirements;
       for (uint32_t nn = 0; nn < reqs->num_layers; ++nn)

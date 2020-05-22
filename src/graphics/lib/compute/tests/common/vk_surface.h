@@ -44,8 +44,8 @@ typedef struct vk_surface_requirements
 
 } vk_surface_requirements_t;
 
-extern vk_surface_requirements_t
-vk_surface_get_requirements(bool disable_swapchain_present);
+extern void
+vk_surface_get_requirements(bool disable_swapchain_present, vk_surface_requirements_t * reqs);
 
 //
 // vk_surface_t

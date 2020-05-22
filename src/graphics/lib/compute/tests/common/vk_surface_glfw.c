@@ -48,22 +48,18 @@ vk_physical_device_supports_presentation(VkInstance       instance,
          GLFW_TRUE;
 }
 
-vk_surface_requirements_t
-vk_surface_get_requirements(bool disable_vsync)
+void
+vk_surface_get_requirements(bool disable_vsync, vk_surface_requirements_t * reqs)
 {
   glfw_ensure_init();
 
-  vk_surface_requirements_t reqs = {};
-
   // NOTE: Storage is provided by GLFW.
-  reqs.extension_names = glfwGetRequiredInstanceExtensions(&reqs.num_extensions);
+  reqs->extension_names = glfwGetRequiredInstanceExtensions(&reqs->num_extensions);
 
   if (disable_vsync)
     {
       fprintf(stderr, "WARNING: disable_swapchain_present is ignored on this platform!\n");
     }
-
-  return reqs;
 }
 
 //
