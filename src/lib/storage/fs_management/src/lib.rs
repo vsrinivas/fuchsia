@@ -50,10 +50,11 @@
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
-    fdio::{
-        clone_channel, create_fd, spawn_etc, transfer_fd, Namespace, SpawnAction, SpawnOptions,
+    fdio::{spawn_etc, Namespace, SpawnAction, SpawnOptions},
+    fidl_fuchsia_io::{
+        DirectoryAdminSynchronousProxy, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS,
+        OPEN_RIGHT_ADMIN,
     },
-    fidl_fuchsia_io::{DirectoryAdminSynchronousProxy, OPEN_RIGHT_ADMIN},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef},
     std::{ffi::CStr, marker::PhantomData},
@@ -91,7 +92,7 @@ where
     FSType: Layout,
 {
     namespace: Namespace,
-    device: Option<zx::Channel>,
+    device: NodeSynchronousProxy,
     mount_point: Option<String>,
     launcher: FSLauncher<FSType, ProcLauncher>,
 }
@@ -191,9 +192,10 @@ where
     /// of the structs that implements Layout.
     fn new(device: zx::Channel) -> Result<Filesystem<FSType>, Error> {
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
+        let device = NodeSynchronousProxy::new(device);
         Ok(Filesystem {
             namespace,
-            device: Some(device),
+            device,
             mount_point: None,
             launcher: FSLauncher::new(FSType::options()),
         })
@@ -244,11 +246,9 @@ where
 
     /// Returns a channel to the block device.
     fn get_channel(&mut self) -> Result<zx::Channel, Error> {
-        // Create a channel clone.
-        let file = create_fd(self.device.take().unwrap().into())?;
-        let channel = clone_channel(&file).context("Clonning device channel")?;
-        self.device = Some((transfer_fd(file)?).into());
-
+        let (channel, server) = zx::Channel::create()?;
+        let () =
+            self.device.clone(CLONE_FLAG_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(server))?;
         Ok(channel)
     }
 
