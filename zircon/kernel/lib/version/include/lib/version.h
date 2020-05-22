@@ -8,6 +8,8 @@
 #ifndef ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_
 #define ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_
 
+#include <stdio.h>
+
 // This is the string returned by zx_system_get_version_string.
 const char* version_string();
 
@@ -15,6 +17,9 @@ const char* version_string();
 const char* elf_build_id_string();
 
 void print_version(void);
+
+// Prints symbolizer markup context elements for the kernel.
+void PrintSymbolizerContext(FILE*);
 
 // Prints version info and kernel mappings required to interpret backtraces.
 void print_backtrace_version_info(void);

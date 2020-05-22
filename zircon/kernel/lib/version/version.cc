@@ -61,12 +61,16 @@ void init_build_id(uint level) {
 // This must happen before print_version, below.
 LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_HEAP - 2)
 
+void print_module(FILE* f, const char* build_id) {
+  fprintf(f, "{{{module:0:kernel:elf:%s}}}\n", build_id);
+}
+
 // TODO(eieio): Consider whether it makes sense to locate the logic for printing
 // mappings somewhere else (perhaps in vm/vm.cpp?).
-void print_mmap(uintptr_t bias, const void* begin, const void* end, const char* perm) {
+void print_mmap(FILE* f, uintptr_t bias, const void* begin, const void* end, const char* perm) {
   const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
   const size_t size = reinterpret_cast<uintptr_t>(end) - start;
-  printf("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
+  fprintf(f, "{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
 }
 
 }  // namespace
@@ -82,18 +86,23 @@ void print_version(void) {
   printf("\tELF build ID: %s\n", gElfBuildIdString);
 }
 
+void PrintSymbolizerContext(FILE* f) {
+  const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
+  fprintf(f, "{{{reset}}}\n");
+  print_module(f, gElfBuildIdString);
+  // These four mappings match the mappings printed by vm_init().
+  print_mmap(f, bias, __code_start, __code_end, "rx");
+  print_mmap(f, bias, __rodata_start, __rodata_end, "r");
+  print_mmap(f, bias, __data_start, __data_end, "rw");
+  print_mmap(f, bias, __bss_start, _end, "rw");
+}
+
 void print_backtrace_version_info() {
   printf("zx_system_get_version_string %s\n\n", kVersionString);
 
   // Log the ELF build ID in the format the symbolizer scripts understand.
   if (gElfBuildIdString[0] != '\0') {
-    const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
-    print_module(printf, gElfBuildIdString);
-    // These four mappings match the mappings printed by vm_init().
-    print_mmap(printf, bias, __code_start, __code_end, "rx");
-    print_mmap(printf, bias, __rodata_start, __rodata_end, "r");
-    print_mmap(printf, bias, __data_start, __data_end, "rw");
-    print_mmap(printf, bias, __bss_start, _end, "rw");
+    PrintSymbolizerContext(stdout);
     printf("dso: id=%s base=%#lx name=zircon.elf\n", gElfBuildIdString,
            reinterpret_cast<uintptr_t>(__code_start));
   }

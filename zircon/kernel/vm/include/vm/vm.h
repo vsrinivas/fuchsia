@@ -50,19 +50,6 @@ extern char __data_end[];
 extern char __bss_start[];
 extern char _end[];
 
-// Prints a single mapping required to interpret backtraces.
-template <class F>
-void print_mmap(const F &f, uintptr_t bias, const void *begin, const void *end, const char *perm) {
-  const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
-  const size_t size = reinterpret_cast<uintptr_t>(end) - start;
-  f("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
-}
-
-template <class F>
-void print_module(const F &f, const char *build_id) {
-  f("{{{module:0:kernel:elf:%s}}}\n", build_id);
-}
-
 // return the physical address corresponding to _start
 static inline paddr_t get_kernel_base_phys() {
   extern paddr_t kernel_base_phys;
@@ -87,7 +74,7 @@ static inline paddr_t vm_get_zero_page_paddr(void) {
 
 // List of the kernel program's various segments.
 struct kernel_region {
-  const char *name;
+  const char* name;
   vaddr_t base;
   size_t size;
   uint arch_mmu_flags;
@@ -101,14 +88,14 @@ typedef struct vmm_aspace vmm_aspace_t;
 // internal kernel routines below, do not call directly
 
 // internal routine by the scheduler to swap mmu contexts
-void vmm_context_switch(vmm_aspace_t *oldspace, vmm_aspace_t *newaspace);
+void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace);
 
 // set the current user aspace as active on the current thread.
 // NULL is a valid argument, which unmaps the current user address space
-void vmm_set_active_aspace(vmm_aspace_t *aspace);
+void vmm_set_active_aspace(vmm_aspace_t* aspace);
 
 // specialized version of above function that must be called with the thread_lock already held.
 // This is only intended for use by panic handlers.
-void vmm_set_active_aspace_locked(vmm_aspace_t *aspace);
+void vmm_set_active_aspace_locked(vmm_aspace_t* aspace);
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_

@@ -8,4 +8,7 @@ zx_library("crashlog") {
   kernel = true
   sources = [ "crashlog.cc" ]
   deps = [ "$zx/kernel/lib/version" ]
+
+  # TODO: testonly
+  deps += [ "test" ]
 }
