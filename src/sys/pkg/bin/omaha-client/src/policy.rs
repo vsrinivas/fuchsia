@@ -300,6 +300,10 @@ where
         }
     }
 
+    pub fn get_config(&self) -> &PolicyConfig {
+        &self.config
+    }
+
     fn build_update_policy_data(&self) -> FuchsiaUpdatePolicyData {
         FuchsiaUpdatePolicyData::builder()
             .use_timesource(&self.time_source)
@@ -419,10 +423,10 @@ impl FuchsiaRebootPolicyData {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-struct PolicyConfig {
-    periodic_interval: Duration,
-    startup_delay: Duration,
-    retry_delay: Duration,
+pub struct PolicyConfig {
+    pub periodic_interval: Duration,
+    pub startup_delay: Duration,
+    pub retry_delay: Duration,
 }
 
 impl From<Option<PolicyConfigJson>> for PolicyConfig {

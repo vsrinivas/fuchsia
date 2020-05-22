@@ -19,6 +19,7 @@ use {
         ManagerProxy, MonitorMarker, MonitorRequest, MonitorRequestStream, NoUpdateAvailableData,
         State, UpdateInfo,
     },
+    fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
@@ -85,6 +86,7 @@ struct Proxies {
     paver: Arc<MockPaver>,
     resolver: Arc<MockResolver>,
     update_manager: ManagerProxy,
+    channel_control: ChannelControlProxy,
 }
 
 struct TestEnvBuilder {
@@ -178,6 +180,9 @@ impl TestEnvBuilder {
                 update_manager: omaha_client
                     .connect_to_service::<ManagerMarker>()
                     .expect("connect to update manager"),
+                channel_control: omaha_client
+                    .connect_to_service::<ChannelControlMarker>()
+                    .expect("connect to channel control"),
             },
             _omaha_client: omaha_client,
             nested_environment_label,
@@ -731,5 +736,24 @@ async fn test_omaha_client_invalid_app_set() {
     assert_matches!(
         env.proxies.update_manager.check_now(options, None).await.expect("check_now"),
         Err(CheckNotStartedReason::Internal)
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_policy_config_inspect() {
+    let env = TestEnvBuilder::new().build();
+
+    // Wait for omaha client to start.
+    let _ = env.proxies.channel_control.get_current().await;
+
+    assert_inspect_tree!(
+        env.inspect_hierarchy().await,
+        "root": contains {
+            "policy_config": {
+                "periodic_interval": 60 * 60u64,
+                "startup_delay": 60u64,
+                "retry_delay": 5 * 60u64,
+            }
+        }
     );
 }

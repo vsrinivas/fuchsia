@@ -4,7 +4,7 @@
 
 mod bounded_node;
 
-use crate::fidl::State;
+use crate::{fidl::State, policy::PolicyConfig};
 use chrono::{DateTime, Utc};
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
@@ -194,6 +194,19 @@ impl LastResultsNode {
         if self.last_results.len() > 10 {
             self.last_results.pop_front();
         }
+    }
+}
+
+pub struct PolicyConfigNode {
+    _node: Node,
+}
+
+impl PolicyConfigNode {
+    pub fn new(node: Node, policy_config: &PolicyConfig) -> Self {
+        node.record_uint("periodic_interval", policy_config.periodic_interval.as_secs());
+        node.record_uint("startup_delay", policy_config.startup_delay.as_secs());
+        node.record_uint("retry_delay", policy_config.retry_delay.as_secs());
+        PolicyConfigNode { _node: node }
     }
 }
 

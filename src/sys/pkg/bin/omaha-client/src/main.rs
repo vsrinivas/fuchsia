@@ -47,33 +47,14 @@ fn main() -> Result<(), Error> {
 
         let futures = FuturesUnordered::new();
 
+        // Cobalt metrics
         let (metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
         futures.push(cobalt_fut.boxed_local());
 
-        let http = FuchsiaHyperHttpRequest::new();
-        let installer = temp_installer::FuchsiaInstaller::new()?;
-        let stash = storage::Stash::new("omaha-client").await;
-        let stash_ref = Rc::new(Mutex::new(stash));
-        let policy_engine = policy::FuchsiaPolicyEngineBuilder
-            .time_source(StandardTimeSource)
-            .load_config_from("/config/data")
-            .build();
-        futures.push(policy_engine.start_watching_ui_activity().boxed_local());
-        let (state_machine_control, state_machine) = StateMachineBuilder::new(
-            policy_engine,
-            http,
-            installer,
-            timer::FuchsiaTimer,
-            metrics_reporter,
-            stash_ref.clone(),
-            config.clone(),
-            app_set.clone(),
-        )
-        .start()
-        .await;
-
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
+
+        // Inspect
         let inspector = fuchsia_inspect::Inspector::new();
         inspector.serve(&mut fs)?;
         let root = inspector.root();
@@ -88,15 +69,50 @@ fn main() -> Result<(), Error> {
             inspect::ProtocolStateNode::new(root.create_child("protocol_state"));
         let last_results_node = inspect::LastResultsNode::new(root.create_child("last_results"));
         let platform_metrics_node = root.create_child("platform_metrics");
-        let _channel_source_property =
-            root.create_string("channel_source", format!("{:?}", channel_source));
+        root.record_string("channel_source", format!("{:?}", channel_source));
 
+        // HTTP
+        let http = FuchsiaHyperHttpRequest::new();
+
+        // Installer
+        let installer = temp_installer::FuchsiaInstaller::new()?;
+
+        // Storage
+        let stash = storage::Stash::new("omaha-client").await;
+        let stash_ref = Rc::new(Mutex::new(stash));
+
+        // Policy
+        let policy_engine = policy::FuchsiaPolicyEngineBuilder
+            .time_source(StandardTimeSource)
+            .load_config_from("/config/data")
+            .build();
+        futures.push(policy_engine.start_watching_ui_activity().boxed_local());
+        let policy_config = policy_engine.get_config();
+        let _policy_config_node =
+            inspect::PolicyConfigNode::new(root.create_child("policy_config"), policy_config);
+
+        // StateMachine
+        let (state_machine_control, state_machine) = StateMachineBuilder::new(
+            policy_engine,
+            http,
+            installer,
+            timer::FuchsiaTimer,
+            metrics_reporter,
+            stash_ref.clone(),
+            config.clone(),
+            app_set.clone(),
+        )
+        .start()
+        .await;
+
+        // Notify Cobalt current channel
         let notify_cobalt =
             channel_source == ChannelSource::VbMeta || channel_source == ChannelSource::SysConfig;
         if notify_cobalt {
             futures.push(cobalt::notify_cobalt_current_channel(app_set.clone()).boxed_local());
         }
 
+        // Serve FIDL API
         let fidl = fidl::FidlServer::new(
             state_machine_control,
             stash_ref,
@@ -107,6 +123,7 @@ fn main() -> Result<(), Error> {
         );
         let fidl = Rc::new(RefCell::new(fidl));
 
+        // Observe state machine events
         let mut observer = observer::FuchsiaObserver::new(
             Rc::clone(&fidl),
             schedule_node,
