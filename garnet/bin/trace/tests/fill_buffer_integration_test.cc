@@ -16,7 +16,7 @@ namespace test {
 
 const char kFillBufferProviderName[] = "fill-buffer";
 
-static bool RunFillBufferTest(const tracing::Spec& spec) {
+static bool RunFillBufferTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // If we're streaming then we need intermediate buffer saving to be acted on while we're
   // writing the buffer. So run the provider loop in the background.
@@ -46,7 +46,7 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
   // This stress tests streaming mode buffer saving (with buffer size of 1MB).
   constexpr size_t kMinNumBuffersFilled = 4;
 
-  FillBuffer(kMinNumBuffersFilled, *spec.buffer_size_in_mb);
+  FillBuffer(kMinNumBuffersFilled, buffer_size_in_mb);
 
   loop.Quit();
   loop.JoinThreads();
@@ -57,19 +57,31 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
   return true;
 }
 
-static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& test_output_file) {
-  const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(*spec.buffering_mode);
+static bool VerifyFillBufferTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                                 const std::string& test_output_file) {
+  const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(buffering_mode);
   if (mode_spec == nullptr) {
-    FX_LOGS(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
+    FX_LOGS(ERROR) << "Bad buffering mode: " << buffering_mode;
     return false;
   }
-  return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);
+  return VerifyFullBuffer(test_output_file, mode_spec->mode, buffer_size_in_mb);
+}
+
+// TODO(52043): Remove tspec compatibility.
+static bool RunFillBufferTest(const tracing::Spec& spec) {
+  return RunFillBufferTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
+}
+
+static bool VerifyFillBufferTest(const tracing::Spec& spec, const std::string& test_output_file) {
+  return VerifyFillBufferTest(*spec.buffer_size_in_mb, *spec.buffering_mode, test_output_file);
 }
 
 const IntegrationTest kFillBufferIntegrationTest = {
     kFillBufferProviderName,
-    &RunFillBufferTest,
-    &VerifyFillBufferTest,
+    &RunFillBufferTest,     // for run command
+    &VerifyFillBufferTest,  // for verify command
+    &RunFillBufferTest,     // for run_tspec command; to be removed
+    &VerifyFillBufferTest,  // for verify_tspec command; to be removed
 };
 
 }  // namespace test

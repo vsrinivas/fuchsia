@@ -15,7 +15,6 @@
 
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <stdlib.h>
 
 #include <initializer_list>
 #include <iostream>
@@ -26,6 +25,7 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 const char kUsageString[] = {
     "Test runner usage:\n"
@@ -47,12 +47,17 @@ const char kUsageString[] = {
 
 static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
-static bool ParseInteger(const std::string& string_value, size_t* int_value) {
-  *int_value = strtoul(string_value.c_str(), nullptr, 10);
-  if (*int_value == 0L) {
-    FX_LOGS(ERROR) << "Failed to parse integer " << string_value;
+static bool ParseSize(const std::string& string_value, size_t* int_value) {
+  if (!fxl::StringToNumberWithError<size_t>(string_value, int_value)) {
+    FX_LOGS(ERROR) << "Failed to parse unsigned integer from string: \"" << string_value << '"';
+    return false;
   }
-  return *int_value != 0L;
+  if (*int_value == 0) {
+    FX_LOGS(ERROR) << "String \"" << string_value
+                   << "\" parsed to integer 0; expected a positive value";
+    return false;
+  }
+  return true;
 }
 
 static bool CopyArguments(const std::vector<std::string>& args,
@@ -121,12 +126,15 @@ int main(int argc, char* argv[]) {
     std::string test_name, buffer_size_string, buffering_mode;
     size_t buffer_size;
     if (!(CopyArguments(args, {&test_name, &buffer_size_string, &buffering_mode}) &&
-          ParseInteger(buffer_size_string, &buffer_size))) {
+          ParseSize(buffer_size_string, &buffer_size))) {
       return EXIT_FAILURE;  // error already logged
     }
 
-    FX_LOGS(ERROR) << "Command run not yet implemented";
-    return EXIT_FAILURE;
+    const tracing::test::IntegrationTest* test = tracing::test::LookupTest(test_name);
+
+    FX_LOGS(INFO) << "Running subprogram for test " << test_name << " with " << buffer_size
+                  << " MB " << buffering_mode << " buffer";
+    return test->run(buffer_size, buffering_mode) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
   if (command == "verify") {
@@ -134,12 +142,15 @@ int main(int argc, char* argv[]) {
     size_t buffer_size;
     if (!(CopyArguments(args,
                         {&test_name, &buffer_size_string, &buffering_mode, &trace_output_file}) &&
-          ParseInteger(buffer_size_string, &buffer_size))) {
+          ParseSize(buffer_size_string, &buffer_size))) {
       return EXIT_FAILURE;  // error already logged
     }
 
-    FX_LOGS(ERROR) << "Command verify not yet implemented";
-    return EXIT_FAILURE;
+    const tracing::test::IntegrationTest* test = tracing::test::LookupTest(test_name);
+
+    FX_LOGS(INFO) << "Verifying test " << test_name << ", output file " << trace_output_file;
+    return test->verify(buffer_size, buffering_mode, trace_output_file) ? EXIT_SUCCESS
+                                                                        : EXIT_FAILURE;
   }
 
   if (command == "run_tspec") {
@@ -155,7 +166,7 @@ int main(int argc, char* argv[]) {
     }
 
     FX_LOGS(INFO) << "Running subprogram for test " << spec_file << ":\"" << test->name << "\"";
-    return test->run(spec) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return test->run_tspec(spec) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
   if (command == "verify_tspec") {
@@ -172,7 +183,7 @@ int main(int argc, char* argv[]) {
 
     FX_LOGS(INFO) << "Verifying test " << spec_file << ":\"" << test->name << "\", output file "
                   << trace_output_file;
-    return test->verify(spec, trace_output_file) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return test->verify_tspec(spec, trace_output_file) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
   FX_LOGS(ERROR) << "Unknown command: " << command;

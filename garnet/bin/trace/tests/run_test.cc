@@ -19,6 +19,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,9 @@ namespace test {
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
 const char kTraceProgramPath[] = "/bin/trace";
+// The URL of the integration test app.
+const char kIntegrationTestUrl[] =
+    "fuchsia-pkg://fuchsia.com/trace_tests#meta/basic_integration_test_app.cmx";
 
 // TODO(52043): Remove tspec functionality once all tests are converted
 static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
@@ -51,6 +55,34 @@ static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
     FX_LOGS(ERROR) << "Error decoding test spec: " << tspec_path;
     return false;
   }
+  return true;
+}
+
+static bool BuildTraceProgramArgs(const std::string& app_path, const std::string& test_name,
+                                  const std::string& categories, size_t buffer_size_in_mb,
+                                  const std::string& buffering_mode,
+                                  std::initializer_list<std::string> additional_arguments,
+                                  const std::string& relative_output_file_path,
+                                  const syslog::LogSettings& log_settings,
+                                  std::vector<std::string>* args) {
+  AppendLoggingArgs(args, "", log_settings);
+  args->push_back("record");
+
+  args->push_back(fxl::StringPrintf("--buffer-size=%zu", buffer_size_in_mb));
+  args->push_back(fxl::StringPrintf("--buffering-mode=%s", buffering_mode.c_str()));
+
+  args->push_back(fxl::StringPrintf("--categories=%s", categories.c_str()));
+  args->push_back(fxl::StringPrintf(
+      "--output-file=%s",
+      (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
+  args->insert(args->end(), additional_arguments);
+
+  AppendLoggingArgs(args, "--append-args=", log_settings);
+  args->push_back(fxl::StringPrintf("--append-args=run,%s,%zu,%s", test_name.c_str(),
+                                    buffer_size_in_mb, buffering_mode.c_str()));
+
+  args->push_back(app_path);
+
   return true;
 }
 
@@ -81,6 +113,20 @@ static bool BuildTraceProgramArgsWithTspec(const std::string& relative_tspec_pat
                          "/" + relative_tspec_path)
                             .c_str()));
 
+  return true;
+}
+
+static bool BuildVerificationProgramArgs(const std::string& test_name, size_t buffer_size_in_mb,
+                                         const std::string& buffering_mode,
+                                         const std::string& output_file_path,
+                                         const syslog::LogSettings& log_settings,
+                                         std::vector<std::string>* args) {
+  AppendLoggingArgs(args, "", log_settings);
+  args->push_back("verify");
+  args->push_back(test_name);
+  args->push_back(fxl::StringPrintf("%zu", buffer_size_in_mb));
+  args->push_back(buffering_mode);
+  args->push_back(output_file_path);
   return true;
 }
 
@@ -198,6 +244,23 @@ static bool RunTraceComponentAndWait(const std::string& app, const std::vector<s
   return RunComponentAndWait(&loop, context, app, args, std::move(flat_namespace));
 }
 
+bool RunIntegrationTest(const std::string& test_name, const std::string& categories,
+                        size_t buffer_size_in_mb, const std::string& buffering_mode,
+                        std::initializer_list<std::string> additional_arguments,
+                        const std::string& relative_output_file_path,
+                        const syslog::LogSettings& log_settings) {
+  std::vector<std::string> args;
+  BuildTraceProgramArgs(kIntegrationTestUrl, test_name, categories, buffer_size_in_mb,
+                        buffering_mode, additional_arguments, relative_output_file_path,
+                        log_settings, &args);
+
+  FX_LOGS(INFO) << "Running test " << test_name << " with " << buffer_size_in_mb << " MB "
+                << buffering_mode << " buffer, tracing categories " << categories
+                << ", output file " << relative_output_file_path;
+
+  return RunTraceComponentAndWait(kTraceProgramUrl, args);
+}
+
 bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
               const syslog::LogSettings& log_settings) {
   std::vector<std::string> args;
@@ -210,6 +273,21 @@ bool RunTspec(const std::string& relative_tspec_path, const std::string& relativ
                 << relative_output_file_path;
 
   return RunTraceComponentAndWait(kTraceProgramUrl, args);
+}
+
+bool VerifyIntegrationTest(const std::string& test_name, size_t buffer_size_in_mb,
+                           const std::string& buffering_mode,
+                           const std::string& relative_output_file_path,
+                           const syslog::LogSettings& log_settings) {
+  std::vector<std::string> args;
+  BuildVerificationProgramArgs(test_name, buffer_size_in_mb, buffering_mode,
+                               std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path,
+                               log_settings, &args);
+
+  FX_LOGS(INFO) << "Verifying test " << test_name << " with " << buffer_size_in_mb << " MB "
+                << buffering_mode << " buffer, output file " << relative_output_file_path;
+
+  return RunTraceComponentAndWait(kIntegrationTestUrl, args);
 }
 
 bool VerifyTspec(const std::string& relative_tspec_path,

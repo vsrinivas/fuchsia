@@ -20,7 +20,7 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/self_contained_provider.h"
 
-#define TEST_NAME "two-providers-two-engines"
+const char kTwoProvidersTwoEnginesProviderName[] = "two-providers-two-engines";
 
 namespace tracing {
 namespace test {
@@ -64,14 +64,32 @@ static bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
   return true;
 }
 
+static bool RunTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb,
+                                          const std::string& buffering_mode) {
+  // TODO(52043): Implement non-tspec version of two-providers-two-engines test.
+  FX_LOGS(ERROR) << "Non-tspec two-providers-two-engines test not yet implemented";
+  return false;
+}
+
+static bool VerifyTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb,
+                                             const std::string& buffering_mode,
+                                             const std::string& test_output_file) {
+  // TODO(52043): Implement non-tspec version of two-providers-two-engines test.
+  FX_LOGS(ERROR) << "Non-tspec two-providers-two-engines test not yet implemented";
+  return false;
+}
+
+// TODO(52043): Remove tspec functionality.
 const IntegrationTest kTwoProvidersTwoEnginesIntegrationTest = {
-    TEST_NAME,
-    &RunTwoProvidersTwoEnginesTest,
-    &VerifyTwoProvidersTwoEnginesTest,
+    kTwoProvidersTwoEnginesProviderName,
+    &RunTwoProvidersTwoEnginesTest,     // for run command
+    &VerifyTwoProvidersTwoEnginesTest,  // for verify command
+    &RunTwoProvidersTwoEnginesTest,     // for run_tspec command; to be removed
+    &VerifyTwoProvidersTwoEnginesTest,  // for verify_tspec command; to be removed
 };
 
 const IntegrationTest* LookupTest(const std::string& test_name) {
-  if (test_name == TEST_NAME) {
+  if (test_name == kTwoProvidersTwoEnginesProviderName) {
     return &kTwoProvidersTwoEnginesIntegrationTest;
   }
   return nullptr;

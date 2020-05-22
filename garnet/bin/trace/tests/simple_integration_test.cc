@@ -47,10 +47,26 @@ static bool VerifySimpleTest(const tracing::Spec& spec, const std::string& test_
   return true;
 }
 
+static bool RunSimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
+  // TODO(52043): Implement non-tspec version of simple integration test.
+  FX_LOGS(ERROR) << "Non-tspec simple integration test not yet implemented";
+  return false;
+}
+
+static bool VerifySimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                             const std::string& test_output_file) {
+  // TODO(52043): Implement non-tspec version of simple integration test.
+  FX_LOGS(ERROR) << "Non-tspec simple integration test not yet implemented";
+  return false;
+}
+
+// TODO(52043): Remove tspec functionality.
 const IntegrationTest kSimpleIntegrationTest = {
     "simple",
-    &RunSimpleTest,
-    &VerifySimpleTest,
+    &RunSimpleTest,     // for run command
+    &VerifySimpleTest,  // for verify command
+    &RunSimpleTest,     // for run_tspec command; to be removed
+    &VerifySimpleTest,  // for verify_tspec command; to be removed
 };
 
 }  // namespace test

@@ -24,11 +24,16 @@ namespace test {
 
 using TspecTestRunner = bool(const tracing::Spec& spec);
 using TspecTestVerifier = bool(const tracing::Spec& spec, const std::string& test_output_file);
+using TestRunner = bool(size_t buffer_size_in_mb, const std::string& buffering_mode);
+using TestVerifier = bool(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                          const std::string& test_output_file);
 
 struct IntegrationTest {
   const char* name;
-  TspecTestRunner* run;
-  TspecTestVerifier* verify;
+  TestRunner* run;
+  TestVerifier* verify;
+  TspecTestRunner* run_tspec;
+  TspecTestVerifier* verify_tspec;
 };
 
 // When emitting a small fixed number of events, emit this amount.

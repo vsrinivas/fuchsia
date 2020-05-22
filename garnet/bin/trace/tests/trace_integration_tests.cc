@@ -29,19 +29,30 @@ namespace test {
 
 namespace {
 
+void RunAndVerify(const std::string& test_name, const std::string& categories,
+                  size_t buffer_size_in_mb, const std::string& buffering_mode,
+                  std::initializer_list<std::string> additional_arguments = {}) {
+  ASSERT_TRUE(RunIntegrationTest(test_name, categories, buffer_size_in_mb, buffering_mode,
+                                 additional_arguments, kRelativeOutputFilePath, g_log_settings));
+  ASSERT_TRUE(VerifyIntegrationTest(test_name, buffer_size_in_mb, buffering_mode,
+                                    kRelativeOutputFilePath, g_log_settings));
+}
+
 // |relative_tspec_path| is a relative path, from /pkg.
-static void RunAndVerify(const char* relative_tspec_path) {
+static void RunAndVerifyTspec(const char* relative_tspec_path) {
   ASSERT_TRUE(RunTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
   ASSERT_TRUE(VerifyTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
 }
 
-TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot.tspec"); }
+// These two tests should have the same output.
+TEST(Oneshot, FillBuffer) { RunAndVerify("fill-buffer", "trace:test", 1, "oneshot"); }
+TEST(Oneshot, FillBufferTspec) { RunAndVerifyTspec("data/oneshot.tspec"); }
 
-TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
+TEST(Circular, FillBuffer) { RunAndVerify("fill-buffer", "trace:test", 1, "circular"); }
 
-TEST(CircularWithTrigger, FillBufferAndAlert) { RunAndVerify("data/circular_trigger.tspec"); }
+TEST(CircularWithTrigger, FillBufferAndAlert) { RunAndVerifyTspec("data/circular_trigger.tspec"); }
 
-TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
+TEST(Streaming, FillBuffer) { RunAndVerify("fill-buffer", "trace:test", 1, "streaming"); }
 
 TEST(NestedTestEnvironment, Test) {
   ASSERT_TRUE(
@@ -128,16 +139,16 @@ class TwoProvidersOneEngine : public ExtraProvider {
 TEST_F(TwoProvidersOneEngine, DISABLED_ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
-  RunAndVerify("data/simple.tspec");
+  RunAndVerifyTspec("data/simple.tspec");
 
   // Running this test twice should work.
   // DX-448: Providers didn't properly reset themselves after a previous
   // trace was prematurely aborted.
-  RunAndVerify("data/simple.tspec");
+  RunAndVerifyTspec("data/simple.tspec");
 }
 
 TEST(TwoProvidersTwoEngines, DISABLED_Test) {
-  RunAndVerify("data/two_providers_two_engines.tspec");
+  RunAndVerifyTspec("data/two_providers_two_engines.tspec");
 }
 
 }  // namespace

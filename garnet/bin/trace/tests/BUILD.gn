@@ -538,16 +538,8 @@ test_package("trace_tests") {
       dest = "oneshot.tspec"
     },
     {
-      path = rebase_path("circular.tspec")
-      dest = "circular.tspec"
-    },
-    {
       path = rebase_path("circular_trigger.tspec")
       dest = "circular_trigger.tspec"
-    },
-    {
-      path = rebase_path("streaming.tspec")
-      dest = "streaming.tspec"
     },
     {
       path = rebase_path("simple.tspec")

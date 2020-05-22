@@ -17,7 +17,7 @@
 namespace tracing {
 namespace test {
 
-const char kFillBufferAndAlerProviderName[] = "fill-buffer-and-alert";
+const char kFillBufferAndAlertProviderName[] = "fill-buffer-and-alert";
 
 static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -27,7 +27,7 @@ static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
 
   std::unique_ptr<trace::TraceProvider> provider;
   bool already_started;
-  if (!CreateProviderSynchronously(loop, kFillBufferAndAlerProviderName, &provider,
+  if (!CreateProviderSynchronously(loop, kFillBufferAndAlertProviderName, &provider,
                                    &already_started)) {
     return false;
   }
@@ -40,7 +40,7 @@ static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
     // contains the trace buffer (as a vmo) and other things. So wait for it.
     async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!WaitForTracingToStart(wait_loop, kStartTimeout)) {
-      FX_LOGS(ERROR) << "Provider " << kFillBufferAndAlerProviderName
+      FX_LOGS(ERROR) << "Provider " << kFillBufferAndAlertProviderName
                      << " failed waiting for tracing to start";
       return false;
     }
@@ -82,10 +82,27 @@ static bool VerifyFillBufferAndAlertTest(const tracing::Spec& spec,
   return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);
 }
 
+static bool RunFillBufferAndAlertTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
+  // TODO(52043): Implement non-tspec version of fill-buffer-and-alert test.
+  FX_LOGS(ERROR) << "Non-tspec fill-buffer-and-alert test not yet implemented";
+  return false;
+}
+
+static bool VerifyFillBufferAndAlertTest(size_t buffer_size_in_mb,
+                                         const std::string& buffering_mode,
+                                         const std::string& test_output_file) {
+  // TODO(52043): Implement non-tspec version of fill-buffer-and-alert test.
+  FX_LOGS(ERROR) << "Non-tspec fill-buffer-and-alert test not yet implemented";
+  return false;
+}
+
+// TODO(52043): Remove tspec functionality.
 const IntegrationTest kFillBufferAndAlertIntegrationTest = {
-    kFillBufferAndAlerProviderName,
-    &RunFillBufferAndAlertTest,
-    &VerifyFillBufferAndAlertTest,
+    kFillBufferAndAlertProviderName,
+    &RunFillBufferAndAlertTest,     // for run command
+    &VerifyFillBufferAndAlertTest,  // for verify command
+    &RunFillBufferAndAlertTest,     // for run_tspec command; to be removed
+    &VerifyFillBufferAndAlertTest,  // for verify_tspec command; to be removed
 };
 
 }  // namespace test

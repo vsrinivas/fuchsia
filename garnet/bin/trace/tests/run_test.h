@@ -48,14 +48,32 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args);
 // We don't need to pass a context to RunTspec because the trace program
 // is currently a system app. If that changes then we will need a context
 // to run the trace too.
+// TODO(52043): Remove tspec functionality.
 bool RunTspec(const std::string& relative_tspec_path, const std::string& relative_output_file_path,
               const syslog::LogSettings& log_settings);
 
+// Runs and traces integration test system app with run command and given parameters. This looks up
+// the test by name and produces a trace file that can be verified using VerifyIntegrationTest.
+// additional_arguments are passed to trace, not to the test app.
+bool RunIntegrationTest(const std::string& test_name, const std::string& categories,
+                        size_t buffer_size_in_mb, const std::string& buffering_mode,
+                        std::initializer_list<std::string> additional_arguments,
+                        const std::string& relative_output_file_path,
+                        const syslog::LogSettings& log_settings);
+
 // N.B. This is a synchronous call that uses an internal async loop.
 // ("synchronous" meaning that it waits for the verifier to complete).
+// TODO(52043): Remove tspec functionality.
 bool VerifyTspec(const std::string& relative_tspec_path,
                  const std::string& relative_output_file_path,
                  const syslog::LogSettings& log_settings);
+
+// Runs integration test system app with verify command and given parameters. This verifies the
+// trace file resulting from a call to RunIntegrationTest using the test's verification method.
+bool VerifyIntegrationTest(const std::string& test_name, size_t buffer_size_in_mb,
+                           const std::string& buffering_mode,
+                           const std::string& relative_output_file_path,
+                           const syslog::LogSettings& log_settings);
 
 }  // namespace test
 }  // namespace tracing
