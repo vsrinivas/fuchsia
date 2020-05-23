@@ -95,7 +95,7 @@ group("tests") {
     "//zircon/system/utest/cprng:cprng-package",
     "//zircon/system/utest/ctor:ctor-package",
     "//zircon/system/utest/debugger:debugger-package",
-    "//zircon/system/utest/devcoordinator-namespace:devcoordinator-namespace-package",
+    "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//zircon/system/utest/device-enumeration:device-enumeration-package",
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-package",
     "//zircon/system/utest/entropy:entropy-package",
