@@ -132,7 +132,7 @@ group("tests") {
     "//zircon/system/utest/pty:pty-package",
     "//zircon/system/utest/qsort:qsort-package",
     "//zircon/system/utest/race-tests:race-tests-package",
-    "//zircon/system/utest/ramdisk:ramdisk-package",
+    "//src/devices/block/drivers/ramdisk/test:ramdisk-package",
     "//zircon/system/utest/register-state:register-state-package",
     "//zircon/system/utest/status:status-package",
     "//zircon/system/utest/stdio:stdio-test-package",
