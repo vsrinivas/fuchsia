@@ -46,3 +46,62 @@ func TestSingleQuote(t *testing.T) {
 		}
 	}
 }
+
+func TestPrintableASCIIRune(t *testing.T) {
+	// positive cases
+	printableRunes := []rune{
+		'h',
+		'e',
+		'l',
+		'0',
+		rune(0x20),
+		rune(0x7e),
+	}
+	for _, r := range printableRunes {
+		if !PrintableASCIIRune(r) {
+			t.Errorf("expected %x to be a printable rune", r)
+		}
+	}
+
+	// negative cases
+	nonPrintableRunes := []rune{
+		rune(0x00),
+		rune(0x19),
+		rune(0x80),
+		rune(0x4242),
+	}
+	for _, r := range nonPrintableRunes {
+		if PrintableASCIIRune(r) {
+			t.Errorf("did not expect %x to be a printable rune", r)
+		}
+	}
+}
+
+func TestPrintableASCII(t *testing.T) {
+	// positive cases
+	printableStrings := []string{
+		"ahb",
+		"aeb",
+		"alb",
+		"a0b",
+		"a\x20b",
+		"a\x7eb",
+	}
+	for _, s := range printableStrings {
+		if !PrintableASCII(s) {
+			t.Errorf("expected %s to be a printable syring", s)
+		}
+	}
+
+	// negative cases
+	nonPrintableStrings := []string{
+		"a\x00b",
+		"a\x19b",
+		"a\x81b",
+	}
+	for _, s := range nonPrintableStrings {
+		if PrintableASCII(s) {
+			t.Errorf("did not expect %s to be a printable string", s)
+		}
+	}
+}

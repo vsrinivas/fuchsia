@@ -5,10 +5,13 @@
 package cpp
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
+	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
@@ -62,8 +65,24 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 	case float64:
 		return fmt.Sprintf("%g", value)
 	case string:
-		// TODO(fxb/39686) Consider Go/C++ escape sequence differences
-		return strconv.Quote(value)
+		if fidlcommon.PrintableASCII(value) {
+			return strconv.Quote(value)
+		}
+		var (
+			buf    bytes.Buffer
+			src    = []byte(value)
+			dstLen = hex.EncodedLen(len(src))
+			dst    = make([]byte, dstLen)
+		)
+		hex.Encode(dst, src)
+		buf.WriteRune('"')
+		for i := 0; i < dstLen; i += 2 {
+			buf.WriteString("\\x")
+			buf.WriteByte(dst[i])
+			buf.WriteByte(dst[i+1])
+		}
+		buf.WriteRune('"')
+		return buf.String()
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
 	case []interface{}:

@@ -38,7 +38,7 @@ executable("fidl_llcpp_conformance_test_bin") {
   ]
 }
 
-unittest_package("fidl_llcpp_conformance_test") {
+test_package("fidl_llcpp_conformance_test") {
   deps = [ ":fidl_llcpp_conformance_test_bin" ]
 
   tests = [

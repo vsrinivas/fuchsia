@@ -60,6 +60,8 @@ class StringPtr final : public fit::optional<std::string> {
 
   // Construct from string pointers
   StringPtr(const char* value) : fit::optional<std::string>(value) {}
+  StringPtr(const char* value, size_t size)
+      : fit::optional<std::string>(std::string(value, size)) {}
   StringPtr& operator=(const char* value) {
     fit::optional<std::string>::operator=(value);
     return *this;
@@ -172,7 +174,7 @@ class StringPtr final {
   const std::string& operator*() const { return str_; }
 
   FIDL_FIT_OPTIONAL_DEPRECATED("use value_or(\"\")")
-  operator const std::string &() const { return str_; }
+  operator const std::string&() const { return str_; }
 
  private:
   std::string str_;

@@ -17,15 +17,6 @@ import (
 	gidlmixer "gidl/mixer"
 )
 
-func isPrintableASCII(s string) bool {
-	for _, r := range s {
-		if r < 0x20 || r > 0x7e {
-			return false
-		}
-	}
-	return true
-}
-
 func escapeStr(value string) string {
 	var (
 		buf    bytes.Buffer
@@ -60,7 +51,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case string:
 		var expr string
-		if isPrintableASCII(value) {
+		if fidlcommon.PrintableASCII(value) {
 			expr = fmt.Sprintf("String::from(%q)", value)
 		} else {
 			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", escapeStr(value))
