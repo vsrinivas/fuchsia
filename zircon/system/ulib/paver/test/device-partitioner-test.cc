@@ -322,7 +322,8 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutFvmFails) {
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionZirconB) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
+  // 128MiB
+  constexpr uint64_t kBlockCount = ((128LU << 20)) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -336,7 +337,8 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionZirconB) {
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionFvm) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
+  // 16GiB
+  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -363,7 +365,8 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionTooSmall) {
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_AddedPartitionIsFindable) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
+  // 128MiB
+  constexpr uint64_t kBlockCount = (128LU << 20) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -379,7 +382,8 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_AddedPartitionIsFindable) {
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_InitializePartitionsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
+  // 16GiB
+  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
@@ -401,7 +405,8 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitializePartitionsWithoutExplicitDe
 TEST_F(EfiDevicePartitionerTests,
        DISABLED_InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
+  // 16GiB
+  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
@@ -433,7 +438,8 @@ TEST_F(EfiDevicePartitionerTests,
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
+  // 16GiB
+  constexpr uint64_t kBlockCount = (16LU << 30) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
@@ -465,7 +471,8 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithTwoCandidateGPTsSucceed
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_AddedPartitionRemovedAfterWipePartitions) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  constexpr uint64_t kBlockCount = (1LU << 26) / kBlockSize;
+  // 128MiB
+  constexpr uint64_t kBlockCount = (128LU << 20) / kBlockSize + kGptBlockCount;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
