@@ -278,12 +278,13 @@ TEST(PartitionSpec, ToStringWithContentType) {
             GUID_ZIRCON_A_NAME " (a b c)");
 }
 
-class EfiDevicePartitionerTests : public zxtest::Test {
+class GptDevicePartitionerTests : public zxtest::Test {
  protected:
-  EfiDevicePartitionerTests() {
+  GptDevicePartitionerTests(fbl::String board_name) {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
+    args.board_name = board_name;
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;
@@ -292,6 +293,11 @@ class EfiDevicePartitionerTests : public zxtest::Test {
   }
 
   IsolatedDevmgr devmgr_;
+};
+
+class EfiDevicePartitionerTests : public GptDevicePartitionerTests {
+ protected:
+  EfiDevicePartitionerTests() : GptDevicePartitionerTests(fbl::String()) {}
 };
 
 // TODO(fxb/42894): Re-enable after de-flaking
@@ -614,18 +620,9 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_ValidatePayload) {
                                          fbl::Span<uint8_t>()));
 }
 
-class CrosDevicePartitionerTests : public zxtest::Test {
+class CrosDevicePartitionerTests : public GptDevicePartitionerTests {
  protected:
-  CrosDevicePartitionerTests() {
-    IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
-    args.disable_block_watcher = false;
-    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
-
-    fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
-  }
+  CrosDevicePartitionerTests() : GptDevicePartitionerTests(fbl::String()) {}
 
   // Create a disk with the given size in bytes.
   void CreateCrosDisk(uint64_t bytes, std::unique_ptr<BlockDevice>* device) {
@@ -651,8 +648,6 @@ class CrosDevicePartitionerTests : public zxtest::Test {
         devmgr_.devfs_root().duplicate(), paver::Arch::kX64, fbl::unique_fd{dup(device->fd())},
         partitioner));
   }
-
-  IsolatedDevmgr devmgr_;
 };
 
 TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
@@ -969,21 +964,9 @@ TEST_F(FixedDevicePartitionerTests, SupportsPartitionTest) {
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
 }
 
-class SherlockPartitionerTests : public zxtest::Test {
+class SherlockPartitionerTests : public GptDevicePartitionerTests {
  protected:
-  SherlockPartitionerTests() {
-    IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
-    args.disable_block_watcher = false;
-    args.board_name = "sherlock";
-    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
-
-    fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
-  }
-
-  IsolatedDevmgr devmgr_;
+  SherlockPartitionerTests() : GptDevicePartitionerTests("sherlock") {}
 };
 
 // TODO(fxb/42894): Re-enable after de-flaking
