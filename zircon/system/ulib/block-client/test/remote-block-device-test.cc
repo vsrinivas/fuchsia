@@ -245,7 +245,7 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->BlockGetInfo(&block_info));
 }
 
-TEST(RemoveBlockDeviceTest, LargeThreadCountSuceeds) {
+TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
@@ -318,13 +318,13 @@ TEST(RemoveBlockDeviceTest, LargeThreadCountSuceeds) {
   }
 }
 
-TEST(RemoveBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
+TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
   std::unique_ptr<RemoteBlockDevice> device;
-  constexpr int kThreadCount = 2 * MAX_TXN_GROUP_COUNT;
+  constexpr int kThreadCount = 4 * MAX_TXN_GROUP_COUNT;
   std::thread threads[kThreadCount];
 
   {
