@@ -325,6 +325,8 @@ an exception response.
 ```
 typedef struct zx_info_thread_stats {
     // Total accumulated running time of the thread.
+    //
+    // Note: See zx_info_task_runtime for queue time in addition to runtime.
     zx_duration_t total_runtime;
 
     // CPU number that this thread was last scheduled on, or ZX_INFO_INVALID_CPU
@@ -569,6 +571,43 @@ typedef struct zx_info_task_stats {
 Additional errors:
 
 *   **ZX_ERR_BAD_STATE**: If the target process has terminated
+
+### ZX_INFO_TASK_RUNTIME
+
+*handle* type: **Job**, **Process**, or **Thread**
+
+*buffer* type: `zx_info_task_runtime_t[1]`
+
+Returns statistics about the runtime of a task.
+
+```
+// Info on the runtime of a task.
+typedef struct zx_info_task_runtime {
+    // The total amount of time this task and its children were
+    // running on a CPU (not blocked).
+    // * Threads include only their own runtime.
+    // * Processes include the runtime for all of their threads (including threads that previously
+    // exited).
+    // * Jobs include the runtime for all of their processes (including processes that previously
+    // exited).
+    zx_duration_t cpu_time;
+
+    // The total amount of time this task and its children were queued
+    // to run (ready) but not actually using a CPU.
+    // * Threads include only their own queue time.
+    // * Processes include the queue time for all of their threads (including threads that
+    // previously exited).
+    // * Jobs include the queue time for all of their processes (including processes that previously
+    // exited).
+    zx_duration_t queue_time;
+} zx_info_task_runtime_t;
+```
+
+The run time of a task does not include the time spent suspended or
+blocked waiting on events or I/O. These stats may be used to:
+
+1. Estimate how much CPU time a task has used.
+2. Estimate how much latency (queue time) a task is experiencing due to other tasks.
 
 ### ZX_INFO_PROCESS_MAPS
 
