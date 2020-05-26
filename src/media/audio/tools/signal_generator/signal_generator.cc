@@ -12,6 +12,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/cli.h"
 
@@ -145,7 +146,9 @@ void MediaApp::ParameterRangeChecks() {
   }
 
   if (adjusting_clock_rate_) {
-    clock_type_ = ClockType::Custom;
+    if (clock_type_ != ClockType::Monotonic) {
+      clock_type_ = ClockType::Custom;
+    }
 
     if (clock_rate_adjustment_ > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST) {
       std::cerr << "Clock adjustment must be " << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST
@@ -288,6 +291,9 @@ void MediaApp::DisplayConfigurationSettings() {
       break;
     case ClockType::Monotonic:
       printf("a clone of the MONOTONIC clock");
+      if (adjusting_clock_rate_) {
+        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_);
+      }
       break;
     case ClockType::Custom:
       printf("a custom clock");
@@ -401,18 +407,30 @@ void MediaApp::InitializeAudibleRenderer() {
     if (clock_type_ == ClockType::Optimal) {
       reference_clock_to_set = zx::clock(ZX_HANDLE_INVALID);
     } else {
-      // In both Monotonic and Custom cases, we start with a clone of CLOCK_MONOTONIC.
-      // Create, possibly rate-adjust, reduce rights, then send to SetRefClock().
-      zx::clock custom_clock;
-      auto status = zx::clock::create(
-          ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START, nullptr,
-          &custom_clock);
-      CLI_CHECK_OK(status, "zx::clock::create failed");
+      zx_status_t status;
+      zx::clock::update_args args;
+      args.reset();
+      if (adjusting_clock_rate_) {
+        args.set_rate_adjust(clock_rate_adjustment_);
+      }
 
-      if (clock_type_ == ClockType::Custom && adjusting_clock_rate_) {
-        zx::clock::update_args args;
-        args.reset().set_rate_adjust(clock_rate_adjustment_);
-        status = custom_clock.update(args);
+      // In both Monotonic and Custom cases, we create, reduce rights, then send to SetRefClock().
+      if (clock_type_ == ClockType::Monotonic) {
+        // This clock is already started, in lock-step with CLOCK_MONOTONIC.
+        reference_clock_to_set = audio::clock::AdjustableCloneOfMonotonic();
+        CLI_CHECK(reference_clock_to_set.is_valid(),
+                  "Invalid clock; could not clone monotonic clock");
+      } else {
+        // In custom clock case, set it to start at value zero. Rate-adjust it if specified.
+        status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr,
+                                   &reference_clock_to_set);
+        CLI_CHECK_OK(status, "zx::clock::create failed");
+
+        args.set_value(zx::time(0));
+      }
+      if (adjusting_clock_rate_ || clock_type_ == ClockType::Custom) {
+        // update starts our clock
+        status = reference_clock_to_set.update(args);
         CLI_CHECK_OK(status, "zx::clock::update failed");
       }
 
@@ -422,7 +440,7 @@ void MediaApp::InitializeAudibleRenderer() {
       // rate-adjustment during playback (we also don't need this clock to read the current ref
       // time: we call GetReferenceClock later), so we use 'replace' (not 'duplicate').
       auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-      status = custom_clock.replace(rights, &reference_clock_to_set);
+      status = reference_clock_to_set.replace(rights, &reference_clock_to_set);
       CLI_CHECK_OK(status, "zx::clock::duplicate failed");
     }
 

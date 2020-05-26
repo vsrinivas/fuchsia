@@ -304,23 +304,25 @@ int main(int argc, const char** argv) {
       command_line.GetOptionValueWithDefault(kNumPayloadBuffersSwitch, kNumPayloadBuffersDefault);
   media_app.set_num_payload_buffers(fxl::StringToNumber<uint32_t>(num_payload_buffers_str));
 
-  // Handle any explicit reference clock selection
-  if (command_line.HasOption(kCustomClockSwitch) || command_line.HasOption(kClockRateSwitch)) {
+  // Handle any explicit reference clock selection. We allow Monotonic to be rate-adjusted,
+  // otherwise rate-adjustment implies a custom clock which starts at value zero.
+  if (command_line.HasOption(kMonotonicClockSwitch)) {
+    media_app.set_clock_type(ClockType::Monotonic);
+  } else if (command_line.HasOption(kCustomClockSwitch) ||
+             command_line.HasOption(kClockRateSwitch)) {
     media_app.set_clock_type(ClockType::Custom);
-    if (command_line.HasOption(kClockRateSwitch)) {
-      std::string rate_adjustment_str;
-      command_line.GetOptionValue(kClockRateSwitch, &rate_adjustment_str);
-      if (rate_adjustment_str == "") {
-        rate_adjustment_str = kClockRateDefault;
-      }
-      media_app.adjust_clock_rate(fxl::StringToNumber<int32_t>(rate_adjustment_str));
-    }
   } else if (command_line.HasOption(kOptimalClockSwitch)) {
     media_app.set_clock_type(ClockType::Optimal);
-  } else if (command_line.HasOption(kMonotonicClockSwitch)) {
-    media_app.set_clock_type(ClockType::Monotonic);
   } else {
     media_app.set_clock_type(ClockType::Default);
+  }
+  if (command_line.HasOption(kClockRateSwitch)) {
+    std::string rate_adjustment_str;
+    command_line.GetOptionValue(kClockRateSwitch, &rate_adjustment_str);
+    if (rate_adjustment_str == "") {
+      rate_adjustment_str = kClockRateDefault;
+    }
+    media_app.adjust_clock_rate(fxl::StringToNumber<int32_t>(rate_adjustment_str));
   }
 
   // Handle timestamp usage

@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "lib/media/audio/cpp/types.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 
 namespace media::tools {
@@ -102,30 +103,33 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
     file_duration_ = zx::duration(duration * ZX_SEC(1));
   }
 
-  if (cmd_line_.HasOption(kCustomClockOption) || cmd_line_.HasOption(kClockRateAdjustOption)) {
-    clock_type_ = ClockType::Custom;
-    if (cmd_line_.HasOption(kClockRateAdjustOption)) {
-      adjusting_clock_rate_ = true;
-      std::string rate_adjust_str;
-      if (cmd_line_.GetOptionValue(kClockRateAdjustOption, &rate_adjust_str)) {
-        if (rate_adjust_str == "") {
-          rate_adjust_str = kClockRateAdjustDefault;
-        }
-        CLI_CHECK(sscanf(rate_adjust_str.c_str(), "%i", &clock_rate_adjustment_) == 1,
-                  "Clock rate adjustment must be an integer");
-        CLI_CHECK(clock_rate_adjustment_ >= ZX_CLOCK_UPDATE_MIN_RATE_ADJUST &&
-                      clock_rate_adjustment_ <= ZX_CLOCK_UPDATE_MAX_RATE_ADJUST,
-                  "Clock rate adjustment must be between " << ZX_CLOCK_UPDATE_MIN_RATE_ADJUST
-                                                           << " and "
-                                                           << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
-      }
-    }
-  } else if (cmd_line_.HasOption(kMonotonicClockOption)) {
+  // Handle any explicit reference clock selection. We allow Monotonic to be rate-adjusted,
+  // otherwise rate-adjustment implies a custom clock which starts at value zero.
+  if (cmd_line_.HasOption(kMonotonicClockOption)) {
     clock_type_ = ClockType::Monotonic;
+  } else if (cmd_line_.HasOption(kCustomClockOption) ||
+             cmd_line_.HasOption(kClockRateAdjustOption)) {
+    clock_type_ = ClockType::Custom;
   } else if (cmd_line_.HasOption(kOptimalClockOption)) {
     clock_type_ = ClockType::Optimal;
   } else {
     clock_type_ = ClockType::Default;
+  }
+  if (cmd_line_.HasOption(kClockRateAdjustOption)) {
+    adjusting_clock_rate_ = true;
+    std::string rate_adjust_str;
+    if (cmd_line_.GetOptionValue(kClockRateAdjustOption, &rate_adjust_str)) {
+      if (rate_adjust_str == "") {
+        rate_adjust_str = kClockRateAdjustDefault;
+      }
+      CLI_CHECK(sscanf(rate_adjust_str.c_str(), "%i", &clock_rate_adjustment_) == 1,
+                "Clock rate adjustment must be an integer");
+      CLI_CHECK(clock_rate_adjustment_ >= ZX_CLOCK_UPDATE_MIN_RATE_ADJUST &&
+                    clock_rate_adjustment_ <= ZX_CLOCK_UPDATE_MAX_RATE_ADJUST,
+                "Clock rate adjustment must be between " << ZX_CLOCK_UPDATE_MIN_RATE_ADJUST
+                                                         << " and "
+                                                         << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
+    }
   }
 
   CLI_CHECK(pos_args.size() >= 1, "No filename specified");
@@ -204,9 +208,9 @@ void WavRecorder::Usage() {
   printf("  --%s\tUse a custom clock as this stream's reference clock\n", kCustomClockOption);
   printf("  --%s[=<PPM>]\tRun faster/slower than local system clock, in parts-per-million\n",
          kClockRateAdjustOption);
-  printf("\t\t\t(min %d, max %d; %s if unspecified). Implies '--%s'\n",
+  printf("\t\t\t(min %d, max %d; %s if unspecified). Implies '--%s' if '--%s' is not specified\n",
          ZX_CLOCK_UPDATE_MIN_RATE_ADJUST, ZX_CLOCK_UPDATE_MAX_RATE_ADJUST, kClockRateAdjustDefault,
-         kCustomClockOption);
+         kCustomClockOption, kMonotonicClockOption);
 
   printf("\n    By default, capture audio using packets of 100.0 msec\n");
   printf("  --%s=<MSECS>\tSpecify the duration (in milliseconds) of each capture packet\n",
@@ -297,19 +301,32 @@ void WavRecorder::EstablishReferenceClock() {
     if (clock_type_ == ClockType::Optimal) {
       reference_clock_to_set = zx::clock(ZX_HANDLE_INVALID);
     } else {
-      // In both Monotonic and Custom cases, we start with a clone of CLOCK_MONOTONIC.
-      // Create, possibly rate-adjust, reduce rights, then send to SetRefClock().
-      zx::clock custom_clock;
-      auto status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr,
-                                      &custom_clock);
-      CLI_CHECK_OK(status, "zx::clock::create failed");
+      zx_status_t status;
       zx::clock::update_args args;
-      args.reset().set_value(zx::clock::get_monotonic());
-      if (clock_type_ == ClockType::Custom && adjusting_clock_rate_) {
+      args.reset();
+      if (adjusting_clock_rate_) {
         args.set_rate_adjust(clock_rate_adjustment_);
       }
-      status = custom_clock.update(args);
-      CLI_CHECK_OK(status, "zx::clock::update failed");
+
+      // In both Monotonic and Custom cases, Create, reduce rights, then send to SetRefClock().
+      if (clock_type_ == ClockType::Monotonic) {
+        // This clock is already started, in lock-step with CLOCK_MONOTONIC.
+        reference_clock_to_set = audio::clock::AdjustableCloneOfMonotonic();
+        CLI_CHECK(reference_clock_to_set.is_valid(),
+                  "Invalid clock; could not clone monotonic clock");
+      } else {
+        // In custom clock case, set it to start at value zero. Rate-adjust it if specified.
+        status = zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr,
+                                   &reference_clock_to_set);
+        CLI_CHECK_OK(status, "zx::clock::create failed");
+
+        args.set_value(zx::time(0));
+      }
+      if (adjusting_clock_rate_ || clock_type_ == ClockType::Custom) {
+        // update starts our clock
+        status = reference_clock_to_set.update(args);
+        CLI_CHECK_OK(status, "zx::clock::update failed");
+      }
 
       // The clock we send to AudioCapturer cannot have ZX_RIGHT_WRITE. Most clients would retain
       // their custom clocks for subsequent rate-adjustment, and thus would use 'duplicate' to
@@ -317,7 +334,7 @@ void WavRecorder::EstablishReferenceClock() {
       // (we also don't need this clock to read the current ref time: we call GetReferenceClock
       // later), so we use 'replace' (not 'duplicate').
       auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-      status = custom_clock.replace(rights, &reference_clock_to_set);
+      status = reference_clock_to_set.replace(rights, &reference_clock_to_set);
       CLI_CHECK_OK(status, "zx::clock::duplicate failed");
     }
 
@@ -525,7 +542,11 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
   if (clock_type_ == ClockType::Optimal) {
     printf("using AudioCore's optimal clock as the reference\n");
   } else if (clock_type_ == ClockType::Monotonic) {
-    printf("using a clone of CLOCK_MONOTONIC as reference clock\n");
+    printf("using a clone of CLOCK_MONOTONIC as reference clock");
+    if (adjusting_clock_rate_) {
+      printf(", adjusting its rate by %d ppm", clock_rate_adjustment_);
+    }
+    printf("\n");
   } else if (clock_type_ == ClockType::Custom) {
     printf("using a custom reference clock");
     if (adjusting_clock_rate_) {
