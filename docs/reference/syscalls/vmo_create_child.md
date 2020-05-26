@@ -64,7 +64,7 @@ you should use one of the precise child types as this alias may change or become
 In addition, *options* can contain zero or more of the following flags to
 further specify the child's behavior:
 
-- **ZX_VMO_CHILD_RESIZEABLE** - Create a resizeable child VMO.
+- **ZX_VMO_CHILD_RESIZABLE** - Create a resizable child VMO.
 
 - **ZX_VMO_CHILD_NO_WRITE** - Create a child that cannot be written to.
 
