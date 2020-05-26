@@ -119,7 +119,6 @@ class BatchPQRemove {
   // Add a page to the batch set. Automatically calls |Flush| if the limit is reached.
   void Push(vm_page_t* page) {
     DEBUG_ASSERT(page);
-    DEBUG_ASSERT(list_in_list(&page->queue_node));
     pages_[count_] = page;
     count_++;
     if (count_ == kMaxPages) {
@@ -2166,8 +2165,6 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
           page->object.pin_count++;
           if (page->object.pin_count == 1) {
             pmm_page_queues()->MoveToWired(page);
-          } else {
-            DEBUG_ASSERT(list_in_list(&page->queue_node));
           }
           // Pinning every page in the largest vmo possible as many times as possible can't overflow
           static_assert(VmObjectPaged::MAX_SIZE / PAGE_SIZE <
@@ -2562,10 +2559,6 @@ void VmObjectPaged::UnpinPage(vm_page_t* page, uint64_t offset) {
   page->object.pin_count--;
   if (page->object.pin_count == 0) {
     MoveToNotWired(page, offset);
-  } else {
-    // Only check that the page is on *some* list, using the PageQueues::DebugPageIsWired check is
-    // too expensive here.
-    DEBUG_ASSERT(list_in_list(&page->queue_node));
   }
 }
 
