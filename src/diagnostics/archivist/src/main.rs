@@ -83,8 +83,7 @@ fn main() -> Result<(), Error> {
     if !opt.disable_klog {
         let log_manager = archivist.log_manager().clone();
         let debug_log = logs::KernelDebugLog::new().context("Failed to read kernel logs")?;
-        executor
-            .run(async move { log_manager.spawn_debuglog_drainer(debug_log).await }, num_threads)?;
+        executor.run(async move { log_manager.spawn_debuglog_drainer(debug_log).await }, 1)?;
     }
 
     let startup_handle =
