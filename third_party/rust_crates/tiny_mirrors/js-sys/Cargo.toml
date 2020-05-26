@@ -1,0 +1,4 @@
+[package]
+name = "js-sys"
+version = "0.3.37"
+authors = ["The Fuchsia Authors <rust-fuchsia@fuchsia.com>"]

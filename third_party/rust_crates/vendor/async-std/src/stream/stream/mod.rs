@@ -110,12 +110,12 @@ pub use take::Take;
 pub use take_while::TakeWhile;
 pub use zip::Zip;
 
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 cfg_unstable! {
-    use std::future::Future;
-    use std::pin::Pin;
-    use std::time::Duration;
+    use core::future::Future;
+    use core::pin::Pin;
+    use core::time::Duration;
 
     use crate::stream::into_stream::IntoStream;
     use crate::stream::{FromStream, Product, Sum};
@@ -1011,7 +1011,7 @@ extension_trait! {
 
             # Examples
 
-            ```ignore
+            ```
             # fn main() { async_std::task::block_on(async {
             #
             use async_std::prelude::*;
@@ -1028,12 +1028,12 @@ extension_trait! {
             # }) }
             ```
         "#]
-        fn max<F>(
+        fn max(
             self,
-        ) -> impl Future<Output = Option<Self::Item>> [MaxFuture<Self, F, Self::Item>]
+        ) -> impl Future<Output = Option<Self::Item>> [MaxFuture<Self, Self::Item>]
         where
             Self: Sized,
-            F: FnMut(&Self::Item, &Self::Item) -> Ordering,
+            Self::Item: Ord,
         {
             MaxFuture::new(self)
         }
@@ -1044,7 +1044,7 @@ extension_trait! {
 
             # Examples
 
-            ```ignore
+            ```
             # fn main() { async_std::task::block_on(async {
             #
             use async_std::prelude::*;
@@ -1061,12 +1061,12 @@ extension_trait! {
             # }) }
             ```
         "#]
-        fn min<F>(
+        fn min(
             self,
-        ) -> impl Future<Output = Option<Self::Item>> [MinFuture<Self, F, Self::Item>]
+        ) -> impl Future<Output = Option<Self::Item>> [MinFuture<Self, Self::Item>]
         where
             Self: Sized,
-            F: FnMut(&Self::Item, &Self::Item) -> Ordering,
+            Self::Item: Ord,
         {
             MinFuture::new(self)
         }

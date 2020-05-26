@@ -1,0 +1,4 @@
+[package]
+name = "wepoll-binding"
+version = "2.0.1"
+authors = ["The Fuchsia Authors <rust-fuchsia@fuchsia.com>"]

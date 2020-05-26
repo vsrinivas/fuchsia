@@ -31,7 +31,7 @@ pub(crate) struct TaskVTable {
     pub(crate) destroy: unsafe fn(*const ()),
 
     /// Runs the task.
-    pub(crate) run: unsafe fn(*const ()),
+    pub(crate) run: unsafe fn(*const ()) -> bool,
 
     /// Creates a new waker associated with the task.
     pub(crate) clone_waker: unsafe fn(ptr: *const ()) -> RawWaker,
@@ -83,13 +83,7 @@ impl<F, R, S, T> Copy for RawTask<F, R, S, T> {}
 
 impl<F, R, S, T> Clone for RawTask<F, R, S, T> {
     fn clone(&self) -> Self {
-        Self {
-            header: self.header,
-            schedule: self.schedule,
-            tag: self.tag,
-            future: self.future,
-            output: self.output,
-        }
+        *self
     }
 }
 
@@ -457,7 +451,7 @@ where
     ///
     /// If polling its future panics, the task will be closed and the panic will be propagated into
     /// the caller.
-    unsafe fn run(ptr: *const ()) {
+    unsafe fn run(ptr: *const ()) -> bool {
         let raw = Self::from_ptr(ptr);
 
         // Create a context from the raw task pointer and the vtable inside the its header.
@@ -470,17 +464,20 @@ where
         loop {
             // If the task has already been closed, drop the task reference and return.
             if state & CLOSED != 0 {
-                // Notify the awaiter that the task has been closed.
+                // Drop the future.
+                Self::drop_future(ptr);
+
+                // Mark the task as unscheduled.
+                let state = (*raw.header).state.fetch_and(!SCHEDULED, Ordering::AcqRel);
+
+                // Notify the awaiter that the future has been dropped.
                 if state & AWAITER != 0 {
                     (*raw.header).notify(None);
                 }
 
-                // Drop the future.
-                Self::drop_future(ptr);
-
                 // Drop the task reference.
                 Self::drop_task(ptr);
-                return;
+                return false;
             }
 
             // Mark the task as unscheduled and running.
@@ -555,6 +552,8 @@ where
                 drop(output);
             }
             Poll::Pending => {
+                let mut future_dropped = false;
+
                 // The task is still not completed.
                 loop {
                     // If the task was closed while running, we'll need to unschedule in case it
@@ -565,6 +564,13 @@ where
                         state & !RUNNING
                     };
 
+                    if state & CLOSED != 0 && !future_dropped {
+                        // The thread that closed the task didn't drop the future because it was
+                        // running so now it's our responsibility to do so.
+                        Self::drop_future(ptr);
+                        future_dropped = true;
+                    }
+
                     // Mark the task as not running.
                     match (*raw.header).state.compare_exchange_weak(
                         state,
@@ -573,20 +579,21 @@ where
                         Ordering::Acquire,
                     ) {
                         Ok(state) => {
-                            // If the task was closed while running, we need to drop its future.
+                            // If the task was closed while running, we need to notify the awaiter.
                             // If the task was woken up while running, we need to schedule it.
                             // Otherwise, we just drop the task reference.
                             if state & CLOSED != 0 {
-                                // The thread that closed the task didn't drop the future because
-                                // it was running so now it's our responsibility to do so.
-                                Self::drop_future(ptr);
-
+                                // Notify the awaiter that the future has been dropped.
+                                if state & AWAITER != 0 {
+                                    (*raw.header).notify(None);
+                                }
                                 // Drop the task reference.
                                 Self::drop_task(ptr);
                             } else if state & SCHEDULED != 0 {
                                 // The thread that woke the task up didn't reschedule it because
                                 // it was running so now it's our responsibility to do so.
                                 Self::schedule(ptr);
+                                return true;
                             } else {
                                 // Drop the task reference.
                                 Self::drop_task(ptr);
@@ -598,6 +605,8 @@ where
                 }
             }
         }
+
+        return false;
 
         /// A guard that closes the task if polling its future panics.
         struct Guard<F, R, S, T>(RawTask<F, R, S, T>)
@@ -621,13 +630,19 @@ where
                         // If the task was closed while running, then unschedule it, drop its
                         // future, and drop the task reference.
                         if state & CLOSED != 0 {
-                            // We still need to unschedule the task because it is possible it was
-                            // woken up while running.
-                            (*raw.header).state.fetch_and(!SCHEDULED, Ordering::AcqRel);
-
                             // The thread that closed the task didn't drop the future because it
                             // was running so now it's our responsibility to do so.
                             RawTask::<F, R, S, T>::drop_future(ptr);
+
+                            // Mark the task as not running and not scheduled.
+                            (*raw.header)
+                                .state
+                                .fetch_and(!RUNNING & !SCHEDULED, Ordering::AcqRel);
+
+                            // Notify the awaiter that the future has been dropped.
+                            if state & AWAITER != 0 {
+                                (*raw.header).notify(None);
+                            }
 
                             // Drop the task reference.
                             RawTask::<F, R, S, T>::drop_task(ptr);
@@ -645,7 +660,7 @@ where
                                 // Drop the future because the task is now closed.
                                 RawTask::<F, R, S, T>::drop_future(ptr);
 
-                                // Notify the awaiter that the task has been closed.
+                                // Notify the awaiter that the future has been dropped.
                                 if state & AWAITER != 0 {
                                     (*raw.header).notify(None);
                                 }

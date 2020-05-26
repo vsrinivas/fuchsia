@@ -1,13 +1,14 @@
 use core::fmt;
 use core::future::Future;
 use core::marker::PhantomData;
-use core::mem::{self, ManuallyDrop};
-use core::pin::Pin;
+use core::mem;
 use core::ptr::NonNull;
-use core::task::{Context, Poll, Waker};
+use core::sync::atomic::Ordering;
+use core::task::Waker;
 
 use crate::header::Header;
 use crate::raw::RawTask;
+use crate::state::*;
 use crate::JoinHandle;
 
 /// Creates a new task.
@@ -53,7 +54,14 @@ where
     S: Fn(Task<T>) + Send + Sync + 'static,
     T: Send + Sync + 'static,
 {
-    let raw_task = RawTask::<F, R, S, T>::allocate(future, schedule, tag);
+    // Allocate large futures on the heap.
+    let raw_task = if mem::size_of::<F>() >= 2048 {
+        let future = alloc::boxed::Box::pin(future);
+        RawTask::<_, R, S, T>::allocate(future, schedule, tag)
+    } else {
+        RawTask::<F, R, S, T>::allocate(future, schedule, tag)
+    };
+
     let task = Task {
         raw_task,
         _marker: PhantomData,
@@ -79,6 +87,9 @@ where
 /// Unlike [`spawn`], this function does not require the future to implement [`Send`]. If the
 /// [`Task`] reference is run or dropped on a thread it was not created on, a panic will occur.
 ///
+/// **NOTE:** This function is only available when the `std` feature for this crate is enabled (it
+/// is by default).
+///
 /// [`Task`]: struct.Task.html
 /// [`JoinHandle`]: struct.JoinHandle.html
 /// [`spawn`]: fn.spawn.html
@@ -101,7 +112,7 @@ where
 /// // Create a task with the future and the schedule function.
 /// let (task, handle) = async_task::spawn_local(future, schedule, ());
 /// ```
-#[cfg(any(unix, windows))]
+#[cfg(feature = "std")]
 pub fn spawn_local<F, R, S, T>(future: F, schedule: S, tag: T) -> (Task<T>, JoinHandle<R, T>)
 where
     F: Future<Output = R> + 'static,
@@ -109,20 +120,25 @@ where
     S: Fn(Task<T>) + Send + Sync + 'static,
     T: Send + Sync + 'static,
 {
-    #[cfg(unix)]
-    #[inline]
-    fn thread_id() -> usize {
-        unsafe { libc::pthread_self() as usize }
-    }
+    extern crate std;
 
-    #[cfg(windows)]
+    use std::mem::ManuallyDrop;
+    use std::pin::Pin;
+    use std::task::{Context, Poll};
+    use std::thread::{self, ThreadId};
+    use std::thread_local;
+
     #[inline]
-    fn thread_id() -> usize {
-        unsafe { winapi::um::processthreadsapi::GetCurrentThreadId() as usize }
+    fn thread_id() -> ThreadId {
+        thread_local! {
+            static ID: ThreadId = thread::current().id();
+        }
+        ID.try_with(|id| *id)
+            .unwrap_or_else(|_| thread::current().id())
     }
 
     struct Checked<F> {
-        id: usize,
+        id: ThreadId,
         inner: ManuallyDrop<F>,
     }
 
@@ -150,12 +166,20 @@ where
         }
     }
 
+    // Wrap the future into one that which thread it's on.
     let future = Checked {
         id: thread_id(),
         inner: ManuallyDrop::new(future),
     };
 
-    let raw_task = RawTask::<_, R, S, T>::allocate(future, schedule, tag);
+    // Allocate large futures on the heap.
+    let raw_task = if mem::size_of::<F>() >= 2048 {
+        let future = alloc::boxed::Box::pin(future);
+        RawTask::<_, R, S, T>::allocate(future, schedule, tag)
+    } else {
+        RawTask::<_, R, S, T>::allocate(future, schedule, tag)
+    };
+
     let task = Task {
         raw_task,
         _marker: PhantomData,
@@ -178,8 +202,8 @@ where
 /// function. In most executors, scheduling simply pushes the [`Task`] reference into a queue of
 /// runnable tasks.
 ///
-/// If the [`Task`] reference is dropped without getting run, the task is automatically cancelled.
-/// When cancelled, the task won't be scheduled again even if a [`Waker`] wakes it. It is possible
+/// If the [`Task`] reference is dropped without getting run, the task is automatically canceled.
+/// When canceled, the task won't be scheduled again even if a [`Waker`] wakes it. It is possible
 /// for the [`JoinHandle`] to cancel while the [`Task`] reference exists, in which case an attempt
 /// to run the task won't do anything.
 ///
@@ -204,7 +228,7 @@ impl<T> Task<T> {
     /// This is a convenience method that simply reschedules the task by passing it to its schedule
     /// function.
     ///
-    /// If the task is cancelled, this method won't do anything.
+    /// If the task is canceled, this method won't do anything.
     pub fn schedule(self) {
         let ptr = self.raw_task.as_ptr();
         let header = ptr as *const Header;
@@ -217,32 +241,33 @@ impl<T> Task<T> {
 
     /// Runs the task.
     ///
+    /// Returns `true` if the task was woken while running, in which case it gets rescheduled at
+    /// the end of this method invocation.
+    ///
     /// This method polls the task's future. If the future completes, its result will become
     /// available to the [`JoinHandle`]. And if the future is still pending, the task will have to
     /// be woken up in order to be rescheduled and run again.
     ///
-    /// If the task was cancelled by a [`JoinHandle`] before it gets run, then this method won't do
+    /// If the task was canceled by a [`JoinHandle`] before it gets run, then this method won't do
     /// anything.
     ///
     /// It is possible that polling the future panics, in which case the panic will be propagated
     /// into the caller. It is advised that invocations of this method are wrapped inside
-    /// [`catch_unwind`]. If a panic occurs, the task is automatically cancelled.
+    /// [`catch_unwind`]. If a panic occurs, the task is automatically canceled.
     ///
     /// [`JoinHandle`]: struct.JoinHandle.html
     /// [`catch_unwind`]: https://doc.rust-lang.org/std/panic/fn.catch_unwind.html
-    pub fn run(self) {
+    pub fn run(self) -> bool {
         let ptr = self.raw_task.as_ptr();
         let header = ptr as *const Header;
         mem::forget(self);
 
-        unsafe {
-            ((*header).vtable.run)(ptr);
-        }
+        unsafe { ((*header).vtable.run)(ptr) }
     }
 
     /// Cancels the task.
     ///
-    /// When cancelled, the task won't be scheduled again even if a [`Waker`] wakes it. An attempt
+    /// When canceled, the task won't be scheduled again even if a [`Waker`] wakes it. An attempt
     /// to run it won't do anything.
     ///
     /// [`Waker`]: https://doc.rust-lang.org/std/task/struct.Waker.html
@@ -313,6 +338,14 @@ impl<T> Drop for Task<T> {
 
             // Drop the future.
             ((*header).vtable.drop_future)(ptr);
+
+            // Mark the task as unscheduled.
+            let state = (*header).state.fetch_and(!SCHEDULED, Ordering::AcqRel);
+
+            // Notify the awaiter that the future has been dropped.
+            if state & AWAITER != 0 {
+                (*header).notify(None);
+            }
 
             // Drop the task reference.
             ((*header).vtable.drop_task)(ptr);

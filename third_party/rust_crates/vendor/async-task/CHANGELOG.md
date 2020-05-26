@@ -1,3 +1,20 @@
+# Version 3.0.0
+
+- Use `ThreadId` in `spawn_local` because OS-provided IDs can get recycled.
+- Add `std` feature to `Cargo.toml`.
+
+# Version 2.1.1
+
+- Allocate large futures on the heap.
+
+# Version 2.1.0
+
+- `JoinHandle` now only evaluates after the task's future has been dropped.
+
+# Version 2.0.0
+
+- Return `true` in `Task::run()`.
+
 # Version 1.3.1
 
 - Make `spawn_local` available only on unix and windows.
@@ -22,7 +39,7 @@
 
 # Version 1.1.0
 
-- If a task is dropped or cancelled outside the `run` method, it gets re-scheduled.
+- If a task is dropped or canceled outside the `run` method, it gets re-scheduled.
 - Add `spawn_local` constructor.
 
 # Version 1.0.0

@@ -182,7 +182,7 @@ webpki = "0.21"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
-async-std = { version = "1.5.0", features = ["attributes"] }
+async-std = { version = "1.6.0", features = ["attributes"] }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 handlebars = "2.0.0-beta.2"
 indoc = "0.3.3"
@@ -191,6 +191,7 @@ proc-macro2 = "1.0.9"
 quote = "1.0.2"
 simplelog = "0.7.5"
 signal-hook = "0.1.13"
+smol = "0.1.10"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
@@ -204,6 +205,8 @@ tokio = "0.1.22"
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
+futures-timer = { path = "tiny_mirrors/futures-timer" }
+js-sys = { path = "tiny_mirrors/js-sys" }
 libm = { path = "tiny_mirrors/libm" }
 memchr = { path = "tiny_mirrors/memchr" }
 nom_locate = { path = "tiny_mirrors/nom_locate" }
@@ -211,7 +214,9 @@ pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
+wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
 web-sys = { path = "tiny_mirrors/web-sys" }
+wepoll-binding = { path = "tiny_mirrors/wepoll-binding" }
 winapi = { path = "tiny_mirrors/winapi" }
 winapi-util = { path = "tiny_mirrors/winapi-util" }
 
@@ -283,6 +288,9 @@ rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=me
 
 [[gn.crate.mime_guess."1.8.6"]]
 env_vars = ["OUT_DIR=../../../compat/mime_guess"]
+
+[[gn.crate.nix."0.17.0"]] 
+rustflags = []
 
 [[gn.crate.num-bigint."0.2.2"]]
 rustflags = ["--cfg=has_i128"]

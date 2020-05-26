@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://book.async.rs/overview
 
 ## [Unreleased]
 
+# [1.6.0] - 2020-05-22
+
+See `1.6.0-beta.1` and `1.6.0-beta.2`.
+
+# [1.6.0-beta.2] - 2020-05-19
+
+## Added 
+
+- Added an environment variable to configure the thread pool size of the runtime. ([#774](https://github.com/async-rs/async-std/pull/774))
+- Implement `Clone` for `UnixStream` ([#772](https://github.com/async-rs/async-std/pull/772))
+
+## Changed
+
+- For `wasm`, switched underlying `Timer` implementation to [`futures-timer`](https://github.com/async-rs/futures-timer). ([#776](https://github.com/async-rs/async-std/pull/776))
+
+## Fixed
+
+- Use `smol::block_on` to handle drop of `File`, avoiding nested executor panic. ([#768](https://github.com/async-rs/async-std/pull/768))
+
+# [1.6.0-beta.1] - 2020-05-07
+
+## Added
+
+- Added `task::spawn_local`. ([#757](https://github.com/async-rs/async-std/pull/757))
+- Added out of the box support for `wasm`. ([#757](https://github.com/async-rs/async-std/pull/757))
+- Added `JoinHandle::cancel` ([#757](https://github.com/async-rs/async-std/pull/757))
+- Added `sync::Condvar` ([#369](https://github.com/async-rs/async-std/pull/369))
+- Added `sync::Sender::try_send` and `sync::Receiver::try_recv` ([#585](https://github.com/async-rs/async-std/pull/585))
+- Added `no_std` support for `task`, `future` and `stream` ([#680](https://github.com/async-rs/async-std/pull/680))
+
+## Changed
+
+- Switched underlying runtime to [`smol`](https://github.com/stjepang/smol/). ([#757](https://github.com/async-rs/async-std/pull/757))
+- Switched implementation of `sync::Barrier` to use `sync::Condvar` like `std` does. ([#581](https://github.com/async-rs/async-std/pull/581))
+
+## Fixed
+
+- Allow compilation on 32 bit targets, by using `AtomicUsize` for `TaskId`. ([#756](https://github.com/async-rs/async-std/pull/756))
+
 # [1.5.0] - 2020-02-03
 
 [API Documentation](https://docs.rs/async-std/1.5.0/async-std)
@@ -677,7 +716,10 @@ task::blocking(async {
 
 - Initial beta release
 
-[Unreleased]: https://github.com/async-rs/async-std/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/async-rs/async-std/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/async-rs/async-std/compare/v1.5.0...v1.6.0
+[1.6.0-beta.2]: https://github.com/async-rs/async-std/compare/v1.6.0-beta.1...v1.6.0-beta.2
+[1.6.0-beta.1]: https://github.com/async-rs/async-std/compare/v1.5.0...v1.6.0-beta.1
 [1.5.0]: https://github.com/async-rs/async-std/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/async-rs/async-std/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/async-rs/async-std/compare/v1.2.0...v1.3.0

@@ -8,13 +8,12 @@ use core::task::{Context, Poll, Waker};
 
 use crate::header::Header;
 use crate::state::*;
-use crate::utils::abort_on_panic;
 
 /// A handle that awaits the result of a task.
 ///
 /// This type is a future that resolves to an `Option<R>` where:
 ///
-/// * `None` indicates the task has panicked or was cancelled.
+/// * `None` indicates the task has panicked or was canceled.
 /// * `Some(result)` indicates the task has completed with `result` of type `R`.
 pub struct JoinHandle<R, T> {
     /// A raw task pointer.
@@ -34,7 +33,7 @@ impl<R, T> JoinHandle<R, T> {
     ///
     /// If the task has already completed, calling this method will have no effect.
     ///
-    /// When a task is cancelled, its future will not be polled again.
+    /// When a task is canceled, its future will not be polled again.
     pub fn cancel(&self) {
         let ptr = self.raw_task.as_ptr();
         let header = ptr as *const Header;
@@ -43,7 +42,7 @@ impl<R, T> JoinHandle<R, T> {
             let mut state = (*header).state.load(Ordering::Acquire);
 
             loop {
-                // If the task has been completed or closed, it can't be cancelled.
+                // If the task has been completed or closed, it can't be canceled.
                 if state & (COMPLETED | CLOSED) != 0 {
                     break;
                 }
@@ -199,6 +198,23 @@ impl<R, T> Future for JoinHandle<R, T> {
             loop {
                 // If the task has been closed, notify the awaiter and return `None`.
                 if state & CLOSED != 0 {
+                    // If the task is scheduled or running, we need to wait until its future is
+                    // dropped.
+                    if state & (SCHEDULED | RUNNING) != 0 {
+                        // Replace the waker with one associated with the current task.
+                        (*header).register(cx.waker());
+
+                        // Reload the state after registering. It is possible changes occurred just
+                        // before registration so we need to check for that.
+                        state = (*header).state.load(Ordering::Acquire);
+
+                        // If the task is still scheduled or running, we need to wait because its
+                        // future is not dropped yet.
+                        if state & (SCHEDULED | RUNNING) != 0 {
+                            return Poll::Pending;
+                        }
+                    }
+
                     // Even though the awaiter is most likely the current task, it could also be
                     // another task.
                     (*header).notify(Some(cx.waker()));
@@ -207,21 +223,16 @@ impl<R, T> Future for JoinHandle<R, T> {
 
                 // If the task is not completed, register the current task.
                 if state & COMPLETED == 0 {
-                    // Replace the waker with one associated with the current task. We need a
-                    // safeguard against panics because dropping the previous waker can panic.
-                    abort_on_panic(|| {
-                        (*header).register(cx.waker());
-                    });
+                    // Replace the waker with one associated with the current task.
+                    (*header).register(cx.waker());
 
                     // Reload the state after registering. It is possible that the task became
                     // completed or closed just before registration so we need to check for that.
                     state = (*header).state.load(Ordering::Acquire);
 
-                    // If the task has been closed, return `None`. We do not need to notify the
-                    // awaiter here, since we have replaced the waker above, and the executor can
-                    // only set it back to `None`.
+                    // If the task has been closed, restart.
                     if state & CLOSED != 0 {
-                        return Poll::Ready(None);
+                        continue;
                     }
 
                     // If the task is still not completed, we're blocked on it.

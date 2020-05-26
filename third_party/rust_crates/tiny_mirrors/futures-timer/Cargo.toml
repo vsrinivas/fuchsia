@@ -1,0 +1,7 @@
+[package]
+name = "futures-timer"
+version = "3.0.2"
+authors = ["The Fuchsia Authors <rust-fuchsia@fuchsia.com>"]
+
+[features]
+wasm-bindgen = []
