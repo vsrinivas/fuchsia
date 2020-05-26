@@ -37,7 +37,7 @@ pub struct StreamWithEpitaph<S, E> {
 // implementation. The bounds can be relaxed if !Unpin support is desired.
 impl<S, T, E> Stream for StreamWithEpitaph<S, E>
 where
-    S: Stream<Item = T> + FusedStream + Unpin,
+    S: Stream<Item = T> + Unpin,
     E: Unpin,
     T: Unpin,
 {
