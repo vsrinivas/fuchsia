@@ -4,6 +4,7 @@
 
 # Entry point for all general purpose GN templates for building and testing
 # Fuchsia components.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 import("fuchsia_component.gni")
 import("fuchsia_cpp_component.gni")
 import("fuchsia_cpp_unittest.gni")

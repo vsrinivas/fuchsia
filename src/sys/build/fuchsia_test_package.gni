@@ -7,6 +7,7 @@ import("//src/sys/build/fuchsia_test.gni")
 
 # Defines a Fuchsia package that contains one or more components, some of which
 # implement one or more tests, and specifies how to run tests.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
 # Example:
 # ```

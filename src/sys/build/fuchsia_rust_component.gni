@@ -5,7 +5,7 @@
 import("//src/sys/build/fuchsia_component.gni")
 
 # Defines a Fuchsia component that contains a Rust program.
-# See: https://fuchsia.dev/fuchsia-src/glossary#component
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
 # This template is a combination of `fuchsia_component()` and `rustc_binary()`.
 # It takes the same parameters as `fuchsia_component()` does, and forwards the

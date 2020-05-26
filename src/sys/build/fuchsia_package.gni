@@ -6,7 +6,7 @@ import("//build/images/manifest.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Defines a Fuchsia package.
-# See: https://fuchsia.dev/fuchsia-src/glossary#fuchsia-package
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
 # Fuchsia packages are a collection of any number of files (or resources), each
 # with a unique path that is relative to the package's root.

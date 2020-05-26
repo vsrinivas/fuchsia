@@ -6,6 +6,7 @@ import("fuchsia_component.gni")
 import("fuchsia_test_package.gni")
 
 # Internal template. Do not use outside of fuchsia_*_unittest templates.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 template("fuchsia_unittest_internal") {
   if (defined(invoker.manifest_contents)) {
     generated_target = "${target_name}_generated_manifest"

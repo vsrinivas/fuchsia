@@ -6,7 +6,7 @@ import("//src/sys/cmc/build/cml.gni")
 import("//src/sys/cmc/build/cmx.gni")
 
 # Defines a Fuchsia component.
-# See: https://fuchsia.dev/fuchsia-src/glossary#component
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
 # A component is defined by a component manifest.
 # Component manifests typically reference files in the package that they are

@@ -5,6 +5,7 @@
 import("//build/testing/test_spec.gni")
 
 # Defines a test that runs on a Fuchsia device.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
 # Invoking this template registers a component and a package such that running
 # the test would involve pushing the package to a Fuchsia device, launching the

@@ -3,6 +3,8 @@
 GN templates for defining Fuchsia components and packages for production and
 testing.
 
+See: [https://fuchsia.dev/fuchsia-src/development/components/build]
+
 ## Using
 
 Add this line to your `BUILD.gn` file:

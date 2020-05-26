@@ -5,6 +5,7 @@
 import("fuchsia_unittest_internal.gni")
 
 # Defines a Rust test to be used as a unit test on Fuchsia.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
 #
 # This template is a useful shortcut for defining Rust unit tests for target
 # devices. Pure unit tests don't require any special capabilities, so their
