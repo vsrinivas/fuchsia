@@ -4,8 +4,14 @@
             "injected-services": {
                 "fuchsia.deprecatedtimezone.Timezone": "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx",
                 "fuchsia.devicesettings.DeviceSettingsManager": "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
-                "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl_services#meta/intl_services.cmx",
-                "fuchsia.settings.Intl": "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
+                "fuchsia.intl.PropertyProvider": [
+                    "fuchsia-pkg://fuchsia.com/intl_services#meta/intl_services.cmx",
+                    "--verbose=4"
+                ],
+                "fuchsia.settings.Intl": [
+                    "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
+                    "--verbose=4"
+                ],
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
             }
         }

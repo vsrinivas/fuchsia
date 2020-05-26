@@ -11,11 +11,17 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 
 using intl::IntlPropertyProviderImpl;
 
-int main() {
+int main(int argc, char** argv) {
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+    exit(EXIT_FAILURE);
+  }
   syslog::SetTags({"intl_services"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   std::unique_ptr<sys::ComponentContext> context =

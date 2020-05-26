@@ -59,11 +59,21 @@ class IntlServicesTest : public sys::testing::TestWithEnvironment {
 };
 
 TEST_F(IntlServicesTest, AsyncSetThenGet) {
-  IntlSettings settings;
-  settings.set_locales({LocaleId{.id = "ru-RU"}});
-  settings.set_time_zone_id(TimeZoneId{.id = "Europe/Moscow"});
-  settings.set_temperature_unit(TemperatureUnit::CELSIUS);
-  settings.set_hour_cycle(HourCycle::H23);
+  // Run a dummy GetProfile first, to ensure the event loop is ran until the
+  // binding from this test's client is registered with the server.  This avoids
+  // a data race between the binding and the notification that may happen below.
+  // if the first OnChange event is sent out to the server before a binding
+  // exists, causing this test to miss the OnChange notification.
+  bool dummy_get_completed{};
+  auto dummy_get_callback = [&](fuchsia::intl::Profile res) {
+    dummy_get_completed = true;
+  };
+  intl_property_provider_->GetProfile(dummy_get_callback);
+  RunLoopUntil([&] {
+    return dummy_get_completed || FIDLError() || Timeout();
+  });
+  ASSERT_FALSE(FIDLError());
+  ASSERT_FALSE(Timeout());
 
   Profile get_result;
   bool get_completed{};
@@ -86,6 +96,13 @@ TEST_F(IntlServicesTest, AsyncSetThenGet) {
     set_result = std::move(res);
     set_completed = true;
   };
+
+  IntlSettings settings;
+  settings.set_locales({LocaleId{.id = "ru-RU"}});
+  settings.set_time_zone_id(TimeZoneId{.id = "Europe/Moscow"});
+  settings.set_temperature_unit(TemperatureUnit::CELSIUS);
+  settings.set_hour_cycle(HourCycle::H23);
+
   settings_intl_->Set(std::move(settings), set_callback);
   RunLoopUntil([&] {
     return (set_completed && get_completed && on_change_completed) || FIDLError() || Timeout();

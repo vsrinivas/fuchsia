@@ -29,6 +29,7 @@ executable("intl_services_bin") {
     "//sdk/fidl/fuchsia.setui",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl:fxl",
     "//src/lib/intl/intl_property_provider_impl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
