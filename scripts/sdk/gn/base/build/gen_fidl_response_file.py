@@ -77,7 +77,7 @@ def main(args_list=None):
         response_file.append("--tables %s" % args.tables)
 
     if args.c_header:
-        response_file.append("--c-header %s" % args.c_header)
+        response_file.append("--fuchsia-only-c-header %s" % args.c_header)
 
     if args.name:
         response_file.append("--name %s" % args.name)

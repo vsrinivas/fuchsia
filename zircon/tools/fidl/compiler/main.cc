@@ -33,26 +33,32 @@ namespace {
 
 void Usage() {
   std::cout
-      << "usage: fidlc [--c-header HEADER_PATH]\n"
-         "             [--c-client CLIENT_PATH]\n"
-         "             [--c-server SERVER_PATH]\n"
+      << "usage: fidlc [--fuchsia-only-c-header HEADER_PATH]\n"
+         "             [--fuchsia-only-c-client CLIENT_PATH]\n"
+         "             [--fuchsia-only-c-server SERVER_PATH]\n"
          "             [--tables TABLES_PATH]\n"
          "             [--json JSON_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
-         "             [--werror]\n"
-         "             [--format=[text|json]]\n"
+         "             [--experimental FLAG_NAME]\n"
          "             [--json-schema]\n"
+         "             [--format=[text|json]]\n"
+         "             [--werror]\n"
          "             [--files [FIDL_FILE...]...]\n"
          "             [--help]\n"
          "\n"
-         " * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output\n"
-         "   a C header at the given path.\n"
+         " * `--fuchsia-only-c-header HEADER_PATH`. If present, this flag instructs `fidlc` to\n"
+         "    output a C header at the given path. This should only be used in the fuchsia.git "
+         "repo\n"
          "\n"
-         " * `--c-client CLIENT_PATH`. If present, this flag instructs `fidlc` to output\n"
-         "   the simple C client implementation at the given path.\n"
+         " * `--fuchsia-only-c-client CLIENT_PATH`. If present, this flag instructs `fidlc` to\n"
+         "    output the simple C client implementation at the given path. This should only be "
+         "used\n"
+         "    in the fuchsia.git repo.\n"
          "\n"
-         " * `--c-server SERVER_PATH`. If present, this flag instructs `fidlc` to output\n"
-         "   the simple C server implementation at the given path.\n"
+         " * `--fuchsia-only-c-server SERVER_PATH`. If present, this flag instructs `fidlc` to\n"
+         "   output the simple C server implementation at the given path. This should only be "
+         "used\n"
+         "   in the fuchsia.git repo.\n"
          "\n"
          " * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output\n"
          "   coding tables at the given path. The coding tables are required to encode and\n"
@@ -71,12 +77,6 @@ void Usage() {
          " * `--experimental FLAG_NAME`. If present, this flag enables an experimental\n"
          "    feature of fidlc.\n"
          "\n"
-         " * `--files [FIDL_FILE...]...`. Each `--file [FIDL_FILE...]` chunk of arguments\n"
-         "   describes a library, all of which must share the same top-level library name\n"
-         "   declaration. Libraries must be presented in dependency order, with later\n"
-         "   libraries able to use declarations from preceding libraries but not vice versa.\n"
-         "   Output is only generated for the final library, not for each of its dependencies.\n"
-         "\n"
          " * `--json-schema`. If present, this flag instructs `fidlc` to output the\n"
          "   JSON schema of the intermediate representation.\n"
          "\n"
@@ -85,6 +85,12 @@ void Usage() {
          "    plain text (the default), or as JSON.\n"
          "\n"
          " * `--werror`. Treats warnings as errors.\n"
+         "\n"
+         " * `--files [FIDL_FILE...]...`. Each `--file [FIDL_FILE...]` chunk of arguments\n"
+         "   describes a library, all of which must share the same top-level library name\n"
+         "   declaration. Libraries must be presented in dependency order, with later\n"
+         "   libraries able to use declarations from preceding libraries but not vice versa.\n"
+         "   Output is only generated for the final library, not for each of its dependencies.\n"
          "\n"
          " * `--help`. Prints this help, and exit immediately.\n"
          "\n"
@@ -327,13 +333,13 @@ int main(int argc, char* argv[]) {
         FailWithUsage("Unknown value for flag `format` %s\n", format_value.data());
       }
       format = format_value;
-    } else if (behavior_argument == "--c-header") {
+    } else if (behavior_argument == "--fuchsia-only-c-header") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCHeader, path));
-    } else if (behavior_argument == "--c-client") {
+    } else if (behavior_argument == "--fuchsia-only-c-client") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCClient, path));
-    } else if (behavior_argument == "--c-server") {
+    } else if (behavior_argument == "--fuchsia-only-c-server") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCServer, path));
     } else if (behavior_argument == "--tables") {

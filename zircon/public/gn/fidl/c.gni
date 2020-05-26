@@ -22,16 +22,16 @@ fidl_support_fidlc = [
     name = "c"
     files = [
       {
-        switch = "--c-header"
+        switch = "--fuchsia-only-c-header"
         path_prefix = "include/"
         path_suffix = "/c/fidl.h"
       },
       {
-        switch = "--c-client"
+        switch = "--fuchsia-only-c-client"
         path = "client.c"
       },
       {
-        switch = "--c-server"
+        switch = "--fuchsia-only-c-server"
         path = "server.c"
       },
     ]

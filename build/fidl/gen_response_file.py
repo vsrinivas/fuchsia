@@ -79,13 +79,13 @@ def main():
         response_file.append("--tables %s" % args.tables)
 
     if args.c_client:
-        response_file.append("--c-client %s" % args.c_client)
+        response_file.append("--fuchsia-only-c-client %s" % args.c_client)
 
     if args.c_header:
-        response_file.append("--c-header %s" % args.c_header)
+        response_file.append("--fuchsia-only-c-header %s" % args.c_header)
 
     if args.c_server:
-        response_file.append("--c-server %s" % args.c_server)
+        response_file.append("--fuchsia-only-c-server %s" % args.c_server)
 
     if args.name:
         response_file.append("--name %s" % args.name)
