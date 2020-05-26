@@ -12,6 +12,7 @@
 //! [openthread-spinel]: https://github.com/openthread/openthread/blob/master/src/lib/spinel/spinel.h
 
 use spinel_pack::*;
+
 use std::io;
 
 #[allow(unused)]
@@ -110,6 +111,7 @@ pub enum Cmd {
     PropValueIs,
     PropValueInserted,
     PropValueRemoved,
+    NetSave,
     NetClear,
     NetRecall,
     Unknown(u32),
@@ -130,6 +132,7 @@ impl From<Cmd> for u32 {
             PropValueIs => 6,
             PropValueInserted => 7,
             PropValueRemoved => 8,
+            NetSave => 9,
             NetClear => 10,
             NetRecall => 11,
             Unknown(x) => x,
@@ -150,6 +153,7 @@ impl From<u32> for Cmd {
             6 => PropValueIs,
             7 => PropValueInserted,
             8 => PropValueRemoved,
+            9 => NetSave,
             10 => NetClear,
             11 => NetRecall,
             x => Unknown(x),
@@ -202,7 +206,18 @@ impl_sub_enum!(Prop::Phy, PropPhy);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum PropMac {
+    ScanState,
+    ScanMask,
+    ScanPeriod,
+    ScanBeacon,
     LongAddr,
+    ShortAddr,
+    Panid,
+    RawStreamEnabled,
+    PromiscuousMode,
+    EnergyScanResult,
+    DataPollPeriod,
+
     Unknown(u32),
 }
 impl_sub_enum!(Prop::Mac, PropMac);
@@ -353,7 +368,17 @@ impl From<Prop> for u32 {
             Phy(PropPhy::ChanPreferred) => 0x29,
             Phy(PropPhy::Unknown(x)) => x,
 
+            Mac(PropMac::ScanState) => 0x30,
+            Mac(PropMac::ScanMask) => 0x31,
+            Mac(PropMac::ScanPeriod) => 0x32,
+            Mac(PropMac::ScanBeacon) => 0x33,
             Mac(PropMac::LongAddr) => 0x34,
+            Mac(PropMac::ShortAddr) => 0x35,
+            Mac(PropMac::Panid) => 0x36,
+            Mac(PropMac::RawStreamEnabled) => 0x37,
+            Mac(PropMac::PromiscuousMode) => 0x38,
+            Mac(PropMac::EnergyScanResult) => 0x39,
+            Mac(PropMac::DataPollPeriod) => 0x3a,
             Mac(PropMac::Unknown(x)) => x,
 
             Net(PropNet::Saved) => 0x40,
@@ -462,7 +487,17 @@ impl From<u32> for Prop {
             0x29 => Phy(PropPhy::ChanPreferred),
             x if (x >= 0x20 && x < 0x30) || (x >= 0x1200 && x < 0x1300) => Phy(PropPhy::Unknown(x)),
 
+            0x30 => Mac(PropMac::ScanState),
+            0x31 => Mac(PropMac::ScanMask),
+            0x32 => Mac(PropMac::ScanPeriod),
+            0x33 => Mac(PropMac::ScanBeacon),
             0x34 => Mac(PropMac::LongAddr),
+            0x35 => Mac(PropMac::ShortAddr),
+            0x36 => Mac(PropMac::Panid),
+            0x37 => Mac(PropMac::RawStreamEnabled),
+            0x38 => Mac(PropMac::PromiscuousMode),
+            0x39 => Mac(PropMac::EnergyScanResult),
+            0x3a => Mac(PropMac::DataPollPeriod),
             x if (x >= 0x30 && x < 0x40) || (x >= 0x1300 && x < 0x1400) => Mac(PropMac::Unknown(x)),
 
             0x40 => Net(PropNet::Saved),
@@ -707,6 +742,91 @@ impl From<u32> for Status {
 
             x if x >= 15360 && x < 16384 => Vendor(x),
             x if x >= 16384 && x < 81920 => StackNative(x),
+            x => Unknown(x),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum NetRole {
+    Detached,
+    Child,
+    Router,
+    Leader,
+    Unknown(u32),
+}
+impl_spinel_pack_uint!(NetRole);
+impl_spinel_unpack_uint!(NetRole);
+
+impl std::fmt::Display for NetRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl From<NetRole> for u32 {
+    fn from(role: NetRole) -> Self {
+        use NetRole::*;
+        match role {
+            Detached => 0,
+            Child => 1,
+            Router => 2,
+            Leader => 3,
+
+            Unknown(x) => x,
+        }
+    }
+}
+
+impl From<u32> for NetRole {
+    fn from(id: u32) -> Self {
+        use NetRole::*;
+        match id {
+            0 => Detached,
+            1 => Child,
+            2 => Router,
+            3 => Leader,
+            x => Unknown(x),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum InterfaceType {
+    Bootloader,
+    ZigbeeIp,
+    Thread,
+    Unknown(u32),
+}
+impl_spinel_pack_uint!(InterfaceType);
+impl_spinel_unpack_uint!(InterfaceType);
+
+impl std::fmt::Display for InterfaceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl From<InterfaceType> for u32 {
+    fn from(x: InterfaceType) -> Self {
+        use InterfaceType::*;
+        match x {
+            Bootloader => 0,
+            ZigbeeIp => 2,
+            Thread => 3,
+
+            Unknown(x) => x,
+        }
+    }
+}
+
+impl From<u32> for InterfaceType {
+    fn from(id: u32) -> Self {
+        use InterfaceType::*;
+        match id {
+            0 => Bootloader,
+            2 => ZigbeeIp,
+            3 => Thread,
             x => Unknown(x),
         }
     }

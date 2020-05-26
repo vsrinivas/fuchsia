@@ -61,6 +61,17 @@ pub fn new_fake_spinel_pair() -> (
                 )
                 .unwrap();
             }
+            Prop::InterfaceType => {
+                spinel_write!(
+                    &mut response,
+                    "Ciii",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    InterfaceType::Thread
+                )
+                .unwrap();
+            }
             Prop::Net(PropNet::Saved) => {
                 spinel_write!(&mut response, "Ciib", frame.header, Cmd::PropValueIs, prop, false)
                     .unwrap();
@@ -72,6 +83,17 @@ pub fn new_fake_spinel_pair() -> (
             Prop::Net(PropNet::StackUp) => {
                 spinel_write!(&mut response, "Ciib", frame.header, Cmd::PropValueIs, prop, false)
                     .unwrap();
+            }
+            Prop::Net(PropNet::Role) => {
+                spinel_write!(
+                    &mut response,
+                    "Ciii",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    NetRole::Detached
+                )
+                .unwrap();
             }
             Prop::Phy(PropPhy::ChanSupported) => {
                 spinel_write!(
