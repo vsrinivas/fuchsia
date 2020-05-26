@@ -422,7 +422,6 @@ void main(List<String> args) {
 
     expect(computeMean(results[0].values), _closeTo(4.405753983333));
     expect(computeMean(results[1].values), _closeTo(6.072069499999));
-    expect(computeMean(results[2].values), _closeTo(4.072828216666666));
   });
 
   test('DRM FPS metric', () async {
