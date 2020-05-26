@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
@@ -59,6 +60,8 @@ class BaseRenderer : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
+  ClockReference reference_clock() const { return reference_clock_ref_; }
+
  protected:
   BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
                Context* context);
@@ -87,11 +90,10 @@ class BaseRenderer : public AudioObject,
   // Minimum Lead Time state
   zx::duration min_lead_time_;
 
- protected:
-  const zx::clock& optimal_clock() const { return optimal_clock_; }
-  const zx::clock& reference_clock() const { return reference_clock_; }
+  const zx::clock& optimal_clock() { return optimal_clock_; }
   void set_optimal_clock(zx::clock optimal_clock) { optimal_clock_ = std::move(optimal_clock); }
   void set_reference_clock(zx::clock ref_clock) { reference_clock_ = std::move(ref_clock); }
+
   fidl::Binding<fuchsia::media::AudioRenderer>& binding() { return audio_renderer_binding_; }
 
  private:
@@ -143,6 +145,7 @@ class BaseRenderer : public AudioObject,
   // Whether default, optimal or custom clock, audio_core will treat this as not-rate-adjustable
   // (although if set to the optimal_clock_, tuning of that clock will be reflected here)
   zx::clock reference_clock_;
+  ClockReference reference_clock_ref_ = ClockReference::MakeReadonly(reference_clock_);
 };
 
 }  // namespace media::audio

@@ -7,8 +7,10 @@
 #include <lib/async/cpp/time.h>
 
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/packet.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio::testing {
 namespace {
@@ -38,7 +40,9 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::option
       format_(format),
       usage_(usage),
       packet_factory_(dispatcher, *format, 2 * PAGE_SIZE),
-      link_matrix_(*link_matrix) {}
+      link_matrix_(*link_matrix),
+      clock_mono_(clock::CloneOfMonotonic()),
+      ref_clock_(ClockReference::MakeReadonly(clock_mono_)) {}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
                                            fit::closure callback) {

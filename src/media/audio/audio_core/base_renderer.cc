@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -487,10 +488,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     // streams across multiple parallel outputs. In this mode we must update lead time upon changes
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
-    zx_time_t ref_now;
-    auto status = reference_clock_.read(&ref_now);
-    FX_DCHECK(status == ZX_OK) << "clock.read failed during Play";
-    auto ref_clock_now = zx::time(ref_now);
+    auto ref_clock_now = reference_clock().Read();
 
     reference_time = ref_clock_now + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
@@ -569,9 +567,7 @@ void BaseRenderer::Pause(PauseCallback callback) {
   }
 
   // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
-  zx_time_t ref_now;
-  auto status = reference_clock_.read(&ref_now);
-  FX_DCHECK(status == ZX_OK) << "clock.read failed during Pause";
+  zx_time_t ref_now = reference_clock().Read().get();
 
   pause_time_frac_frames_ =
       FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frames_->Apply(ref_now));
@@ -643,10 +639,8 @@ void BaseRenderer::ReportNewMinLeadTime() {
 void BaseRenderer::CreateOptimalReferenceClock() {
   TRACE_DURATION("audio", "BaseRenderer::CreateOptimalReferenceClock");
 
-  auto status =
-      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
-                        nullptr, &optimal_clock_);
-  FX_DCHECK(status == ZX_OK) << "Could not create the optimal clock";
+  optimal_clock_ = audio::clock::AdjustableCloneOfMonotonic();
+  FX_DCHECK(optimal_clock_.is_valid()) << "Optimal clock is not valid";
 }
 
 // For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
@@ -655,8 +649,9 @@ void BaseRenderer::CreateOptimalReferenceClock() {
 void BaseRenderer::EstablishDefaultReferenceClock() {
   TRACE_DURATION("audio", "BaseRenderer::EstablishDefaultReferenceClock");
 
-  auto status = audio::clock::DuplicateClock(optimal_clock_, &reference_clock_);
+  auto status = audio::clock::DuplicateClock(optimal_clock(), &reference_clock_);
   FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
+  FX_DCHECK(reference_clock_.is_valid()) << "Default reference clock is not valid";
 }
 
 // Regardless of the source of the reference clock, we can duplicate and return it here.
@@ -668,7 +663,7 @@ void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   zx::clock dupe_clock_for_client;
-  auto status = audio::clock::DuplicateClock(reference_clock_, &dupe_clock_for_client);
+  auto status = audio::clock::DuplicateClock(reference_clock().get(), &dupe_clock_for_client);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Could not duplicate the current reference clock handle";
     return;

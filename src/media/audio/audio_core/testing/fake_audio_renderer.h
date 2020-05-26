@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_RENDERER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
 #include <unordered_map>
@@ -13,6 +14,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
@@ -83,6 +85,8 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   LinkMatrix& link_matrix_;
+  zx::clock clock_mono_;
+  ClockReference ref_clock_;
 };
 
 }  // namespace media::audio::testing

@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -43,6 +44,9 @@ class AudioCapturerTest : public testing::ThreadingModelFixture {
     capturer_ = capturer.get();
     EXPECT_NE(capturer_, nullptr);
 
+    fidl_capturer_.set_error_handler(
+        [](auto status) { EXPECT_TRUE(status == ZX_OK) << "Capturer disconnected: " << status; });
+
     context().route_graph().AddCapturer(std::move(capturer));
   }
 
@@ -57,7 +61,16 @@ class AudioCapturerTest : public testing::ThreadingModelFixture {
     testing::ThreadingModelFixture::TearDown();
   }
 
- protected:
+  zx::clock GetReferenceClock() {
+    zx::clock fidl_clock;
+    fidl_capturer_->GetReferenceClock(
+        [&fidl_clock](zx::clock ref_clock) { fidl_clock = std::move(ref_clock); });
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(fidl_clock.is_valid());
+    return fidl_clock;
+  }
+
   AudioCapturer* capturer_;
   fuchsia::media::AudioCapturerPtr fidl_capturer_;
 
@@ -163,6 +176,30 @@ TEST_F(AudioCapturerTest, CanReleasePacketWithoutDroppingConnection) {
 
   // The RouteGraph should still own our capturer.
   EXPECT_FALSE(channel_dropped);
+}
+
+TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(capturer_->reference_clock().get().is_valid());
+
+  clock::testing::VerifyAdvances(fidl_clock);
+  clock::testing::VerifyAdvances(capturer_->reference_clock().get());
+}
+
+TEST_F(AudioCapturerTest, ReferenceClockIsReadOnly) {
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(capturer_->reference_clock().get().is_valid());
+
+  clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(capturer_->reference_clock().get());
+}
+
+TEST_F(AudioCapturerTest, DefaultClockIsClockMonotonic) {
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(capturer_->reference_clock().get().is_valid());
+
+  clock::testing::VerifyIsSystemMonotonic(fidl_clock);
+  clock::testing::VerifyIsSystemMonotonic(capturer_->reference_clock().get());
 }
 
 }  // namespace

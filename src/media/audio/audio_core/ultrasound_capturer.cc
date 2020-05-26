@@ -27,7 +27,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> UltrasoundCapturer::InitializeS
   }
 
   zx::clock reference_clock_out;
-  zx_status_t status = clock::DuplicateClock(reference_clock(), &reference_clock_out);
+  zx_status_t status = clock::DuplicateClock(reference_clock().get(), &reference_clock_out);
   if (status != ZX_OK) {
     return fit::error(status);
   }

@@ -5,6 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/clock.h>
 
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
@@ -240,6 +241,8 @@ TEST_F(AudioCapturerClockTest, OptimalReferenceClock) {
 }
 
 constexpr auto kClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+// Set a recognizable custom reference clock -- should be what we receive from GetReferenceClock.
+// Also, the clock received from GetRefClock is read-only, but the original can still be adjusted.
 TEST_F(AudioCapturerClockTest, CustomReferenceClock) {
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
@@ -274,11 +277,8 @@ TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoTransferRightShouldCauseNo
 
   //
   // Now create another clock without transfer rights...
-  zx::clock no_transfer_clock;
-  EXPECT_EQ(
-      zx::clock::create(ZX_CLOCK_OPT_AUTO_START | ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS,
-                        nullptr, &no_transfer_clock),
-      ZX_OK);
+  zx::clock no_transfer_clock = clock::CloneOfMonotonic();
+  ASSERT_TRUE(no_transfer_clock.is_valid());
   ASSERT_EQ(no_transfer_clock.replace(kClockRights & ~ZX_RIGHT_TRANSFER, &no_transfer_clock),
             ZX_OK);
   clock::testing::VerifyNotSame(received_clock, no_transfer_clock);
@@ -310,6 +310,16 @@ TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoReadRightShouldDisconnect)
   audio_capturer_->SetReferenceClock(std::move(dupe_clock));
 
   ExpectDisconnect();
+}
+
+// If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
+TEST_F(AudioCapturerClockTest, CustomReferenceClock_GetReferenceClockRemovesWriteRight) {
+  auto orig_clock = clock::AdjustableCloneOfMonotonic();
+  audio_capturer_->SetReferenceClock(std::move(orig_clock));
+
+  zx::clock received_clock = GetAndValidateReferenceClock();
+  EXPECT_TRUE(received_clock.is_valid());
+  clock::testing::VerifyReadOnlyRights(received_clock);
 }
 
 }  // namespace media::audio::test

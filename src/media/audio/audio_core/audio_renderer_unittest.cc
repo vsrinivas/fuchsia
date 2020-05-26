@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
+#include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -36,6 +37,9 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
 
     renderer_ = AudioRenderer::Create(fidl_renderer_.NewRequest(), &context());
     EXPECT_NE(renderer_.get(), nullptr);
+
+    fidl_renderer_.set_error_handler(
+        [](auto status) { EXPECT_TRUE(status == ZX_OK) << "Renderer disconnected: " << status; });
   }
 
   fuchsia::media::AudioStreamType PcmStreamType() {
@@ -71,7 +75,16 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
     testing::ThreadingModelFixture::TearDown();
   }
 
- protected:
+  zx::clock GetReferenceClock() {
+    zx::clock fidl_clock;
+    fidl_renderer_->GetReferenceClock(
+        [&fidl_clock](zx::clock ref_clock) { fidl_clock = std::move(ref_clock); });
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(fidl_clock.is_valid());
+    return fidl_clock;
+  }
+
   fuchsia::media::AudioRendererPtr fidl_renderer_;
   std::shared_ptr<AudioRenderer> renderer_;
 
@@ -233,6 +246,30 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
   buf = std::nullopt;
   RunLoopUntilIdle();
 }
+
+TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(renderer_->reference_clock().get().is_valid());
+
+  clock::testing::VerifyAdvances(fidl_clock);
+  clock::testing::VerifyAdvances(renderer_->reference_clock().get());
+}
+
+TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(renderer_->reference_clock().get().is_valid());
+
+  clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(renderer_->reference_clock().get());
+}
+
+TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
+  auto fidl_clock = GetReferenceClock();
+  ASSERT_TRUE(renderer_->reference_clock().get().is_valid());
+
+  clock::testing::VerifyIsSystemMonotonic(fidl_clock);
+  clock::testing::VerifyIsSystemMonotonic(renderer_->reference_clock().get());
+}  // namespace
 
 }  // namespace
 }  // namespace media::audio

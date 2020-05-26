@@ -19,6 +19,7 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/clock_reference.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
@@ -31,6 +32,9 @@
 namespace media::audio {
 
 class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
+ public:
+  ClockReference reference_clock() const { return reference_clock_ref_; }
+
  protected:
   using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
   BaseCapturer(std::optional<Format> format,
@@ -128,11 +132,10 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
                          std::shared_ptr<ReadableStream> stream) override;
   void OnLinkAdded() override;
 
- protected:
-  const zx::clock& optimal_clock() const { return optimal_clock_; }
-  const zx::clock& reference_clock() const { return reference_clock_; }
+  const zx::clock& optimal_clock() { return optimal_clock_; }
   void set_optimal_clock(zx::clock optimal_clock) { optimal_clock_ = std::move(optimal_clock); }
   void set_reference_clock(zx::clock ref_clock) { reference_clock_ = std::move(ref_clock); }
+
   fidl::Binding<fuchsia::media::AudioCapturer>& binding() { return binding_; }
 
  private:
@@ -184,10 +187,10 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
 
   void RecomputeMinFenceTime();
 
-  TimelineRate dest_frames_to_clock_mono_rate() {
+  TimelineRate dest_frames_to_ref_clock_rate() {
     return TimelineRate(ZX_SEC(1), format_.frames_per_second());
   }
-  TimelineRate fractional_dest_frames_to_clock_mono_rate() {
+  TimelineRate fractional_dest_frames_to_ref_clock_rate() {
     return TimelineRate(ZX_SEC(1),
                         FractionalFrames<int64_t>(format_.frames_per_second()).raw_value());
   }
@@ -223,7 +226,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::vector<LinkMatrix::LinkHandle> source_links_ FXL_GUARDED_BY(mix_domain_->token());
 
   // Capture bookkeeping
-  fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_dest_frames_ =
+  fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_dest_frames_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
@@ -243,6 +246,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   // Whether default, optimal or custom clock, audio_core will treat this as not-rate-adjustable
   // (although if set to the optimal_clock_, tuning of that clock will be reflected here)
   zx::clock reference_clock_;
+  ClockReference reference_clock_ref_ = ClockReference::MakeReadonly(reference_clock_);
 };
 
 }  // namespace media::audio

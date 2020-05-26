@@ -6,6 +6,7 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
@@ -799,11 +800,8 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock_NoTransferRightShouldCauseNo
 
   //
   // Now create another clock without transfer rights...
-  zx::clock no_transfer_clock;
-  EXPECT_EQ(
-      zx::clock::create(ZX_CLOCK_OPT_AUTO_START | ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS,
-                        nullptr, &no_transfer_clock),
-      ZX_OK);
+  zx::clock no_transfer_clock = clock::CloneOfMonotonic();
+  ASSERT_TRUE(no_transfer_clock.is_valid());
   ASSERT_EQ(no_transfer_clock.replace(kClockRights & ~ZX_RIGHT_TRANSFER, &no_transfer_clock),
             ZX_OK);
   clock::testing::VerifyNotSame(received_clock, no_transfer_clock);
@@ -835,6 +833,16 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock_NoReadRightShouldDisconnect)
   audio_renderer_->SetReferenceClock(std::move(dupe_clock));
 
   ExpectDisconnect();
+}
+
+// If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
+TEST_F(AudioRendererClockTest, CustomReferenceClock_GetRefClkRemovesWriteRight) {
+  auto orig_clock = clock::AdjustableCloneOfMonotonic();
+  audio_renderer_->SetReferenceClock(std::move(orig_clock));
+
+  zx::clock received_clock = GetAndValidateReferenceClock();
+  EXPECT_TRUE(received_clock.is_valid());
+  clock::testing::VerifyReadOnlyRights(received_clock);
 }
 
 }  // namespace media::audio::test

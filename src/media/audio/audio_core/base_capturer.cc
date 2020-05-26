@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -31,7 +32,6 @@ namespace {
 // to WARNING or higher, we throttle these even more, specified by kCaptureOverflowErrorInterval.
 // To disable all logging of client-side overflows, set kLogCaptureOverflow to false.
 //
-// Note: by default we set NDEBUG builds to WARNING and DEBUG builds to INFO.
 static constexpr bool kLogCaptureOverflow = true;
 static constexpr uint16_t kCaptureOverflowTraceInterval = 1;
 static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
@@ -80,6 +80,7 @@ BaseCapturer::BaseCapturer(
   // the device where the capturer is initially routed.
   CreateOptimalReferenceClock();
   EstablishDefaultReferenceClock();
+
   zx_status_t status =
       finish_buffers_wakeup_.Activate(context_.threading_model().FidlDomain().dispatcher(),
                                       [this](WakeupEvent* event) -> zx_status_t {
@@ -545,7 +546,7 @@ zx_status_t BaseCapturer::Process() {
 
         // If we don't know our timeline transformation, then the next buffer we produce is
         // guaranteed to be discontinuous relative to the previous one (if any).
-        if (!clock_mono_to_fractional_dest_frames_->get().first.invertible()) {
+        if (!ref_clock_to_fractional_dest_frames_->get().first.invertible()) {
           p.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
         }
 
@@ -571,12 +572,12 @@ zx_status_t BaseCapturer::Process() {
     // 1) We are operating in synchronous mode and our user is not supplying buffers fast enough.
     // 2) We are starting up in asynchronous mode and have not queued our first buffer yet.
     //
-    // Either way, invalidate the frames_to_clock_mono transformation and make sure we don't have a
+    // Either way, invalidate the frames_to_ref_clock transformation and make sure we don't have a
     // wakeup timer pending. Then, if we are in synchronous mode, simply get out. If we are in
     // asynchronous mode, reset our async ring buffer state, add a new pending capture buffer to the
     // queue, and restart the main Process loop.
     if (mix_target == nullptr) {
-      clock_mono_to_fractional_dest_frames_->Update(TimelineFunction());
+      ref_clock_to_fractional_dest_frames_->Update(TimelineFunction());
       frame_count_ = 0;
       mix_timer_.Cancel();
 
@@ -599,14 +600,14 @@ zx_status_t BaseCapturer::Process() {
     //
     // Ideally, if there were only one capture source and our frame rates match, we would align our
     // start time exactly with a source sample boundary.
-    auto now = zx::clock::get_monotonic();
-    if (!clock_mono_to_fractional_dest_frames_->get().first.invertible()) {
+    auto ref_now = reference_clock().Read();
+    if (!ref_clock_to_fractional_dest_frames_->get().first.invertible()) {
       // Ideally a timeline function could alter offsets without also recalculating the scale
       // factor. Then we could re-establish this function without re-reducing the fps-to-nsec rate.
       // Since we supply a rate that is already reduced, this should go pretty quickly.
-      clock_mono_to_fractional_dest_frames_->Update(
-          TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), now.get(),
-                           fractional_dest_frames_to_clock_mono_rate().Inverse()));
+      ref_clock_to_fractional_dest_frames_->Update(
+          TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), ref_now.get(),
+                           fractional_dest_frames_to_ref_clock_rate().Inverse()));
     }
 
     // Limit our job size to our max job size.
@@ -615,16 +616,16 @@ zx_status_t BaseCapturer::Process() {
     }
 
     // Figure out when we can finish the job. If in the future, wait until then.
-    zx::time last_frame_time =
-        zx::time(clock_mono_to_fractional_dest_frames_->get().first.Inverse().Apply(
+    zx::time last_frame_ref_time =
+        zx::time(ref_clock_to_fractional_dest_frames_->get().first.Inverse().Apply(
             FractionalFrames<int64_t>(frame_count_ + mix_frames).raw_value()));
-    if (last_frame_time.get() == TimelineRate::kOverflow) {
+    if (last_frame_ref_time.get() == TimelineRate::kOverflow) {
       FX_LOGS(ERROR) << "Fatal timeline overflow in capture mixer, shutting down capture.";
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
     }
 
-    if (last_frame_time > now) {
+    if (last_frame_ref_time > ref_now) {
       // TODO(40183): We should not assume anything about fence times for our sources. Instead, we
       // should heed the actual reported fence times (FIFO depth), and the arrivals and departures
       // of sources, and update this number dynamically.
@@ -632,19 +633,30 @@ zx_status_t BaseCapturer::Process() {
       // Additionally, we must be mindful that if a newly-arriving source causes our "fence time" to
       // increase, we will wake up early. At wakeup time, we need to be able to detect this case and
       // sleep a bit longer before mixing.
-      zx::time next_mix_time = last_frame_time + min_fence_time_ + kFenceTimePadding;
+      zx::time next_mix_ref_time = last_frame_ref_time + min_fence_time_ + kFenceTimePadding;
 
-      zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_mix_time);
+      auto mono_wakeup_time =
+          audio::clock::MonotonicTimeFromReferenceTime(reference_clock().get(), next_mix_ref_time);
+      zx_status_t status;
+      if (!mono_wakeup_time.is_ok()) {
+        FX_LOGS(ERROR) << "clock.get_details() failed during conversion";
+        status = ZX_ERR_INTERNAL;
+      } else {
+        status = mix_timer_.PostForTime(mix_domain_->dispatcher(), mono_wakeup_time.take_value());
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "Failed to schedule capturer mix";
+        }
+      }
       if (status != ZX_OK) {
-        FX_PLOGS(ERROR, status) << "Failed to schedule capturer mix";
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
       }
+
       return ZX_OK;
     }
 
     // Mix the requested number of frames from sources to intermediate buffer, then into output.
-    auto buf = mix_stage_->ReadLock(now, frame_count_, mix_frames);
+    auto buf = mix_stage_->ReadLock(ref_now, frame_count_, mix_frames);
     FXB_48598_DCHECK(buf);
     FXB_48598_DCHECK(buf->start().Floor() == frame_count_);
     FXB_48598_DCHECK(buf->length().Floor() == mix_frames);
@@ -672,10 +684,10 @@ zx_status_t BaseCapturer::Process() {
 
           // Assign a timestamp if one has not already been assigned.
           if (p.capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
-            auto [clock_mono_to_fractional_dest_frames, _] =
-                clock_mono_to_fractional_dest_frames_->get();
-            FXB_48598_DCHECK(clock_mono_to_fractional_dest_frames.invertible());
-            p.capture_timestamp = clock_mono_to_fractional_dest_frames.Inverse().Apply(
+            auto [ref_clock_to_fractional_dest_frames, _] =
+                ref_clock_to_fractional_dest_frames_->get();
+            FXB_48598_DCHECK(ref_clock_to_fractional_dest_frames.invertible());
+            p.capture_timestamp = ref_clock_to_fractional_dest_frames.Inverse().Apply(
                 FractionalFrames<int64_t>(frame_count_).raw_value());
           }
 
@@ -684,7 +696,7 @@ zx_status_t BaseCapturer::Process() {
           if (buffer_finished) {
             wakeup_service_thread = finished_capture_buffers_.is_empty();
             if (wakeup_service_thread) {
-              finish_buffers_signal_time_ = now;
+              finish_buffers_signal_time_ = ref_now;
             }
             finished_capture_buffers_.push_back(pending_capture_buffers_.pop_front());
             if (++packets_produced % 20 == 0) {
@@ -695,9 +707,9 @@ zx_status_t BaseCapturer::Process() {
         } else {
           // It looks like we were flushed while we were mixing. Invalidate our timeline function,
           // we will re-establish it and flag a discontinuity next time we have work to do.
-          clock_mono_to_fractional_dest_frames_->Update(
-              TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), now.get(),
-                               fractional_dest_frames_to_clock_mono_rate().Inverse()));
+          ref_clock_to_fractional_dest_frames_->Update(
+              TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), ref_now.get(),
+                               fractional_dest_frames_to_ref_clock_rate().Inverse()));
         }
       }
     }
@@ -814,7 +826,7 @@ void BaseCapturer::DoStopAsyncCapture() {
   }
 
   // Invalidate our clock transformation (our next packet will be discontinuous)
-  clock_mono_to_fractional_dest_frames_->Update(TimelineFunction());
+  ref_clock_to_fractional_dest_frames_->Update(TimelineFunction());
 
   // If we had a timer set, make sure that it is canceled. There is no point in
   // having it armed right now as we are in the process of stopping.
@@ -922,8 +934,8 @@ void BaseCapturer::FinishBuffersThunk() {
     finish_buffers_signal_time_ = zx::time(0);
   }
 
-  auto now = zx::clock::get_monotonic();
-  auto time_to_schedule = now - signal_time;
+  auto ref_now = reference_clock().Read();
+  auto time_to_schedule = ref_now - signal_time;
   if (signal_time != zx::time(0) && time_to_schedule > zx::msec(500)) {
     FX_LOGS(WARNING) << "FinishBuffersThunk took " << time_to_schedule.to_msecs()
                      << "ms to schedule";
@@ -983,10 +995,10 @@ void BaseCapturer::UpdateFormat(Format format) {
   // are able to hold onto data after presentation. We need to wait until after
   // presentation time to capture these frames, but if we batch up too much
   // work, then the AudioOutput may have overwritten the data before we decide
-  // to get around to capturing it. Limiting our maximum number of frames of to
-  // capture to be less than this amount of time prevents this issue.
+  // to get around to capturing it. By limiting our maximum number of frames to
+  // capture to be less than this amount of time, we prevent this issue.
   int64_t tmp;
-  tmp = dest_frames_to_clock_mono_rate().Inverse().Scale(kMaxTimePerCapture);
+  tmp = dest_frames_to_ref_clock_rate().Inverse().Scale(kMaxTimePerCapture);
   max_frames_per_capture_ = static_cast<uint32_t>(tmp);
 
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
@@ -997,7 +1009,7 @@ void BaseCapturer::UpdateFormat(Format format) {
   // TODO(39886): Limit this to something smaller than one second of frames.
   uint32_t max_mix_frames = format_.frames_per_second();
   mix_stage_ =
-      std::make_shared<MixStage>(format_, max_mix_frames, clock_mono_to_fractional_dest_frames_);
+      std::make_shared<MixStage>(format_, max_mix_frames, ref_clock_to_fractional_dest_frames_);
 }
 
 // Eventually, we'll set the optimal clock according to the source where it is initially routed.
@@ -1005,10 +1017,8 @@ void BaseCapturer::UpdateFormat(Format format) {
 void BaseCapturer::CreateOptimalReferenceClock() {
   TRACE_DURATION("audio", "BaseCapturer::CreateOptimalReferenceClock");
 
-  auto status =
-      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
-                        nullptr, &optimal_clock_);
-  FX_DCHECK(status == ZX_OK) << "Could not create an AUTOSTART clock for optimal clock";
+  optimal_clock_ = audio::clock::AdjustableCloneOfMonotonic();
+  FX_DCHECK(optimal_clock_.is_valid()) << "Optimal clock is not valid";
 }
 
 // For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
@@ -1017,8 +1027,9 @@ void BaseCapturer::CreateOptimalReferenceClock() {
 void BaseCapturer::EstablishDefaultReferenceClock() {
   TRACE_DURATION("audio", "BaseCapturer::EstablishDefaultReferenceClock");
 
-  auto status = audio::clock::DuplicateClock(optimal_clock_, &reference_clock_);
+  auto status = audio::clock::DuplicateClock(optimal_clock(), &reference_clock_);
   FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
+  FX_DCHECK(reference_clock_.is_valid()) << "Default reference clock is not valid";
 }
 
 // Regardless of the source of the reference clock, we can duplicate and return it here.
@@ -1029,8 +1040,8 @@ void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
   zx::clock dupe_clock_for_client;
-  auto status = audio::clock::DuplicateClock(reference_clock_, &dupe_clock_for_client);
-  if (status != ZX_OK) {
+  auto status = audio::clock::DuplicateClock(reference_clock().get(), &dupe_clock_for_client);
+  if (status != ZX_OK || !dupe_clock_for_client.is_valid()) {
     FX_PLOGS(ERROR, status) << "Could not duplicate the current reference clock handle";
     return;
   }
