@@ -29,7 +29,8 @@ namespace {
 using stubs::BuildLogMessage;
 
 const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line XX")).size();
-const size_t kDroppedFormatStrSize = std::string("!!! DROPPED %lu LOG MESSAGES !!!\n").size();
+const size_t kDroppedFormatStrSize = std::string("!!! DROPPED XX MESSAGES !!!\n").size();
+const size_t kRepeatedFormatStrSize = std::string("!!! MESSAGE REPEATED XX MORE TIMES !!!\n").size();
 
 TEST(LogMessageStoreTest, AddAndConsume) {
   // Set up the store to hold 2 log lines.
@@ -62,7 +63,7 @@ TEST(LogMessageStoreTest, DropsCorrectly) {
 
   EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 3 LOG MESSAGES !!!
+!!! DROPPED 3 MESSAGES !!!
 )");
 }
 
@@ -79,7 +80,127 @@ TEST(LogMessageStoreTest, DropsSubsequentShorterMessages) {
   EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
 
   EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
-!!! DROPPED 4 LOG MESSAGES !!!
+!!! DROPPED 4 MESSAGES !!!
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyRepetitionMessage_AtConsume) {
+  // Set up the store to hold 2 log line. With three repeated messages, the last two messages
+  // should get reduced to a single repeated message.
+  LogMessageStore store(kMaxLogLineSize);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenMessageChanges) {
+  // Set up the store to hold 3 log line. Verify that a repetition message appears after input
+  // repetition and before the input change.
+  LogMessageStore store(kMaxLogLineSize * 2 + kRepeatedFormatStrSize);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[15604.000][07559][07687][] INFO: line 1
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyDroppedRepeatedMessage_OnBufferFull) {
+  // Set up the store to hold 1 log line. Verify that repeated messages that occur after the
+  // buffer is full get dropped.
+  LogMessageStore store(kMaxLogLineSize * 1);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! DROPPED 2 MESSAGES !!!
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyNoRepeatMessage_AfterFirstConsume) {
+  // Set up the store to hold 1 log line. Verify that there is no repeat message right after
+  // dropping messages.
+  LogMessageStore store(kMaxLogLineSize * 1);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! DROPPED 1 MESSAGES !!!
+)");
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 1
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyRepeatMessage_AfterFirstConsume) {
+  // Set up the store to hold 3 log lines. Verify that there can be a repeat message after
+  // consume, when no messages were dropped.
+  LogMessageStore store(kMaxLogLineSize * 3);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[15604.000][07559][07687][] INFO: line 1
+)");
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_EQ(store.Consume(), R"(!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyRepeatedAndDropped) {
+  // Set up the store to hold 2 log lines. Verify that we can have the repeated message, and then
+  // the dropped message.
+  LogMessageStore store(kMaxLogLineSize * 2);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! DROPPED 1 MESSAGES !!!
+)");
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 1
+)");
+}
+
+TEST(LogMessageStoreTest, VerifyNoRepeatMessage_TimeOrdering) {
+  // Set up the store to hold 2 log line. Verify time ordering: a message cannot be counted as
+  // repeated if it's in between messages, even if those messages get dropped.
+  LogMessageStore store(kMaxLogLineSize * 2);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1 overflow msg")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1 overflow msg")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
+!!! DROPPED 5 MESSAGES !!!
+)");
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(), R"([15604.000][07559][07687][] INFO: line 0
 )");
 }
 
@@ -189,7 +310,7 @@ TEST(WriterTest, WritesMessages) {
 [15604.000][07559][07687][] INFO: line 1
 [15604.000][07559][07687][] INFO: line 2
 [15604.000][07559][07687][] INFO: line 3
-!!! DROPPED 1 LOG MESSAGES !!!
+!!! DROPPED 1 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 5
 )");
 
@@ -207,13 +328,13 @@ TEST(WriterTest, WritesMessages) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 2
 [15604.000][07559][07687][] INFO: line 3
-!!! DROPPED 1 LOG MESSAGES !!!
+!!! DROPPED 1 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 5
 [15604.000][07559][07687][] INFO: line 6
 [15604.000][07559][07687][] INFO: line 7
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
-!!! DROPPED 1 LOG MESSAGES !!!
+!!! DROPPED 1 MESSAGES !!!
 )");
 }
 
@@ -294,7 +415,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 LOG MESSAGES !!!
+!!! DROPPED 6 MESSAGES !!!
 )");
 
   RunLoopFor(kWriterPeriod);
@@ -303,7 +424,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 LOG MESSAGES !!!
+!!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
 )");
 
@@ -313,7 +434,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 LOG MESSAGES !!!
+!!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
 )");
@@ -324,7 +445,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 LOG MESSAGES !!!
+!!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
 [15604.000][07559][07687][] INFO: line 10
@@ -337,7 +458,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 LOG MESSAGES !!!
+!!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
 [15604.000][07559][07687][] INFO: line 10
@@ -351,7 +472,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
-!!! DROPPED 6 LOG MESSAGES !!!
+!!! DROPPED 6 MESSAGES !!!
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
 [15604.000][07559][07687][] INFO: line 10

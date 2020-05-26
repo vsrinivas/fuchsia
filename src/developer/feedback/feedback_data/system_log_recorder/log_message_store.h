@@ -23,9 +23,10 @@ class LogMessageStore {
  public:
   LogMessageStore(size_t max_capacity_bytes);
 
-  // Adds the log message to the store. The message will be dropped if the store does not have
-  // enough capacity remaining for it and return false.
-  bool Add(fuchsia::logger::LogMessage msg);
+  // May add the log message to the store:
+  // * The message is dropped if the store has reached its maximum capacity, returning false.
+  // * The message is omitted if it is the same one as the previous one in the store.
+  bool Add(fuchsia::logger::LogMessage log);
 
   // Consumes the contents of the store as a string. This will empty the store.
   std::string Consume();
@@ -37,7 +38,9 @@ class LogMessageStore {
   const size_t max_capacity_bytes_;
 
   size_t bytes_remaining_;
-  size_t num_messages_dropped = 0;
+  size_t num_messages_dropped_ = 0;
+  size_t last_pushed_message_count_ = 0;
+  std::string last_pushed_message_;
 };
 
 }  // namespace feedback
