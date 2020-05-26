@@ -10,4 +10,6 @@ fidl("fuchsia.ui.brightness") {
     "brightness.fidl",
     "color_adjustment.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

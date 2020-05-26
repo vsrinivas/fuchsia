@@ -94,6 +94,8 @@ lazy_static! {
     static ref AUTO_BRIGHTNESS_ADJUSTMENT: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
     static ref GET_BRIGHTNESS_FAILED_FIRST: Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
     static ref LAST_SET_BRIGHTNESS: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
+    static ref BRIGHTNESS_CHANGE_DURATION: Arc<Mutex<Duration>> =
+        Arc::new(Mutex::new(BRIGHTNESS_CHANGE_DURATION_MS.millis()));
 }
 
 pub struct WatcherCurrentResponder {
@@ -203,6 +205,13 @@ impl Control {
             BrightnessControlRequest::SetManualBrightness { value, control_handle: _ } => {
                 let value = num_traits::clamp(value, 0.0, 1.0);
                 self.set_manual_brightness(value).await;
+            }
+            BrightnessControlRequest::SetManualBrightnessSmooth {
+                value,
+                duration,
+                control_handle: _,
+            } => {
+                self.set_manual_brightness_smooth(value, duration).await;
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
                 let watch_current_result =
@@ -338,6 +347,13 @@ impl Control {
         set_brightness(value, self.set_brightness_abort_handle.clone(), self.backlight.clone())
             .await;
         self.current_sender_channel.lock().await.send_value(value);
+    }
+
+    async fn set_manual_brightness_smooth(&mut self, value: f32, duration: i64) {
+        let duration_nanos = Duration::from_nanos(duration);
+        *BRIGHTNESS_CHANGE_DURATION.lock().await = duration_nanos.into_millis().millis();
+        let value = num_traits::clamp(value, 0.0, 1.0);
+        self.set_manual_brightness(value).await;
     }
 
     async fn watch_current_brightness(
@@ -599,7 +615,7 @@ async fn set_brightness_impl(value: f32, backlight: Arc<Mutex<dyn BacklightContr
         current_value,
         value,
         set_brightness,
-        BRIGHTNESS_CHANGE_DURATION_MS.millis(),
+        *BRIGHTNESS_CHANGE_DURATION.lock().await,
     )
     .await;
 }
@@ -1105,5 +1121,35 @@ mod tests {
         serde_json::to_writer(io::BufWriter::new(file), &1.0).unwrap();
         let result = read_brightness_table_file("/data/invalid_brightness_file");
         assert_eq!(true, result.is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_manual_brightness_smooth_with_duration_got_set() {
+        let mut control = generate_control_struct().await;
+        control.set_manual_brightness_smooth(0.6, 4000000000).await;
+        let duration = *BRIGHTNESS_CHANGE_DURATION.lock().await;
+        assert_eq!(4000, duration.into_millis());
+    }
+
+    #[test]
+    fn test_set_manual_brightness_updates_brightness() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let func_fut1 = generate_control_struct();
+        futures::pin_mut!(func_fut1);
+        let mut control = exec.run_singlethreaded(&mut func_fut1);
+        {
+            let func_fut2 = control.set_manual_brightness_smooth(0.6, 4000);
+            futures::pin_mut!(func_fut2);
+            exec.run_singlethreaded(&mut func_fut2);
+        }
+        let _ = exec.run_until_stalled(&mut future::pending::<()>());
+        let func_fut3 = control.backlight.lock();
+        futures::pin_mut!(func_fut3);
+        let backlight = exec.run_singlethreaded(&mut func_fut3);
+        let func_fut4 = backlight.get_brightness();
+        futures::pin_mut!(func_fut4);
+        let value = exec.run_singlethreaded(&mut func_fut4);
+        assert_eq!(cmp_float(0.6, value.unwrap() as f32), true);
     }
 }
