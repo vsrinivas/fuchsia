@@ -122,7 +122,6 @@ class FshostBootArgs {
         {fidl::StringView{"zircon.system.filesystem-check"}, false},
         {fidl::StringView{"zircon.system.wait-for-data"}, true},
         {fidl::StringView{"blobfs.userpager"}, false},
-        {fidl::StringView{"blobfs.uncompressed"}, false},
     };
 
     auto ret = boot_args_->GetBools(fidl::unowned_vec(defaults));
@@ -136,13 +135,6 @@ class FshostBootArgs {
     zircon_system_filesystem_check_ = ret->values[2];
     zircon_system_wait_for_data_ = ret->values[3];
     blobfs_userpager_ = ret->values[4];
-    bool legacy_uncompressed_flag = ret->values[5];
-
-    if (legacy_uncompressed_flag) {
-      // Convert the legacy blobfs.uncompressed flag to the new blobfs.write-compression-algorithm
-      // flag. The value will be overridden by the new flag, if it is also set.
-      blobfs_write_compression_algorithm_ = "UNCOMPRESSED";
-    }
 
     auto algorithm = boot_args_->GetString(fidl::StringView{"blobfs.write-compression-algorithm"});
     if (!algorithm.ok()) {

@@ -57,7 +57,6 @@ TEST(FshostBootArgsTest, GetNonDefaultBools) {
       {"zircon.system.filesystem-check", ""},
       {"zircon.system.wait-for-data", "false"},
       {"blobfs.userpager", ""},
-      {"blobfs.uncompressed", ""},
   };
   auto server = mock_boot_arguments::Server{std::move(config)};
   auto boot_args = CreateFshostBootArgs(loop.dispatcher(), server);
@@ -66,8 +65,6 @@ TEST(FshostBootArgsTest, GetNonDefaultBools) {
   ASSERT_EQ(true, boot_args->check_filesystems());
   ASSERT_EQ(false, boot_args->wait_for_data());
   ASSERT_EQ(true, boot_args->blobfs_enable_userpager());
-  // Legacy argument blobfs.uncompressed is converted to blobfs.write-compression-algorithm
-  ASSERT_STR_EQ("UNCOMPRESSED", boot_args->blobfs_write_compression_algorithm());
 }
 
 TEST(FshostBootArgsTest, GetPkgfsFile) {
