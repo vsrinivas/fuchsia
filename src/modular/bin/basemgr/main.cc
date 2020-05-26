@@ -233,10 +233,7 @@ int main(int argc, const char** argv) {
   };
 
   setui.set_error_handler([&initialize_basemgr](zx_status_t) {
-    // In case of error, log event and continue as if no user setting is
-    // present.
-    FX_LOGS(ERROR) << "Error retrieving user set login override, defaulting to "
-                      "build time configuration";
+    // In case of error, continue as if no user setting is present.
     fuchsia::setui::AccountSettings default_account_settings;
     default_account_settings.set_mode(fuchsia::setui::LoginOverride::NONE);
     fuchsia::setui::SettingsObject default_settings_object;
