@@ -53,6 +53,8 @@ type Client struct {
 	// Stubbable in test.
 	rand           *rand.Rand
 	retransTimeout func(time.Duration) <-chan time.Time
+	acquire        func(ctx context.Context, c *Client, info *Info) (Config, error)
+	now            func() time.Time
 }
 
 type dhcpClientState uint8
@@ -128,6 +130,8 @@ func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, ac
 		sem:            make(chan struct{}, 1),
 		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
 		retransTimeout: time.After,
+		acquire:        acquire,
+		now:            time.Now,
 	}
 	c.info.Store(Info{
 		NICID:          nicid,
@@ -204,7 +208,7 @@ func (c *Client) Run(ctx context.Context) {
 			ctx, cancel := context.WithTimeout(ctx, acquisitionTimeout)
 			defer cancel()
 
-			cfg, err := c.acquire(ctx, &info)
+			cfg, err := c.acquire(ctx, c, &info)
 			if err != nil {
 				return err
 			}
@@ -234,7 +238,7 @@ func (c *Client) Run(ctx context.Context) {
 				cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime = leaseLength, renewTime, rebindTime
 			}
 
-			now := time.Now()
+			now := c.now()
 			leaseExpirationTime = now.Add(cfg.LeaseLength.Duration())
 			renewTime = now.Add(cfg.RenewTime.Duration())
 			rebindTime = now.Add(cfg.RebindTime.Duration())
@@ -263,7 +267,7 @@ func (c *Client) Run(ctx context.Context) {
 		//   the time at which the client's lease will expire.
 		var next dhcpClientState
 		var waitDuration time.Duration
-		switch now := time.Now(); {
+		switch now := c.now(); {
 		case !now.Before(leaseExpirationTime):
 			next = initSelecting
 		case !now.Before(rebindTime):
@@ -286,12 +290,10 @@ func (c *Client) Run(ctx context.Context) {
 			waitDuration = info.Backoff
 		}
 
-		if waitDuration != 0 {
-			if timer == nil {
-				timer = time.NewTimer(waitDuration)
-			} else {
-				timer.Reset(waitDuration)
-			}
+		if timer == nil {
+			timer = time.NewTimer(waitDuration)
+		} else if waitDuration != 0 {
+			timer.Reset(waitDuration)
 		}
 
 		if info.State != next && next != renewing {
@@ -364,7 +366,7 @@ func (c *Client) exponentialBackoff(iteration uint) time.Duration {
 	return backoff
 }
 
-func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
+func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	// https://tools.ietf.org/html/rfc2131#section-4.3.6 Client messages:
 	//
 	// ---------------------------------------------------------------------

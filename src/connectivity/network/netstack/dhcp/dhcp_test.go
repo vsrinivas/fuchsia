@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -179,7 +178,7 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 	defer close(errs)
 	go func() {
 		info := c.Info()
-		_, err := c.acquire(ctx, &info)
+		_, err := acquire(ctx, c, &info)
 		errs <- err
 	}()
 
@@ -188,7 +187,7 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 		if errors.Is(err, context.DeadlineExceeded) {
 			t.Fatal("timed out waiting for a DHCP packet to be sent")
 		}
-		t.Fatalf("c.acquire(_, _): %s", err)
+		t.Fatalf("acquire(_, _, _): %s", err)
 	case <-sent:
 		// Be careful not to do this if we read off the channel above to avoid
 		// deadlocking when the test fails in the clause above.
@@ -263,7 +262,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		c := newZeroJitterClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c.Info()
 		go func() {
-			_, err := c.acquire(ctx, &info)
+			_, err := acquire(ctx, c, &info)
 			errs <- err
 		}()
 	}
@@ -328,7 +327,7 @@ func TestDHCP(t *testing.T) {
 	info := c0.Info()
 	{
 		{
-			cfg, err := c0.acquire(ctx, &info)
+			cfg, err := acquire(ctx, c0, &info)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -341,7 +340,7 @@ func TestDHCP(t *testing.T) {
 			c0.verifyClientStats(t, 1)
 		}
 		{
-			cfg, err := c0.acquire(ctx, &info)
+			cfg, err := acquire(ctx, c0, &info)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -358,7 +357,7 @@ func TestDHCP(t *testing.T) {
 	{
 		c1 := newZeroJitterClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 		info := c1.Info()
-		cfg, err := c1.acquire(ctx, &info)
+		cfg, err := acquire(ctx, c1, &info)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -379,7 +378,7 @@ func TestDHCP(t *testing.T) {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
 		defer s.RemoveAddress(testNICID, info.Addr.Address)
-		cfg, err := c0.acquire(ctx, &info)
+		cfg, err := acquire(ctx, c0, &info)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -473,7 +472,7 @@ func TestDelayRetransmission(t *testing.T) {
 			}
 
 			info := c.Info()
-			cfg, err := c.acquire(ctx, &info)
+			cfg, err := acquire(ctx, c, &info)
 			if tc.success {
 				if err != nil {
 					t.Fatal(err)
@@ -687,26 +686,26 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 				signal(ctx, unblockResponse)
 			}()
 
-			if _, err := c.acquire(ctx, &info); err != nil {
-				t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
+			if _, err := acquire(ctx, c, &info); err != nil {
+				t.Fatalf("acquire(_, _, _) failed: %s", err)
 			}
 
 			wg.Wait()
 
-			if !cmp.Equal(gotTimeouts, tc.wantTimeouts) {
-				t.Errorf("c.acquire(ctx, &c.Info()) got timeouts: %v, want timeouts: %v", gotTimeouts, tc.wantTimeouts)
+			if diff := cmp.Diff(tc.wantTimeouts, gotTimeouts); diff != "" {
+				t.Errorf("acquire(_, _, _) got timeouts diff (-want +got):\n%s", diff)
 			}
 			if got := c.stats.RecvOfferTimeout.Value(); int(got) != tc.offerTimeouts {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: %d", got, tc.offerTimeouts)
+				t.Errorf("acquire(_, _, _) got RecvOfferTimeout count: %d, want: %d", got, tc.offerTimeouts)
 			}
 			if got := c.stats.RecvOffers.Value(); got != 1 {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
+				t.Errorf("acquire(_, _, _) got RecvOffers count: %d, want: 1", got)
 			}
 			if got := c.stats.RecvAckTimeout.Value(); int(got) != tc.ackTimeouts {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: %d", got, tc.ackTimeouts)
+				t.Errorf("acquire(_, _, _) got RecvAckTimeout count: %d, want: %d", got, tc.ackTimeouts)
 			}
 			if got := c.stats.RecvAcks.Value(); got != 1 {
-				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAcks count: %d, want: 1", got)
+				t.Errorf("acquire(_, _, _) got RecvAcks count: %d, want: 1", got)
 			}
 		})
 	}
@@ -805,38 +804,53 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	}()
 
 	info := c.Info()
-	if _, err := c.acquire(ctx, &info); err != nil {
-		t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
+	if _, err := acquire(ctx, c, &info); err != nil {
+		t.Fatalf("acquire(_, _, _) failed: %s", err)
 	}
 
 	wg.Wait()
 
 	if got := c.stats.RecvOfferTimeout.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: 1", got)
+		t.Errorf("acquire(_, _, _) got RecvOfferTimeout count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvOfferUnexpectedType.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferUnexpectedType count: %d, want: 1", got)
+		t.Errorf("acquire(_, _, _) got RecvOfferUnexpectedType count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvOffers.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
+		t.Errorf("acquire(_, _, _) got RecvOffers count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAckTimeout.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: 1", got)
+		t.Errorf("acquire(_, _, _) got RecvAckTimeout count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAckUnexpectedType.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckUnexpectedType count: %d, want: 1", got)
+		t.Errorf("acquire(_, _, _) got RecvAckUnexpectedType count: %d, want: 1", got)
 	}
 	if got := c.stats.RecvAcks.Value(); got != 1 {
-		t.Errorf("c.acquire(ctx, &c.Info()) got RecvAcks count: %d, want: 1", got)
+		t.Errorf("acquire(_, _, _) got RecvAcks count: %d, want: 1", got)
 	}
 }
 
-// stateTransitionTestTimeout calculates the amount of time the test is
-// willing to wait for the client to bind/unbind addresses.
-// This value has to be larger than lease length, because in the worst case
-// a test has to wait for the client to respond to lease expiration.
-func stateTransitionTestTimeout(leaseLength Seconds) time.Duration {
-	return leaseLength.Duration() + time.Second
+// stubTimeNow returns a function that can be used to stub out `time.Now` in test.
+//
+// The stub function consumes the first duration from `durations` each time it
+// is called, and makes the time in test advance for the corresponding amount.
+// After all durations are consumed, the call to the stub function will first
+// signal the input done channel and then block until context is cancelled.
+func stubTimeNow(ctx context.Context, t0 time.Time, durations []time.Duration, done chan struct{}) func() time.Time {
+	t := t0
+	return func() time.Time {
+		if len(durations) == 0 {
+			done <- struct{}{}
+			<-ctx.Done()
+			// The time returned here doesn't matter, the client is going to exit
+			// due to context cancellation.
+			return time.Time{}
+		}
+		var d time.Duration
+		d, durations = durations[0], durations[1:]
+		t = t.Add(d)
+		return t
+	}
 }
 
 func TestStateTransition(t *testing.T) {
@@ -848,10 +862,6 @@ func TestStateTransition(t *testing.T) {
 	)
 
 	const (
-		// acquireTimeout is the default acquisition timeout to use in tests.
-		// It is small enough to make sure the client doesn't get stuck in retransmission
-		// when it should transition to the next state.
-		acquireTimeout = 400 * time.Millisecond
 		// The following 3 durations are included in DHCP responses.
 		// They are multiples of a second because that's the smallest time granularity
 		// DHCP messages support.
@@ -859,45 +869,100 @@ func TestStateTransition(t *testing.T) {
 		rebindTime  Seconds = 2
 		leaseLength Seconds = 3
 	)
-	testTimeout := stateTransitionTestTimeout(leaseLength)
 
 	for _, tc := range []struct {
 		name           string
 		typ            testType
 		acquireTimeout time.Duration
+		// The time durations to advance in test when the current time is requested.
+		durations []time.Duration
 	}{
 		{
 			name:           "Renew",
 			typ:            testRenew,
-			acquireTimeout: acquireTimeout,
+			acquireTimeout: defaultAcquireTimeout,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Transition to renew.
+				renewTime.Duration(),
+				// Second acquisition from renew.
+				0,
+			},
 		},
 		{
 			name:           "Rebind",
 			typ:            testRebind,
-			acquireTimeout: acquireTimeout,
+			acquireTimeout: defaultAcquireTimeout,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Transition to renew. Acquisition from renew should fail.
+				renewTime.Duration(),
+				// Transition to rebind.
+				(rebindTime - renewTime).Duration(),
+				// Second acquisition from rebind.
+				0,
+			},
 		},
 		{
 			// Test the client is not stuck in retransimission longer than it should.
 			// If the client keeps retransmitting until the acquisition timeout
 			// configured in this test, the lease will expire after it's done,
 			// causing it to miss REBIND.
-			name:           "RebindWithLargeAcquisitionTimeout",
-			typ:            testRebind,
-			acquireTimeout: leaseLength.Duration() + time.Second,
+			name: "RebindWithLargeAcquisitionTimeout",
+			typ:  testRebind,
+			// A large enough duration for the test to timeout.
+			acquireTimeout: 1000 * time.Hour,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Transition to renew. Acquisition from renew should fail.
+				renewTime.Duration(),
+				// Transition to rebind.
+				(rebindTime - renewTime).Duration(),
+				// Second acquisition from rebind.
+				0,
+			},
 		},
 		{
 			name:           "LeaseExpire",
 			typ:            testLeaseExpire,
-			acquireTimeout: acquireTimeout,
+			acquireTimeout: defaultAcquireTimeout,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Transition to renew. Acquisition from renew should fail.
+				renewTime.Duration(),
+				// Transition to rebind. Acquisition from rebind should fail.
+				(rebindTime - renewTime).Duration(),
+				// Transition to lease expiration.
+				(leaseLength - rebindTime).Duration(),
+				// Second acquisition after lease expiration.
+				0,
+			},
 		},
 		{
 			// Test the client is not stuck in retransimission longer than it should.
 			// If the client keeps retransmitting until the acquisition timeout
 			// configured in this test, the test will timeout before the client can
 			// reinitialize after lease expiration.
-			name:           "LeaseExpireWithLargeAcquisitionTimeout",
-			typ:            testLeaseExpire,
-			acquireTimeout: testTimeout + 1*time.Second,
+			name: "LeaseExpireWithLargeAcquisitionTimeout",
+			typ:  testLeaseExpire,
+			// A large enough duration for the test to timeout.
+			acquireTimeout: 1000 * time.Hour,
+			durations: []time.Duration{
+				// First acquisition.
+				0,
+				// Transition to renew. Acquisition from renew should fail.
+				renewTime.Duration(),
+				// Transition to rebind. Acquisition from rebind should fail.
+				(rebindTime - renewTime).Duration(),
+				// Transition to lease expiration.
+				(leaseLength - rebindTime).Duration(),
+				// Second acquisition after lease expiration.
+				0,
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -906,15 +971,40 @@ func TestStateTransition(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			serverCfg := defaultServerCfg
-			serverCfg.LeaseLength = leaseLength
-			serverCfg.RebindTime = rebindTime
-			serverCfg.RenewTime = renewTime
+			c := newZeroJitterClient(nil, testNICID, linkAddr1, tc.acquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 
-			clientStack, clientEP, _, c := setupTestEnv(ctx, t, serverCfg)
-			info := c.Info()
-			info.Acquisition = tc.acquireTimeout
-			c.info.Store(info)
+			c.acquire = func(ctx context.Context, _ *Client, info *Info) (Config, error) {
+				timeout := false
+				switch info.State {
+				case renewing:
+					if tc.typ == testRebind {
+						timeout = true
+					}
+					fallthrough
+				case rebinding:
+					if tc.typ == testLeaseExpire {
+						timeout = true
+					}
+				}
+				if timeout {
+					// Simulates a timeout using the deadline from context.
+					<-ctx.Done()
+					return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
+				}
+
+				info.Addr = tcpip.AddressWithPrefix{
+					Address:   tcpip.Address("\xc0\xa8\x03\x02"),
+					PrefixLen: 24,
+				}
+				return Config{
+					RenewTime:   renewTime,
+					RebindTime:  rebindTime,
+					LeaseLength: leaseLength,
+				}, nil
+			}
+
+			clientTransitionsDone := make(chan struct{})
+			c.now = stubTimeNow(ctx, time.Time{}, tc.durations, clientTransitionsDone)
 
 			count := 0
 			var curAddr tcpip.AddressWithPrefix
@@ -927,53 +1017,12 @@ func TestStateTransition(t *testing.T) {
 				count++
 				curAddr = newAddr
 
-				// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
-				// will need to send from that address when it tries to renew its lease.
-				if curAddr != oldAddr {
-					if oldAddr != (tcpip.AddressWithPrefix{}) {
-						if err := clientStack.RemoveAddress(testNICID, oldAddr.Address); err != nil {
-							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
-						}
-					}
-
-					if curAddr != (tcpip.AddressWithPrefix{}) {
-						protocolAddress := tcpip.ProtocolAddress{
-							Protocol:          ipv4.ProtocolNumber,
-							AddressWithPrefix: curAddr,
-						}
-						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
-						}
-					}
-				}
-
-				if curAddr != (tcpip.AddressWithPrefix{}) {
-					if cfg.LeaseLength != serverCfg.LeaseLength {
-						t.Fatalf("aquisition %d: lease length: %s, want %s", count, cfg.LeaseLength, serverCfg.LeaseLength)
-					}
-				}
-				// Respond to context cancellation to avoid deadlock when
-				// enclosing test times out.
+				// Respond to context cancellation to avoid deadlock when enclosing test
+				// times out.
 				select {
 				case <-ctx.Done():
 				case addrCh <- curAddr:
 				}
-			}
-
-			var blockData uint32 = 0
-			clientEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
-				if atomic.LoadUint32(&blockData) == 1 {
-					return nil
-				}
-				if tc.typ == testRebind {
-					// Only pass client broadcast packets back into the stack. This simulates
-					// packet loss during the client's unicast RENEWING state, forcing
-					// it into broadcast REBINDING state.
-					if header.IPv4(b.Header.View()).DestinationAddress() != header.IPv4Broadcast {
-						return nil
-					}
-				}
-				return &b
 			}
 
 			wg.Add(1)
@@ -982,38 +1031,25 @@ func TestStateTransition(t *testing.T) {
 				wg.Done()
 			}()
 
-			var addr tcpip.AddressWithPrefix
-			select {
-			case addr = <-addrCh:
-				t.Logf("got first address: %s", addr)
-			case <-time.After(testTimeout):
-				t.Fatal("timeout acquiring initial address")
-			}
+			wantAddr := <-addrCh
+			t.Logf("got first address: %s", wantAddr)
 
 			// The first address is always acquired through init selecting state.
 			if got := c.stats.InitAcquire.Value(); got != 1 {
 				t.Errorf("client entered initselecting state %d times, want: 1", got)
 			}
 
-			wantAddr := addr
 			if tc.typ == testLeaseExpire {
-				wantAddr = tcpip.AddressWithPrefix{}
-				// Cut the data flow to block request packets during renew/rebind.
-				// TODO(ckuiper): This has the potential for a race between when the thread that injects
-				// data into the link EP reads the new "blockData" value and when the DHCP client thread's
-				// timers expire, triggering a renewal request.
-				atomic.StoreUint32(&blockData, 1)
+				if gotAddr, wantAddr := <-addrCh, (tcpip.AddressWithPrefix{}); gotAddr != wantAddr {
+					t.Fatalf("lease did not correctly expire: got unexpected address = %s, want = %s", gotAddr, wantAddr)
+				}
 			}
 
-			select {
-			case newAddr := <-addrCh:
-				t.Logf("got new acquisition: %s", newAddr)
-				if newAddr != wantAddr {
-					t.Fatalf("incorrect new address: got = %s, want = %s", newAddr, wantAddr)
-				}
-			case <-time.After(testTimeout):
-				t.Fatal("timeout acquiring renewed address")
+			if gotAddr := <-addrCh; gotAddr != wantAddr {
+				t.Fatalf("incorrect new address: got = %s, want = %s", gotAddr, wantAddr)
 			}
+
+			<-clientTransitionsDone
 
 			switch tc.typ {
 			case testRenew:
@@ -1040,54 +1076,57 @@ func TestStateTransition(t *testing.T) {
 // and keeps retrying when previous acquisition fails.
 func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 	const (
-		acquireTimeout         = 400 * time.Millisecond
 		leaseLength    Seconds = 1
+		acquireTimeout         = time.Nanosecond
+		backoffTime            = time.Nanosecond
 	)
-	testTimeout := stateTransitionTestTimeout(leaseLength)
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	serverCfg := defaultServerCfg
-	serverCfg.LeaseLength = leaseLength
-	clientStack, _, serverEP, c := setupTestEnv(ctx, t, serverCfg)
-	info := c.Info()
-	info.Acquisition = acquireTimeout
-	c.info.Store(info)
-
-	// Only respond to the first DHCP request. This makes sure the client is stuck
+	c := newZeroJitterClient(nil, testNICID, linkAddr1, acquireTimeout, backoffTime, defaultRetransTime, nil)
+	// Only returns a valid config in the first acquisition. Blocks until context
+	// cancellation in following acquisitions. This makes sure the client is stuck
 	// in init selecting state after lease expiration.
-	var ackSent bool
-	serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
-		if ackSent {
-			return nil
+	firstAcquisition := true
+	c.acquire = func(ctx context.Context, _ *Client, info *Info) (Config, error) {
+		if !firstAcquisition {
+			// Simulates a timeout using the deadline from context.
+			<-ctx.Done()
+			return Config{}, fmt.Errorf("fake test timeout error: %w", ctx.Err())
 		}
-		if mustMsgType(t, b) == dhcpACK {
-			ackSent = true
+		firstAcquisition = false
+		info.Addr = tcpip.AddressWithPrefix{
+			Address:   tcpip.Address("\xc0\xa8\x03\x02"),
+			PrefixLen: 24,
 		}
-		return &b
+		return Config{LeaseLength: leaseLength}, nil
 	}
+
+	// wantInitCount is the number of times we want the client to enter init
+	// selecting after lease expiration before test exits. This makes us believe
+	// the client is correctly staying in the init selecting state.
+	const wantInitCount = 10
+	durations := []time.Duration{
+		0, // first acquisition
+		// Transition to lease expiration: this will cause the client to go into
+		// init once.
+		leaseLength.Duration(),
+	}
+	// Make the client enter init N-1 more times.
+	for i := 0; i < wantInitCount-1; i++ {
+		durations = append(durations, 0)
+	}
+
+	clientTransitionsDone := make(chan struct{})
+	c.now = stubTimeNow(ctx, time.Time{}, durations, clientTransitionsDone)
 
 	var curAddr tcpip.AddressWithPrefix
 	addrCh := make(chan tcpip.AddressWithPrefix)
 	c.acquiredFunc = func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config) {
-		// Any address acquired by the DHCP client must be added to the stack, because the DHCP client
-		// will need to send from that address when it tries to renew its lease.
-		if newAddr == (tcpip.AddressWithPrefix{}) {
-			if err := clientStack.RemoveAddress(testNICID, oldAddr.Address); err != nil {
-				t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
-			}
-		} else {
-			protocolAddress := tcpip.ProtocolAddress{
-				Protocol:          ipv4.ProtocolNumber,
-				AddressWithPrefix: newAddr,
-			}
-			if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-				t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
-			}
-		}
 		// Respond to context cancellation to avoid deadlock when enclosing test
 		// times out.
 		select {
@@ -1102,62 +1141,31 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		wg.Done()
 	}()
 
-	select {
-	case gotAddr := <-addrCh:
-		t.Logf("got first address: %s", gotAddr)
-	case <-time.After(testTimeout):
-		t.Fatal("timeout acquiring initial address")
-	}
+	gotAddr := <-addrCh
+	t.Logf("got first address: %s", gotAddr)
 
+	initCountAfterFirstAcquisition := c.stats.InitAcquire.Value()
 	// The first address is always acquired through init selecting state.
-	if got := c.stats.InitAcquire.Value(); got != 1 {
-		t.Errorf("client entered initselecting state %d times, want: 1", got)
+	if initCountAfterFirstAcquisition != 1 {
+		t.Errorf("client entered initselecting state %d times, want: 1", initCountAfterFirstAcquisition)
 	}
 
-	select {
-	case gotAddr := <-addrCh:
-		if wantAddr := (tcpip.AddressWithPrefix{}); gotAddr != wantAddr {
-			t.Fatalf("lease did not correctly expire: got unexpected address = %s, want = %s", gotAddr, wantAddr)
-		}
-	case <-time.After(testTimeout):
-		t.Fatal("timeout waiting for lease to expire")
+	if gotAddr, wantAddr := <-addrCh, (tcpip.AddressWithPrefix{}); gotAddr != wantAddr {
+		t.Fatalf("lease did not correctly expire: got unexpected address = %s, want = %s", gotAddr, wantAddr)
 	}
 
-	init := c.stats.InitAcquire.Value()
-	renew := c.stats.RenewAcquire.Value()
-	rebind := c.stats.RebindAcquire.Value()
+	<-clientTransitionsDone
 
-	// wantInitCount is the number of times we want the client to enter init
-	// selecting after lease expiration before test exits. This makes us believe
-	// the client is correctly staying in the init selecting state.
-	wantInitCount := 3
-	// initBackoff is the amount of time the client needs to finish one round of
-	// address acquisition in init selecting. The client needs to always wait for
-	// the full acquisition timeout because the test server is not responding to
-	// any requests at this stage.
-	initDuration := acquireTimeout + defaultBackoffTime
-	// initTimeout is more than enough time for the client to finish address
-	// acquisition at least the number of rounds wanted.
-	initTimeout := time.After(time.Duration(2*wantInitCount) * initDuration)
-
-	for {
-		// Use `>=` to avoid flakiness. It is possible for the counter to be
-		// incremented twice during one iteration.
-		if gotInit := c.stats.InitAcquire.Value() - init; int(gotInit) >= wantInitCount {
-			t.Logf("client successfully entered init selecting %d times", gotInit)
-			break
-		}
-		select {
-		case <-time.After(initDuration):
-		case <-initTimeout:
-			t.Errorf("timeout waiting for the client to enter init selecting at least %d times after lease expiration", wantInitCount)
-			break
-		}
+	// Minus the first init where the client has gone through to acquire the
+	// first address.
+	if gotInit := c.stats.InitAcquire.Value() - initCountAfterFirstAcquisition; int(gotInit) != wantInitCount {
+		t.Errorf("got %d inits after lease expiration, want: %d", gotInit, wantInitCount)
 	}
-	if gotRenew := c.stats.RenewAcquire.Value() - renew; gotRenew != 0 {
+
+	if gotRenew := c.stats.RenewAcquire.Value(); gotRenew != 0 {
 		t.Errorf("got %d renews after lease expiration, want: 0", gotRenew)
 	}
-	if gotRebind := c.stats.RebindAcquire.Value() - rebind; gotRebind != 0 {
+	if gotRebind := c.stats.RebindAcquire.Value(); gotRebind != 0 {
 		t.Errorf("got %d rebinds after lease expiration, want: 0", gotRebind)
 	}
 }
@@ -1281,7 +1289,7 @@ func TestTwoServers(t *testing.T) {
 
 	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
 	info := c.Info()
-	if _, err := c.acquire(ctx, &info); err != nil {
+	if _, err := acquire(ctx, c, &info); err != nil {
 		t.Fatal(err)
 	}
 }
