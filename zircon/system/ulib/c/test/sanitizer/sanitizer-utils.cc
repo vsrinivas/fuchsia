@@ -26,6 +26,10 @@ namespace {
 
 #if __has_feature(address_sanitizer)
 
+// TODO(52653): These tests are flaky as they rely on the OS not decommitting
+//              memory automatically.
+#if 0
+
 // c++ complains if we try to do PAGE_SIZE << shadow_scale.
 constexpr size_t kPageSize = PAGE_SIZE;
 
@@ -190,6 +194,7 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
   // We expect the memory use to stay the same.
   EXPECT_EQ(final_mem_use, init_mem_use, "");
 }
+#endif  // 0
 
 #endif
 
