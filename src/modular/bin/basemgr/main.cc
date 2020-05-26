@@ -5,7 +5,6 @@
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
-#include <fuchsia/setui/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
@@ -27,16 +26,11 @@
 
 namespace {
 #ifdef AUTO_LOGIN_TO_GUEST
-constexpr bool kAutoLoginToGuest = true;
+constexpr bool kStableSessionId = true;
 #else
-constexpr bool kAutoLoginToGuest = false;
+constexpr bool kStableSessionId = false;
 #endif
 
-// Base shell URL's used to implement login override. See c.f.
-// ConfigureLoginOverride.
-constexpr char kAutoLoginBaseShellUrl[] =
-    "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
-    "auto_login_base_shell.cmx";
 }  // namespace
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
@@ -46,74 +40,6 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
   }
   return modular::InitializeCobalt(dispatcher, component_context);
 };
-
-bool LoginModeOverrideIsSpecified(const fuchsia::setui::SettingsObject& settings_obj,
-                                  fuchsia::setui::LoginOverride login_override) {
-  return settings_obj.data.is_account() && settings_obj.data.account().has_mode() &&
-         settings_obj.data.account().mode() == login_override;
-}
-
-// Configures base shell based on user specified login override.
-//
-// 1. Reads the login override settings stored in SetUiService.
-// 2. Overrides the base shell to the base shell corresponding to the login
-// override mode.
-// 3. If SetUiService did not have any login override settings initially,
-// write the login mode corresponding to the base shell being configured.
-void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
-                            const fuchsia::setui::SettingsObject& settings_obj,
-                            fuchsia::setui::SetUiService* setui) {
-  // Get the login override settings.
-  bool guest_mode_requested =
-      LoginModeOverrideIsSpecified(settings_obj, fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST);
-
-  // Any value of LoginOverride will override the build flag
-  // |auto_login_to_guest|.
-  if (kAutoLoginToGuest) {
-    fuchsia::modular::session::AppConfig override_base_shell;
-    override_base_shell.mutable_args()->push_back("--persist_user");
-    config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
-  }
-
-  if (guest_mode_requested) {
-    FX_LOGS(INFO) << "Login Override: Guest mode";
-    // When guest mode is specified, we use auto_login_base_shell with
-    // a persistent guest user. The framework expects this package to be
-    // available in all product configurations.
-    fuchsia::modular::session::AppConfig override_base_shell;
-    override_base_shell.mutable_args()->push_back("--persist_user");
-    config.mutable_base_shell()->set_app_config(std::move(override_base_shell));
-  } else {
-    // In the case no login mode is specified, propagate the default login mode
-    // to setui service so that other components are aware of this state.
-    if (settings_obj.data.is_account() && settings_obj.data.account().has_mode() &&
-        settings_obj.data.account().mode() != fuchsia::setui::LoginOverride::NONE) {
-      return;
-    }
-
-    // Determine the default login mode by looking at which base shell is being
-    // requested for this product configuration.
-    fuchsia::setui::AccountMutation account_mutation;
-    account_mutation.set_operation(fuchsia::setui::AccountOperation::SET_LOGIN_OVERRIDE);
-    if (config.base_shell().app_config().url() == kAutoLoginBaseShellUrl) {
-      account_mutation.set_login_override(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST);
-    } else {
-      return;
-    }
-
-    fuchsia::setui::Mutation mutation;
-    mutation.set_account_mutation_value(std::move(account_mutation));
-
-    // There is no need to wait for this callback as the result does not
-    // affect basemgr.
-    setui->Mutate(fuchsia::setui::SettingType::ACCOUNT, std::move(mutation),
-                  [](fuchsia::setui::MutationResponse response) {
-                    if (response.return_code != fuchsia::setui::ReturnCode::OK) {
-                      FX_LOGS(ERROR) << "Failed to persist login type";
-                    }
-                  });
-  }
-}
 
 // Configures Basemgr by passing in connected services.
 std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
@@ -195,61 +121,40 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::CreateAndServeOutgoingDirectory());
 
-  fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
   LifecycleImpl lifecycle_impl(&loop, component_context.get());
-  bool ran = false;
-  auto initialize_basemgr = [&modular_config, &loop, &component_context, &basemgr_impl,
-                             &lifecycle_impl, &setui,
-                             &ran](fuchsia::setui::SettingsObject settings_obj) mutable {
-    if (ran) {
-      return;
-    }
 
-    ran = true;
+  // Clients can specify whether a stable session ID is used by setting a
+  // property against base shell in the modular config. Parse the
+  // |auto_login_to_guest| build flag to set the same property.
+  if (kStableSessionId) {
+    FX_LOGS(INFO) << "Requesting stable session ID based on build flag";
+    fuchsia::modular::session::AppConfig override_base_shell;
+    override_base_shell.mutable_args()->push_back("--persist_user");
+    modular_config.mutable_basemgr_config()->mutable_base_shell()->set_app_config(
+        std::move(override_base_shell));
+  }
 
-    ConfigureLoginOverride(*modular_config.mutable_basemgr_config(), settings_obj, setui.get());
+  std::unique_ptr<modular::BasemgrImpl> basemgr =
+      ConfigureBasemgr(modular_config, component_context.get(), &loop);
 
-    std::unique_ptr<modular::BasemgrImpl> basemgr =
-        ConfigureBasemgr(modular_config, component_context.get(), &loop);
+  basemgr_impl = std::move(basemgr);
+  lifecycle_impl.set_sink(basemgr_impl.get());
 
-    basemgr_impl = std::move(basemgr);
-    lifecycle_impl.set_sink(basemgr_impl.get());
-
-    // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
-    // component's out directory has mounted. basemgr_launcher uses this signal
-    // to determine when basemgr has completed initialization so it can detach
-    // and stop itself. When basemgr_launcher is used, it's responsible for
-    // providing basemgr a configuration file. To ensure we don't shutdown
-    // basemgr_launcher too early, we need additions to out/ to complete after
-    // configurations have been parsed.
-    component_context->outgoing()->debug_dir()->AddEntry(
-        modular_config::kBasemgrConfigName,
-        std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](zx::channel request,
-                                                                           async_dispatcher_t*) {
-          basemgr_impl->Connect(
-              fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(std::move(request)));
-        }));
-  };
-
-  setui.set_error_handler([&initialize_basemgr](zx_status_t) {
-    // In case of error, continue as if no user setting is present.
-    fuchsia::setui::AccountSettings default_account_settings;
-    default_account_settings.set_mode(fuchsia::setui::LoginOverride::NONE);
-    fuchsia::setui::SettingsObject default_settings_object;
-    default_settings_object.setting_type = fuchsia::setui::SettingType::ACCOUNT;
-    default_settings_object.data.set_account(std::move(default_account_settings));
-
-    initialize_basemgr(std::move(default_settings_object));
-  });
-
-  component_context->svc()->Connect(setui.NewRequest());
-
-  // Retrieve the user specified login override. This override will take
-  // precedence over any compile time configuration. Watch will always
-  // return a value in this case, as it is the initial request (long
-  // polling).
-  setui->Watch(fuchsia::setui::SettingType::ACCOUNT, initialize_basemgr);
+  // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
+  // component's out directory has mounted. basemgr_launcher uses this signal
+  // to determine when basemgr has completed initialization so it can detach
+  // and stop itself. When basemgr_launcher is used, it's responsible for
+  // providing basemgr a configuration file. To ensure we don't shutdown
+  // basemgr_launcher too early, we need additions to out/ to complete after
+  // configurations have been parsed.
+  component_context->outgoing()->debug_dir()->AddEntry(
+      modular_config::kBasemgrConfigName,
+      std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](zx::channel request,
+                                                                         async_dispatcher_t*) {
+        basemgr_impl->Connect(
+            fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(std::move(request)));
+      }));
 
   loop.Run();
 

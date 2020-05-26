@@ -10,7 +10,7 @@ import("//src/modular/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
-  # Whether basemgr should automatically login as a persistent guest user.
+  # Whether basemgr should set a stable session ID.
   auto_login_to_guest = false
 }
 
@@ -36,7 +36,6 @@ executable_package("basemgr") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.lifecycle",
