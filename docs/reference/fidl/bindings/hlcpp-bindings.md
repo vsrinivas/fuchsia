@@ -175,13 +175,6 @@ Structs may have additional members if they represent the response variant of a
 
 ### Unions {#unions}
 
-The following terminology is used when discussing [unions][lang-unions]:
-
-* Variant: the selected member of a union.
-* Tag: the target language variant discriminator. In HLCPP, these are
-  represented using `enum`s.
-* Ordinal: the on the wire variant discriminator.
-
 Given the union definition:
 
 ```fidl
@@ -193,7 +186,7 @@ union JsonValue {
 ```
 
 FIDL generates a `JsonValue` class. `JsonValue` contains a public tag enum
-representing the possible variants:
+representing the possible [variants][union-lexicon]:
 
 ```c++
 enum Tag : fidl_xunion_tag_t {
@@ -203,10 +196,10 @@ enum Tag : fidl_xunion_tag_t {
 };
 ```
 
-Each member of `Tag` has a value matching its ordinal specified in the `union`
-definition. Reserved fields do not have any generated code. In addition, there
-is an `Invalid` field which is the initial value used for a `JsonValue` that has
-no variant set yet.
+Each member of `Tag` has a value matching its [ordinal][union-lexicon] specified
+in the `union` definition. Reserved fields do not have any generated code. In
+addition, there is an `Invalid` field which is the initial value used for a
+`JsonValue` that has no variant set yet.
 
 `JsonValue` provides the following methods:
 
@@ -234,7 +227,8 @@ no variant set yet.
   as the specified variant.
 * `JsonValue& set_int_value(int32_t)` and `JsonValue&
   set_string_value(std::string)`: Setter methods for each variant.
-* `Tag Which() const`: returns the current tag of the `JsonValue`.
+* `Tag Which() const`: returns the current [tag][union-lexicon] of the
+  `JsonValue`.
 * `fidl_xunion_tag_t Ordinal() const`: returns the raw `fidl_xunion_tag_t` tag.
   Prefer to use `Which()` unless the raw ordinal is required
 
@@ -547,3 +541,4 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms

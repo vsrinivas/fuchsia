@@ -156,13 +156,6 @@ all fields of the struct.
 
 ### Unions {#unions}
 
-The following terminology is used when discussing [unions][lang-unions]:
-
-* Variant: the selected member of a union.
-* Tag: the target language variant discriminator. In LLCPP, these are
-  represented using an `enum class`.
-* Ordinal: the on the wire variant discriminator.
-
 Given the union definition:
 
 ```fidl
@@ -174,7 +167,7 @@ union JsonValue {
 ```
 
 FIDL will generate a `JsonValue` class. `JsonValue` contains a public tag enum
-class representing the possible variants:
+class representing the possible [variants][union-lexicon]:
 
 ```c++
 enum class Tag : fidl_xunion_tag_t {
@@ -213,8 +206,9 @@ definition. Reserved fields do not have any generated code
   set_string_value(fidl::tracking_ptr<fidl::StringView>&& value)`: Setter
   methods for each variant. These setters will overwrite the previously selected
   member, if any.
-* `Tag Which() const`: returns the current tag of the `JsonValue`. Calling this
-  method without first setting the variant leads to an assertion error.
+* `Tag Which() const`: returns the current [tag][union-lexicon] of the
+  `JsonValue`. Calling this method without first setting the variant leads to an
+  assertion error.
 
 #### Flexible unions and unknown variants
 
@@ -238,7 +232,7 @@ A flexible `JsonValue` also has the following extra methods:
   method fails with an assertion error if the variant is *not* unknown.
 
 Encoding a union with an unknown variant will write the unknown data and the
-original ordinal back onto the wire.
+original [ordinal][union-lexicon] back onto the wire.
 
 The decoding operation will fail when encountering an unknown variant at a
 non-flexible union type.
@@ -649,3 +643,4 @@ Name[]` field on the protocol class, containing the full protocol name.
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms

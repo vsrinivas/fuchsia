@@ -191,13 +191,6 @@ The FIDL toolchain generates a `Color` class with the following methods:
 
 ### Unions {#unions}
 
-The following terminology is used when discussing [unions][lang-unions]:
-
-* Variant: the selected member of a union.
-* Tag: the target language variant discriminator. In Dart, these are represented
-  using `enum`s.
-* Ordinal: the on the wire variant discriminator.
-
 Given the union definition:
 
 ```fidl
@@ -208,7 +201,7 @@ union JsonValue {
 };
 ```
 
-FIDL generates an `enum` representing the tags of the union:
+FIDL generates an `enum` representing the [tags][union-lexicon] of the union:
 
 ```dart
 enum JsonValueTag {
@@ -221,13 +214,13 @@ As well as a `JsonValue` class with the following methods:
 
 * `const JsonValue.withIntValue(int)` and `const
   JsonValue.withStringValue(String)`: Constructors for each variant.
-* `JsonValueTag get $tag`: Getter for the tag corresponding to this the variant
-   of this union.
+* `JsonValueTag get $tag`: Getter for the tag corresponding to this the
+  [variant][union-lexicon] of this union.
 * `int get intValue` and `String get stringValue`: Getter for the underlying
   value. If the instance's variant does not match the getter method, `null` is
   returned.
 * `String toString()`: Returns a readable string of the `JsonValue`.
-* `int get $ordinal`: Setter for the underlying ordinal value.
+* `int get $ordinal`: Setter for the underlying [ordinal][union-lexicon] value.
 * `Object get $data`: Setter for the underlying union data.
 * `bool operator ==(dynamic other)`: Equality operator that performs deep
    comparison when compared to another `JsonValue` of the same variant.
@@ -477,3 +470,4 @@ and all events are implemented by returning a Stream with a single
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms

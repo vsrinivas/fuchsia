@@ -170,13 +170,6 @@ The Go bindings do not currently support default values on struct fields.
 
 ### Unions {#unions}
 
-The following terminology is used when discussing [unions][lang-unions]:
-
-* Variant: the selected member of a union.
-* Tag: the target language variant discriminator. In Go, these are represented
-  using `uint64`.
-* Ordinal: the on the wire variant discriminator.
-
 Given the union definition:
 
 ```fidl
@@ -187,7 +180,8 @@ union JsonValue {
 };
 ```
 
-FIDL generates an alias and associated constants representing the union tag:
+FIDL generates an alias and associated constants representing the
+[union tag][union-lexicon]:
 
 ```golang
 type I_jsonValueTag uint64
@@ -198,8 +192,8 @@ const (
 )
 ```
 
-as well as a `JsonValue` struct with fields for the tag and each variant of the
-union:
+as well as a `JsonValue` struct with fields for the tag and each
+[variant][union-lexicon] of the union:
 
 ```golang
 type JsonValue struct {
@@ -455,3 +449,4 @@ protocol name.
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
