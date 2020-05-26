@@ -8,7 +8,9 @@ import("//build/test/test_package.gni")
 source_set("lib") {
   sources = [
     "args.cc",
+    "cpu.cc",
     "hwstress.cc",
+    "util.cc",
   ]
 
   public_deps = [
@@ -43,7 +45,9 @@ executable("hwstress_test") {
 
   sources = [
     "args_test.cc",
+    "cpu_test.cc",
     "hwstress_test.cc",
+    "util_test.cc",
   ]
 
   deps = [

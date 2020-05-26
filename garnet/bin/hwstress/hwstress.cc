@@ -12,16 +12,10 @@
 #include <utility>
 
 #include "args.h"
+#include "cpu.h"
+#include "util.h"
 
 namespace hwstress {
-
-// Convert double representing a number of seconds to a zx::duration.
-zx::duration SecsToDuration(double secs) {
-  return zx::nsec(static_cast<int64_t>(secs * 1'000'000'000.0));
-}
-
-// Convert zx::duration to double representing the number of seconds.
-double DurationToSecs(zx::duration d) { return d.to_nsecs() / 1'000'000'000.0; }
 
 int Run(int argc, const char** argv) {
   // Parse arguments.
@@ -44,20 +38,10 @@ int Run(int argc, const char** argv) {
   zx::duration duration = args.test_duration_seconds == 0
                               ? zx::duration::infinite()
                               : SecsToDuration(args.test_duration_seconds);
-  zx::time finish_time = zx::deadline_after(duration);
 
-  // Print start banner.
-  if (finish_time == zx::time::infinite()) {
-    printf("Exercising CPU until stopped...\n");
-  } else {
-    printf("Exercising CPU for %0.2f seconds...\n", DurationToSecs(duration));
-  }
+  // Run the CPU tests.
+  StressCpu(duration);
 
-  // Minimal viable product.
-  while (zx::clock::get_monotonic() < finish_time) {
-  }
-
-  printf("Done.\n");
   return 0;
 }
 
