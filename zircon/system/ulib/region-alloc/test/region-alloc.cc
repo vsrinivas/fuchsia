@@ -353,4 +353,146 @@ TEST(RegionAllocCppApiTestCase, AllocatedWalkFromHeap) {
   ASSERT_NO_FAILURES(AllocatedWalkHelper(TestFlavor::UseHeap));
 }
 
+void TestRegionHelper(TestFlavor flavor) {
+  // Make an allocator, and if we are not using the heap for bookkeeping, make a
+  // pool and attach it to an allocator.
+  RegionAllocator alloc((flavor == TestFlavor::UsePool)
+                            ? RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE)
+                            : nullptr);
+
+  // Put the allocator into the state we want for testing.  We want a situation
+  // where there are at least 3 regions in the available set, and 3 regions in
+  // the allocated set.
+  const ralloc_region_t test_regions[] = {
+      {.base = 0x1000, .size = 0x2000},
+      {.base = 0x4000, .size = 0x2000},
+      {.base = 0x8000, .size = 0x2000},
+  };
+
+  struct AllocatedRegion {
+    // Allow implicit construction to make our notation in the table of regions
+    // below just a bit shorter.
+    AllocatedRegion(const ralloc_region_t& r) : region(r) {}
+    const ralloc_region_t region;
+    RegionAllocator::Region::UPtr ptr;
+  } allocated_regions[] = {
+      {{.base = 0x1000, .size = 0x1000}},
+      {{.base = 0x4800, .size = 0x1000}},
+      {{.base = 0x9000, .size = 0x1000}},
+  };
+
+  // Add the initial available regions to the set
+  for (const auto& r : test_regions) {
+    ASSERT_OK(alloc.AddRegion(r));
+  }
+
+  // Take out the initial "allocated" set, making sure to hold onto the
+  // allocation references.
+  for (auto& ar : allocated_regions) {
+    ar.ptr = alloc.GetRegion(ar.region);
+  }
+
+  // OK, at this point we should have an allocator with the following available
+  // and allocated regions.
+  //
+  // :: Allocated ::
+  // [ 0x1000, 0x1FFF ],
+  // [ 0x4800, 0x57FF ],
+  // [ 0x9000, 0x9FFF ],
+  //
+  // :: Avail ::
+  // [ 0x2000, 0x2FFF ],
+  // [ 0x4000, 0x47FF ],
+  // [ 0x5800, 0x5FFF ],
+  // [ 0x8000, 0x8FFF ],
+  //
+  // Now just create a set of test vectors which attempts to hit all of the edge
+  // cases here.  Each vector is flagged with an expectations to
+  // intersect/be-contained-by regions in the allocated/available region sets.
+  const struct {
+    ralloc_region_t region;
+    bool ai, ac;  // allocated intersects/contained by
+    bool vi, vc;  // available intersects/contained_by
+  } test_vectors[] = {
+      // clang-format off
+    { {.base = 0x0000, .size = 0xF000 }, .ai =  true, .ac = false, .vi =  true, .vc = false },
+    { {.base = 0x0000, .size =  0x100 }, .ai = false, .ac = false, .vi = false, .vc = false },
+
+    { {.base = 0x0FF0, .size =   0x10 }, .ai = false, .ac = false, .vi = false, .vc = false },
+    { {.base = 0x0FF1, .size =   0x10 }, .ai =  true, .ac = false, .vi = false, .vc = false },
+    { {.base = 0x1000, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x1010, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x1FF0, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x1FF8, .size =   0x10 }, .ai =  true, .ac = false, .vi =  true, .vc = false },
+
+    { {.base = 0x2000, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x2010, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x2FF0, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x2FF8, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc = false },
+    { {.base = 0x3000, .size =   0x10 }, .ai = false, .ac = false, .vi = false, .vc = false },
+
+    { {.base = 0x3FF0, .size =   0x10 }, .ai = false, .ac = false, .vi = false, .vc = false },
+    { {.base = 0x3FF1, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc = false },
+    { {.base = 0x4000, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x4010, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x47F0, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x47F8, .size =   0x10 }, .ai =  true, .ac = false, .vi =  true, .vc = false },
+
+    { {.base = 0x4800, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x4900, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x57F0, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x57F8, .size =   0x10 }, .ai =  true, .ac = false, .vi =  true, .vc = false },
+
+    { {.base = 0x5800, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x5900, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x5FF0, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x5FF8, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc = false },
+    { {.base = 0x6000, .size =   0x10 }, .ai = false, .ac = false, .vi = false, .vc = false },
+
+    { {.base = 0x7FF0, .size =   0x10 }, .ai = false, .ac = false, .vi = false, .vc = false },
+    { {.base = 0x7FF1, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc = false },
+    { {.base = 0x8000, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x8010, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x8FF0, .size =   0x10 }, .ai = false, .ac = false, .vi =  true, .vc =  true },
+    { {.base = 0x8FF8, .size =   0x10 }, .ai =  true, .ac = false, .vi =  true, .vc = false },
+
+    { {.base = 0x9000, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x9010, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x9FF0, .size =   0x10 }, .ai =  true, .ac =  true, .vi = false, .vc = false },
+    { {.base = 0x9FF8, .size =   0x10 }, .ai =  true, .ac = false, .vi = false, .vc = false },
+    { {.base = 0xA000, .size =   0x10 }, .ai = false, .ac = false, .vi = false, .vc = false },
+      // clang-format on
+  };
+
+  for (const auto& tv : test_vectors) {
+    using TRS = RegionAllocator::TestRegionSet;
+    uint64_t s = tv.region.base;
+    uint64_t e = tv.region.base + tv.region.size - 1;
+    EXPECT_EQ(tv.ai, alloc.TestRegionIntersects(tv.region, TRS::Allocated),
+              "Region [0x%lx, 0x%lx] should %sintersect by the allocated set, but is%s.", s, e,
+              tv.ai ? "" : "not ", tv.ai ? "not " : "");
+    EXPECT_EQ(tv.ac, alloc.TestRegionContainedBy(tv.region, TRS::Allocated),
+              "Region [0x%lx, 0x%lx] should %sbe contained by the allocated set, but is%s.", s, e,
+              tv.ac ? "" : "not ", tv.ac ? "not " : "");
+    EXPECT_EQ(tv.vi, alloc.TestRegionIntersects(tv.region, TRS::Available),
+              "Region [0x%lx, 0x%lx] should %sintersect by the available set, but is%s.", s, e,
+              tv.vi ? "" : "not ", tv.vi ? "not " : "");
+    EXPECT_EQ(tv.vc, alloc.TestRegionContainedBy(tv.region, TRS::Available),
+              "Region [0x%lx, 0x%lx] should %sbe contained by the available set, but is%s.", s, e,
+              tv.vc ? "" : "not ", tv.vc ? "not " : "");
+  }
+
+  // We should be done now.  When allocated_regions goes out of scope, it will
+  // release our allocations.  Then the allocator will go out of scope releasing
+  // all of the bookkeeping and the RegionPool (if we used one) in the process.
+}
+
+TEST(RegionAllocCppApiTestCase, TestRegionFromPool) {
+  ASSERT_NO_FAILURES(TestRegionHelper(TestFlavor::UsePool));
+}
+
+TEST(RegionAllocCppApiTestCase, TestRegionFromHeap) {
+  ASSERT_NO_FAILURES(TestRegionHelper(TestFlavor::UseHeap));
+}
+
 }  // namespace

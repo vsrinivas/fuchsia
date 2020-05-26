@@ -246,6 +246,14 @@ class RegionAllocator {
   struct SortBySizeTag {};
 
  public:
+  // An enum which selects which set of regions to test against when testing for
+  // intersection or containment.  See TestRegionIntersect and
+  // TestRegionContains for examples.
+  enum class TestRegionSet {
+    Allocated,  // The set of currently allocated regions.
+    Available,  // The set of currently available regions.
+  };
+
   class Region;
   using RegionSlabTraits =
       fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE, fbl::Mutex,
@@ -477,6 +485,35 @@ class RegionAllocator {
     return ret;
   }
 
+  // Returns true if |region| intersects any of the regions in either the set of
+  // currently allocated regions, or currently available regions.
+  //
+  // region : The region to test
+  // which  : Either TestRegionSet::Allocated or TestRegionSet::Available to
+  //          test against the set of currently allocated or currently available
+  //          regions.
+  bool TestRegionIntersects(const ralloc_region_t& region, TestRegionSet which) const {
+    fbl::AutoLock alloc_lock(&alloc_lock_);
+    return IntersectsLocked(
+        (which == TestRegionSet::Allocated) ? allocated_regions_by_base_ : avail_regions_by_base_,
+        region);
+  }
+
+  // Returns true if |region| is completely contained by any of the regions in
+  // either the set of currently allocated regions, or currently available
+  // regions.
+  //
+  // region : The region to test
+  // which  : Either TestRegionSet::Allocated or TestRegionSet::Available to
+  //          test against the set of currently allocated or currently available
+  //          regions.
+  bool TestRegionContainedBy(const ralloc_region_t& region, TestRegionSet which) const {
+    fbl::AutoLock alloc_lock(&alloc_lock_);
+    return ContainedByLocked(
+        (which == TestRegionSet::Allocated) ? allocated_regions_by_base_ : avail_regions_by_base_,
+        region);
+  }
+
   size_t AllocatedRegionCount() const __TA_EXCLUDES(alloc_lock_) {
     fbl::AutoLock alloc_lock(&alloc_lock_);
     return allocated_regions_by_base_.size();
@@ -535,8 +572,13 @@ class RegionAllocator {
                                    Region::UPtr& out_region, uint64_t base, uint64_t size)
       __TA_REQUIRES(alloc_lock_);
 
-  bool IntersectsLocked(const Region::WAVLTreeSortByBase& tree, const ralloc_region_t& region)
+  // Returns true if any of the regions in |tree| intersect |region|.
+  bool IntersectsLocked(const Region::WAVLTreeSortByBase& tree, const ralloc_region_t& region) const
       __TA_REQUIRES(alloc_lock_);
+
+  // Returns true if any of the regions in |tree| completely contain |region|.
+  bool ContainedByLocked(const Region::WAVLTreeSortByBase& tree,
+                         const ralloc_region_t& region) const __TA_REQUIRES(alloc_lock_);
 
   // Create a region by allocating it from the current RegionPool, or from the
   // heap if we have no assigned region pool.

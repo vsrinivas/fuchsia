@@ -565,7 +565,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
 }
 
 bool RegionAllocator::IntersectsLocked(const Region::WAVLTreeSortByBase& tree,
-                                       const ralloc_region_t& region) {
+                                       const ralloc_region_t& region) const {
   // Find the first entry in the tree whose base is >= region.base.  If this
   // element exists, and its base is < the exclusive end of region, then
   // we have an intersection.
@@ -579,6 +579,28 @@ bool RegionAllocator::IntersectsLocked(const Region::WAVLTreeSortByBase& tree,
   // have an intersection.
   --iter;
   if (iter.IsValid() && (region.base < (iter->base + iter->size))) {
+    return true;
+  }
+
+  return false;
+}
+
+bool RegionAllocator::ContainedByLocked(const Region::WAVLTreeSortByBase& tree,
+                                        const ralloc_region_t& region) const {
+  // Find the first entry in the tree whose base is > region.base, then back up
+  // one.  Our iterator now points to the first entry in a set of disjoint
+  // regions sorted by ascending base address, whose base address is <= to ours.
+  //
+  // If we are completely contained by any block, it must be this one.  We
+  // already know that the region after this one (if any) has a base address which is
+  // strictly > than |region|, so it cannot contain |region|.  Also,
+  // All of the regions are disjoint (by nature of the data structure).  So, any
+  // region which comes before |iter| one must have an end address strictly < the
+  // base address of |iter|.  Since |region|'s base address is >= |iter|'s base
+  // address, we know that the region which comes before |iter| cannot contain
+  // region either.
+  auto iter = --(tree.upper_bound(region.base));
+  if (iter.IsValid() && ((iter->base + iter->size) >= (region.base + region.size))) {
     return true;
   }
 
