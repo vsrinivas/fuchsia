@@ -61,8 +61,8 @@
 
 namespace {
 
-constexpr char kDriverHostPath[] = "/boot/bin/driver_host";
-constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
+constexpr char kDriverHostPath[] = "bin/driver_host";
+constexpr char kBootFirmwarePath[] = "lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
@@ -120,8 +120,6 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
-const char* kFragmentDriverPath = "/boot/driver/fragment.so";
-
 Coordinator::Coordinator(CoordinatorConfig config)
     : config_(std::move(config)), inspect_manager_(config_.dispatcher) {
   if (config_.oom_event) {
@@ -156,7 +154,7 @@ void Coordinator::ShutdownFilesystems() {
   LOGF(INFO, "Successfully waited for VFS exit completion");
 }
 
-zx_status_t Coordinator::InitCoreDevices(const char* sys_device_driver) {
+zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
   root_device_ = fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
                                              ZX_PROTOCOL_ROOT, zx::channel());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
@@ -375,7 +373,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 }
 
 zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out) {
-  const char* program = kDriverHostPath;
+  std::string program = config_.path_prefix + kDriverHostPath;
   std::vector<const char*> env;
   if (config_.asan_drivers) {
     // If there are any ASan drivers, use the ASan-supporting driver_host for
@@ -418,7 +416,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 
   fbl::RefPtr<DriverHost> dh;
   zx_status_t status = DriverHost::Launch(
-      this, loader_service_connector_, program, name, env.data(), root_resource(),
+      this, loader_service_connector_, program.c_str(), name, env.data(), root_resource(),
       zx::unowned_job(config_.driver_host_job), config_.fs_provider, &dh);
   if (status != ZX_OK) {
     return status;
@@ -782,8 +780,8 @@ zx_status_t Coordinator::AddCompositeDevice(
 
 zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path,
                                       zx::vmo* vmo, size_t* size) {
-  static const char* fwdirs[] = {
-      kBootFirmwarePath,
+  const std::string fwdirs[] = {
+      config_.path_prefix + kBootFirmwarePath,
       kSystemFirmwarePath,
   };
 
@@ -794,7 +792,7 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
 
   int fd, fwfd;
   for (unsigned n = 0; n < fbl::count_of(fwdirs); n++) {
-    if ((fd = open(fwdirs[n], O_RDONLY, O_DIRECTORY)) < 0) {
+    if ((fd = open(fwdirs[n].c_str(), O_RDONLY, O_DIRECTORY)) < 0) {
       continue;
     }
     fwfd = openat(fd, path, O_RDONLY);
@@ -1437,7 +1435,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   }
 
   // Record the special fragment driver when we see it
-  if (!strcmp(driver->libname.data(), kFragmentDriverPath)) {
+  if (driver->libname.data() == GetFragmentDriverPath()) {
     fragment_driver_ = driver.get();
     driver->never_autoselect = true;
   }
@@ -1924,4 +1922,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
   this->ShutdownFilesystems();
+}
+
+std::string Coordinator::GetFragmentDriverPath() const {
+  return config_.path_prefix + "driver/fragment.so";
 }

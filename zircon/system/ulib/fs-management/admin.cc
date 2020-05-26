@@ -17,6 +17,8 @@
 #include <fs-management/admin.h>
 #include <fs/vfs.h>
 
+#include "path.h"
+
 namespace fio = ::llcpp::fuchsia::io;
 namespace fshost = ::llcpp::fuchsia::fshost;
 
@@ -125,9 +127,11 @@ zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_opti
 
   switch (df) {
     case DISK_FORMAT_MINFS:
-      return InitNativeFs("/boot/bin/minfs", std::move(device), *options, out_export_root);
+      return InitNativeFs(fs_management::GetBinaryPath("minfs").c_str(), std::move(device),
+                          *options, out_export_root);
     case DISK_FORMAT_BLOBFS:
-      return InitNativeFs("/boot/bin/blobfs", std::move(device), *options, out_export_root);
+      return InitNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), std::move(device),
+                          *options, out_export_root);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

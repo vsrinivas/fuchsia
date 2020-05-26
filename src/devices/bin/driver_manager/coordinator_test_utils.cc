@@ -17,7 +17,7 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
   // manage pointer lifetime for it below.
   static DummyFsProvider dummy_fs_provider;
 
-  CoordinatorConfig config{};
+  CoordinatorConfig config;
 
   if (boot_args != nullptr && client != nullptr) {
     *boot_args = mock_boot_arguments::Server{{{"key1", "new-value"}, {"key2", "value2"}}};
@@ -41,7 +41,8 @@ void InitializeCoordinator(Coordinator* coordinator) {
   ASSERT_OK(status);
 
   // Load the fragment driver
-  load_driver(kFragmentDriverPath, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
+  load_driver(coordinator->GetFragmentDriverPath().c_str(),
+              fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
 
   // Add the driver we're using as platform bus
   load_driver(kSystemDriverPath, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));

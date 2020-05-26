@@ -137,13 +137,13 @@ class ResumeContext {
 struct DevmgrArgs {
   // Load drivers from these directories.  If this is empty, the default will
   // be used.
-  fbl::Vector<const char*> driver_search_paths;
+  fbl::Vector<std::string> driver_search_paths;
   // Load the drivers with these paths.  The specified drivers do not need to
   // be in directories in |driver_search_paths|.
   fbl::Vector<const char*> load_drivers;
   // Use this driver as the sys_device driver.  If nullptr, the default will
   // be used.
-  const char* sys_device_driver = nullptr;
+  std::string sys_device_driver;
   // Select whether to launch a new svchost process, or to use the /svc provided through the
   // namespace when launching subprocesses (only used in integration tests).
   bool start_svchost = true;
@@ -156,6 +156,10 @@ struct DevmgrArgs {
   // Connect the stdout and stderr file descriptors for this program to a
   // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
   bool log_to_debuglog = false;
+  // Path prefix for binaries/drivers/libraries etc.
+  std::string path_prefix = "/boot/";
+  // Use the default loader rather than the one provided by fshost.
+  bool use_default_loader = false;
 };
 
 struct CoordinatorConfig {
@@ -166,21 +170,21 @@ struct CoordinatorConfig {
   // Event that is signaled by the kernel in OOM situation.
   zx::event oom_event;
   // Async dispatcher for the coordinator.
-  async_dispatcher_t* dispatcher;
+  async_dispatcher_t* dispatcher = nullptr;
   // Client for the Arguments service.
   llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
   // If true, netsvc is disabled and will not start.
-  bool disable_netsvc;
+  bool disable_netsvc = false;
   // Whether we require /system.
-  bool require_system;
+  bool require_system = false;
   // Whether we require ASan drivers.
-  bool asan_drivers;
+  bool asan_drivers = false;
   // Whether to reboot the device when suspend does not finish on time.
-  bool suspend_fallback;
+  bool suspend_fallback = false;
   // Whether to output logs to debuglog.
-  bool log_to_debuglog;
+  bool log_to_debuglog = false;
   // Whether to enable verbose logging.
-  bool verbose;
+  bool verbose = false;
   // Timeout for system wide suspend
   zx::duration suspend_timeout = kDefaultSuspendTimeout;
   // Timeout for system wide resume
@@ -190,7 +194,10 @@ struct CoordinatorConfig {
   power_fidl::statecontrol::SystemPowerState shutdown_system_state =
       power_fidl::statecontrol::SystemPowerState::REBOOT;
   // Something to clone a handle from the environment to pass to a Devhost.
-  FsProvider* fs_provider;
+  FsProvider* fs_provider = nullptr;
+  // The path prefix to find binaries, drivers, etc. Typically this is "/boot/", but in test
+  // environments this might be different.
+  std::string path_prefix = "/boot/";
 };
 
 using ResumeCallback = std::function<void(zx_status_t)>;
@@ -214,7 +221,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   ~Coordinator();
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
-  zx_status_t InitCoreDevices(const char* sys_device_driver);
+  zx_status_t InitCoreDevices(std::string_view sys_device_driver);
   bool InSuspend() const;
   bool InResume() const;
 
@@ -372,6 +379,9 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
                                  device_manager_fidl::SystemStateTransition::Interface::
                                      SetTerminationSystemStateCompleter::Sync completer) override;
 
+  // Returns path to driver that should be bound to fragments of composite devices.
+  std::string GetFragmentDriverPath() const;
+
  protected:
   std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
 
@@ -459,9 +469,6 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
                         const fbl::Array<const zx_device_prop_t>& props, bool autobind);
-
-// Path to driver that should be bound to fragments of composite devices
-extern const char* kFragmentDriverPath;
 
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
                                 fidl_txn_t* txn);

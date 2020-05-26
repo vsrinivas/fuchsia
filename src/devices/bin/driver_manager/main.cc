@@ -114,6 +114,8 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     kDisableBlockWatcher,
     kDisableNetsvc,
     kLogToDebuglog,
+    kPathPrefix,
+    kUseDefaultLoader,
   };
   option options[] = {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
@@ -123,6 +125,8 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
       {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
       {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
       {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
+      {"path-prefix", required_argument, nullptr, kPathPrefix},
+      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
   };
 
   auto print_usage_and_exit = [options]() {
@@ -133,8 +137,8 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     abort();
   };
 
-  auto check_not_duplicated = [print_usage_and_exit](const char* arg) {
-    if (arg != nullptr) {
+  auto check_not_duplicated = [print_usage_and_exit](const std::string& arg) {
+    if (!arg.empty()) {
       printf("driver_manager: duplicated argument\n");
       print_usage_and_exit();
     }
@@ -167,6 +171,12 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
         break;
       case kLogToDebuglog:
         out->log_to_debuglog = true;
+        break;
+      case kPathPrefix:
+        out->path_prefix = std::string(optarg);
+        break;
+      case kUseDefaultLoader:
+        out->use_default_loader = true;
         break;
       default:
         print_usage_and_exit();
@@ -239,12 +249,12 @@ int main(int argc, char** argv) {
   if (devmgr_args.driver_search_paths.size() == 0) {
     devmgr_args.driver_search_paths.push_back("/boot/driver");
   }
-  if (devmgr_args.sys_device_driver == nullptr) {
-    devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
+  if (devmgr_args.sys_device_driver.empty()) {
+    devmgr_args.sys_device_driver = devmgr_args.path_prefix + "driver/platform-bus.so";
   }
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  CoordinatorConfig config{};
+  CoordinatorConfig config;
   SystemInstance system_instance;
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
@@ -255,6 +265,7 @@ int main(int argc, char** argv) {
   config.verbose = driver_manager_params.verbose;
   config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;
+  config.path_prefix = devmgr_args.path_prefix;
 
   // TODO(ZX-4178): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);
@@ -305,7 +316,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver);
+  status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver.c_str());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
     return status;
@@ -326,15 +337,18 @@ int main(int argc, char** argv) {
 
   // Check if whatever launched devmgr gave a channel for component lifecycle events
   zx::channel component_lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  ZX_ASSERT(component_lifecycle_request.is_valid());
   if (component_lifecycle_request.is_valid()) {
     status = devmgr::ComponentLifecycleServer::Create(loop.dispatcher(), &coordinator,
                                                       std::move(component_lifecycle_request));
     if (status != ZX_OK) {
-      LOGF(ERROR, "driver_manager: Cannot create componentlifecycleserver: %s\n",
+      LOGF(ERROR, "driver_manager: Cannot create componentlifecycleserver: %s",
            zx_status_get_string(status));
       return status;
     }
+  } else {
+    LOGF(INFO,
+         "No valid handle found for lifecycle events, assuming test environment and "
+         "continuing");
   }
 
   status = system_instance.CreateSvcJob(root_job);
@@ -416,7 +430,7 @@ int main(int argc, char** argv) {
       }
       return status;
     });
-  } else {
+  } else if (!devmgr_args.use_default_loader) {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
@@ -427,7 +441,7 @@ int main(int argc, char** argv) {
     });
   }
 
-  for (const char* path : devmgr_args.driver_search_paths) {
+  for (const std::string& path : devmgr_args.driver_search_paths) {
     find_loadable_drivers(path, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
   for (const char* driver : devmgr_args.load_drivers) {

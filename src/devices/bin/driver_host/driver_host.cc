@@ -653,7 +653,10 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
     return;
   }
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    LOGF(FATAL, "Disconnected %p from driver_manager", conn.get());
+    // This is expected in test environments where driver_manager has terminated.
+    // TODO(fxb/52627): Support graceful termination.
+    LOGF(WARNING, "Disconnected %p from driver_manager", conn.get());
+    exit(1);
   }
   LOGF(WARNING, "Unexpected signal state %#08x", signal->observed);
   BeginWait(std::move(conn), dispatcher);

@@ -14,6 +14,7 @@
 #include <zircon/status.h>
 
 #include <new>
+#include <string>
 
 #include <driver-info/driver-info.h>
 #include <fbl/string_printf.h>
@@ -80,8 +81,8 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
 
 }  // namespace
 
-void find_loadable_drivers(const char* path, DriverLoadCallback func) {
-  DIR* dir = opendir(path);
+void find_loadable_drivers(const std::string& path, DriverLoadCallback func) {
+  DIR* dir = opendir(path.c_str());
   if (dir == nullptr) {
     return;
   }
@@ -95,7 +96,7 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
     if (de->d_type != DT_REG) {
       continue;
     }
-    auto libname = fbl::StringPrintf("%s/%s", path, de->d_name);
+    auto libname = fbl::StringPrintf("%s/%s", path.c_str(), de->d_name);
     context.libname = libname.data();
 
     int fd = openat(dirfd(dir), de->d_name, O_RDONLY);

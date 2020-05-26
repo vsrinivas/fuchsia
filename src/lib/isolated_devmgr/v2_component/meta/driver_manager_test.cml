@@ -1,0 +1,32 @@
+{
+    program: {
+        binary: "bin/driver_manager",
+        args: [
+            "--no-start-svchost",
+            "--path-prefix",
+            "/pkg/",
+            "--use-default-loader",
+            "--driver-search-path",
+            "/pkg/bin/driver",
+        ],
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.boot.Arguments",
+                "/svc/fuchsia.boot.RootJob",
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            directory: "/dev",
+            from: "self",
+            rights: [ "rw*" ],
+        },
+    ],
+}

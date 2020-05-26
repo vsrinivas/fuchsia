@@ -1,0 +1,45 @@
+{
+    program: {
+        binary: "bin/support",
+    },
+    children: [
+        {
+            name: "driver_manager_test",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/driver_manager_test.cm",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#driver_manager_test" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+            from: "realm",
+            to: [ "#driver_manager_test" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.boot.Arguments",
+                "/svc/fuchsia.boot.RootJob",
+            ],
+            from: "self",
+            to: [ "#driver_manager_test" ],
+        },
+    ],
+    expose: [
+        {
+            directory: "/dev",
+            from: "#driver_manager_test",
+            rights: [ "rw*" ],
+        },
+    ],
+}

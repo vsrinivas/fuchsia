@@ -24,6 +24,8 @@
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 
+#include "path.h"
+
 namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
@@ -73,11 +75,11 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const mkfs_options_t* options) {
   switch (df) {
     case DISK_FORMAT_MINFS:
-      return MkfsNativeFs("/boot/bin/minfs", device_path, cb, options);
+      return MkfsNativeFs(fs_management::GetBinaryPath("minfs").c_str(), device_path, cb, options);
     case DISK_FORMAT_FAT:
       return MkfsFat(device_path, cb, options);
     case DISK_FORMAT_BLOBFS:
-      return MkfsNativeFs("/boot/bin/blobfs", device_path, cb, options);
+      return MkfsNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), device_path, cb, options);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

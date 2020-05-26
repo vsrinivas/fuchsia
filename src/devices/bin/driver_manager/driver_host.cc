@@ -50,13 +50,6 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
     }
   }
 
-  zx::channel loader_connection;
-  status = loader_connector(&loader_connection);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to get driver_host loader connection: %s", zx_status_get_string(status));
-    return status;
-  }
-
   constexpr size_t kMaxActions = 5;
   fdio_spawn_action_t actions[kMaxActions];
   size_t actions_count = 0;
@@ -78,10 +71,24 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
     };
   }
 
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
-  };
+  uint32_t flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO;
+
+  if (loader_connector) {
+    zx::channel loader_connection;
+    status = loader_connector(&loader_connection);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to get driver_host loader connection: %s", zx_status_get_string(status));
+      return status;
+    }
+
+    actions[actions_count++] = fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
+    };
+  } else {
+    flags |= FDIO_SPAWN_DEFAULT_LDSVC;
+  }
+
   ZX_ASSERT(actions_count <= kMaxActions);
 
   zx::process proc;
@@ -91,7 +98,6 @@ zx_status_t DriverHost::Launch(Coordinator* coordinator,
       driver_host_bin,
       nullptr,
   };
-  const auto flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO;
   status = fdio_spawn_etc(driver_host_job->get(), flags, argv[0], argv, proc_env, actions_count,
                           actions, proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {

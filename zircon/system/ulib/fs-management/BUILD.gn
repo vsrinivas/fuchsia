@@ -32,6 +32,7 @@ if (is_fuchsia) {
       "launch.cc",
       "mkfs.cc",
       "mount.cc",
+      "path.cc",
     ]
     public_deps = [ "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c" ]
     deps = [

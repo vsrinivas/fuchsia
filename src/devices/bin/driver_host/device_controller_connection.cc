@@ -301,7 +301,10 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
       return;
     }
 
-    LOGD(FATAL, dev, "driver_manager disconnected from device %p", dev.get());
+    // This is expected in test environments where driver_manager has terminated.
+    // TODO(fxb/52627): Support graceful termination.
+    LOGD(WARNING, dev, "driver_manager disconnected from device %p", dev.get());
+    exit(1);
   }
   LOGD(WARNING, dev, "Unexpected signal state %#08x for device %p", signal->observed, dev.get());
   BeginWait(std::move(conn), dispatcher);

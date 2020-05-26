@@ -39,7 +39,8 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   DriverHost(Coordinator* coordinator, zx::channel rpc, zx::process proc);
   ~DriverHost();
 
-  // |coordinator| must outlive this DriverHost object.
+  // |coordinator| must outlive this DriverHost object. If |loader_conector| is nullptr, the
+  // default loader service is used, which is useful in test environments.
   static zx_status_t Launch(Coordinator* coordinator,
                             const LoaderServiceConnector& loader_connector,
                             const char* driver_host_bin, const char* proc_name,
