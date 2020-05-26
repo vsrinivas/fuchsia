@@ -11,6 +11,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_wasm_library.gni")
 
 rustc_binary("bin") {
   name = "wasm_toolchain_example"
@@ -20,9 +21,16 @@ rustc_library("lib") {
   name = "wasm_toolchain_example_lib"
 }
 
+if (current_toolchain == unknown_wasm32_toolchain) {
+  rustc_wasm_library("lib_wasm") {
+    name = "wasm_toolchain_example_lib_wasm"
+  }
+}
+
 group("toolchain") {
   deps = [
     ":bin($unknown_wasm32_toolchain)",
     ":lib($unknown_wasm32_toolchain)",
+    ":lib_wasm($unknown_wasm32_toolchain)",
   ]
 }
