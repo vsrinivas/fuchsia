@@ -17,9 +17,13 @@
 
 #include <ddk/device.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/coding.h>
+#include <lib/fidl/txn_header.h>
 #include <pretty/hexdump.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 int zxc_dump(int argc, char** argv) {
@@ -630,18 +634,68 @@ static int send_dump(zx_status_t(*fidl_call)(zx_handle_t, zx_handle_t,
     return status;
 }
 
-static int send_suspend(uint32_t flags) {
+typedef struct suspend_resp {
+    FIDL_ALIGNDECL
+    fidl_message_header_t hdr;
+    fidl_xunion_t data;
+    zx_status_t err;
+} suspend_resp_t;
+
+static int send_suspend(fuchsia_hardware_power_statecontrol_SystemPowerState state) {
     zx_handle_t channel;
-    zx_status_t status = connect_to_service("/svc/fuchsia.device.manager.Administrator", &channel);
+    zx_status_t status =
+        connect_to_service("/svc/fuchsia.hardware.power.statecontrol.Admin", &channel);
+
     if (status != ZX_OK) {
         return status;
     }
 
-    zx_status_t call_status;
-    status = fuchsia_device_manager_AdministratorSuspend(channel, flags, &call_status);
-    zx_handle_close(channel);
-    if (status != ZX_OK || call_status != ZX_OK) {
+    alignas(FIDL_ALIGNMENT) fuchsia_hardware_power_statecontrol_AdminSuspendRequest msg;
+    fidl_init_txn_header(&msg.hdr, 0, fuchsia_hardware_power_statecontrol_AdminSuspendGenOrdinal);
+    msg.state = state;
+
+    const char* errs;
+    void* msg_handle = (void*)&msg;
+    uint32_t actual_handle_count;
+
+    zx_status_t call_status =
+        fidl_encode(&fuchsia_hardware_power_statecontrol_AdminSuspendRequestTable, msg_handle,
+                    sizeof(msg), NULL, 0, &actual_handle_count, &errs);
+    if (call_status != ZX_OK) {
         return -1;
+    }
+
+    suspend_resp_t resp;
+    zx_channel_call_args_t call_args;
+    call_args.wr_bytes = msg_handle;
+    call_args.wr_handles = NULL;
+    call_args.rd_bytes = (void*) &resp;
+    call_args.rd_handles = NULL;
+    call_args.wr_num_bytes = sizeof(fuchsia_hardware_power_statecontrol_AdminSuspendRequest);
+    call_args.wr_num_handles = 0;
+    call_args.rd_num_bytes = sizeof(resp);
+    call_args.rd_num_handles = 0;
+    uint32_t bytes_rx;
+    uint32_t handles_rx;
+    call_status = zx_channel_call(channel, 0, ZX_TIME_INFINITE, &call_args, &bytes_rx,
+                                  &handles_rx);
+    if (call_status != ZX_OK) {
+        printf("send_suspend: zx_channel_call failed: %i\n", call_status);
+        return -1;
+    }
+
+    switch (resp.data.tag) {
+        case 1:
+            // success!
+            break;
+        case 2:
+            // service returned an error
+            printf("send_suspend: Failure suspending system to: %d with error: %s\n", state,
+                   zx_status_get_string(resp.err));
+            break;
+        default:
+            printf("send_suspend: Unexpected service response code: %lu", resp.data.tag);
+            break;
     }
 
     return 0;
@@ -702,20 +756,21 @@ int zxc_dm(int argc, char** argv) {
         return send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
 
     } else if (command_cmp("reboot", NULL, argv[1], &command_length)) {
-        return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT);
+        return send_suspend(fuchsia_hardware_power_statecontrol_SystemPowerState_REBOOT);
 
     } else if (command_cmp("reboot-bootloader", "rb", argv[1], &command_length)) {
-        return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
+        return send_suspend(
+            fuchsia_hardware_power_statecontrol_SystemPowerState_REBOOT_BOOTLOADER);
 
     } else if (command_cmp("reboot-recovery", "rr", argv[1], &command_length)) {
-        return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
+        return send_suspend(fuchsia_hardware_power_statecontrol_SystemPowerState_REBOOT_RECOVERY);
 
     } else if (command_cmp("suspend", NULL, argv[1], &command_length)) {
-        return send_suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
+        return send_suspend(fuchsia_hardware_power_statecontrol_SystemPowerState_SUSPEND_RAM);
 
     } else if (command_cmp("poweroff", NULL, argv[1], &command_length) ||
                command_cmp("shutdown", NULL, argv[1], &command_length)) {
-        return send_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
+        return send_suspend(fuchsia_hardware_power_statecontrol_SystemPowerState_POWEROFF);
 
     } else {
         printf("Unknown command '%s'\n\n", argv[1]);

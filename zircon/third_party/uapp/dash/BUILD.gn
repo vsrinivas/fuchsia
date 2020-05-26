@@ -66,10 +66,12 @@ executable("dash") {
     "$zx_build/public/gn/config:static-libc++",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//src/lib/ddk:ddk-device-headers",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-device-manager:c",
