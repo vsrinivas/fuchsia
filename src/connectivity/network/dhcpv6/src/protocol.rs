@@ -4,26 +4,28 @@
 
 //! Parsing and serialization for DHCPv6 messages.
 
-use byteorder::{ByteOrder, NetworkEndian};
-use fuchsia_syslog::fx_log_warn;
-use mdns::protocol::{Domain, ParseError};
-use num_derive::FromPrimitive;
-use packet::{
-    records::{
-        ParsedRecord, RecordParseResult, Records, RecordsImpl, RecordsImplLayout,
-        RecordsSerializer, RecordsSerializerImpl,
+use {
+    byteorder::{ByteOrder, NetworkEndian},
+    fuchsia_syslog::fx_log_warn,
+    mdns::protocol::{Domain, ParseError},
+    num_derive::FromPrimitive,
+    packet::{
+        records::{
+            ParsedRecord, RecordParseResult, Records, RecordsImpl, RecordsImplLayout,
+            RecordsSerializer, RecordsSerializerImpl,
+        },
+        BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata,
     },
-    BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata,
+    std::{
+        convert::{TryFrom, TryInto},
+        mem,
+        net::Ipv6Addr,
+        slice::Iter,
+    },
+    thiserror::Error,
+    uuid::Uuid,
+    zerocopy::{AsBytes, ByteSlice},
 };
-use std::{
-    convert::{TryFrom, TryInto},
-    mem,
-    net::Ipv6Addr,
-    slice::Iter,
-};
-use thiserror::Error;
-use uuid::Uuid;
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 type U16 = zerocopy::U16<NetworkEndian>;
 type U32 = zerocopy::U32<NetworkEndian>;
@@ -45,7 +47,8 @@ pub enum ProtocolError {
 /// A DHCPv6 message type as defined in [RFC 8415, Section 7.3].
 ///
 /// [RFC 8415, Section 7.3]: https://tools.ietf.org/html/rfc8415#section-7.3
-#[derive(Debug, PartialEq, FromPrimitive)]
+#[derive(Debug, PartialEq, FromPrimitive, AsBytes)]
+#[repr(u8)]
 enum Dhcpv6MessageType {
     Solicit = 1,
     Advertise = 2,
@@ -450,28 +453,28 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
     }
 }
 
-#[derive(FromBytes, AsBytes, Unaligned, Copy, Clone, Debug, PartialEq)]
-#[repr(C)]
-struct Dhcpv6MessagePrefix {
-    msg_type: u8,
-    transaction_id: [u8; 3],
-}
+/// A transaction ID defined in [RFC 8415, Section 8].
+///
+/// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
+type TransactionId = [u8; 3];
 
 /// A DHCPv6 message as defined in [RFC 8415, Section 8].
 ///
 /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
-struct Dhcpv6Message<B> {
-    prefix: LayoutVerified<B, Dhcpv6MessagePrefix>,
+struct Dhcpv6Message<'a, B> {
+    msg_type: Dhcpv6MessageType,
+    transaction_id: &'a TransactionId,
     options: Records<B, Dhcpv6OptionsImpl>,
 }
 
-impl<B: ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<B> {
+impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
     type Error = ProtocolError;
 
     fn parse_metadata(&self) -> ParseMetadata {
+        let Self { msg_type, transaction_id, options } = self;
         ParseMetadata::from_packet(
-            mem::size_of::<Dhcpv6MessagePrefix>(),
-            self.options.bytes().len(),
+            0,
+            mem::size_of_val(msg_type) + mem::size_of_val(transaction_id) + options.bytes().len(),
             0,
         )
     }
@@ -479,28 +482,31 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<B> {
     /// Tries to parse a DHCPv6 message by consuming the input buffer. Returns the parsed
     /// `Dhcpv6Message`. If the buffer is malformed, returns a `ProtocolError`.
     fn parse<BV: BufferView<B>>(mut buf: BV, _args: ()) -> Result<Self, Self::Error> {
-        let prefix =
-            buf.take_obj_front::<Dhcpv6MessagePrefix>().ok_or(ProtocolError::BufferExhausted)?;
-        let _ = Dhcpv6MessageType::try_from(prefix.msg_type)?;
+        let msg_type = Dhcpv6MessageType::try_from(
+            buf.take_byte_front().ok_or(ProtocolError::BufferExhausted)?,
+        )?;
+        let transaction_id =
+            buf.take_obj_front::<TransactionId>().ok_or(ProtocolError::BufferExhausted)?.into_ref();
         let options = Records::<_, Dhcpv6OptionsImpl>::parse(buf.take_rest_front())?;
-        Ok(Dhcpv6Message { prefix, options })
+        Ok(Dhcpv6Message { msg_type, transaction_id, options })
     }
 }
 
 struct Dhcpv6MessageBuilder<'a> {
-    prefix: Dhcpv6MessagePrefix,
+    msg_type: Dhcpv6MessageType,
+    transaction_id: TransactionId,
     options: RecordsSerializer<'a, Dhcpv6OptionsImpl, Dhcpv6Option<'a>, Iter<'a, Dhcpv6Option<'a>>>,
 }
 
 impl<'a> Dhcpv6MessageBuilder<'a> {
     fn new(
         msg_type: Dhcpv6MessageType,
-        transaction_id: [u8; 3],
+        transaction_id: TransactionId,
         options: &'a [Dhcpv6Option<'a>],
     ) -> Dhcpv6MessageBuilder<'a> {
-        let msg_type = u8::from(msg_type);
         Dhcpv6MessageBuilder {
-            prefix: Dhcpv6MessagePrefix { msg_type, transaction_id },
+            msg_type,
+            transaction_id,
             options: RecordsSerializer::new(options.iter()),
         }
     }
@@ -508,14 +514,17 @@ impl<'a> Dhcpv6MessageBuilder<'a> {
 
 impl InnerPacketBuilder for Dhcpv6MessageBuilder<'_> {
     fn bytes_len(&self) -> usize {
-        mem::size_of::<Dhcpv6MessagePrefix>() + self.options.records_bytes_len()
+        let Self { msg_type, transaction_id, options } = self;
+        mem::size_of_val(msg_type) + mem::size_of_val(transaction_id) + options.records_bytes_len()
     }
 
     fn serialize(&self, mut buffer: &mut [u8]) {
+        let Self { msg_type, transaction_id, options } = self;
         // Implements BufferViewMut, giving us write_obj_front.
         let mut buffer = &mut buffer;
-        buffer.write_obj_front(&self.prefix);
-        self.options.serialize_records(buffer);
+        buffer.write_obj_front(msg_type);
+        buffer.write_obj_front(transaction_id);
+        options.serialize_records(buffer);
     }
 }
 
@@ -603,7 +612,8 @@ mod tests {
 
         let mut buf = &buf[..];
         let msg = Dhcpv6Message::parse(&mut buf, ()).expect("parse should succeed");
-        assert_eq!(*msg.prefix.into_ref(), builder.prefix);
+        assert_eq!(msg.msg_type, Dhcpv6MessageType::Solicit);
+        assert_eq!(msg.transaction_id, &[1, 2, 3]);
         let got_options: Vec<_> = msg.options.iter().collect();
         assert_eq!(got_options, options);
     }
