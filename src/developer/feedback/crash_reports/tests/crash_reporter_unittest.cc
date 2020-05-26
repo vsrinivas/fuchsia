@@ -525,7 +525,7 @@ TEST_F(CrashReporterTest, Check_guidNotSet) {
 
   ASSERT_NE(crash_server_->latest_annotations().find("debug.device-id.error"),
             crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("debug.device-id.error"), "no data returned");
+  EXPECT_EQ(crash_server_->latest_annotations().at("debug.device-id.error"), "missing");
 }
 
 TEST_F(CrashReporterTest, Check_UnknownChannel) {

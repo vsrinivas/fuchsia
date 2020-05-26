@@ -78,33 +78,6 @@ inline std::string ToString(Error error) {
   }
 }
 
-// Provide a reason why |error| occurred.
-inline std::string ToReason(const Error error) {
-  switch (error) {
-    case Error::kLogicError:
-      return "feedback logic error";
-    case Error::kTimeout:
-      return "data collection timeout";
-    case Error::kConnectionError:
-      return "FIDL connection error";
-    case Error::kAsyncTaskPostFailure:
-      return "async post task failure";
-    case Error::kMissingValue:
-      return "no data returned";
-    case Error::kBadValue:
-      return "bad data returned";
-    case Error::kFileReadFailure:
-      return "file read failure";
-    case Error::kFileWriteFailure:
-      return "file write failure";
-    case Error::kDefault:
-      FX_LOGS(FATAL) << "Error::kDefault does not have a reason";
-    case Error::kNotSet:
-      FX_LOGS(FATAL) << "Error::kNotSet does not have a reason";
-      return "FATAL, THIS SHOULD NOT HAPPEN";
-  }
-}
-
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_ERRORS_H_

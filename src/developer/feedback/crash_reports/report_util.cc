@@ -10,6 +10,8 @@
 
 #include <string>
 
+#include "src/developer/feedback/crash_reports/errors.h"
+
 namespace feedback {
 
 bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer) {

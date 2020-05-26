@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_data/integrity_reporter.h"
 
+#include "src/developer/feedback/feedback_data/errors.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"

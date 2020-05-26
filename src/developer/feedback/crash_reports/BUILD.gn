@@ -199,6 +199,15 @@ source_set("database") {
   ]
 }
 
+source_set("errors") {
+  sources = [ "errors.h" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/feedback/utils:errors",
+  ]
+}
+
 source_set("privacy_settings_ptr") {
   sources = [
     "privacy_settings_ptr.cc",
@@ -263,6 +272,7 @@ source_set("report_util") {
   ]
 
   deps = [
+    ":errors",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fxl",

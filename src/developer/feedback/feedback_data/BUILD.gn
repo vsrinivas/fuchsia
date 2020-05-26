@@ -195,6 +195,15 @@ source_set("device_id_provider") {
   ]
 }
 
+source_set("errors") {
+  sources = [ "errors.h" ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/feedback/utils:errors",
+  ]
+}
+
 source_set("main_service") {
   sources = [
     "main_service.cc",
@@ -248,6 +257,7 @@ source_set("integrity_reporter") {
   ]
 
   deps = [
+    ":errors",
     "//src/developer/feedback/utils:errors",
     "//third_party/rapidjson",
   ]
