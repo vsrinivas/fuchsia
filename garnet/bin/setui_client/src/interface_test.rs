@@ -562,6 +562,21 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
                     muted: Some(true)
                 }),
             }))?;
+        },
+        AudioRequest::Watch2 { responder } => {
+            responder.send(AudioSettings {
+                streams: Some(vec![AudioStreamSettings {
+                    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+                    source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
+                    user_volume: Some(Volume {
+                        level: Some(0.6),
+                        muted: Some(false)
+                    }),
+                }]),
+                input: Some(AudioInput {
+                    muted: Some(true)
+                }),
+            })?;
         }
     );
 

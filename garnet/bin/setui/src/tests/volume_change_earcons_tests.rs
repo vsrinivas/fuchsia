@@ -186,7 +186,7 @@ async fn test_sounds() {
 
     // Test that the volume-changed sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
     assert!(fake_services.sound_player.lock().await.id_exists(1));
     assert_eq!(
@@ -196,7 +196,7 @@ async fn test_sounds() {
 
     // Test that the volume-max sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
     assert!(fake_services.sound_player.lock().await.id_exists(0));
     assert_eq!(
@@ -219,7 +219,7 @@ async fn test_max_volume_sound_on_press() {
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
 
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    audio_proxy.watch2().await.expect("watch completed");
     assert!(fake_services.sound_player.lock().await.id_exists(0));
     assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
 
@@ -232,7 +232,7 @@ async fn test_max_volume_sound_on_press() {
     // Sets volume max again.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
 
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    audio_proxy.watch2().await.expect("watch completed");
 
     // Set volume to max again, to simulate holding button.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
@@ -271,7 +271,7 @@ async fn test_earcons_on_multiple_channel_change() {
     )
     .await;
 
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    audio_proxy.watch2().await.expect("watch completed");
     assert!(fake_services.sound_player.lock().await.id_exists(0));
     assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
 }
@@ -288,7 +288,7 @@ async fn test_earcons_with_active_stream() {
     set_volume(&audio_proxy, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
     assert!(fake_services.sound_player.lock().await.id_exists(1));
     assert_eq!(
@@ -307,7 +307,7 @@ async fn test_earcons_with_active_stream() {
         .await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
 
     // With the background stream muted, the sound should not have played.
@@ -328,10 +328,10 @@ async fn test_earcons_with_active_stream() {
         .await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    audio_proxy.watch2().await.expect("watch completed");
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    audio_proxy.watch2().await.expect("watch completed");
 
     // With the background stream ducked, the sound should not have played.
     assert!(!fake_services.sound_player.lock().await.id_exists(0));
@@ -353,7 +353,7 @@ async fn test_earcons_with_active_stream() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
 
-    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    audio_proxy.watch2().await.expect("watch completed");
 
     // With the background stream unadjusted, the sound should have played.
     assert!(fake_services.sound_player.lock().await.id_exists(0));

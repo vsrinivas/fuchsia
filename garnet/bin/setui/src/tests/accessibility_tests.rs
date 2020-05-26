@@ -7,8 +7,8 @@ use {
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
-    crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError},
-    crate::tests::fakes::base::create_setting_handler,
+    crate::switchboard::base::SettingType,
+    crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::*,
@@ -33,28 +33,11 @@ async fn create_test_accessibility_env(
 }
 
 // Creates an environment that will fail on a get request.
-async fn create_test_env_with_failures(
+async fn create_a11y_test_env_with_failures(
     storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> AccessibilityProxy {
-    EnvironmentBuilder::new(storage_factory)
-        .handler(
-            SettingType::Accessibility,
-            create_setting_handler(Box::new(move |request| {
-                if request == SettingRequest::Get {
-                    Box::pin(async move {
-                        Err(SwitchboardError::UnhandledType {
-                            setting_type: SettingType::Accessibility,
-                        })
-                    })
-                } else {
-                    Box::pin(async { Ok(None) })
-                }
-            })),
-        )
-        .settings(&[SettingType::Accessibility])
-        .spawn_and_get_nested_environment(ENV_NAME)
+    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Accessibility)
         .await
-        .unwrap()
         .connect_to_service::<AccessibilityMarker>()
         .unwrap()
 }
@@ -199,14 +182,16 @@ async fn test_accessibility_set_captions() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_channel_failure_watch() {
-    let accessibility_proxy = create_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let accessibility_proxy =
+        create_a11y_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = accessibility_proxy.watch().await.ok();
     assert_eq!(result, Some(Err(Error::Failed)));
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_channel_failure_watch2() {
-    let accessibility_proxy = create_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let accessibility_proxy =
+        create_a11y_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = accessibility_proxy.watch2().await;
     assert!(result.is_err());
     assert_eq!(

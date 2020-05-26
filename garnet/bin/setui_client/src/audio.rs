@@ -44,14 +44,9 @@ pub async fn command(
         && input_muted.is_none();
 
     if none_set {
-        let settings = proxy.watch().await?;
-        match settings {
-            Ok(setting_value) => {
-                let setting_string = format!("{:#?}", setting_value);
-                output.push_str(&setting_string);
-            }
-            Err(err) => output.push_str(&format!("{:?}", err)),
-        }
+        let setting_value = proxy.watch2().await?;
+        let setting_string = format!("{:#?}", setting_value);
+        output.push_str(&setting_string);
     } else {
         let mutate_result = proxy.set(audio_settings).await?;
         match mutate_result {

@@ -17,11 +17,14 @@ use {
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
     crate::tests::fakes::usage_reporter_service::UsageReporterService,
+    crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
+    fidl::Error::ClientChannelClosed,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
+    fuchsia_zircon::Status,
     futures::lock::Mutex,
     std::sync::Arc,
 };
@@ -46,6 +49,16 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
         muted: Some(CHANGED_VOLUME_MUTED),
     }),
 };
+
+/// Creates an environment that will fail on a get request.
+async fn create_audio_test_env_with_failures(
+    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+) -> AudioProxy {
+    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Audio)
+        .await
+        .connect_to_service::<AudioMarker>()
+        .unwrap()
+}
 
 // Used to store fake services for mocking dependencies and checking input/outputs.
 // To add a new fake to these tests, add here, in create_services, and then use
@@ -145,14 +158,14 @@ async fn test_audio() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
@@ -178,7 +191,7 @@ async fn test_volume_rounding() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
@@ -194,7 +207,7 @@ async fn test_volume_rounding() {
     )
     .await;
 
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
@@ -224,8 +237,7 @@ async fn test_audio_input() {
         MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
-    let updated_settings =
-        audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let updated_settings = audio_proxy.watch2().await.expect("watch completed");
 
     let input = updated_settings.input.expect("Should have input settings");
     let mic_mute = input.muted.expect("Should have mic mute value");
@@ -292,7 +304,7 @@ async fn test_bringup_without_audio_core() {
     // At this point we should not crash.
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
@@ -365,9 +377,9 @@ async fn test_persisted_values_applied_at_start() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = audio_proxy.watch2().await.expect("watch completed");
 
-    // Check that the stored values were returned from watch() and applied to the audio core
+    // Check that the stored values were returned from watch2() and applied to the audio core
     // service.
     for stream in test_audio_info.streams.iter() {
         verify_audio_stream(settings.clone(), AudioStreamSettings::from(*stream));
@@ -381,4 +393,47 @@ async fn test_persisted_values_applied_at_start() {
                 .unwrap()
         );
     }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch() {
+    let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let result = audio_proxy.watch().await.ok();
+    assert_eq!(result, Some(Err(Error::Failed)));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch2() {
+    let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let result = audio_proxy.watch2().await;
+    assert!(result.is_err());
+    assert_eq!(
+        ClientChannelClosed(Status::INTERNAL).to_string(),
+        result.err().unwrap().to_string()
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_simultaneous_watch() {
+    let (service_registry, _) = create_services().await;
+    let (env, _) = create_environment(service_registry).await;
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings2 = audio_proxy.watch2().await.expect("watch completed");
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+    verify_audio_stream(
+        settings2.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings2 = audio_proxy.watch2().await.expect("watch completed");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+    verify_audio_stream(settings2.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
 }
