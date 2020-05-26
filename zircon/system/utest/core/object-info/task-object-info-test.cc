@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
+#include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -10,6 +10,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls/object.h>
 
+#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "helper.h"
@@ -106,6 +107,21 @@ constexpr auto thread_provider = []() -> const zx::thread& {
 TEST(TaskGetInfoTest, InfoTaskStatsThreadHandleIsBadHandle) {
   ASSERT_NO_FATAL_FAILURES(
       CheckWrongHandleTypeFails<zx_info_task_stats_t>(ZX_INFO_TASK_STATS, 1, thread_provider));
+}
+
+TEST(TaskGetInfoTest, InfoTaskRuntimeWrongType) {
+  zx::event event;
+  zx::event::create(0, &event);
+
+  auto event_provider = [&]() -> const zx::event& { return event; };
+
+  ASSERT_NO_FATAL_FAILURES(
+      CheckWrongHandleTypeFails<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME, 1, event_provider));
+}
+
+TEST(TaskGetInfoTest, InfoTaskRuntimeInvalidHandle) {
+  ASSERT_NO_FATAL_FAILURES(
+      CheckInvalidHandleFails<zx_info_task_runtime_t>(ZX_INFO_TASK_RUNTIME, 1, thread_provider));
 }
 
 }  // namespace

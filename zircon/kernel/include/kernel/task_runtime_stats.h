@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_TASK_RUNTIME_STATS_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_TASK_RUNTIME_STATS_H_
 
+#include <zircon/syscalls/object.h>
 #include <zircon/time.h>
 
 // Holds information about the runtime of a task.
@@ -21,6 +22,11 @@ struct TaskRuntimeStats {
   void Add(const TaskRuntimeStats& other) {
     cpu_time = zx_duration_add_duration(cpu_time, other.cpu_time);
     queue_time = zx_duration_add_duration(queue_time, other.queue_time);
+  }
+
+  void AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
+    info->cpu_time = zx_duration_add_duration(info->cpu_time, cpu_time);
+    info->queue_time = zx_duration_add_duration(info->queue_time, queue_time);
   }
 };
 

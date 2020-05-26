@@ -14443,7 +14443,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "If", "topic", "is", "ZX_INFO_BTI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_BTI", "and", "have", "ZX_RIGHT_INSPECT", ".",
         "If", "topic", "is", "ZX_INFO_PROCESS_HANDLE_STATS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
         "If", "topic", "is", "ZX_INFO_SOCKET", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_MSI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_MSI", "and", "have", "ZX_RIGHT_INSPECT", "."
+        "If", "topic", "is", "ZX_INFO_MSI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_MSI", "and", "have", "ZX_RIGHT_INSPECT", ".",
+        "If", "topic", "is", "ZX_INFO_TASK_RUNTIME", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", ",", "ZX_OBJ_TYPE_PROCESS", ",", "or", "ZX_OBJ_TYPE_JOB", ","
       ],
       "arguments": [
         {

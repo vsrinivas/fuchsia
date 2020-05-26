@@ -160,6 +160,18 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Fetch a consistent snapshot of the runtime stats.
   zx_status_t GetRuntimeStats(Thread::RuntimeStats* out) const;
 
+  // Aggregate the runtime stats for this thread into the given struct.
+  zx_status_t AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
+    Thread::RuntimeStats out;
+    zx_status_t err = GetRuntimeStats(&out);
+    if (err != ZX_OK) {
+      return err;
+    }
+
+    out.AccumulateRuntimeTo(info);
+    return ZX_OK;
+  }
+
   // For debugger usage.
   zx_status_t ReadState(zx_thread_state_topic_t state_kind, user_out_ptr<void> buffer,
                         size_t buffer_size);

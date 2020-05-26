@@ -4,9 +4,13 @@
 
 #include <lib/fit/function.h>
 #include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
+#include <lib/zx/msi.h>
 #include <lib/zx/process.h>
+#include <lib/zx/time.h>
+#include <lib/zx/vmar.h>
 #include <threads.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -59,6 +63,22 @@ TEST(ProcessTest, EmptyNameSucceeds) {
   ASSERT_EQ(strcmp(proc_name, ""), 0);
   ASSERT_OK(zx_handle_close(vmar));
   ASSERT_OK(zx_handle_close(proc));
+}
+
+TEST(ProcessTest, GetRuntimeNoPermission) {
+  zx::process proc;
+  zx::vmar vmar;
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), "", 0, 0, &proc, &vmar));
+
+  zx_info_handle_basic basic;
+  ASSERT_OK(proc.get_info(ZX_INFO_HANDLE_BASIC, &basic, sizeof(basic), nullptr, nullptr));
+
+  zx::process proc_dup;
+  ASSERT_OK(proc.duplicate(basic.rights & ~ZX_RIGHT_INSPECT, &proc_dup));
+  zx_info_task_runtime_t info;
+  ASSERT_OK(proc.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(proc_dup.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr),
+            ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(ProcessTest, MiniProcessSanity) {
@@ -614,6 +634,51 @@ TEST(ProcessTest, SuspendWithDyingThread) {
   ASSERT_NO_FAILURES(test_process.StopProcess());
 }
 
+TEST(ProcessTest, GetTaskRuntime) {
+  TestProcess test_process;
+  ASSERT_NO_FAILURES(test_process.CreateProcess());
+  ASSERT_NO_FAILURES(test_process.CreateThread());
+
+  // Get info before the threads start running.
+  zx_info_task_runtime_t info;
+  ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info, sizeof(info),
+                               nullptr, nullptr));
+  ASSERT_EQ(info.cpu_time, 0);
+  ASSERT_EQ(info.queue_time, 0);
+
+  ASSERT_NO_FAILURES(test_process.StartProcess());
+
+  test_process.WaitForThreadSignal(0, ZX_THREAD_RUNNING, ZX_OK);
+
+  // We are occasionally fast enough reading the thread info to see it before it gets scheduled.
+  // Loop until we see the values we are looking for.
+  while (info.cpu_time == 0 || info.queue_time == 0) {
+    ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info, sizeof(info),
+                                 nullptr, nullptr));
+  }
+
+  EXPECT_GT(info.cpu_time, 0);
+  EXPECT_GT(info.queue_time, 0);
+
+  ASSERT_OK(zx_task_kill(test_process.process()));
+  ASSERT_OK(
+      zx_object_wait_one(test_process.process(), ZX_TASK_TERMINATED, ZX_TIME_INFINITE, nullptr));
+
+  // Read info after process death, ensure it does not change.
+  ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info, sizeof(info),
+                               nullptr, nullptr));
+  EXPECT_GT(info.cpu_time, 0);
+  EXPECT_GT(info.queue_time, 0);
+
+  zx_info_task_runtime_t info2;
+  ASSERT_OK(zx_object_get_info(test_process.process(), ZX_INFO_TASK_RUNTIME, &info2, sizeof(info2),
+                               nullptr, nullptr));
+  EXPECT_EQ(info.cpu_time, info2.cpu_time);
+  EXPECT_EQ(info.queue_time, info2.queue_time);
+
+  ASSERT_NO_FAILURES(test_process.StopProcess());
+}
+
 // A stress test designed to create a race where one thread is creating a process while another
 // thread is killing its parent job.
 TEST(ProcessTest, CreateAndKillJobRaceStress) {
@@ -878,8 +943,7 @@ TEST(ProcessTest, ProcessHwTraceContextIdProperty) {
   };
 
   fit::function<void(const char*)> read_prop_test;
-  printf("Note: debugging syscalls are %s\n",
-         debugging_syscalls_enabled ? "enabled" : "disabled");
+  printf("Note: debugging syscalls are %s\n", debugging_syscalls_enabled ? "enabled" : "disabled");
   if (debugging_syscalls_enabled) {
     read_prop_test = std::move(supported_read_prop_test);
   } else {
@@ -893,8 +957,8 @@ TEST(ProcessTest, ProcessHwTraceContextIdProperty) {
     zx::process proc;
     zx::vmar vmar;
 
-    ASSERT_OK(zx::process::create(*zx::job::default_job(), name, sizeof(name) - 1, 0,
-                                  &proc, &vmar));
+    ASSERT_OK(
+        zx::process::create(*zx::job::default_job(), name, sizeof(name) - 1, 0, &proc, &vmar));
     read_prop_test("process created");
 
     zx::thread thread;
@@ -918,9 +982,8 @@ TEST(ProcessTest, ProcessHwTraceContextIdProperty) {
   // The property is read-only.
   {
     uintptr_t prop_to_set = 0;
-    zx_status_t status = zx_object_set_property(zx_process_self(),
-                                                ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID,
-                                                &prop_to_set, sizeof(prop_to_set));
+    zx_status_t status = zx_object_set_property(
+        zx_process_self(), ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID, &prop_to_set, sizeof(prop_to_set));
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "unexpected status: %d", status);
   }
 }

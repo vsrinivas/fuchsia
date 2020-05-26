@@ -238,6 +238,11 @@ class ProcessDispatcher final
   // Syscall helpers
   void GetInfo(zx_info_process_t* info) const;
   zx_status_t GetStats(zx_info_task_stats_t* stats) const;
+
+  // Accumulate the runtime of all threads that previously ran or are currently running under this
+  // process.
+  zx_status_t AccumulateRuntimeTo(zx_info_task_runtime_t* info) const;
+
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
   zx_status_t GetAspaceMaps(VmAspace* current_aspace, user_out_ptr<zx_info_maps_t> maps, size_t max,

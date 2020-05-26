@@ -4,6 +4,7 @@
 // found in the LICENSE file.
 
 #include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/process.h>
@@ -397,6 +398,76 @@ TEST(Threads, GetLastScheduledCpu) {
   ASSERT_EQ(zx_object_signal(state.should_stop, 0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
+}
+
+TEST(Threads, GetInfoRuntime) {
+  // State to synchronize with the worker thread.
+  struct WorkerState {
+    zx_handle_t started;
+    zx_handle_t should_stop;
+  } state;
+
+  zx::event started, should_stop;
+  ASSERT_EQ(zx::event::create(0, &started), ZX_OK);
+  ASSERT_EQ(zx::event::create(0, &should_stop), ZX_OK);
+  state.started = started.get();
+  state.should_stop = should_stop.get();
+
+  // Create a thread.
+  zxr_thread_t thread;
+  zx::thread thread_h;
+  ThreadStarter starter;
+  starter.CreateThread(&thread, thread_h.reset_and_get_address());
+
+  // Ensure runtime is 0 prior to thread starting.
+  zx_info_task_runtime_t info;
+  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+  ASSERT_EQ(info.cpu_time, 0);
+  ASSERT_EQ(info.queue_time, 0);
+
+  // Start the thread.
+  // NOTE! This function can only call vDSO entry points.  Any other function
+  // might be compiled with shadow-call-stack or other instrumentation that
+  // requires full proper ABI setup, which ThreadStarter does not do.
+  //
+  // This means we cannot call zx::event object methods.
+  auto thread_body = [](void* arg) __NO_SAFESTACK -> void {
+    auto* state = static_cast<WorkerState*>(arg);
+    zx_object_signal(state->started, 0, ZX_USER_SIGNAL_0);
+    zx_object_wait_one(state->should_stop, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr);
+  };
+  ASSERT_TRUE(starter.StartThread(thread_body, &state));
+
+  // Wait for worker to start.
+  ASSERT_EQ(started.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr), ZX_OK);
+
+  // Ensure the last-reported thread looks reasonable.
+  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+  ASSERT_GT(info.cpu_time, 0);
+  ASSERT_GT(info.queue_time, 0);
+
+  // Shut down and clean up.
+  ASSERT_EQ(should_stop.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
+  ASSERT_EQ(thread_h.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
+
+  // Ensure the runtime can still be read after the task exits, and it does not change.
+  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
+  ASSERT_GT(info.cpu_time, 0);
+  ASSERT_GT(info.queue_time, 0);
+
+  zx_info_task_runtime_t info2;
+  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info2, sizeof(info2), nullptr, nullptr),
+            ZX_OK);
+  ASSERT_EQ(info.cpu_time, info2.cpu_time);
+  ASSERT_EQ(info.queue_time, info2.queue_time);
+
+  // Test that removing ZX_RIGHT_INSPECT causes runtime calls to fail.
+  zx_info_handle_basic_t basic;
+  ASSERT_OK(thread_h.get_info(ZX_INFO_HANDLE_BASIC, &basic, sizeof(basic), nullptr, nullptr));
+  zx::thread thread_dup;
+  ASSERT_OK(thread_h.duplicate(basic.rights & ~ZX_RIGHT_INSPECT, &thread_dup));
+  ASSERT_EQ(thread_dup.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr),
+            ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(Threads, GetAffinity) {

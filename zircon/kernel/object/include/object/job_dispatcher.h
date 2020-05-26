@@ -145,6 +145,13 @@ class JobDispatcher final
 
   void GetInfo(zx_info_job_t* info) const;
 
+  // Aggregate the runtime for all processes that were previously running or are currently running
+  // as children of this job.
+  //
+  // This includes runtime for threads that previously ran under those processes, but it does not
+  // include runtime for child jobs.
+  zx_status_t AccumulateRuntimeTo(zx_info_task_runtime_t* info) const;
+
   uint32_t LockOrder() const;
 
  private:

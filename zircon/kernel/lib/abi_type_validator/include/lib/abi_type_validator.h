@@ -211,6 +211,10 @@ VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_thread_stats_t, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_thread_stats_t, total_runtime, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_thread_stats_t, last_scheduled_cpu, 8, 4);
 
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_task_runtime_t, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_task_runtime_t, cpu_time, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_task_runtime_t, queue_time, 8, 8);
+
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_timer_t, 24, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_timer_t, options, 0, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_timer_t, deadline, 8, 8);

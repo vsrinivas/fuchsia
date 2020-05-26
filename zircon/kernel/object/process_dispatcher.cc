@@ -622,6 +622,19 @@ zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {
   return ZX_OK;
 }
 
+zx_status_t ProcessDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
+  Guard<Mutex> guard{get_lock()};
+  aggregated_runtime_stats_.AccumulateRuntimeTo(info);
+  for (const auto& thread : thread_list_) {
+    zx_status_t err = thread.AccumulateRuntimeTo(info);
+    if (err != ZX_OK) {
+      return err;
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t ProcessDispatcher::GetAspaceMaps(VmAspace* current_aspace,
                                              user_out_ptr<zx_info_maps_t> maps, size_t max,
                                              size_t* actual, size_t* available) const {

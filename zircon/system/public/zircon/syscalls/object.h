@@ -42,6 +42,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_HANDLE_TABLE            ((zx_object_info_topic_t) 27u) // zx_info_handle_extended_t[n]
 #define ZX_INFO_MSI                     ((zx_object_info_topic_t) 28u) // zx_info_msi_t[1]
 #define ZX_INFO_GUEST_STATS             ((zx_object_info_topic_t) 29u) // zx_info_guest_stats_t[1]
+#define ZX_INFO_TASK_RUNTIME            ((zx_object_info_topic_t) 30u) // zx_info_task_runtime_t[1]
 
 typedef uint32_t zx_obj_props_t;
 #define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
@@ -504,6 +505,26 @@ typedef struct zx_info_guest_stats {
 #endif
 } zx_info_guest_stats_t;
 
+// Info on the runtime of a task.
+typedef struct zx_info_task_runtime {
+    // The total amount of time this task and its children were running.
+    // * Threads include only their own runtime.
+    // * Processes include the runtime for all of their threads (including threads that previously
+    // exited).
+    // * Jobs include the runtime for all of their processes (including processes that previously
+    // exited).
+    zx_duration_t cpu_time;
+
+    // The total amount of time this task and its children were queued to run.
+    // * Threads include only their own queue time.
+    // * Processes include the queue time for all of their threads (including threads that
+    // previously exited).
+    // * Jobs include the queue time for all of their processes (including processes that previously
+    // exited).
+    zx_duration_t queue_time;
+} zx_info_task_runtime_t;
+
+
 // kernel statistics per cpu
 // TODO(cpu), expose the deprecated stats via a new syscall.
 typedef struct zx_info_cpu_stats {
@@ -596,7 +617,6 @@ typedef struct zx_info_msi {
   // The number of outstanding interrupt objects created off this Msi object.
   uint32_t interrupt_count;
 } zx_info_msi_t;
-
 
 #define ZX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)
 

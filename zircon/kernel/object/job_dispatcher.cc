@@ -624,3 +624,22 @@ void JobDispatcher::GetInfo(zx_info_job_t* info) const {
   info->kill_on_oom = kill_on_oom_;
   info->debugger_attached = debug_exceptionate_.HasValidChannel();
 }
+
+zx_status_t JobDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
+  canary_.Assert();
+
+  Guard<Mutex> guard{get_lock()};
+  aggregated_runtime_stats_.AccumulateRuntimeTo(info);
+
+  // At this point, the process in question may be in its destructor waiting to acquire the lock and
+  // remove itself from this job, but its aggregated runtime is not yet part of this job's data.
+  //
+  // AccumulateRuntimeTo must be safe to be called even when the process is in its destructor.
+  for (const auto& proc : procs_) {
+    zx_status_t err = proc.AccumulateRuntimeTo(info);
+    if (err != ZX_OK) {
+      return err;
+    }
+  }
+  return ZX_OK;
+}

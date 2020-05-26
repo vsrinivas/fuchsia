@@ -329,6 +329,36 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
+    case ZX_INFO_TASK_RUNTIME: {
+      fbl::RefPtr<Dispatcher> dispatcher;
+      auto err = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &dispatcher);
+      if (err != ZX_OK) {
+        return err;
+      }
+
+      zx_info_task_runtime_t info = {};
+
+      if (auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher)) {
+        err = thread->AccumulateRuntimeTo(&info);
+        if (err != ZX_OK) {
+          return err;
+        }
+      } else if (auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher)) {
+        err = process->AccumulateRuntimeTo(&info);
+        if (err != ZX_OK) {
+          return err;
+        }
+      } else if (auto job = DownCastDispatcher<JobDispatcher>(&dispatcher)) {
+        err = job->AccumulateRuntimeTo(&info);
+        if (err != ZX_OK) {
+          return err;
+        }
+      } else {
+        return ZX_ERR_WRONG_TYPE;
+      }
+
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
+    }
     case ZX_INFO_PROCESS_MAPS: {
       fbl::RefPtr<ProcessDispatcher> process;
       zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);

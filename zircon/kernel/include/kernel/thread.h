@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/syscalls/scheduler.h>
 #include <zircon/types.h>
 
@@ -205,6 +206,7 @@ struct Thread {
   zx_duration_t Runtime() const;
   // Last cpu this thread was running on, or INVALID_CPU if it has never run.
   cpu_num_t LastCpu() const TA_EXCL(thread_lock);
+
   // Return true if thread has been signaled.
   bool IsSignaled() { return signals_ != 0; }
   bool IsIdle() const { return !!(flags_ & THREAD_FLAG_IDLE); }
@@ -400,6 +402,15 @@ struct Thread {
             ret.queue_time, zx_duration_sub_duration(current_time(), state_time));
       }
       return ret;
+    }
+
+    // Adds the local stats to the given output for userspace.
+    //
+    // This method uses the current state of the thread to include partial runtime and queue time
+    // between reschedules.
+    void AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
+      TaskRuntimeStats runtime = TotalRuntime();
+      runtime.AccumulateRuntimeTo(info);
     }
   };
 
