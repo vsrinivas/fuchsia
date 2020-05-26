@@ -50,10 +50,17 @@ __NO_RETURN void Halt() {
 
 }  // anonymous namespace
 
+RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job)
+    : RootJobObserver(ktl::move(root_job), Halt) {}
+
+RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, fbl::Closure callback)
+    : root_job_(ktl::move(root_job)), callback_(std::move(callback)) {
+  root_job_->AddObserver(this);
+}
+
+RootJobObserver::~RootJobObserver() { root_job_->RemoveObserver(this); }
+
 StateObserver::Flags RootJobObserver::OnInitialize(zx_signals_t initial_state) {
-  if (HasChild(initial_state)) {
-    panic("root-job: invalid initial state\n");
-  }
   return 0;
 }
 
@@ -62,15 +69,16 @@ StateObserver::Flags RootJobObserver::OnStateChange(zx_signals_t new_state) {
   // this method.  Take care to avoid calling anything that might attempt to
   // acquire that lock.
 
-  // If the root job has been terminated, it will have no children. We do not
-  // check for `ZX_JOB_TERMINATED`, as that may occur before all the children
-  // have been terminated.
-  if (HasChild(new_state)) {
-    return 0;
+  // If we don't have any children, trigger the callback.
+  //
+  // If the root job is itself killed, all children processes and jobs will
+  // first be removed, also causing the "HasChild" check to fail.
+  if (!HasChild(new_state)) {
+    callback_();
+    return kNeedRemoval;
   }
 
-  // Never returns.
-  Halt();
+  return 0;
 }
 
 StateObserver::Flags RootJobObserver::OnCancel(const Handle* handle) { return 0; }
