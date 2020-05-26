@@ -765,6 +765,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/usb/lib/usb/test:usb-desc-lib-test-manifest",
     "//src/devices/usb/lib/usb/test:usb-request-test-manifest",
     "//src/devices/usb/lib/usb/test:usb-wrapper-test-manifest",
+    "//src/graphics/display/bin/display-factory-test:display-factory-test-manifest",
     "//src/graphics/display/bin/display-test:display-test-manifest",
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
     "//src/media/audio/drivers/astro-tdm-output/test:astro-audio-out-test-manifest",
