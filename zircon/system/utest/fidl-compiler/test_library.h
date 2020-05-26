@@ -130,7 +130,7 @@ class TestLibrary final {
   bool Lint() {
     fidl::Findings findings;
     bool passed = Lint(&findings);
-    lints_ = fidl::utils::FormatFindings(findings);
+    lints_ = fidl::utils::FormatFindings(findings, false);
     return passed;
   }
 

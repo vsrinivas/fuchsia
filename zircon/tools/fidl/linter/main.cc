@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <lib/cmdline/status.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <iostream>
@@ -121,7 +122,8 @@ int main(int argc, char* argv[]) {
   excluded_and_disabled_checks.insert("no-trailing-comment");
 
   fidl::Findings findings;
-  fidl::Reporter reporter;
+  bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
+  fidl::Reporter reporter(false, enable_color);
   for (const auto& source_file : source_manager.sources()) {
     Lint(*source_file, &findings, &reporter, included_checks, excluded_and_disabled_checks,
          exclude_by_default, &excluded_checks_not_found);
@@ -131,7 +133,7 @@ int main(int argc, char* argv[]) {
   }
   if (options.format == "text") {
     reporter.PrintReports();
-    auto lints = fidl::utils::FormatFindings(findings);
+    auto lints = fidl::utils::FormatFindings(findings, enable_color);
     for (const auto& lint : lints) {
       fprintf(stderr, "%s\n", lint.c_str());
     }

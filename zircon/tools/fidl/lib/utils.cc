@@ -185,13 +185,13 @@ void PrintFinding(std::ostream& os, const Finding& finding) {
   }
 }
 
-std::vector<std::string> FormatFindings(const Findings& findings) {
+std::vector<std::string> FormatFindings(const Findings& findings, bool enable_color) {
   std::vector<std::string> lint;
   for (auto& finding : findings) {
     std::stringstream ss;
     PrintFinding(ss, finding);
     auto warning = reporter::Format("warning", std::make_optional(finding.span()), ss.str(),
-                                    finding.span().data().size());
+                                    enable_color, finding.span().data().size());
     lint.push_back(warning);
   }
   return lint;

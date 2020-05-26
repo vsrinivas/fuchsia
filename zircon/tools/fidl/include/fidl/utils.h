@@ -153,7 +153,7 @@ void PrintFinding(std::ostream& os, const Finding& finding);
 
 // Used by fidl-lint main() and for testing, this generates the linter error
 // messages for a list of findings.
-std::vector<std::string> FormatFindings(const Findings& findings);
+std::vector<std::string> FormatFindings(const Findings& findings, bool enable_color);
 
 // Gets a string with the original file contents, and a string with the
 // formatted file, and makes sure that the only difference is in the whitespace.
