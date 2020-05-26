@@ -141,11 +141,8 @@ template("fuchsia_package") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$meta_package_target" ]
+    deps += [ ":$meta_package_target" ] + invoker.components
     sources = [ meta_package_file ]
-    foreach(component, invoker.components) {
-      sources += get_target_outputs(component)
-    }
     args = [ "@" + rebase_path(args_file, root_build_dir) ]
   }
 
