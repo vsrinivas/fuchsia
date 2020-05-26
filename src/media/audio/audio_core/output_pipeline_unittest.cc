@@ -497,5 +497,59 @@ TEST_F(OutputPipelineTest, DifferentMixRates) {
   }
 }
 
+TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
+  auto test_effects = testing::TestEffectsModule::Open();
+  test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .effects =
+          {
+              {
+                  .lib_name = "test_effects.so",
+                  .effect_name = "add_1.0",
+                  .instance_name = "",
+                  .effect_config = "",
+                  .output_channels = 4,
+              },
+          },
+      .inputs = {{
+          .name = "mix",
+          .input_streams =
+              {
+                  RenderUsage::MEDIA,
+                  RenderUsage::SYSTEM_AGENT,
+                  RenderUsage::INTERRUPTION,
+                  RenderUsage::COMMUNICATION,
+              },
+          .effects =
+              {
+                  {
+                      .lib_name = "test_effects.so",
+                      .effect_name = "add_1.0",
+                      .instance_name = "",
+                      .effect_config = "",
+                  },
+              },
+          .loopback = true,
+          .output_rate = 48000,
+      }},
+      .loopback = false,
+      .output_rate = 48000,
+  };
+  auto pipeline_config = PipelineConfig(root);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, kDefaultFormat.channels(),
+                                                       128, kDefaultTransform);
+
+  // Verify the pipeline format includes the rechannel effect.
+  EXPECT_EQ(4u, pipeline->format().channels());
+  EXPECT_EQ(48000u, pipeline->format().frames_per_second());
+  EXPECT_EQ(fuchsia::media::AudioSampleFormat::FLOAT, pipeline->format().sample_format());
+}
+
+
 }  // namespace
 }  // namespace media::audio

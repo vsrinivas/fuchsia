@@ -68,7 +68,7 @@ class OutputPipelineImpl : public OutputPipeline {
   ~OutputPipelineImpl() override = default;
 
   // |media::audio::OutputPipeline|
-  std::shared_ptr<ReadableStream> loopback() const override { return loopback_; }
+  std::shared_ptr<ReadableStream> loopback() const override { return state_.loopback; }
   std::shared_ptr<Mixer> AddInput(
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
       Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override;
@@ -79,40 +79,52 @@ class OutputPipelineImpl : public OutputPipeline {
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override {
     TRACE_DURATION("audio", "OutputPipeline::ReadLock");
-    FX_DCHECK(stream_);
-    return stream_->ReadLock(ref_time, frame, frame_count);
+    FX_DCHECK(state_.stream);
+    return state_.stream->ReadLock(ref_time, frame, frame_count);
   }
   void Trim(zx::time trim) override {
     TRACE_DURATION("audio", "OutputPipeline::Trim");
-    FX_CHECK(stream_);
-    stream_->Trim(trim);
+    FX_CHECK(state_.stream);
+    state_.stream->Trim(trim);
   }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
     TRACE_DURATION("audio", "OutputPipeline::ReferenceClockToFractionalFrames");
-    FX_DCHECK(stream_);
-    return stream_->ReferenceClockToFractionalFrames();
+    FX_DCHECK(state_.stream);
+    return state_.stream->ReferenceClockToFractionalFrames();
   }
   void SetMinLeadTime(zx::duration min_lead_time) override {
     ReadableStream::SetMinLeadTime(min_lead_time);
-    stream_->SetMinLeadTime(min_lead_time);
+    state_.stream->SetMinLeadTime(min_lead_time);
   }
 
  private:
-  std::shared_ptr<ReadableStream> CreateMixStage(
-      const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t block_size,
-      fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask,
-      Mixer::Resampler sampler);
+  struct State {
+    State() = default;
+
+    State(const PipelineConfig& config, uint32_t channels, uint32_t max_block_size_frames,
+          TimelineFunction ref_clock_to_fractional_frame, Mixer::Resampler sampler);
+
+    std::shared_ptr<ReadableStream> CreateMixStage(
+        const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t block_size,
+        fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask,
+        Mixer::Resampler sampler);
+
+    std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages;
+    std::vector<std::shared_ptr<EffectsStage>> effects_stages;
+    std::vector<std::pair<std::shared_ptr<ReadableStream>, StreamUsage>> streams;
+
+    // This is the root of the mix graph. The other mix stages must be reachable from this node
+    // to actually get mixed.
+    std::shared_ptr<ReadableStream> stream;
+
+    std::shared_ptr<ReadableStream> loopback;
+  };
+
+  OutputPipelineImpl(State state);
+
   MixStage& LookupStageForUsage(const StreamUsage& usage);
 
-  std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages_;
-  std::vector<std::shared_ptr<EffectsStage>> effects_stages_;
-  std::vector<std::pair<std::shared_ptr<ReadableStream>, StreamUsage>> streams_;
-
-  // This is the root of the mix graph. The other mix stages must be reachable from this node
-  // to actually get mixed.
-  std::shared_ptr<ReadableStream> stream_;
-
-  std::shared_ptr<ReadableStream> loopback_;
+  State state_;
 };
 
 }  // namespace media::audio

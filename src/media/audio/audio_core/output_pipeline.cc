@@ -36,9 +36,18 @@ OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config, uint32_t ch
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_clock_to_fractional_frame,
                                        Mixer::Resampler sampler)
-    : OutputPipeline(FormatForMixGroup(config.root(), channels)) {
+    : OutputPipelineImpl(
+          State(config, channels, max_block_size_frames, ref_clock_to_fractional_frame, sampler)) {}
+
+OutputPipelineImpl::OutputPipelineImpl(State state)
+    : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
+
+OutputPipelineImpl::State::State(const PipelineConfig& config, uint32_t channels,
+                                 uint32_t max_block_size_frames,
+                                 TimelineFunction ref_clock_to_fractional_frame,
+                                 Mixer::Resampler sampler) {
   uint32_t usage_mask = 0;
-  stream_ =
+  stream =
       CreateMixStage(config.root(), channels, max_block_size_frames,
                      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame),
                      &usage_mask, sampler);
@@ -48,27 +57,27 @@ std::shared_ptr<Mixer> OutputPipelineImpl::AddInput(std::shared_ptr<ReadableStre
                                                     const StreamUsage& usage,
                                                     Mixer::Resampler sampler_hint) {
   TRACE_DURATION("audio", "OutputPipelineImpl::AddInput", "stream", stream.get());
-  streams_.emplace_back(stream, usage);
+  state_.streams.emplace_back(stream, usage);
   return LookupStageForUsage(usage).AddInput(std::move(stream), sampler_hint);
 }
 
 void OutputPipelineImpl::RemoveInput(const ReadableStream& stream) {
   TRACE_DURATION("audio", "OutputPipelineImpl::RemoveInput", "stream", &stream);
-  auto it = std::find_if(streams_.begin(), streams_.end(),
+  auto it = std::find_if(state_.streams.begin(), state_.streams.end(),
                          [&stream](auto& pair) { return pair.first.get() == &stream; });
-  FX_CHECK(it != streams_.end());
+  FX_CHECK(it != state_.streams.end());
   LookupStageForUsage(it->second).RemoveInput(stream);
-  streams_.erase(it);
+  state_.streams.erase(it);
 }
 
 void OutputPipelineImpl::SetEffectConfig(const std::string& instance_name,
                                          const std::string& config) {
-  for (auto& effects_stage : effects_stages_) {
+  for (auto& effects_stage : state_.effects_stages) {
     effects_stage->SetEffectConfig(instance_name, config);
   }
 }
 
-std::shared_ptr<ReadableStream> OutputPipelineImpl::CreateMixStage(
+std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t max_block_size_frames,
     fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, uint32_t* usage_mask,
     Mixer::Resampler sampler) {
@@ -87,7 +96,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::CreateMixStage(
   if (!spec.effects.empty()) {
     auto effects_stage = EffectsStage::Create(spec.effects, root);
     if (effects_stage) {
-      effects_stages_.push_back(effects_stage);
+      effects_stages.push_back(effects_stage);
       root = std::move(effects_stage);
     }
   }
@@ -95,15 +104,15 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::CreateMixStage(
   // If this is the loopback stage, allocate the loopback ring buffer. Note we want this to be
   // after any effects that may have been applied.
   if (spec.loopback) {
-    FX_DCHECK(!loopback_) << "Only a single loopback point is allowed.";
+    FX_DCHECK(!loopback) << "Only a single loopback point is allowed.";
     const uint32_t ring_size = output_format.frames_per_second();
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         output_format, ref_clock_to_fractional_frame, ring_size);
-    loopback_ = std::move(endpoints.reader);
+    loopback = std::move(endpoints.reader);
     root = std::make_shared<TapStage>(std::move(root), std::move(endpoints.writer));
   }
 
-  mix_stages_.emplace_back(stage, UsagesFromRenderUsages(spec.input_streams));
+  mix_stages.emplace_back(stage, UsagesFromRenderUsages(spec.input_streams));
   for (const auto& input : spec.inputs) {
     auto [timeline_function, _] = ref_clock_to_fractional_frame->get();
     // Create a new timeline function to represent the ref_clock_to_frac_frame mapping for this
@@ -122,7 +131,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::CreateMixStage(
 }
 
 MixStage& OutputPipelineImpl::LookupStageForUsage(const StreamUsage& usage) {
-  for (auto& [mix_stage, stage_usages] : mix_stages_) {
+  for (auto& [mix_stage, stage_usages] : state_.mix_stages) {
     for (const auto& stage_usage : stage_usages) {
       if (stage_usage == usage) {
         return *mix_stage;
