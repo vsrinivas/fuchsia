@@ -10,18 +10,18 @@ use fidl::{AsyncSocket, HandleBased};
 use fuchsia_zircon_status as zx_status;
 use futures::io::{AsyncRead, AsyncWrite};
 use futures::ready;
-use std::cell::RefCell;
+use parking_lot::Mutex;
 use std::pin::Pin;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 
 pub(crate) struct Socket {
-    socket: RefCell<AsyncSocket>,
+    socket: Mutex<AsyncSocket>,
 }
 
 impl std::fmt::Debug for Socket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.socket.borrow().fmt(f)
+        "Socket".fmt(f)
     }
 }
 
@@ -47,7 +47,7 @@ impl Proxyable for Socket {
 impl IntoProxied for fidl::Socket {
     type Proxied = Socket;
     fn into_proxied(self) -> Result<Socket, Error> {
-        Ok(Socket { socket: RefCell::new(AsyncSocket::from_socket(self)?) })
+        Ok(Socket { socket: Mutex::new(AsyncSocket::from_socket(self)?) })
     }
 }
 
@@ -68,7 +68,8 @@ impl IO for SocketReader {
         if msg.0.len() < MIN_READ_LEN {
             msg.0.resize(MIN_READ_LEN, 0u8);
         }
-        let n = ready!(Pin::new(&mut *socket.socket.borrow_mut()).poll_read(fut_ctx, &mut msg.0))?;
+        let mut socket = socket.socket.lock();
+        let n = ready!(Pin::new(&mut *socket).poll_read(fut_ctx, &mut msg.0))?;
         if n == 0 {
             return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
         }
@@ -90,7 +91,8 @@ impl IO for SocketWriter {
         socket: &Socket,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<(), zx_status::Status>> {
-        let n = ready!(Pin::new(&mut *socket.socket.borrow_mut()).poll_write(fut_ctx, &mut msg.0))?;
+        let mut socket = socket.socket.lock();
+        let n = ready!(Pin::new(&mut *socket).poll_write(fut_ctx, &mut msg.0))?;
         if n == msg.0.len() {
             Poll::Ready(Ok(()))
         } else {
@@ -114,6 +116,7 @@ impl Message for SocketMessage {
     type Serializer = SocketMessageSerializer;
 }
 
+#[derive(Debug)]
 pub(crate) struct SocketMessageSerializer;
 
 impl Serializer for SocketMessageSerializer {
@@ -126,7 +129,7 @@ impl Serializer for SocketMessageSerializer {
         msg: &mut SocketMessage,
         bytes: &mut Vec<u8>,
         _: &AsyncConnection,
-        _: &Rc<MessageStats>,
+        _: &Arc<MessageStats>,
         _: &mut RouterHolder<'_>,
         _: &mut Context<'_>,
     ) -> Poll<Result<(), Error>> {

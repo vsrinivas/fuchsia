@@ -19,11 +19,11 @@ if (!is_fuchsia) {
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-std",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates:tokio",
     ]
 
     non_rust_deps = [ "//third_party/boringssl" ]
@@ -40,7 +40,6 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:tokio",
     ]
 
     non_rust_deps = [ "//third_party/boringssl" ]

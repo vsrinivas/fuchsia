@@ -76,13 +76,12 @@ async fn exec_client(text: Option<&str>) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // Server implementation
 
-fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
-    hoist::spawn(
-        async move {
-            let mut stream = chan.into_stream()?;
-            while let Some(echo::EchoRequest::EchoString { value, responder }) =
-                stream.try_next().await.context("error running echo server")?
-            {
+async fn echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) -> Result<(), Error> {
+    chan.into_stream()?
+        .map_err(Into::into)
+        .try_for_each_concurrent(
+            None,
+            |echo::EchoRequest::EchoString { value, responder }| async move {
                 if !quiet {
                     println!("Received echo request for string {:?}", value);
                 }
@@ -90,61 +89,51 @@ fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
                 if !quiet {
                     println!("echo response sent successfully");
                 }
-            }
-            Ok(())
-        }
-        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
-    );
+                Ok(())
+            },
+        )
+        .await
 }
 
-fn spawn_example_server(chan: fidl::AsyncChannel, quiet: bool) {
-    hoist::spawn(
-        async move {
-            let mut stream = interfacepassing::ExampleRequestStream::from_channel(chan);
-            while let Some(request) =
-                stream.try_next().await.context("error running echo server")?
-            {
-                match request {
-                    interfacepassing::ExampleRequest::Request { iface, .. } => {
-                        if !quiet {
-                            println!("Received interface request");
-                        }
-                        spawn_echo_server(iface, quiet);
-                    }
+async fn example_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Error> {
+    interfacepassing::ExampleRequestStream::from_channel(chan)
+        .map_err(Into::into)
+        .try_for_each_concurrent(
+            None,
+            |interfacepassing::ExampleRequest::Request { iface, .. }| {
+                if !quiet {
+                    println!("Received interface request");
                 }
-            }
-            Ok(())
-        }
-        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
-    );
-}
-
-async fn next_request(
-    stream: &mut ServiceProviderRequestStream,
-) -> Result<Option<ServiceProviderRequest>, Error> {
-    println!("Awaiting request");
-    Ok(stream.try_next().await.context("error running service provider server")?)
+                echo_server(iface, quiet)
+            },
+        )
+        .await
 }
 
 async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    let mut stream = ServiceProviderRequestStream::from_channel(chan);
     hoist::publish_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
-    while let Some(ServiceProviderRequest::ConnectToService {
-        chan,
-        info: _,
-        control_handle: _control_handle,
-    }) = next_request(&mut stream).await?
-    {
-        if !quiet {
-            println!("Received service request for service");
-        }
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        spawn_example_server(chan, quiet);
-    }
-    Ok(())
+    ServiceProviderRequestStream::from_channel(chan)
+        .map_err(Into::into)
+        .try_for_each_concurrent(
+            None,
+            |ServiceProviderRequest::ConnectToService {
+                 chan,
+                 info: _,
+                 control_handle: _control_handle,
+             }| {
+                async move {
+                    if !quiet {
+                        println!("Received service request for service");
+                    }
+                    let chan = fidl::AsyncChannel::from_channel(chan)
+                        .context("failed to make async channel")?;
+                    example_server(chan, quiet).await
+                }
+            },
+        )
+        .await
 }
 
 ////////////////////////////////////////////////////////////////////////////////

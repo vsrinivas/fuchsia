@@ -7,33 +7,18 @@
 use {
     crate::{
         coding::{decode_fidl, encode_fidl},
-        future_help::log_errors,
         labels::NodeId,
         router::Router,
-        runtime::spawn,
         stream_framer::{new_deframer, new_framer, Format, FrameType, LosslessBinary, LossyBinary},
     },
     anyhow::{bail, Context as _, Error},
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     futures::{io::AsyncWriteExt, prelude::*},
-    std::{rc::Rc, time::Duration},
+    std::{sync::Arc, time::Duration},
 };
 
-pub(crate) fn spawn_socket_link(
-    node: Rc<Router>,
-    node_id: NodeId,
-    connection_label: Option<String>,
-    socket: fidl::Socket,
-    duration_per_byte: Option<Duration>,
-) {
-    spawn(log_errors(
-        run_socket_link(node, node_id, connection_label, socket, duration_per_byte),
-        "Socket link failed",
-    ));
-}
-
-async fn run_socket_link(
-    node: Rc<Router>,
+pub(crate) async fn run_socket_link(
+    node: Arc<Router>,
     node_id: NodeId,
     connection_label: Option<String>,
     socket: fidl::Socket,
@@ -73,6 +58,9 @@ async fn run_socket_link(
             let mut buf = [0u8; 4096];
             loop {
                 let n = rx_bytes.read(&mut buf).await?;
+                if n == 0 {
+                    return Ok(());
+                }
                 deframer_write.write(&buf[..n]).await?;
             }
         },

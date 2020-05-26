@@ -4,17 +4,21 @@
 
 //! Async wrapper around QUIC
 
-use crate::future_help::{log_errors, Observable};
+use crate::future_help::{LockInner, PollMutex, PollWeakMutex};
 use crate::labels::{Endpoint, NodeId};
-use crate::runtime::{maybe_wait_until, spawn};
+use crate::runtime::{maybe_wait_until, Task};
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::StreamId;
-use futures::{prelude::*, select};
-use std::cell::RefCell;
+use futures::{
+    future::{poll_fn, Either},
+    lock::{Mutex, MutexLockFuture},
+    prelude::*,
+    ready,
+};
 use std::collections::BTreeMap;
 use std::pin::Pin;
-use std::rc::{Rc, Weak};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Weak};
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
@@ -24,7 +28,8 @@ struct IO {
     waiting_for_conn_send: Option<Waker>,
     waiting_for_stream_recv: BTreeMap<u64, Waker>,
     waiting_for_stream_send: BTreeMap<u64, Waker>,
-    timeout: Observable<Option<Instant>>,
+    new_timeout: Option<Waker>,
+    timeout: Option<Instant>,
 }
 
 impl std::fmt::Debug for IO {
@@ -49,6 +54,7 @@ impl IO {
     }
 
     fn wait_for_stream_send<R>(&mut self, stream: u64, ctx: &mut Context<'_>) -> Poll<R> {
+        log::info!("[{:?}, {:?}] wait for stream send", self.conn.trace_id(), stream);
         self.waiting_for_stream_send.insert(stream, ctx.waker().clone());
         Poll::Pending
     }
@@ -62,6 +68,7 @@ impl IO {
     }
 
     fn wake_stream_io(&mut self) {
+        (self.seen_established, self.conn.is_established());
         if !self.seen_established && self.conn.is_established() {
             self.seen_established = true;
             std::mem::replace(&mut self.waiting_for_stream_recv, BTreeMap::new())
@@ -80,15 +87,56 @@ impl IO {
         }
     }
 
+    fn wait_for_new_timeout(
+        &mut self,
+        ctx: &mut Context<'_>,
+        last_seen: Option<Instant>,
+    ) -> Poll<Option<Instant>> {
+        if last_seen == self.timeout {
+            self.new_timeout = Some(ctx.waker().clone());
+            Poll::Pending
+        } else {
+            Poll::Ready(self.timeout)
+        }
+    }
+
     fn update_timeout(&mut self) {
         // TODO: the max(d, 1ms) below is a hedge against unreasonable values coming out of quiche.
         // In particular, at least one version has been observed to produce 0 length durations,
         // which jams us on some platforms/executors into a spin loop, freezing out other activity.
-        self.timeout.push(
-            self.conn
-                .timeout()
-                .map(|d| Instant::now() + std::cmp::max(d, Duration::from_millis(1))),
-        );
+        let new_timeout = self
+            .conn
+            .timeout()
+            .map(|d| Instant::now() + std::cmp::max(d, Duration::from_millis(1)));
+        if new_timeout != self.timeout {
+            self.timeout = new_timeout;
+            self.new_timeout.take().map(|w| w.wake());
+        }
+    }
+}
+
+pub struct NextSend<'a>(PollMutex<'a, IO>, NodeId, Endpoint);
+
+impl<'a> NextSend<'a> {
+    pub fn poll(
+        &mut self,
+        ctx: &mut Context<'_>,
+        frame: &mut [u8],
+    ) -> Poll<Result<Option<usize>, Error>> {
+        let mut guard = ready!(self.0.poll(ctx));
+        match guard.conn.send(frame) {
+            Ok(n) => {
+                guard.update_timeout();
+                guard.wake_stream_io();
+                Poll::Ready(Ok(Some(n)))
+            }
+            Err(quiche::Error::Done) if guard.conn.is_closed() => Poll::Ready(Ok(None)),
+            Err(quiche::Error::Done) => {
+                guard.update_timeout();
+                guard.wait_for_conn_send(ctx)
+            }
+            Err(e) => Poll::Ready(Err(e.into())),
+        }
     }
 }
 
@@ -97,12 +145,19 @@ struct AsyncConnectionInner {
     next_bidi: AtomicU64,
     next_uni: AtomicU64,
     endpoint: Endpoint,
-    io: RefCell<IO>,
+    io: Mutex<IO>,
     peer_node_id: NodeId,
 }
 
+impl LockInner for AsyncConnectionInner {
+    type Inner = IO;
+    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, IO> {
+        self.io.lock()
+    }
+}
+
 #[derive(Clone, Debug)]
-pub struct AsyncConnection(Rc<AsyncConnectionInner>);
+pub struct AsyncConnection(Arc<AsyncConnectionInner>);
 
 impl AsyncConnection {
     pub fn from_connection(
@@ -110,14 +165,15 @@ impl AsyncConnection {
         endpoint: Endpoint,
         peer_node_id: NodeId,
     ) -> Self {
-        let inner = Rc::new(AsyncConnectionInner {
-            io: RefCell::new(IO {
+        let inner = Arc::new(AsyncConnectionInner {
+            io: Mutex::new(IO {
                 conn,
                 seen_established: false,
                 waiting_for_conn_send: None,
                 waiting_for_stream_recv: BTreeMap::new(),
                 waiting_for_stream_send: BTreeMap::new(),
-                timeout: Observable::new(None),
+                timeout: None,
+                new_timeout: None,
             }),
             next_bidi: AtomicU64::new(match endpoint {
                 Endpoint::Client => 1,
@@ -127,34 +183,32 @@ impl AsyncConnection {
             endpoint,
             peer_node_id,
         });
-        spawn(log_errors(run_timers(Rc::downgrade(&inner)), "Error checking QUIC timers"));
         Self(inner)
     }
 
-    pub fn poll_next_send<'a>(
-        &self,
-        frame: &'a mut [u8],
-        ctx: &mut Context<'_>,
-    ) -> Poll<Result<Option<usize>, Error>> {
-        let mut io = self.0.io.borrow_mut();
-        let r = io.conn.send(frame);
-        match r {
-            Ok(n) => {
-                io.update_timeout();
-                io.wake_stream_io();
-                Poll::Ready(Ok(Some(n)))
-            }
-            Err(quiche::Error::Done) => io.wait_for_conn_send(ctx),
-            Err(e) => Poll::Ready(Err(e.into())),
-        }
+    /// Perform maintence tasks vital to keeping the connection running.
+    /// Owner of the AsyncConnection is responsible for calling this function and providing it a task to run within.
+    pub fn run(&self) -> impl Future<Output = Result<(), Error>> {
+        run_timers(Arc::downgrade(&self.0))
     }
 
-    pub fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
-        let mut io = self.0.io.borrow_mut();
+    pub fn next_send<'a>(&'a self) -> NextSend<'a> {
+        NextSend(PollMutex::new(&self.0.io), self.0.peer_node_id, self.0.endpoint)
+    }
+
+    #[allow(dead_code)]
+    pub fn debug_id(&self) -> impl std::fmt::Debug {
+        (self.0.peer_node_id, self.0.endpoint)
+    }
+
+    pub async fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
+        let mut io = self.0.io.lock().await;
         match io.conn.recv(packet) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
-            Err(x) => return Err(x.into()),
+            Err(x) => {
+                return Err(x.into());
+            }
         }
         io.update_timeout();
         io.wake_stream_io();
@@ -175,22 +229,34 @@ impl AsyncConnection {
     }
 
     pub fn bind_uni_id(&self, id: u64) -> AsyncQuicStreamReader {
-        AsyncQuicStreamReader { conn: self.clone(), id, ready: false, abandoned: false }
+        AsyncQuicStreamReader {
+            conn: self.clone(),
+            id,
+            ready: false,
+            observed_closed: false,
+            buffered: Vec::new(),
+        }
     }
 
     pub fn bind_id(&self, id: u64) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
         (
             AsyncQuicStreamWriter { conn: self.clone(), id, sent_fin: false },
-            AsyncQuicStreamReader { conn: self.clone(), id, ready: false, abandoned: false },
+            AsyncQuicStreamReader {
+                conn: self.clone(),
+                id,
+                ready: false,
+                observed_closed: false,
+                buffered: Vec::new(),
+            },
         )
     }
 
-    pub fn stats(&self) -> quiche::Stats {
-        self.0.io.borrow().conn.stats()
+    pub async fn stats(&self) -> quiche::Stats {
+        self.0.io.lock().await.conn.stats()
     }
 
-    pub fn is_established(&self) -> bool {
-        self.0.io.borrow().conn.is_established()
+    pub async fn is_established(&self) -> bool {
+        self.0.io.lock().await.conn.is_established()
     }
 
     pub fn peer_node_id(&self) -> NodeId {
@@ -203,34 +269,34 @@ impl AsyncConnection {
 }
 
 async fn run_timers(inner: Weak<AsyncConnectionInner>) -> Result<(), Error> {
-    let mut observer = Weak::upgrade(&inner)
-        .ok_or_else(|| format_err!("Connection disappeared before running timers"))?
-        .io
-        .borrow()
-        .timeout
-        .new_observer();
-
-    enum Action {
-        OnTimeout,
-        UpdateTimeout(Option<Option<Instant>>),
-    }
+    let mut timeout_lock = PollWeakMutex::new(inner.clone());
+    let mut poll_timeout = |ctx: &mut Context<'_>,
+                            current_timeout: Option<Instant>|
+     -> Poll<Option<Option<Instant>>> {
+        timeout_lock.poll_fn(ctx, |ctx, io| io.wait_for_new_timeout(ctx, current_timeout))
+    };
 
     let mut current_timeout = None;
     loop {
-        let action = select! {
-            _ = maybe_wait_until(current_timeout).fuse() => Action::OnTimeout,
-            x = observer.next().fuse() => Action::UpdateTimeout(x),
-        };
-        match action {
-            Action::OnTimeout => {
+        match futures::future::select(
+            poll_fn(|ctx| poll_timeout(ctx, current_timeout)),
+            maybe_wait_until(current_timeout).boxed(),
+        )
+        .await
+        {
+            Either::Right(_) => {
                 let inner = Weak::upgrade(&inner)
                     .ok_or_else(|| format_err!("Connection disappeared before timeout expired"))?;
-                let mut io = inner.io.borrow_mut();
+                let mut io = inner.io.lock().await;
                 io.conn.on_timeout();
                 io.update_timeout();
+                io.wake_stream_io();
+                io.wake_conn_send();
             }
-            Action::UpdateTimeout(None) => return Ok(()),
-            Action::UpdateTimeout(Some(timeout)) => current_timeout = timeout,
+            Either::Left((Some(timeout), _)) => {
+                current_timeout = timeout;
+            }
+            Either::Left((None, _)) => return Ok(()),
         }
     }
 }
@@ -266,32 +332,41 @@ pub struct AsyncQuicStreamWriter {
 }
 
 impl AsyncQuicStreamWriter {
-    pub fn abandon(&mut self) {
+    pub async fn abandon(&mut self) {
         self.sent_fin = true;
         if let Err(e) =
-            self.conn.0.io.borrow_mut().conn.stream_shutdown(self.id, quiche::Shutdown::Write, 0)
+            self.conn.0.io.lock().await.conn.stream_shutdown(self.id, quiche::Shutdown::Write, 0)
         {
             log::trace!("shutdown stream failed: {:?}", e);
         }
     }
 
-    pub fn send<'b>(&'b mut self, bytes: &'b [u8], fin: bool) -> QuicSend<'b> {
+    pub async fn send(&mut self, bytes: &[u8], fin: bool) -> Result<(), Error> {
         assert_eq!(self.sent_fin, false);
         QuicSend {
-            conn: self.conn.clone(),
+            conn: &*self.conn.0,
             id: self.id,
             bytes,
             fin,
             n: 0,
             sent_fin: &mut self.sent_fin,
+            io_lock: PollMutex::new(&self.conn.0.io),
         }
+        .await
     }
 }
 
 impl Drop for AsyncQuicStreamWriter {
     fn drop(&mut self) {
         if !self.sent_fin {
-            self.abandon();
+            log::warn!("Stream {} writer dropped before sending fin", self.id);
+            let conn = self.conn.clone();
+            let id = self.id;
+            // TODO: don't detach
+            Task::spawn(async move {
+                let _ = conn.0.io.lock().await.conn.stream_shutdown(id, quiche::Shutdown::Write, 0);
+            })
+            .detach();
         }
     }
 }
@@ -307,12 +382,20 @@ impl StreamProperties for AsyncQuicStreamWriter {
 }
 
 pub struct QuicSend<'b> {
-    conn: AsyncConnection,
+    conn: &'b AsyncConnectionInner,
     id: u64,
     bytes: &'b [u8],
     n: usize,
     fin: bool,
     sent_fin: &'b mut bool,
+    io_lock: PollMutex<'b, IO>,
+}
+
+impl<'b> QuicSend<'b> {
+    #[allow(dead_code)]
+    fn debug_id(&self) -> impl std::fmt::Debug {
+        (self.conn.peer_node_id, self.conn.endpoint, self.id)
+    }
 }
 
 impl<'b> Future for QuicSend<'b> {
@@ -320,34 +403,23 @@ impl<'b> Future for QuicSend<'b> {
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = Pin::into_inner(self);
-        let io = &mut *this.conn.0.io.borrow_mut();
+        let mut io = ready!(this.io_lock.poll(ctx));
         if !io.conn.is_established() {
             return io.wait_for_stream_send(this.id, ctx);
         }
-        let r = io
+        let n = io
             .conn
             .stream_send(this.id, &this.bytes[this.n..], this.fin)
-            .with_context(|| format!("sending on stream {}", this.id));
-        match r {
-            Ok(n) => {
-                io.wake_conn_send();
-                this.n += n;
-                if this.n == this.bytes.len() {
-                    if this.fin {
-                        *this.sent_fin = true;
-                    }
-                    Poll::Ready(Ok(()))
-                } else {
-                    io.wait_for_stream_send(this.id, ctx)
-                }
+            .with_context(|| format!("sending on stream {}", this.id))?;
+        io.wake_conn_send();
+        this.n += n;
+        if this.n == this.bytes.len() {
+            if this.fin {
+                *this.sent_fin = true;
             }
-            Err(e) => Poll::Ready(Err(e).with_context(|| {
-                format_err!(
-                    "async quic send: stream_id={:?} endpoint={:?}",
-                    this.id,
-                    this.conn.0.endpoint
-                )
-            })),
+            Poll::Ready(Ok(()))
+        } else {
+            io.wait_for_stream_send(this.id, ctx)
         }
     }
 }
@@ -357,41 +429,164 @@ pub struct AsyncQuicStreamReader {
     conn: AsyncConnection,
     id: u64,
     ready: bool,
-    abandoned: bool,
+    observed_closed: bool,
+    buffered: Vec<u8>,
 }
 
 impl Drop for AsyncQuicStreamReader {
     fn drop(&mut self) {
-        if !self.abandoned && !self.conn.0.io.borrow().conn.stream_finished(self.id) {
-            self.abandon()
+        if !self.observed_closed {
+            let conn = self.conn.clone();
+            let id = self.id;
+            // TODO: don't detach
+            Task::spawn(async move {
+                let _ = conn.0.io.lock().await.conn.stream_shutdown(id, quiche::Shutdown::Read, 0);
+            })
+            .detach()
         }
     }
 }
 
 impl AsyncQuicStreamReader {
-    pub async fn read<'a, 'b>(&'a mut self, bytes: &'b mut [u8]) -> Result<(usize, bool), Error> {
-        QuicRead { conn: self.conn.clone(), id: self.id, bytes, ready: &mut self.ready }.await
-    }
-
-    pub async fn read_exact(&mut self, mut bytes: &mut [u8]) -> Result<bool, Error> {
-        loop {
-            let (n, fin) = self.read(bytes).await?;
-            if n == bytes.len() {
-                return Ok(fin);
-            }
-            if fin {
-                anyhow::bail!("End of stream");
-            }
-            bytes = &mut bytes[n..];
+    pub fn read<'b>(&'b mut self, bytes: impl Into<ReadBuf<'b>>) -> QuicRead<'b> {
+        QuicRead {
+            conn: &self.conn.0,
+            id: self.id,
+            observed_closed: &mut self.observed_closed,
+            ready: &mut self.ready,
+            buffered: &mut self.buffered,
+            bytes: bytes.into(),
+            bytes_offset: 0,
+            io_lock: PollMutex::new(&self.conn.0.io),
         }
     }
 
-    pub fn abandon(&mut self) {
-        self.abandoned = true;
+    pub fn read_exact<'b>(&'b mut self, bytes: &'b mut [u8]) -> ReadExact<'b> {
+        ReadExact { read: self.read(bytes), done: false }
+    }
+
+    pub async fn abandon(&mut self) {
+        self.observed_closed = true;
         if let Err(e) =
-            self.conn.0.io.borrow_mut().conn.stream_shutdown(self.id, quiche::Shutdown::Write, 0)
+            self.conn.0.io.lock().await.conn.stream_shutdown(self.id, quiche::Shutdown::Read, 0)
         {
             log::trace!("shutdown stream failed: {:?}", e);
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ReadExact<'b> {
+    read: QuicRead<'b>,
+    done: bool,
+}
+
+impl<'b> ReadExact<'b> {
+    #[allow(dead_code)]
+    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
+        self.read.debug_id()
+    }
+}
+
+impl<'b> Future for ReadExact<'b> {
+    type Output = Result<bool, Error>;
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = Pin::into_inner(self);
+        assert!(!this.done);
+        let read = &mut this.read;
+        loop {
+            let (n, fin) = ready!(read.poll_unpin(ctx))?;
+            if n == read.bytes.len() {
+                this.done = true;
+                return Poll::Ready(Ok(fin));
+            }
+            if fin {
+                this.done = true;
+                return Poll::Ready(Err(format_err!("End of stream")));
+            }
+            read.bytes_offset += n;
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ReadBuf<'b> {
+    Slice(&'b mut [u8]),
+    Vec(&'b mut Vec<u8>),
+}
+
+impl<'b> ReadBuf<'b> {
+    fn as_mut_slice_from<'a>(&'a mut self, offset: usize) -> &'a mut [u8] {
+        match self {
+            Self::Slice(buf) => &mut buf[offset..],
+            Self::Vec(buf) => &mut buf[offset..],
+        }
+    }
+
+    pub(crate) fn as_mut_slice<'a>(&'a mut self) -> &'a mut [u8] {
+        match self {
+            Self::Slice(buf) => buf,
+            Self::Vec(buf) => buf.as_mut(),
+        }
+    }
+
+    fn take_vec_to(&mut self, offset: usize) -> Vec<u8> {
+        match self {
+            Self::Slice(buf) => buf[..offset].to_vec(),
+            Self::Vec(buf) => {
+                buf.truncate(offset);
+                std::mem::replace(buf, Vec::new())
+            }
+        }
+    }
+
+    pub(crate) fn take_vec(&mut self) -> Vec<u8> {
+        match self {
+            Self::Slice(buf) => buf.to_vec(),
+            Self::Vec(buf) => std::mem::replace(buf, Vec::new()),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Self::Slice(buf) => buf.len(),
+            Self::Vec(buf) => buf.len(),
+        }
+    }
+}
+
+impl<'b> From<&'b mut [u8]> for ReadBuf<'b> {
+    fn from(buf: &'b mut [u8]) -> Self {
+        Self::Slice(buf)
+    }
+}
+
+impl<'b> From<&'b mut Vec<u8>> for ReadBuf<'b> {
+    fn from(buf: &'b mut Vec<u8>) -> Self {
+        Self::Vec(buf)
+    }
+}
+
+impl<'b> ReadExact<'b> {
+    pub(crate) fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
+        self.read.read_buf_mut()
+    }
+
+    pub(crate) fn rearm(&mut self, bytes: impl Into<ReadBuf<'b>>) {
+        assert!(self.done);
+        self.read.bytes_offset = 0;
+        self.read.bytes = bytes.into();
+        self.done = false;
+    }
+}
+
+impl<'b> Drop for ReadExact<'b> {
+    fn drop(&mut self) {
+        // If we never returned Ready but did read some data, then return that data to the readers
+        // buffer so that we can try to consume it next time.
+        if !self.done && self.read.bytes_offset != 0 {
+            assert!(self.read.buffered.is_empty());
+            *self.read.buffered = self.read.bytes.take_vec_to(self.read.bytes_offset);
         }
     }
 }
@@ -406,49 +601,97 @@ impl StreamProperties for AsyncQuicStreamReader {
     }
 }
 
-pub struct QuicRead<'a, 'b> {
-    conn: AsyncConnection,
+#[derive(Debug)]
+pub struct QuicRead<'b> {
     id: u64,
-    bytes: &'b mut [u8],
-    ready: &'a mut bool,
+    ready: &'b mut bool,
+    observed_closed: &'b mut bool,
+    buffered: &'b mut Vec<u8>,
+    conn: &'b AsyncConnectionInner,
+    bytes: ReadBuf<'b>,
+    bytes_offset: usize,
+    io_lock: PollMutex<'b, IO>,
 }
 
-impl<'a, 'b> Future for QuicRead<'a, 'b> {
-    type Output = Result<(usize, bool), Error>;
+impl<'b> QuicRead<'b> {
+    #[allow(dead_code)]
+    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
+        (self.conn.peer_node_id, self.conn.endpoint, self.id)
+    }
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = Pin::into_inner(self);
-        let io = &mut *this.conn.0.io.borrow_mut();
-        let r = io.conn.stream_recv(this.id, this.bytes);
-        match r {
+    pub(crate) fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
+        &mut self.bytes
+    }
+
+    fn poll_inner(&mut self, ctx: &mut Context<'_>) -> Poll<Result<(usize, bool), Error>> {
+        let bytes = &mut self.bytes.as_mut_slice_from(self.bytes_offset);
+
+        if !self.buffered.is_empty() {
+            let n = match bytes.len().cmp(&self.buffered.len()) {
+                std::cmp::Ordering::Less => {
+                    let trail = self.buffered.split_off(bytes.len());
+                    let head = std::mem::replace(self.buffered, trail);
+                    bytes.copy_from_slice(&head);
+                    bytes.len()
+                }
+                std::cmp::Ordering::Equal => {
+                    bytes.copy_from_slice(self.buffered);
+                    self.buffered.clear();
+                    bytes.len()
+                }
+                std::cmp::Ordering::Greater => {
+                    let n = self.buffered.len();
+                    bytes[..n].copy_from_slice(self.buffered);
+                    self.buffered.clear();
+                    n
+                }
+            };
+            return Poll::Ready(Ok((n, false)));
+        }
+
+        let mut io = ready!(self.io_lock.poll(ctx));
+        match io.conn.stream_recv(self.id, bytes) {
             Ok((n, fin)) => {
-                *this.ready = true;
+                *self.ready = true;
                 Poll::Ready(Ok((n, fin)))
             }
             Err(quiche::Error::Done) => {
-                *this.ready = true;
-                let finished = io.conn.stream_finished(this.id);
+                *self.ready = true;
+                let finished = io.conn.stream_finished(self.id);
                 if finished {
                     Poll::Ready(Ok((0, true)))
                 } else {
-                    io.wait_for_stream_recv(this.id, ctx)
+                    io.wait_for_stream_recv(self.id, ctx)
                 }
             }
-            Err(quiche::Error::InvalidStreamState) if !*this.ready => {
-                io.wait_for_stream_recv(this.id, ctx)
+            Err(quiche::Error::InvalidStreamState) if !*self.ready => {
+                io.wait_for_stream_recv(self.id, ctx)
             }
-            Err(quiche::Error::InvalidStreamState) if io.conn.stream_finished(this.id) => {
+            Err(quiche::Error::InvalidStreamState) if io.conn.stream_finished(self.id) => {
                 Poll::Ready(Ok((0, true)))
             }
             Err(x) => Poll::Ready(Err(x).with_context(|| {
                 format_err!(
                     "async quic read: stream_id={:?} ready={:?} endpoint={:?}",
-                    this.id,
-                    this.ready,
-                    this.conn.0.endpoint
+                    self.id,
+                    *self.ready,
+                    self.conn.endpoint
                 )
             })),
         }
+    }
+}
+
+impl<'b> Future for QuicRead<'b> {
+    type Output = Result<(usize, bool), Error>;
+
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = Pin::into_inner(self);
+        let (n, fin) = ready!(this.poll_inner(ctx))?;
+        if fin {
+            *this.observed_closed = true;
+        }
+        Poll::Ready(Ok((n, fin)))
     }
 }
 
@@ -456,8 +699,7 @@ impl<'a, 'b> Future for QuicRead<'a, 'b> {
 pub(crate) mod test_util {
 
     use super::*;
-    use crate::future_help::log_errors;
-    use crate::runtime::spawn;
+    use crate::router::test_util::run;
     use futures::future::poll_fn;
     use rand::Rng;
 
@@ -516,20 +758,28 @@ pub(crate) mod test_util {
 
     async fn direct_packets(from: AsyncConnection, to: AsyncConnection) -> Result<(), Error> {
         let mut frame = [0u8; 2048];
-        while let Some(length) = poll_fn(|ctx| from.poll_next_send(&mut frame, ctx)).await? {
-            to.recv(&mut frame[..length])?;
+        while let Some(length) = {
+            let mut ns = from.next_send();
+            poll_fn(|ctx| ns.poll(ctx, &mut frame)).await?
+        } {
+            to.recv(&mut frame[..length]).await?;
         }
         Ok(())
     }
 
     /// Generate a test connection pair, that automatically forwards packets from client to server.
-    pub fn new_client_server() -> Result<(AsyncConnection, AsyncConnection), Error> {
+    pub fn run_client_server<
+        F: 'static + Send + FnOnce(AsyncConnection, AsyncConnection) -> Fut,
+        Fut: 'static + Send + Future<Output = ()>,
+    >(
+        f: F,
+    ) {
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let client = AsyncConnection::from_connection(
-            quiche::connect(None, &scid, &mut client_config()?)?,
+            quiche::connect(None, &scid, &mut client_config().unwrap()).unwrap(),
             Endpoint::Client,
             crate::router::generate_node_id(),
         );
@@ -538,120 +788,99 @@ pub(crate) mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let server = AsyncConnection::from_connection(
-            quiche::accept(&scid, None, &mut server_config()?)?,
+            quiche::accept(&scid, None, &mut server_config().unwrap()).unwrap(),
             Endpoint::Server,
             crate::router::generate_node_id(),
         );
-        spawn(log_errors(
+        let forward = futures::future::try_join(
             direct_packets(client.clone(), server.clone()),
-            "directing packets from client->server",
-        ));
-        spawn(log_errors(
             direct_packets(server.clone(), client.clone()),
-            "directing packets from server->client",
-        ));
-        Ok((client, server))
+        );
+        let run_client = client.run();
+        let run_server = server.run();
+        run(|| async move {
+            let _1 = Task::spawn(async move {
+                forward.await.unwrap();
+            });
+            let _2 = Task::spawn(async move {
+                run_client.await.unwrap();
+            });
+            let _3 = Task::spawn(async move {
+                run_server.await.unwrap();
+            });
+            f(client, server).await;
+        })
     }
 }
 
 #[cfg(test)]
 mod test {
 
-    use super::test_util::new_client_server;
+    use super::test_util::run_client_server;
     use super::StreamProperties;
-    use crate::future_help::log_errors;
-    use crate::router::test_util::run;
-    use crate::runtime::spawn;
 
     #[test]
     fn simple_send() {
-        run(|| {
-            async move {
-                let (client, server) = new_client_server().unwrap();
-                let (mut cli_tx, mut cli_rx) = client.alloc_bidi();
-                let (mut svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
+        run_client_server(|client, server| async move {
+            let (mut cli_tx, _cli_rx) = client.alloc_bidi();
+            let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
-                cli_tx.send(&[1, 2, 3], false).await.unwrap();
-                let mut buf = [0u8; 64];
-                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-                assert_eq!(n, 3);
-                assert_eq!(fin, false);
-                assert_eq!(&buf[..n], &[1, 2, 3]);
-
-                // Shutdown everything
-                eprintln!("SEND SVR FIN");
-                svr_tx.send(&[], true).await.unwrap();
-                eprintln!("WAIT CLI FIN");
-                cli_rx.read(&mut buf).await.unwrap();
-
-                eprintln!("SEND CLI FIN");
-                cli_tx.send(&[], true).await.unwrap();
-                eprintln!("WAIT SVR FIN");
-                svr_rx.read(&mut buf).await.unwrap();
-            }
+            cli_tx.send(&[1, 2, 3], false).await.unwrap();
+            let mut buf = [0u8; 32];
+            let (n, fin) = svr_rx.read(buf.as_mut()).await.unwrap();
+            assert_eq!(n, 3);
+            assert_eq!(fin, false);
+            assert_eq!(&buf[..n], &[1, 2, 3]);
         })
     }
 
     #[test]
     fn send_fin() {
-        run(|| {
-            async move {
-                let (client, server) = new_client_server().unwrap();
-                let (mut cli_tx, mut cli_rx) = client.alloc_bidi();
-                let (mut svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
+        run_client_server(|client, server| async move {
+            let (mut cli_tx, _cli_rx) = client.alloc_bidi();
+            let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
-                cli_tx.send(&[1, 2, 3], true).await.unwrap();
-                let mut buf = [0u8; 64];
-                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-                assert_eq!(n, 3);
-                assert_eq!(fin, true);
-                assert_eq!(&buf[..n], &[1, 2, 3]);
-
-                // Shutdown the direction we don't care about
-                svr_tx.send(&[], true).await.unwrap();
-                cli_rx.read(&mut buf).await.unwrap();
-            }
+            cli_tx.send(&[1, 2, 3], true).await.unwrap();
+            let mut buf = [0u8; 32];
+            let (n, fin) = svr_rx.read(buf.as_mut()).await.unwrap();
+            assert_eq!(n, 3);
+            assert_eq!(fin, true);
+            assert_eq!(&buf[..n], &[1, 2, 3]);
         })
     }
 
     #[test]
     fn recv_before_send() {
-        run(|| {
-            async move {
-                let (client, server) = new_client_server().unwrap();
-                let (mut cli_tx, mut cli_rx) = client.alloc_bidi();
-                let (mut svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
+        run_client_server(|client, server| async move {
+            let (mut cli_tx, _cli_rx) = client.alloc_bidi();
+            let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
-                let mut buf = [0u8; 64];
+            let mut buf = [0u8; 32];
 
-                let (unpause, pause) = futures::channel::oneshot::channel();
-                spawn(log_errors(
-                    async move {
-                        cli_tx.send(&[1, 2, 3], false).await?;
-                        eprintln!("sent first");
-                        pause.await.unwrap();
-                        eprintln!("finished pause");
-                        cli_tx.send(&[], true).await?;
-                        eprintln!("sent second");
-                        Ok(())
-                    },
-                    "send failed",
-                ));
-                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-                eprintln!("got: {} {}", n, fin);
-                assert_eq!(n, 3);
-                assert_eq!(fin, false);
-                assert_eq!(&buf[..n], &[1, 2, 3]);
-                unpause.send(()).unwrap();
-                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-                eprintln!("got: {} {}", n, fin);
-                assert_eq!(n, 0);
-                assert_eq!(fin, true);
-
-                // Shutdown the direction we don't care about
-                svr_tx.send(&[], true).await.unwrap();
-                cli_rx.read(&mut buf).await.unwrap();
-            }
+            let (unpause, pause) = futures::channel::oneshot::channel();
+            futures::future::join(
+                async move {
+                    cli_tx.send(&[1, 2, 3], false).await.unwrap();
+                    eprintln!("sent first");
+                    pause.await.unwrap();
+                    eprintln!("finished pause");
+                    cli_tx.send(&[], true).await.unwrap();
+                    eprintln!("sent second");
+                },
+                async move {
+                    let (n, fin) = svr_rx.read(buf.as_mut()).await.unwrap();
+                    eprintln!("got: {} {}", n, fin);
+                    assert_eq!(n, 3);
+                    assert_eq!(fin, false);
+                    assert_eq!(&buf[..n], &[1, 2, 3]);
+                    unpause.send(()).unwrap();
+                    let (n, fin) = svr_rx.read(buf.as_mut()).await.unwrap();
+                    eprintln!("got: {} {}", n, fin);
+                    assert_eq!(n, 0);
+                    assert_eq!(fin, true);
+                },
+            )
+            .await;
         })
     }
 }

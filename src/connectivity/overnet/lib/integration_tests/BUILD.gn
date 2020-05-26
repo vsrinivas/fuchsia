@@ -33,7 +33,7 @@ rustc_library("integration_tests") {
       "//src/lib/zircon/rust:fuchsia-zircon",
     ]
   } else {
-    deps += [ "//third_party/rust_crates:tokio" ]
+    deps += [ "//third_party/rust_crates:smol" ]
   }
 }
 

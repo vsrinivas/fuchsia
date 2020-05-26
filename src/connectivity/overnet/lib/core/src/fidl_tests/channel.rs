@@ -35,6 +35,7 @@ impl channel::Fixture for ChanFixture {
 
 #[test]
 fn fidl_channel_tests_no_transfer() {
+    crate::router::test_util::init();
     channel::run(ChanFixture::new(|purpose| match purpose {
         channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
         channel::CreateHandlePurpose::PayloadChannel => Target::A,
@@ -43,11 +44,13 @@ fn fidl_channel_tests_no_transfer() {
 
 #[test]
 fn fidl_channel_tests_all_to_b() {
+    crate::router::test_util::init();
     channel::run(ChanFixture::new(|_| Target::B))
 }
 
 #[test]
 fn fidl_channel_tests_b_then_c() {
+    crate::router::test_util::init();
     channel::run(ChanFixture::new(|purpose| match purpose {
         channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
         channel::CreateHandlePurpose::PayloadChannel => Target::C,

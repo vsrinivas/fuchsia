@@ -17,7 +17,7 @@ use {
         ServicePublisherProxyInterface,
     },
     futures::prelude::*,
-    overnet_core::spawn,
+    overnet_core::Task,
     std::sync::Arc,
 };
 
@@ -27,8 +27,8 @@ use {
 #[test]
 fn simple() -> Result<(), Error> {
     crate::run_async_test(async move {
-        let client = Overnet::new()?;
-        let server = Overnet::new()?;
+        let client = Overnet::new(1.into())?;
+        let server = Overnet::new(2.into())?;
         crate::connect(&client, &server)?;
         run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
@@ -37,8 +37,8 @@ fn simple() -> Result<(), Error> {
 #[test]
 fn quic() -> Result<(), Error> {
     crate::run_async_test(async move {
-        let client = Overnet::new()?;
-        let server = Overnet::new()?;
+        let client = Overnet::new(1.into())?;
+        let server = Overnet::new(2.into())?;
         crate::connect_with_quic(&client, &server)?;
         run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
@@ -47,9 +47,9 @@ fn quic() -> Result<(), Error> {
 #[test]
 fn interspersed_log_messages() -> Result<(), Error> {
     crate::run_async_test(async move {
-        let client = Overnet::new()?;
-        let server = Overnet::new()?;
-        crate::connect_with_interspersed_log_messages(&client, &server)?;
+        let client = Overnet::new(1.into())?;
+        let server = Overnet::new(2.into())?;
+        let _t = crate::connect_with_interspersed_log_messages(&client, &server)?;
         run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
 }
@@ -61,7 +61,7 @@ async fn exec_client(overnet: Arc<Overnet>, text: Option<&str>) -> Result<(), Er
     let svc = overnet.connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
-        log::trace!("Got peers: {:?}", peers);
+        eprintln!("Got peers: {:?}", peers);
         for mut peer in peers {
             if peer.description.services.is_none() {
                 continue;
@@ -81,7 +81,7 @@ async fn exec_client(overnet: Arc<Overnet>, text: Option<&str>) -> Result<(), Er
             let proxy =
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
-            log::trace!("Sending {:?} to {:?}", text, peer.id);
+            eprintln!("Sending {:?} to {:?}", text, peer.id);
             assert_eq!(cli.echo_string(text).await.unwrap(), text.map(|s| s.to_string()));
             return Ok(());
         }
@@ -91,46 +91,35 @@ async fn exec_client(overnet: Arc<Overnet>, text: Option<&str>) -> Result<(), Er
 ////////////////////////////////////////////////////////////////////////////////
 // Server implementation
 
-async fn next_request(
-    stream: &mut ServiceProviderRequestStream,
-) -> Result<Option<ServiceProviderRequest>, Error> {
-    log::trace!("Awaiting request");
-    Ok(stream.try_next().await.context("error running service provider server")?)
-}
-
 async fn exec_server(overnet: Arc<Overnet>) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    let mut stream = ServiceProviderRequestStream::from_channel(chan);
     overnet
         .connect_as_service_publisher()?
         .publish_service(echo::EchoMarker::NAME, ClientEnd::new(p))?;
-    while let Some(ServiceProviderRequest::ConnectToService {
-        chan,
-        info: _,
-        control_handle: _control_handle,
-    }) = next_request(&mut stream).await?
-    {
-        log::trace!("Received service request for service");
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        spawn(
-            async move {
-                let mut stream = echo::EchoRequestStream::from_channel(chan);
-                while let Some(echo::EchoRequest::EchoString { value, responder }) =
-                    stream.try_next().await.context("error running echo server")?
-                {
-                    log::trace!("Received echo request for string {:?}", value);
-                    responder
-                        .send(value.as_ref().map(|s| &**s))
-                        .context("error sending response")?;
-                    log::trace!("echo response sent successfully");
-                }
-                Ok(())
+    ServiceProviderRequestStream::from_channel(chan)
+        .map_err(Into::<Error>::into)
+        .try_for_each_concurrent(None, |req| async move {
+            let ServiceProviderRequest::ConnectToService {
+                chan,
+                info: _,
+                control_handle: _control_handle,
+            } = req;
+            eprintln!("Received service request for service");
+            let chan =
+                fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
+            let mut stream = echo::EchoRequestStream::from_channel(chan);
+            while let Some(echo::EchoRequest::EchoString { value, responder }) =
+                stream.try_next().await.context("error running echo server")?
+            {
+                eprintln!("Received echo request for string {:?}", value);
+                responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
+                eprintln!("echo response sent successfully");
             }
-            .unwrap_or_else(|e: Error| log::trace!("{:?}", e)),
-        );
-    }
+            Ok(())
+        })
+        .await?;
+    drop(overnet);
     Ok(())
 }
 
@@ -142,6 +131,11 @@ async fn run_echo_test(
     server: Arc<Overnet>,
     text: Option<&str>,
 ) -> Result<(), Error> {
-    spawn(async move { exec_server(server).await.unwrap() });
-    exec_client(client, text).await
+    let server = Task::spawn(async move {
+        exec_server(server).await.unwrap();
+        eprintln!("SERVER DONE")
+    });
+    let r = exec_client(client, text).await;
+    drop(server);
+    r
 }

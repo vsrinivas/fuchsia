@@ -5,8 +5,8 @@
 //! Handles diagnostics requests
 
 use {
-    crate::{future_help::log_errors, router::Router, runtime::spawn},
-    anyhow::{Context as _, Error},
+    crate::router::Router,
+    anyhow::{format_err, Context as _, Error},
     fidl::{
         endpoints::{ClientEnd, RequestStream, ServiceMarker},
         AsyncChannel, Channel,
@@ -16,7 +16,7 @@ use {
         DiagnosticMarker, DiagnosticRequest, DiagnosticRequestStream, ProbeResult, ProbeSelector,
     },
     futures::prelude::*,
-    std::rc::Rc,
+    std::sync::Weak,
 };
 
 // Helper: if a bit is set in a probe selector, return Some(make()), else return None
@@ -32,48 +32,52 @@ async fn if_probe_has_bit<R>(
     }
 }
 
-pub fn spawn_diagostic_service_request_handler(
-    router: Rc<Router>,
+pub async fn run_diagostic_service_request_handler(
+    router: &Weak<Router>,
     implementation: fidl_fuchsia_overnet_protocol::Implementation,
-) {
-    spawn(log_errors(
-        async move {
-            let (s, p) = Channel::create().context("failed to create zx channel")?;
-            let chan = AsyncChannel::from_channel(s).context("failed to make async channel")?;
-            router.register_service(DiagnosticMarker::NAME.to_string(), ClientEnd::new(p)).await?;
-            handle_diagnostic_service_requests(
-                router,
-                implementation,
-                ServiceProviderRequestStream::from_channel(chan),
-            )
-            .await
-        },
-        "Failed handling diagnostic requests",
-    ));
+) -> Result<(), Error> {
+    let (s, p) = Channel::create().context("failed to create zx channel")?;
+    let chan = AsyncChannel::from_channel(s).context("failed to make async channel")?;
+    Weak::upgrade(router)
+        .ok_or_else(|| format_err!("router gone"))?
+        .register_service(DiagnosticMarker::NAME.to_string(), ClientEnd::new(p))
+        .await?;
+    handle_diagnostic_service_requests(
+        router,
+        implementation,
+        ServiceProviderRequestStream::from_channel(chan),
+    )
+    .await
 }
 
 async fn handle_diagnostic_service_requests(
-    router: Rc<Router>,
+    router: &Weak<Router>,
     implementation: fidl_fuchsia_overnet_protocol::Implementation,
-    mut stream: ServiceProviderRequestStream,
+    stream: ServiceProviderRequestStream,
 ) -> Result<(), Error> {
-    while let Some(ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ }) =
-        stream.try_next().await.context("awaiting next diagnostic stream request")?
-    {
-        let stream = DiagnosticRequestStream::from_channel(fidl::AsyncChannel::from_channel(chan)?);
-        spawn(log_errors(
-            handle_diagnostic_requests(router.clone(), implementation, stream),
-            "Failed handling diagnostics requests",
-        ));
-    }
+    stream
+        .map_err(Into::<Error>::into)
+        .try_for_each_concurrent(None, |request| async move {
+            match request {
+                ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ } => {
+                    let stream = DiagnosticRequestStream::from_channel(
+                        fidl::AsyncChannel::from_channel(chan)?,
+                    );
+                    handle_diagnostic_requests(router, implementation, stream).await?;
+                }
+            }
+            Ok(())
+        })
+        .await?;
     Ok(())
 }
 
 async fn handle_diagnostic_requests(
-    router: Rc<Router>,
+    router: &Weak<Router>,
     implementation: fidl_fuchsia_overnet_protocol::Implementation,
     mut stream: DiagnosticRequestStream,
 ) -> Result<(), Error> {
+    let get_router = move || Weak::upgrade(router).ok_or_else(|| format_err!("router gone"));
     while let Some(req) = stream.try_next().await.context("awaiting next diagnostic request")? {
         match req {
             DiagnosticRequest::Probe { selector, responder } => {
@@ -101,13 +105,13 @@ async fn handle_diagnostic_requests(
                     links: if_probe_has_bit(
                         selector,
                         ProbeSelector::Links,
-                        router.link_diagnostics(),
+                        get_router()?.link_diagnostics(),
                     )
                     .await,
                     peer_connections: if_probe_has_bit(
                         selector,
                         ProbeSelector::PeerConnections,
-                        router.peer_diagnostics(),
+                        get_router()?.peer_diagnostics(),
                     )
                     .await,
                 });

@@ -19,7 +19,6 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     hoist::spawn,
-    std::rc::Rc,
     std::sync::Arc,
     std::time::Duration,
 };
@@ -44,7 +43,7 @@ impl DiscoveryHook for RCSActivatorHook {
 pub struct Daemon {
     target_collection: Arc<TargetCollection>,
 
-    discovered_target_hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
+    discovered_target_hooks: Arc<Mutex<Vec<Arc<dyn Sync + Send + DiscoveryHook>>>>,
 }
 
 impl Daemon {
@@ -52,7 +51,8 @@ impl Daemon {
         log::info!("Starting daemon overnet server");
         let (tx, rx) = mpsc::unbounded::<Target>();
         let target_collection = Arc::new(TargetCollection::new());
-        let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
+        let discovered_target_hooks =
+            Arc::new(Mutex::new(Vec::<Arc<dyn DiscoveryHook + Sync + Send>>::new()));
         Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
         Daemon::spawn_onet_discovery(target_collection.clone());
         let mut d = Daemon {
@@ -71,15 +71,15 @@ impl Daemon {
         Ok(d)
     }
 
-    pub async fn register_hook(&mut self, cb: impl DiscoveryHook + 'static) {
+    pub async fn register_hook(&mut self, cb: impl DiscoveryHook + Sync + Send + 'static) {
         let mut hooks = self.discovered_target_hooks.lock().await;
-        hooks.push(Rc::new(cb));
+        hooks.push(Arc::new(cb));
     }
 
     pub fn spawn_receiver_loop(
         rx: mpsc::UnboundedReceiver<Target>,
         tc: Arc<TargetCollection>,
-        hooks: Arc<Mutex<Vec<Rc<dyn DiscoveryHook>>>>,
+        hooks: Arc<Mutex<Vec<Arc<dyn DiscoveryHook + Sync + Send>>>>,
     ) {
         spawn(async move {
             rx.for_each_concurrent(None, |target| async {
@@ -98,7 +98,8 @@ impl Daemon {
     #[cfg(test)]
     pub fn new_with_rx(rx: mpsc::UnboundedReceiver<Target>) -> Daemon {
         let target_collection = Arc::new(TargetCollection::new());
-        let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
+        let discovered_target_hooks =
+            Arc::new(Mutex::new(Vec::<Arc<dyn DiscoveryHook + Sync + Send>>::new()));
         Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
         Daemon { target_collection, discovered_target_hooks }
     }
@@ -332,9 +333,9 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(RemoteControlRequest::StartComponent { responder, .. }) => {
+                    RemoteControlRequest::StartComponent { responder, .. } => {
                         let _ = responder.send(&mut Ok(())).context("sending ok response");
                     }
                     _ => assert!(false),

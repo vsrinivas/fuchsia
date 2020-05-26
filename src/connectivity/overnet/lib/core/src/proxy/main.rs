@@ -15,11 +15,11 @@ use crate::labels::{NodeId, TransferKey};
 use crate::proxy_stream::{
     Frame, StreamReader, StreamReaderBinder, StreamWriter, StreamWriterBinder,
 };
-use crate::runtime::spawn;
+use crate::runtime::Task;
 use anyhow::{bail, format_err, Context as _, Error};
 use fuchsia_zircon_status as zx_status;
-use futures::{prelude::*, select};
-use std::rc::Rc;
+use futures::future::Either;
+use std::sync::Arc;
 
 // We run two tasks to proxy a handle - one to handle handle->stream, the other to handle
 // stream->handle. When we want to perform a transfer operation we end up wanting to think about
@@ -102,7 +102,7 @@ fn new_task_joiner<Hdl: Proxyable>() -> (FinishProxyLoopSender<Hdl>, FinishProxy
 
 // Spawn a proxy (two tasks, one for each direction of proxying).
 pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: FramedStreamWriter,
     initial_stream_reader: Option<FramedStreamReader>,
@@ -113,16 +113,17 @@ pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
     let mut stream_writer = stream_writer.bind(hdl);
     let initial_stream_reader = initial_stream_reader.map(|s| s.bind(hdl));
     let mut stream_reader = stream_reader.bind(hdl);
-    spawn(log_errors(
+    // TODO: don't detach
+    Task::spawn(log_errors(
         async move {
             futures::future::try_join(
                 async {
                     if !stream_reader.is_initiator() {
                         stream_reader.expect_hello().await?;
-                        log::trace!("[PROXY {:?}] got hello", proxy.hdl().hdl());
+                        log::info!("[PROXY {:?}] got hello", proxy.hdl().hdl());
                     } else {
                         stream_writer.send_hello().await?;
-                        log::trace!("[PROXY {:?}] sent hello", proxy.hdl().hdl());
+                        log::info!("[PROXY {:?}] sent hello", proxy.hdl().hdl());
                     }
                     Ok::<(), Error>(())
                 },
@@ -134,7 +135,7 @@ pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
                 },
             )
             .await?;
-            log::trace!("[PROXY {:?}] entering main loop", proxy.hdl().hdl());
+            log::info!("[PROXY {:?}] entering main loop", proxy.hdl().hdl());
             futures::future::try_join(
                 stream_to_handle(proxy.clone(), initiate_transfer, stream_reader, tx_join),
                 handle_to_stream(proxy, stream_writer, rx_join),
@@ -143,26 +144,34 @@ pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
             Ok(())
         },
         "Proxy loop failed",
-    ));
+    ))
+    .detach();
     Ok(())
 }
 
 async fn handle_to_stream<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     mut stream: StreamWriter<Hdl::Message>,
-    finish_proxy_loop: FinishProxyLoopReceiver<Hdl>,
+    mut finish_proxy_loop: FinishProxyLoopReceiver<Hdl>,
 ) -> Result<(), Error> {
     let mut message = Default::default();
-    let mut finish_proxy_loop = finish_proxy_loop.fuse();
     let finish_proxy_loop_action = loop {
-        let r = select! {
-            x = proxy.read_from_handle(&mut message).fuse() => x,
-            x = finish_proxy_loop => break x
+        let r = match futures::future::select(
+            &mut finish_proxy_loop,
+            proxy.read_from_handle(&mut message),
+        )
+        .await
+        {
+            Either::Left((finish_proxy_loop_action, _)) => {
+                // Note: Proxy guarantees that read_from_handle can be dropped safely without losing data.
+                break finish_proxy_loop_action;
+            }
+            Either::Right((r, _)) => r,
         };
         match r {
             Ok(()) => stream.send_data(&mut message).await?,
             Err(zx_status::Status::PEER_CLOSED) => {
-                log::trace!("[PROXY {:?}] handle closed normally", proxy.hdl().hdl());
+                log::info!("[PROXY {:?}] handle closed normally", proxy.hdl().hdl());
                 stream.send_shutdown(Ok(())).await?;
                 return Ok(());
             }
@@ -172,7 +181,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             }
         }
     };
-    let proxy = Rc::try_unwrap(proxy).map_err(|_| format_err!("Proxy should be isolated"))?;
+    let proxy = Arc::try_unwrap(proxy).map_err(|_| format_err!("Proxy should be isolated"))?;
     match finish_proxy_loop_action {
         Ok(FinishProxyLoopAction::InitiateTransfer {
             paired_handle,
@@ -180,7 +189,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             stream_ref_sender,
             stream_reader,
         }) => {
-            log::trace!("[PROXY {:?}] finish main loop and initiate transfer", proxy.hdl().hdl(),);
+            log::info!("[PROXY {:?}] finish main loop and initiate transfer", proxy.hdl().hdl(),);
             xfer::initiate(
                 proxy,
                 paired_handle,
@@ -197,7 +206,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             transfer_key,
             stream_reader,
         }) => {
-            log::trace!(
+            log::info!(
                 "[PROXY {:?}] finish main loop and follow {:?}",
                 proxy.hdl().hdl(),
                 transfer_key
@@ -213,7 +222,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             .await
         }
         Ok(FinishProxyLoopAction::Shutdown { result, stream_reader }) => {
-            log::trace!(
+            log::info!(
                 "[PROXY {:?}] finish main loop and shutdown; result={:?}",
                 proxy.hdl().hdl(),
                 result
@@ -237,12 +246,12 @@ async fn join_shutdown<Hdl: 'static + Proxyable>(
 }
 
 async fn drain<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     mut drain_stream: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
     loop {
         let frame = drain_stream.next().await?;
-        log::trace!("[PROXY {:?}] drain gets {:?}", proxy.hdl().hdl(), frame);
+        log::info!("[PROXY {:?}] drain gets {:?}", proxy.hdl().hdl(), frame);
         match frame {
             Frame::Data(message) => proxy.write_to_handle(message).await?,
             Frame::EndTransfer => break,
@@ -256,16 +265,27 @@ async fn drain<Hdl: 'static + Proxyable>(
 }
 
 async fn stream_to_handle<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     mut initiate_transfer: ProxyTransferInitiationReceiver,
     mut stream: StreamReader<Hdl::Message>,
     finish_proxy_loop: FinishProxyLoopSender<Hdl>,
 ) -> Result<(), Error> {
     let removed_from_proxy_table = loop {
-        let frame = select! {
-            x = stream.next().fuse() => x,
-            x = initiate_transfer => break x,
+        let frame = match futures::future::select(&mut initiate_transfer, stream.next()).await {
+            Either::Left((removed_from_proxy_table, fut)) => {
+                // Note: StreamReader guarantees it's safe to drop a partial read without
+                // losing data.
+                log::info!(
+                    "[PROXY {:?}] removed from proxy table {:?}; fut={:?}",
+                    proxy.hdl().hdl(),
+                    removed_from_proxy_table,
+                    fut
+                );
+                break removed_from_proxy_table;
+            }
+            Either::Right((frame, _)) => frame,
         };
+        log::info!("[PROXY {:?}] receive frame {:?}", proxy.hdl().hdl(), frame);
         match frame {
             Ok(Frame::Data(message)) => {
                 if let Err(e) = proxy.write_to_handle(message).await {
@@ -298,7 +318,7 @@ async fn stream_to_handle<Hdl: 'static + Proxyable>(
         }
     };
     match removed_from_proxy_table {
-        Err(e) => panic!(e),
+        Err(e) => Err(e.into()),
         Ok(RemoveFromProxyTable::Dropped) => unreachable!(),
         Ok(RemoveFromProxyTable::InitiateTransfer {
             paired_handle,

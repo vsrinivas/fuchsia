@@ -11,17 +11,17 @@ use crate::proxyable_handle::{IntoProxied, Proxyable, ProxyableHandle};
 use crate::router::{FoundTransfer, OpenedTransfer, Router};
 use anyhow::{format_err, Error};
 use fidl_fuchsia_overnet_protocol::{StreamId, StreamRef, TransferInitiator, TransferWaiter};
-use std::rc::{Rc, Weak};
+use std::sync::{Arc, Weak};
 
 pub(crate) fn send<Hdl: 'static + Proxyable>(
     hdl: Hdl,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: FramedStreamWriter,
     stream_reader: FramedStreamReader,
-    stats: Rc<MessageStats>,
+    stats: Arc<MessageStats>,
     router: Weak<Router>,
 ) -> Result<(), Error> {
-    log::trace!(
+    log::info!(
         "[PROXY {:?}] spawn from {:?} to {:?}:{:?} for send",
         hdl,
         Weak::upgrade(&router).map(|r| r.node_id()),
@@ -45,7 +45,7 @@ pub(crate) async fn recv<Hdl: 'static + Proxyable, CreateType>(
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_ref: StreamRef,
     conn: &AsyncConnection,
-    stats: Rc<MessageStats>,
+    stats: Arc<MessageStats>,
     router: Weak<Router>,
 ) -> Result<(fidl::Handle, bool), Error>
 where
@@ -56,7 +56,7 @@ where
             let (app_chan, overnet_chan) = create_handles()?;
             let (stream_writer, stream_reader) = conn.bind_id(stream_id);
             let overnet_chan = overnet_chan.into_proxied()?;
-            log::trace!(
+            log::info!(
                 "[PROXY {:?}] spawn from {:?}:{:?} to {:?} for recv with pair {:?}",
                 overnet_chan,
                 stream_writer.peer_node_id(),
@@ -93,7 +93,7 @@ where
             match opened_transfer {
                 OpenedTransfer::Fused => {
                     let app_chan = app_chan.into_proxied()?;
-                    log::trace!(
+                    log::info!(
                         "[PROXY] fuse drain {:?}:{:?} into {:?} handle {:?} after opening {:?}",
                         initial_stream_reader.peer_node_id(),
                         initial_stream_reader.id(),
@@ -109,7 +109,7 @@ where
                     )
                 }
                 OpenedTransfer::Remote(stream_writer, stream_reader, overnet_chan) => {
-                    log::trace!(
+                    log::info!(
                         "[PROXY {:?}] spawn from {:?}:{:?} then {:?}:{:?} to {:?} for recv with pair {:?} after opening {:?}",
                         overnet_chan,
                         initial_stream_reader.peer_node_id(),
@@ -143,7 +143,7 @@ where
             match found_transfer {
                 FoundTransfer::Fused(handle) => {
                     let handle = Hdl::from_fidl_handle(handle)?;
-                    log::trace!(
+                    log::info!(
                         "[PROXY] fuse drain {:?}:{:?} into {:?} handle {:?} after waiting for {:?}",
                         initial_stream_reader.peer_node_id(),
                         initial_stream_reader.id(),
@@ -160,7 +160,7 @@ where
                 }
                 FoundTransfer::Remote(stream_writer, stream_reader) => {
                     let (app_chan, overnet_chan) = create_handles()?;
-                    log::trace!(
+                    log::info!(
                         "[PROXY {:?}] spawn from {:?}:{:?} then {:?}:{:?} to {:?} for recv with pair {:?} after waiting for {:?}",
                         overnet_chan,
                         initial_stream_reader.peer_node_id(),

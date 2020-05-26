@@ -837,7 +837,10 @@ pub mod non_fuchsia_handles {
             match self.socket.read(bytes) {
                 Err(zx_status::Status::SHOULD_WAIT) => hdl_need_wakeup(self.socket.0, cx),
                 Err(zx_status::Status::PEER_CLOSED) => Poll::Ready(Ok(0)),
-                Ok(x) => Poll::Ready(Ok(x)),
+                Ok(x) => {
+                    assert_ne!(x, 0);
+                    Poll::Ready(Ok(x))
+                }
                 Err(x) => Poll::Ready(Err(x.into())),
             }
         }

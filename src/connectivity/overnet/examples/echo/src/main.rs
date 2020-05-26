@@ -98,53 +98,46 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // Server implementation
 
-fn spawn_echo_server(chan: fidl::AsyncChannel, quiet: bool) {
-    hoist::spawn(
-        async move {
-            let mut stream = echo::EchoRequestStream::from_channel(chan);
-            while let Some(echo::EchoRequest::EchoString { value, responder }) =
-                stream.try_next().await.context("error running echo server")?
-            {
-                if !quiet {
-                    log::info!("Received echo request for string {:?}", value);
-                }
-                responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-                if !quiet {
-                    log::info!("echo response sent successfully");
-                }
-            }
-            Ok(())
+async fn echo_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Error> {
+    let mut stream = echo::EchoRequestStream::from_channel(chan);
+    while let Some(echo::EchoRequest::EchoString { value, responder }) =
+        stream.try_next().await.context("error running echo server")?
+    {
+        if !quiet {
+            log::info!("Received echo request for string {:?}", value);
         }
-        .unwrap_or_else(|e: anyhow::Error| log::trace!("ERROR: {:?}", e)),
-    );
-}
-
-async fn next_request(
-    stream: &mut ServiceProviderRequestStream,
-) -> Result<Option<ServiceProviderRequest>, Error> {
-    log::trace!("Awaiting request");
-    Ok(stream.try_next().await.context("error running service provider server")?)
+        responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
+        if !quiet {
+            log::info!("echo response sent successfully");
+        }
+    }
+    Ok(())
 }
 
 async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    let mut stream = ServiceProviderRequestStream::from_channel(chan);
     hoist::publish_service(echo::EchoMarker::NAME, ClientEnd::new(p))?;
-    while let Some(ServiceProviderRequest::ConnectToService {
-        chan,
-        info: _,
-        control_handle: _control_handle,
-    }) = next_request(&mut stream).await?
-    {
-        if !quiet {
-            log::trace!("Received service request for service");
-        }
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        spawn_echo_server(chan, quiet);
-    }
-    Ok(())
+    ServiceProviderRequestStream::from_channel(chan)
+        .map_err(Into::into)
+        .try_for_each_concurrent(
+            None,
+            |ServiceProviderRequest::ConnectToService {
+                 chan,
+                 info: _,
+                 control_handle: _control_handle,
+             }| {
+                async move {
+                    if !quiet {
+                        log::trace!("Received service request for service");
+                    }
+                    let chan = fidl::AsyncChannel::from_channel(chan)
+                        .context("failed to make async channel")?;
+                    echo_server(chan, quiet).await
+                }
+            },
+        )
+        .await
 }
 
 ////////////////////////////////////////////////////////////////////////////////

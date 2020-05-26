@@ -3,17 +3,18 @@
 // found in the LICENSE file.
 
 use crate::{
-    future_help::{log_errors, Observer},
+    future_help::{Observer, PollMutex},
     labels::{NodeId, NodeLinkId},
     link::LinkStatus,
     router::Router,
-    runtime::{maybe_wait_until, spawn},
+    runtime::wait_until,
 };
 use anyhow::{bail, format_err, Error};
-use futures::{prelude::*, select};
+use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{
     collections::{BTreeMap, BinaryHeap},
-    rc::{Rc, Weak},
+    sync::{Arc, Weak},
+    task::{Context, Poll, Waker},
     time::{Duration, Instant},
 };
 
@@ -52,28 +53,24 @@ pub struct Link {
 struct NodeTable {
     root_node: NodeId,
     nodes: BTreeMap<NodeId, Node>,
+    version: u64,
+    wake_on_version_change: Option<Waker>,
 }
 
 impl NodeTable {
     /// Create a new node table rooted at `root_node`
     pub fn new(root_node: NodeId) -> NodeTable {
-        NodeTable { root_node, nodes: BTreeMap::new() }
+        NodeTable { root_node, nodes: BTreeMap::new(), version: 0, wake_on_version_change: None }
     }
 
-    /// Convert the node table to a string representing a directed graph for graphviz visualization
-    pub fn digraph_string(&self) -> String {
-        let mut s = "digraph G {\n".to_string();
-        s += &format!("  {} [shape=diamond];\n", self.root_node.0);
-        for (id, node) in self.nodes.iter() {
-            for (link_id, link) in node.links.iter() {
-                s += &format!(
-                    "  {} -> {} [label=\"[{}] rtt={:?}\"];\n",
-                    id.0, link.to.0, link_id.0, link.desc.round_trip_time
-                );
-            }
+    fn poll_new_version(&mut self, ctx: &mut Context<'_>, last_version: &mut u64) -> Poll<()> {
+        if *last_version == self.version {
+            self.wake_on_version_change = Some(ctx.waker().clone());
+            Poll::Pending
+        } else {
+            *last_version = self.version;
+            Poll::Ready(())
         }
-        s += "}\n";
-        s
     }
 
     fn get_or_create_node_mut(&mut self, node_id: NodeId) -> &mut Node {
@@ -109,6 +106,8 @@ impl NodeTable {
         for LinkStatus { to, local_id, round_trip_time } in links.into_iter() {
             self.update_link(from, to, local_id, LinkDescription { round_trip_time })?;
         }
+        self.version += 1;
+        self.wake_on_version_change.take().map(|w| w.wake());
         Ok(())
     }
 
@@ -184,81 +183,61 @@ pub(crate) fn routing_update_channel() -> (RemoteRoutingUpdateSender, RemoteRout
     futures::channel::mpsc::channel(1)
 }
 
-pub(crate) fn spawn_route_planner(
-    router: Rc<Router>,
+pub(crate) async fn run_route_planner(
+    router: &Weak<Router>,
     mut remote_updates: RemoteRoutingUpdateReceiver,
     mut local_updates: Observer<Vec<LinkStatus>>,
-) {
-    let mut node_table = NodeTable::new(router.node_id());
-    let router = Rc::downgrade(&router);
-    spawn(log_errors(
+) -> Result<(), Error> {
+    let get_router = move || Weak::upgrade(router).ok_or_else(|| format_err!("router gone"));
+    let node_table = Arc::new(Mutex::new(NodeTable::new(get_router()?.node_id())));
+    let remote_node_table = node_table.clone();
+    let local_node_table = node_table.clone();
+    let update_node_table = node_table;
+    let _: ((), (), ()) = futures::future::try_join3(
         async move {
-            let mut next_route_table_update = None;
-            loop {
-                #[derive(Debug)]
-                enum Action {
-                    ApplyRemote(RemoteRoutingUpdate),
-                    ApplyLocal(Vec<LinkStatus>),
-                    UpdateRoutes,
+            while let Some(RemoteRoutingUpdate { from_node_id, status }) =
+                remote_updates.next().await
+            {
+                let mut node_table = remote_node_table.lock().await;
+                if from_node_id == node_table.root_node {
+                    log::warn!("Attempt to update own node id links as remote");
+                    continue;
                 }
-                let action = select! {
-                    x = remote_updates.next().fuse() => match x {
-                        Some(x) => Action::ApplyRemote(x),
-                        None => return Ok(()),
-                    },
-                    x = local_updates.next().fuse() => match x {
-                        Some(x) => Action::ApplyLocal(x),
-                        None => return Ok(()),
-                    },
-                    _ = maybe_wait_until(next_route_table_update).fuse() => Action::UpdateRoutes
-                };
-                log::trace!("{:?} Routing update: {:?}", node_table.root_node, action);
-                match action {
-                    Action::ApplyRemote(RemoteRoutingUpdate { from_node_id, status }) => {
-                        if from_node_id == node_table.root_node {
-                            log::warn!("Attempt to update own node id links as remote");
-                            continue;
-                        }
-                        if let Err(e) = node_table.update_links(from_node_id, status) {
-                            log::warn!(
-                                "Update remote links from {:?} failed: {:?}",
-                                from_node_id,
-                                e
-                            );
-                            continue;
-                        }
-                        if next_route_table_update.is_none() {
-                            next_route_table_update =
-                                Some(Instant::now() + Duration::from_millis(100));
-                        }
-                    }
-                    Action::ApplyLocal(status) => {
-                        if let Err(e) = node_table.update_links(node_table.root_node, status) {
-                            log::warn!("Update local links failed: {:?}", e);
-                            continue;
-                        }
-                        if next_route_table_update.is_none() {
-                            next_route_table_update =
-                                Some(Instant::now() + Duration::from_millis(100));
-                        }
-                    }
-                    Action::UpdateRoutes => {
-                        log::trace!(
-                            "{:?} Route table: {}",
-                            node_table.root_node,
-                            node_table.digraph_string()
-                        );
-                        next_route_table_update = None;
-                        Weak::upgrade(&router)
-                            .ok_or_else(|| format_err!("Router shut down"))?
-                            .update_routes(node_table.build_routes())
-                            .await?;
-                    }
+                if let Err(e) = node_table.update_links(from_node_id, status) {
+                    log::warn!("Update remote links from {:?} failed: {:?}", from_node_id, e);
+                    continue;
                 }
             }
+            Ok::<_, Error>(())
         },
-        "Failed planning routes",
-    ));
+        async move {
+            while let Some(status) = local_updates.next().await {
+                let mut node_table = local_node_table.lock().await;
+                let root_node = node_table.root_node;
+                if let Err(e) = node_table.update_links(root_node, status) {
+                    log::warn!("Update local links failed: {:?}", e);
+                    continue;
+                }
+            }
+            Ok(())
+        },
+        async move {
+            let mut pm = PollMutex::new(&*update_node_table);
+            let mut current_version = 0;
+            let mut poll_version = move |ctx: &mut Context<'_>| {
+                let mut node_table = ready!(pm.poll(ctx));
+                ready!(node_table.poll_new_version(ctx, &mut current_version));
+                Poll::Ready(node_table)
+            };
+            loop {
+                let node_table = poll_fn(&mut poll_version).await;
+                get_router()?.update_routes(node_table.build_routes()).await?;
+                wait_until(Instant::now() + Duration::from_millis(100)).await;
+            }
+        },
+    )
+    .await?;
+    Ok(())
 }
 
 #[cfg(test)]

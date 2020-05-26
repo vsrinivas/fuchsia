@@ -12,7 +12,7 @@ use fidl_fuchsia_overnet_protocol::{ZirconChannelMessage, ZirconHandle};
 use fuchsia_zircon_status as zx_status;
 use futures::{prelude::*, ready};
 use std::pin::Pin;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 
 pub(crate) struct Channel {
@@ -107,9 +107,20 @@ pub(crate) enum ChannelMessageParser {
     New,
     Pending {
         bytes: Vec<u8>,
-        handles: Pin<Box<dyn 'static + Future<Output = Result<Vec<fidl::Handle>, Error>>>>,
+        handles: Pin<Box<dyn 'static + Send + Future<Output = Result<Vec<fidl::Handle>, Error>>>>,
     },
     Done,
+}
+
+impl std::fmt::Debug for ChannelMessageParser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelMessageParser::New => "New",
+            ChannelMessageParser::Pending { .. } => "Pending",
+            ChannelMessageParser::Done => "Done",
+        }
+        .fmt(f)
+    }
 }
 
 impl Serializer for ChannelMessageParser {
@@ -122,7 +133,7 @@ impl Serializer for ChannelMessageParser {
         msg: &mut Self::Message,
         serialized: &mut Vec<u8>,
         conn: &AsyncConnection,
-        stats: &Rc<MessageStats>,
+        stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<(), Error>> {
@@ -130,11 +141,7 @@ impl Serializer for ChannelMessageParser {
             "ChannelMessageParser::poll_ser: msg:{:?} serialized:{:?} self:{:?}",
             msg,
             serialized,
-            match self {
-                ChannelMessageParser::New => "New",
-                ChannelMessageParser::Pending { .. } => "Pending",
-                ChannelMessageParser::Done => "Done",
-            }
+            self
         );
         match self {
             ChannelMessageParser::New => {
@@ -164,7 +171,7 @@ impl Serializer for ChannelMessageParser {
                         }
                         Ok(handles)
                     }
-                    .boxed_local(),
+                    .boxed(),
                 };
                 self.poll_ser(msg, serialized, conn, stats, router, fut_ctx)
             }
@@ -182,7 +189,7 @@ impl Serializer for ChannelMessageParser {
 
 pub(crate) enum ChannelMessageSerializer {
     New,
-    Pending(Pin<Box<dyn 'static + Future<Output = Result<Vec<ZirconHandle>, Error>>>>),
+    Pending(Pin<Box<dyn 'static + Send + Future<Output = Result<Vec<ZirconHandle>, Error>>>>),
     Done,
 }
 
@@ -196,7 +203,7 @@ impl Serializer for ChannelMessageSerializer {
         msg: &mut Self::Message,
         serialized: &mut Vec<u8>,
         conn: &AsyncConnection,
-        stats: &Rc<MessageStats>,
+        stats: &Arc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<(), Error>> {
@@ -242,7 +249,7 @@ impl Serializer for ChannelMessageSerializer {
                         }
                         Ok(send_handles)
                     }
-                    .boxed_local(),
+                    .boxed(),
                 );
                 self.poll_ser(msg, serialized, conn, stats, router, fut_ctx)
             }
