@@ -65,26 +65,41 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
 
   MultiLibEffectsLoader loader;
   uint32_t frame_rate = source->format().frames_per_second();
-  uint16_t channels = source->format().channels();
+  uint16_t channels_in = source->format().channels();
   for (const auto& effect_spec : effects) {
+    uint16_t channels_out = effect_spec.output_channels.value_or(channels_in);
     auto effect = loader.CreateEffectByName(effect_spec.lib_name, effect_spec.effect_name,
-                                            effect_spec.instance_name, frame_rate, channels,
-                                            channels, effect_spec.effect_config);
-    FX_DCHECK(effect);
+                                            effect_spec.instance_name, frame_rate, channels_in,
+                                            channels_out, effect_spec.effect_config);
     if (!effect) {
-      FX_LOGS(ERROR) << "Unable to create effect '" << effect_spec.effect_name << "' with config '"
-                     << effect_spec.effect_config << "' from lib '" << effect_spec.lib_name << "'";
-      continue;
+      FX_LOGS(ERROR) << "Unable to create effect '" << effect_spec.effect_name << "' from lib '"
+                     << effect_spec.lib_name << "'";
+      return nullptr;
     }
-    processor->AddEffect(std::move(effect));
+    zx_status_t status = processor->AddEffect(std::move(effect));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Unable to add effect '" << effect_spec.effect_name
+                              << "' from lib '" << effect_spec.lib_name << "'";
+      return nullptr;
+    }
+    channels_in = channels_out;
   }
 
   return std::make_shared<EffectsStage>(std::move(source), std::move(processor));
 }
 
+Format ComputeFormat(const Format& source_format, const EffectsProcessor& processor) {
+  return Format::Create(fuchsia::media::AudioStreamType{
+                            .sample_format = source_format.sample_format(),
+                            .channels = processor.channels_out(),
+                            .frames_per_second = source_format.frames_per_second(),
+                        })
+      .take_value();
+}
+
 EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
                            std::unique_ptr<EffectsProcessor> effects_processor)
-    : ReadableStream(source->format()),
+    : ReadableStream(ComputeFormat(source->format(), *effects_processor)),
       source_(std::move(source)),
       effects_processor_(std::move(effects_processor)) {
   // Initialize our lead time. Setting 0 here will resolve our lead time to effect delay in our
@@ -109,8 +124,12 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, 
   TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", frame, "length", frame_count);
 
   // If we have a partially consumed block, return that here.
-  if (current_block_ && frame >= current_block_->start() && frame < current_block_->end()) {
-    return DupCurrentBlock();
+  if (current_block_) {
+    if (frame >= current_block_->start() && frame < current_block_->end()) {
+      return DupCurrentBlock();
+    }
+    // We have a current block that is non-overlapping with this request, so we can release it.
+    current_block_ = std::nullopt;
   }
 
   // New frames are requested. Block-align the start frame and length.
@@ -123,16 +142,29 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, 
     aligned_frame_count = std::min<uint32_t>(aligned_frame_count, max_batch_size);
   }
 
-  current_block_ = source_->ReadLock(ref_time, aligned_first_frame, aligned_frame_count);
-  if (current_block_) {
+  auto source_buffer = source_->ReadLock(ref_time, aligned_first_frame, aligned_frame_count);
+  if (source_buffer) {
     // TODO(50669): We assume that ReadLock always returns exactly the frames we request. This is
     // not true in general, but in practice it's true because source_ is always a MixStage that
     // outputs to an IntermediateBuffer.
-    FX_DCHECK(current_block_->start().Floor() == aligned_first_frame);
-    FX_DCHECK(current_block_->length().Floor() == aligned_frame_count);
+    FX_DCHECK(source_buffer->start().Floor() == aligned_first_frame);
+    FX_DCHECK(source_buffer->length().Floor() == aligned_frame_count);
 
-    auto payload = static_cast<float*>(current_block_->payload());
-    effects_processor_->ProcessInPlace(aligned_frame_count, payload);
+    float* buf_out = nullptr;
+    auto payload = static_cast<float*>(source_buffer->payload());
+    effects_processor_->Process(aligned_frame_count, payload, &buf_out);
+
+    // If the processor has done in-place processing, we want to retain |source_buffer| until we
+    // no longer need the frames. If the processor has made a copy then we can release our
+    // |source_buffer| since we have a copy in a buffer managed by the effect chain.
+    //
+    // This buffer will be valid until the next call to |effects_processor_->Process|.
+    if (buf_out == payload) {
+      current_block_ = std::move(source_buffer);
+    } else {
+      current_block_ = ReadableStream::Buffer(aligned_first_frame, aligned_frame_count, buf_out,
+                                              source_buffer->is_continuous());
+    }
     return DupCurrentBlock();
   }
 

@@ -287,5 +287,154 @@ TEST_F(EffectsStageTest, SetEffectConfig) {
   EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
 }
 
+TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
+  test_effects_.AddEffect("increment")
+      .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
+      .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
+  // Create a packet queue to use as our source stream.
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+
+  // Create the effects stage.
+  //
+  // We have a source stream that provides 2 channel frames. We'll pass that through one effect that
+  // will perform a 2 -> 4 channel upsample. For the existing channels it will increment each sample
+  // and for the 'new' channels, it will populate 0's. The second effect will be a simple increment
+  // on all 4 channels.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "increment",
+      .instance_name = "incremement_with_upchannel",
+      .effect_config = "",
+      .output_channels = 4,
+  });
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "increment",
+      .instance_name = "incremement_without_upchannel",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
+  EXPECT_EQ(4u, effects_stage->format().channels());
+
+  {
+    // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
+    // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
+    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(480u, buf->length().Floor());
+
+    // Expect 480, 4-channel frames.
+    auto& arr = as_array<float, 480 * 4>(buf->payload());
+    for (size_t i = 0; i < 480; ++i) {
+      // The first effect will increment channels 0,1, and upchannel by adding channels 2,3
+      // initialized as 0's. The second effect will increment all channels, so channels 0,1 will be
+      // incremented twice and channels 2,3 will be incremented once. So we expect each frame to be
+      // the samples [3.0, 3.0, 1.0, 1.0].
+      ASSERT_FLOAT_EQ(arr[i * 4 + 0], 3.0f);
+      ASSERT_FLOAT_EQ(arr[i * 4 + 1], 3.0f);
+      ASSERT_FLOAT_EQ(arr[i * 4 + 2], 1.0f);
+      ASSERT_FLOAT_EQ(arr[i * 4 + 3], 1.0f);
+    }
+  }
+}
+
+TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
+  test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
+  // Create a packet queue to use as our source stream.
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+
+  // Create a simple effects stage.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "increment",
+      .instance_name = "",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
+  bool packet_released = false;
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
+                                                 [&packet_released] { packet_released = true; }));
+
+  // Acquire a buffer.
+  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+  RunLoopUntilIdle();
+  ASSERT_TRUE(buf);
+  EXPECT_EQ(0u, buf->start().Floor());
+  EXPECT_EQ(480u, buf->length().Floor());
+  EXPECT_FALSE(packet_released);
+
+  // Now release |buf| and mark it as fully consumed. This should release the underlying packet.
+  buf->set_is_fully_consumed(true);
+  buf = std::nullopt;
+  RunLoopUntilIdle();
+  EXPECT_TRUE(packet_released);
+}
+
+TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
+  test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
+  // Create a packet queue to use as our source stream.
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+
+  // Create a simple effects stage.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "increment",
+      .instance_name = "",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
+  bool packet_released = false;
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
+                                                 [&packet_released] { packet_released = true; }));
+
+  // Acquire a buffer.
+  auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 0, 480);
+  RunLoopUntilIdle();
+  ASSERT_TRUE(buf);
+  EXPECT_EQ(0u, buf->start().Floor());
+  EXPECT_EQ(480u, buf->length().Floor());
+  EXPECT_FALSE(packet_released);
+
+  // Release |buf|, we don't yet expect the underlying packet to be released.
+  buf->set_is_fully_consumed(false);
+  buf = std::nullopt;
+  RunLoopUntilIdle();
+  EXPECT_FALSE(packet_released);
+
+  // Now read another buffer. Since this does not overlap with the last buffer, this should release
+  // that packet.
+  buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 480, 480);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(buf);
+  EXPECT_TRUE(packet_released);
+}
+
 }  // namespace
 }  // namespace media::audio

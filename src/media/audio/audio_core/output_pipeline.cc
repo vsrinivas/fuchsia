@@ -86,7 +86,6 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::CreateMixStage(
   std::shared_ptr<ReadableStream> root = stage;
   if (!spec.effects.empty()) {
     auto effects_stage = EffectsStage::Create(spec.effects, root);
-    FX_DCHECK(effects_stage);
     if (effects_stage) {
       effects_stages_.push_back(effects_stage);
       root = std::move(effects_stage);
