@@ -117,96 +117,74 @@ fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> BufferCollage::Get
 fit::promise<uint32_t> BufferCollage::AddCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token, fuchsia::sysmem::ImageFormat_2 image_format,
     std::string description) {
-  auto collection_id = next_collection_id_++;
-  FX_LOGS(DEBUG) << "Adding collection with ID " << collection_id << ".";
-  ZX_ASSERT(collection_views_.find(collection_id) == collection_views_.end());
-  auto& collection_view = collection_views_[collection_id];
-  std::ostringstream oss;
-  oss << " (" << collection_id << ")";
-  SetStopOnError(collection_view.collection, "Collection" + oss.str());
-  SetStopOnError(collection_view.image_pipe, "Image Pipe" + oss.str());
-  collection_view.image_format = image_format;
-  collection_view.visible = false;
+  fit::bridge<uint32_t> task_bridge;
 
-  // Bind and duplicate the token.
-  fuchsia::sysmem::BufferCollectionTokenPtr token_ptr;
-  SetStopOnError(token_ptr);
-  zx_status_t status = token_ptr.Bind(std::move(token), loop_.dispatcher());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    Stop();
-    return fit::make_result_promise<uint32_t>(fit::error());
-  }
-  fuchsia::sysmem::BufferCollectionTokenHandle scenic_token;
-  token_ptr->Duplicate(ZX_RIGHT_SAME_RIGHTS, scenic_token.NewRequest());
-  allocator_->BindSharedCollection(std::move(token_ptr),
-                                   collection_view.collection.NewRequest(loop_.dispatcher()));
-
-  // Sync the collection and create an image pipe using the scenic token.
-  fit::bridge scenic_bridge;
-  collection_view.collection->Sync([this, collection_id, token = std::move(scenic_token),
-                                    result = std::move(scenic_bridge.completer)]() mutable {
-    auto& view = collection_views_[collection_id];
-    view.image_pipe_id = session_->AllocResourceId();
-    auto command = scenic::NewCreateImagePipe2Cmd(view.image_pipe_id,
-                                                  view.image_pipe.NewRequest(loop_.dispatcher()));
-    session_->Enqueue(std::move(command));
-    view.image_pipe->AddBufferCollection(1, std::move(token));
-    UpdateLayout();
-    result.complete_ok();
-  });
-
-  // Set minimal constraints then wait for buffer allocation.
-  collection_view.collection->SetConstraints(true, {.usage{.none = fuchsia::sysmem::noneUsage}});
-  fit::bridge sysmem_bridge;
-  collection_view.collection->WaitForBuffersAllocated(
-      [this, collection_id, result = std::move(sysmem_bridge.completer)](
-          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) mutable {
-        if (status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "Failed to allocate buffers.";
-          Stop();
-          result.complete_error();
-          return;
-        }
-        collection_views_[collection_id].buffers = std::move(buffers);
-        result.complete_ok();
-      });
-
-  // Once both scenic and sysmem complete their operations, add the negotiated images to the image
-  // pipe. Note that this continuation may be run on an arbitrary thread, so private actions must be
-  // marshalled back to the collage thread.
-  return fit::join_promises(scenic_bridge.consumer.promise(), sysmem_bridge.consumer.promise())
-      .then([this, collection_id,
-             image_format](fit::result<std::tuple<fit::result<>, fit::result<>>>& result)
-                -> fit::promise<uint32_t> {
-        if (result.is_error() || std::get<0>(result.value()).is_error() ||
-            std::get<1>(result.value()).is_error()) {
-          FX_LOGS(ERROR) << "Failed to add collection " << collection_id << ".";
-          zx_status_t status = async::PostTask(loop_.dispatcher(), [this] { Stop(); });
-          if (status != ZX_OK) {
-            FX_PLOGS(ERROR, status) << "Failed to schedule task.";
-          }
-          return fit::make_result_promise<uint32_t>(fit::error());
-        }
-
-        fit::bridge<uint32_t> task_bridge;
-        zx_status_t status = async::PostTask(
-            loop_.dispatcher(), [this, collection_id, image_format,
+  fit::closure add_collection = [this, token = std::move(token), image_format, description,
                                  result = std::move(task_bridge.completer)]() mutable {
-              auto& view = collection_views_[collection_id];
-              for (uint32_t i = 0; i < view.buffers.buffer_count; ++i) {
-                view.image_pipe->AddImage(i + 1, 1, i, image_format);
-              }
-              FX_LOGS(DEBUG) << "Successfully added collection " << collection_id << ".";
-              result.complete_ok(collection_id);
-            });
-        if (status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "Failed to schedule task.";
-          return fit::make_result_promise<uint32_t>(fit::error());
-        }
+    auto collection_id = next_collection_id_++;
+    FX_LOGS(DEBUG) << "Adding collection with ID " << collection_id << ".";
+    ZX_ASSERT(collection_views_.find(collection_id) == collection_views_.end());
+    auto& view = collection_views_[collection_id];
+    std::ostringstream oss;
+    oss << " (" << collection_id << ")";
+    SetStopOnError(view.collection, "Collection" + oss.str());
+    SetStopOnError(view.image_pipe, "Image Pipe" + oss.str());
+    view.image_format = image_format;
+    view.visible = false;
 
-        return task_bridge.consumer.promise();
-      });
+    // Bind and duplicate the token.
+    fuchsia::sysmem::BufferCollectionTokenPtr token_ptr;
+    SetStopOnError(token_ptr);
+    zx_status_t status = token_ptr.Bind(std::move(token), loop_.dispatcher());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status);
+      Stop();
+      result.complete_error();
+      return;
+    }
+    fuchsia::sysmem::BufferCollectionTokenHandle scenic_token;
+    token_ptr->Duplicate(ZX_RIGHT_SAME_RIGHTS, scenic_token.NewRequest());
+    allocator_->BindSharedCollection(std::move(token_ptr),
+                                     view.collection.NewRequest(loop_.dispatcher()));
+
+    // Sync the collection and create an image pipe using the scenic token.
+    view.collection->Sync([this, collection_id, token = std::move(scenic_token),
+                           result = std::move(result)]() mutable {
+      auto& view = collection_views_[collection_id];
+      view.image_pipe_id = session_->AllocResourceId();
+      auto command = scenic::NewCreateImagePipe2Cmd(view.image_pipe_id,
+                                                    view.image_pipe.NewRequest(loop_.dispatcher()));
+      session_->Enqueue(std::move(command));
+      view.image_pipe->AddBufferCollection(1, std::move(token));
+      UpdateLayout();
+
+      // Set minimal constraints then wait for buffer allocation.
+      view.collection->SetConstraints(true, {.usage{.none = fuchsia::sysmem::noneUsage}});
+      view.collection->WaitForBuffersAllocated(
+          [this, collection_id, result = std::move(result)](
+              zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) mutable {
+            if (status != ZX_OK) {
+              FX_PLOGS(ERROR, status) << "Failed to allocate buffers.";
+              Stop();
+              result.complete_error();
+              return;
+            }
+            collection_views_[collection_id].buffers = std::move(buffers);
+
+            // Add the negotiated images to the image pipe.
+            auto& view = collection_views_[collection_id];
+            for (uint32_t i = 0; i < view.buffers.buffer_count; ++i) {
+              view.image_pipe->AddImage(i + 1, 1, i, view.image_format);
+            }
+
+            // Complete the promise.
+            FX_LOGS(DEBUG) << "Successfully added collection " << collection_id << ".";
+            result.complete_ok(collection_id);
+          });
+    });
+  };
+  async::PostTask(loop_.dispatcher(), std::move(add_collection));
+  return task_bridge.consumer.promise();
 }
 
 void BufferCollage::RemoveCollection(uint32_t id) {
