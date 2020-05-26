@@ -26,6 +26,9 @@ using digest::MerkleTreeCreator;
 using digest::MerkleTreeVerifier;
 
 fbl::Array<uint8_t> LoadTemplateData() {
+  // TODO(jfsulliv): Load aux file properly. Requires componentizing the blobfs tests which use
+  // this helper.
+  // XXX DO NOT COPY THIS. This is not a well supported mechanism for loading test data.
   const char* file = "bin/test-binary";
   const char* root_dir = getenv("TEST_ROOT_DIR");
   EXPECT_NE("", root_dir);
