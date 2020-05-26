@@ -21,8 +21,8 @@ import (
 
 	"github.com/creack/pty"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
+	bootserver "go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	botanist "go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
@@ -368,10 +368,11 @@ func (t *QEMUTarget) Restart(context.Context) error {
 }
 
 // Stop stops the QEMU target.
-func (t *QEMUTarget) Stop(context.Context) error {
+func (t *QEMUTarget) Stop(ctx context.Context) error {
 	if t.process == nil {
 		return fmt.Errorf("QEMU target has not yet been started")
 	}
+	logger.Debugf(ctx, "Sending SIGKILL to %d", t.process.Pid)
 	err := t.process.Kill()
 	t.process = nil
 	return err
