@@ -33,8 +33,12 @@ TEST(PrintValueTest, StringTypes) {
   EXPECT_EQ("qux", zxtest::PrintValue(fbl::String("qux")));
 }
 
+#if !defined(__Fuchsia__)
+
 // Test printing of status types.
 TEST(PrintValueTest, StatusType) { EXPECT_EQ("0", zxtest::PrintStatus(ZX_OK)); }
+
+#endif
 
 // Test printing of tuple types.
 TEST(PrintValueTest, TupleType) {
