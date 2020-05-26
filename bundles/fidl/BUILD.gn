@@ -23,6 +23,7 @@ group("tests") {
     "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests($host_toolchain)",
     "//sdk/lib/fidl/cpp:fidl_tests",
     "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
+    "//src/lib/fidl/c/coding_tables_tests:bin",
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_builder_test",
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_conformance_test",
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_types_test",
@@ -43,6 +44,7 @@ group("tests") {
     "//tools/fidl/gidl:gidl_parser_test($host_toolchain)",
     "//tools/fidl/measure-tape:tests",
     "//zircon/system/ulib/fidl-async-2/test",
+    "//zircon/system/utest/fidl-compiler($host_toolchain)",
   ]
 }
 

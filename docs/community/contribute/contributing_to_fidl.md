@@ -412,7 +412,7 @@ The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:
 
 | Name                      | Test Command                                                                                                  | Directories Covered     |
 |---------------------------|---------------------------------------------------------------------------------------------------------------|-------------------------|
-| fidlc host test           | `$FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug`  | zircon/system/host/fidl |
+| fidlc host test           | `$FUCHSIA_DIR/out/default/host_x64/exe.unstripped/fidl-compiler`  | zircon/system/host/fidl |
 | fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test`                                             | zircon/system/ulib/fidl |
 | fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test`                                      | zircon/system/ulib/fidl |
 | fidl c-llcpp interop test | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test`                               | zircon/system/ulib/fidl |

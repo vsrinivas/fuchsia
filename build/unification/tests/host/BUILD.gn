@@ -116,9 +116,6 @@ group("migrated-tests") {
     "//zircon/system/utest/fidl",
   #------------------
   #------------------
-    "//zircon/system/utest/fidl-compiler",
-  #------------------
-  #------------------
     "//zircon/system/utest/fs-host",
   #------------------
   #------------------
