@@ -437,7 +437,8 @@ void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _com
     svc_root_ = OpenServiceRoot();
   }
 
-  DataSink::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_), std::move(data_sink));
+  DataSink::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_), std::move(data_sink),
+                 context_);
 }
 
 void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
@@ -451,7 +452,7 @@ void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_si
   }
 
   DynamicDataSink::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_),
-                        std::move(block_device), std::move(dynamic_data_sink));
+                        std::move(block_device), std::move(dynamic_data_sink), context_);
 }
 
 void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync _completer) {
@@ -463,7 +464,7 @@ void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::
     svc_root_ = OpenServiceRoot();
   }
 
-  BootManager::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_),
+  BootManager::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_), context_,
                     std::move(boot_manager));
 }
 
@@ -727,9 +728,9 @@ zx_status_t DataSinkImpl::WipeVolume(zx::channel* out) {
 }
 
 void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                    zx::channel server) {
-  auto partitioner =
-      DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root), GetCurrentArch());
+                    zx::channel server, std::shared_ptr<Context> context) {
+  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root),
+                                               GetCurrentArch(), context);
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -740,9 +741,10 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, z
 }
 
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                           zx::channel svc_root, zx::channel block_device, zx::channel server) {
+                           zx::channel svc_root, zx::channel block_device, zx::channel server,
+                           std::shared_ptr<Context> context) {
   auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root),
-                                               GetCurrentArch(), std::move(block_device));
+                                               GetCurrentArch(), context, std::move(block_device));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -790,10 +792,10 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
 }
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                       zx::channel svc_root, zx::channel server) {
+                       zx::channel svc_root, std::shared_ptr<Context> context, zx::channel server) {
   std::unique_ptr<abr::Client> abr_client;
   if (zx_status_t status =
-          abr::Client::Create(std::move(devfs_root), std::move(svc_root), &abr_client);
+          abr::Client::Create(std::move(devfs_root), std::move(svc_root), context, &abr_client);
       status != ZX_OK) {
     ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
     fidl_epitaph_write(server.get(), status);

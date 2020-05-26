@@ -385,6 +385,44 @@ zx::channel SysconfigPartitionClient::GetChannel() { return {}; }
 
 fbl::unique_fd SysconfigPartitionClient::block_fd() { return fbl::unique_fd(); }
 
+zx_status_t AstroSysconfigPartitionClientBuffered::GetBlockSize(size_t* out_size) {
+  return context_->Call<AstroPartitionerContext>(
+      [&](auto* ctx) { return ctx->client_->GetPartitionSize(partition_, out_size); });
+}
+
+zx_status_t AstroSysconfigPartitionClientBuffered::GetPartitionSize(size_t* out_size) {
+  return context_->Call<AstroPartitionerContext>(
+      [&](auto* ctx) { return ctx->client_->GetPartitionSize(partition_, out_size); });
+}
+
+zx_status_t AstroSysconfigPartitionClientBuffered::Read(const zx::vmo& vmo, size_t size) {
+  return context_->Call<AstroPartitionerContext>(
+      [&](auto* ctx) { return ctx->client_->ReadPartition(partition_, vmo, 0); });
+}
+
+zx_status_t AstroSysconfigPartitionClientBuffered::Write(const zx::vmo& vmo, size_t size) {
+  return context_->Call<AstroPartitionerContext>([&](auto* ctx) {
+    size_t partition_size;
+    if (auto res = ctx->client_->GetPartitionSize(partition_, &partition_size); res != ZX_OK) {
+      return res;
+    }
+    if (size != partition_size) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    return ctx->client_->WritePartition(partition_, vmo, 0);
+  });
+}
+
+zx_status_t AstroSysconfigPartitionClientBuffered::Trim() { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t AstroSysconfigPartitionClientBuffered::Flush() {
+  return context_->Call<AstroPartitionerContext>([&](auto* ctx) { return ctx->client_->Flush(); });
+}
+
+zx::channel AstroSysconfigPartitionClientBuffered::GetChannel() { return {}; }
+
+fbl::unique_fd AstroSysconfigPartitionClientBuffered::block_fd() { return fbl::unique_fd(); }
+
 zx_status_t PartitionCopyClient::GetBlockSize(size_t* out_size) {
   // Choose the lowest common multiple of all block sizes.
   size_t lcm = 1;

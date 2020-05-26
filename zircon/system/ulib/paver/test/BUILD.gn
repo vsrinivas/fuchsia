@@ -43,6 +43,7 @@ test("paver-test") {
     "device-partitioner-test.cc",
     "fvm-test.cc",
     "partition-client-test.cc",
+    "paver-context-test.cc",
     "paversvc-test.cc",
     "stream-reader-test.cc",
     "test-utils.cc",

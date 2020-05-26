@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
 #define ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
 
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
@@ -25,6 +26,7 @@
 #include <gpt/gpt.h>
 
 #include "partition-client.h"
+#include "paver-context.h"
 
 namespace paver {
 using gpt::GptDevice;
@@ -87,7 +89,7 @@ class DevicePartitioner {
   // |block_device| is root block device whichs contains the logical partitions we wish to operate
   // against. It's only meaningful for EFI and CROS devices which may have multiple storage devices.
   static std::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel svc_root,
-                                                   Arch arch,
+                                                   Arch arch, std::shared_ptr<Context> context,
                                                    zx::channel block_device = zx::channel());
 
   virtual ~DevicePartitioner() = default;
@@ -354,7 +356,10 @@ class SkipBlockDevicePartitioner {
 
 class AstroPartitioner : public DevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root,
+  enum class AbrWearLevelingOption { ON, OFF };
+
+  static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                                std::shared_ptr<Context> context,
                                 std::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return true; }
@@ -378,13 +383,20 @@ class AstroPartitioner : public DevicePartitioner {
   zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
-  zx_status_t Flush() const override { return ZX_OK; }
+  zx_status_t Flush() const override;
 
  private:
-  AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
-      : skip_block_(std::move(skip_block)) {}
+  AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block,
+                   std::shared_ptr<Context> context)
+      : skip_block_(std::move(skip_block)), context_(context) {}
+
+  static zx_status_t InitializeContext(const fbl::unique_fd& devfs_root,
+                                       AbrWearLevelingOption abr_wear_leveling_opt,
+                                       std::shared_ptr<Context> context);
 
   std::unique_ptr<SkipBlockDevicePartitioner> skip_block_;
+
+  std::shared_ptr<Context> context_;
 };
 
 class As370Partitioner : public DevicePartitioner {

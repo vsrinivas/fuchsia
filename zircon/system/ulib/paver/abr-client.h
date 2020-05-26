@@ -12,6 +12,8 @@
 #include <fbl/unique_fd.h>
 #include <libabr/libabr.h>
 
+#include "paver-context.h"
+
 namespace abr {
 
 // Interface for interacting with ABR data.
@@ -19,6 +21,7 @@ class Client {
  public:
   // Factory create method.
   static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                            std::shared_ptr<paver::Context> context,
                             std::unique_ptr<abr::Client>* out);
   virtual ~Client() = default;
 
@@ -61,7 +64,9 @@ class Client {
 
 class AstroClient {
  public:
-  static zx_status_t Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out);
+  static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                            std::shared_ptr<paver::Context> context,
+                            std::unique_ptr<abr::Client>* out);
 };
 
 class SherlockClient {

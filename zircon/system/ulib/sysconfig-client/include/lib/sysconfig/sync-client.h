@@ -164,6 +164,10 @@ class SyncClientBuffered {
   zx_status_t GetSubpartitionCacheAddrSize(PartitionType partition, uint8_t** start, size_t* size);
 };
 
+class SyncClientAbrWearLeveling : public SyncClientBuffered {
+  using SyncClientBuffered::SyncClientBuffered;
+};
+
 }  // namespace sysconfig
 
 #endif  // LIB_SYSCONFIG_SYNC_CLIENT_H_

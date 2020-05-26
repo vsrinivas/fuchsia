@@ -443,6 +443,40 @@ bool SpecMatches(const PartitionSpec& a, const PartitionSpec& b) {
   return a.partition == b.partition && a.content_type == b.content_type;
 }
 
+std::optional<::llcpp::fuchsia::boot::Arguments::SyncClient> OpenBootArgumentClient(
+    const zx::channel& svc_root) {
+  if (!svc_root.is_valid()) {
+    return {};
+  }
+
+  zx::channel local, remote;
+  if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
+    ERROR("Failed to create channel. \n");
+    return {};
+  }
+
+  auto status = fdio_service_connect_at(svc_root.get(), ::llcpp::fuchsia::boot::Arguments::Name,
+                                        remote.release());
+  if (status != ZX_OK) {
+    ERROR("Failed to connect to boot::Arguments service.\n");
+    return {};
+  }
+
+  return {::llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local))};
+}
+
+bool GetBool(::llcpp::fuchsia::boot::Arguments::SyncClient& client, ::fidl::StringView key,
+             bool default_on_missing_or_failure) {
+  auto key_data = key.data();
+  auto result = client.GetBool(std::move(key), default_on_missing_or_failure);
+  if (!result.ok()) {
+    ERROR("Failed to get boolean argument %s. Default to %d.\n", key_data,
+          default_on_missing_or_failure);
+    return default_on_missing_or_failure;
+  }
+  return result->value;
+}
+
 }  // namespace
 
 const char* PartitionName(Partition type) {
@@ -480,6 +514,7 @@ fbl::String PartitionSpec::ToString() const {
 
 std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
                                                              zx::channel svc_root, Arch arch,
+                                                             std::shared_ptr<Context> context,
                                                              zx::channel block_device) {
   std::optional<fbl::unique_fd> block_dev;
   std::optional<fbl::unique_fd> block_dev_dup;
@@ -498,7 +533,8 @@ std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     block_dev_dup2 = block_dev->duplicate();
   }
   std::unique_ptr<DevicePartitioner> device_partitioner;
-  if ((AstroPartitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
+  if ((AstroPartitioner::Initialize(devfs_root.duplicate(), svc_root, context,
+                                    &device_partitioner) == ZX_OK) ||
       (As370Partitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
       (SherlockPartitioner::Initialize(devfs_root.duplicate(), std::move(block_dev_dup2),
                                        &device_partitioner) == ZX_OK) ||
@@ -1912,17 +1948,61 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
   return result2.ok() ? result2.value().status : result2.status();
 }
 
-zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root,
+zx_status_t AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_root,
+                                                AbrWearLevelingOption abr_wear_leveling_opt,
+                                                std::shared_ptr<Context> context) {
+  return context->Initialize<AstroPartitionerContext>([&](auto* out) {
+    std::optional<sysconfig::SyncClient> client;
+    if (zx_status_t status = sysconfig::SyncClient::Create(devfs_root, &client); status != ZX_OK) {
+      ERROR("Failed to initialize context. %s\n", zx_status_get_string(status));
+      return status;
+    }
+
+    std::unique_ptr<::sysconfig::SyncClientBuffered> sysconfig_client;
+    if (abr_wear_leveling_opt == AbrWearLevelingOption::OFF) {
+      sysconfig_client = std::make_unique<::sysconfig::SyncClientBuffered>(*std::move(client));
+      LOG("Using SyncClientBuffered\n");
+    } else if (abr_wear_leveling_opt == AbrWearLevelingOption::ON) {
+      sysconfig_client =
+          std::make_unique<::sysconfig::SyncClientAbrWearLeveling>(*std::move(client));
+      LOG("Using SyncClientAbrWearLeveling\n");
+    } else {
+      ZX_ASSERT_MSG(false, "Unknown AbrWearLevelingOption %d\n",
+                    static_cast<int>(abr_wear_leveling_opt));
+    }
+
+    *out = std::make_unique<AstroPartitionerContext>(std::move(sysconfig_client));
+    return ZX_OK;
+  });
+}
+
+zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                                         std::shared_ptr<Context> context,
                                          std::unique_ptr<DevicePartitioner>* partitioner) {
+  auto boot_arg_client = OpenBootArgumentClient(svc_root);
   zx_status_t status = IsBoard(devfs_root, "astro");
   if (status != ZX_OK) {
     return status;
   }
+
+  // Enable abr wear-leveling only when we see an explicitly defined boot argument
+  // "astro.sysconfig.abr-wear-leveling".
+  // TODO(47505): Find a proper place to document the parameter.
+  AbrWearLevelingOption option =
+      boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.abr-wear-leveling", false)
+          ? AbrWearLevelingOption::ON
+          : AbrWearLevelingOption::OFF;
+
+  if ((status = InitializeContext(devfs_root, option, context)) != ZX_OK) {
+    ERROR("Failed to initialize context. %s\n", zx_status_get_string(status));
+    return status;
+  }
+
   LOG("Successfully initialized AstroPartitioner Device Partitioner\n");
   std::unique_ptr<SkipBlockDevicePartitioner> skip_block(
       new SkipBlockDevicePartitioner(std::move(devfs_root)));
 
-  *partitioner = WrapUnique(new AstroPartitioner(std::move(skip_block)));
+  *partitioner = WrapUnique(new AstroPartitioner(std::move(skip_block), context));
   return ZX_OK;
 }
 
@@ -2028,12 +2108,8 @@ zx_status_t AstroPartitioner::FindPartition(const PartitionSpec& spec,
         }
         ZX_ASSERT(false);
       }();
-      std::optional<sysconfig::SyncClient> client;
-      zx_status_t status = sysconfig::SyncClient::Create(skip_block_->devfs_root(), &client);
-      if (status != ZX_OK) {
-        return status;
-      }
-      out_partition->reset(new SysconfigPartitionClient(*std::move(client), type));
+      ZX_ASSERT(context_);
+      out_partition->reset(new AstroSysconfigPartitionClientBuffered(context_, type));
       return ZX_OK;
     }
     case Partition::kFuchsiaVolumeManager: {
@@ -2043,6 +2119,11 @@ zx_status_t AstroPartitioner::FindPartition(const PartitionSpec& spec,
       ERROR("partition_type is invalid!\n");
       return ZX_ERR_NOT_SUPPORTED;
   }
+}
+
+zx_status_t AstroPartitioner::Flush() const {
+  ZX_ASSERT(context_);
+  return context_->Call<AstroPartitionerContext>([&](auto* ctx) { return ctx->client_->Flush(); });
 }
 
 zx_status_t AstroPartitioner::WipeFvm() const { return skip_block_->WipeFvm(); }
