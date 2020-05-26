@@ -134,18 +134,23 @@ void test_validation_layer(const char* layer_name) {
       .queueCount = 1,
       .pQueuePriorities = queue_priorities,
   };
+
+  // This structure was selected because it's illegal to chain it onto VkDeviceCreateInfo, but it
+  // doesn't cause any drivers we're using to assert or crash. Adding this structure is unlikely to
+  // cause crashes in the future, since drivers are likely to ignore structures they don't
+  // understand.
+  VkBindSparseInfo bind_sparse_info = {
+      .sType = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO,
+      .pNext = nullptr,
+  };
   VkDeviceCreateInfo device_create_info = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .pNext = nullptr,
+      .pNext = &bind_sparse_info,
       .queueCreateInfoCount = 1,
       .pQueueCreateInfos = &queue_create_info,
   };
   VkDevice vk_device;
   ASSERT_EQ(VK_SUCCESS, vkCreateDevice(phys_device, &device_create_info, nullptr, &vk_device));
-
-  VkQueue vk_queue;
-  // vkGetDeviceQeueue should trigger a validation error given VK_QUEUE_FAMILY_IGNORED
-  vkGetDeviceQueue(vk_device, VK_QUEUE_FAMILY_IGNORED, 0, &vk_queue);
 
   EXPECT_GE(validation_error_count, 1u);
 
