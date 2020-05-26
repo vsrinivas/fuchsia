@@ -10,6 +10,7 @@ source_set("lib") {
     "args.cc",
     "cpu.cc",
     "hwstress.cc",
+    "status.cc",
     "util.cc",
   ]
 
@@ -48,6 +49,7 @@ executable("hwstress_test") {
     "args_test.cc",
     "cpu_test.cc",
     "hwstress_test.cc",
+    "status_test.cc",
     "util_test.cc",
   ]
 

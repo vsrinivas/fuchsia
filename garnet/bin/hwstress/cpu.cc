@@ -17,6 +17,9 @@
 #include <thread>
 #include <utility>
 
+#include <fbl/string_printf.h>
+
+#include "status.h"
 #include "util.h"
 
 namespace hwstress {
@@ -50,38 +53,41 @@ void CpuStressor::Stop() {
 }
 
 void StressCpu(zx::duration duration) {
+  StatusLine status;
+
   // Calculate finish time.
   zx::time start_time = zx::clock::get_monotonic();
   zx::time finish_time = start_time + duration;
 
   // Get number of CPUs.
   uint32_t num_cpus = zx_system_get_num_cpus();
-  printf("Detected %d CPU(s) in the system.\n", num_cpus);
+  status.Log("Detected %d CPU(s) in the system.\n", num_cpus);
 
   // Print start banner.
   if (finish_time == zx::time::infinite()) {
-    printf("Exercising CPU until stopped...\n");
+    status.Log("Exercising CPU until stopped...\n");
   } else {
-    printf("Exercising CPU for %0.2f seconds...\n", DurationToSecs(duration));
+    status.Log("Exercising CPU for %0.2f seconds...\n", DurationToSecs(duration));
   }
 
   // Start a workload.
   CpuStressor stressor{num_cpus, []() { /* do nothing */ }};
   stressor.Start();
 
-  // Run the loop, printing an update every 5 seconds.
-  constexpr uint64_t kStatusUpdateFrequencySecs = 5;
-  for (uint64_t iterations = 0; zx::clock::get_monotonic() < finish_time; iterations++) {
-    // Update next in 5 seconds or the finish time, whichever is sooner.
-    zx::time next_update = start_time + (zx::sec(kStatusUpdateFrequencySecs * (iterations + 1)));
+  // Run the loop, updating the status line as we go.
+  while (zx::clock::get_monotonic() < finish_time) {
+    // Sleep for 250ms or the finish time, whichever is sooner.
+    zx::time next_update = zx::deadline_after(zx::msec(250));
     zx::nanosleep(std::min(finish_time, next_update));
 
-    printf(" ... have run for %0.1f seconds.\n",
-           DurationToSecs(zx::clock::get_monotonic() - start_time));
-    fflush(stdout);
+    // Update the status line.
+    zx::duration time_running = zx::clock::get_monotonic() - start_time;
+    status.Set("%02ld:%02ld:%02ld", time_running.to_hours(), time_running.to_mins() % 60,
+               time_running.to_secs() % 60);
   }
 
-  printf("Complete.\n");
+  status.Set("");
+  status.Log("Complete.\n");
   stressor.Stop();
 }
 
