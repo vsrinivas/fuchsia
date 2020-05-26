@@ -35,16 +35,16 @@ pub fn publish_service(
 mod test {
 
     use super::*;
-    use parking_lot::Mutex;
-    use std::sync::Arc;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     #[test]
     fn run_works() {
-        let done = Arc::new(Mutex::new(false));
+        let done = Rc::new(RefCell::new(false));
         let done_check = done.clone();
         run(async move {
-            *done.lock() = true;
+            *done.borrow_mut() = true;
         });
-        assert!(*done_check.lock());
+        assert!(*done_check.borrow());
     }
 }

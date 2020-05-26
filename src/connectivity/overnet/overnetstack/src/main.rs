@@ -21,10 +21,10 @@ use futures::prelude::*;
 use overnet_core::{log_errors, Link, NodeId, Router, RouterOptions};
 use std::collections::HashMap;
 use std::net::{SocketAddr, SocketAddrV6};
-use std::sync::Arc;
+use std::rc::Rc;
 
 struct UdpSocketHolder {
-    sock: Arc<fasync::net::UdpSocket>,
+    sock: Rc<fasync::net::UdpSocket>,
     abort_publisher: AbortHandle,
 }
 
@@ -33,7 +33,7 @@ impl UdpSocketHolder {
         let sock = std::net::UdpSocket::bind("[::]:0").context("Creating UDP socket")?;
         let publisher =
             mdns::publish(node_id, sock.local_addr().context("Getting UDP local address")?.port());
-        let sock = Arc::new(fasync::net::UdpSocket::from_socket(sock)?);
+        let sock = Rc::new(fasync::net::UdpSocket::from_socket(sock)?);
         let (publisher, abort_publisher) = abortable(publisher);
         fasync::spawn_local(async move {
             let _ = publisher.await;
@@ -48,7 +48,7 @@ impl Drop for UdpSocketHolder {
     }
 }
 
-type UdpLinks = Arc<Mutex<HashMap<SocketAddrV6, Arc<Link>>>>;
+type UdpLinks = Rc<Mutex<HashMap<SocketAddrV6, Rc<Link>>>>;
 
 fn normalize_addr(addr: SocketAddr) -> SocketAddrV6 {
     match addr {
@@ -58,7 +58,7 @@ fn normalize_addr(addr: SocketAddr) -> SocketAddrV6 {
 }
 
 /// UDP read inner loop.
-async fn read_udp(udp_socket: Arc<UdpSocketHolder>, udp_links: UdpLinks) -> Result<(), Error> {
+async fn read_udp(udp_socket: Rc<UdpSocketHolder>, udp_links: UdpLinks) -> Result<(), Error> {
     let mut buf = [0u8; 1500];
     loop {
         let sock = udp_socket.sock.clone();
@@ -80,8 +80,8 @@ async fn read_udp(udp_socket: Arc<UdpSocketHolder>, udp_links: UdpLinks) -> Resu
 async fn register_udp(
     addr: SocketAddr,
     node_id: NodeId,
-    node: Arc<Router>,
-    udp_socket: Arc<UdpSocketHolder>,
+    node: Rc<Router>,
+    udp_socket: Rc<UdpSocketHolder>,
     udp_links: UdpLinks,
 ) -> Result<(), Error> {
     let addr = normalize_addr(addr);
@@ -105,68 +105,62 @@ async fn register_udp(
 }
 
 async fn run_service_publisher_server(
-    node: Arc<Router>,
-    stream: ServicePublisherRequestStream,
+    node: Rc<Router>,
+    mut stream: ServicePublisherRequestStream,
 ) -> Result<(), Error> {
-    stream
-        .map_err(Into::into)
-        .try_for_each_concurrent(None, |request| {
-            let node = node.clone();
-            async move {
-                match request {
-                    ServicePublisherRequest::PublishService { service_name, provider, .. } => {
-                        node.register_service(service_name, provider).await
-                    }
-                }
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
+        let result = match request {
+            ServicePublisherRequest::PublishService { service_name, provider, .. } => {
+                node.register_service(service_name, provider).await
             }
-        })
-        .await
+        };
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e)
+        }
+    }
+    Ok(())
 }
 
 async fn run_service_consumer_server(
-    node: Arc<Router>,
-    stream: ServiceConsumerRequestStream,
+    node: Rc<Router>,
+    mut stream: ServiceConsumerRequestStream,
 ) -> Result<(), Error> {
-    stream
-        .map_err(Into::into)
-        .try_for_each_concurrent(None, |request| {
-            let node = node.clone();
-            async move {
-                match request {
-                    ServiceConsumerRequest::ListPeers { responder, .. } => {
-                        let mut peers = node.list_peers().await?;
-                        responder.send(&mut peers.iter_mut())?;
-                        Ok(())
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
+        let result = match request {
+            ServiceConsumerRequest::ListPeers { responder, .. } => {
+                node.list_peers(Box::new(|mut peers| {
+                    if let Err(e) = responder.send(&mut peers.iter_mut()) {
+                        log::warn!("Failed sending list peers response: {}", e);
                     }
-                    ServiceConsumerRequest::ConnectToService {
-                        node: node_id,
-                        service_name,
-                        chan,
-                        ..
-                    } => node.connect_to_service(node_id.id.into(), &service_name, chan).await,
-                }
+                }))
+                .await
             }
-        })
-        .await
+            ServiceConsumerRequest::ConnectToService {
+                node: node_id, service_name, chan, ..
+            } => node.connect_to_service(node_id.id.into(), &service_name, chan).await,
+        };
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e);
+        }
+    }
+    Ok(())
 }
 
 async fn run_mesh_controller_server(
-    node: Arc<Router>,
-    stream: MeshControllerRequestStream,
+    node: Rc<Router>,
+    mut stream: MeshControllerRequestStream,
 ) -> Result<(), Error> {
-    stream
-        .map_err(Into::into)
-        .try_for_each_concurrent(None, |request| {
-            let node = node.clone();
-            async move {
-                match request {
-                    MeshControllerRequest::AttachSocketLink { socket, options, .. } => {
-                        node.run_socket_link(socket, options).await
-                    }
-                }
+    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
+        let result = match request {
+            MeshControllerRequest::AttachSocketLink { socket, options, .. } => {
+                node.attach_socket_link(socket, options)
             }
-        })
-        .await
+        };
+        if let Err(e) = result {
+            log::warn!("Error servicing request: {:?}", e);
+        }
+    }
+    Ok(())
 }
 
 enum IncomingService {
@@ -195,8 +189,8 @@ async fn main() -> Result<(), Error> {
             .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::OvernetStack),
     )?;
 
-    let udp_socket = Arc::new(UdpSocketHolder::new(node.node_id())?);
-    let udp_links: UdpLinks = Arc::new(Mutex::new(HashMap::new()));
+    let udp_socket = Rc::new(UdpSocketHolder::new(node.node_id())?);
+    let udp_links: UdpLinks = Rc::new(Mutex::new(HashMap::new()));
     let (tx_addr, mut rx_addr) = futures::channel::mpsc::channel(1);
     fasync::spawn_local(log_errors(mdns::subscribe(tx_addr), "MDNS Subscriber failed"));
     fasync::spawn_local(log_errors(
@@ -221,7 +215,8 @@ async fn main() -> Result<(), Error> {
         "Error registering links",
     ));
 
-    fs.for_each_concurrent(None, move |svcreq| match svcreq {
+    const MAX_CONCURRENT: usize = 10_000;
+    fs.for_each_concurrent(MAX_CONCURRENT, move |svcreq| match svcreq {
         IncomingService::MeshController(stream) => run_mesh_controller_server(node.clone(), stream)
             .unwrap_or_else(|e| log::trace!("{:?}", e))
             .boxed_local(),

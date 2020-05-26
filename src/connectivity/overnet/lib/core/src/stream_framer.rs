@@ -4,25 +4,23 @@
 
 //! Handles framing/deframing of stream links
 
-use crate::future_help::PollMutex;
 use crate::runtime::wait_until;
 use anyhow::{format_err, Error};
 use byteorder::WriteBytesExt;
 use crc::crc32;
-use futures::executor::block_on;
 use futures::future::poll_fn;
-use futures::lock::Mutex;
-use futures::{prelude::*, ready};
+use futures::prelude::*;
+use std::cell::Cell;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::rc::Rc;
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
 use crate::router::generate_node_id;
 
 /// Describes a framing format.
-pub trait Format: Send + Sync + 'static {
+pub trait Format {
     /// Write a frame of `frame_type` with payload `bytes` into `outgoing`.
     fn frame(
         &self,
@@ -85,7 +83,7 @@ pub enum FrameType {
 struct Framer<Fmt: Format> {
     fmt: Fmt,
     max_queued: usize,
-    outgoing: Mutex<Outgoing>,
+    outgoing: Cell<Outgoing>,
     id: u64,
 }
 
@@ -123,12 +121,12 @@ impl Default for Outgoing {
 
 /// Writes frames into the framer.
 pub struct FramerWriter<Fmt: Format> {
-    framer: Arc<Framer<Fmt>>,
+    framer: Rc<Framer<Fmt>>,
 }
 
 /// Reads framed bytes out of the framer.
 pub struct FramerReader<Fmt: Format> {
-    framer: Arc<Framer<Fmt>>,
+    framer: Rc<Framer<Fmt>>,
 }
 
 /// Construct a new framer for some format.
@@ -136,10 +134,10 @@ pub fn new_framer<Fmt: Format>(
     fmt: Fmt,
     max_queued: usize,
 ) -> (FramerWriter<Fmt>, FramerReader<Fmt>) {
-    let framer = Arc::new(Framer {
+    let framer = Rc::new(Framer {
         fmt,
         max_queued,
-        outgoing: Mutex::new(Outgoing::Open {
+        outgoing: Cell::new(Outgoing::Open {
             buffer: BVec(Vec::new()),
             waiting_read: None,
             waiting_write: None,
@@ -151,29 +149,31 @@ pub fn new_framer<Fmt: Format>(
 
 impl<Fmt: Format> FramerWriter<Fmt> {
     fn poll_write(
-        &self,
+        &mut self,
         ctx: &mut Context<'_>,
         frame_type: FrameType,
         bytes: &[u8],
-        lock: &mut PollMutex<'_, Outgoing>,
     ) -> Poll<Result<(), Error>> {
-        let mut outgoing = ready!(lock.poll(ctx));
+        let outgoing = self.framer.outgoing.take();
         log::trace!("{} poll_write: {:?}", self.framer.id, outgoing);
-        match std::mem::replace(&mut *outgoing, Outgoing::Closed) {
+        match outgoing {
             Outgoing::Closed => Poll::Ready(Err(format_err!("Closed Framer"))),
             Outgoing::Open { buffer: BVec(mut buffer), mut waiting_read, waiting_write: _ } => {
                 if buffer.len() >= self.framer.max_queued {
-                    *outgoing = Outgoing::Open {
+                    self.framer.outgoing.set(Outgoing::Open {
                         buffer: BVec(buffer),
                         waiting_read,
                         waiting_write: Some(ctx.waker().clone()),
-                    };
+                    });
                     Poll::Pending
                 } else {
                     self.framer.fmt.frame(frame_type, bytes, &mut buffer)?;
                     waiting_read.take().map(|w| w.wake());
-                    *outgoing =
-                        Outgoing::Open { buffer: BVec(buffer), waiting_read, waiting_write: None };
+                    self.framer.outgoing.set(Outgoing::Open {
+                        buffer: BVec(buffer),
+                        waiting_read,
+                        waiting_write: None,
+                    });
                     Poll::Ready(Ok(()))
                 }
             }
@@ -182,46 +182,37 @@ impl<Fmt: Format> FramerWriter<Fmt> {
 
     /// Write a frame into the framer.
     pub async fn write(&mut self, frame_type: FrameType, bytes: &[u8]) -> Result<(), Error> {
-        let mut lock = PollMutex::new(&self.framer.outgoing);
-        poll_fn(|ctx| self.poll_write(ctx, frame_type, bytes, &mut lock)).await
+        poll_fn(|ctx| self.poll_write(ctx, frame_type, bytes)).await
     }
 }
 
 impl<Fmt: Format> Drop for FramerWriter<Fmt> {
     fn drop(&mut self) {
-        let framer = self.framer.clone();
-        // TODO: don't detach
-        block_on(async move {
-            std::mem::replace(&mut *framer.outgoing.lock().await, Outgoing::Closed).wake();
-        })
+        self.framer.outgoing.take().wake();
     }
 }
 
 impl<Fmt: Format> FramerReader<Fmt> {
-    fn poll_read(
-        &self,
-        ctx: &mut Context<'_>,
-        lock: &mut PollMutex<'_, Outgoing>,
-    ) -> Poll<Result<Vec<u8>, Error>> {
-        let mut outgoing = ready!(lock.poll(ctx));
+    fn poll_read(&mut self, ctx: &mut Context<'_>) -> Poll<Result<Vec<u8>, Error>> {
+        let outgoing = self.framer.outgoing.take();
         log::trace!("{} poll_read: {:?}", self.framer.id, outgoing);
-        match std::mem::replace(&mut *outgoing, Outgoing::Closed) {
+        match outgoing {
             Outgoing::Closed => Poll::Ready(Err(format_err!("Closed Framer"))),
             Outgoing::Open { buffer: BVec(buffer), mut waiting_write, waiting_read: _ } => {
                 if buffer.is_empty() {
-                    *outgoing = Outgoing::Open {
+                    self.framer.outgoing.set(Outgoing::Open {
                         buffer: BVec(buffer),
                         waiting_write,
                         waiting_read: Some(ctx.waker().clone()),
-                    };
+                    });
                     Poll::Pending
                 } else {
                     waiting_write.take().map(|w| w.wake());
-                    *outgoing = Outgoing::Open {
+                    self.framer.outgoing.set(Outgoing::Open {
                         buffer: BVec(Vec::new()),
                         waiting_write,
                         waiting_read: None,
-                    };
+                    });
                     Poll::Ready(Ok(buffer))
                 }
             }
@@ -230,28 +221,23 @@ impl<Fmt: Format> FramerReader<Fmt> {
 
     /// Read framed bytes out of the framer.
     pub async fn read(&mut self) -> Result<Vec<u8>, Error> {
-        let mut lock = PollMutex::new(&self.framer.outgoing);
-        poll_fn(|ctx| self.poll_read(ctx, &mut lock)).await
+        poll_fn(|ctx| self.poll_read(ctx)).await
     }
 }
 
 impl<Fmt: Format> Drop for FramerReader<Fmt> {
     fn drop(&mut self) {
-        let framer = self.framer.clone();
-        // TODO: don't detach
-        block_on(async move {
-            std::mem::replace(&mut *framer.outgoing.lock().await, Outgoing::Closed).wake();
-        })
+        self.framer.outgoing.take().wake();
     }
 }
 
 struct Deframer<Fmt: Format> {
     fmt: Fmt,
-    incoming: Mutex<Incoming>,
+    incoming: Cell<Incoming>,
     id: u64,
 }
 
-struct TimeoutFut(Option<Pin<Box<dyn Send + Future<Output = ()>>>>);
+struct TimeoutFut(Option<Pin<Box<dyn Future<Output = ()>>>>);
 
 impl std::fmt::Debug for TimeoutFut {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -297,21 +283,21 @@ impl Incoming {
 
 /// Writes framed bytes into the deframer.
 pub struct DeframerWriter<Fmt: Format> {
-    deframer: Arc<Deframer<Fmt>>,
+    deframer: Rc<Deframer<Fmt>>,
 }
 
 /// Reads deframed packets from a deframer.
 pub struct DeframerReader<Fmt: Format> {
-    deframer: Arc<Deframer<Fmt>>,
+    deframer: Rc<Deframer<Fmt>>,
 }
 
 /// Construct a new deframer, with an optional timeout for reads (such that bytes can be skipped).
 pub fn new_deframer<Fmt: Format>(fmt: Fmt) -> (DeframerWriter<Fmt>, DeframerReader<Fmt>) {
-    let deframer = Arc::new(Deframer {
-        incoming: Mutex::new(Incoming::Parsing {
+    let deframer = Rc::new(Deframer {
+        incoming: Cell::new(Incoming::Parsing {
             unparsed: BVec(Vec::new()),
             waiting_read: None,
-            timeout: TimeoutFut(fmt.deframe_timeout(false).map(|i| wait_until(i).boxed())),
+            timeout: TimeoutFut(fmt.deframe_timeout(false).map(|i| wait_until(i).boxed_local())),
         }),
         fmt,
         id: generate_node_id().0,
@@ -360,32 +346,31 @@ fn deframe_step<Fmt: Format>(
 }
 
 fn make_timeout<Fmt: Format>(fmt: &Fmt, unparsed_len: usize) -> TimeoutFut {
-    TimeoutFut(fmt.deframe_timeout(unparsed_len > 0).map(|when| wait_until(when).boxed()))
+    TimeoutFut(fmt.deframe_timeout(unparsed_len > 0).map(|when| wait_until(when).boxed_local()))
 }
 
 impl<Fmt: Format> DeframerWriter<Fmt> {
-    fn poll_write(
-        &self,
-        ctx: &mut Context<'_>,
-        bytes: &[u8],
-        lock: &mut PollMutex<'_, Incoming>,
-    ) -> Poll<Result<(), Error>> {
-        let mut incoming = ready!(lock.poll(ctx));
-        log::trace!("{} poll_write: {:?} bytes={:?}", self.deframer.id, incoming, bytes);
-        match std::mem::replace(&mut *incoming, Incoming::Closed) {
+    fn poll_write(&mut self, ctx: &mut Context<'_>, bytes: &[u8]) -> Poll<Result<(), Error>> {
+        let incoming = self.deframer.incoming.take();
+        log::trace!("{} poll_write: {:?}", self.deframer.id, incoming);
+        match incoming {
             Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during write"))),
             Incoming::Parsing { unparsed: BVec(mut unparsed), waiting_read, timeout: _ } => {
                 unparsed.extend_from_slice(bytes);
-                *incoming = deframe_step(unparsed, waiting_read, &self.deframer.fmt)?;
+                self.deframer.incoming.set(deframe_step(
+                    unparsed,
+                    waiting_read,
+                    &self.deframer.fmt,
+                )?);
                 Poll::Ready(Ok(()))
             }
             Incoming::Queuing { unparsed, framed, unframed, waiting_write: _ } => {
-                *incoming = Incoming::Queuing {
+                self.deframer.incoming.set(Incoming::Queuing {
                     unparsed,
                     framed,
                     unframed,
                     waiting_write: Some(ctx.waker().clone()),
-                };
+                });
                 Poll::Pending
             }
         }
@@ -393,117 +378,101 @@ impl<Fmt: Format> DeframerWriter<Fmt> {
 
     /// Write some data into the deframer, to be deframed and read later.
     pub async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        if bytes.is_empty() {
-            return Ok(());
-        }
-        let mut lock = PollMutex::new(&self.deframer.incoming);
-        poll_fn(|ctx| self.poll_write(ctx, bytes, &mut lock)).await
+        poll_fn(|ctx| self.poll_write(ctx, bytes)).await
     }
 }
 
 impl<Fmt: Format> Drop for DeframerWriter<Fmt> {
     fn drop(&mut self) {
-        let framer = self.deframer.clone();
-        // TODO: don't detach
-        block_on(async move {
-            std::mem::replace(&mut *framer.incoming.lock().await, Incoming::Closed).wake();
-        })
+        self.deframer.incoming.take().wake();
     }
 }
 
 impl<Fmt: Format> DeframerReader<Fmt> {
     fn poll_read(
-        &self,
+        &mut self,
         ctx: &mut Context<'_>,
-        lock: &mut PollMutex<'_, Incoming>,
     ) -> Poll<Result<(Option<FrameType>, Vec<u8>), Error>> {
-        let mut incoming = ready!(lock.poll(ctx));
-        loop {
-            log::trace!("{} poll_read: {:?}", self.deframer.id, incoming);
-            break match std::mem::replace(&mut *incoming, Incoming::Closed) {
-                Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during read"))),
-                Incoming::Queuing {
-                    unframed: Some(BVec(unframed)),
-                    framed,
-                    unparsed: BVec(unparsed),
-                    waiting_write,
-                } => {
-                    if framed.is_some() {
-                        *incoming = Incoming::Queuing {
-                            unframed: None,
-                            framed,
-                            unparsed: BVec(unparsed),
-                            waiting_write,
-                        };
-                    } else {
-                        *incoming = deframe_step(unparsed, None, &self.deframer.fmt)?;
-                        waiting_write.map(|w| w.wake());
-                    }
-                    Poll::Ready(Ok((None, unframed)))
-                }
-                Incoming::Queuing {
-                    unframed: None,
-                    framed: Some((frame_type, BVec(bytes))),
-                    unparsed: BVec(unparsed),
-                    waiting_write,
-                } => {
-                    *incoming = deframe_step(unparsed, None, &self.deframer.fmt)?;
+        let incoming = self.deframer.incoming.take();
+        log::trace!("{} poll_read: {:?}", self.deframer.id, incoming);
+        match incoming {
+            Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during read"))),
+            Incoming::Queuing {
+                unframed: Some(BVec(unframed)),
+                framed,
+                unparsed: BVec(unparsed),
+                waiting_write,
+            } => {
+                if framed.is_some() {
+                    self.deframer.incoming.set(Incoming::Queuing {
+                        unframed: None,
+                        framed,
+                        unparsed: BVec(unparsed),
+                        waiting_write,
+                    });
+                } else {
+                    self.deframer.incoming.set(deframe_step(unparsed, None, &self.deframer.fmt)?);
                     waiting_write.map(|w| w.wake());
-                    Poll::Ready(Ok((Some(frame_type), bytes)))
                 }
-                Incoming::Queuing { unframed: None, framed: None, .. } => unreachable!(),
-                Incoming::Parsing { unparsed, timeout: TimeoutFut(None), waiting_read: _ } => {
-                    *incoming = Incoming::Parsing {
-                        unparsed,
+                Poll::Ready(Ok((None, unframed)))
+            }
+            Incoming::Queuing {
+                unframed: None,
+                framed: Some((frame_type, BVec(bytes))),
+                unparsed: BVec(unparsed),
+                waiting_write,
+            } => {
+                self.deframer.incoming.set(deframe_step(unparsed, None, &self.deframer.fmt)?);
+                waiting_write.map(|w| w.wake());
+                Poll::Ready(Ok((Some(frame_type), bytes)))
+            }
+            Incoming::Queuing { unframed: None, framed: None, .. } => unreachable!(),
+            Incoming::Parsing { unparsed, timeout: TimeoutFut(None), waiting_read: _ } => {
+                self.deframer.incoming.set(Incoming::Parsing {
+                    unparsed,
+                    waiting_read: Some(ctx.waker().clone()),
+                    timeout: TimeoutFut(None),
+                });
+                Poll::Pending
+            }
+            Incoming::Parsing {
+                unparsed: BVec(mut unparsed),
+                timeout: TimeoutFut(Some(mut timeout)),
+                waiting_read,
+            } => match timeout.as_mut().poll(ctx) {
+                Poll::Pending => {
+                    self.deframer.incoming.set(Incoming::Parsing {
+                        unparsed: BVec(unparsed),
                         waiting_read: Some(ctx.waker().clone()),
-                        timeout: TimeoutFut(None),
-                    };
+                        timeout: TimeoutFut(Some(timeout)),
+                    });
                     Poll::Pending
                 }
-                Incoming::Parsing {
-                    unparsed: BVec(mut unparsed),
-                    timeout: TimeoutFut(Some(mut timeout)),
-                    waiting_read,
-                } => match timeout.as_mut().poll(ctx) {
-                    Poll::Pending => {
-                        *incoming = Incoming::Parsing {
-                            unparsed: BVec(unparsed),
-                            waiting_read: Some(ctx.waker().clone()),
-                            timeout: TimeoutFut(Some(timeout)),
-                        };
-                        Poll::Pending
-                    }
-                    Poll::Ready(()) => {
-                        let mut unframed = unparsed.split_off(1);
-                        std::mem::swap(&mut unframed, &mut unparsed);
-                        waiting_read.map(|w| w.wake());
-                        *incoming = Incoming::Queuing {
-                            unframed: Some(BVec(unframed)),
-                            framed: None,
-                            unparsed: BVec(unparsed),
-                            waiting_write: None,
-                        };
-                        continue;
-                    }
-                },
-            };
+                Poll::Ready(()) => {
+                    let mut unframed = unparsed.split_off(1);
+                    std::mem::swap(&mut unframed, &mut unparsed);
+                    waiting_read.map(|w| w.wake());
+                    self.deframer.incoming.set(Incoming::Queuing {
+                        unframed: Some(BVec(unframed)),
+                        framed: None,
+                        unparsed: BVec(unparsed),
+                        waiting_write: None,
+                    });
+                    self.poll_read(ctx)
+                }
+            },
         }
     }
 
     /// Read one frame from the deframer.
     pub async fn read(&mut self) -> Result<(Option<FrameType>, Vec<u8>), Error> {
-        let mut lock = PollMutex::new(&self.deframer.incoming);
-        poll_fn(|ctx| self.poll_read(ctx, &mut lock)).await
+        poll_fn(|ctx| self.poll_read(ctx)).await
     }
 }
 
 impl<Fmt: Format> Drop for DeframerReader<Fmt> {
     fn drop(&mut self) {
-        let framer = self.deframer.clone();
-        // TODO: don't detach
-        block_on(async move {
-            std::mem::replace(&mut *framer.incoming.lock().await, Incoming::Closed).wake();
-        })
+        self.deframer.incoming.take().wake();
     }
 }
 
@@ -684,7 +653,7 @@ mod test {
     #[test]
     fn large_frame() {
         run(|| async move {
-            let big_slice = vec![0u8; 100000];
+            let big_slice = [0u8; 100000];
             let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
             assert!(framer_writer.write(FrameType::Overnet, &big_slice).await.is_err());
         })

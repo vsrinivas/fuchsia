@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Trace;
 use crate::{
     future_help::{Observable, Observer},
     labels::NodeId,
@@ -45,7 +44,7 @@ impl ServiceMap {
         ServiceMap {
             local_services: Mutex::new(BTreeMap::new()),
             local_node_id,
-            local_service_list: Observable::new_traced(Vec::new(), false),
+            local_service_list: Observable::new(Vec::new()),
             list_peers: Observable::new(Vec::new()),
         }
     }
@@ -76,17 +75,12 @@ impl ServiceMap {
             log::trace!("Publish new service '{}'", service_name);
             let services: Vec<String> = local_services.keys().cloned().collect();
             drop(local_services);
-            let local_node_id = self.local_node_id;
-            self.local_service_list
-                .push(services.clone().trace("services...publish", local_node_id))
-                .await
-                .trace("services...published", local_node_id);
+            self.local_service_list.push(services.clone());
             self.update_list_peers(ListablePeer {
                 node_id: self.local_node_id,
                 is_self: true,
                 services,
-            })
-            .await;
+            });
         }
     }
 
@@ -94,23 +88,20 @@ impl ServiceMap {
         if node_id == self.local_node_id {
             bail!("Attempt to set local services list");
         }
-        (node_id, &services).trace("update_node", self.local_node_id);
-        self.update_list_peers(ListablePeer { node_id, is_self: false, services }).await;
+        self.update_list_peers(ListablePeer { node_id, is_self: false, services });
         Ok(())
     }
 
-    async fn update_list_peers(&self, update_peer: ListablePeer) {
-        self.list_peers
-            .edit(|peers| {
-                for existing_peer in peers.iter_mut() {
-                    if existing_peer.node_id == update_peer.node_id {
-                        *existing_peer = update_peer;
-                        return;
-                    }
+    fn update_list_peers(&self, update_peer: ListablePeer) {
+        self.list_peers.edit(|peers| {
+            for existing_peer in peers.iter_mut() {
+                if existing_peer.node_id == update_peer.node_id {
+                    *existing_peer = update_peer;
+                    return;
                 }
-                peers.push(update_peer);
-            })
-            .await;
+            }
+            peers.push(update_peer);
+        });
     }
 
     pub fn new_local_service_observer(&self) -> Observer<Vec<String>> {

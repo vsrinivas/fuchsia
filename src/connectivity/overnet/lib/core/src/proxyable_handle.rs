@@ -11,27 +11,18 @@ use crate::proxy_stream::{Frame, StreamReaderBinder, StreamWriter};
 use crate::router::Router;
 use anyhow::{bail, format_err, Error};
 use fuchsia_zircon_status as zx_status;
-use futures::{future::poll_fn, prelude::*, task::noop_waker_ref};
-use std::sync::{Arc, Weak};
+use futures::{future::poll_fn, prelude::*, select};
+use std::rc::{Rc, Weak};
 use std::task::{Context, Poll};
 
 #[derive(Clone)]
 pub(crate) enum RouterHolder<'a> {
     Unused(&'a Weak<Router>),
-    Used(Arc<Router>),
-}
-
-impl<'a> std::fmt::Debug for RouterHolder<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RouterHolder::Unused(_) => f.write_str("Unused"),
-            RouterHolder::Used(r) => write!(f, "Used({:?})", r.node_id()),
-        }
-    }
+    Used(Rc<Router>),
 }
 
 impl<'a> RouterHolder<'a> {
-    pub(crate) fn get(&mut self) -> Result<&Arc<Router>, Error> {
+    pub(crate) fn get(&mut self) -> Result<&Rc<Router>, Error> {
         match self {
             RouterHolder::Used(ref r) => Ok(r),
             RouterHolder::Unused(r) => {
@@ -44,7 +35,7 @@ impl<'a> RouterHolder<'a> {
     }
 }
 
-pub(crate) trait IO: Send {
+pub(crate) trait IO {
     type Proxyable: Proxyable;
     fn new() -> Self;
     fn poll_io(
@@ -55,7 +46,7 @@ pub(crate) trait IO: Send {
     ) -> Poll<Result<(), zx_status::Status>>;
 }
 
-pub(crate) trait Serializer: Send {
+pub(crate) trait Serializer {
     type Message;
     fn new() -> Self;
     fn poll_ser(
@@ -63,18 +54,18 @@ pub(crate) trait Serializer: Send {
         msg: &mut Self::Message,
         bytes: &mut Vec<u8>,
         conn: &AsyncConnection,
-        stats: &Arc<MessageStats>,
+        stats: &Rc<MessageStats>,
         router: &mut RouterHolder<'_>,
         fut_ctx: &mut Context<'_>,
     ) -> Poll<Result<(), Error>>;
 }
 
-pub(crate) trait Message: Send + Sized + Default + PartialEq + std::fmt::Debug {
-    type Parser: Serializer<Message = Self> + std::fmt::Debug;
+pub(crate) trait Message: Sized + Default + PartialEq + std::fmt::Debug {
+    type Parser: Serializer<Message = Self>;
     type Serializer: Serializer<Message = Self>;
 }
 
-pub(crate) trait Proxyable: Send + Sync + Sized + std::fmt::Debug {
+pub(crate) trait Proxyable: Sized + std::fmt::Debug {
     type Message: Message;
     type Reader: IO<Proxyable = Self>;
     type Writer: IO<Proxyable = Self>;
@@ -92,7 +83,7 @@ pub(crate) trait IntoProxied {
 pub(crate) struct ProxyableHandle<Hdl: Proxyable> {
     hdl: Hdl,
     router: Weak<Router>,
-    stats: Arc<MessageStats>,
+    stats: Rc<MessageStats>,
 }
 
 impl<Hdl: Proxyable> std::fmt::Debug for ProxyableHandle<Hdl> {
@@ -102,7 +93,7 @@ impl<Hdl: Proxyable> std::fmt::Debug for ProxyableHandle<Hdl> {
 }
 
 impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
-    pub(crate) fn new(hdl: Hdl, router: Weak<Router>, stats: Arc<MessageStats>) -> Self {
+    pub(crate) fn new(hdl: Hdl, router: Weak<Router>, stats: Rc<MessageStats>) -> Self {
         Self { hdl, router, stats }
     }
 
@@ -114,18 +105,15 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         self.handle_io(msg, Hdl::Writer::new()).await
     }
 
-    pub(crate) fn read<'a>(
-        &'a self,
-        msg: &'a mut Hdl::Message,
-    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin {
-        self.handle_io(msg, Hdl::Reader::new())
+    pub(crate) async fn read(&self, msg: &mut Hdl::Message) -> Result<(), zx_status::Status> {
+        self.handle_io(msg, Hdl::Reader::new()).await
     }
 
     pub(crate) fn router(&self) -> &Weak<Router> {
         &self.router
     }
 
-    pub(crate) fn stats(&self) -> &Arc<MessageStats> {
+    pub(crate) fn stats(&self) -> &Rc<MessageStats> {
         &self.stats
     }
 
@@ -133,12 +121,12 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         &self.hdl
     }
 
-    fn handle_io<'a>(
-        &'a self,
-        msg: &'a mut Hdl::Message,
-        mut io: impl 'a + IO<Proxyable = Hdl>,
-    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin {
-        poll_fn(move |fut_ctx| io.poll_io(msg, &self.hdl, fut_ctx))
+    async fn handle_io(
+        &self,
+        msg: &mut Hdl::Message,
+        mut io: impl IO<Proxyable = Hdl>,
+    ) -> Result<(), zx_status::Status> {
+        poll_fn(move |fut_ctx| io.poll_io(msg, &self.hdl, fut_ctx)).await
     }
 
     pub(crate) async fn drain_to_stream(
@@ -146,11 +134,10 @@ impl<Hdl: Proxyable> ProxyableHandle<Hdl> {
         stream_writer: &mut StreamWriter<Hdl::Message>,
     ) -> Result<(), Error> {
         let mut message = Default::default();
-        let mut ctx = Context::from_waker(noop_waker_ref());
         loop {
-            match self.read(&mut message).poll_unpin(&mut ctx) {
-                Poll::Pending => return Ok(()),
-                Poll::Ready(x) => x?,
+            select! {
+                x = self.read(&mut message).fuse() => x?,
+                default => return Ok(()),
             }
             stream_writer.send_data(&mut message).await?;
         }

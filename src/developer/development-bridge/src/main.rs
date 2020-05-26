@@ -183,9 +183,9 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
         hoist::spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
+            while let Ok(req) = stream.try_next().await {
                 match req {
-                    DaemonRequest::EchoString { value, responder } => {
+                    Some(DaemonRequest::EchoString { value, responder }) => {
                         let _ = responder.send(value.as_ref());
                     }
                     _ => assert!(false),

@@ -22,10 +22,7 @@ rustc_library("core") {
     "//third_party/rust_crates:crc",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rental",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:timebomb",
     "//third_party/rust_crates/transitional/quiche",
@@ -38,8 +35,8 @@ rustc_library("core") {
     ]
   } else {
     deps += [
-      "//third_party/rust_crates:smol",
       "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:tokio",
     ]
   }
   non_rust_deps = [ "//third_party/boringssl" ]
