@@ -6,6 +6,7 @@ package netstack
 
 import (
 	"context"
+	"errors"
 	"net"
 	"sort"
 	"syscall/zx"
@@ -1042,11 +1043,11 @@ func TestAddRouteParameterValidation(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		route       tcpip.Route
-		metric      routes.Metric
-		dynamic     bool
-		shouldError bool
+		name    string
+		route   tcpip.Route
+		metric  routes.Metric
+		dynamic bool
+		err     error
 	}{
 		{
 			name: "IPv4 destination no NIC invalid gateway",
@@ -1055,8 +1056,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 				Gateway:     testV4Address,
 				NIC:         0,
 			},
-			metric:      routes.Metric(0),
-			shouldError: true,
+			metric: routes.Metric(0),
+			err:    routes.ErrNoSuchNIC,
 		},
 		{
 			name: "IPv6 destination no NIC invalid gateway",
@@ -1065,8 +1066,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 				Gateway:     testV6Address,
 				NIC:         0,
 			},
-			metric:      routes.Metric(0),
-			shouldError: true,
+			metric: routes.Metric(0),
+			err:    routes.ErrNoSuchNIC,
 		},
 		{
 			name: "IPv4 destination no NIC valid gateway",
@@ -1087,10 +1088,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := ns.AddRoute(test.route, test.metric, test.dynamic)
-			if got := err != nil; got != test.shouldError {
-				t.Logf("err = %v", err)
-				t.Errorf("got (ns.AddRoute(_) != nil) = %t, want = %t", got, test.shouldError)
+			if err := ns.AddRoute(test.route, test.metric, test.dynamic); !errors.Is(err, test.err) {
+				t.Errorf("got ns.AddRoute(...) = %v, want %v", err, test.err)
 			}
 		})
 	}

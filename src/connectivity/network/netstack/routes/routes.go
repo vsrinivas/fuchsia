@@ -33,6 +33,7 @@ const tag = "routes"
 
 var (
 	ErrNoSuchRoute = errors.New("no such route")
+	ErrNoSuchNIC   = errors.New("no such NIC")
 )
 
 // Metric is the metric used for sorting the route table. It acts as a
@@ -304,7 +305,7 @@ func (rt *RouteTable) FindNIC(addr tcpip.Address) (tcpip.NICID, error) {
 			return er.Route.NIC, nil
 		}
 	}
-	return 0, fmt.Errorf("cannot find NIC with valid destination route to %s", addr)
+	return 0, ErrNoSuchNIC
 }
 
 func (rt *RouteTable) sortRouteTableLocked() {
