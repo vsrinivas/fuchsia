@@ -17,8 +17,8 @@ using fuchsia.location;
 /// to be present. The remaining fields, if present, are contained
 /// within `extras`.
 struct Position {
-    float32 latitude; // In WGS84 datum
-    float32 longitude; // In WGS84 datum
+    float64 latitude; // In WGS84 datum
+    float64 longitude; // In WGS84 datum
     PositionExtras extras;
 };
 
@@ -31,8 +31,8 @@ struct Position {
 ///
 /// Note that all extras are optional.
 table PositionExtras {
-    1: float32 accuracy_meters;
-    2: float32 altitude_meters; // Above WGS84 ellipsoid
+    1: float64 accuracy_meters;
+    2: float64 altitude_meters; // Above WGS84 ellipsoid
 };
 
 /// Provides access to position data for emergency purposes. Implementations
