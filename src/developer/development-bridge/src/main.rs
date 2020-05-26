@@ -12,11 +12,17 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    selectors,
     std::env,
     std::process::Command,
 };
 
 mod logger;
+
+pub const SELECTOR_FORMAT_HELP: &str = "Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
+Example: 'remote-control:out:*' would return all services in 'out' for the component remote-control.
+
+Note that moniker wildcards are not recursive: 'a/*/c' will only match components named 'c' running in some sub-realm directly below 'a', and no further.";
 
 // Cli
 pub struct Cli {
@@ -97,6 +103,36 @@ impl Cli {
         Ok(())
     }
 
+    pub async fn select(&mut self, selector: &str) -> Result<(), Error> {
+        let selector = match selectors::parse_selector(selector) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("Failed to parse the provided selector: {:?}", e);
+                println!("{}", SELECTOR_FORMAT_HELP);
+                return Ok(());
+            }
+        };
+
+        let remote_proxy = self.get_remote_proxy().await?;
+
+        match remote_proxy.select(selector).await.context("awaiting select call")? {
+            Ok(paths) => {
+                if paths.is_empty() {
+                    return Ok(());
+                }
+
+                for path in paths.iter() {
+                    println!("{}", path);
+                }
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("Failed to execute selector: {:?}", e);
+                Ok(())
+            }
+        }
+    }
+
     async fn spawn_daemon() -> Result<(), Error> {
         Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
         Ok(())
@@ -146,6 +182,15 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::Quit(_) => {
             match Cli::new().await?.quit().await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("ERROR: {:?}", e);
+                }
+            }
+            Ok(())
+        }
+        Subcommand::Select(c) => {
+            match Cli::new().await?.select(&c.selector).await {
                 Ok(_) => {}
                 Err(e) => {
                     println!("ERROR: {:?}", e);

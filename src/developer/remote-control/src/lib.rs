@@ -6,14 +6,23 @@ use {
     crate::component_control::ComponentController,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
-    fidl_fuchsia_device_manager as fdevmgr, fidl_fuchsia_net as fnet,
-    fidl_fuchsia_net_stack as fnetstack, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_device_manager as fdevmgr,
+    fidl_fuchsia_diagnostics::Selector,
+    fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
+    fidl_fuchsia_test_manager as ftest_manager,
     fuchsia_component::client::{launcher, AppBuilder},
+    fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
 };
 
 mod component_control;
+mod service_discovery;
+
+const HUB_ROOT: &str = "/discovery_root";
+// Workaround for fxbug.dev/52248.
+// TODO: remove this once that is resolved.
+const SELECT_TRUNCATION_HACK: usize = 25;
 
 pub struct RemoteControlService {
     admin_proxy: fdevmgr::AdministratorProxy,
@@ -72,6 +81,13 @@ impl RemoteControlService {
                 rcs::RemoteControlRequest::IdentifyHost { responder } => {
                     self.clone().identify_host(responder).await?;
                 }
+                rcs::RemoteControlRequest::Connect { selector, service_chan, responder } => {
+                    responder
+                        .send(&mut self.clone().connect_to_service(selector, service_chan).await)?;
+                }
+                rcs::RemoteControlRequest::Select { selector, responder } => {
+                    responder.send(&mut self.clone().select(selector).await)?;
+                }
                 rcs::RemoteControlRequest::LaunchSuite {
                     test_url,
                     suite,
@@ -113,6 +129,74 @@ impl RemoteControlService {
             fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
                 .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
         return Ok((admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy));
+    }
+
+    async fn connect_with_matcher(
+        self: &Rc<Self>,
+        selector: &Selector,
+        service_chan: zx::Channel,
+        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
+    ) -> Result<(), rcs::ConnectError> {
+        let paths = matcher_fut.await.map_err(|e| {
+            log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
+            rcs::ConnectError::ServiceDiscoveryFailed
+        })?;
+        if paths.is_empty() {
+            return Err(rcs::ConnectError::NoMatchingServices);
+        } else if paths.len() > 1 {
+            // TODO(jwing): we should be able to communicate this to the FE somehow.
+            log::warn!(
+                "Selector must match exactly one service. Provided selector matched all of the following: {}",
+                paths.iter().map(|p| p.topological_str()).collect::<Vec<String>>().join(", "));
+            return Err(rcs::ConnectError::MultipleMatchingServices);
+        }
+        let path = paths.get(0).unwrap().hub_path.to_str().unwrap();
+        log::info!("attempting to connect to '{}'", path);
+        io_util::connect_in_namespace(path, service_chan, io::OPEN_RIGHT_READABLE).map_err(|e| {
+            log::error!("error connecting to selector {:?}: {}", selector, e);
+            rcs::ConnectError::ServiceConnectFailed
+        })
+    }
+
+    pub async fn connect_to_service(
+        self: &Rc<Self>,
+        selector: Selector,
+        service_chan: zx::Channel,
+    ) -> Result<(), rcs::ConnectError> {
+        self.connect_with_matcher(
+            &selector,
+            service_chan,
+            service_discovery::get_matching_paths(HUB_ROOT, &selector),
+        )
+        .await
+    }
+
+    async fn select_with_matcher(
+        self: &Rc<Self>,
+        selector: &Selector,
+        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
+    ) -> Result<Vec<String>, rcs::SelectError> {
+        let mut paths = matcher_fut.await.map_err(|e| {
+            log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
+            rcs::SelectError::ServiceDiscoveryFailed
+        })?;
+
+        // Workaround for fxbug.dev/52248.
+        // TODO: remove this once that is resolved.
+        paths.truncate(SELECT_TRUNCATION_HACK);
+
+        Ok(paths.iter().map(|pb| pb.topological_path.to_string_lossy().into_owned()).collect())
+    }
+
+    pub async fn select(
+        self: &Rc<Self>,
+        selector: Selector,
+    ) -> Result<Vec<String>, rcs::SelectError> {
+        self.select_with_matcher(
+            &selector,
+            service_discovery::get_matching_paths(HUB_ROOT, &selector),
+        )
+        .await
     }
 
     pub fn spawn_component_async(
@@ -242,7 +326,9 @@ impl RemoteControlService {
 mod tests {
     use {
         super::*, fidl::endpoints::create_proxy, fidl_fuchsia_developer_remotecontrol as rcs,
-        fidl_fuchsia_hardware_ethernet::MacAddress, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_hardware_ethernet::MacAddress, fidl_fuchsia_io::NodeMarker,
+        fuchsia_async as fasync, fuchsia_zircon as zx, selectors::parse_selector,
+        service_discovery::PathEntry, std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -367,7 +453,7 @@ mod tests {
     }
 
     async fn run_reboot_test(reboot_type: rcs::RebootType) {
-        let rcs_proxy = setup_rcs();
+        let rcs_proxy = setup_rcs_proxy();
 
         let response = rcs_proxy.reboot_device(reboot_type).await.unwrap();
         assert_eq!(response, ());
@@ -399,14 +485,17 @@ mod tests {
         assert_eq!(std::str::from_utf8(&value).unwrap(), expected);
     }
 
-    fn setup_rcs() -> rcs::RemoteControlProxy {
-        let service: Rc<RemoteControlService>;
-        service = Rc::new(RemoteControlService::new_with_proxies(
+    fn make_rcs() -> Rc<RemoteControlService> {
+        Rc::new(RemoteControlService::new_with_proxies(
             setup_fake_admin_service(),
             setup_fake_netstack_service(),
             setup_fake_harness_service(),
             setup_fake_name_provider_service(),
-        ));
+        ))
+    }
+
+    fn setup_rcs_proxy() -> rcs::RemoteControlProxy {
+        let service = make_rcs();
 
         let (rcs_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
@@ -419,7 +508,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_spawn_hello_world() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs();
+        let rcs_proxy = setup_rcs_proxy();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
         let (sout, cout) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -447,7 +536,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_spawn_and_kill() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs();
+        let rcs_proxy = setup_rcs_proxy();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
         let (sout, cout) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -473,7 +562,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_start_non_existent_package() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs();
+        let rcs_proxy = setup_rcs_proxy();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
         let (sout, cout) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -518,7 +607,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_identify_host() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs();
+        let rcs_proxy = setup_rcs_proxy();
 
         let resp = rcs_proxy.identify_host().await.unwrap().unwrap();
 
@@ -535,6 +624,88 @@ mod tests {
         assert_eq!(v6.prefix_len, 6);
         assert_eq!(v6.ip_address, rcs::IpAddress::Ipv6(rcs::Ipv6Address { addr: IPV6_ADDR }));
 
+        Ok(())
+    }
+
+    fn wildcard_selector() -> Selector {
+        parse_selector("*:*:*").unwrap()
+    }
+
+    async fn no_paths_matcher() -> Result<Vec<PathEntry>, Error> {
+        Ok(vec![])
+    }
+
+    async fn two_paths_matcher() -> Result<Vec<PathEntry>, Error> {
+        Ok(vec![
+            PathEntry { hub_path: PathBuf::from("/"), topological_path: PathBuf::from("/a/b/c") },
+            PathEntry { hub_path: PathBuf::from("/"), topological_path: PathBuf::from("/d/e/f") },
+        ])
+    }
+
+    async fn single_path_matcher() -> Result<Vec<PathEntry>, Error> {
+        Ok(vec![PathEntry {
+            hub_path: PathBuf::from("/tmp"),
+            topological_path: PathBuf::from("/tmp"),
+        }])
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_no_matches() -> Result<(), Error> {
+        let service = make_rcs();
+        let (_, server_end) = zx::Channel::create().unwrap();
+
+        let result = service
+            .connect_with_matcher(&wildcard_selector(), server_end, no_paths_matcher())
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), rcs::ConnectError::NoMatchingServices);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_multiple_matches() -> Result<(), Error> {
+        let service = make_rcs();
+        let (_, server_end) = zx::Channel::create().unwrap();
+
+        let result = service
+            .connect_with_matcher(&wildcard_selector(), server_end, two_paths_matcher())
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), rcs::ConnectError::MultipleMatchingServices);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_single_match() -> Result<(), Error> {
+        let service = make_rcs();
+        let (client_end, server_end) = fidl::endpoints::create_endpoints::<NodeMarker>().unwrap();
+
+        service
+            .connect_with_matcher(
+                &wildcard_selector(),
+                server_end.into_channel(),
+                single_path_matcher(),
+            )
+            .await
+            .unwrap();
+
+        // Make a dummy call to verify that the channel did get hooked up.
+        assert!(client_end.into_proxy().unwrap().describe().await.is_ok());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_select_multiple_matches() -> Result<(), Error> {
+        let service = make_rcs();
+
+        let result =
+            service.select_with_matcher(&wildcard_selector(), two_paths_matcher()).await.unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|p| p == "/a/b/c"));
+        assert!(result.iter().any(|p| p == "/d/e/f"));
         Ok(())
     }
 }

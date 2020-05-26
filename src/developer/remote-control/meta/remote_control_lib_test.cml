@@ -16,6 +16,12 @@
             to: [ "#sys-launcher" ],
         },
         {
+            directory: "/tmp",
+            from: "realm",
+            to: [ "#test-driver" ],
+            rights: [ "rw*" ],
+        },
+        {
             runner: "rust_test_runner",
             from: "realm",
             to: [ "#test-driver" ],

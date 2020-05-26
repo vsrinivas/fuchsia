@@ -5,6 +5,11 @@
     use: [
         { runner: "rust_test_runner" },
         {
+            directory: "/tmp",
+            from: "realm",
+            rights: [ "rw*" ],
+        },
+        {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.sys.Launcher",

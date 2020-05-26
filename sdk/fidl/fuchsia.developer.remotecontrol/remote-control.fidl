@@ -4,6 +4,7 @@
 
 library fuchsia.developer.remotecontrol;
 
+using fuchsia.diagnostics as diagnostics;
 using fuchsia.url;
 using fuchsia.test as test;
 using fuchsia.test.manager as test_manager;
@@ -12,6 +13,8 @@ using fuchsia.test.manager as test_manager;
 // Unfortunately we can't depend on it directly,
 // because this protocol needs to build on the host.
 const uint16 MAX_URL_LENGTH = 2083;
+const uint16 MAX_MATCH_LENGTH = 200;
+const uint16 MAX_NUM_MATCHES = 250;
 
 enum RebootType {
     // Standard reboot.
@@ -20,6 +23,22 @@ enum RebootType {
     RECOVERY = 2;
     // Reboots into the bootloader.
     BOOTLOADER = 3;
+};
+
+enum ConnectError : uint32 {
+    // Selector did not match any services.
+    NO_MATCHING_SERVICES = 1;
+    // Selector matched multiple services.
+    MULTIPLE_MATCHING_SERVICES = 2;
+    // There was an error when trying to find matching services.
+    SERVICE_DISCOVERY_FAILED = 3;
+    // A single service was matched, but connecting to it failed.
+    SERVICE_CONNECT_FAILED = 4;
+};
+
+enum SelectError : uint32 {
+    // There was an error when trying to find matching services.
+    SERVICE_DISCOVERY_FAILED = 1;
 };
 
 [Discoverable]
@@ -53,4 +72,13 @@ protocol RemoteControl {
         request<test.Suite> suite,
         request<test_manager.SuiteController> controller) -> ()
         error test_manager.LaunchError;
+
+    Connect(
+        diagnostics.Selector selector,
+        handle<channel> service_chan) -> ()
+        error ConnectError;
+
+    Select(diagnostics.Selector selector)
+        -> (vector<string:MAX_MATCH_LENGTH>:MAX_NUM_MATCHES matches)
+        error SelectError;
 };

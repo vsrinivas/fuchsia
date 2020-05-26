@@ -32,11 +32,11 @@ pub static WILDCARD_SYMBOL_STR: &str = "*";
 pub static WILDCARD_SYMBOL_CHAR: char = '*';
 
 // Globs will match everything along a moniker, but won't match empty strings.
-static GLOB_REGEX_EQUIVALENT: &str = ".+";
+pub static GLOB_REGEX_EQUIVALENT: &str = ".+";
 
 // Wildcards will match anything except for an unescaped slash, since their match
 // only extends to a single moniker "node".
-static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])+"#;
+pub static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])+"#;
 
 // Extract moniker from component path.
 // For example, for path "/hub/c/archivist.cmx" this function will return "archivist.cmx".

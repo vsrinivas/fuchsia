@@ -164,6 +164,13 @@
             from: "realm",
             to: [ "#appmgr" ],
         },
+        {
+            // Note: this is the v2 root hub. The hub in the `expose` section below
+            // is the v1 root hub.
+            directory: "/hub",
+            from: "realm",
+            to: [ "#remote-control" ],
+        },
 
         // Offer the ELF runner to children.
         {

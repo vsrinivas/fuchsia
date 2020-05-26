@@ -149,6 +149,13 @@
             dependency: "weak_for_migration",
         },
 
+        // RCS uses the root hub for service discovery.
+        {
+            directory: "/hub",
+            from: "framework",
+            to: [ "#core" ],
+        },
+
         // Offer the ELF runner to children.
         {
             runner: "elf",

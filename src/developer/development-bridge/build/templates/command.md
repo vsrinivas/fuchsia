@@ -5,7 +5,7 @@
 use {
   argh::FromArgs,
   ffx_config_args::ConfigCommand,
-  ffx_core::args::{DaemonCommand, EchoCommand, ListCommand, QuitCommand},
+  ffx_core::args::{DaemonCommand, EchoCommand, ListCommand, QuitCommand, SelectCommand},
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -16,6 +16,7 @@ pub enum Subcommand {
     List(ListCommand),
     Config(ConfigCommand),
     Quit(QuitCommand),
+    Select(SelectCommand),
 {% for dep in deps %}
     {{dep.enum}}({{dep.lib}}::FfxPluginCommand),
 {% endfor %}

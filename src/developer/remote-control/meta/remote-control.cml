@@ -5,6 +5,12 @@
     use: [
         { runner: "elf" },
         {
+            directory: "/hub",
+            from: "realm",
+            as: "/discovery_root",
+            rights: [ "r*" ],
+        },
+        {
             protocol: [
                 "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.NameProvider",
