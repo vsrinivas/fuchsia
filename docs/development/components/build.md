@@ -206,7 +206,7 @@ Note the following details:
 To simplify defining components in commonly used languages, simplified templates
 are provided.
 
-* {C++}
+   * {C++}
 
    ```gn
    import("//src/sys/build/components.gni")
@@ -221,7 +221,7 @@ are provided.
 
    Additional [`executable()`][executable] parameters may be provided.
 
-* {Rust}
+   * {Rust}
 
    ```gn
    import("//src/sys/build/components.gni")
@@ -251,7 +251,7 @@ Note the following details:
 Since unit tests are very common, simplified templates are provided to define
 them.
 
-* {C++}
+   * {C++}
 
    ```gn
    import("//src/sys/build/components.gni")
@@ -266,7 +266,7 @@ them.
 
    Additional [`executable()`][executable] parameters may be provided.
 
-* {Rust}
+   * {Rust}
 
    ```gn
    import("//src/sys/build/fuchsia_cpp_unittest.gni")
