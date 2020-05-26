@@ -22,6 +22,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
@@ -98,6 +99,16 @@ func TestStackNICEnableDisable(t *testing.T) {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
 	}
 
+	getLinkState := func() link.State {
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
+		return ifs.mu.state
+	}
+
+	if got, want := getLinkState(), link.StateUnknown; got != want {
+		t.Fatalf("got ifs.mu.state = %s, want %s", got, want)
+	}
+
 	// Bringing the link up should enable the NIC in stack.Stack.
 	if err := ifs.controller.Up(); err != nil {
 		t.Fatal("ifs.controller.Up(): ", err)
@@ -106,12 +117,20 @@ func TestStackNICEnableDisable(t *testing.T) {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
 	}
 
+	if got, want := getLinkState(), link.StateStarted; got != want {
+		t.Fatalf("got ifs.mu.state = %s, want %s", got, want)
+	}
+
 	// Bringing the link down should disable the NIC in stack.Stack.
 	if err := ifs.controller.Down(); err != nil {
 		t.Fatal("ifs.controller.Down(): ", err)
 	}
 	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
+	}
+
+	if got, want := getLinkState(), link.StateDown; got != want {
+		t.Fatalf("got ifs.mu.state = %s, want %s", got, want)
 	}
 }
 
