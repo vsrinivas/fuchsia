@@ -62,7 +62,7 @@ tracing overhead.
 From //src/media/audio/audio_core/BUILD.gn:13
 
 ### auto_login_to_guest
-Whether basemgr should automatically login as a persistent guest user.
+Whether basemgr should set a stable session ID.
 
 **Current value (from the default):** `false`
 
@@ -961,7 +961,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:653
+From //build/config/BUILDCONFIG.gn:657
 
 ### fastboot_product
 
@@ -1512,7 +1512,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:578
+From //build/config/BUILDCONFIG.gn:582
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2086,7 +2086,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:866
+From //build/config/BUILDCONFIG.gn:870
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2095,7 +2095,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:871
+From //build/config/BUILDCONFIG.gn:875
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2122,7 +2122,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:699
+From //build/config/BUILDCONFIG.gn:703
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2377,7 +2377,7 @@ From //build/config/sanitizers/BUILD.gn:31
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:673
+From //build/config/BUILDCONFIG.gn:677
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
