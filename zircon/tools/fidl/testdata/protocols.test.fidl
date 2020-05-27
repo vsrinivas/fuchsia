@@ -29,3 +29,14 @@ protocol ChannelProtocol {
     MethodB(int64 a, int64 b) -> (int64 result);
     MutateSocket(handle<socket> a) -> (handle<socket> b);
 };
+
+protocol Transitional {
+    [Transitional]
+    Request(int64 x) -> (int64 y);
+
+    [Transitional]
+    OneWay(int64 x);
+
+    [Transitional]
+    -> Event(int64 x);
+};

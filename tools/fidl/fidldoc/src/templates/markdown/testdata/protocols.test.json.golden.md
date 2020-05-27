@@ -293,6 +293,64 @@
             </td>
         </tr></table>
 
+## Transitional {#Transitional}
+*Defined in [test.name/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/protocols.test.fidl#33)*
+
+
+### Request {#Request}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>x</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>y</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+        </tr></table>
+
+### OneWay {#OneWay}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>x</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+        </tr></table>
+
+
+
+### Event {#Event}
+
+
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>x</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+        </tr></table>
+
 
 
 ## **STRUCTS**

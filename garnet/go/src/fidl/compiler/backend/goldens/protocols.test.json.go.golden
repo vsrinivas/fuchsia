@@ -225,6 +225,50 @@ func (msg *channelProtocolWithCtxMutateSocketResponse) Marshaler() _bindings.Mar
 	return _mchannelProtocolWithCtxMutateSocketResponse
 }
 
+type transitionalWithCtxRequestRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	X int64    `fidl_offset_v1:"0"`
+}
+
+var _mtransitionalWithCtxRequestRequest = _bindings.CreateLazyMarshaler(transitionalWithCtxRequestRequest{})
+
+func (msg *transitionalWithCtxRequestRequest) Marshaler() _bindings.Marshaler {
+	return _mtransitionalWithCtxRequestRequest
+}
+
+type transitionalWithCtxRequestResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Y int64    `fidl_offset_v1:"0"`
+}
+
+var _mtransitionalWithCtxRequestResponse = _bindings.CreateLazyMarshaler(transitionalWithCtxRequestResponse{})
+
+func (msg *transitionalWithCtxRequestResponse) Marshaler() _bindings.Marshaler {
+	return _mtransitionalWithCtxRequestResponse
+}
+
+type transitionalWithCtxOneWayRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	X int64    `fidl_offset_v1:"0"`
+}
+
+var _mtransitionalWithCtxOneWayRequest = _bindings.CreateLazyMarshaler(transitionalWithCtxOneWayRequest{})
+
+func (msg *transitionalWithCtxOneWayRequest) Marshaler() _bindings.Marshaler {
+	return _mtransitionalWithCtxOneWayRequest
+}
+
+type transitionalWithCtxEventResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	X int64    `fidl_offset_v1:"0"`
+}
+
+var _mtransitionalWithCtxEventResponse = _bindings.CreateLazyMarshaler(transitionalWithCtxEventResponse{})
+
+func (msg *transitionalWithCtxEventResponse) Marshaler() _bindings.Marshaler {
+	return _mtransitionalWithCtxEventResponse
+}
+
 type I_withErrorSyntaxResponseAsStructResultTag uint64
 
 const (
@@ -735,4 +779,106 @@ func (p *ChannelProtocolEventProxy) EventA(a int64, b int64) error {
 		B: b,
 	}
 	return ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolEventAGenOrdinal, event_)
+}
+
+const (
+	TransitionalRequestOrdinal    uint64 = 0x64aef9ce00000000
+	TransitionalRequestGenOrdinal uint64 = 0x74cf6772aaa991e2
+	TransitionalOneWayOrdinal     uint64 = 0x2b3a266800000000
+	TransitionalOneWayGenOrdinal  uint64 = 0x41bb88b33c2ecd62
+	TransitionalEventOrdinal      uint64 = 0x35e91ba200000000
+	TransitionalEventGenOrdinal   uint64 = 0x1834fa04375da92c
+)
+
+type TransitionalWithCtxInterface _bindings.ChannelProxy
+
+func (p *TransitionalWithCtxInterface) Request(ctx_ _bindings.Context, x int64) (int64, error) {
+	req_ := &transitionalWithCtxRequestRequest{
+		X: x,
+	}
+	resp_ := &transitionalWithCtxRequestResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(TransitionalRequestGenOrdinal, req_, resp_, TransitionalRequestOrdinal, TransitionalRequestGenOrdinal)
+	return resp_.Y, err_
+}
+
+func (p *TransitionalWithCtxInterface) OneWay(ctx_ _bindings.Context, x int64) error {
+	req_ := &transitionalWithCtxOneWayRequest{
+		X: x,
+	}
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(TransitionalOneWayGenOrdinal, req_)
+	return err_
+}
+
+func (p *TransitionalWithCtxInterface) ExpectEvent(ctx_ _bindings.Context) (int64, error) {
+	resp_ := &transitionalWithCtxEventResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(TransitionalEventOrdinal, resp_, TransitionalEventGenOrdinal)
+	return resp_.X, err_
+}
+
+type TransitionalWithCtx interface {
+	Request(ctx_ _bindings.Context, x int64) (int64, error)
+	OneWay(ctx_ _bindings.Context, x int64) error
+}
+
+type TransitionalWithCtxTransitionalBase struct{}
+
+func (_ *TransitionalWithCtxTransitionalBase) Request(ctx_ _bindings.Context, x int64) (int64, error) {
+	panic("Not Implemented")
+}
+func (_ *TransitionalWithCtxTransitionalBase) OneWay(ctx_ _bindings.Context, x int64) error {
+	panic("Not Implemented")
+}
+
+type TransitionalWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewTransitionalWithCtxInterfaceRequest() (TransitionalWithCtxInterfaceRequest, *TransitionalWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return TransitionalWithCtxInterfaceRequest(req), (*TransitionalWithCtxInterface)(cli), err
+}
+
+type TransitionalWithCtxStub struct {
+	Impl TransitionalWithCtx
+}
+
+func (s_ *TransitionalWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case TransitionalRequestOrdinal:
+		fallthrough
+	case TransitionalRequestGenOrdinal:
+		in_ := transitionalWithCtxRequestRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		y, err_ := s_.Impl.Request(args_.Ctx, in_.X)
+		out_ := transitionalWithCtxRequestResponse{}
+		out_.Y = y
+		return &out_, true, err_
+	case TransitionalOneWayOrdinal:
+		fallthrough
+	case TransitionalOneWayGenOrdinal:
+		in_ := transitionalWithCtxOneWayRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.OneWay(args_.Ctx, in_.X)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type TransitionalEventProxy _bindings.ChannelProxy
+
+func (p *TransitionalEventProxy) Event(x int64) error {
+	event_ := &transitionalWithCtxEventResponse{
+		X: x,
+	}
+	return ((*_bindings.ChannelProxy)(p)).Send(TransitionalEventGenOrdinal, event_)
 }

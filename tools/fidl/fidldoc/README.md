@@ -46,7 +46,7 @@ fx fidldoc -v \
 The `tests` target will generate a unit test binary in the build output directory.
 
 1. Set the test target `fx set core.x64 --with //tools/fidl/fidldoc:tests`
-1. Run with `fx test fidldoc_bin_test`
+1. Run with `fx test host_x64/fidldoc_bin_test`
 
 # Goldens
 The test `golden_test` uses `.json.golden` files from `//zircon/tools/fidl/goldens`
@@ -55,5 +55,6 @@ as input, and compares the generated output with the goldens from `src/templates
 To regenerate the goldens run:
 
 ```
-REGENERATE_GOLDENS_FOLDER=$FOLDER fx test fidldoc_bin_test -- golden_test
+REGENERATE_GOLDENS_FOLDER=$FUCHSIA_DIR/tools/fidl/fidldoc/src/templates/markdown/testdata \
+    fx test host_x64/fidldoc_bin_test -- golden_test
 ```

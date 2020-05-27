@@ -2808,3 +2808,567 @@ impl ChannelProtocolMutateSocketResponder {
         })
     }
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct TransitionalMarker;
+
+impl fidl::endpoints::ServiceMarker for TransitionalMarker {
+    type Proxy = TransitionalProxy;
+    type RequestStream = TransitionalRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) Transitional";
+}
+
+pub trait TransitionalProxyInterface: Send + Sync {
+    type RequestResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
+    #[allow(unused_variables)]
+    fn request(&self, x: i64) -> Self::RequestResponseFut {
+        unimplemented!("transitional method request is unimplemented");
+    }
+    #[allow(unused_variables)]
+    fn one_way(&self, x: i64) -> Result<(), fidl::Error> {
+        unimplemented!("transitional method one_way is unimplemented");
+    }
+    type EventResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct TransitionalSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl TransitionalSynchronousProxy {
+    pub fn new(channel: ::fidl::Channel) -> Self {
+        Self { client: fidl::client::sync::Client::new(channel) }
+    }
+
+    pub fn into_channel(self) -> ::fidl::Channel {
+        self.client.into_channel()
+    }
+    pub fn request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
+        self.client.send_query(&mut (x), 0x74cf6772aaa991e2, ___deadline)
+    }
+    pub fn one_way(&mut self, mut x: i64) -> Result<(), fidl::Error> {
+        self.client.send(&mut (x), 0x41bb88b33c2ecd62)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TransitionalProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for TransitionalProxy {
+    type Service = TransitionalMarker;
+    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+}
+
+impl ::std::ops::Deref for TransitionalProxy {
+    type Target = fidl::client::Client;
+
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
+}
+
+impl TransitionalProxy {
+    /// Create a new Proxy for Transitional
+    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+        Self { client: fidl::client::Client::new(channel) }
+    }
+
+    /// Attempt to convert the Proxy back into a channel.
+    ///
+    /// This will only succeed if there are no active clones of this Proxy
+    /// and no currently-alive EventStream or response futures that came from
+    /// this Proxy.
+    pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    /// Get a Stream of events from the remote end of the Transitional protocol
+    pub fn take_event_stream(&self) -> TransitionalEventStream {
+        TransitionalEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+    pub fn request(&self, mut x: i64) -> fidl::client::QueryResponseFut<(i64)> {
+        TransitionalProxyInterface::request(self, x)
+    }
+    pub fn one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
+        TransitionalProxyInterface::one_way(self, x)
+    }
+}
+
+impl TransitionalProxyInterface for TransitionalProxy {
+    type RequestResponseFut = fidl::client::QueryResponseFut<(i64)>;
+    fn request(&self, mut x: i64) -> Self::RequestResponseFut {
+        self.client.send_query(&mut (x), 0x74cf6772aaa991e2)
+    }
+    fn one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
+        self.client.send(&mut (x), 0x41bb88b33c2ecd62)
+    }
+    type EventResponseFut = fidl::client::QueryResponseFut<(i64)>;
+}
+
+pub struct TransitionalEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl ::std::marker::Unpin for TransitionalEventStream {}
+
+impl futures::stream::FusedStream for TransitionalEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for TransitionalEventStream {
+    type Item = Result<TransitionalEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+            0x35e91ba200000000 | 0x1834fa04375da92c => {
+                let mut out_tuple: (i64) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &tx_header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+                Ok((TransitionalEvent::Event { x: out_tuple }))
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <TransitionalMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }))
+    }
+}
+
+#[derive(Debug)]
+pub enum TransitionalEvent {
+    Event { x: i64 },
+}
+
+impl TransitionalEvent {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_event(self) -> Option<(i64)> {
+        if let TransitionalEvent::Event { x } = self {
+            Some((x))
+        } else {
+            None
+        }
+    }
+}
+
+/// A type which can be used to send responses and events into a borrowed channel.
+///
+/// Note: this should only be used when the channel must be temporarily
+/// borrowed. For a typical sending of events, use the send_ methods
+/// on the ControlHandle types, which can be acquired through a
+/// RequestStream or Responder type.
+#[deprecated(note = "Use TransitionalRequestStream / Responder instead")]
+pub struct TransitionalServerSender<'a> {
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(unused)]
+    channel: &'a ::fidl::Channel,
+}
+
+impl<'a> TransitionalServerSender<'a> {
+    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+        Self { channel }
+    }
+    pub fn send_request_response(
+        &self,
+        txid: fidl::client::Txid,
+        mut y: i64,
+    ) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            TransitionalEncoder::encode_request_response(bytes, handles, txid.as_raw_id(), y)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+    pub fn send_event(&self, mut x: i64) -> Result<(), fidl::Error> {
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            TransitionalEncoder::encode_event_response(bytes, handles, x)?;
+            self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+
+/// A Stream of incoming requests for Transitional
+pub struct TransitionalRequestStream {
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl ::std::marker::Unpin for TransitionalRequestStream {}
+
+impl futures::stream::FusedStream for TransitionalRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for TransitionalRequestStream {
+    type Service = TransitionalMarker;
+
+    /// Consume a channel to make a TransitionalRequestStream
+    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    /// ControlHandle for the remote connection
+    type ControlHandle = TransitionalControlHandle;
+
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        TransitionalControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for TransitionalRequestStream {
+    type Item = Result<TransitionalRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: ::std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled TransitionalRequestStream after completion");
+        }
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            match this.inner.channel().read(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                0x64aef9ce00000000 | 0x74cf6772aaa991e2 => {
+                    let mut req: (i64) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = TransitionalControlHandle { inner: this.inner.clone() };
+
+                    Ok(TransitionalRequest::Request {
+                        x: req,
+                        responder: TransitionalRequestResponder {
+                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
+                0x2b3a266800000000 | 0x41bb88b33c2ecd62 => {
+                    let mut req: (i64) = fidl::encoding::Decodable::new_empty();
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    let control_handle = TransitionalControlHandle { inner: this.inner.clone() };
+
+                    Ok(TransitionalRequest::OneWay { x: req, control_handle })
+                }
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name:
+                        <TransitionalMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use TransitionalRequest instead")]
+pub enum TransitionalRequestMessage {
+    Request { x: i64, tx_id: fidl::client::Txid },
+    OneWay { x: i64 },
+}
+
+impl TransitionalRequestMessage {
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::Handle],
+    ) -> Result<TransitionalRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+        match header.ordinal() {
+            0x64aef9ce00000000 | 0x74cf6772aaa991e2 => {
+                let mut out_tuple: (i64) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+
+                Ok(TransitionalRequestMessage::Request {
+                    x: out_tuple,
+                    tx_id: header.tx_id().into(),
+                })
+            }
+            0x2b3a266800000000 | 0x41bb88b33c2ecd62 => {
+                let mut out_tuple: (i64) = fidl::encoding::Decodable::new_empty();
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+
+                Ok(TransitionalRequestMessage::OneWay { x: out_tuple })
+            }
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <TransitionalMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+#[derive(Debug)]
+pub enum TransitionalRequest {
+    Request { x: i64, responder: TransitionalRequestResponder },
+    OneWay { x: i64, control_handle: TransitionalControlHandle },
+}
+
+impl TransitionalRequest {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_request(self) -> Option<(i64, TransitionalRequestResponder)> {
+        if let TransitionalRequest::Request { x, responder } = self {
+            Some((x, responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_one_way(self) -> Option<(i64, TransitionalControlHandle)> {
+        if let TransitionalRequest::OneWay { x, control_handle } = self {
+            Some((x, control_handle))
+        } else {
+            None
+        }
+    }
+
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {
+            TransitionalRequest::Request { .. } => "request",
+            TransitionalRequest::OneWay { .. } => "one_way",
+        }
+    }
+}
+
+pub struct TransitionalEncoder;
+
+impl TransitionalEncoder {
+    pub fn encode_request_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_x: i64,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x74cf6772aaa991e2);
+        let mut body = (in_x,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_request_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        tx_id: u32,
+        mut in_y: i64,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x74cf6772aaa991e2);
+        let mut body = (in_y,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_one_way_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        mut in_x: i64,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x41bb88b33c2ecd62);
+        let mut body = (in_x,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+    pub fn encode_event_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::Handle>,
+        mut in_x: i64,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x1834fa04375da92c);
+        let mut body = (in_x,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TransitionalControlHandle {
+    inner: ::std::sync::Arc<fidl::ServeInner>,
+}
+
+impl ::std::ops::Deref for TransitionalControlHandle {
+    type Target = ::std::sync::Arc<fidl::ServeInner>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl TransitionalControlHandle {
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+    pub fn send_event(&self, mut x: i64) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(0, 0x1834fa04375da92c);
+
+        let mut response = (x);
+
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+
+        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+            self.inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)
+        })?;
+
+        Ok(())
+    }
+}
+
+/* beginning of response types */
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct TransitionalRequestResponder {
+    control_handle: ::std::mem::ManuallyDrop<TransitionalControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+impl ::std::ops::Drop for TransitionalRequestResponder {
+    fn drop(&mut self) {
+        // Shutdown the channel if the responder is dropped without sending a response
+        // so that the client doesn't hang. To prevent this behavior, some methods
+        // call "drop_without_shutdown"
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl TransitionalRequestResponder {
+    pub fn control_handle(&self) -> &TransitionalControlHandle {
+        &self.control_handle
+    }
+
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        ::std::mem::forget(self);
+    }
+
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self, mut y: i64) -> Result<(), fidl::Error> {
+        let r = self.send_raw(y);
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self, mut y: i64) -> Result<(), fidl::Error> {
+        let r = self.send_raw(y);
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(&self, mut y: i64) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal);
+
+        let mut response = (y);
+
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut response };
+
+        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            self.control_handle
+                .inner
+                .channel()
+                .write(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
