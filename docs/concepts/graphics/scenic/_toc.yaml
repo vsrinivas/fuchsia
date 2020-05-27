@@ -18,3 +18,7 @@ toc:
   path: /docs/concepts/graphics/scenic/units_and_metrics.md
 - title: "Views, bounds, and clipping"
   path: /docs/concepts/graphics/scenic/view_bounds.md
+- title: "Scenic Views, view tree, and ViewRefs"
+  path: /docs/concepts/graphics/scenic/view_ref.md
+- title: "Scenic Views, view focus, and focus chain"
+  path: /docs/concepts/graphics/scenic/focus_chain.md
