@@ -7,7 +7,6 @@
 
 #include "src/ui/examples/escher/rainfall/rainfall_demo.h"
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/lib/escher/flatland/rectangle_renderable.h"
 
 namespace escher {
 class Stopwatch;
@@ -26,7 +25,9 @@ class Scene {
   // Implementors use this to update the renderables in the scene per frame.
   virtual void Update(const escher::Stopwatch& stopwatch) = 0;
 
-  virtual std::vector<escher::RectangleRenderable>& renderables() = 0;
+  virtual std::vector<escher::Rectangle2D>& renderables() = 0;
+
+  virtual std::vector<escher::RectangleCompositor::ColorData>& color_data() = 0;
 
  protected:
   const escher::VulkanContext& vulkan_context() const { return demo_->vulkan_context(); }

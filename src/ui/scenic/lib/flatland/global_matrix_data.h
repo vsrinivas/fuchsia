@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_MATRIX_DATA_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_MATRIX_DATA_H_
 
+#include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
@@ -24,6 +25,12 @@ GlobalMatrixVector ComputeGlobalMatrixData(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const UberStruct::InstanceMap& uber_structs);
+
+// Generates a 2D axis-aligned rectangle given the provided matrix and a set of clockwise uv
+// coordinates, which are reordered dependening on the final orientation of the returned
+// rectangle, so that textures are properly applied.
+const escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix,
+                                            const std::array<glm::vec2, 4>& uvs);
 
 }  // namespace flatland
 

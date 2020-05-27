@@ -16,6 +16,8 @@
 
 #include "src/ui/lib/escher/util/debug_print.h"
 
+#include <array>
+
 namespace escher {
 
 using glm::mat2;
@@ -33,6 +35,21 @@ ESCHER_DEBUG_PRINTABLE(mat2);
 ESCHER_DEBUG_PRINTABLE(mat3);
 ESCHER_DEBUG_PRINTABLE(mat4);
 ESCHER_DEBUG_PRINTABLE(quat);
+
+// A 2d, axis-aligned rectangle parameterized by an
+// origin point and an extent representing the width
+// and height. The extent must be >= 0. The uv coords
+// are given in clockwise order, starting from the origin.
+struct Rectangle2D {
+  Rectangle2D(const vec2& in_origin, const vec2& in_extent,
+              const std::array<vec2, 4>& in_uvs = {vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)})
+      : origin(in_origin), extent(in_extent), clockwise_uvs(in_uvs) {
+    FX_CHECK(glm::all(glm::greaterThanEqual(extent, vec2(0.f))));
+  }
+  const glm::vec2 origin = vec2(0, 0);
+  const glm::vec2 extent = vec2(0, 0);
+  const std::array<vec2, 4> clockwise_uvs = {vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
+};
 
 // A ray with an origin and a direction of travel.
 struct ray4 {

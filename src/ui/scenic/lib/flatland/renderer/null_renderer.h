@@ -33,8 +33,8 @@ class NullRenderer : public Renderer {
   std::optional<BufferCollectionMetadata> Validate(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  void Render(const ImageMetadata& render_target,
-              const std::vector<RenderableMetadata>& renderables) override;
+  void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
+              const std::vector<ImageMetadata>& images) override;
 
  private:
   GlobalBufferCollectionId RegisterCollection(

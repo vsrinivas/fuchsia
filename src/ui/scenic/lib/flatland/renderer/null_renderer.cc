@@ -75,9 +75,9 @@ std::optional<BufferCollectionMetadata> NullRenderer::Validate(
 // Check that the buffer collections for each of the images passed in have been validated.
 // DCHECK if they have not.
 void NullRenderer::Render(const ImageMetadata& render_target,
-                          const std::vector<RenderableMetadata>& renderables) {
-  for (const auto& renderable : renderables) {
-    const auto& image = renderable.image;
+                          const std::vector<Rectangle2D>& rectangles,
+                          const std::vector<ImageMetadata>& images) {
+  for (const auto& image : images) {
     auto collection_id = image.collection_id;
     FX_DCHECK(collection_id != kInvalidId);
 

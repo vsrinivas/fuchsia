@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
 namespace flatland {
@@ -53,6 +54,51 @@ GlobalMatrixVector ComputeGlobalMatrixData(
   }
 
   return matrices;
+}
+
+const escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix,
+                                            const std::array<glm::vec2, 4>& uvs) {
+  // The local-space of the renderable has its top-left origin point at (0,0) and grows
+  // downward and to the right, so that the bottom-right point is at (1,-1). We apply
+  // the matrix to the four points that represent this unit square to get the points
+  // in the global coordinate space.
+  const glm::vec2 verts[4] = {
+      matrix * glm::vec3(0, 0, 1),
+      matrix * glm::vec3(1, 0, 1),
+      matrix * glm::vec3(1, -1, 1),
+      matrix * glm::vec3(0, -1, 1),
+  };
+
+  float min_x = FLT_MAX, min_y = FLT_MAX;
+  float max_x = -FLT_MAX, max_y = -FLT_MAX;
+  for (uint32_t i = 0; i < 4; i++) {
+    min_x = std::min(min_x, verts[i].x);
+    min_y = std::min(min_y, verts[i].y);
+    max_x = std::max(max_x, verts[i].x);
+    max_y = std::max(max_y, verts[i].y);
+  }
+
+  glm::vec2 reordered_verts[4] = {
+      glm::vec2(min_x, max_y),  // top_left
+      glm::vec2(max_x, max_y),  // top_right
+      glm::vec2(max_x, min_y),  // bottom_right
+      glm::vec2(min_x, min_y),  // bottom_left
+  };
+
+  std::array<glm::vec2, 4> reordered_uvs;
+  for (uint32_t i = 0; i < 4; i++) {
+    for (uint32_t j = 0; j < 4; j++) {
+      if (glm::all(glm::epsilonEqual(reordered_verts[i], verts[j], 0.001f))) {
+        reordered_uvs[i] = uvs[j];
+        break;
+      }
+    }
+  }
+
+  // This construction will CHECK if the extent is negative.
+  escher::Rectangle2D rectangle(reordered_verts[0], reordered_verts[1] - reordered_verts[3],
+                                reordered_uvs);
+  return rectangle;
 }
 
 }  // namespace flatland

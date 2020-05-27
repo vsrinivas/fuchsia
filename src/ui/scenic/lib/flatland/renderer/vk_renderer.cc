@@ -207,26 +207,22 @@ escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,
 }
 
 void VkRenderer::Render(const ImageMetadata& render_target,
-                        const std::vector<RenderableMetadata>& renderables) {
+                        const std::vector<Rectangle2D>& rectangles,
+                        const std::vector<ImageMetadata>& images) {
   // Escher's frame class acts as a command buffer manager that we use to create a
   // command buffer and submit it to the device queue once we are done.
   auto frame = escher_->NewFrame("flatland::VkRenderer", ++frame_number_);
   auto command_buffer = frame->cmds();
 
-  std::vector<escher::TexturePtr> textures;
-  std::vector<escher::RectangleRenderable> rectangles;
-  for (const auto& renderable : renderables) {
+  std::vector<const escher::TexturePtr> textures;
+  std::vector<escher::RectangleCompositor::ColorData> color_data;
+  for (const auto& image : images) {
     // Pass the texture into the above vector to keep it alive outside of this loop.
-    auto texture = ExtractTexture(command_buffer, renderable.image);
-    textures.push_back(texture);
+    textures.emplace_back(ExtractTexture(command_buffer, image));
 
-    // Create escher rectangle renderable. This function will CHECK if the matrix has an
-    // invalid rotation that is not a multiple of 90 degrees and DCHECK any other issue,
-    // such as having uv coordinates that are not within the range [0,1].
-    const auto rectangle =
-        escher::RectangleRenderable::Create(renderable.matrix, renderable.uv_coords, texture.get(),
-                                            renderable.multiply_color, renderable.is_transparent);
-    rectangles.push_back(rectangle);
+    // TODO(52632): We are hardcoding the multiply color and transparency flag for now.
+    // Eventually these will be exposed in the API.
+    color_data.emplace_back(escher::RectangleCompositor::ColorData(glm::vec4(1.f), true));
   }
 
   // Grab the output image and use it to generate a depth texture. The depth texture needs to
@@ -235,7 +231,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   escher::TexturePtr depth_texture = escher::CreateDepthTexture(escher_.get(), output_image);
 
   // Now the compositor can finally draw.
-  compositor_.DrawBatch(command_buffer, rectangles, output_image, depth_texture);
+  compositor_.DrawBatch(command_buffer, rectangles, textures, color_data, output_image,
+                        depth_texture);
 
   // Submit the commands and wait for them to finish.
   frame->EndFrame(escher::SemaphorePtr(), nullptr);

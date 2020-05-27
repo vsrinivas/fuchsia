@@ -20,10 +20,13 @@ class FlatlandDemoScene1 : public Scene {
   // |Scene|
   void Update(const escher::Stopwatch& stopwatch) override;
 
-  std::vector<escher::RectangleRenderable>& renderables() override { return renderables_; }
+  std::vector<escher::Rectangle2D>& renderables() override { return renderables_; }
+
+  std::vector<escher::RectangleCompositor::ColorData>& color_data() override { return color_data_; }
 
  private:
-  std::vector<escher::RectangleRenderable> renderables_;
+  std::vector<escher::Rectangle2D> renderables_;
+  std::vector<escher::RectangleCompositor::ColorData> color_data_;
 };
 
 #endif  // SRC_UI_EXAMPLES_ESCHER_RAINFALL_SCENES_FLATLAND_DEMO_SCENE1_H_

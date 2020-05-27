@@ -16,7 +16,6 @@ FlatlandDemoScene2::~FlatlandDemoScene2() {}
 // This function also gives every rectangle a variable
 // "fall" speed.
 void FlatlandDemoScene2::Init() {
-  renderables_.resize(100);
   fall_speed_.resize(100);
   for (uint32_t i = 0; i < 100; i++) {
     int x_orig = rand() % 2160;
@@ -24,26 +23,15 @@ void FlatlandDemoScene2::Init() {
     uint32_t width = rand() % (230 - 100 + 1) + 100;
     uint32_t height = rand() % (150 - 70 + 1) + 70;
 
-    RectangleDestinationSpec dest = {
-        .origin = vec2(x_orig, y_orig),
-        .extent = vec2(width, height),
-    };
-
     float r = ((double)rand() / (RAND_MAX));
     float g = ((double)rand() / (RAND_MAX));
     float b = ((double)rand() / (RAND_MAX));
     float a = ((double)rand() / (RAND_MAX));
 
-    RectangleRenderable renderable = {
-        .source = RectangleSourceSpec(),
-        .dest = dest,
-        .texture = demo_->default_texture(),
-        .color = vec4(r, g, b, a),
-        .is_transparent = true,
-    };
-
-    renderables_[i] = renderable;
-
+    Rectangle2D renderable(vec2(x_orig, y_orig), vec2(width, height));
+    RectangleCompositor::ColorData color_data(vec4(r, g, b, a), true);
+    renderables_.emplace_back(renderable);
+    color_data_.emplace_back(color_data);
     fall_speed_[i] = rand() % 6 + 1;
   }
 }
@@ -55,9 +43,15 @@ void FlatlandDemoScene2::Init() {
 // illusion of a limitless number of rectangles that continue
 // to fall endlessly.
 void FlatlandDemoScene2::Update(const escher::Stopwatch& stopwatch) {
+  std::vector<Rectangle2D> renderables;
+  std::vector<RectangleCompositor::ColorData> color_data;
   for (uint32_t i = 0; i < 100; i++) {
-    renderables_[i].dest.origin.y += fall_speed_[i];
-    if (renderables_[i].dest.origin.y >= 1140) {
+    vec2 origin = renderables_[i].origin;
+    vec2 extent = renderables_[i].extent;
+    vec4 color = color_data_[i].color;
+    bool transparent = color_data_[i].is_transparent;
+    origin.y += fall_speed_[i];
+    if (renderables_[i].origin.y >= 1140) {
       int x_orig = rand() % 2160;
       int y_orig = -(rand() % 1000);
 
@@ -66,8 +60,16 @@ void FlatlandDemoScene2::Update(const escher::Stopwatch& stopwatch) {
       float b = ((double)rand() / (RAND_MAX));
       float a = ((double)rand() / (RAND_MAX));
 
-      renderables_[i].dest.origin = vec2(x_orig, y_orig);
-      renderables_[i].color = vec4(r, g, b, a);
+      origin = vec2(x_orig, y_orig);
+      color = vec4(r, g, b, a);
     }
+
+    Rectangle2D renderable(origin, extent);
+    RectangleCompositor::ColorData meta(color, transparent);
+    renderables.emplace_back(renderable);
+    color_data.emplace_back(meta);
   }
+
+  renderables_.swap(renderables);
+  color_data_.swap(color_data);
 }

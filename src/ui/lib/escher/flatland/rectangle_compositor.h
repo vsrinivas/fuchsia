@@ -5,9 +5,10 @@
 #ifndef SRC_UI_LIB_ESCHER_FLATLAND_RECTANGLE_COMPOSITOR_H_
 #define SRC_UI_LIB_ESCHER_FLATLAND_RECTANGLE_COMPOSITOR_H_
 
-#include "src/ui/lib/escher/flatland/rectangle_renderable.h"
 #include "src/ui/lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
+#include "src/ui/lib/escher/vk/texture.h"
 
 namespace escher {
 
@@ -19,20 +20,37 @@ class RectangleCompositor {
   static const vk::ImageUsageFlags kRenderTargetUsageFlags;
   static const vk::ImageUsageFlags kTextureUsageFlags;
 
+  struct ColorData {
+    ColorData(vec4 in_color, bool in_transparent)
+        : color(in_color), is_transparent(in_transparent) {
+      FX_CHECK(glm::all(glm::greaterThanEqual(in_color, vec4(0.f))));
+      FX_CHECK(glm::all(glm::lessThanEqual(in_color, vec4(1.f))));
+    }
+
+    const vec4 color = vec4(1.f);
+    const bool is_transparent = true;
+  };
+
   explicit RectangleCompositor(Escher* escher);
   ~RectangleCompositor() = default;
 
   // Draws a single batch of renderables into the provided output image.
   // Parameters:
   // - cmd_buf: The command buffer used to record commands.
-  // - renderables: the batch of renderables to be drawn.
+  // - rectangles: geometry to be drawn.
+  // - textures: must be 1-1 with rectangles, to which they are textured onto.
+  // - metadata: must be 1-1 with rectangles.
+  //             |color| is multiply_color to the texture used in the shader.
+  //             |is_transparent| determines use of opaque or transparent rendering.
   // - output_image: the render target the renderables will be rendered into.
   // - depth_buffer: The depth texture to be used for z-buffering.
   //
   // Depth is implicit. Renderables are drawn in the order they appear in the input
   // vector, with the first entry being the furthest back, and the last the closest.
-  void DrawBatch(CommandBuffer* cmd_buf, const std::vector<RectangleRenderable>& renderables,
-                 const ImagePtr& output_image, const TexturePtr& depth_buffer);
+  void DrawBatch(CommandBuffer* cmd_buf, const std::vector<Rectangle2D>& rectangles,
+                 const std::vector<const TexturePtr>& textures,
+                 const std::vector<ColorData>& color_data, const ImagePtr& output_image,
+                 const TexturePtr& depth_buffer);
 
   // Minimal image constraints to be set on textures passed into DrawBatch.
   static vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format,

@@ -364,22 +364,11 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   ImageMetadata renderable_texture = {
       .collection_id = collection_id, .vmo_idx = 0, .width = 2, .height = 1};
 
-  // Create the transformation matrix for the renderable. The upper-left hand corner
-  // should be at position (6,3), with a width/height of (4,2) and rotated 90 degrees.
-  // After rotation, the width/height should be swapped.
+  // Create a renderable where the upper-left hand corner should be at position (6,3)
+  // with a width/height of (4,2).
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  glm::mat3 matrix = glm::translate(glm::mat3(), glm::vec2(6, 3));
-  matrix = glm::scale(matrix, glm::vec2(kRenderableWidth, kRenderableHeight));
-
-  // Create the renderable to be renderered.
-  RenderableMetadata renderable = {
-      .image = renderable_texture,
-      .uv_coords = {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
-      .matrix = matrix,
-      .multiply_color = glm::vec4(1.),
-      .is_transparent = false,
-  };
+  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Have the client write pixel values to the renderable's texture.
   uint8_t* vmo_host;
@@ -393,7 +382,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   }
 
   // Render the renderable to the render target.
-  renderer.Render(render_target, {renderable});
+  renderer.Render(render_target, {renderable}, {renderable_texture});
 
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center
@@ -434,6 +423,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // ----------------
 // ----------------
 // ----------------
+// TODO(52632): Transparency is currently hardcoded in the renderer to be on. This test will
+// break if that is changed to be hardcoded to false before we expose it in the API.
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
@@ -511,35 +502,12 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   ImageMetadata transparent_texture = {
       .collection_id = collection_id, .vmo_idx = 1, .width = 1, .height = 1};
 
-  // Create the transformation matrix for the renderable. The upper-left hand corner
-  // should be at position (6,3), with a width/height of (4,2) and rotated 90 degrees.
-  // After rotation, the width/height should be swapped.
+  // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  glm::mat3 matrix = glm::translate(glm::mat3(), glm::vec2(6, 3));
-  matrix = glm::scale(matrix, glm::vec2(kRenderableWidth, kRenderableHeight));
-
-  glm::mat3 transparent_matrix = glm::translate(glm::mat3(), glm::vec2(7, 3));
-  transparent_matrix =
-      glm::scale(transparent_matrix, glm::vec2(kRenderableWidth, kRenderableHeight));
-
-  // Create the opaque renderable.
-  RenderableMetadata renderable = {
-      .image = renderable_texture,
-      .uv_coords = {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
-      .matrix = matrix,
-      .multiply_color = glm::vec4(1.),
-      .is_transparent = false,
-  };
-
-  // Create the transparent renderable.
-  RenderableMetadata transparent_renderable = {
-      .image = transparent_texture,
-      .uv_coords = {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
-      .matrix = transparent_matrix,
-      .multiply_color = glm::vec4(1.),
-      .is_transparent = true,
-  };
+  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  Rectangle2D transparent_renderable(glm::vec2(7, 3),
+                                     glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Have the client write pixel values to the renderable's texture.
   uint8_t* vmo_host;
@@ -560,7 +528,8 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   }
 
   // Render the renderable to the render target.
-  renderer.Render(render_target, {renderable, transparent_renderable});
+  renderer.Render(render_target, {renderable, transparent_renderable},
+                  {renderable_texture, transparent_texture});
 
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center

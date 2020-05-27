@@ -16,8 +16,12 @@
 #include <glm/mat3x3.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace flatland {
+
+// Typedef to a flatland type.
+using Rectangle2D = escher::Rectangle2D;
 
 // Used to reference buffer collections registered with the Renderer. Multiple Flatland instances
 // share a Renderer, hence the "global" nature of these IDs.
@@ -57,24 +61,6 @@ struct ImageMetadata {
     return collection_id == meta.collection_id && vmo_idx == meta.vmo_idx && width == meta.width &&
            height == meta.height;
   }
-};
-
-// Struct representing a full flatland renderable struct. These are the primitives
-// that are passed into the renderer to be rendered.
-struct RenderableMetadata {
-  ImageMetadata image;
-
-  // Clockwise uv coordinates, starting from the top-left.
-  std::array<glm::vec2, 4> uv_coords;
-
-  // Global transform matrix.
-  glm::mat3 matrix;
-
-  // Multiply color for the image. Contains an alpha value as well.
-  glm::vec4 multiply_color;
-
-  // Determines whether this renderable should be rendered with transparency or not.
-  bool is_transparent;
 };
 
 // This is the main renderer interface used by the Flatland System. Since Flatland is
@@ -149,7 +135,7 @@ class Renderer {
   virtual std::optional<BufferCollectionMetadata> Validate(
       GlobalBufferCollectionId collection_id) = 0;
 
-  // This function is responsible for rendering a single batch of Flatland renderables into a
+  // This function is responsible for rendering a single batch of Flatland rectangles into a
   // render target. This function is designed to be called on the render thread, not on any
   // Flatland instance thread. The specific behavior may differ depending on the specific subclass
   // implementation, which may also be a null renderer.
@@ -157,8 +143,12 @@ class Renderer {
   // This function assumes that clients have already validated their input data by comparing it
   // against the BufferCollectionMetadata received from calling |Validate| above. This function
   // will abort if invalid data has been passed in or if |Validate| has never been called.
+  //
+  // The size of the arrays |rectangles| and |images| must match or else this function will CHECK.
+  // Entries in each array with the same index will be used together in rendering.
   virtual void Render(const ImageMetadata& render_target,
-                      const std::vector<RenderableMetadata>& renderables) = 0;
+                      const std::vector<Rectangle2D>& rectangles,
+                      const std::vector<ImageMetadata>& images) = 0;
 
   virtual ~Renderer() = default;
 };

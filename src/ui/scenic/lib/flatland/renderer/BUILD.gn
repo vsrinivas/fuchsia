@@ -26,6 +26,7 @@ source_set("renderer") {
   public_configs = [ ":glm_config" ]
 
   public_deps = [
+    "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/zxc",
   ]

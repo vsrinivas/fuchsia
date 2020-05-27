@@ -107,35 +107,23 @@ class RectangleCompositorTest : public ReadbackTest {
 // render as a single white rectangle.
 VK_TEST_F(RectangleCompositorTest, SingleRenderableTest) {
   frame_setup();
-
   EXPECT_TRUE(ren_);
 
-  // Pick asymmetric values for the x and y coordinates.
-  RectangleDestinationSpec dest = {
-      .origin = vec2(150, 200),
-      .extent = vec2(100, 300),
-  };
-
-  RectangleRenderable renderable = {
-      .source = RectangleSourceSpec(),
-      .dest = dest,
-      .texture = default_texture_.get(),
-      .color = vec4(1, 1, 1, 1),
-  };
+  Rectangle2D rectangle(vec2(150, 200), vec2(100, 300));
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_transparent*/ false);
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, {renderable}, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, {rectangle}, {default_texture_}, {color_data},
+                  frame_data_.color_attachment, depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
                                            vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
-
   constexpr ColorBgra kWhite(255, 255, 255, 255);
   constexpr ColorBgra kBlack(0, 0, 0, 0);
-
   EXPECT_EQ(2U, histogram.size());
   EXPECT_EQ(histogram[kWhite], 30000U);  // 100x300.
   EXPECT_EQ(histogram[kBlack], (512U * 512U - 30000U));
@@ -153,21 +141,13 @@ VK_TEST_F(RectangleCompositorTest, SimpleTextureTest) {
   auto texture = CreateFourColorTexture(escher(), gpu_uploader.get());
   gpu_uploader->Submit();
 
-  RectangleDestinationSpec dest = {
-      .origin = vec2(0, 0),
-      .extent = vec2(512, 512),
-  };
-
-  RectangleRenderable renderable = {
-      .source = RectangleSourceSpec(),
-      .dest = dest,
-      .texture = texture.get(),
-      .color = vec4(1, 1, 1, 1),
-  };
+  Rectangle2D rectangle(vec2(0, 0), vec2(512, 512));
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_transparent*/ false);
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, {renderable}, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, {rectangle}, {texture}, {color_data}, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -208,25 +188,14 @@ VK_TEST_F(RectangleCompositorTest, RotatedTextureTest) {
   auto texture = CreateFourColorTexture(escher(), gpu_uploader.get());
   gpu_uploader->Submit();
 
-  // Rotated 90 degrees.
-  RectangleSourceSpec source({/*uv_top_left*/ vec2(0, 1), /*uv_top_right*/ vec2(0, 0),
-                              /*uv_bottom_right*/ vec2(1, 0), /*uv_bottom_left*/ vec2(1, 1)});
-
-  RectangleDestinationSpec dest = {
-      .origin = vec2(256, 0),
-      .extent = vec2(512, 512),
-  };
-
-  RectangleRenderable renderable = {
-      .source = source,
-      .dest = dest,
-      .texture = texture.get(),
-      .color = vec4(1, 1, 1, 1),
-  };
+  Rectangle2D rectangle(vec2(256, 0), vec2(512, 512),
+                        {vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)});
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_transparent*/ false);
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, {renderable}, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, {rectangle}, {texture}, {color_data}, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -252,27 +221,23 @@ VK_TEST_F(RectangleCompositorTest, MultiRenderableTest) {
   frame_setup();
   EXPECT_TRUE(ren_);
 
-  std::vector<RectangleRenderable> renderables;
+  std::vector<Rectangle2D> rectangles;
+  std::vector<RectangleCompositor::ColorData> color_datas;
+  std::vector<const TexturePtr> textures;
   vec4 colors[4] = {vec4{1, 0, 0, 1}, vec4(0, 1, 0, 1), vec4(0, 0, 1, 1), vec4(1, 1, 1, 1)};
   for (uint32_t i = 0; i < 4; i++) {
-    RectangleDestinationSpec dest = {
-        .origin = vec2(128 * i, 0),
-        .extent = vec2(128, 512),
-    };
+    Rectangle2D rectangle(vec2(128 * i, 0), vec2(128, 512));
+    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ false);
 
-    RectangleRenderable renderable = {
-        .source = RectangleSourceSpec(),
-        .dest = dest,
-        .texture = default_texture_.get(),
-        .color = colors[i],
-    };
-
-    renderables.push_back(renderable);
+    rectangles.emplace_back(rectangle);
+    color_datas.emplace_back(color_data);
+    textures.emplace_back(default_texture_);
   }
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, rectangles, textures, color_datas, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -301,28 +266,24 @@ VK_TEST_F(RectangleCompositorTest, OverlapTest) {
   frame_setup();
   EXPECT_TRUE(ren_);
 
-  std::vector<RectangleRenderable> renderables;
+  std::vector<Rectangle2D> rectangles;
+  std::vector<RectangleCompositor::ColorData> color_datas;
+  std::vector<const TexturePtr> textures;
   vec4 colors[2] = {vec4{1, 0, 0, 1}, vec4(0, 1, 0, 1)};
   for (uint32_t i = 0; i < 2; i++) {
-    RectangleDestinationSpec dest = {
-        .origin = vec2(200, 200),
-        .extent = vec2(100, 100),
-    };
+    Rectangle2D rectangle(vec2(200, 200), vec2(100, 100));
 
-    RectangleRenderable renderable = {
-        .source = RectangleSourceSpec(),
-        .dest = dest,
-        .texture = default_texture_.get(),
-        .color = colors[i],
-        .is_transparent = false,
-    };
+    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ false);
 
-    renderables.push_back(renderable);
+    rectangles.emplace_back(rectangle);
+    color_datas.emplace_back(color_data);
+    textures.emplace_back(default_texture_);
   }
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, rectangles, textures, color_datas, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -351,28 +312,24 @@ VK_TEST_F(RectangleCompositorTest, TransparencyTest) {
   frame_setup();
   EXPECT_TRUE(ren_);
 
-  std::vector<RectangleRenderable> renderables;
+  std::vector<Rectangle2D> rectangles;
+  std::vector<RectangleCompositor::ColorData> color_datas;
+  std::vector<const TexturePtr> textures;
+
   vec4 colors[2] = {vec4{1, 0, 0, 1}, vec4(0, 0, 1, 0.6)};
   for (uint32_t i = 0; i < 2; i++) {
-    RectangleDestinationSpec dest = {
-        .origin = vec2(200, 200),
-        .extent = vec2(100, 100),
-    };
+    Rectangle2D rectangle(vec2(200, 200), vec2(100, 100));
+    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ true);
 
-    RectangleRenderable renderable = {
-        .source = RectangleSourceSpec(),
-        .dest = dest,
-        .texture = default_texture_.get(),
-        .color = colors[i],
-        .is_transparent = true,  // Transparency turned on.
-    };
-
-    renderables.push_back(renderable);
+    rectangles.emplace_back(rectangle);
+    color_datas.emplace_back(color_data);
+    textures.emplace_back(default_texture_);
   }
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, rectangles, textures, color_datas, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -399,28 +356,24 @@ VK_TEST_F(RectangleCompositorTest, TransparencyFlagOffTest) {
   frame_setup();
   EXPECT_TRUE(ren_);
 
-  std::vector<RectangleRenderable> renderables;
+  std::vector<Rectangle2D> rectangles;
+  std::vector<RectangleCompositor::ColorData> color_datas;
+  std::vector<const TexturePtr> textures;
+
   vec4 colors[2] = {vec4{1, 0, 0, 1}, vec4(0, 0, 1, 0.6)};
   for (uint32_t i = 0; i < 2; i++) {
-    RectangleDestinationSpec dest = {
-        .origin = vec2(200, 200),
-        .extent = vec2(100, 100),
-    };
+    Rectangle2D rectangle(vec2(200, 200), vec2(100, 100));
+    RectangleCompositor::ColorData color_data(colors[i], /*is_transparent*/ false);
 
-    RectangleRenderable renderable = {
-        .source = RectangleSourceSpec(),
-        .dest = dest,
-        .texture = default_texture_.get(),
-        .color = colors[i],
-        .is_transparent = false,  // Transparency turned OFF.
-    };
-
-    renderables.push_back(renderable);
+    rectangles.emplace_back(rectangle);
+    color_datas.emplace_back(color_data);
+    textures.emplace_back(default_texture_);
   }
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, rectangles, textures, color_datas, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -444,27 +397,23 @@ VK_TEST_F(RectangleCompositorTest, StressTest) {
   frame_setup();
   EXPECT_TRUE(ren_);
 
-  std::vector<RectangleRenderable> renderables;
+  std::vector<Rectangle2D> rectangles;
+  std::vector<RectangleCompositor::ColorData> color_datas;
+  std::vector<const TexturePtr> textures;
   uint32_t max_renderables = 100;
   for (uint32_t i = 0; i < max_renderables; i++) {
-    RectangleDestinationSpec dest = {
-        .origin = vec2(i, 0),
-        .extent = vec2(1, 1),
-    };
+    Rectangle2D rectangle(vec2(i, 0), vec2(1, 1));
+    RectangleCompositor::ColorData color_data(vec4(1, 0, 0, 1), /*is_transparent*/ false);
 
-    RectangleRenderable renderable = {
-        .source = RectangleSourceSpec(),
-        .dest = dest,
-        .texture = default_texture_.get(),
-        .color = vec4(1, 0, 0, 1),
-    };
-
-    renderables.push_back(renderable);
+    rectangles.emplace_back(rectangle);
+    color_datas.emplace_back(color_data);
+    textures.emplace_back(default_texture_);
   }
 
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
-  ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
+  ren_->DrawBatch(cmd_buf, rectangles, textures, color_datas, frame_data_.color_attachment,
+                  depth_texture);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),

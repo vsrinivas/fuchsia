@@ -126,6 +126,11 @@ void RainfallDemo::DrawFrame(const escher::FramePtr& frame, const escher::ImageP
     FX_DCHECK(demo_scenes_[current_scene_]);
     demo_scenes_[current_scene_]->Update(stopwatch_);
     const auto& batch = demo_scenes_[current_scene_]->renderables();
-    renderer_->DrawBatch(frame->cmds(), batch, output_image, depth_buffer_);
+    const auto& color_data = demo_scenes_[current_scene_]->color_data();
+    std::vector<const TexturePtr> textures;
+    for (uint32_t i = 0; i < batch.size(); i++) {
+      textures.push_back(default_texture_);
+    }
+    renderer_->DrawBatch(frame->cmds(), batch, textures, color_data, output_image, depth_buffer_);
   }
 }
