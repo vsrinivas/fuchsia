@@ -151,8 +151,15 @@ impl<R: Render> IOwned<R> {
     }
 
     /// Explicitly update the inspect subtree.
+    // TODO(fxbug.dev/52796): Remove this method
     pub fn iupdate(&mut self) {
         R::update(&self._base, &mut self._inspect_data);
+    }
+
+    /// Returns a RAII guard which can be used for mutations. When the guard
+    /// goes out of scope, the new inspect state is published.
+    pub fn as_mut(&mut self) -> IOwnedMutGuard<'_, R> {
+        IOwnedMutGuard(self)
     }
 
     /// Set the value, then update inspect state.
@@ -212,9 +219,34 @@ impl<R: Render> Deref for IOwned<R> {
     }
 }
 
+// TODO(fxbug.dev/52796): Remove the DerefMut impl in favor of the IOwnedMutGuard
 impl<R: Render> DerefMut for IOwned<R> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self._base
+    }
+}
+
+/// A RAII implementation of a scoped guard of an IOwned smart pointer. When
+/// this structure is dropped (falls out of scope), the new inspect state will
+/// be published.
+pub struct IOwnedMutGuard<'a, R: Render>(&'a mut IOwned<R>);
+
+impl<'a, R: Render> Deref for IOwnedMutGuard<'a, R> {
+    type Target = R::Base;
+    fn deref(&self) -> &R::Base {
+        &self.0._base
+    }
+}
+
+impl<'a, R: Render> DerefMut for IOwnedMutGuard<'a, R> {
+    fn deref_mut(&mut self) -> &mut R::Base {
+        &mut self.0._base
+    }
+}
+
+impl<'a, R: Render> Drop for IOwnedMutGuard<'a, R> {
+    fn drop(&mut self) {
+        R::update(&self.0._base, &mut self.0._inspect_data);
     }
 }
 

@@ -408,6 +408,47 @@ fn ivalue_nested() {
 }
 
 #[test]
+fn ivalue_as_mut() {
+    let inspector = Inspector::new();
+    let root = inspector.root();
+    let yak_base = Yak {
+        name: "Big Sebastian".to_string(),
+        age: 25,
+        credit_card_no: "12345678".to_string(),
+        yakling: Yakling { name: "Lil Sebastian".to_string(), age: 2 },
+    };
+    let mut yak = IValue::attached(yak_base, &root, "my_yak");
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Big Sebastian",
+            age: 25i64,
+            yakling: {
+                name: "Lil Sebastian",
+                years_old: 2u64,
+            },
+        }
+    });
+    {
+        let mut yak = yak.as_mut();
+        yak.yakling.age += 1; // Happy bday, Lil Sebastian
+        yak.name = "Big Sebastian Sr.".to_string();
+        yak.credit_card_no = "1234".to_string();
+    }
+    assert_inspect_tree!(inspector, root: {
+        my_yak: {
+            name: "Big Sebastian Sr.",
+            age: 25i64,
+            yakling: {
+                name: "Lil Sebastian",
+                years_old: 3u64,
+            },
+        }
+    });
+    std::mem::drop(yak);
+    assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
 fn idebug_enum() {
     let inspector = Inspector::new();
     let root = inspector.root();
