@@ -51,6 +51,19 @@ void PrettyStackManager::LoadDefaultMatchers() {
   matchers.push_back(std::move(pthread_startup));
   matchers.push_back(std::move(std_thread_startup));
 
+  // Async loop thread startup. Don't count "async_loop_run" because we count that as part of runing
+  // and task dispatch (dispatch will be the same with a loop and without).
+  matchers.push_back(StackGlob("async_loop thread startup",
+                               {PrettyFrameGlob::FuncFile("async_loop_run_thread", "loop.c"),
+                                PrettyFrameGlob::FuncFile("start_c11", "pthread_create.c"),
+                                PrettyFrameGlob::Func("thread_trampoline")}));
+
+  // Async loop task dispatch.
+  matchers.push_back(StackGlob("Dispatching task from async loop",
+                               {PrettyFrameGlob::Func("async_loop_dispatch_task"),
+                                PrettyFrameGlob::Func("async_loop_dispatch_tasks"),
+                                PrettyFrameGlob::Func("async_loop_run")}));
+
   // fit::promise and fit::function occur a lot and generate extremely long and useless names.
   // Matching useful sequences is difficult. But just replacing individual stack entries with
   // a simple string eliminates ~3 lines of template goop and ~3 lines of unnecessary function
