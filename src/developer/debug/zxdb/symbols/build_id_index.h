@@ -45,6 +45,9 @@ class BuildIDIndex {
   // The file type specifies whether we need the debug info, or the actual binary.
   std::string FileForBuildID(const std::string& build_id, DebugSymbolFileType file_type);
 
+  // Clears all symbol sources. No symbols can be loaded after this call until Add*() is called.
+  void ClearSymbolSources();
+
   // Manually inserts a mapping of a build ID to a file name. The file is probed for its build ID
   // and type, and if not found or not a valid ELF file, it is ignored and we return false.
   bool AddOneFile(const std::string& file_name);

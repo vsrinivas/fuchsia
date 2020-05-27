@@ -630,7 +630,11 @@ void SystemImpl::AddNewJob(std::unique_ptr<Job> job) {
 void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
   if (setting_name == ClientSettings::System::kSymbolPaths) {
     auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
+
+    // Clear the symbol sources and add them back to sync the index with the setting.
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
+    build_id_index.ClearSymbolSources();
+
     for (const std::string& path : paths) {
       if (StringEndsWith(path, ".txt")) {
         build_id_index.AddBuildIDMappingFile(path);

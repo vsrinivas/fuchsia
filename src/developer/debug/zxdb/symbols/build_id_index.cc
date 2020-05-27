@@ -96,6 +96,13 @@ void BuildIDIndex::AddBuildIDMappingForTest(const std::string& build_id,
   }
 }
 
+void BuildIDIndex::ClearSymbolSources() {
+  build_id_files_.clear();
+  sources_.clear();
+  always_repo_sources_.clear();
+  ClearCache();
+}
+
 bool BuildIDIndex::AddOneFile(const std::string& file_name) {
   return IndexOneSourceFile(file_name, true);
 }
@@ -249,16 +256,12 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
         indexed++;
     }
 
-    if (!ec) {
-      status_.emplace_back(path, indexed);
-    }
-  } else if (!ec) {
-    if (IndexOneSourceFile(path)) {
-      status_.emplace_back(path, 1);
-    } else {
-      status_.emplace_back(path, 0);
-      LogMessage(fxl::StringPrintf("Symbol file could not be loaded: %s", path.c_str()));
-    }
+    status_.emplace_back(path, indexed);
+  } else if (!ec && IndexOneSourceFile(path)) {
+    status_.emplace_back(path, 1);
+  } else {
+    status_.emplace_back(path, 0);
+    LogMessage(fxl::StringPrintf("Symbol file could not be loaded: %s", path.c_str()));
   }
 }
 

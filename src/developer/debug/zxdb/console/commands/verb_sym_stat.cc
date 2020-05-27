@@ -28,18 +28,42 @@ const char kSymStatHelp[] =
 
   Prints out symbol information.
 
-  With no arguments, this shows global information and information for the
-  current (or specified) process. The global information includes the symbol
-  search path and how many files are indexed from each location.
+  With no arguments, this refreshes the symbol index and shows global
+  information and information for the current (or specified) process.
 
-  If there is a process it will includes which libraries are loaded, how many
-  symbols each has, and where the symbol file is located.
+  The global information includes the symbol search paths and how many files are
+  indexed from each location. When a symbol path is a "build-id" directory
+  hierarchy, the output prints "folder" since these are not indexed in advance.
+  Instead, build-id folders are searched for a matching file name on demand.
+
+  If there is a current process the output will includes which libraries are
+  loaded, how many symbols each has, and where the symbol file is located.
+
+Symbol troubleshooting
+
+  Processes with zero or very few symbols likely indicate the file has had the
+  symbols stripped (there are sometimes a few symbols even in stripped
+  binaries). Make sure an unstripped binary exists in a directory in the
+  "symbol-paths" setting and restart either the debugged program or the
+  debugger.
+
+  To append to the symbol search path, run for example:
+
+    set symbol-paths += /home/you/project/out/debug/exe.unstripped
+
+  or use the "-s" command-line flag. See "get symbol-paths" for more information
+  on this setting and to view the current list.
 
 Arguments
 
   --dump-index
+
       Dumps the symbol index which maps build IDs to local file paths. This
       can be useful for debugging cases of missing symbols.
+
+      Note that this does not print out the information from "build-id" folders
+      (denoted "folder" in the sym-stat output). These are loaded on-demand by
+      searching for a file name with the corresponding build ID.
 
 Example
 
@@ -94,6 +118,8 @@ void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process, Out
 void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
   out->Append(Syntax::kHeading, "Symbol index status\n\n");
 
+  out->Append(Syntax::kComment, "  This command just refreshed the index.\n");
+
   std::vector<std::vector<OutputBuffer>> table;
   auto index_status = system_symbols->build_id_index().GetStatus();
   if (index_status.empty()) {
@@ -143,6 +169,9 @@ Err RunVerbSymStat(ConsoleContext* context, const Command& cmd) {
 
   SystemSymbols* system_symbols = context->session()->system().GetSymbols();
   OutputBuffer out;
+
+  // Force an update of the symbol index.
+  system_symbols->build_id_index().ClearCache();
 
   if (cmd.HasSwitch(kDumpIndexSwitch)) {
     DumpBuildIdIndex(system_symbols, &out);
