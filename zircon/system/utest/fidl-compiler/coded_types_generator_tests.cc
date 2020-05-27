@@ -31,14 +31,14 @@ struct Arrays {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("uint8", type0->coded_name.c_str());
-  EXPECT_FALSE(type0->coding_needed);
+  EXPECT_TRUE(type0->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
   auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint8, type0_primitive->subtype);
 
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("Array7_5uint8", type1->coded_name.c_str());
-  EXPECT_FALSE(type1->coding_needed);
+  EXPECT_TRUE(type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type1->kind);
   auto type1_array = static_cast<const fidl::coded::ArrayType*>(type1);
   EXPECT_EQ(1, type1_array->element_size);
@@ -46,7 +46,7 @@ struct Arrays {
 
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STR_EQ("Array77_13Array7_5uint8", type2->coded_name.c_str());
-  EXPECT_FALSE(type2->coding_needed);
+  EXPECT_TRUE(type2->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type2->kind);
   auto type2_array = static_cast<const fidl::coded::ArrayType*>(type2);
   EXPECT_EQ(7 * 1, type2_array->element_size);
@@ -54,7 +54,7 @@ struct Arrays {
 
   auto type3 = gen.coded_types().at(3).get();
   EXPECT_STR_EQ("Array1001_23Array77_13Array7_5uint8", type3->coded_name.c_str());
-  EXPECT_FALSE(type3->coding_needed);
+  EXPECT_TRUE(type3->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
   EXPECT_EQ(11 * 7 * 1, type3_array->element_size);
@@ -363,10 +363,9 @@ struct Wrapper2 {
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
-  // 7 == size of {bool-outside-of-envelope, bool-inside-of-envelope,
-  // int32-outside-of-envelope, int32-inside-of-envelope, MyStruct?, MyUnion?,
-  // MyXUnion?}, which is all the coded types in the example.
-  ASSERT_EQ(7, gen.coded_types().size());
+  // 5 == size of {bool, int32, MyStruct?, MyUnion?, MyXUnion?},
+  // which are all the coded types in the example.
+  ASSERT_EQ(5, gen.coded_types().size());
 
   END_TEST;
 }
@@ -432,16 +431,16 @@ struct Complex {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("int32", type0->coded_name.c_str());
-  EXPECT_FALSE(type0->coding_needed);
+  EXPECT_TRUE(type0->coding_needed);
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("bool", type1->coded_name.c_str());
-  EXPECT_FALSE(type1->coding_needed);
+  EXPECT_TRUE(type1->coding_needed);
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STR_EQ("int64", type2->coded_name.c_str());
-  EXPECT_FALSE(type2->coding_needed);
+  EXPECT_TRUE(type2->coding_needed);
   auto type3 = gen.coded_types().at(3).get();
   EXPECT_STR_EQ("int16", type3->coded_name.c_str());
-  EXPECT_FALSE(type3->coding_needed);
+  EXPECT_TRUE(type3->coding_needed);
 
   auto name_bool_and_int32 = fidl::flat::Name::Key(library.library(), "BoolAndInt32");
   auto type_bool_and_int32 = gen.CodedTypeFor(name_bool_and_int32);
@@ -450,10 +449,10 @@ struct Complex {
   auto type_bool_and_int32_struct =
       static_cast<const fidl::coded::StructType*>(type_bool_and_int32);
   ASSERT_EQ(type_bool_and_int32_struct->fields.size(), 2);
-  EXPECT_EQ(type_bool_and_int32_struct->fields[0].type, nullptr);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[0].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].offset, 0);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].padding, 3);
-  EXPECT_EQ(type_bool_and_int32_struct->fields[1].type, nullptr);
+  EXPECT_EQ(type_bool_and_int32_struct->fields[1].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_bool_and_int32_struct->fields[1].offset, 4);
   EXPECT_EQ(type_bool_and_int32_struct->fields[1].padding, 0);
 
@@ -463,19 +462,18 @@ struct Complex {
   EXPECT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
   auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
   ASSERT_EQ(type_complex_struct->fields.size(), 4);
-  EXPECT_EQ(type_complex_struct->fields[0].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[0].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_complex_struct->fields[0].offset, 0);
   EXPECT_EQ(type_complex_struct->fields[0].padding, 0);
-  EXPECT_EQ(type_complex_struct->fields[1].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[1].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_complex_struct->fields[1].offset, 4);
   EXPECT_EQ(type_complex_struct->fields[1].padding, 3);
-  EXPECT_EQ(type_complex_struct->fields[2].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[2].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_complex_struct->fields[2].offset, 8);
   EXPECT_EQ(type_complex_struct->fields[2].padding, 0);
-  EXPECT_EQ(type_complex_struct->fields[3].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[3].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_complex_struct->fields[3].offset, 16);
   EXPECT_EQ(type_complex_struct->fields[3].padding, 6);
-
   END_TEST;
 }
 
@@ -495,7 +493,7 @@ table MyTable {
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
-  ASSERT_EQ(4, gen.coded_types().size());
+  ASSERT_EQ(3, gen.coded_types().size());
 
   // This bool is used in the coding table of the MyTable table.
   auto type0 = gen.coded_types().at(0).get();
@@ -512,15 +510,7 @@ table MyTable {
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
-  // This bool is part of array<bool>; it will not map to any coding table.
-  auto type2 = gen.coded_types().at(2).get();
-  EXPECT_STR_EQ("bool", type2->coded_name.c_str());
-  ASSERT_FALSE(type2->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
-  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
-  EXPECT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
-
-  auto type3 = gen.coded_types().at(3).get();
+  auto type3 = gen.coded_types().at(2).get();
   EXPECT_STR_EQ("Array42_4bool", type3->coded_name.c_str());
   EXPECT_TRUE(type3->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);

@@ -23,12 +23,11 @@ TEST(SomeStruct, CodingTable) {
   ASSERT_STR_EQ("fidl.test.example.codingtables/SomeStruct", some_struct_table.name);
   // Every field (including primitives without padding) has a coding table generated for it.
   ASSERT_EQ(2, some_struct_table.field_count);
-  ASSERT_EQ(nullptr, some_struct_table.fields[0].type);
-  ASSERT_EQ(nullptr, some_struct_table.fields[1].type);
-  // When |type| is nullptr, |offset| stores the starting offset of the padding.
-  ASSERT_EQ(1, some_struct_table.fields[0].offset);
+  ASSERT_EQ(&fidl_internal_kBoolTable, some_struct_table.fields[0].type);
+  ASSERT_EQ(&fidl_internal_kInt32Table, some_struct_table.fields[1].type);
+  ASSERT_EQ(0, some_struct_table.fields[0].offset);
   ASSERT_EQ(3, some_struct_table.fields[0].padding);
-  ASSERT_EQ(8, some_struct_table.fields[1].offset);
+  ASSERT_EQ(4, some_struct_table.fields[1].offset);
   ASSERT_EQ(0, some_struct_table.fields[1].padding);
 }
 

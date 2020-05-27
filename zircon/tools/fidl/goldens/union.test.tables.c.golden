@@ -54,7 +54,7 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector10nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=NULL, .max_count=10u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector10nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=10u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
 
 static const struct FidlCodedString String16nonnullableTable = {.tag=kFidlTypeString, .max_size=16u, .nullable=kFidlNullability_Nonnullable};
 

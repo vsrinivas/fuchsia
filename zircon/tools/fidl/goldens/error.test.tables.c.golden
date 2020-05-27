@@ -24,7 +24,7 @@ const struct FidlCodedStruct fidl_test_json_ExamplefooResponseTable = {.tag=kFid
 
 
 static const struct FidlStructField Fields35fidl_test_json_Example_foo_Response[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=0u, .padding=0u}
 };
 const struct FidlCodedStruct fidl_test_json_Example_foo_ResponseTable = {.tag=kFidlTypeStruct, .fields=Fields35fidl_test_json_Example_foo_Response, .field_count=1u, .size=8u, .name="fidl.test.json/Example_foo_Response"};
 

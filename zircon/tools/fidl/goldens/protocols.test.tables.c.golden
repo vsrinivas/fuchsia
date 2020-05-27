@@ -17,28 +17,28 @@ extern const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_Result
 
 extern const struct FidlCodedStruct test_name_ChannelProtocolMethodARequestTable;
 static const struct FidlStructField Fields39test_name_ChannelProtocolMethodARequest[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=24u, .padding=0u}
 };
 const struct FidlCodedStruct test_name_ChannelProtocolMethodARequestTable = {.tag=kFidlTypeStruct, .fields=Fields39test_name_ChannelProtocolMethodARequest, .field_count=2u, .size=32u, .name="test.name/ChannelProtocolMethodARequest"};
 
 extern const struct FidlCodedStruct test_name_ChannelProtocolEventAEventTable;
 static const struct FidlStructField Fields36test_name_ChannelProtocolEventAEvent[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=24u, .padding=0u}
 };
 const struct FidlCodedStruct test_name_ChannelProtocolEventAEventTable = {.tag=kFidlTypeStruct, .fields=Fields36test_name_ChannelProtocolEventAEvent, .field_count=2u, .size=32u, .name="test.name/ChannelProtocolEventAEvent"};
 
 extern const struct FidlCodedStruct test_name_ChannelProtocolMethodBRequestTable;
 static const struct FidlStructField Fields39test_name_ChannelProtocolMethodBRequest[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=24u, .padding=0u}
 };
 const struct FidlCodedStruct test_name_ChannelProtocolMethodBRequestTable = {.tag=kFidlTypeStruct, .fields=Fields39test_name_ChannelProtocolMethodBRequest, .field_count=2u, .size=32u, .name="test.name/ChannelProtocolMethodBRequest"};
 
 extern const struct FidlCodedStruct test_name_ChannelProtocolMethodBResponseTable;
 static const struct FidlStructField Fields40test_name_ChannelProtocolMethodBResponse[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
 };
 const struct FidlCodedStruct test_name_ChannelProtocolMethodBResponseTable = {.tag=kFidlTypeStruct, .fields=Fields40test_name_ChannelProtocolMethodBResponse, .field_count=1u, .size=24u, .name="test.name/ChannelProtocolMethodBResponse"};
 
@@ -141,9 +141,9 @@ const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumResponseTable =
 
 
 static const struct FidlStructField Fields51test_name_WithErrorSyntax_ResponseAsStruct_Response[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=16u, .padding=0u},
-    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=0u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
 };
 const struct FidlCodedStruct test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = {.tag=kFidlTypeStruct, .fields=Fields51test_name_WithErrorSyntax_ResponseAsStruct_Response, .field_count=3u, .size=24u, .name="test.name/WithErrorSyntax_ResponseAsStruct_Response"};
 

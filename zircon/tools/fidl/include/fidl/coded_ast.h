@@ -114,8 +114,7 @@ struct Type {
 struct PrimitiveType : public Type {
   PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
                 CodingContext context)
-      : Type(Kind::kPrimitive, std::move(name), size, context == CodingContext::kInsideEnvelope),
-        subtype(subtype) {}
+      : Type(Kind::kPrimitive, std::move(name), size, true), subtype(subtype) {}
 
   const types::PrimitiveSubtype subtype;
 };
@@ -250,8 +249,7 @@ struct ProtocolType : public Type {
 struct ArrayType : public Type {
   ArrayType(std::string name, const Type* element_type, uint32_t array_size, uint32_t element_size,
             CodingContext context)
-      : Type(Kind::kArray, std::move(name), array_size,
-             context == CodingContext::kInsideEnvelope || element_type->coding_needed),
+      : Type(Kind::kArray, std::move(name), array_size, true),
         element_type(element_type),
         element_size(element_size) {}
 

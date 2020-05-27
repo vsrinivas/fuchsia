@@ -58,17 +58,13 @@ class CodedTypesGenerator {
     }
   };
 
-  template <typename FlatType, typename CodedType>
-  using MaybeCodedTypeMap = std::map<const std::pair<bool, const FlatType*>, const CodedType*,
-                                     MaybeCodedTypeCompare<FlatType>>;
-
   // All flat::Types and flat::Names here are owned by library_, and
   // all coded::Types by the named_coded_types_ map or the coded_types_ vector.
-  MaybeCodedTypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
+  TypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
   TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
   TypeMap<flat::RequestHandleType, coded::RequestHandleType> request_type_map_;
   TypeMap<flat::IdentifierType, coded::ProtocolHandleType> protocol_type_map_;
-  MaybeCodedTypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
+  TypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
   TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
   TypeMap<flat::StringType, coded::StringType> string_type_map_;
   TypeMap<flat::IdentifierType, coded::StructPointerType> struct_type_map_;

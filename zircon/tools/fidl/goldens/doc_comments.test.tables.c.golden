@@ -32,7 +32,7 @@ static const struct FidlTableField Fields15test_name_Table[] = {
 const struct FidlCodedTable test_name_TableTable = {.tag=kFidlTypeTable, .fields=Fields15test_name_Table, .field_count=1u, .name="test.name/Table"};
 
 static const struct FidlStructField Fields16test_name_Struct[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table), .offset=0u, .padding=0u}
 };
 const struct FidlCodedStruct test_name_StructTable = {.tag=kFidlTypeStruct, .fields=Fields16test_name_Struct, .field_count=1u, .size=4u, .name="test.name/Struct"};
 

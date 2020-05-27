@@ -11,7 +11,7 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 static const struct FidlCodedVector Vector5nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=5u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedVector Vector5nonnullable6uint32Table = {.tag=kFidlTypeVector, .element=NULL, .max_count=5u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedVector Vector5nonnullable6uint32Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint32Table), .max_count=5u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
 
 static const struct FidlCodedVector Vector4294967295nonnullable27String4294967295nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String4294967295nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
@@ -25,7 +25,7 @@ static const struct FidlCodedHandle HandlehandlenullableTable = {.tag=kFidlTypeH
 
 
 static const struct FidlStructField Fields29example_ExampleOfUseOfAliases[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .offset=0u, .padding=4u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable), .offset=8u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable6uint32Table), .offset=24u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable27String4294967295nonnullableTable), .offset=40u, .padding=0u},

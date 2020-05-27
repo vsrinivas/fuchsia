@@ -43,7 +43,7 @@ static const struct FidlTableField Fields20example_ExampleTable[] = {
 const struct FidlCodedTable example_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields20example_ExampleTable, .field_count=1u, .name="example/ExampleTable"};
 
 static const struct FidlStructField Fields21example_ExampleStruct[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .offset=0u, .padding=0u}
 };
 const struct FidlCodedStruct example_ExampleStructTable = {.tag=kFidlTypeStruct, .fields=Fields21example_ExampleStruct, .field_count=1u, .size=4u, .name="example/ExampleStruct"};
 
