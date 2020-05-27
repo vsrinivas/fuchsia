@@ -29,7 +29,7 @@ namespace zx {
 //   zx::status<> AddNewNode(Tree* tree, Args...) {
 //     auto status = MakeNode(Args...));
 //     if (status.is_ok() {
-//       tree->AddNode(std::move(node_ref));
+//       tree->AddNode(std::move(status.value()));
 //       return zx::ok();
 //     }
 //     return status.take_error();
