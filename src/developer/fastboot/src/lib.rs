@@ -10,8 +10,8 @@ use {
     std::io::{Read, Write},
 };
 
-mod command;
-mod reply;
+pub mod command;
+pub mod reply;
 
 const MAX_PACKET_SIZE: usize = 64;
 
