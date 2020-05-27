@@ -180,6 +180,8 @@ class Walker final {
   }
 
   Result WalkInternal(const fidl_type_t* type, Position position, OutOfLineDepth depth);
+  Result WalkIterableInternal(const fidl_type_t* type, Walker<VisitorImpl>::Position position,
+                              uint32_t stride, uint32_t end_offset, OutOfLineDepth depth);
   Result WalkEnum(const FidlCodedEnum* fidl_coded_enum, Position position);
   Result WalkBits(const FidlCodedBits* coded_bits, Position position);
   Result WalkStruct(const FidlCodedStruct* coded_struct, Position position, OutOfLineDepth depth);
@@ -228,6 +230,22 @@ Result Walker<VisitorImpl>::WalkInternal(const fidl_type_t* type,
       return Result::kContinue;
   }
   assert(false && "unhandled type");
+  return Result::kContinue;
+}
+
+template <typename VisitorImpl>
+Result Walker<VisitorImpl>::WalkIterableInternal(const fidl_type_t* type,
+                                                 Walker<VisitorImpl>::Position position,
+                                                 uint32_t stride, uint32_t end_offset,
+                                                 OutOfLineDepth depth) {
+  if (type->type_tag() == kFidlTypePrimitive) {
+    // nothing to do
+    return Result::kContinue;
+  }
+  for (uint32_t offset = 0; offset < end_offset; offset += stride) {
+    auto result = WalkInternal(&type->coded_handle(), position + offset, depth);
+    FIDL_RESULT_GUARD(result);
+  }
   return Result::kContinue;
 }
 
@@ -488,12 +506,9 @@ template <typename VisitorImpl>
 Result Walker<VisitorImpl>::WalkArray(const FidlCodedArray* coded_array,
                                       Walker<VisitorImpl>::Position position,
                                       OutOfLineDepth depth) {
-  for (uint32_t offset = 0; offset < coded_array->array_size; offset += coded_array->element_size) {
-    Position element_pos = position + offset;
-    if (coded_array->element) {
-      auto result = WalkInternal(coded_array->element, element_pos, depth);
-      FIDL_RESULT_GUARD(result);
-    }
+  if (coded_array->element) {
+    return WalkIterableInternal(coded_array->element, position, coded_array->element_size,
+                                coded_array->array_size, depth);
   }
   return Result::kContinue;
 }
@@ -602,11 +617,10 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
   FIDL_STATUS_GUARD(status);
   if (coded_vector->element) {
     uint32_t stride = coded_vector->element_size;
-    uint64_t max_byte_count = count * stride;
-    for (uint32_t offset = 0; offset < max_byte_count; offset += stride) {
-      Result result = WalkInternal(coded_vector->element, array_position + offset, array_depth);
-      FIDL_RESULT_GUARD(result);
-    }
+    ZX_ASSERT(count <= std::numeric_limits<uint32_t>::max());
+    uint32_t end_offset = uint32_t(count) * stride;
+    return WalkIterableInternal(coded_vector->element, array_position, stride, end_offset,
+                                array_depth);
   }
   return Result::kContinue;
 }
