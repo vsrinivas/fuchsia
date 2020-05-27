@@ -16,7 +16,8 @@
         "base_shell": { "$ref": "#definitions/base_shell" },
         "session_shells": {
           "type": "array",
-          "items": { "$ref": "#/definitions/session_shell" }
+          "items": { "$ref": "#/definitions/session_shell" },
+          "maxItems": 1
         },
         "story_shell_url": {
           "type": "string",

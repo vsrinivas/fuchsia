@@ -78,8 +78,8 @@ The file may contain (non-standard JSON) C-style comments
     - A list of arguments to be passed to the base shell specified by url.
       Arguments must be prefixed with --.
 - `session_shells` **array** _(required)_
-  - Lists all the session shells with each shell containing the following
-    fields:
+  - List of max one session shell containing the following
+    fields (is an Array type for backwards compatibility):
     - `url`: **string** _(required)_
       - The fuchsia component url for which session shell to use.
     - `display_usage`: **string** _(optional)_
