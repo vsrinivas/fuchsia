@@ -20,7 +20,8 @@
 // (3) Tested
 //     Tests for this library can be found at zircon/system/utest/zbi/*
 
-#pragma once
+#ifndef LIBZBI_ZBI_H_
+#define LIBZBI_ZBI_H_
 
 #include <stddef.h>
 #include <zircon/boot/image.h>
@@ -36,6 +37,7 @@ typedef enum zbi_result {
   ZBI_RESULT_BAD_MAGIC,
   ZBI_RESULT_BAD_VERSION,
   ZBI_RESULT_BAD_CRC,
+  ZBI_RESULT_BAD_ALIGNMENT,
   ZBI_RESULT_ERR_TRUNCATED,
 
   ZBI_RESULT_TOO_BIG,
@@ -46,30 +48,144 @@ typedef enum zbi_result {
 
 typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr, void* payload, void* cookie);
 
-// Creates an empty ZBI container in buffer.
+// Creates an empty ZBI container in the buffer.
+//
+// The buffer must be aligned to ZBI_ALIGNMENT and large enough to store the
+// empty container.
+//
+// Parameters:
+//     buffer - The buffer the container will be created in.
+//     length - The size of the buffer.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If buffer is NULL.
+//     ZBI_RESULT_TOO_BIG - If the container cannot fit in the buffer.
+//     ZBI_RESULT_BAD_ALIGNMENT - If the buffer is not aligned.
 zbi_result_t zbi_init(void* buffer, size_t length);
 
-// Checks the integrity of the underlying ZBI.
-// If err is not null and an error is found, err will point to the ZBI entry
-// in which a problem was found the return value will attempt to specify the
-// nature of the error.
+// Validates the ZBI.
+//
+// Checks the container and all of its entries.
+//
+// If an error is found and err is not null, err will point to the ZBI entry in
+// which the problem was found.
+//
+// Parameters:
+//     base - The ZBI to check.
+//     err - Optional, set to the problem entry if one is found.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If base is NULL.
+//     Not ZBI_RESULT_OK - Indicating the error.
 zbi_result_t zbi_check(const void* base, zbi_header_t** err);
 
-// Same, but also diagnose ZBI_RESULT_INCOMPLETE_* result codes if the
-// ZBI is not a valid complete ZBI for the host platform.
+// Validates the ZBI for the host platform.
+//
+// Same as zbi_check but also diagnoses ZBI_RESULT_INCOMPLETE_* result codes
+// if the ZBI is not a valid complete ZBI for the host platform.
+//
+// Parameters:
+//     base - The ZBI to check.
+//     err - Optional, set to the problem entry if one is found.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If base is NULL.
+//     Not ZBI_RESULT_OK - Indicating the error.
 zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err);
 
-// Call `cb` with a pointer to the header and payload of each ZBI item
-// excluding the root ZBI_TYPE_CONTAINER.
+// Calls the callback with a pointer to the header and payload of each ZBI
+// entry (excluding the container).
 //
-// If any of the callbacks return anything other than ZBI_RESULT_OK, iteration
-// will cease and zbi_for_each will short circuit and return with the error
-// result. If all items were successfully processed, ForEach will return
-// ZBI_RESULT_OK.
+// Returns early if the callback does not return ZBI_RESULT_OK, leaving
+// previous entries in a potentially modified state.
 //
-// cookie will be passed transparently to each cb and is available for the
-// client to pass data back from each of the callbacks.
-zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb, void* cookie);
+// Parameters:
+//     base - The ZBI to iterate over.
+//     callback - The callback invoked for each entry.
+//     cookie - Transparent data provided by the client to the callback.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If base is NULL.
+//     ZBI_RESULT_ERR_TRUNCATED - If the next entry would read past the ZBI.
+//     An error returned by the callback.
+zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, void* cookie);
+
+// Creates a new ZBI entry and returns a pointer to the payload.
+//
+// The new entry is aligned to ZBI_ALIGNMENT. The capacity of the base ZBI must
+// be large enough to fit the new entry.
+//
+// The ZBI_FLAG_VERSION is unconditionally set for the new entry.
+//
+// The ZBI_FLAG_CRC32 flag yields an error because CRC computation is not yet
+// supported.
+//
+// Parameters:
+//     base - The base ZBI.
+//     capacity - The max potential size of the base ZBI.
+//     type - The new entry's type.
+//     extra - The new entry's type-specific data.
+//     flags - The new entry's flags.
+//     payload_length - The length of the new entry’s payload.
+//     payload - Set to the address of the entry's payload.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If base is NULL.
+//     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
+//     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
+//     ZBI_RESULT_ERROR - If the CRC32 flag is used.
+zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
+                              uint32_t flags, uint32_t payload_length, void** payload);
+
+// Creates a new ZBI entry with the provided payload.
+//
+// The new entry is aligned to ZBI_ALIGNMENT. The capacity of the base ZBI must
+// be large enough to fit the new entry.
+//
+// The ZBI_FLAG_VERSION is unconditionally set for the new entry.
+//
+// The ZBI_FLAG_CRC32 flag yields an error because CRC computation is not yet
+// supported.
+//
+// Parameters:
+//     base - The base ZBI.
+//     capacity - The max potential size of the base ZBI.
+//     type - The new entry's type.
+//     extra - The new entry's type-specific data.
+//     flags - The new entry's flags.
+//     payload - The payload, copied into the new entry.
+//     payload_length - The length of the new entry’s payload.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If base or payload is NULL.
+//     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
+//     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
+//     ZBI_RESULT_ERROR - If the CRC32 flag is used.
+zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t type,
+                                           uint32_t extra, uint32_t flags, const void* payload,
+                                           uint32_t payload_length);
+
+// Extends a ZBI container with another container's payload.
+//
+// Both dst and src must be ZBI containers.
+//
+// Parameters:
+//     dst - The destination container.
+//     capacity - The max potential size of the base ZBI.
+//     src - The container to copy the payload from.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If dst or src is NULL.
+//     ZBI_RESULT_BAD_TYPE - If dst or src is not a container.
+//     ZBI_RESULT_TOO_BIG - If dst is too small.
+zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
 
 // Creates a new ZBI section and appends it to the end of the ZBI pointed to by
 // `base`. Assumes that the buffer at `base` has a length of `capacity` which
@@ -83,14 +199,16 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb, void* coo
 //
 // CRC computation is not currently supported and setting the ZBI_FLAG_CRC32
 // flag will yield an error.
+//
+// TODO(fxb/52665): Remove this; use zbi_create_entry_with_payload instead.
 zbi_result_t zbi_append_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
                                 uint32_t extra, uint32_t flags, const void* payload);
 
 // Create a new ZBI section and returns a pointer to the payload.
+// TODO(fxb/52665): Remove this; use zbi_create_entry instead.
 zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
                                 uint32_t extra, uint32_t flags, void** payload);
 
-// Extend dst by appending src to the end of it.
-zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
-
 __END_CDECLS
+
+#endif  // LIBZBI_ZBI_H_

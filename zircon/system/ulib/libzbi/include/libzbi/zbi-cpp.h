@@ -7,12 +7,13 @@
 //
 // Documentation for methods can also be found in ulib/zbi/include/zbi/zbi.h
 
-#pragma once
-
-#include "zbi.h"
+#ifndef LIBZBI_ZBI_CPP_H_
+#define LIBZBI_ZBI_CPP_H_
 
 #include <stddef.h>
 #include <zircon/boot/image.h>
+
+#include "zbi.h"
 
 namespace zbi {
 
@@ -47,6 +48,16 @@ class Zbi {
     return zbi_create_section(base_, capacity_, length, type, extra, flags, payload);
   }
 
+  zbi_result_t CreateEntry(uint32_t type, uint32_t extra, uint32_t flags, uint32_t length,
+                           void** payload) {
+    return zbi_create_entry(base_, capacity_, type, extra, flags, length, payload);
+  }
+
+  zbi_result_t CreateEntryWithPayload(uint32_t type, uint32_t extra, uint32_t flags,
+                                      const void* payload, uint32_t length) {
+    return zbi_create_entry_with_payload(base_, capacity_, type, extra, flags, payload, length);
+  }
+
   zbi_result_t Extend(const Zbi& source) { return zbi_extend(base_, capacity_, source.base_); }
 
   const uint8_t* Base() const { return base_; }
@@ -64,3 +75,5 @@ class Zbi {
 };
 
 }  // namespace zbi
+
+#endif  // LIBZBI_ZBI_CPP_H_

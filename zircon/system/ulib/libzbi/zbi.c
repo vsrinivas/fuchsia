@@ -128,7 +128,7 @@ zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err) {
                             err);
 }
 
-zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb, void* cookie) {
+zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, void* cookie) {
   zbi_header_t* header = (zbi_header_t*)(base);
 
   // Skip container header.
@@ -137,7 +137,7 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb, void* coo
   while (offset < totalSize) {
     zbi_header_t* entryHeader = (zbi_header_t*)(base + offset);
 
-    zbi_result_t result = cb(entryHeader, entryHeader + 1, cookie);
+    zbi_result_t result = callback(entryHeader, entryHeader + 1, cookie);
 
     if (result != ZBI_RESULT_OK) {
       return result;
@@ -151,6 +151,17 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t cb, void* coo
   }
 
   return ZBI_RESULT_OK;
+}
+
+zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
+                              uint32_t flags, uint32_t payload_length, void** payload) {
+  return zbi_create_section(base, capacity, payload_length, type, extra, flags, payload);
+}
+
+zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, uint32_t type,
+                                           uint32_t extra, uint32_t flags, const void* payload,
+                                           uint32_t payload_length) {
+  return zbi_append_section(base, capacity, payload_length, type, extra, flags, payload);
 }
 
 zbi_result_t zbi_append_section(void* base, const size_t capacity, uint32_t section_length,
