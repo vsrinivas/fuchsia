@@ -32,7 +32,8 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
  public:
   App(const fxl::CommandLine& command_line, async::Loop* loop,
       std::unique_ptr<sys::ComponentContext> component_context =
-          sys::ComponentContext::CreateAndServeOutgoingDirectory());
+          sys::ComponentContext::CreateAndServeOutgoingDirectory(),
+      bool use_input_reader = true);
   ~App() = default;
 
   // |InputDeviceImpl::Listener|
@@ -53,7 +54,7 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
   std::unique_ptr<sys::ComponentContext> component_context_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
-  ui_input::InputReader input_reader_;
+  std::optional<ui_input::InputReader> input_reader_;
 
   std::unique_ptr<root_presenter::FactoryResetManager> fdr_manager_;
   root_presenter::ActivityNotifierImpl activity_notifier_;

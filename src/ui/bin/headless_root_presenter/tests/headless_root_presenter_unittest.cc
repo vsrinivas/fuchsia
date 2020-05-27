@@ -61,7 +61,8 @@ class AppUnitTest : public gtest::TestLoopFixture {
         fake_tracker_.GetHandler(dispatcher()));
 
     app_ = std::make_unique<headless_root_presenter::App>(command_line_, &loop_,
-                                                          context_provider_.TakeContext());
+                                                          context_provider_.TakeContext(),
+                                                          /* driver-based input */ false);
     SetupMockDevice();
   }
   void SetUp() override { TestLoopFixture::SetUp(); }
@@ -110,8 +111,7 @@ fuchsia::ui::input::InputReport CreateOneReport() {
   return input_report;
 }
 
-// TODO(48425) - Tests are DISABLED because they are flaking.
-TEST_F(AppUnitTest, DISABLED_NormalFlowTest) {
+TEST_F(AppUnitTest, NormalFlowTest) {
   RegisterMockListener();
   RunLoopUntilIdle();
   int current_count = listener_.GetMediaButtonEventCount();
@@ -125,8 +125,7 @@ TEST_F(AppUnitTest, DISABLED_NormalFlowTest) {
   EXPECT_TRUE(listener_.GetLastEvent()->volume() == -1);
 }
 
-// TODO(48425) - Tests are DISABLED because they are flaking.
-TEST_F(AppUnitTest, DISABLED_NoListenerTest) {
+TEST_F(AppUnitTest, NoListenerTest) {
   input_device_->DispatchReport(CreateOneReport());
   RunLoopUntilIdle();
 
@@ -134,8 +133,7 @@ TEST_F(AppUnitTest, DISABLED_NoListenerTest) {
   EXPECT_TRUE(listener_.GetMediaButtonEventCount() == 0);
 }
 
-// TODO(48425) - Tests are DISABLED because they are flaking.
-TEST_F(AppUnitTest, DISABLED_DisconnectTest) {
+TEST_F(AppUnitTest, DisconnectTest) {
   RegisterMockListener();
   RunLoopUntilIdle();
   int current_count = listener_.GetMediaButtonEventCount();

@@ -15,9 +15,8 @@
 namespace headless_root_presenter {
 
 App::App(const fxl::CommandLine& command_line, async::Loop* loop,
-         std::unique_ptr<sys::ComponentContext> component_context)
+         std::unique_ptr<sys::ComponentContext> component_context, bool use_input_reader)
     : component_context_(std::move(component_context)),
-      input_reader_(this),
       fdr_manager_(
           std::make_unique<root_presenter::FactoryResetManager>(*component_context_.get())),
       activity_notifier_(loop->dispatcher(), root_presenter::ActivityNotifierImpl::kDefaultInterval,
@@ -25,7 +24,10 @@ App::App(const fxl::CommandLine& command_line, async::Loop* loop,
       media_buttons_handler_(&activity_notifier_) {
   FX_DCHECK(component_context_);
 
-  input_reader_.Start();
+  if (use_input_reader) {
+    input_reader_.emplace(this);
+    input_reader_->Start();
+  }
 
   component_context_->outgoing()->AddPublicService(device_listener_bindings_.GetHandler(this));
   component_context_->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
