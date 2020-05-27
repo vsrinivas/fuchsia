@@ -777,7 +777,7 @@ impl Deref for HostImage {
 fn get_image_size(info: &ImageInfo) -> usize {
     assert!(info.tiling == Tiling::Linear);
     match info.pixel_format {
-        PixelFormat::Bgra8 => (info.height * info.stride) as usize,
+        PixelFormat::Bgra8 | PixelFormat::R8G8B8A8 => (info.height * info.stride) as usize,
         PixelFormat::Yuy2 => (info.height * info.stride) as usize,
         PixelFormat::Nv12 => (info.height * info.stride * 3 / 2) as usize,
         PixelFormat::Yv12 => (info.height * info.stride * 3 / 2) as usize,

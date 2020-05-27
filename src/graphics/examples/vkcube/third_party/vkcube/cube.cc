@@ -2784,22 +2784,25 @@ void demo_init_vk_swapchain(struct demo* demo) {
   uint32_t surfFormatIndex = 0;
   if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
 #if USE_SRGB
-    demo->format = VK_FORMAT_B8G8R8A8_SRGB;
+    demo->format = VK_FORMAT_R8G8B8A8_SRGB;
 #else
-    demo->format = VK_FORMAT_B8G8R8A8_UNORM;
+    demo->format = VK_FORMAT_R8G8B8A8_UNORM;
 #endif
   } else {
     assert(formatCount >= 1);
-#if USE_SRGB
     for (i = 0; i < formatCount; ++i) {
-      if (surfFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB ||
-          surfFormats[i].format == VK_FORMAT_R8G8B8A8_SRGB) {
+#if USE_SRGB
+      if (surfFormats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||
+          surfFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB) {
+#else
+      if (surfFormats[i].format == VK_FORMAT_R8G8B8A8_UNORM ||
+          surfFormats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
+#endif
         surfFormatIndex = i;
         break;
       }
     }
     assert(i < formatCount);
-#endif
     demo->format = surfFormats[surfFormatIndex].format;
   }
   demo->color_space = surfFormats[surfFormatIndex].colorSpace;

@@ -41,7 +41,7 @@ vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format) {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.extent = vk::Extent3D{1, 1, 1};
-  create_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+  create_info.flags = vk::ImageCreateFlags();
   create_info.format = vk_format;
   create_info.mipLevels = 1;
   create_info.arrayLayers = 1;

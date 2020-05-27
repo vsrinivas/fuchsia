@@ -224,6 +224,9 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
                           width, height, captured_in_stride);
       };
       break;
+    case fuchsia::images::PixelFormat::R8G8B8A8:
+      FX_DCHECK(false) << "R8G8B8A8 not supported";
+      break;
   }
   return nullptr;
 }

@@ -124,6 +124,7 @@ enum PixelFormatDef {
     Yuy2 = 1,
     Nv12 = 2,
     Yv12 = 3,
+    R8G8B8A8 = 4,
 }
 
 #[derive(Serialize, Deserialize)]

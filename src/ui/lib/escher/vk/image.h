@@ -22,7 +22,7 @@ struct ImageInfo {
   vk::ImageUsageFlags usage;
   vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
   vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
-  bool is_mutable = true;
+  bool is_mutable = false;
   bool is_external = false;
 
   bool operator==(const ImageInfo& other) const {

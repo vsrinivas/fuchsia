@@ -37,6 +37,10 @@ HostImage::HostImage(Session* session, ResourceId id, MemoryPtr memory, escher::
 ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
                         const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
                         ErrorReporter* error_reporter) {
+  if (image_info.pixel_format == fuchsia::images::PixelFormat::R8G8B8A8) {
+    error_reporter->ERROR() << "Image::CreateFromMemory(): pixelformat must not be R8G8B8A8.";
+    return nullptr;
+  }
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Srgb;
   size_t pixel_alignment = images::MaxSampleAlignment(image_info.pixel_format);

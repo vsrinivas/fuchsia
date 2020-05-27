@@ -77,7 +77,9 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     fprintf(stderr, "Failed to import buffer collection: %d\n", result);
     return false;
   }
-  uint32_t image_flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+  uint32_t image_flags = 0;
+  if (swapchain_flags & VK_SWAPCHAIN_CREATE_MUTABLE_FORMAT_BIT_KHR)
+    image_flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
   if (swapchain_flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR)
     image_flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
   VkImageCreateInfo image_create_info = {

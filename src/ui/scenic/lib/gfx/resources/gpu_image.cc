@@ -29,18 +29,24 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
                           const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
                           ErrorReporter* error_reporter) {
   vk::Format pixel_format = vk::Format::eUndefined;
-  size_t bytes_per_pixel;
-  size_t pixel_alignment;
+  size_t bytes_per_pixel = 4u;
+  size_t pixel_alignment = 4u;
+  bool is_mutable = false;
   switch (image_info.pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
       pixel_format = vk::Format::eB8G8R8A8Srgb;
-      bytes_per_pixel = 4u;
-      pixel_alignment = 4u;
+      // Mutable format flag is required for image info to match existing clients.
+      // TODO(reveman): Remove this when clients have switched to immutable R8G8B8A8.
+      is_mutable = true;
+      break;
+    case fuchsia::images::PixelFormat::R8G8B8A8:
+      pixel_format = vk::Format::eR8G8B8A8Srgb;
       break;
     case fuchsia::images::PixelFormat::YUY2:
     case fuchsia::images::PixelFormat::NV12:
     case fuchsia::images::PixelFormat::YV12:
-      error_reporter->ERROR() << "GpuImage::CreateFromMemory(): PixelFormat must be BGRA_8.";
+      error_reporter->ERROR()
+          << "GpuImage::CreateFromMemory(): PixelFormat must be BGRA_8 or R8G8B8A8.";
       return nullptr;
   }
 
@@ -84,6 +90,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
       vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
   escher_image_info.is_external = true;
+  escher_image_info.is_mutable = is_mutable;
   // TODO(SCN-1182): Add unit tests to verify this logic.
   switch (image_info.tiling) {
     case fuchsia::images::Tiling::LINEAR:

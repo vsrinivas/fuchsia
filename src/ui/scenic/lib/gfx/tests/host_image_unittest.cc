@@ -153,7 +153,7 @@ VK_TEST_F(HostImageTest, FindResource) {
   EXPECT_FALSE(image_pipe_as_image_resource);
 }
 
-VK_TEST_F(HostImageTest, RgbaImport) {
+VK_TEST_F(HostImageTest, BgraImport) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
   ASSERT_EQ(ZX_OK, status);
@@ -235,6 +235,28 @@ VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
   EXPECT_TRUE(image_resource->GetEscherImage());
   // The images should have been constructed directly, not through the image
   // factory.
+  EXPECT_EQ(0u, listener->images_created_);
+}
+
+VK_TEST_F(HostImageTest, RgbaImportFails) {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
+
+  fuchsia::images::ImageInfo image_info{
+      .width = kSize,
+      .height = kSize,
+      .stride = static_cast<uint32_t>(
+          kSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::R8G8B8A8)),
+      .pixel_format = fuchsia::images::PixelFormat::R8G8B8A8,
+  };
+
+  // This should fail as host memory backed RGBA images are not supported.
+  EXPECT_FALSE(Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
+  EXPECT_FALSE(FindResource<HostImage>(kImageId));
   EXPECT_EQ(0u, listener->images_created_);
 }
 

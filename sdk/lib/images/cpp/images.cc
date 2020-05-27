@@ -12,6 +12,7 @@ namespace images {
 size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
   switch (pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
+    case fuchsia::images::PixelFormat::R8G8B8A8:
       return 4u * 8u;
     case fuchsia::images::PixelFormat::YUY2:
       return 2u * 8u;
@@ -27,6 +28,7 @@ size_t BitsPerPixel(const fuchsia::images::PixelFormat& pixel_format) {
 size_t StrideBytesPerWidthPixel(const fuchsia::images::PixelFormat& pixel_format) {
   switch (pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
+    case fuchsia::images::PixelFormat::R8G8B8A8:
       return 4u;
     case fuchsia::images::PixelFormat::YUY2:
       return 2u;
@@ -42,6 +44,7 @@ size_t StrideBytesPerWidthPixel(const fuchsia::images::PixelFormat& pixel_format
 size_t MaxSampleAlignment(const fuchsia::images::PixelFormat& pixel_format) {
   switch (pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
+    case fuchsia::images::PixelFormat::R8G8B8A8:
       return 4u;
     case fuchsia::images::PixelFormat::YUY2:
       return 2u;
@@ -68,6 +71,7 @@ size_t ImageSize(const fuchsia::images::ImageInfo& image_info) {
   ZX_DEBUG_ASSERT(image_info.tiling == fuchsia::images::Tiling::LINEAR);
   switch (image_info.pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
+    case fuchsia::images::PixelFormat::R8G8B8A8:
     case fuchsia::images::PixelFormat::YUY2:
       return image_info.height * image_info.stride;
     case fuchsia::images::PixelFormat::NV12:

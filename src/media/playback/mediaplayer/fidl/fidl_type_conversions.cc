@@ -101,6 +101,8 @@ TypeConverter<media_player::VideoStreamType::PixelFormat, fuchsia::images::Pixel
       return media_player::VideoStreamType::PixelFormat::kYv12;
     case fuchsia::images::PixelFormat::NV12:
       return media_player::VideoStreamType::PixelFormat::kNv12;
+    case fuchsia::images::PixelFormat::R8G8B8A8:
+      break;
   }
 
   return media_player::VideoStreamType::PixelFormat::kUnknown;
