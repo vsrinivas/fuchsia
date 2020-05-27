@@ -675,6 +675,163 @@ const uint8_t* SyncClientBuffered::GetCacheBuffer(PartitionType partition) {
   return start;
 }
 
+// One example layout that supports abr wear-leveling.
+// Comparing with legacy layout, abr metadata is put at the end, extended to 10 pages
+// sysconfig_data shrunken to 5 pages.
+// The first page is reserved for header.
+static constexpr sysconfig_header kLayoutForWearLeveling = {
+    .magic = SYSCONFIG_HEADER_MAGIC_ARRAY,
+    .sysconfig_data = {4 * kKilobyte, 20 * kKilobyte},
+    .abr_metadata = {216 * kKilobyte, 40 * kKilobyte},
+    .vb_metadata_a = {24 * kKilobyte, kVerifiedBootMetadataSize},
+    .vb_metadata_b = {88 * kKilobyte, kVerifiedBootMetadataSize},
+    .vb_metadata_r = {152 * kKilobyte, kVerifiedBootMetadataSize},
+    .crc_value = 0x16713db5,
+};
+
+const sysconfig_header& SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout() {
+  return kLayoutForWearLeveling;
+}
+
+zx_status_t SyncClientAbrWearLeveling::ReadPartition(PartitionType partition, const zx::vmo& vmo,
+                                                     zx_off_t vmo_offset) {
+  return IsCacheEmpty(partition) && partition == PartitionType::kABRMetadata
+             ? ReadLatestAbrMetadataFromStorage(vmo, vmo_offset)
+             : SyncClientBuffered::ReadPartition(partition, vmo, vmo_offset);
+}
+
+bool SyncClientAbrWearLeveling::IsOnlyAbrMetadataModified() {
+  return !IsCacheEmpty(PartitionType::kABRMetadata) && IsCacheEmpty(PartitionType::kSysconfig) &&
+         IsCacheEmpty(PartitionType::kVerifiedBootMetadataA) &&
+         IsCacheEmpty(PartitionType::kVerifiedBootMetadataB) &&
+         IsCacheEmpty(PartitionType::kVerifiedBootMetadataR);
+}
+
+zx_status_t SyncClientAbrWearLeveling::ReadLatestAbrMetadataFromStorage(const zx::vmo& vmo,
+                                                                        zx_off_t vmo_offset) {
+  abr_metadata_ext latest;
+
+  zx_status_t status_get_header;
+  auto header = client_.GetHeader(&status_get_header);
+  if (header == nullptr) {
+    return status_get_header;
+  }
+
+  if (auto status = client_.LoadFromStorage(); status != ZX_OK) {
+    return status;
+  }
+
+  auto abr_start =
+      static_cast<uint8_t*>(client_.read_mapper_.start()) + header->abr_metadata.offset;
+
+  if (layout_support_wear_leveling(header, kAstroPageSize)) {
+    find_latest_abr_metadata_page(header, abr_start, kAstroPageSize, &latest);
+  } else {
+    memcpy(&latest, abr_start, sizeof(abr_metadata_ext));
+  }
+
+  return vmo.write(&latest, vmo_offset, sizeof(abr_metadata_ext));
+}
+
+zx_status_t SyncClientAbrWearLeveling::Flush() {
+  if (IsAllCacheEmpty()) {
+    return ZX_OK;
+  }
+
+  zx_status_t status_get_header;
+  auto header = client_.GetHeader(&status_get_header);
+  if (!header) {
+    return status_get_header;
+  }
+
+  if (!layout_support_wear_leveling(header, kAstroPageSize)) {
+    return SyncClientBuffered::Flush();
+  }
+
+  // Try if we can only perform an abr metadata append.
+  if (FlushAppendAbrMetadata(header) != ZX_OK) {
+    // If appending is not applicable, flush all valid cached data to memory.
+    // An erase will be introduced.
+    if (auto status = FlushReset(header); status != ZX_OK) {
+      return status;
+    }
+  }
+
+  InvalidateCache();
+  return ZX_OK;
+}
+
+zx_status_t SyncClientAbrWearLeveling::FlushAppendAbrMetadata(const sysconfig_header* header) {
+  if (!IsOnlyAbrMetadataModified()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (auto status = client_.LoadFromStorage(); status != ZX_OK) {
+    return status;
+  }
+  auto& mapper = client_.read_mapper_;
+  auto abr_start = static_cast<const uint8_t*>(mapper.start()) + header->abr_metadata.offset;
+
+  // Find an empty page to write
+  int64_t page_write_index;
+  if (!find_empty_page_for_wear_leveling(header, abr_start, kAstroPageSize, &page_write_index)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Read the abr metadata from cache, update magic and write back to cache.
+  // Note: Although cache has the same layout as sysconfig partition, writing abr metadata to
+  // cache does not use abr wear-leveling. The new data is just written to the start of the abr
+  // metadata sub-partition in cache.
+  abr_metadata_ext abr_data;
+  uint8_t* cache_abr_start = static_cast<uint8_t*>(cache_.start()) + header->abr_metadata.offset;
+  memcpy(&abr_data, cache_abr_start, sizeof(abr_metadata_ext));
+  set_abr_metadata_ext_magic(&abr_data);
+  memcpy(cache_abr_start, &abr_data, sizeof(abr_metadata_ext));
+
+  // Perform a write without erase.
+  size_t offset =
+      header->abr_metadata.offset + static_cast<size_t>(page_write_index) * kAstroPageSize;
+  if (auto status = client_.WriteBytesWithoutErase(offset, kAstroPageSize, cache_.vmo(),
+                                                   header->abr_metadata.offset);
+      status != ZX_OK) {
+    fprintf(stderr, "Failed to append abr metadata to persistent storage. %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SyncClientAbrWearLeveling::FlushReset(const sysconfig_header* header) {
+  // 1. Write the abr data to the first page of in the sub-partition
+  // 2. Set the rest pages of the abr sub-partition to empty (write 0xff).
+
+  auto abr_start = static_cast<uint8_t*>(cache_.start()) + header->abr_metadata.offset;
+  abr_metadata_ext abr_data;
+  // Find the latest abr meta, either from the cache if it is modified, or from the storage.
+  if (IsCacheEmpty(PartitionType::kABRMetadata)) {
+    find_latest_abr_metadata_page(header, abr_start, kAstroPageSize, &abr_data);
+  } else {
+    memcpy(&abr_data, abr_start, sizeof(abr_metadata_ext));
+  }
+  // Set magic.
+  set_abr_metadata_ext_magic(&abr_data);
+  // Put the latest abr data to the first page.
+  memcpy(abr_start, &abr_data, sizeof(abr_metadata_ext));
+  // Reset the rest of the pages in abr partition to be empty for future use
+  memset(&abr_start[kAstroPageSize], 0xff, header->abr_metadata.size - kAstroPageSize);
+
+  // Write data to persistent storage.
+  if (auto status = client_.Write(0, kAstroSysconfigPartitionSize, cache_.vmo(), 0);
+      status != ZX_OK) {
+    fprintf(stderr, "Failed to flush write. %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  erase_count_++;
+  return ZX_OK;
+}
+
 }  // namespace sysconfig
 
 uint32_t sysconfig_header_crc32(uint32_t crc, const uint8_t* buf, size_t len) {

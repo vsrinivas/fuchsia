@@ -168,11 +168,11 @@ class SyncClientTest : public zxtest::Test {
     }
   }
 
-  void WriteData(size_t offset, size_t size) {
+  void WriteData(size_t offset, size_t size, uint8_t data = 0x5c) {
     for (size_t block = 4; block < 7; block++) {
       uint8_t* start =
           static_cast<uint8_t*>(device_->mapper().start()) + (block * kBlockSize) + offset;
-      memset(start, 0x5c, size);
+      memset(start, data, size);
     }
   }
 
@@ -879,6 +879,208 @@ TEST_F(SyncClientBufferedTest, WriteAllPartitionsWithHeader) {
                        {PartitionType::kVerifiedBootMetadataA, 0, 0, 0x3},
                        {PartitionType::kVerifiedBootMetadataB, 0, 0, 0x4},
                        {PartitionType::kVerifiedBootMetadataR, 0, 0, 0x5}});
+}
+
+enum class VerifyAbrPageMagic { ON, OFF };
+void VerifyAbrMetaDataPage(const abr_metadata_ext& abr_data, uint8_t value,
+                           VerifyAbrPageMagic opt = VerifyAbrPageMagic::ON) {
+  uint8_t expected[ABR_WEAR_LEVELING_ABR_DATA_SIZE];
+  memset(expected, value, ABR_WEAR_LEVELING_ABR_DATA_SIZE);
+  ASSERT_BYTES_EQ(&abr_data, expected, ABR_WEAR_LEVELING_ABR_DATA_SIZE);
+  if (opt == VerifyAbrPageMagic::ON) {
+    uint8_t magic[] = {
+        ABR_WEAR_LEVELING_MAGIC_BYTE_0,
+        ABR_WEAR_LEVELING_MAGIC_BYTE_1,
+        ABR_WEAR_LEVELING_MAGIC_BYTE_2,
+        ABR_WEAR_LEVELING_MAGIC_BYTE_3,
+    };
+    ASSERT_BYTES_EQ(abr_data.magic, magic, ABR_WEAR_LEVELING_MAGIC_LEN);
+  }
+}
+
+TEST_F(SyncClientBufferedTest, AbrWearLevelingUnsupportedLayout) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientAbrWearLeveling astro_client(*std::move(client));
+  size_t partition_size;
+  ASSERT_OK(astro_client.GetPartitionSize(PartitionType::kABRMetadata, &partition_size));
+
+  zx::vmo vmo;
+  ASSERT_NO_FATAL_FAILURES(CreatePayload(partition_size, &vmo, 0xa5));
+  ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
+  ASSERT_OK(astro_client.Flush());
+
+  // The new abr data should still be at the 16th page as it will use default flush.
+  ASSERT_NO_FATAL_FAILURES(
+      ValidateMemory({{PartitionType::kABRMetadata, 60 * kKilobyte, 4 * kKilobyte, 0xa5}}));
+
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(partition_size, "test"));
+  ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
+  abr_metadata_ext abr_data;
+  memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
+  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0xa5, VerifyAbrPageMagic::OFF));
+}
+
+sysconfig_header WriteHeaderSupportingAbrWearLeveling(void* memory) {
+  // Provide a supporting header in storage.
+  auto header = sysconfig::SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout();
+  memcpy(memory, &header, sizeof(header));
+  return header;
+}
+
+TEST_F(SyncClientBufferedTest, AbrWearLeveling) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientAbrWearLeveling astro_client(*std::move(client));
+  auto memory = static_cast<uint8_t*>(device_->mapper().start()) + 4 * kBlockSize;
+  auto header = WriteHeaderSupportingAbrWearLeveling(memory);
+
+  uint8_t empty_page[kPageSize];
+  memset(empty_page, 0xff, sizeof(empty_page));
+  size_t abr_part_size;
+  ASSERT_OK(astro_client.GetPartitionSize(PartitionType::kABRMetadata, &abr_part_size));
+  const size_t num_pages = header.abr_metadata.size / kPageSize;
+  // Verify that client can write abr meta data <num_pages> times without an erase.
+  for (uint8_t i = 0; i < num_pages; i++) {
+    zx::vmo vmo;
+    // Fill the payload with value |i+1|.
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(abr_part_size, &vmo, i + 1));
+    ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
+    ASSERT_OK(astro_client.Flush());
+    ASSERT_EQ(astro_client.GetEraseCount(), 0);
+
+    abr_metadata_ext abr_data;
+
+    // Validate that memory is as expected:
+    //
+    // 1. Previous and newly written pages are as expected.
+    auto abr_subpart = memory + header.abr_metadata.offset;
+    for (uint8_t j = 0; j <= i; j++) {
+      memcpy(&abr_data, abr_subpart + j * kPageSize, sizeof(abr_data));
+      ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, j + 1));
+    }
+    // 2. Pages after stay empty.
+    for (uint8_t j = i + 1; j < num_pages; j++) {
+      ASSERT_BYTES_EQ(abr_subpart + j * kPageSize, empty_page, kPageSize, "@ page %d", j);
+    }
+
+    // Verify that latest abr meta data can be correctly read.
+    fzl::OwnedVmoMapper mapper;
+    ASSERT_OK(mapper.CreateAndMap(abr_part_size, "test"));
+    ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
+
+    memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
+    ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, i + 1));
+  }
+
+  // Verify that the |num_pages + 1|th write should introduce an erase.
+  zx::vmo vmo;
+  ASSERT_NO_FATAL_FAILURES(CreatePayload(abr_part_size, &vmo, 0xAB));
+  ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
+  ASSERT_OK(astro_client.Flush());
+  ASSERT_EQ(astro_client.GetEraseCount(), 1);
+
+  // Verify that the (<num_pages> + 1)th write is correct.
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(abr_part_size, "test"));
+  ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
+
+  abr_metadata_ext abr_data;
+  memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
+  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0xAB));
+}
+
+TEST_F(SyncClientBufferedTest, AbrWearLevelingMultiplePartitionsModifiedInCache) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientAbrWearLeveling astro_client(*std::move(client));
+  auto memory = static_cast<uint8_t*>(device_->mapper().start()) + 4 * kBlockSize;
+  auto header = WriteHeaderSupportingAbrWearLeveling(memory);
+
+  auto write_partition = [&](PartitionType partition, uint8_t data) {
+    zx::vmo vmo;
+    size_t part_size;
+    ASSERT_OK(astro_client.GetPartitionSize(partition, &part_size));
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(part_size, &vmo, data));
+    ASSERT_OK(astro_client.WritePartition(partition, vmo, 0));
+  };
+
+  // Write multiple sub-partitions: vb_a, vb_r and abr
+  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kVerifiedBootMetadataA, 0xAB));
+  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kVerifiedBootMetadataR, 0xCD));
+  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kABRMetadata, 0xEF));
+
+  // Verify that for flushing changes more than just abr metadata introduce an erase
+  ASSERT_EQ(astro_client.GetEraseCount(), 0);
+  ASSERT_OK(astro_client.Flush());
+  ASSERT_EQ(astro_client.GetEraseCount(), 1);
+
+  // Verify that abr data is correctly written
+  size_t abr_part_size;
+  ASSERT_OK(astro_client.GetPartitionSize(PartitionType::kABRMetadata, &abr_part_size));
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(abr_part_size, "test"));
+  ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
+
+  abr_metadata_ext abr_data;
+  memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
+  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0xEF));
+
+  // Veiry that all partition are written correctly
+  ASSERT_NO_FATAL_FAILURES(ValidateMemory(
+      {// a place holder header partition to exempt it from validation
+       {.partition_offset = 0, .partition_size = 4 * kKilobyte, .write_value = {}},
+       // dont care sysconfig
+       {PartitionType::kSysconfig, header.sysconfig_data.offset, header.sysconfig_data.size, {}},
+       // abr metadata in the first page has just been validated. Exempt it.
+       {PartitionType::kABRMetadata, header.abr_metadata.offset, kPageSize, {}},
+       // the rest of pages in abr partition should be reset to 0xff
+       {PartitionType::kABRMetadata, header.abr_metadata.offset + kPageSize,
+        header.abr_metadata.size - kPageSize, 0xff},
+       // vb metadata a
+       {PartitionType::kVerifiedBootMetadataA, header.vb_metadata_a.offset,
+        header.vb_metadata_a.size, 0xAB},
+       // vb metadata r
+       {PartitionType::kVerifiedBootMetadataR, header.vb_metadata_r.offset,
+        header.vb_metadata_r.size, 0xCD}}));
+
+  // Introduces an additional abr writes.
+  // Since we just performed a reset flush, there should be enough empty pages for the
+  // write. It shouldn't introduce additional erase.
+  ASSERT_NO_FATAL_FAILURES(write_partition(PartitionType::kABRMetadata, 0x01));
+
+  ASSERT_OK(astro_client.Flush());
+  ASSERT_EQ(astro_client.GetEraseCount(), 1);
+
+  // Read back the new abr meta and validate it is correct.
+  ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
+  memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
+  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0x1));
+}
+
+TEST_F(SyncClientBufferedTest, AbrWearLevelingDefaultToFirstPage) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientAbrWearLeveling astro_client(*std::move(client));
+  auto memory = static_cast<uint8_t*>(device_->mapper().start()) + 4 * kBlockSize;
+  auto header = WriteHeaderSupportingAbrWearLeveling(memory);
+
+  // Write data to all pages such that none contains valid magic values.
+  const size_t num_pages = header.abr_metadata.size / kPageSize;
+  for (uint8_t i = 0; i < num_pages; i++) {
+    zx::vmo vmo;
+    WriteData(header.abr_metadata.offset + i * kPageSize, kPageSize, i + 1);
+  }
+
+  // Verify that the read will default to the 1st page in abr sub-partition.
+  fzl::OwnedVmoMapper mapper;
+  ASSERT_OK(mapper.CreateAndMap(kPageSize, "test"));
+  ASSERT_OK(astro_client.ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
+
+  abr_metadata_ext abr_data;
+  memcpy(&abr_data, mapper.start(), sizeof(abr_metadata_ext));
+  ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0x1, VerifyAbrPageMagic::OFF));
 }
 
 }  // namespace

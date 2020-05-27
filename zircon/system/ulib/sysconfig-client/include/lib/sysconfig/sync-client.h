@@ -14,6 +14,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "abr-wear-leveling.h"
 #include "sysconfig-header.h"
 
 namespace sysconfig {
@@ -48,6 +49,13 @@ class __EXPORT SyncClient {
   // |vmo| must have a size greater than or equal to the partitions size + |vmo_offset|.
   zx_status_t WritePartition(PartitionType partition, const zx::vmo& vmo, zx_off_t vmo_offset);
 
+  // TODO(47505): The method is not implemented yet. Here we use normal write for test
+  // purpose. Update it once support for write-without-erase in SkipBlock service lands.
+  zx_status_t WriteBytesWithoutErase(size_t offset, size_t len, const zx::vmo& vmo,
+                                     zx_off_t vmo_offset) {
+    return Write(offset, len, vmo, vmo_offset);
+  }
+
   // Provides read access for the partition specified. Always reads full partition.
   //
   // |vmo| must have a size greater than or equal to the partitions size + |vmo_offset|.
@@ -73,7 +81,7 @@ class __EXPORT SyncClient {
 
   SyncClient(SyncClient&&) = default;
   SyncClient& operator=(SyncClient&&) = default;
-
+  // TODO(47505): Swap the return and output argument.
   const sysconfig_header* GetHeader(zx_status_t* status_out = nullptr);
 
  private:
@@ -101,6 +109,7 @@ class __EXPORT SyncClient {
   // create another one. It makes possible the use of class composition method instead of
   // inheritance, which is usually preferred.
   friend class SyncClientBuffered;
+  friend class SyncClientAbrWearLeveling;
 };
 
 // SynClientBuffered is a wrapper of SyncClient added with write-caching capability.
@@ -164,8 +173,43 @@ class SyncClientBuffered {
   zx_status_t GetSubpartitionCacheAddrSize(PartitionType partition, uint8_t** start, size_t* size);
 };
 
+/**
+ * Specialized sysconfig client for astro with NAND I/O optimization
+ * Implement buffered write + abr wear-leveling
+ */
 class SyncClientAbrWearLeveling : public SyncClientBuffered {
-  using SyncClientBuffered::SyncClientBuffered;
+ public:
+  using PartitionType = SyncClient::PartitionType;
+
+  SyncClientAbrWearLeveling(::sysconfig::SyncClient client)
+      : SyncClientBuffered(std::move(client)), erase_count_(0) {}
+
+  // No copy.
+  SyncClientAbrWearLeveling(const SyncClientAbrWearLeveling&) = delete;
+  SyncClientAbrWearLeveling& operator=(const SyncClientAbrWearLeveling&) = delete;
+
+  SyncClientAbrWearLeveling(SyncClientAbrWearLeveling&&) = default;
+  SyncClientAbrWearLeveling& operator=(SyncClientAbrWearLeveling&&) = default;
+
+  zx_status_t ReadPartition(PartitionType partition, const zx::vmo& vmo,
+                            zx_off_t vmo_offset) override;
+
+  zx_status_t Flush() override;
+
+  static const sysconfig_header& GetAbrWearLevelingSupportedLayout();
+
+  // For test purpose
+  uint32_t GetEraseCount() const { return erase_count_; }
+
+ private:
+  bool IsOnlyAbrMetadataModified();
+  zx_status_t ReadLatestAbrMetadataFromStorage(const zx::vmo& vmo, zx_off_t vmo_offset);
+  zx_status_t FlushAppendAbrMetadata(const sysconfig_header* header);
+  zx_status_t FlushReset(const sysconfig_header* header);
+  zx_status_t ValidateAbrMetadataInStorage(const abr_metadata_ext* expected);
+  zx_status_t InitializeAbrReadMapper(const sysconfig_header& header);
+  // For test purpose
+  uint32_t erase_count_;
 };
 
 }  // namespace sysconfig

@@ -26,8 +26,9 @@ zx_library("sysconfig-sync-client") {
   sdk_headers = [ "lib/sysconfig/sync-client.h" ]
 
   sources = [
+    "shared/abr-wear-leveling.c",
+    "shared/sysconfig-header.c",
     "sync-client.cc",
-    "sysconfig-header.c",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
