@@ -73,6 +73,9 @@ template("rustc_staticlib") {
       forward_variables_from(invoker,
                              "*",
                              [
+                               # Do not copy configs otherwise the default ones
+                               # for rustc_test get clobbered.
+                               "configs",
                                "name",
                                "test_configs",
                                "test_deps",

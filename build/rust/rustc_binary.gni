@@ -143,6 +143,9 @@ template("rustc_binary") {
       forward_variables_from(invoker,
                              "*",
                              [
+                               # Do not forward configs otherwise the defaults
+                               # for rustc_test get clobbered.
+                               "configs",
                                "name",
                                "source_root",
                              ])
