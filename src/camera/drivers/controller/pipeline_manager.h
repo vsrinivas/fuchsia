@@ -9,7 +9,7 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 #include "fbl/macros.h"
@@ -93,8 +93,13 @@ class PipelineManager {
       StreamCreationData* info, const InternalConfigNode& current_internal_node,
       ProcessNode* graph_head);
 
-  ProcessNode* full_resolution_stream() { return full_resolution_stream_.get(); }
-  ProcessNode* downscaled_resolution_stream() { return downscaled_resolution_stream_.get(); }
+  ProcessNode* full_resolution_stream() const {
+    return FindStream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  }
+
+  ProcessNode* downscaled_resolution_stream() const {
+    return FindStream(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION);
+  }
 
   void StopStreaming();
   void StartStreaming();
@@ -113,6 +118,14 @@ class PipelineManager {
 
   void SerializedTaskComplete();
 
+  ProcessNode* FindStream(fuchsia::camera2::CameraStreamType stream) const {
+    auto stream_entry = streams_.find(stream);
+    if (stream_entry != streams_.end()) {
+      return stream_entry->second.get();
+    }
+    return nullptr;
+  }
+
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
       StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
@@ -124,9 +137,10 @@ class PipelineManager {
   ddk::GdcProtocolClient gdc_;
   ddk::Ge2dProtocolClient ge2d_;
   ControllerMemoryAllocator memory_allocator_;
-  std::unique_ptr<ProcessNode> full_resolution_stream_;
-  std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
-  std::map<fuchsia::camera2::CameraStreamType, OutputNode*> output_nodes_info_;
+  // Map of Input streams -> ProcessNodes
+  std::unordered_map<fuchsia::camera2::CameraStreamType, std::unique_ptr<ProcessNode>> streams_;
+  // Map of Output streams -> OutputNodes
+  std::unordered_map<fuchsia::camera2::CameraStreamType, OutputNode*> output_nodes_info_;
   std::vector<fuchsia::camera2::CameraStreamType> stream_shutdown_requested_;
   bool serialized_task_in_progress_ = false;
   zx::event serialized_tasks_event_;

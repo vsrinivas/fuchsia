@@ -194,11 +194,8 @@ zx_status_t PipelineManager::AppendToExistingGraph(
 
   return status;
 }
-
 void PipelineManager::ConfigureStreamPipeline(
     StreamCreationData info, fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  // TODO (45160) Review suggestion to queue the request instead of the setup process itself.
-
   serialized_task_queue_.emplace(
       [this, info = std::move(info), stream = std::move(stream)]() mutable {
         zx_status_t status = ZX_OK;
@@ -210,65 +207,28 @@ void PipelineManager::ConfigureStreamPipeline(
           }
         });
 
-        // Here at top level we check what type of input stream do we have to deal with
-        // TODO (45163) Refactor to reduce code duplication.
-        switch (info.node.input_stream_type) {
-          case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-            if (full_resolution_stream_) {
-              // If the same stream is requested again, we return failure.
-              if (HasStreamType(full_resolution_stream_->configured_streams(),
-                                info.stream_config.properties.stream_type())) {
-                status = ZX_ERR_ALREADY_BOUND;
-                return;
-              }
-              // We will now append the requested stream to the existing graph.
-              status = AppendToExistingGraph(&info, full_resolution_stream_.get(), stream);
-              if (status != ZX_OK) {
-                FX_PLOGST(DEBUG, kTag, status) << "AppendToExistingGraph failed";
-                return;
-              }
-              return;
-            }
-            auto result = ConfigureStreamPipelineHelper(&info, stream);
-            if (result.is_error()) {
-              status = result.error();
-              return;
-            }
-            full_resolution_stream_ = std::move(result.value());
-            break;
-          }
-
-          case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-            if (downscaled_resolution_stream_) {
-              // If the same stream is requested again, we return failure.
-              if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
-                                info.stream_config.properties.stream_type())) {
-                status = ZX_ERR_ALREADY_BOUND;
-                return;
-              }
-              // We will now append the requested stream to the existing graph.
-              status = AppendToExistingGraph(&info, downscaled_resolution_stream_.get(), stream);
-              if (status != ZX_OK) {
-                FX_PLOGST(ERROR, kTag, status) << "AppendToExistingGraph failed";
-                return;
-              }
-              return;
-            }
-
-            auto result = ConfigureStreamPipelineHelper(&info, stream);
-            if (result.is_error()) {
-              status = result.error();
-              return;
-            }
-            downscaled_resolution_stream_ = std::move(result.value());
-            break;
-          }
-          default: {
-            FX_LOGST(ERROR, kTag) << "Invalid input stream type";
-            status = ZX_ERR_INVALID_ARGS;
+        auto* input_node = FindStream(info.node.input_stream_type);
+        if (input_node) {
+          // If the same stream is requested again, we return failure.
+          if (HasStreamType(input_node->configured_streams(),
+                            info.stream_config.properties.stream_type())) {
+            status = ZX_ERR_ALREADY_BOUND;
             return;
           }
+          // We will now append the requested stream to the existing graph.
+          status = AppendToExistingGraph(&info, input_node, stream);
+          if (status != ZX_OK) {
+            FX_PLOGST(DEBUG, kTag, status) << "AppendToExistingGraph failed";
+            return;
+          }
+          return;
         }
+        auto result = ConfigureStreamPipelineHelper(&info, stream);
+        if (result.is_error()) {
+          status = result.error();
+          return;
+        }
+        streams_[info.node.input_stream_type] = std::move(result.value());
       });
   serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
 }
@@ -340,34 +300,20 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
       }
     });
 
-    switch (input_stream_type) {
-      case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-        ZX_ASSERT_MSG(full_resolution_stream_ != nullptr, "FR node is null");
-        if (full_resolution_stream_->configured_streams().size() == 1) {
-          full_resolution_stream_ = nullptr;
-          SerializedTaskComplete();
-          return;
-        }
-        graph_head = full_resolution_stream_.get();
-        DeleteGraphForDisconnectedStream(graph_head, stream_to_disconnect);
-        break;
-      }
-      case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-        ZX_ASSERT_MSG(downscaled_resolution_stream_ != nullptr, "DS node is null");
-        if (downscaled_resolution_stream_->configured_streams().size() == 1) {
-          downscaled_resolution_stream_ = nullptr;
-          SerializedTaskComplete();
-          return;
-        }
-        graph_head = downscaled_resolution_stream_.get();
-        DeleteGraphForDisconnectedStream(graph_head, stream_to_disconnect);
-        break;
-      }
-      default: {
-        ZX_ASSERT_MSG(false, "Invalid input stream type\n");
-        break;
-      }
+    auto* input_node = FindStream(input_stream_type);
+    if (input_node == nullptr) {
+      ZX_ASSERT_MSG(false, "Invalid input stream type\n");
+      return;
     }
+
+    if (input_node->configured_streams().size() == 1) {
+      streams_.erase(input_stream_type);
+      SerializedTaskComplete();
+      return;
+    }
+
+    graph_head = input_node;
+    DeleteGraphForDisconnectedStream(graph_head, stream_to_disconnect);
   };
 
   // Only one stream supported by the graph.
@@ -390,16 +336,9 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
 
 fit::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
 PipelineManager::FindGraphHead(fuchsia::camera2::CameraStreamType stream_type) {
-  if (full_resolution_stream_ != nullptr) {
-    if (HasStreamType(full_resolution_stream_->configured_streams(), stream_type)) {
-      return fit::ok(std::make_pair(full_resolution_stream_.get(),
-                                    fuchsia::camera2::CameraStreamType::FULL_RESOLUTION));
-    }
-  }
-  if (downscaled_resolution_stream_ != nullptr) {
-    if (HasStreamType(downscaled_resolution_stream_->configured_streams(), stream_type)) {
-      return fit::ok(std::make_pair(downscaled_resolution_stream_.get(),
-                                    fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION));
+  for (auto& stream : streams_) {
+    if (HasStreamType(stream.second->configured_streams(), stream_type)) {
+      return fit::ok(std::make_pair(stream.second.get(), stream.first));
     }
   }
   return fit::error(ZX_ERR_BAD_STATE);
