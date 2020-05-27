@@ -136,12 +136,12 @@ func doTestReboot(
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	expectedConfig, err := check.DetermineActiveABRConfig(ctx, *rpcClient)
 	if err != nil {
-		return fmt.Errorf("error determining target config: %s", err)
+		return fmt.Errorf("error determining target config: %w", err)
 	}
 
 	if err := check.ValidateDevice(
@@ -156,7 +156,7 @@ func doTestReboot(
 	}
 
 	if err := device.Reboot(ctx); err != nil {
-		return fmt.Errorf("error rebooting: %s", err)
+		return fmt.Errorf("error rebooting: %w", err)
 	}
 
 	// Disconnect from sl4f since we rebooted the device.
@@ -168,7 +168,7 @@ func doTestReboot(
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f: %s", err)
+		return fmt.Errorf("unable to connect to sl4f: %w", err)
 	}
 
 	if err := check.ValidateDevice(
@@ -179,7 +179,7 @@ func doTestReboot(
 		expectedConfig,
 		false,
 	); err != nil {
-		return fmt.Errorf("failed to validate device: %s", err)
+		return fmt.Errorf("failed to validate device: %w", err)
 	}
 
 	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {

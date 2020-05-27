@@ -154,28 +154,28 @@ func testTrackingOTAAttempt(
 ) error {
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
-		return fmt.Errorf("failed to get output directory: %s", err)
+		return fmt.Errorf("failed to get output directory: %w", err)
 	}
 	defer cleanup()
 
 	build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, outputDir, nil)
 	if err != nil {
-		return fmt.Errorf("failed to find build %s: %s", buildID, err)
+		return fmt.Errorf("failed to find build %s: %w", buildID, err)
 	}
 
 	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get repo for build: %s", err)
+		return fmt.Errorf("failed to get repo for build: %w", err)
 	}
 
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("failed to get repo system image merkle: %s", err)
+		return fmt.Errorf("failed to get repo system image merkle: %w", err)
 	}
 
 	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %s", err)
+		return fmt.Errorf("failed to check if device is up to date: %w", err)
 	}
 	if upToDate {
 		logger.Infof(ctx, "device already up to date")
@@ -209,7 +209,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 
 	expectedSystemImageMerkle, err := downgradeRepo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return nil, fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	if err := pave.PaveDevice(ctx, device, downgradeBuild, c.otaToRecovery); err != nil {
@@ -246,7 +246,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	return otaToPackage(
@@ -271,12 +271,12 @@ func otaToPackage(
 ) error {
 	expectedConfig, err := check.DetermineTargetABRConfig(ctx, *rpcClient)
 	if err != nil {
-		return fmt.Errorf("error determining target config: %s", err)
+		return fmt.Errorf("error determining target config: %w", err)
 	}
 
 	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %s", err)
+		return fmt.Errorf("failed to check if device is up to date: %w", err)
 	}
 	if upToDate {
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
@@ -284,14 +284,14 @@ func otaToPackage(
 
 	u := updater.NewSystemUpdater(repo, updatePackageUrl)
 	if err := u.Update(ctx, device); err != nil {
-		return fmt.Errorf("failed to download OTA: %s", err)
+		return fmt.Errorf("failed to download OTA: %w", err)
 	}
 
 	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
 	if err = device.Reboot(ctx); err != nil {
-		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
+		return fmt.Errorf("device failed to reboot after OTA applied: %w", err)
 	}
 
 	logger.Infof(ctx, "Reboot complete in %s", time.Now().Sub(startTime))
@@ -309,7 +309,7 @@ func otaToPackage(
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
+		return fmt.Errorf("unable to connect to sl4f after OTA: %w", err)
 	}
 
 	if err := check.ValidateDevice(
@@ -320,7 +320,7 @@ func otaToPackage(
 		expectedConfig,
 		checkABR,
 	); err != nil {
-		return fmt.Errorf("failed to validate after OTA: %s", err)
+		return fmt.Errorf("failed to validate after OTA: %w", err)
 	}
 	return nil
 }

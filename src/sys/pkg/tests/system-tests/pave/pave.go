@@ -29,7 +29,7 @@ func PaveDevice(
 	}
 
 	if err := d.Pave(ctx, build, mode); err != nil {
-		return fmt.Errorf("device failed to pave: %s", err)
+		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
 	log.Printf("Paving successful in %s", time.Now().Sub(startTime))

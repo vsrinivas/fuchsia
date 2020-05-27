@@ -84,7 +84,7 @@ func NewRepository(dir string) (*Repository, error) {
 // exist, or contains malformed metadata.
 func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Repository, error) {
 	if err := util.Untar(ctx, dst, src); err != nil {
-		return nil, fmt.Errorf("failed to extract packages: %s", err)
+		return nil, fmt.Errorf("failed to extract packages: %w", err)
 	}
 
 	return NewRepository(filepath.Join(dst, "amber-files"))

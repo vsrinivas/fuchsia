@@ -20,7 +20,7 @@ func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 	path := "/pkgfs/ctl/validation/missing"
 	f, err := c.FileRead(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading %q: %s", path, err)
+		return fmt.Errorf("error reading %q: %w", path, err)
 	}
 
 	merkles := strings.TrimSpace(string(f))
@@ -37,7 +37,7 @@ func (c *Client) GetSystemImageMerkle(ctx context.Context) (string, error) {
 	path := "/system/meta"
 	f, err := c.FileRead(ctx, path)
 	if err != nil {
-		return "", fmt.Errorf("error reading %q: %s", path, err)
+		return "", fmt.Errorf("error reading %q: %w", path, err)
 	}
 
 	return strings.TrimSpace(string(f)), nil

@@ -161,7 +161,7 @@ func (c *Client) GetSSHConnection(ctx context.Context) (string, error) {
 	var stderr bytes.Buffer
 	cmd := []string{"PATH=''", "echo", "$SSH_CONNECTION"}
 	if err := c.Run(ctx, cmd, &stdout, &stderr); err != nil {
-		return "", fmt.Errorf("failed to read SSH_CONNECTION: %s: %s", err, string(stderr.Bytes()))
+		return "", fmt.Errorf("failed to read SSH_CONNECTION: %w: %s", err, string(stderr.Bytes()))
 	}
 	return strings.Split(string(stdout.Bytes()), " ")[0], nil
 }
@@ -193,7 +193,7 @@ func (c *Client) Reboot(ctx context.Context) error {
 			if _, ok := err.(*ssh.ExitMissingError); ok {
 				logger.Infof(ctx, "ssh disconnected before returning a status")
 			} else {
-				return fmt.Errorf("failed to reboot: %s", err)
+				return fmt.Errorf("failed to reboot: %w", err)
 			}
 		}
 
@@ -289,7 +289,7 @@ func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
 	select {
 	case <-ch:
 	case <-ctx.Done():
-		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+		return fmt.Errorf("device did not disconnect: %w", ctx.Err())
 	}
 
 	logger.Infof(ctx, "device disconnected")
@@ -403,7 +403,7 @@ func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 	path := "/pkgfs/ctl/validation/missing"
 	f, err := c.ReadRemotePath(ctx, path)
 	if err != nil {
-		return fmt.Errorf("error reading %q: %s", path, err)
+		return fmt.Errorf("error reading %q: %w", path, err)
 	}
 
 	merkles := strings.TrimSpace(string(f))
@@ -430,7 +430,7 @@ func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error
 		fi
 		)`, path, path)
 	if err := c.Run(ctx, strings.Fields(cmd), &stdout, &stderr); err != nil {
-		return nil, fmt.Errorf("failed to read %q: %s: %s", path, err, string(stderr.Bytes()))
+		return nil, fmt.Errorf("failed to read %q: %w: %s", path, err, string(stderr.Bytes()))
 	}
 
 	return stdout.Bytes(), nil
@@ -441,7 +441,7 @@ func (c *Client) DeleteRemotePath(ctx context.Context, path string) error {
 	var stderr bytes.Buffer
 	cmd := []string{"PATH=''", "rm", path}
 	if err := c.Run(ctx, cmd, os.Stdout, &stderr); err != nil {
-		return fmt.Errorf("failed to delete %q: %s: %s", path, err, string(stderr.Bytes()))
+		return fmt.Errorf("failed to delete %q: %w: %s", path, err, string(stderr.Bytes()))
 	}
 
 	return nil
@@ -458,7 +458,7 @@ func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error
 				return false, nil
 			}
 		}
-		return false, fmt.Errorf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
+		return false, fmt.Errorf("error reading %q: %w: %s", path, err, string(stderr.Bytes()))
 	}
 
 	return true, nil
@@ -515,23 +515,23 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	// Ensure this client is running system_image or system_image_prime from repo.
 	currentSystemImageMerkle, err := c.GetSystemImageMerkle(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get system image merkle: %s", err)
+		return nil, fmt.Errorf("failed to get system image merkle: %w", err)
 	}
 	if err := repo.VerifyMatchesAnyUpdateSystemImageMerkle(currentSystemImageMerkle); err != nil {
-		return nil, fmt.Errorf("repo does not match system version: %s", err)
+		return nil, fmt.Errorf("repo does not match system version: %w", err)
 	}
 
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing_sl4f".
 	repoName := "host_target_testing_sl4f"
 	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, false)
 	if err != nil {
-		return nil, fmt.Errorf("error serving repo to device: %s", err)
+		return nil, fmt.Errorf("error serving repo to device: %w", err)
 	}
 	defer repoServer.Shutdown(ctx)
 
 	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
 	if err != nil {
-		return nil, fmt.Errorf("error creating sl4f client: %s", err)
+		return nil, fmt.Errorf("error creating sl4f client: %w", err)
 	}
 
 	logger.Infof(ctx, "connected to sl4f in %s", time.Now().Sub(startTime))

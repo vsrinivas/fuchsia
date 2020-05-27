@@ -24,7 +24,7 @@ type Builder struct {
 func (b *Builder) GetLatestBuildID(ctx context.Context) (string, error) {
 	stdout, stderr, err := util.RunCommand(ctx, b.archive.lkgbPath, b.name)
 	if err != nil {
-		return "", fmt.Errorf("lkgb failed: %s: %s", err, string(stderr))
+		return "", fmt.Errorf("lkgb failed: %w: %s", err, string(stderr))
 	}
 	return strings.TrimRight(string(stdout), "\n"), nil
 }

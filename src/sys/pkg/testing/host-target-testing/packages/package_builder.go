@@ -61,7 +61,7 @@ func NewPackageBuilderFromDir(dir string) (*PackageBuilder, error) {
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("walk of %s failed. %s", dir, err)
+			return fmt.Errorf("walk of %s failed. %w", dir, err)
 		}
 		if !info.IsDir() {
 			relativePath := strings.Replace(path, dir+"/", "", 1)
@@ -80,7 +80,7 @@ func NewPackageBuilderFromDir(dir string) (*PackageBuilder, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error when walking the directory. %s", err)
+		return nil, fmt.Errorf("error when walking the directory. %w", err)
 	}
 	if pkg.Name == "" || pkg.Version == "" {
 		return nil, fmt.Errorf("missing package info and version information.")
@@ -101,7 +101,7 @@ func (p *PackageBuilder) AddResource(path string, contents io.Reader) error {
 	}
 	data, err := ioutil.ReadAll(contents)
 	if err != nil {
-		return fmt.Errorf("failed to read file. %s", err)
+		return fmt.Errorf("failed to read file. %w", err)
 	}
 	tempPath := filepath.Join(p.Cache, path)
 	if err := os.MkdirAll(filepath.Dir(tempPath), os.ModePerm); err != nil {
@@ -212,10 +212,10 @@ func (p *PackageBuilder) Publish(pkgRepo *Repository) error {
 	// Publish new config to repo.
 	_, err = pmRepo.PublishManifest(outputManifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to publish manifest. %s", err)
+		return fmt.Errorf("failed to publish manifest. %w", err)
 	}
 	if err = pmRepo.CommitUpdates(true); err != nil {
-		return fmt.Errorf("failed to commit updates to repo. %s", err)
+		return fmt.Errorf("failed to commit updates to repo. %w", err)
 	}
 	return nil
 }

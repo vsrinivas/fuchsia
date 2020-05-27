@@ -53,9 +53,9 @@ func (a *Archive) GetBuildByID(
 	if err != nil {
 		if len(stderr) != 0 {
 			fmt.Printf("artifacts output: \n%s", stdout)
-			return nil, fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
+			return nil, fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
 		}
-		return nil, fmt.Errorf("artifacts failed: %s", err)
+		return nil, fmt.Errorf("artifacts failed: %w", err)
 	}
 
 	return &ArchiveBuild{id: id, archive: a, dir: dir, sshPublicKey: publicKey}, nil
@@ -93,9 +93,9 @@ func (a *Archive) download(ctx context.Context, dir string, buildID string, src 
 		_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
 		if err != nil {
 			if len(stderr) != 0 {
-				return fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
+				return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
 			}
-			return fmt.Errorf("artifacts failed: %s", err)
+			return fmt.Errorf("artifacts failed: %w", err)
 		}
 		return nil
 	})

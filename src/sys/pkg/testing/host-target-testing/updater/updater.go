@@ -55,7 +55,7 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 	return c.ExpectReboot(ctx, func() error {
 		server, err := c.ServePackageRepository(ctx, u.repo, "trigger-ota", true)
 		if err != nil {
-			return fmt.Errorf("error setting up server: %s", err)
+			return fmt.Errorf("error setting up server: %w", err)
 		}
 		defer server.Shutdown(ctx)
 		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
@@ -71,7 +71,7 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
 			if _, ok := err.(*ssh.ExitMissingError); !ok {
-				return fmt.Errorf("failed to trigger OTA: %s", err)
+				return fmt.Errorf("failed to trigger OTA: %w", err)
 			}
 		}
 		return nil
@@ -98,7 +98,7 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	startTime := time.Now()
 	server, err := c.ServePackageRepository(ctx, u.repo, "download-ota", true)
 	if err != nil {
-		return fmt.Errorf("error setting up server: %s", err)
+		return fmt.Errorf("error setting up server: %w", err)
 	}
 	defer server.Shutdown(ctx)
 	// In order to manually trigger the system updater, we need the `run`
@@ -106,7 +106,7 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	// packages, we need to explicitly resolve it.
 	cmd := []string{"pkgctl", "resolve", "fuchsia-pkg://fuchsia.com/run/0"}
 	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("error resolving the run package: %v", err)
+		return fmt.Errorf("error resolving the run package: %w", err)
 	}
 	log.Printf("Downloading system OTA")
 	cmd = []string{
@@ -119,7 +119,7 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 		"--update", fmt.Sprintf("%q", u.updatePackageUrl),
 	}
 	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
+		return fmt.Errorf("failed to run system_updater.cmx: %w", err)
 	}
 	log.Printf("OTA successfully downloaded in %s", time.Now().Sub(startTime))
 	return nil

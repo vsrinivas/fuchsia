@@ -68,7 +68,7 @@ func (c *DeviceConfig) DeviceHostname(ctx context.Context) (string, error) {
 		c.deviceHostname, err = c.DeviceFinder(ctx, "resolve", "-netboot", "-ipv4=false", "-timeout=1s",
 			"-device-limit=1", c.DeviceName)
 		if err != nil {
-			return "", fmt.Errorf("ERROR: Failed to find device %s: %s", c.DeviceName, err)
+			return "", fmt.Errorf("ERROR: Failed to find device %s: %w", c.DeviceName, err)
 		}
 		if c.deviceHostname == "" {
 			return "", fmt.Errorf("unable to determine the device hostname")
@@ -80,7 +80,7 @@ func (c *DeviceConfig) DeviceHostname(ctx context.Context) (string, error) {
 func (c *DeviceConfig) DeviceFinder(ctx context.Context, arg ...string) (string, error) {
 	stdout, stderr, err := util.RunCommand(ctx, c.deviceFinderPath, arg...)
 	if err != nil {
-		return "", fmt.Errorf("device-finder failed: %s: %s", err, string(stderr))
+		return "", fmt.Errorf("device-finder failed: %w: %s", err, string(stderr))
 	}
 	return strings.TrimRight(string(stdout), "\n"), nil
 }

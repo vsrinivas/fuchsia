@@ -145,18 +145,18 @@ func doTestOTAs(
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %s", err)
+		return fmt.Errorf("failed to check if device is up to date: %w", err)
 	}
 	if !upToDate {
 		logger.Infof(ctx, "starting OTA from N-1 -> N test")
 		otaTime := time.Now()
 		if err := systemOTA(ctx, device, rpcClient, repo, true); err != nil {
-			return fmt.Errorf("OTA from N-1 -> N failed: %s", err)
+			return fmt.Errorf("OTA from N-1 -> N failed: %w", err)
 		}
 		logger.Infof(ctx, "OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
 	}
@@ -164,14 +164,14 @@ func doTestOTAs(
 	logger.Infof(ctx, "starting OTA N -> N' test")
 	otaTime := time.Now()
 	if err := systemPrimeOTA(ctx, device, rpcClient, repo, false); err != nil {
-		return fmt.Errorf("OTA from N -> N' failed: %s", err)
+		return fmt.Errorf("OTA from N -> N' failed: %w", err)
 	}
 	logger.Infof(ctx, "OTA from N -> N' successful in %s", time.Now().Sub(otaTime))
 
 	logger.Infof(ctx, "starting OTA N' -> N test")
 	otaTime = time.Now()
 	if err := systemOTA(ctx, device, rpcClient, repo, false); err != nil {
-		return fmt.Errorf("OTA from N' -> N failed: %s", err)
+		return fmt.Errorf("OTA from N' -> N failed: %w", err)
 	}
 	logger.Infof(ctx, "OTA from N' -> N successful in %s", time.Now().Sub(otaTime))
 	logger.Infof(ctx, "OTA cycle sucessful in %s", time.Now().Sub(startTime))
@@ -284,17 +284,17 @@ func systemOTA(
 ) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	expectedConfig, err := check.DetermineTargetABRConfig(ctx, *rpcClient)
 	if err != nil {
-		return fmt.Errorf("error determining target config: %s", err)
+		return fmt.Errorf("error determining target config: %w", err)
 	}
 
 	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %s", err)
+		return fmt.Errorf("failed to check if device is up to date: %w", err)
 	}
 	if upToDate {
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
@@ -305,11 +305,11 @@ func systemOTA(
 
 	u, err := c.installerConfig.Updater(repo)
 	if err != nil {
-		return fmt.Errorf("Configuration error: %s", err)
+		return fmt.Errorf("Configuration error: %w", err)
 	}
 
 	if err := u.Update(ctx, device); err != nil {
-		return fmt.Errorf("OTA failed: %s", err)
+		return fmt.Errorf("OTA failed: %w", err)
 	}
 
 	logger.Infof(ctx, "OTA complete in %s", time.Now().Sub(startTime))
@@ -327,7 +327,7 @@ func systemOTA(
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
+		return fmt.Errorf("unable to connect to sl4f after OTA: %w", err)
 	}
 	if err := check.ValidateDevice(
 		ctx,
@@ -337,7 +337,7 @@ func systemOTA(
 		expectedConfig,
 		checkABR,
 	); err != nil {
-		return fmt.Errorf("failed to validate after OTA: %s", err)
+		return fmt.Errorf("failed to validate after OTA: %w", err)
 	}
 
 	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {
@@ -351,7 +351,7 @@ func systemOTA(
 func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	return otaToPackage(
@@ -369,7 +369,7 @@ func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Clie
 func systemPrimeOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
 	return otaToPackage(
@@ -394,12 +394,12 @@ func otaToPackage(
 ) error {
 	expectedConfig, err := check.DetermineTargetABRConfig(ctx, *rpcClient)
 	if err != nil {
-		return fmt.Errorf("error determining target config: %s", err)
+		return fmt.Errorf("error determining target config: %w", err)
 	}
 
 	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
 	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %s", err)
+		return fmt.Errorf("failed to check if device is up to date: %w", err)
 	}
 	if upToDate {
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
@@ -407,14 +407,14 @@ func otaToPackage(
 
 	u := updater.NewSystemUpdater(repo, updatePackageUrl)
 	if err := u.Update(ctx, device); err != nil {
-		return fmt.Errorf("failed to download OTA: %s", err)
+		return fmt.Errorf("failed to download OTA: %w", err)
 	}
 
 	logger.Infof(ctx, "Rebooting device")
 	startTime := time.Now()
 
 	if err = device.Reboot(ctx); err != nil {
-		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
+		return fmt.Errorf("device failed to reboot after OTA applied: %w", err)
 	}
 
 	logger.Infof(ctx, "Reboot complete in %s", time.Now().Sub(startTime))
@@ -432,7 +432,7 @@ func otaToPackage(
 
 	*rpcClient, err = device.StartRpcSession(ctx, repo)
 	if err != nil {
-		return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
+		return fmt.Errorf("unable to connect to sl4f after OTA: %w", err)
 	}
 	if err := check.ValidateDevice(
 		ctx,
@@ -442,7 +442,7 @@ func otaToPackage(
 		expectedConfig,
 		checkABR,
 	); err != nil {
-		return fmt.Errorf("failed to validate after OTA: %s", err)
+		return fmt.Errorf("failed to validate after OTA: %w", err)
 	}
 
 	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {

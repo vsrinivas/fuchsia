@@ -52,7 +52,7 @@ func (b *ArchiveBuild) GetPackageRepository(ctx context.Context) (*packages.Repo
 
 	path, err := b.archive.download(ctx, b.dir, b.id, "packages.tar.gz")
 	if err != nil {
-		return nil, fmt.Errorf("failed to download packages.tar.gz: %s", err)
+		return nil, fmt.Errorf("failed to download packages.tar.gz: %w", err)
 	}
 
 	packagesDir := filepath.Join(b.dir, b.id, "packages")
@@ -79,7 +79,7 @@ func (b *ArchiveBuild) GetBuildArchive(ctx context.Context) (string, error) {
 	}
 	path, err := b.archive.download(ctx, b.dir, b.id, "build-archive.tgz")
 	if err != nil {
-		return "", fmt.Errorf("failed to download build-archive.tar.gz: %s", err)
+		return "", fmt.Errorf("failed to download build-archive.tar.gz: %w", err)
 	}
 
 	buildArchiveDir := filepath.Join(b.dir, b.id, "build-archive")
@@ -89,7 +89,7 @@ func (b *ArchiveBuild) GetBuildArchive(ctx context.Context) (string, error) {
 	}
 
 	if err := util.Untar(ctx, buildArchiveDir, path); err != nil {
-		return "", fmt.Errorf("failed to extract packages: %s", err)
+		return "", fmt.Errorf("failed to extract packages: %w", err)
 	}
 
 	b.buildArchiveDir = buildArchiveDir

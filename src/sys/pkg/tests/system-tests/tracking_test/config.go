@@ -114,7 +114,7 @@ func (c *config) getDowngradeBuildID(ctx context.Context) (string, error) {
 		}
 		id, err := b.GetLatestBuildID(ctx)
 		if err != nil {
-			return "", fmt.Errorf("failed to lookup build id: %s", err)
+			return "", fmt.Errorf("failed to lookup build id: %w", err)
 		}
 		c.downgradeBuildID = id
 	}
@@ -125,7 +125,7 @@ func (c *config) getDowngradeBuildID(ctx context.Context) (string, error) {
 func (c *config) getDowngradeBuild(ctx context.Context, dir string) (artifacts.Build, error) {
 	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ssh key: %v", err)
+		return nil, fmt.Errorf("failed to get ssh key: %w", err)
 	}
 
 	buildID, err := c.getDowngradeBuildID(ctx)
@@ -161,7 +161,7 @@ func (c *config) getUpgradeBuildID(ctx context.Context) (string, error) {
 		}
 		id, err := b.GetLatestBuildID(ctx)
 		if err != nil {
-			return "", fmt.Errorf("failt to lookup build id: %s", err)
+			return "", fmt.Errorf("failt to lookup build id: %w", err)
 		}
 		c.upgradeBuildID = id
 	}

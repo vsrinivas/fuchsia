@@ -93,7 +93,7 @@ func (c *config) getBuildID(ctx context.Context) (string, error) {
 		}
 		id, err := b.GetLatestBuildID(ctx)
 		if err != nil {
-			return "", fmt.Errorf("failed to lookup build id: %s", err)
+			return "", fmt.Errorf("failed to lookup build id: %w", err)
 		}
 		c.buildID = id
 	}
@@ -104,7 +104,7 @@ func (c *config) getBuildID(ctx context.Context) (string, error) {
 func (c *config) getBuild(ctx context.Context, dir string) (artifacts.Build, error) {
 	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get ssh key: %v", err)
+		return nil, fmt.Errorf("failed to get ssh key: %w", err)
 	}
 
 	buildID, err := c.getBuildID(ctx)
