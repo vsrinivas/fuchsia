@@ -88,6 +88,9 @@ use crate::logging::facade::LoggingFacade;
 // Netstack related includes
 use crate::netstack::facade::NetstackFacade;
 
+// Repository Manager related includes
+use crate::repository_manager::facade::RepositoryManagerFacade;
+
 // Paver related includes
 use crate::paver::facade::PaverFacade;
 
@@ -184,6 +187,7 @@ impl Sl4f {
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::new(),
+                "repo_facade" => RepositoryManagerFacade::new(),
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),

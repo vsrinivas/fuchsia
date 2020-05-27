@@ -43,6 +43,7 @@
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.paver.Paver",
+            "fuchsia.pkg.RepositoryManager",
             "fuchsia.posix.socket.Provider",
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",

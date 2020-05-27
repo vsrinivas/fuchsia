@@ -30,6 +30,7 @@ pub mod location;
 pub mod logging;
 pub mod netstack;
 pub mod paver;
+pub mod repository_manager;
 pub mod scenic;
 pub mod server;
 pub mod setui;
