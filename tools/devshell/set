@@ -179,7 +179,7 @@ function main {
   shift
 
   local gn_cmd='gen'
-  local -a gn_switches=(--check --ide=json --export-rust-project --export-compile-commands=default)
+  local -a gn_switches=(--check --export-rust-project --export-compile-commands=default)
   local gn_after_args=""
   local base=()
   local universe=()
@@ -191,8 +191,7 @@ function main {
   local use_goma
   local goma_dir
   local ensure_goma=1
-  # TODO(bwb) disable this by default to prevent project.json gen
-  local cargo_toml_gen=1
+  local cargo_toml_gen=0
   local ccache
   while [[ $# -ne 0 ]]; do
     case "$1" in

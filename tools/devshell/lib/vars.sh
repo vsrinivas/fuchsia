@@ -51,7 +51,7 @@ function fx-gen {
       set -ex
       cd "${FUCHSIA_DIR}"
       local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
-      PATH="${newpath}" fx-gn gen --check --ide=json --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
+      PATH="${newpath}" fx-gn gen --check --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
       # symlink rust-project.json to root of project
       if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
         ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" rust-project.json

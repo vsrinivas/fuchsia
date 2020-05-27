@@ -35,6 +35,18 @@ toolchain("rustlang") {
   }
 }
 
+# NOTE: This target is used by "fx set --cargo-toml-gen ..." which
+# will do the following:
+#
+#  1) Ensure that "fx gen" (and "fx build") will pass `--ide-json`
+#     to `gn gen`, which generates an up-to-date
+#     `$root_build_dir/project.json` file, used here as input.
+#
+#  2) Add this target to the base packages list to ensure its
+#     action script is run by "fx build".
+#
+# For more details, see docs/development/language/rust/README.md
+#
 action("cargo_toml_gen") {
   # Nothing in-tree should depend on Cargo files.
   # TODO(bwb) remove base_packages visibility when auto-generation is disabled
