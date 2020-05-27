@@ -29,6 +29,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
+				EnableSendEventBenchmark: true,
 			},
 			{
 				Name:    "ByteVector/4096",
@@ -36,6 +37,7 @@ func init() {
 				Config: config.Config{
 					"size": 4096,
 				},
+				EnableSendEventBenchmark: true,
 			},
 			{
 				Name: "ByteVector/65536",

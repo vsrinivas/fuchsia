@@ -51,10 +51,11 @@ type DecodeFailure struct {
 }
 
 type Benchmark struct {
-	Name              string
-	Value             interface{}
-	BindingsAllowlist *LanguageList
-	BindingsDenylist  *LanguageList
+	Name                     string
+	Value                    interface{}
+	BindingsAllowlist        *LanguageList
+	BindingsDenylist         *LanguageList
+	EnableSendEventBenchmark bool
 }
 
 type LanguageList []string

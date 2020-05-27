@@ -31,7 +31,10 @@ benchmark("{{ .Name }}") {
     {{- end -}}
     {{- if .Denylist }}
     bindings_denylist = {{ .Denylist }},
-    {{- end }}
+	{{- end }}
+	{{- if .EnableSendEventBenchmark }}
+	enable_send_event_benchmark = true,
+	{{- end }}
     value = {{ .Value }},
 }
 {{- end }}
@@ -43,10 +46,11 @@ type gidlTmplInput struct {
 }
 
 type gidlTmplBenchmark struct {
-	Name                string
-	Comment             string
-	Value               string
-	Allowlist, Denylist string
+	Name                     string
+	Comment                  string
+	Value                    string
+	Allowlist, Denylist      string
+	EnableSendEventBenchmark bool
 }
 
 func genGidlFile(filepath string, gidl config.GidlFile) error {
@@ -57,11 +61,12 @@ func genGidlFile(filepath string, gidl config.GidlFile) error {
 			return err
 		}
 		results = append(results, gidlTmplBenchmark{
-			Name:      benchmark.Name,
-			Comment:   formatComment(benchmark.Comment),
-			Value:     formatObj(1, value),
-			Allowlist: formatBindingList(benchmark.Allowlist),
-			Denylist:  formatBindingList(benchmark.Denylist),
+			Name:                     benchmark.Name,
+			Comment:                  formatComment(benchmark.Comment),
+			Value:                    formatObj(1, value),
+			Allowlist:                formatBindingList(benchmark.Allowlist),
+			Denylist:                 formatBindingList(benchmark.Denylist),
+			EnableSendEventBenchmark: benchmark.EnableSendEventBenchmark,
 		})
 	}
 

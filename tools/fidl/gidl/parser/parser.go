@@ -129,6 +129,7 @@ const (
 	isErr
 	isBindingsAllowlist
 	isBindingsDenylist
+	isEnableSendEventBenchmark
 )
 
 func (kind bodyElement) String() string {
@@ -145,18 +146,21 @@ func (kind bodyElement) String() string {
 		return "bindings_allowlist"
 	case isBindingsDenylist:
 		return "bindings_denylist"
+	case isEnableSendEventBenchmark:
+		return "enable_send_event_benchmark"
 	default:
 		panic("unsupported kind")
 	}
 }
 
 type body struct {
-	Type              string
-	Value             ir.Value
-	Encodings         []ir.Encoding
-	Err               ir.ErrorCode
-	BindingsAllowlist *ir.LanguageList
-	BindingsDenylist  *ir.LanguageList
+	Type                     string
+	Value                    ir.Value
+	Encodings                []ir.Encoding
+	Err                      ir.ErrorCode
+	BindingsAllowlist        *ir.LanguageList
+	BindingsDenylist         *ir.LanguageList
+	EnableSendEventBenchmark bool
 }
 
 type sectionMetadata struct {
@@ -249,13 +253,14 @@ var sections = map[string]sectionMetadata{
 	},
 	"benchmark": {
 		requiredKinds: map[bodyElement]bool{isValue: true},
-		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
+		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true, isEnableSendEventBenchmark: true},
 		setter: func(name string, body body, all *ir.All) {
 			benchmark := ir.Benchmark{
-				Name:              name,
-				Value:             body.Value,
-				BindingsAllowlist: body.BindingsAllowlist,
-				BindingsDenylist:  body.BindingsDenylist,
+				Name:                     name,
+				Value:                    body.Value,
+				BindingsAllowlist:        body.BindingsAllowlist,
+				BindingsDenylist:         body.BindingsDenylist,
+				EnableSendEventBenchmark: body.EnableSendEventBenchmark,
 			}
 			all.Benchmark = append(all.Benchmark, benchmark)
 		},
@@ -384,8 +389,22 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		}
 		result.BindingsDenylist = &languages
 		kind = isBindingsDenylist
+	case "enable_send_event_benchmark":
+		value, err := p.parseValue()
+		if err != nil {
+			return err
+		}
+		boolValue, ok := value.(bool)
+		if !ok {
+			return p.newParseError(tok, "expected boolean value")
+		}
+		result.EnableSendEventBenchmark = boolValue
+		kind = isEnableSendEventBenchmark
 	default:
 		return p.newParseError(tok, "must be type, value, bytes, err, bindings_allowlist or bindings_denylist")
+	}
+	if kind == 0 {
+		panic("kind must be set")
 	}
 	if all[kind] {
 		return p.newParseError(tok, "duplicate %s found", kind)

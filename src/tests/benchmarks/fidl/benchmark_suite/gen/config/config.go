@@ -47,11 +47,12 @@ type GidlFile struct {
 }
 
 type Benchmark struct {
-	Name      string
-	Comment   string
-	Config    Config
-	Allowlist []Binding
-	Denylist  []Binding
+	Name                     string
+	Comment                  string
+	Config                   Config
+	Allowlist                []Binding
+	Denylist                 []Binding
+	EnableSendEventBenchmark bool
 }
 
 type FidlFile struct {
