@@ -12,6 +12,7 @@ dart_test("sl4f_test") {
     "device_log_test.dart",
     "diagnostics_test.dart",
     "dump_test.dart",
+    "launch_test.dart",
     "performance_test.dart",
     "repository_manager_test.dart",
     "setui_test.dart",

@@ -83,11 +83,13 @@ impl LaunchFacade {
             }
             // if there's exception (like url package not found, return fail)
             ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                bail!(
-                    "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                    return_code,
-                    termination_reason
-                );
+                if return_code != 0 {
+                    bail!(
+                        "Component terminated unexpectedly. Code: {}. Reason: {:?}",
+                        return_code,
+                        termination_reason
+                    );
+                }
             }
         }
         Ok(LaunchResult::Success)
