@@ -197,6 +197,11 @@
             "required": [
               "event"
             ]
+          },
+          {
+            "required": [
+              "event_stream"
+            ]
           }
         ],
         "properties": {
@@ -266,6 +271,21 @@
           "event": {
             "title": "Used event name",
             "description": "The name of an event or a list of event names",
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/name-clause"
+                },
+                {
+                    "$ref": "#/definitions/name-clause-multiple"
+                }
+            ],
+            "examples": [
+                "started"
+            ]
+          },
+          "event_stream": {
+            "title": "Event stream",
+            "description": "The static event stream upon which to receive events",
             "oneOf": [
                 {
                     "$ref": "#/definitions/name-clause"

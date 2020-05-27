@@ -68,6 +68,16 @@
                     "path": "/diagnostics"
                 }
             }
+        },
+        {
+            "event_stream": {
+                "target_path": "/svc/my_stream",
+                "events": [
+                    "began",
+                    "destroyed",
+                    "diagnostics_ready"
+                ]
+            }
         }
     ],
     "exposes": [

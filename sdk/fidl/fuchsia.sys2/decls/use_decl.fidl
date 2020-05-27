@@ -17,6 +17,7 @@ flexible union UseDecl {
     4: UseStorageDecl storage;
     5: UseRunnerDecl runner;
     6: UseEventDecl event;
+    7: UseEventStreamDecl event_stream;
 };
 
 /// Declares a service used by a component, which was offered to the component's
@@ -122,4 +123,16 @@ table UseEventDecl {
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.
     4: fuchsia.data.Dictionary filter;
+};
+
+/// Declares a static EventStream used by a component.
+table UseEventStreamDecl {
+    /// The path where the EventStream protocol will be served.
+    ///
+    /// Must be an absolute path starting with /.
+    1: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+
+    /// The set of event names to which this EventStream is subscribed.
+    /// Note: This vector must be non-empty.
+    2: vector<fuchsia.component.event_name>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED events;
 };

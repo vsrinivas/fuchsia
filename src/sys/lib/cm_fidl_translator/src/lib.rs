@@ -70,6 +70,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
             cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
             cm::Use::Runner(r) => fsys::UseDecl::Runner(r.cm_into()?),
             cm::Use::Event(e) => fsys::UseDecl::Event(e.cm_into()?),
+            cm::Use::EventStream(e) => fsys::UseDecl::EventStream(e.cm_into()?),
         })
     }
 }
@@ -176,6 +177,14 @@ impl CmInto<fsys::UseEventDecl> for cm::UseEvent {
     }
 }
 
+impl CmInto<fsys::UseEventStreamDecl> for cm::UseEventStream {
+    fn cm_into(self) -> Result<fsys::UseEventStreamDecl, Error> {
+        Ok(fsys::UseEventStreamDecl {
+            target_path: Some(self.target_path.into()),
+            events: Some(self.events.iter().map(|e| e.to_string()).collect()),
+        })
+    }
+}
 impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
     fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
         Ok(fsys::ExposeServiceDecl {
@@ -814,6 +823,12 @@ mod tests {
                             "source_name": "started",
                             "target_name": "started"
                         }
+                    },
+                    {
+                        "event_stream": {
+                            "target_path": "/svc/fuchsia.sys2.EventStream",
+                            "events": ["capability_ready_from_realm", "started"]
+                        }
                     }
                 ]
             }),
@@ -876,6 +891,10 @@ mod tests {
                         source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
                         filter: None,
+                    }),
+                    fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
+                        target_path: Some("/svc/fuchsia.sys2.EventStream".to_string()),
+                        events: Some(vec!["capability_ready_from_realm".to_string(), "started".to_string()]),
                     }),
                 ];
                 let mut decl = new_component_decl();

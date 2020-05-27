@@ -284,6 +284,7 @@ impl ComponentCapability {
                 UseDecl::Storage(_) => "storage",
                 UseDecl::Runner(_) => "runner",
                 UseDecl::Event(_) => "event",
+                UseDecl::EventStream(_) => "event_stream",
             },
             ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
                 match expose {

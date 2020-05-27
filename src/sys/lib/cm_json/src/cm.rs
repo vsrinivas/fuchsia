@@ -212,6 +212,8 @@ pub enum Use {
     Runner(UseRunner),
     /// Used event capability.
     Event(UseEvent),
+    /// Used static event stream capability.
+    EventStream(UseEventStream),
 }
 
 /// Used service capability. See [`UseServiceDecl`].
@@ -292,6 +294,17 @@ pub struct UseEvent {
     pub target_name: Name,
     /// Used event filter.
     pub filter: Option<Map<String, Value>>,
+}
+
+/// Used event capability. See [`UseEventStreamDecl`].
+///
+/// [`UseEventStreamDecl`]: ../../fidl_fuchsia_sys2/struct.UseEventStreamDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseEventStream {
+    /// Used event stream path.
+    pub target_path: Path,
+    /// Used events.
+    pub events: Vec<Name>,
 }
 
 /// Exposed capability destination. See [`ExposeTargetDecl`].

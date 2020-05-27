@@ -47,6 +47,8 @@ pub enum Error {
     InvalidEnvironment(DeclField, String),
     #[error("\"{1}\" is referenced in {0} but it does not appear in resolvers")]
     InvalidResolver(DeclField, String),
+    #[error("\"{1}\" is referenced in {0} but it does not appear in events")]
+    InvalidEventStream(DeclField, String),
     #[error("{0} specifies multiple runners")]
     MultipleRunnersSpecified(String),
     #[error("dependency cycle(s) exist: {0}")]
@@ -157,6 +159,17 @@ impl Error {
         )
     }
 
+    pub fn invalid_event_stream(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        event_name: impl Into<String>,
+    ) -> Self {
+        Error::InvalidEventStream(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            event_name.into(),
+        )
+    }
+
     pub fn multiple_runners_specified(decl_type: impl Into<String>) -> Self {
         Error::MultipleRunnersSpecified(decl_type.into())
     }
@@ -234,6 +247,8 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_runners_and_sources: HashMap::new(),
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
+        all_event_names: HashSet::new(),
+        all_event_streams: HashSet::new(),
         strong_dependencies: DirectedGraph::new(),
         target_paths: HashMap::new(),
         offered_runner_names: HashMap::new(),
@@ -270,6 +285,8 @@ struct ValidationContext<'a> {
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
+    all_event_names: HashSet<&'a str>,
+    all_event_streams: HashSet<&'a str>,
     strong_dependencies: DirectedGraph<DependencyNode<'a>>,
     target_paths: PathMap<'a>,
     offered_runner_names: NameMap<'a>,
@@ -409,7 +426,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_use_decls(&mut self, uses: &[fsys::UseDecl]) {
+    fn validate_use_decls(&mut self, uses: &'a [fsys::UseDecl]) {
         // Validate individual fields.
         for use_ in uses.iter() {
             self.validate_use_decl(&use_);
@@ -419,7 +436,7 @@ impl<'a> ValidationContext<'a> {
         self.validate_use_paths(&uses);
     }
 
-    fn validate_use_decl(&mut self, use_: &fsys::UseDecl) {
+    fn validate_use_decl(&mut self, use_: &'a fsys::UseDecl) {
         match use_ {
             fsys::UseDecl::Service(u) => {
                 self.validate_use_fields(
@@ -481,9 +498,10 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::UseDecl::Event(e) => {
-                self.validate_source(e.source.as_ref(), "UseEventDecl", "source");
-                check_name(e.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
-                check_name(e.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
+                self.validate_event(e);
+            }
+            fsys::UseDecl::EventStream(e) => {
+                self.validate_event_stream(e);
             }
             fsys::UseDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
@@ -586,6 +604,59 @@ impl<'a> ValidationContext<'a> {
                     capability_b.decl,
                     path_b,
                 ));
+            }
+        }
+    }
+
+    fn validate_event(&mut self, event: &'a fsys::UseEventDecl) {
+        self.validate_source(event.source.as_ref(), "UseEventDecl", "source");
+        check_name(event.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
+        check_name(event.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
+        if let Some(target_name) = event.target_name.as_ref() {
+            if !self.all_event_names.insert(target_name) {
+                self.errors.push(Error::duplicate_field(
+                    "UseEventDecl",
+                    "target_name",
+                    target_name,
+                ));
+            }
+        }
+    }
+
+    fn validate_event_stream(&mut self, event_stream: &'a fsys::UseEventStreamDecl) {
+        check_path(
+            event_stream.target_path.as_ref(),
+            "UseEventStreamDecl",
+            "target_path",
+            &mut self.errors,
+        );
+        if let Some(target_path) = event_stream.target_path.as_ref() {
+            if !self.all_event_streams.insert(target_path) {
+                self.errors.push(Error::duplicate_field(
+                    "UseEventStreamDecl",
+                    "target_path",
+                    target_path,
+                ));
+            }
+        }
+        match event_stream.events.as_ref() {
+            None => {
+                self.errors.push(Error::missing_field("UseEventStreamDecl", "events"));
+            }
+            Some(events) if events.is_empty() => {
+                self.errors.push(Error::empty_field("UseEventStreamDecl", "events"));
+            }
+            Some(events) => {
+                for event in events {
+                    check_name(Some(event), "UseEventStreamDecl", "event_name", &mut self.errors);
+                    if !self.all_event_names.contains(event.as_str()) {
+                        self.errors.push(Error::invalid_event_stream(
+                            "UseEventStreamDecl",
+                            "events",
+                            event,
+                        ));
+                    }
+                }
             }
         }
     }
@@ -1703,8 +1774,8 @@ mod tests {
             FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
             OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref,
             ResolverDecl, ResolverRegistration, RunnerDecl, SelfRef, StartupMode, StorageDecl,
-            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
-            UseRunnerDecl, UseServiceDecl, UseStorageDecl,
+            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
+            UseProtocolDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -2218,7 +2289,11 @@ mod tests {
                         source_name: None,
                         target_name: None,
                         filter: None,
-                    })
+                    }),
+                    UseDecl::EventStream(UseEventStreamDecl {
+                        target_path: None,
+                        events: None,
+                    }),
                 ]);
                 decl
             },
@@ -2239,6 +2314,8 @@ mod tests {
                 Error::missing_field("UseEventDecl", "source"),
                 Error::missing_field("UseEventDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "target_name"),
+                Error::missing_field("UseEventStreamDecl", "target_path"),
+                Error::missing_field("UseEventStreamDecl", "events"),
             ])),
         },
         test_validate_uses_invalid_identifiers_service => {
@@ -2302,6 +2379,10 @@ mod tests {
                         target_name: Some("/foo".to_string()),
                         filter: Some(fdata::Dictionary { entries: None }),
                     }),
+                    UseDecl::EventStream(UseEventStreamDecl {
+                        target_path: Some("/bar".to_string()),
+                        events: Some(vec!["/a".to_string(), "/b".to_string()]),
+                    }),
                 ]);
                 decl
             },
@@ -2315,6 +2396,30 @@ mod tests {
                 Error::invalid_field("UseEventDecl", "source"),
                 Error::invalid_character_in_field("UseEventDecl", "source_name", '/'),
                 Error::invalid_character_in_field("UseEventDecl", "target_name", '/'),
+                Error::invalid_character_in_field("UseEventStreamDecl", "event_name", '/'),
+                Error::invalid_event_stream("UseEventStreamDecl", "events", "/a".to_string()),
+                Error::invalid_character_in_field("UseEventStreamDecl", "event_name", '/'),
+                Error::invalid_event_stream("UseEventStreamDecl", "events", "/b".to_string()),
+            ])),
+        },
+        test_validate_has_events_in_event_stream => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::EventStream(UseEventStreamDecl {
+                        target_path: Some("/bar".to_string()),
+                        events: None,
+                    }),
+                    UseDecl::EventStream(UseEventStreamDecl {
+                        target_path: Some("/barbar".to_string()),
+                        events: Some(vec![]),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("UseEventStreamDecl", "events"),
+                Error::empty_field("UseEventStreamDecl", "events"),
             ])),
         },
         test_validate_uses_multiple_runners => {

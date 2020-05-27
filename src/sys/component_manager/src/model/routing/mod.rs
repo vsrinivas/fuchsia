@@ -99,7 +99,7 @@ pub(super) async fn route_use_capability<'a>(
             )
             .await
         }
-        UseDecl::Event(_) => {
+        UseDecl::Event(_) | UseDecl::EventStream(_) => {
             // Events are logged separately through route_use_event_capability.
             Ok(())
         }

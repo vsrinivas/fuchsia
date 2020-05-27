@@ -471,6 +471,7 @@ fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
     Storage(UseStorageDecl),
     Runner(UseRunnerDecl),
     Event(UseEventDecl),
+    EventStream(UseEventStreamDecl),
 });
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
 {
@@ -505,6 +506,12 @@ fsys::UseEventDecl,
     source_name: CapabilityName,
     target_name: CapabilityName,
     filter: Option<HashMap<String, DictionaryValue>>,
+});
+fidl_into_struct!(UseEventStreamDecl, UseEventStreamDecl, fsys::UseEventStreamDecl,
+fsys::UseEventStreamDecl,
+{
+    target_path: CapabilityPath,
+    events: Vec<String>,
 });
 
 fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDecl,
@@ -640,6 +647,7 @@ fidl_into_vec!(ResolverDecl, fsys::ResolverDecl);
 fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
 fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
+fidl_translations_opt_type!(Vec<String>);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
@@ -712,6 +720,7 @@ impl UseDecl {
             UseDecl::Directory(d) => &d.target_path,
             UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
             UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
+            UseDecl::EventStream(e) => &e.target_path,
             UseDecl::Storage(UseStorageDecl::Meta) | UseDecl::Runner(_) | UseDecl::Event(_) => {
                 // Meta storage and runners don't show up in the namespace; no capability path.
                 return None;
@@ -727,7 +736,8 @@ impl UseDecl {
             UseDecl::Service(_)
             | UseDecl::Protocol(_)
             | UseDecl::Directory(_)
-            | UseDecl::Storage(_) => None,
+            | UseDecl::Storage(_)
+            | UseDecl::EventStream(_) => None,
         }
     }
 }

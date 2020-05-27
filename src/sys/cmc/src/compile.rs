@@ -186,11 +186,8 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 // source_name == target_name,
                 // When one source name is provided, source_name may be aliased to a different
                 // target_name, so we use source_names[0] to derive the source_name.
-                let source_name = if source_ids.len() == 1 {
-                    cm::Name::new(source_ids[0].clone())?
-                } else {
-                    target_name.clone()
-                };
+                let source_name =
+                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
                 out_uses.push(cm::Use::Event(cm::UseEvent {
                     source: source.clone(),
                     source_name,
@@ -200,6 +197,12 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                     filter: use_.filter.clone(),
                 }));
             }
+        } else if let Some(p) = use_.event_stream() {
+            let target_path = one_target_capability_id(use_, use_)?;
+            out_uses.push(cm::Use::EventStream(cm::UseEventStream {
+                target_path: cm::Path::new(target_path)?,
+                events: p.to_vec(),
+            }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -393,11 +396,8 @@ fn translate_offer(
                 // When one source name is provided, source_name may be aliased to a different
                 // source_name, so we source_ids[0] to derive the source_name.
                 let target_name = cm::Name::new(target_id)?;
-                let source_name = if source_ids.len() == 1 {
-                    cm::Name::new(source_ids[0].clone())?
-                } else {
-                    target_name.clone()
-                };
+                let source_name =
+                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
                 out_offers.push(cm::Offer::Event(cm::OfferEvent {
                     source: source.clone(),
                     source_name,
@@ -793,8 +793,10 @@ where
             Some(OneOrMany::One(p.clone()))
         } else if let Some(p) = in_obj.resolver() {
             Some(OneOrMany::One(p.to_string()))
-        } else if let Some(p) = in_obj.event() {
-            Some(p.clone())
+        } else if let Some(OneOrMany::One(event)) = in_obj.event() {
+            Some(OneOrMany::One(event.to_string()))
+        } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
+            Some(OneOrMany::Many(events.iter().map(|e| e.to_string()).collect()))
         } else if let Some(type_) = in_obj.storage() {
             match type_.as_str() {
                 "data" => Some(OneOrMany::One("/data".to_string())),

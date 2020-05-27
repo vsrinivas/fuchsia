@@ -62,6 +62,7 @@ enum CapabilityType {
     Runner,
     Resolver,
     Event,
+    EventStream,
 }
 
 impl From<UseDecl> for CapabilityType {
@@ -73,6 +74,7 @@ impl From<UseDecl> for CapabilityType {
             UseDecl::Storage(_) => CapabilityType::Storage,
             UseDecl::Runner(_) => CapabilityType::Runner,
             UseDecl::Event(_) => CapabilityType::Event,
+            UseDecl::EventStream(_) => CapabilityType::EventStream,
         }
     }
 }
@@ -123,6 +125,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                 CapabilityType::Runner => panic!("runner capability unsupported"),
                 CapabilityType::Resolver => panic!("resolver capability unsupported"),
                 CapabilityType::Event => panic!("event capability unsupported"),
+                CapabilityType::EventStream => panic!("event stream capability unsupported"),
             }
         },
     )

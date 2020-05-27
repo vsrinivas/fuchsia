@@ -96,7 +96,9 @@ impl IncomingNamespace {
                 cm_rust::UseDecl::Storage(_) => {
                     Self::add_storage_use(&mut ns, &mut directory_waiters, use_, realm.clone())?;
                 }
-                cm_rust::UseDecl::Runner(_) | cm_rust::UseDecl::Event(_) => {
+                cm_rust::UseDecl::Runner(_)
+                | cm_rust::UseDecl::Event(_)
+                | cm_rust::UseDecl::EventStream(_) => {
                     // Event and Runner capabilities are handled in model::model,
                     // as these are capabilities used by the framework itself
                     // and not given to components directly.

@@ -11,7 +11,8 @@ use fidl_fuchsia_sys2::{
     Entry, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
     ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, Object, OfferDecl, OfferEventDecl,
     OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef,
-    StartupMode, UseDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, Value,
+    StartupMode, UseDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl,
+    UseServiceDecl, Value,
 };
 use std::fs::File;
 use std::io::Read;
@@ -78,6 +79,14 @@ fn main() {
                         ))),
                     }]),
                 }),
+            }),
+            UseDecl::EventStream(UseEventStreamDecl {
+                target_path: Some("/svc/my_stream".to_string()),
+                events: Some(vec![
+                    "began".to_string(),
+                    "destroyed".to_string(),
+                    "diagnostics_ready".to_string(),
+                ]),
             }),
         ];
         let runners = vec![RunnerDecl {

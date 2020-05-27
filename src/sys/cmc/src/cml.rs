@@ -186,6 +186,29 @@ pub struct Document {
 }
 
 impl Document {
+    pub fn all_event_names(&self) -> Vec<Name> {
+        let mut all_events: Vec<Name> = vec![];
+        if let Some(uses) = self.r#use.as_ref() {
+            for use_ in uses.iter() {
+                if let Some(event) = &use_.event {
+                    let alias = use_.r#as();
+                    let mut events =
+                        event.to_vec().iter().map(|e| e.clone()).collect::<Vec<Name>>();
+
+                    if events.len() == 1 {
+                        let event_name = alias.unwrap_or(&events[0].to_string()).to_string();
+                        if let Ok(event_name) = Name::new(event_name) {
+                            all_events.push(event_name);
+                        }
+                    } else {
+                        all_events.append(&mut events);
+                    }
+                }
+            }
+        }
+        all_events
+    }
+
     pub fn all_children_names(&self) -> Vec<&Name> {
         if let Some(children) = self.children.as_ref() {
             children.iter().map(|c| &c.name).collect()
@@ -290,7 +313,8 @@ pub struct Use {
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
-    pub event: Option<OneOrMany<String>>,
+    pub event: Option<OneOrMany<Name>>,
+    pub event_stream: Option<OneOrMany<Name>>,
     pub filter: Option<Map<String, Value>>,
 }
 
@@ -316,7 +340,7 @@ pub struct Offer {
     pub storage: Option<String>,
     pub runner: Option<String>,
     pub resolver: Option<Name>,
-    pub event: Option<OneOrMany<String>>,
+    pub event: Option<OneOrMany<Name>>,
     pub from: OneOrMany<Ref>,
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
@@ -371,7 +395,8 @@ pub trait CapabilityClause {
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
     fn resolver(&self) -> &Option<Name>;
-    fn event(&self) -> &Option<OneOrMany<String>>;
+    fn event(&self) -> &Option<OneOrMany<Name>>;
+    fn event_stream(&self) -> &Option<OneOrMany<Name>>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -405,8 +430,11 @@ impl CapabilityClause for Use {
     fn resolver(&self) -> &Option<Name> {
         &None
     }
-    fn event(&self) -> &Option<OneOrMany<String>> {
+    fn event(&self) -> &Option<OneOrMany<Name>> {
         &self.event
+    }
+    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+        &self.event_stream
     }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
@@ -421,6 +449,8 @@ impl CapabilityClause for Use {
             "runner"
         } else if self.event.is_some() {
             "event"
+        } else if self.event_stream.is_some() {
+            "event_stream"
         } else {
             ""
         }
@@ -466,7 +496,10 @@ impl CapabilityClause for Expose {
     fn resolver(&self) -> &Option<Name> {
         &self.resolver
     }
-    fn event(&self) -> &Option<OneOrMany<String>> {
+    fn event(&self) -> &Option<OneOrMany<Name>> {
+        &None
+    }
+    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
         &None
     }
     fn capability_name(&self) -> &'static str {
@@ -523,8 +556,11 @@ impl CapabilityClause for Offer {
     fn resolver(&self) -> &Option<Name> {
         &self.resolver
     }
-    fn event(&self) -> &Option<OneOrMany<String>> {
+    fn event(&self) -> &Option<OneOrMany<Name>> {
         &self.event
+    }
+    fn event_stream(&self) -> &Option<OneOrMany<Name>> {
+        &None
     }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {

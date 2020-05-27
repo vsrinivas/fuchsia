@@ -19,6 +19,8 @@ use {
     valico::json_schema,
 };
 
+const DEFAULT_EVENT_STREAM_PATH: &'static str = "/svc/fuchsia.sys2.EventStream";
+
 /// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
 /// or Ok(()) if all files are valid.
 ///
@@ -52,6 +54,7 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
         all_runners: HashSet::new(),
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
+        all_event_names: HashSet::new(),
     };
     ctx.validate()?;
     Ok(document)
@@ -143,6 +146,7 @@ struct ValidationContext<'a> {
     all_runners: HashSet<&'a cml::Name>,
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
+    all_event_names: HashSet<cml::Name>,
 }
 
 /// A name/identity of a capability exposed/offered to another component.
@@ -164,6 +168,7 @@ enum CapabilityId<'a> {
     Resolver(&'a str),
     StorageType(&'a str),
     Event(&'a str),
+    EventStream(&'a str),
 }
 
 impl<'a> CapabilityId<'a> {
@@ -177,6 +182,7 @@ impl<'a> CapabilityId<'a> {
             | CapabilityId::Resolver(p)
             | CapabilityId::StorageType(p)
             | CapabilityId::Event(p) => p,
+            CapabilityId::EventStream(p) => p,
         }
     }
 
@@ -190,6 +196,7 @@ impl<'a> CapabilityId<'a> {
             CapabilityId::Resolver(_) => "resolver",
             CapabilityId::StorageType(_) => "storage type",
             CapabilityId::Event(_) => "event",
+            CapabilityId::EventStream(_) => "event_stream",
         }
     }
 
@@ -259,9 +266,13 @@ impl<'a> CapabilityId<'a> {
                     "\"as\",\"filter\" fields can only be specified when one `event` is supplied",
                 )),
                 (None, None, _) => {
-                    Ok(events.iter().map(|event| CapabilityId::Event(event)).collect())
+                    Ok(events.iter().map(|event| CapabilityId::Event(event.as_str())).collect())
                 }
             };
+        } else if let Some(_event_stream) = clause.event_stream().as_ref() {
+            return Ok(vec![CapabilityId::EventStream(
+                alias.map(|a| a.as_str()).unwrap_or(DEFAULT_EVENT_STREAM_PATH),
+            )]);
         }
 
         // Offers rules prohibit using the "as" clause for storage; this is validated outside the
@@ -313,6 +324,7 @@ impl<'a> ValidationContext<'a> {
         self.all_runners = self.document.all_runner_names().into_iter().collect();
         self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
+        self.all_event_names = self.document.all_event_names().into_iter().collect();
 
         // Validate "children".
         let mut strong_dependencies = DirectedGraph::new();
@@ -449,6 +461,18 @@ impl<'a> ValidationContext<'a> {
             }
             _ => Ok(()),
         }?;
+
+        if let Some(event_stream) = use_.event_stream.as_ref() {
+            let events = event_stream.to_vec();
+            for event in events {
+                if !self.all_event_names.contains(&event) {
+                    return Err(Error::validate(format!(
+                        "Event \"{}\" in event stream not found in any \"use\" declaration.",
+                        event
+                    )));
+                }
+            }
+        }
 
         // Disallow multiple capability ids of the same name.
         let capability_ids = CapabilityId::from_clause(use_)?;
@@ -1207,6 +1231,13 @@ mod tests {
                         "path": "/diagnositcs"
                     }
                   },
+                  {
+                    "event_stream": [ "started", "stopped", "launched" ]
+                  },
+                  {
+                    "event_stream": [ "started", "stopped", "launched" ],
+                    "as": "/svc/my_stream"
+                  },
                 ]
             }),
             result = Ok(()),
@@ -1360,6 +1391,32 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate("\"as\" field can only be specified when one `event` is supplied")),
+        },
+        test_cml_use_duplicate_events => {
+            input = json!({
+                "use": [
+                    {
+                        "event": ["destroyed", "started"],
+                        "from": "realm",
+                    },
+                    {
+                        "event": ["destroyed"],
+                        "from": "realm",
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"destroyed\" is a duplicate \"use\" target event")),
+        },
+        test_cml_use_event_stream_missing_events => {
+            input = json!({
+                "use": [
+                    {
+                        "event_stream": ["destroyed"],
+                    },
+                ]
+            }),
+            result = Err(Error::validate(format!(
+                        "Event \"destroyed\" in event stream not found in any \"use\" declaration."))),
         },
         test_cml_use_bad_filter_in_event => {
             input = json!({
