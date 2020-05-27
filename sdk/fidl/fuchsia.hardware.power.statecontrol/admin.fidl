@@ -40,13 +40,13 @@ const uint32 MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS = 5;
 protocol Admin {
     /// Ask all devices to enter into the system power state indicated by 'state'. The devices will
     /// get into a low power state, that corresponds to the system power state 'state'.
-    [Transitional = "soon to be deprecated in favor of Suspend2() "]
+    [Transitional = "please use Suspend2() "]
     Suspend(SystemPowerState state) -> () error zx.status;
 
     /// Ask all devices to enter into the system power state indicated by 'request.state' and, in
     /// the case of a reboot or a poweroff, specify the reason for the request. The devices will
     /// get into a low power state, that corresponds to the system power state 'request.state'.
-    [Transitional = "replacing Suspend() in the future "]
+    [Transitional]
     Suspend2(SuspendRequest request) -> () error zx.status;
 };
 
