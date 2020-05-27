@@ -703,6 +703,9 @@ defines up to three overloads of a `Reply()` function
 The completer always defines a `Close(zx_status_t)` function, to close the
 connection with a specified epitaph.
 
+NOTE: Each `Completer` object must only be accessed by one thread at a time.
+Simultaneous access from multiple threads will result in a crash.
+
 ### Responding asynchronously {#async-server}
 
 Notice that the type for the completer `ScanForPlanetsCompleter::Sync` has

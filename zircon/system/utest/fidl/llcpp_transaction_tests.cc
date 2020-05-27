@@ -7,8 +7,11 @@
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/sync/completion.h>
 #include <limits.h>
 #include <zircon/syscalls.h>
+
+#include <thread>
 
 #include <fidl/test/coding/llcpp/fidl.h>
 #include <unittest/unittest.h>
@@ -20,14 +23,26 @@ namespace {
 class Transaction : public fidl::Transaction {
  public:
   Transaction() = default;
+  explicit Transaction(sync_completion_t* wait, sync_completion_t* signal)
+      : wait_(wait),
+        signal_(signal) {}
 
   std::unique_ptr<fidl::Transaction> TakeOwnership() override { ZX_ASSERT(false); }
 
-  void Reply(fidl::Message message) override {}
+  void Reply(fidl::Message message) override {
+    if (wait_ && signal_) {
+      sync_completion_signal(signal_);
+      sync_completion_wait(wait_, ZX_TIME_INFINITE);
+    }
+  }
 
   void Close(zx_status_t epitaph) override {}
 
   ~Transaction() override = default;
+
+ private:
+  sync_completion_t* wait_;
+  sync_completion_t* signal_;
 };
 
 using Completer = ::llcpp::fidl::test::coding::Llcpp::Interface::ActionCompleter::Sync;
@@ -91,6 +106,29 @@ bool close_then_reply_asserts() {
   END_TEST;
 }
 
+// It is not allowed to be accessed from multiple threads simultaneously
+bool concurrent_access_asserts() {
+  BEGIN_TEST;
+
+  sync_completion_t signal, wait;
+  Transaction txn{&signal, &wait};
+  Completer completer(&txn);
+  std::thread t([&] { completer.Reply(1); });
+  sync_completion_wait(&wait, ZX_TIME_INFINITE);
+  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Reply(1); }, &completer,
+               "concurrent access should crash");
+  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Close(ZX_OK); },
+               &completer, "concurrent access should crash");
+  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->EnableNextDispatch(); },
+               &completer, "concurrent access should crash");
+  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->ToAsync(); },
+               &completer, "concurrent access should crash");
+  sync_completion_signal(&signal);
+  t.join();  // Don't accidentally invoke ~Completer() while `t` is still in Reply().
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(llcpp_transaction)
@@ -99,4 +137,5 @@ RUN_TEST(no_expected_reply_doesnt_assert)
 RUN_TEST(double_reply_asserts)
 RUN_TEST(reply_then_close_doesnt_assert)
 RUN_TEST(close_then_reply_asserts)
+RUN_TEST(concurrent_access_asserts)
 END_TEST_CASE(llcpp_transaction)

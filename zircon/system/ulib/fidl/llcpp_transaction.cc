@@ -20,13 +20,15 @@ CompleterBase& CompleterBase::operator=(CompleterBase&& other) noexcept {
 }
 
 void CompleterBase::Close(zx_status_t status) {
-  EnsureHasTransaction();
+  ScopedLock lock(lock_);
+  EnsureHasTransaction(&lock);
   transaction_->Close(status);
   DropTransaction();
 }
 
 void CompleterBase::EnableNextDispatch() {
-  EnsureHasTransaction();
+  ScopedLock lock(lock_);
+  EnsureHasTransaction(&lock);
   transaction_->EnableNextDispatch();
 }
 
@@ -40,25 +42,36 @@ CompleterBase::CompleterBase(CompleterBase&& other) noexcept
 }
 
 CompleterBase::~CompleterBase() {
-  ZX_ASSERT(!needs_to_reply_);
+  ScopedLock lock(lock_);
+  ZX_ASSERT_MSG(!needs_to_reply_, "Completer expected a Reply to be sent.");
   DropTransaction();
 }
 
 std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
-  EnsureHasTransaction();
+  ScopedLock lock(lock_);
+  EnsureHasTransaction(&lock);
   std::unique_ptr<Transaction> clone = transaction_->TakeOwnership();
   DropTransaction();
   return clone;
 }
 
 void CompleterBase::SendReply(Message msg) {
-  EnsureHasTransaction();
-  ZX_ASSERT(needs_to_reply_);
+  ScopedLock lock(lock_);
+  EnsureHasTransaction(&lock);
+  if (unlikely(!needs_to_reply_)) {
+    lock.release();  // Avoid crashing on death tests.
+    ZX_PANIC("Repeated or unexpected Reply.");
+  }
   transaction_->Reply(std::move(msg));
   needs_to_reply_ = false;
 }
 
-void CompleterBase::EnsureHasTransaction() { ZX_ASSERT(transaction_); }
+void CompleterBase::EnsureHasTransaction(ScopedLock* lock) {
+  if (unlikely(!transaction_)) {
+    lock->release();  // Avoid crashing on death tests.
+    ZX_PANIC("ToAsync() was already called.");
+  }
+}
 
 void CompleterBase::DropTransaction() {
   if (owned_) {

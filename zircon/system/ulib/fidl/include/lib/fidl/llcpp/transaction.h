@@ -14,6 +14,7 @@
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
+#include <atomic>
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
@@ -146,15 +147,35 @@ class CompleterBase {
   std::unique_ptr<Transaction> TakeOwnership();
 
  private:
+  // Scoped "lock" to which asserts that only one thread enters the given scope at a time.
+  class ScopedLock {
+   public:
+    ScopedLock(std::atomic_flag& lock) : lock_(lock) {
+      ZX_ASSERT_MSG(!lock_.test_and_set(std::memory_order_acquire),
+                    "Completer accessed from multiple threads concurrently.");
+    }
+    ~ScopedLock() { if (!released_) lock_.clear(std::memory_order_release); }
+    void release() {
+      ZX_ASSERT_MSG(!released_, "Cannot release ScopedLock twice.");
+      released_ = true;
+      lock_.clear(std::memory_order_release);
+    }
+   private:
+    std::atomic_flag& lock_;
+    bool released_ = false;
+  };
+
   void SendReply(Message msg);
 
-  void EnsureHasTransaction();
+  void EnsureHasTransaction(ScopedLock* lock);
 
   void DropTransaction();
 
   Transaction* transaction_;
   bool owned_;
   bool needs_to_reply_;
+  // Atomic flag to ensure single-threaded access to CompleterBase.
+  std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 };
 
 // Completers of a FIDL method call.
