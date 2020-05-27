@@ -14,7 +14,9 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 
 use crate::fidl_hanging_get_responder;
-use crate::switchboard::base::*;
+use crate::switchboard::base::{
+    NightModeInfo, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
+};
 use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(

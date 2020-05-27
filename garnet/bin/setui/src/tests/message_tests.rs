@@ -4,10 +4,12 @@
 
 use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
-use crate::message::base::*;
+use crate::message::base::{
+    Address, Audience, DeliveryStatus, MessageEvent, MessengerType, Payload,
+};
 use crate::message::message_client::MessageClient;
 use crate::message::message_hub::MessageHub;
-use crate::message::receptor::*;
+use crate::message::receptor::Receptor;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;

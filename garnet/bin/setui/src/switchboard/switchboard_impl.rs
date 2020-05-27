@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 use crate::internal::core;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::switchboard::base::*;
+use crate::switchboard::base::{
+    ListenCallback, ListenSession, SettingAction, SettingActionData, SettingEvent, SettingRequest,
+    SettingRequestResponder, SettingType, Switchboard, SwitchboardClient, SwitchboardHandle,
+};
 use crate::switchboard::clock;
 
 use anyhow::{format_err, Error};

@@ -4,7 +4,7 @@
 
 use anyhow::{format_err, Error};
 use fidl::endpoints::create_proxy;
-use fidl_fuchsia_stash::*;
+use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use serde::de::DeserializeOwned;
@@ -136,6 +136,7 @@ fn prefixed(input_string: &str) -> String {
 #[cfg(test)]
 pub mod testing {
     use super::*;
+    use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest};
     use fuchsia_async as fasync;
     use futures::lock::Mutex;
     use futures::prelude::*;
@@ -272,6 +273,7 @@ pub mod testing {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest};
     use fuchsia_async as fasync;
     use futures::lock::Mutex;
     use futures::prelude::*;

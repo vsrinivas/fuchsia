@@ -4,9 +4,12 @@
 
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
-use crate::agent::base::*;
+use crate::agent::base::{
+    AgentError, Authority, Blueprint, BlueprintHandle, Context, Descriptor, InitializationContext,
+    Invocation, InvocationResult, Lifespan,
+};
 use crate::internal::agent;
-use crate::registry::device_storage::testing::*;
+use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::switchboard_impl::SwitchboardBuilder;

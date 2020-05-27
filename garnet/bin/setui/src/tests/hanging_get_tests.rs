@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
-use crate::registry::device_storage::testing::*;
+use crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
 use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingType, SetupInfo};
 use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
-use fidl_fuchsia_settings::*;
+use fidl_fuchsia_settings::SetupMarker;
 use fuchsia_component::server::NestedEnvironment;
 use futures::lock::Mutex;
 use std::sync::Arc;
