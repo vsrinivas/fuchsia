@@ -264,7 +264,7 @@ set_defaults("shared_library") {
 }
 
 set_defaults("rust_library") {
-  configs = default_shared_library_configs
+  configs = default_common_binary_configs
 }
 
 set_defaults("rust_proc_macro") {
@@ -292,7 +292,7 @@ set_defaults("rustc_test") {
 }
 
 set_defaults("rustc_library") {
-  configs = default_shared_library_configs
+  configs = default_common_binary_configs
 }
 
 set_defaults("rustc_wasm_library") {
