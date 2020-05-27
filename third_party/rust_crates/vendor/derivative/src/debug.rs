@@ -4,23 +4,27 @@ use ast;
 use attr;
 use matcher;
 use syn;
+use syn::spanned::Spanned;
 use utils;
 
 pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
     let debug_trait_path = debug_trait_path();
     let fmt_path = fmt_path();
 
+    let formatter = quote_spanned! {input.span=> __f};
+
     let body = matcher::Matcher::new(matcher::BindingStyle::Ref).build_arms(
         input,
-        |_, arm_name, style, attrs, bis| {
+        "__arg",
+        |_, _, arm_name, style, attrs, bis| {
             let field_prints = bis.iter().filter_map(|bi| {
                 if bi.field.attrs.ignore_debug() {
                     return None;
                 }
 
                 if attrs.debug_transparent() {
-                    return Some(quote!{
-                        #debug_trait_path::fmt(__arg_0, __f)
+                    return Some(quote_spanned! {arm_name.span()=>
+                        #debug_trait_path::fmt(__arg_0, #formatter)
                     });
                 }
 
@@ -32,14 +36,14 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
 
                 let builder = if let Some(ref name) = bi.field.ident {
                     let name = name.to_string();
-                    quote! {
+                    quote_spanned! {arm_name.span()=>
                         #dummy_debug
-                        let _ = builder.field(#name, &#arg);
+                        let _ = __debug_trait_builder.field(#name, &#arg);
                     }
                 } else {
-                    quote! {
+                    quote_spanned! {arm_name.span()=>
                         #dummy_debug
-                        let _ = builder.field(&#arg);
+                        let _ = __debug_trait_builder.field(&#arg);
                     }
                 };
 
@@ -53,15 +57,15 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
             let method = syn::Ident::new(method, proc_macro2::Span::call_site());
 
             if attrs.debug_transparent() {
-                quote! {
+                quote_spanned! {arm_name.span()=>
                     #(#field_prints)*
                 }
             } else {
                 let name = arm_name.to_string();
-                quote! {
-                    let mut builder = __f.#method(#name);
+                quote_spanned! {arm_name.span()=>
+                    let mut __debug_trait_builder = #formatter.#method(#name);
                     #(#field_prints)*
-                    builder.finish()
+                    __debug_trait_builder.finish()
                 }
             }
         },
@@ -78,11 +82,13 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
     );
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    quote! {
+    // don't attach a span to prevent issue #58
+    let match_self = quote!(match *self);
+    quote_spanned! {input.span=>
         #[allow(unused_qualifications)]
         impl #impl_generics #debug_trait_path for #name #ty_generics #where_clause {
-            fn fmt(&self, __f: &mut #fmt_path::Formatter) -> #fmt_path::Result {
-                match *self {
+            fn fmt(&self, #formatter: &mut #fmt_path::Formatter) -> #fmt_path::Result {
+                #match_self {
                     #body
                 }
             }
@@ -131,9 +137,6 @@ fn format_with(
     let fmt_path = fmt_path();
     let phantom_path = phantom_path();
 
-    let ctor_generics = generics.clone();
-    let (_, ctor_ty_generics, _) = ctor_generics.split_for_impl();
-
     generics
         .make_where_clause()
         .predicates
@@ -157,9 +160,12 @@ fn format_with(
 
             syn::WherePredicate::Type(syn::PredicateType {
                 lifetimes: None,
-                bounded_ty: syn::Type::Path(syn::TypePath { qself: None, path: path }),
+                bounded_ty: syn::Type::Path(syn::TypePath {
+                    qself: None,
+                    path,
+                }),
                 colon_token: Default::default(),
-                bounds: bounds,
+                bounds,
             })
         })
         .collect::<Vec<_>>();
@@ -175,9 +181,17 @@ fn format_with(
     // Leave off the type parameter bounds, defaults, and attributes
     let phantom = generics.type_params().map(|tp| &tp.ident);
 
-    quote!(
+    let mut ctor_generics = generics.clone();
+    *ctor_generics
+        .lifetimes_mut()
+        .last()
+        .expect("There must be a '_derivative lifetime") = syn::LifetimeDef::new(parse_quote!('_));
+    let (_, ctor_ty_generics, _) = ctor_generics.split_for_impl();
+    let ctor_ty_generics = ctor_ty_generics.as_turbofish();
+
+    quote_spanned!(format_fn.span()=>
         let #arg_n = {
-            struct Dummy #ty_generics (&'_derivative #ty, #phantom_path <(#(#phantom),*)>) #where_clause;
+            struct Dummy #impl_generics (&'_derivative #ty, #phantom_path <(#(#phantom,)*)>) #where_clause;
 
             impl #impl_generics #debug_trait_path for Dummy #ty_generics #where_clause {
                 fn fmt(&self, __f: &mut #fmt_path::Formatter) -> #fmt_path::Result {
@@ -185,7 +199,7 @@ fn format_with(
                 }
             }
 
-            Dummy:: #ctor_ty_generics (#arg_n, #phantom_path)
+            Dummy #ctor_ty_generics (#arg_n, #phantom_path)
         };
     )
 }

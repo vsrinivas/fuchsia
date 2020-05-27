@@ -43,7 +43,10 @@ pub fn with_where_predicates(
     predicates: &[syn::WherePredicate],
 ) -> syn::Generics {
     let mut cloned = generics.clone();
-    cloned.make_where_clause().predicates.extend(predicates.iter().cloned());
+    cloned
+        .make_where_clause()
+        .predicates
+        .extend(predicates.iter().cloned());
     cloned
 }
 
@@ -63,7 +66,10 @@ where
             .flat_map(|field| from_field(&field.attrs))
             .flat_map(|predicates| predicates.to_vec());
 
-        cloned.make_where_clause().predicates.extend(field_where_predicates);
+        cloned
+            .make_where_clause()
+            .predicates
+            .extend(field_where_predicates);
     }
     cloned
 }
@@ -137,7 +143,7 @@ where
         .map(|field| &field.ty);
 
     let mut visitor = FindTyParams {
-        all_ty_params: all_ty_params,
+        all_ty_params,
         relevant_ty_params: HashSet::new(),
     };
     for ty in relevant_tys {
@@ -152,14 +158,17 @@ where
             .filter(|id| visitor.relevant_ty_params.contains(id))
             .map(|id| -> syn::WherePredicate { parse_quote!( #id : #bound ) });
 
-        cloned.make_where_clause().predicates.extend(relevant_where_predicates);
+        cloned
+            .make_where_clause()
+            .predicates
+            .extend(relevant_where_predicates);
     }
     cloned
 }
 
 fn is_phantom_data(path: &syn::Path) -> bool {
     match path.segments.last() {
-        Some(syn::punctuated::Pair::End(seg)) if seg.ident == "PhantomData" => true,
+        Some(path) if path.ident == "PhantomData" => true,
         _ => false,
     }
 }

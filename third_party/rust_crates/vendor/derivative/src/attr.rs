@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use proc_macro2;
-use quote::ToTokens;
 use syn;
+use syn::spanned::Spanned;
 
 /// Represent the `derivative` attributes on the input type (`struct`/`enum`).
 #[derive(Debug, Default)]
@@ -13,14 +11,18 @@ pub struct Input {
     pub copy: Option<InputCopy>,
     /// Whether `Debug` is present and its specific attributes.
     pub debug: Option<InputDebug>,
-    /// Whether `Default` is present and its specitif attributes.
+    /// Whether `Default` is present and its specific attributes.
     pub default: Option<InputDefault>,
-    /// Whether `Eq` is present and its specitif attributes.
+    /// Whether `Eq` is present and its specific attributes.
     pub eq: Option<InputEq>,
     /// Whether `Hash` is present and its specific attributes.
     pub hash: Option<InputHash>,
-    /// Whether `Eq` is present and its specitif attributes.
+    /// Whether `PartialEq` is present and its specific attributes.
     pub partial_eq: Option<InputPartialEq>,
+    /// Whether `PartialOrd` is present and its specific attributes.
+    pub partial_ord: Option<InputPartialOrd>,
+    /// Whether `Ord` is present and its specific attributes.
+    pub ord: Option<InputOrd>,
 }
 
 #[derive(Debug, Default)]
@@ -38,8 +40,12 @@ pub struct Field {
     eq_bound: Option<Vec<syn::WherePredicate>>,
     /// The parameters for `Hash`.
     hash: FieldHash,
-    /// The parameters for `Eq`.
+    /// The parameters for `PartialEq`.
     partial_eq: FieldPartialEq,
+    /// The parameters for `PartialOrd`.
+    partial_ord: FieldPartialOrd,
+    /// The parameters for `Ord`.
+    ord: FieldOrd,
 }
 
 #[derive(Debug, Default)]
@@ -95,21 +101,37 @@ pub struct InputHash {
 pub struct InputPartialEq {
     /// The `bound` attribute if present and the corresponding bounds.
     bounds: Option<Vec<syn::WherePredicate>>,
-    /// Allow `derivative(PartialEq)` on enums:
+}
+
+#[derive(Debug, Default)]
+/// Represent the `derivative(PartialOrd(…))` attributes on an input.
+pub struct InputPartialOrd {
+    /// The `bound` attribute if present and the corresponding bounds.
+    bounds: Option<Vec<syn::WherePredicate>>,
+    /// Allow `derivative(PartialOrd)` on enums:
     on_enum: bool,
 }
 
 #[derive(Debug, Default)]
-/// Represents the `derivarive(Clone(…))` attributes on a field.
+/// Represent the `derivative(Ord(…))` attributes on an input.
+pub struct InputOrd {
+    /// The `bound` attribute if present and the corresponding bounds.
+    bounds: Option<Vec<syn::WherePredicate>>,
+    /// Allow `derivative(Ord)` on enums:
+    on_enum: bool,
+}
+
+#[derive(Debug, Default)]
+/// Represents the `derivative(Clone(…))` attributes on a field.
 pub struct FieldClone {
     /// The `bound` attribute if present and the corresponding bounds.
     bounds: Option<Vec<syn::WherePredicate>>,
-    /// The `clone_with` attribute if present and the path to the clonning function.
+    /// The `clone_with` attribute if present and the path to the cloning function.
     clone_with: Option<syn::Path>,
 }
 
 #[derive(Debug, Default)]
-/// Represents the `derivarive(Debug(…))` attributes on a field.
+/// Represents the `derivative(Debug(…))` attributes on a field.
 pub struct FieldDebug {
     /// The `bound` attribute if present and the corresponding bounds.
     bounds: Option<Vec<syn::WherePredicate>>,
@@ -120,16 +142,16 @@ pub struct FieldDebug {
 }
 
 #[derive(Debug, Default)]
-/// Represent the `derivarive(Default(…))` attributes on a field.
+/// Represent the `derivative(Default(…))` attributes on a field.
 pub struct FieldDefault {
     /// The `bound` attribute if present and the corresponding bounds.
     bounds: Option<Vec<syn::WherePredicate>>,
     /// The default value for the field if present.
-    pub value: Option<syn::Expr>,
+    pub value: Option<proc_macro2::TokenStream>,
 }
 
 #[derive(Debug, Default)]
-/// Represents the `derivarive(Hash(…))` attributes on a field.
+/// Represents the `derivative(Hash(…))` attributes on a field.
 pub struct FieldHash {
     /// The `bound` attribute if present and the corresponding bounds.
     bounds: Option<Vec<syn::WherePredicate>>,
@@ -140,7 +162,7 @@ pub struct FieldHash {
 }
 
 #[derive(Debug, Default)]
-/// Represent the `derivarive(PartialEq(…))` attributes on a field.
+/// Represent the `derivative(PartialEq(…))` attributes on a field.
 pub struct FieldPartialEq {
     /// The `bound` attribute if present and the corresponding bounds.
     bounds: Option<Vec<syn::WherePredicate>>,
@@ -150,14 +172,39 @@ pub struct FieldPartialEq {
     ignore: bool,
 }
 
+#[derive(Debug, Default)]
+/// Represent the `derivative(PartialOrd(…))` attributes on a field.
+pub struct FieldPartialOrd {
+    /// The `bound` attribute if present and the corresponding bounds.
+    bounds: Option<Vec<syn::WherePredicate>>,
+    /// The `compare_with` attribute if present and the path to the comparison function.
+    compare_with: Option<syn::Path>,
+    /// Whether the field is to be ignored when comparing.
+    ignore: bool,
+}
+
+#[derive(Debug, Default)]
+/// Represent the `derivative(Ord(…))` attributes on a field.
+pub struct FieldOrd {
+    /// The `bound` attribute if present and the corresponding bounds.
+    bounds: Option<Vec<syn::WherePredicate>>,
+    /// The `compare_with` attribute if present and the path to the comparison function.
+    compare_with: Option<syn::Path>,
+    /// Whether the field is to be ignored when comparing.
+    ignore: bool,
+}
+
 macro_rules! for_all_attr {
-    (for ($name:ident, $value:ident) in $attrs:expr; $($body:tt)*) => {
-        for meta_items in $attrs.iter().filter_map(|attr| derivative_attribute(attr.parse_meta())) {
-            for metaitem in meta_items.iter().map(read_items) {
-                let MetaItem($name, $value) = try!(metaitem);
-                match $name.to_string().as_ref() {
-                    $($body)*
-                    _ => return Err(format!("unknown trait `{}`", $name)),
+    ($errors:ident; for ($name:ident, $value:ident) in $attrs:expr; $($body:tt)*) => {
+        for meta_items in $attrs.iter() {
+            let meta_items = derivative_attribute(meta_items.parse_meta(), $errors);
+            if let Some(meta_items) = meta_items {
+                for meta_item in meta_items.iter() {
+                    let meta_item = read_items(meta_item, $errors);
+                    let MetaItem($name, $value) = try!(meta_item);
+                    match $name.to_string().as_ref() {
+                        $($body)*
+                    }
                 }
             }
         }
@@ -165,111 +212,155 @@ macro_rules! for_all_attr {
 }
 
 macro_rules! match_attributes {
-    (let Some($name:ident) = $unwraped:expr; for $value:ident in $values:expr; $($body:tt)* ) => {
-        let mut $name = $unwraped.take().unwrap_or_default();
+    ($errors:ident for $trait:expr; let Some($name:ident) = $unwrapped:expr; for $value:ident in $values:expr; $($body:tt)* ) => {
+        let mut $name = $unwrapped.take().unwrap_or_default();
 
         match_attributes! {
+            $errors for $trait;
             for $value in $values;
             $($body)*
         }
 
-        $unwraped = Some($name);
+        $unwrapped = Some($name);
     };
 
-    (for $value:ident in $values:expr; $($body:tt)* ) => {
+    ($errors:ident for $trait:expr; for $value:ident in $values:expr; $($body:tt)* ) => {
         for (name, $value) in $values {
-            let value = $value.as_ref().map(|v| v.as_ref());
             match name {
                 Some(ident) => {
                     match ident.to_string().as_ref() {
                         $($body)*
-                        _ => return Err(format!("unknown attribute `{}`", ident)),
+                        unknown => {
+                            let message = format!("Unknown attribute `{}` for trait `{}`", unknown, $trait);
+                            $errors.extend(quote_spanned! {ident.span()=>
+                                compile_error!(#message);
+                            });
+                        }
                     }
                 }
                 None => {
-                    match value.expect("Expected value to be passed") {
+                    let value = $value.expect("Expected value to be passed");
+                    match value.value().as_ref() {
                         $($body)*
-                        _ => return Err("unknown attribute".to_string()),
+                        unknown => {
+                            let message = format!("Unknown attribute `{}` for trait `{}`", unknown, $trait);
+                            let span = value.span();
+                            $errors.extend(quote_spanned! {span=>
+                                compile_error!(#message);
+                            });
+                        }
                     }
                 }
             }
         }
-    };
-}
-
-macro_rules! opt_string_to_str {
-    ($value:ident) => {
-        $value.as_ref().map(|v| v.as_ref())
     };
 }
 
 impl Input {
     /// Parse the `derivative` attributes on a type.
-    pub fn from_ast(attrs: &[syn::Attribute]) -> Result<Input, String> {
+    #[allow(clippy::cognitive_complexity)] // mostly macros
+    pub fn from_ast(
+        attrs: &[syn::Attribute],
+        errors: &mut proc_macro2::TokenStream,
+    ) -> Result<Input, ()> {
         let mut input = Input::default();
 
         for_all_attr! {
+            errors;
             for (name, values) in attrs;
             "Clone" => {
                 match_attributes! {
+                    errors for "Clone";
                     let Some(clone) = input.clone;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut clone.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut clone.bounds, value, errors),
                     "clone_from" => {
-                        clone.clone_from = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "clone_from"));
+                        clone.clone_from = parse_boolean_meta_item(value, true, "clone_from", errors);
                     }
                 }
             }
             "Copy" => {
                 match_attributes! {
+                    errors for "Copy";
                     let Some(copy) = input.copy;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut copy.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut copy.bounds, value, errors),
                 }
             }
             "Debug" => {
                 match_attributes! {
+                    errors for "Debug";
                     let Some(debug) = input.debug;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut debug.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut debug.bounds, value, errors),
                     "transparent" => {
-                        debug.transparent = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "transparent"));
+                        debug.transparent = parse_boolean_meta_item(value, true, "transparent", errors);
                     }
                 }
             }
             "Default" => {
                 match_attributes! {
+                    errors for "Default";
                     let Some(default) = input.default;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut default.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut default.bounds, value, errors),
                     "new" => {
-                        default.new = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "new"));
+                        default.new = parse_boolean_meta_item(value, true, "new", errors);
                     }
                 }
             }
             "Eq" => {
                 match_attributes! {
+                    errors for "Eq";
                     let Some(eq) = input.eq;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut eq.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut eq.bounds, value, errors),
                 }
             }
             "Hash" => {
                 match_attributes! {
+                    errors for "Hash";
                     let Some(hash) = input.hash;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut hash.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut hash.bounds, value, errors),
                 }
             }
             "PartialEq" => {
                 match_attributes! {
+                    errors for "PartialEq";
                     let Some(partial_eq) = input.partial_eq;
                     for value in values;
-                    "bound" => try!(parse_bound(&mut partial_eq.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut partial_eq.bounds, value, errors),
+                    "feature_allow_slow_enum" => (), // backward compatibility, now unnecessary
+                }
+            }
+            "PartialOrd" => {
+                match_attributes! {
+                    errors for "PartialOrd";
+                    let Some(partial_ord) = input.partial_ord;
+                    for value in values;
+                    "bound" => parse_bound(&mut partial_ord.bounds, value, errors),
                     "feature_allow_slow_enum" => {
-                        partial_eq.on_enum = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "feature_allow_slow_enum"));
+                        partial_ord.on_enum = parse_boolean_meta_item(value, true, "feature_allow_slow_enum", errors);
                     }
                 }
+            }
+            "Ord" => {
+                match_attributes! {
+                    errors for "Ord";
+                    let Some(ord) = input.ord;
+                    for value in values;
+                    "bound" => parse_bound(&mut ord.bounds, value, errors),
+                    "feature_allow_slow_enum" => {
+                        ord.on_enum = parse_boolean_meta_item(value, true, "feature_allow_slow_enum", errors);
+                    }
+                }
+            }
+            unknown => {
+                let message = format!("deriving `{}` is not supported by derivative", unknown);
+                errors.extend(quote_spanned! {name.span()=>
+                    compile_error!(#message);
+                });
             }
         }
 
@@ -326,82 +417,143 @@ impl Input {
             .and_then(|d| d.bounds.as_ref().map(Vec::as_slice))
     }
 
-    pub fn partial_eq_on_enum(&self) -> bool {
-        self.partial_eq.as_ref().map_or(false, |d| d.on_enum)
+    pub fn partial_ord_bound(&self) -> Option<&[syn::WherePredicate]> {
+        self.partial_ord
+            .as_ref()
+            .and_then(|d| d.bounds.as_ref().map(Vec::as_slice))
+    }
+
+    pub fn ord_bound(&self) -> Option<&[syn::WherePredicate]> {
+        self.ord
+            .as_ref()
+            .and_then(|d| d.bounds.as_ref().map(Vec::as_slice))
+    }
+
+    pub fn partial_ord_on_enum(&self) -> bool {
+        self.partial_ord.as_ref().map_or(false, |d| d.on_enum)
+    }
+
+    pub fn ord_on_enum(&self) -> bool {
+        self.ord.as_ref().map_or(false, |d| d.on_enum)
     }
 }
 
 impl Field {
     /// Parse the `derivative` attributes on a type.
-    pub fn from_ast(field: &syn::Field) -> Result<Field, String> {
+    #[allow(clippy::cognitive_complexity)] // mostly macros
+    pub fn from_ast(
+        field: &syn::Field,
+        errors: &mut proc_macro2::TokenStream,
+    ) -> Result<Field, ()> {
         let mut out = Field::default();
 
         for_all_attr! {
+            errors;
             for (name, values) in field.attrs;
             "Clone" => {
                 match_attributes! {
+                    errors for "Clone";
                     for value in values;
-                    "bound" => try!(parse_bound(&mut out.clone.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut out.clone.bounds, value, errors),
                     "clone_with" => {
-                        let path = try!(opt_string_to_str!(value).ok_or_else(|| "`clone_with` needs a value".to_string()));
-                        out.clone.clone_with = Some(try!(parse_str(&path)));
+                        let path = value.expect("`clone_with` needs a value");
+                        out.clone.clone_with = parse_str_lit(&path, errors).ok();
                     }
                 }
             }
             "Debug" => {
                 match_attributes! {
+                    errors for "Debug";
                     for value in values;
-                    "bound" => try!(parse_bound(&mut out.debug.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut out.debug.bounds, value, errors),
                     "format_with" => {
-                        let path = try!(opt_string_to_str!(value).ok_or_else(|| "`format_with` needs a value".to_string()));
-                        out.debug.format_with = Some(try!(parse_str(&path)));
+                        let path = value.expect("`format_with` needs a value");
+                        out.debug.format_with = parse_str_lit(&path, errors).ok();
                     }
                     "ignore" => {
-                        out.debug.ignore = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "ignore"));
+                        out.debug.ignore = parse_boolean_meta_item(value, true, "ignore", errors);
                     }
                 }
             }
             "Default" => {
                 match_attributes! {
+                    errors for "Default";
                     for value in values;
-                    "bound" => try!(parse_bound(&mut out.default.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut out.default.bounds, value, errors),
                     "value" => {
-                        let value = try!(opt_string_to_str!(value).ok_or_else(|| "`value` needs a value".to_string()));
-                        out.default.value = Some(try!(parse_str(&value)));
+                        let value = value.expect("`value` needs a value");
+                        out.default.value = parse_str_lit(&value, errors).ok();
                     }
                 }
             }
             "Eq" => {
                 match_attributes! {
+                    errors for "Eq";
                     for value in values;
-                    "bound" => try!(parse_bound(&mut out.eq_bound, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut out.eq_bound, value, errors),
                 }
             }
             "Hash" => {
                 match_attributes! {
+                    errors for "Hash";
                     for value in values;
-                    "bound" => try!(parse_bound(&mut out.hash.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut out.hash.bounds, value, errors),
                     "hash_with" => {
-                        let path = try!(opt_string_to_str!(value).ok_or_else(|| "`hash_with` needs a value".to_string()));
-                        out.hash.hash_with = Some(try!(parse_str(&path)));
+                        let path = value.expect("`hash_with` needs a value");
+                        out.hash.hash_with = parse_str_lit(&path, errors).ok();
                     }
                     "ignore" => {
-                        out.hash.ignore = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "ignore"));
+                        out.hash.ignore = parse_boolean_meta_item(value, true, "ignore", errors);
                     }
                 }
             }
             "PartialEq" => {
                 match_attributes! {
+                    errors for "PartialEq";
                     for value in values;
-                    "bound" => try!(parse_bound(&mut out.partial_eq.bounds, opt_string_to_str!(value))),
+                    "bound" => parse_bound(&mut out.partial_eq.bounds, value, errors),
                     "compare_with" => {
-                        let path = try!(opt_string_to_str!(value).ok_or_else(|| "`compare_with` needs a value".to_string()));
-                        out.partial_eq.compare_with = Some(try!(parse_str(&path)));
+                        let path = value.expect("`compare_with` needs a value");
+                        out.partial_eq.compare_with = parse_str_lit(&path, errors).ok();
                     }
                     "ignore" => {
-                        out.partial_eq.ignore = try!(parse_boolean_meta_item(&opt_string_to_str!(value), true, "ignore"));
+                        out.partial_eq.ignore = parse_boolean_meta_item(value, true, "ignore", errors);
                     }
                 }
+            }
+            "PartialOrd" => {
+                match_attributes! {
+                    errors for "PartialOrd";
+                    for value in values;
+                    "bound" => parse_bound(&mut out.partial_ord.bounds, value, errors),
+                    "compare_with" => {
+                        let path = value.expect("`compare_with` needs a value");
+                        out.partial_ord.compare_with = parse_str_lit(&path, errors).ok();
+                    }
+                    "ignore" => {
+                        out.partial_ord.ignore = parse_boolean_meta_item(value, true, "ignore", errors);
+                    }
+                }
+            }
+            "Ord" => {
+                match_attributes! {
+                    errors for "Ord";
+                    for value in values;
+                    "bound" => parse_bound(&mut out.ord.bounds, value, errors),
+                    "compare_with" => {
+                        let path = value.expect("`compare_with` needs a value");
+                        out.ord.compare_with = parse_str_lit(&path, errors).ok();
+                    }
+                    "ignore" => {
+                        out.ord.ignore = parse_boolean_meta_item(value, true, "ignore", errors);
+                    }
+                }
+            }
+            unknown => {
+                let message = format!("deriving `{}` is not supported by derivative", unknown);
+                errors.extend(quote_spanned! {name.span()=>
+                    compile_error!(#message);
+                });
             }
         }
 
@@ -440,7 +592,7 @@ impl Field {
         self.default.bounds.as_ref().map(Vec::as_slice)
     }
 
-    pub fn default_value(&self) -> Option<&syn::Expr> {
+    pub fn default_value(&self) -> Option<&proc_macro2::TokenStream> {
         self.default.value.as_ref()
     }
 
@@ -460,12 +612,36 @@ impl Field {
         self.partial_eq.bounds.as_ref().map(Vec::as_slice)
     }
 
+    pub fn partial_ord_bound(&self) -> Option<&[syn::WherePredicate]> {
+        self.partial_ord.bounds.as_ref().map(Vec::as_slice)
+    }
+
+    pub fn ord_bound(&self) -> Option<&[syn::WherePredicate]> {
+        self.ord.bounds.as_ref().map(Vec::as_slice)
+    }
+
     pub fn partial_eq_compare_with(&self) -> Option<&syn::Path> {
         self.partial_eq.compare_with.as_ref()
     }
 
+    pub fn partial_ord_compare_with(&self) -> Option<&syn::Path> {
+        self.partial_ord.compare_with.as_ref()
+    }
+
+    pub fn ord_compare_with(&self) -> Option<&syn::Path> {
+        self.ord.compare_with.as_ref()
+    }
+
     pub fn ignore_partial_eq(&self) -> bool {
         self.partial_eq.ignore
+    }
+
+    pub fn ignore_partial_ord(&self) -> bool {
+        self.partial_ord.ignore
+    }
+
+    pub fn ignore_ord(&self) -> bool {
+        self.ord.ignore
     }
 }
 
@@ -478,52 +654,78 @@ impl Field {
 /// * `#[derivative(Debug(foo="bar")]` is represented as `(Debug, [(Some(foo), Some("bar"))])`.
 struct MetaItem<'a>(
     &'a syn::Ident,
-    Vec<(Option<&'a syn::Ident>, Option<String>)>,
+    Vec<(Option<&'a syn::Ident>, Option<&'a syn::LitStr>)>,
 );
 
 /// Parse an arbitrary item for our limited `MetaItem` subset.
-fn read_items(item: &syn::NestedMeta) -> Result<MetaItem, String> {
+fn read_items<'a>(item: &'a syn::NestedMeta, errors: &mut proc_macro2::TokenStream) -> Result<MetaItem<'a>, ()> {
     let item = match *item {
         syn::NestedMeta::Meta(ref item) => item,
-        syn::NestedMeta::Literal(..) => {
-            return Err("Expected meta-item but found literal".to_string());
+        syn::NestedMeta::Lit(ref lit) => {
+            errors.extend(quote_spanned! {lit.span()=>
+                compile_error!("expected meta-item but found literal");
+            });
+
+            return Err(());
         }
     };
     match *item {
-        syn::Meta::Word(ref name) => Ok(MetaItem(name, Vec::new())),
+        syn::Meta::Path(ref path) => match path.get_ident() {
+            Some(name) => Ok(MetaItem(name, Vec::new())),
+            None => {
+                errors.extend(quote_spanned! {path.span()=>
+                    compile_error!("expected derivative attribute to be a string, but found a path");
+                });
+
+                Err(())
+            }
+        },
         syn::Meta::List(syn::MetaList {
-            ident: ref name,
+            ref path,
             nested: ref values,
             ..
         }) => {
-            let values = try!(
-                values
-                    .iter()
-                    .map(|value| {
-                        if let syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
-                            ident: ref name,
-                            lit: ref value,
-                            ..
-                        })) = *value
-                        {
-                            let value = try!(string_or_err(value));
+            let values = values
+                .iter()
+                .map(|value| {
+                    if let syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
+                        ref path,
+                        lit: ref value,
+                        ..
+                    })) = *value
+                    {
+                        let (name, value) = ensure_str_lit(&path, &value, errors)?;
 
-                            Ok((Some(name), Some(value)))
-                        } else {
-                            Err("Expected named value".to_string())
-                        }
-                    })
-                    .collect()
-            );
+                        Ok((Some(name), Some(value)))
+                    } else {
+                        errors.extend(quote_spanned! {value.span()=>
+                            compile_error!("expected named value");
+                        });
+
+                        Err(())
+                    }
+                })
+                .collect::<Result<_, _>>()?;
+
+            let name = match path.get_ident() {
+                Some(name) => name,
+                None => {
+                    errors.extend(quote_spanned! {path.span()=>
+                        compile_error!("expected derivative attribute to be a string, but found a path");
+                    });
+
+                    return Err(());
+                }
+            };
 
             Ok(MetaItem(name, values))
         }
         syn::Meta::NameValue(syn::MetaNameValue {
-            ident: ref name,
+            ref path,
             lit: ref value,
             ..
         }) => {
-            let value = try!(string_or_err(value));
+            let (name, value) = ensure_str_lit(&path, &value, errors)?;
 
             Ok(MetaItem(name, vec![(None, Some(value))]))
         }
@@ -533,20 +735,30 @@ fn read_items(item: &syn::NestedMeta) -> Result<MetaItem, String> {
 /// Filter the `derivative` items from an attribute.
 fn derivative_attribute(
     meta: syn::parse::Result<syn::Meta>,
+    errors: &mut proc_macro2::TokenStream,
 ) -> Option<syn::punctuated::Punctuated<syn::NestedMeta, syn::token::Comma>> {
     match meta {
         Ok(syn::Meta::List(syn::MetaList {
-            ident: name,
-            nested: mis,
-            ..
+            path, nested: mis, ..
         })) => {
-            if name == "derivative" {
+            if path
+                .get_ident()
+                .map_or(false, |ident| ident == "derivative")
+            {
                 Some(mis)
             } else {
                 None
             }
         }
-        _ => None,
+        Ok(_) => None,
+        Err(e) => {
+            let message = format!("invalid attribute: {}", e);
+            errors.extend(quote_spanned! {e.span()=>
+                compile_error!(#message);
+            });
+
+            None
+        }
     }
 }
 
@@ -554,56 +766,108 @@ fn derivative_attribute(
 /// `"false"`. The `default` parameter specifies what the value of the boolean is when only its
 /// name is specified (eg. `Debug="ignore"` is equivalent to `Debug(ignore="true")`). The `name`
 /// parameter is used for error reporting.
-fn parse_boolean_meta_item(item: &Option<&str>, default: bool, name: &str) -> Result<bool, String> {
-    match *item {
-        Some("true") => Ok(true),
-        Some("false") => Ok(false),
-        Some(val) => {
-            if val == name {
-                Ok(true)
-            } else {
-                Err(format!("Invalid value for `{}`: `{}`", name, val))
+fn parse_boolean_meta_item(
+    item: Option<&syn::LitStr>,
+    default: bool,
+    name: &str,
+    errors: &mut proc_macro2::TokenStream,
+) -> bool {
+    if let Some(item) = item.as_ref() {
+        match item.value().as_ref() {
+            "true" => true,
+            "false" => false,
+            val => {
+                if val == name {
+                    true
+                } else {
+                    let message = format!(
+                        r#"expected `"true"` or `"false"` for `{}`, got `{}`"#,
+                        name, val
+                    );
+                    errors.extend(quote_spanned! {item.span()=>
+                        compile_error!(#message);
+                    });
+
+                    default
+                }
             }
         }
-        None => Ok(default),
+    } else {
+        default
     }
 }
 
 /// Parse a `bound` item.
 fn parse_bound(
     opt_bounds: &mut Option<Vec<syn::WherePredicate>>,
-    value: Option<&str>,
-) -> Result<(), String> {
-    let mut bounds = opt_bounds.take().unwrap_or_default();
-    let bound = try!(value.ok_or_else(|| "`bound` needs a value".to_string()));
+    value: Option<&syn::LitStr>,
+    errors: &mut proc_macro2::TokenStream,
+) {
+    let bound = value.expect("`bound` needs a value");
+    let bound_value = bound.value();
 
-    if !bound.is_empty() {
-        let mut stream = proc_macro2::TokenStream::new();
-        quote!(where).to_tokens(&mut stream);
-        let constraints = proc_macro2::TokenStream::from_str(bound).map_err(|e| format!("{:?}", e));
-        stream.extend(constraints);
+    *opt_bounds = if !bound_value.is_empty() {
+        let where_string = syn::LitStr::new(&format!("where {}", bound_value), bound.span());
 
-        let where_clause = syn::parse2::<syn::WhereClause>(stream).map_err(|e| e.to_string());
-        bounds.extend(try!(where_clause).predicates);
-    }
+        let bounds = parse_str_lit::<syn::WhereClause>(&where_string, errors)
+            .map(|wh| wh.predicates.into_iter().collect());
 
-    *opt_bounds = Some(bounds);
+        match bounds {
+            Ok(bounds) => Some(bounds),
+            Err(_) => {
+                errors.extend(quote_spanned! {where_string.span()=>
+                    compile_error!("could not parse bound");
+                });
 
-    Ok(())
-}
-
-/// Get the string out of a string literal or report an error for other literals.
-fn string_or_err(lit: &syn::Lit) -> Result<String, String> {
-    if let syn::Lit::Str(ref lit) = *lit {
-        Ok(lit.value())
+                None
+            }
+        }
     } else {
-        Err("Expected string".to_string())
-    }
+        Some(vec![])
+    };
 }
 
-fn parse_str<T>(value: &str) -> Result<T, String>
+fn parse_str_lit<T>(value: &syn::LitStr, errors: &mut proc_macro2::TokenStream) -> Result<T, ()>
 where
     T: syn::parse::Parse,
 {
-    syn::parse_str::<T>(value).map_err(|e| e.to_string())
+    match value.parse() {
+        Ok(value) => Ok(value),
+        Err(e) => {
+            let message = format!("could not parse string literal: {}", e);
+            errors.extend(quote_spanned! {value.span()=>
+                compile_error!(#message);
+            });
+            Err(())
+        }
+    }
+}
+
+fn ensure_str_lit<'a>(
+    attr_path: &'a syn::Path,
+    lit: &'a syn::Lit,
+    errors: &mut proc_macro2::TokenStream,
+) -> Result<(&'a syn::Ident, &'a syn::LitStr), ()> {
+    let attr_name = match attr_path.get_ident() {
+        Some(attr_name) => attr_name,
+        None => {
+            errors.extend(quote_spanned! {attr_path.span()=>
+                compile_error!("expected derivative attribute to be a string, but found a path");
+            });
+            return Err(());
+        }
+    };
+
+    if let syn::Lit::Str(ref lit) = *lit {
+        Ok((attr_name, lit))
+    } else {
+        let message = format!(
+            "expected derivative {} attribute to be a string: `{} = \"...\"`",
+            attr_name, attr_name
+        );
+        errors.extend(quote_spanned! {lit.span()=>
+            compile_error!(#message);
+        });
+        Err(())
+    }
 }

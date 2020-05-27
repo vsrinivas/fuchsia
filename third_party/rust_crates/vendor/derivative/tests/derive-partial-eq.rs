@@ -12,11 +12,33 @@ struct Foo {
     foo: u8,
 }
 
+/// Test for backward compatibility.
 #[derive(Derivative)]
 #[derivative(PartialEq = "feature_allow_slow_enum")]
+#[allow(unused)]
+enum AllowsFeature<T> {
+    Some(T),
+    None,
+}
+
+#[derive(Derivative)]
+#[derivative(PartialEq)]
 enum Option<T> {
     Some(T),
     None,
+}
+
+#[derive(Derivative)]
+#[derivative(PartialEq)]
+enum SimpleEnum {
+    Some,
+    None,
+}
+
+#[derive(Derivative)]
+#[derivative(PartialEq)]
+enum UnitEnum {
+    Single,
 }
 
 #[derive(Derivative)]
@@ -83,8 +105,8 @@ fn main() {
     assert!(Foo { foo: 7 } == Foo { foo: 7 });
     assert!(Foo { foo: 7 } != Foo { foo: 42 });
 
-    let ptr1: *const SomeTrait = &SomeType { foo: 0 };
-    let ptr2: *const SomeTrait = &SomeType { foo: 1 };
+    let ptr1: *const dyn SomeTrait = &SomeType { foo: 0 };
+    let ptr2: *const dyn SomeTrait = &SomeType { foo: 1 };
     assert!(WithPtr { foo: ptr1 } == WithPtr { foo: ptr1 });
     assert!(WithPtr { foo: ptr1 } != WithPtr { foo: ptr2 });
 
@@ -98,6 +120,13 @@ fn main() {
     assert!(Option::Some(42) != Option::None);
     assert!(Option::None != Option::Some(42));
     assert!(Option::None::<u8> == Option::None::<u8>);
+
+    assert!(SimpleEnum::Some == SimpleEnum::Some);
+    assert!(SimpleEnum::None == SimpleEnum::None);
+    assert!(SimpleEnum::Some != SimpleEnum::None);
+    assert!(SimpleEnum::None != SimpleEnum::Some);
+
+    assert!(UnitEnum::Single == UnitEnum::Single);
 
     assert!(Parity(3) == Parity(7));
     assert!(Parity(2) == Parity(42));

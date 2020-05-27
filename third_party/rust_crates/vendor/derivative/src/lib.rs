@@ -1,13 +1,8 @@
-// We support Rust 1.15 and struct initialization shorthand syntax is a Rust 1.17 feature
-//
-// NOTE: Rust 1.17 and older cannot parse `::` in attributes so we can't use
-// `allow(clippy::redundant_field_names)`.
-// Instead, we resort to using `allow(redundant_field_names)`, but this triggers
-// `renamed_and_removed_lints` which we also want to allow.
-#![cfg_attr(feature = "cargo-clippy", allow(
-    renamed_and_removed_lints,
-    redundant_field_names,
-))]
+// We need to support Rust 1.34 to stable
+#![allow(deprecated)]
+
+#![allow(clippy::mem_replace_with_default)] // needs rustc 1.40
+#![allow(clippy::option_as_ref_deref)] // needs rustc 1.40
 
 extern crate proc_macro;
 extern crate proc_macro2;
@@ -26,11 +21,15 @@ mod debug;
 mod default;
 mod hash;
 mod matcher;
+mod paths;
 mod utils;
 
 use proc_macro::TokenStream;
 
-fn derive_impls(input: &ast::Input) -> Result<proc_macro2::TokenStream, String> {
+fn derive_impls(
+    input: &mut ast::Input,
+    errors: &mut proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
     let mut tokens = proc_macro2::TokenStream::new();
 
     if input.attrs.clone.is_some() {
@@ -52,25 +51,39 @@ fn derive_impls(input: &ast::Input) -> Result<proc_macro2::TokenStream, String> 
         tokens.extend(hash::derive(input));
     }
     if input.attrs.partial_eq.is_some() {
-        tokens.extend(cmp::derive_partial_eq(input)?);
+        tokens.extend(cmp::derive_partial_eq(input));
+    }
+    if input.attrs.partial_ord.is_some() {
+        tokens.extend(cmp::derive_partial_ord(input, errors));
+    }
+    if input.attrs.ord.is_some() {
+        tokens.extend(cmp::derive_ord(input, errors));
     }
 
-    Ok(tokens)
+    tokens.extend(std::mem::replace(
+        errors,
+        Default::default(),
+    ));
+
+    tokens
 }
 
-fn detail(input: TokenStream) -> Result<TokenStream, String> {
-    let parsed = syn::parse::<syn::DeriveInput>(input).map_err(|e| e.to_string())?;
-    let output = derive_impls(&ast::Input::from_ast(&parsed)?)?;
-    Ok(output.into())
-}
-
-#[cfg_attr(
-    not(test),
-    proc_macro_derive(Derivative, attributes(derivative))
-)]
+#[cfg_attr(not(test), proc_macro_derive(Derivative, attributes(derivative)))]
 pub fn derivative(input: TokenStream) -> TokenStream {
-    match detail(input) {
-        Ok(output) => output,
-        Err(e) => panic!(e),
-    }
+    let mut errors = proc_macro2::TokenStream::new();
+
+    let mut output = match syn::parse::<syn::DeriveInput>(input) {
+        Ok(parsed) => {
+            ast::Input::from_ast(&parsed, &mut errors)
+                .map(|mut input| derive_impls(&mut input, &mut errors))
+                .unwrap_or_default()
+        },
+        Err(error) => {
+            errors.extend(error.to_compile_error());
+            Default::default()
+        }
+    };
+
+    output.extend(errors);
+    output.into()
 }

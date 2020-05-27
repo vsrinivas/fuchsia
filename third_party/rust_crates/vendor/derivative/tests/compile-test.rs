@@ -1,28 +1,9 @@
-#[cfg(feature = "compiletest_rs")]
-extern crate compiletest_rs as compiletest;
+extern crate trybuild;
 
-#[cfg(feature = "compiletest_rs")]
-fn run_mode(dir: &'static str, mode: &'static str) {
-    use std::path::PathBuf;
-    use std::env::var;
-
-    let mut config = compiletest::Config::default();
-
-    let cfg_mode = mode.parse().expect("Invalid mode");
-    config.target_rustcflags = Some("-L target/debug/ -L target/debug/deps".to_owned());
-    if let Ok(name) = var::<&str>("TESTNAME") {
-        let s: String = name.to_owned();
-        config.filter = Some(s)
-    }
-
-    config.mode = cfg_mode;
-    config.src_base = PathBuf::from(format!("tests/{}", dir));
-
-    compiletest::run_tests(&config);
-}
-
-#[cfg(feature = "compiletest_rs")]
 #[test]
+#[ignore]
 fn compile_test() {
-    run_mode("compile-fail", "compile-fail");
+    let t = trybuild::TestCases::new();
+    let pattern = std::env::var("DERIVATIVE_TEST_FILTER").unwrap_or_else(|_| String::from("*.rs"));
+    t.compile_fail(format!("tests/compile-fail/{}", pattern));
 }

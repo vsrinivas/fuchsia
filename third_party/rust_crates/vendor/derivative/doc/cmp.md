@@ -1,32 +1,36 @@
 # Custom attributes
-The `Eq` and `PartialEq` traits support the following attributes:
+The `PartialEq`, `Eq`, `PartialOrd` and `Eq` and traits support the following attributes:
 
 * **Container attributes**
-    * [`<Trait>(bound="<where-clause or empty>")`](#custom-bound)
+    * [`<CmpTrait>(bound="<where-clause or empty>")`](#custom-bound)
 * **Field attributes**
-    * [`<Trait>(bound="<where-clause or empty>")`](#custom-bound)
+    * [`<CmpTrait>(bound="<where-clause or empty>")`](#custom-bound)
 
-The `PartialEq` trait also supports the following attributes:
+The `PartialEq`, `PartialOrd` and `Ord` traits also supports the following attributes:
 
 * **Container attributes**
-    * [`PartialEq="feature_allow_slow_enum"`](#enumerations)
+    * [`<CmpTrait>="feature_allow_slow_enum"`](#enumerations)
 * **Field attributes**
-    * [`PartialEq="ignore"`](#ignoring-a-field)
-    * [`PartialEq(compare_with="<path>")`](#compare-with)
+    * [`<CmpTrait>="ignore"`](#ignoring-a-field)
+    * [`<CmpTrait>(compare_with="<path>")`](#compare-with)
+
+(These attributes are not relevant for `Eq` which is just a marker trait.)
 
 # Enumerations
 
-Unfortunatelly, there is no way for derivative to derive `PartialEq` on
-enumerations as efficiently as the built-in `derive(PartialEq)`
-[yet][discriminant].
+Unfortunately, there is no way for derivative to derive `PartialOrd` or `Ord` on
+enumerations as efficiently as the built-in `derive(…)` yet.
 
 If you want to use derivative on enumerations anyway, you can add
 
 ```rust
-#[derivative(PartialEq="feature_allow_slow_enum")]
+#[derivative(PartialOrd="feature_allow_slow_enum")]
 ```
 
 to your enumeration. This acts as a “feature-gate”.
+
+This attribute is also allowed for `PartialEq` for historical reason. It is not
+necessary anymore as of v2.1.0. It was never necessary nor allowed for `Eq`.
 
 # Ignoring a field
 
@@ -47,7 +51,7 @@ assert!(Foo { foo: 42, bar: 0 } != Foo { foo: 7, bar: 0});
 
 # Compare with
 
-Usually fields are compared using `==`. You can use an alternative comparison
+Usually fields are compared using `==`, `PartialOrd::partial_cmp` or `Ord::cmp`. You can use an alternative comparison
 function if you like:
 
 ```rust
@@ -63,14 +67,16 @@ struct Foo {
 `foo` will be compared with `==` and `bar` will be compared with
 `path::to::my_cmp_fn` which must have the following prototype:
 
-```rust
-fn my_cmp_fn(&T, &T) -> bool;
-```
+| Trait        | Signature |
+|--------------|-----------|
+| `PartialEq`  | `fn my_cmp_fn(&T, &T) -> bool;`
+| `PartialOrd` | `fn my_cmp_fn(&T, &T) -> std::option::Option<std::cmp::Ordering>;`
+| `Ord`        | `fn my_cmp_fn(&T, &T) -> std::cmp::Ordering;`
 
 # Custom bound
 
-Usually a `T: Eq` bound is added for each type parameter `T`. You can use
-override this behaviour if the infered bound is not correct for you.
+Usually if you derive `CmpTrait`, a `T: CmpTrait` bound is added for each type parameter `T`. You can use
+override this behavior if the inferred bound is not correct for you.
 
 Eg. comparing raw pointers does not require the type to be `Eq`, so you could
 use:
@@ -85,5 +91,3 @@ struct WithPtr<T: ?Sized> {
 ```
 
 See [`Default`'s documentation](./Default.md#custom-bound) for more details.
-
-[discriminant]: https://github.com/rust-lang/rfcs/pull/1696

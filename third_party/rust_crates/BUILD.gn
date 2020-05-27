@@ -95,7 +95,7 @@ if (is_fuchsia) {
 }
 if (is_fuchsia) {
   group("derivative") {
-    deps = [ ":derivative-v1_0_2($host_toolchain)" ]
+    deps = [ ":derivative-v2_1_1($host_toolchain)" ]
   }
 }
 if (is_fuchsia) {
@@ -2228,27 +2228,27 @@ rust_library("deflate-v0_7_19") {
   ]
 }
 
-rust_proc_macro("derivative-v1_0_2") {
+rust_proc_macro("derivative-v2_1_1") {
   crate_name = "derivative"
   crate_root = "//third_party/rust_crates/vendor/derivative/src/lib.rs"
-  output_name = "derivative-27a3abed22cae427"
+  output_name = "derivative-e4b38514ab785324"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v0_4_27" ]
-  deps += [ ":quote-v0_6_11" ]
-  deps += [ ":syn-v0_15_26" ]
+  deps += [ ":proc-macro2-v1_0_9" ]
+  deps += [ ":quote-v1_0_2" ]
+  deps += [ ":syn-v1_0_21" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=27a3abed22cae427",
-    "-Cextra-filename=-27a3abed22cae427",
+    "-Cmetadata=e4b38514ab785324",
+    "-Cextra-filename=-e4b38514ab785324",
   ]
 }
 

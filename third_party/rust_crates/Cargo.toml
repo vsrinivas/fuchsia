@@ -127,7 +127,7 @@ bytes = "0.5.4"
 crossbeam = "0.7.3"
 ct-logs = "0.6"
 data-encoding = "2.1.2"
-derivative = "1.0.2"
+derivative = "2.1.1"
 derp = "0.0.13"
 euclid = "0.20.7"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
