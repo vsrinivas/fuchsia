@@ -1,0 +1,16 @@
+{
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/log-validator-dart-puppet#meta/log-validator-dart-puppet.cmx"
+        ],
+        "binary": "test/log_validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

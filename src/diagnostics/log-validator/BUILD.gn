@@ -13,6 +13,7 @@ group("tests") {
   deps = [
     ":log-validator-tests",
     "puppet/cpp:tests",
+    "puppet/dart:tests",
     "puppet/rust:tests",
   ]
 }
