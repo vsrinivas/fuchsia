@@ -611,7 +611,7 @@ blocked waiting on events or I/O. These stats may be used to:
 
 ### ZX_INFO_PROCESS_MAPS
 
-*handle* type: **Process** other than your own, with **ZX_RIGHT_READ**
+*handle* type: **Process**, with **ZX_RIGHT_READ**
 
 *buffer* type: `zx_info_maps_t[n]`
 
@@ -664,7 +664,7 @@ Additional errors:
 
 ### ZX_INFO_PROCESS_VMOS
 
-*handle* type: **Process** other than your own, with **ZX_RIGHT_READ**
+*handle* type: **Process**, with **ZX_RIGHT_READ**
 
 *buffer* type: `zx_info_vmo_t[n]`
 
