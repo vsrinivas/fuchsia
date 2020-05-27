@@ -27,10 +27,7 @@ TEST(AstroAbrTests, CreateFails) {
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
   std::unique_ptr<abr::Client> partitioner;
-  zx::channel svc_root;
-  ASSERT_NE(
-      abr::AstroClient::Create(devmgr.devfs_root().duplicate(), svc_root, nullptr, &partitioner),
-      ZX_OK);
+  ASSERT_NE(abr::AstroClient::Create(devmgr.devfs_root().duplicate(), &partitioner), ZX_OK);
 }
 
 TEST(SherlockAbrTests, CreateFails) {

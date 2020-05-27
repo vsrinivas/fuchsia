@@ -903,9 +903,8 @@ TEST_F(FixedDevicePartitionerTests, FindPartitionTest) {
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kVbMetaRType, &vbmeta_r));
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &fvm));
 
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto partitioner = paver::DevicePartitioner::Create(devmgr_.devfs_root().duplicate(),
-                                                      zx::channel(), paver::Arch::kArm64, context);
+                                                      zx::channel(), paver::Arch::kArm64);
   ASSERT_NE(partitioner.get(), nullptr);
 
   std::unique_ptr<paver::PartitionClient> partition;
@@ -1120,11 +1119,7 @@ TEST(AstroPartitionerTests, IsFvmWithinFtl) {
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
   ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
 
@@ -1135,9 +1130,8 @@ TEST(AstroPartitionerTests, ChooseAstroPartitioner) {
   std::unique_ptr<BlockDevice> zircon_a;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kZirconAType, &zircon_a));
 
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  auto partitioner = paver::DevicePartitioner::Create(std::move(devfs_root), zx::channel(),
-                                                      paver::Arch::kArm64, context);
+  auto partitioner =
+      paver::DevicePartitioner::Create(std::move(devfs_root), zx::channel(), paver::Arch::kArm64);
   ASSERT_NE(partitioner.get(), nullptr);
   ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
@@ -1147,11 +1141,7 @@ TEST(AstroPartitionerTests, AddPartitionTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
   ASSERT_EQ(partitioner->AddPartition(PartitionSpec(paver::Partition::kZirconB), nullptr),
             ZX_ERR_NOT_SUPPORTED);
 }
@@ -1161,11 +1151,7 @@ TEST(AstroPartitionerTests, WipeFvmTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
   ASSERT_OK(partitioner->WipeFvm());
 }
 
@@ -1174,11 +1160,7 @@ TEST(AstroPartitionerTests, FinalizePartitionTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
 
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kBootloader)));
   ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
@@ -1197,11 +1179,7 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner), ZX_OK);
 
   std::unique_ptr<paver::PartitionClient> partition;
   ASSERT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader), &partition));
@@ -1223,11 +1201,7 @@ TEST(AstroPartitionerTests, SupportsPartition) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
 
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader, "bl2")));
@@ -1274,11 +1248,7 @@ TEST(AstroPartitionerTests, BootloaderTplTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
 
   ASSERT_NO_FATAL_FAILURES(
       WritePartition(partitioner.get(), PartitionSpec(paver::Partition::kBootloader), "abcd1234"));
@@ -1293,11 +1263,7 @@ TEST(AstroPartitionerTests, BootloaderBl2Test) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx::channel svc_root;
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
-  ASSERT_EQ(
-      paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context, &partitioner),
-      ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
 
   ASSERT_NO_FATAL_FAILURES(WritePartition(
       partitioner.get(), PartitionSpec(paver::Partition::kBootloader, "bl2"), "123xyz"));
@@ -1333,9 +1299,8 @@ TEST_F(As370PartitionerTests, IsFvmWithinFtl) {
 }
 
 TEST_F(As370PartitionerTests, ChooseAs370Partitioner) {
-  std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto partitioner = paver::DevicePartitioner::Create(devmgr_.devfs_root().duplicate(),
-                                                      zx::channel(), paver::Arch::kArm64, context);
+                                                      zx::channel(), paver::Arch::kArm64);
   ASSERT_NE(partitioner.get(), nullptr);
   ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }

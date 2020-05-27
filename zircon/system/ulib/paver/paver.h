@@ -11,14 +11,12 @@
 
 #include <variant>
 
-#include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 
 #include "abr-client.h"
 #include "device-partitioner.h"
 #include "lib/async/dispatcher.h"
-#include "paver-context.h"
 
 namespace paver {
 
@@ -35,18 +33,12 @@ class Paver : public ::llcpp::fuchsia::paver::Paver::Interface {
   void set_devfs_root(fbl::unique_fd devfs_root) { devfs_root_ = std::move(devfs_root); }
   void set_svc_root(zx::channel svc_root) { svc_root_ = std::move(svc_root); }
 
-  Paver() : context_(std::make_shared<Context>()) {}
-
  private:
   // Used for test injection.
   fbl::unique_fd devfs_root_;
   zx::channel svc_root_;
 
   async_dispatcher_t* dispatcher_ = nullptr;
-
-  // Declared as shared_ptr to avoid life time issues (i.e. Paver exiting before the created device
-  // partitioners).
-  std::shared_ptr<Context> context_;
 };
 
 // Common shared implementation for DataSink and DynamicDataSink. Necessary to work around lack of
@@ -95,7 +87,7 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
 
   // Automatically finds block device to use.
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                   zx::channel server, std::shared_ptr<Context> context);
+                   zx::channel server);
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
                  ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) override;
@@ -139,7 +131,7 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
       : sink_(std::move(devfs_root), std::move(partitioner)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                   zx::channel block_device, zx::channel server, std::shared_ptr<Context> context);
+                   zx::channel block_device, zx::channel server);
 
   void InitializePartitionTables(InitializePartitionTablesCompleter::Sync completer) override;
 
@@ -186,7 +178,7 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
   BootManager(std::unique_ptr<abr::Client> abr_client) : abr_client_(std::move(abr_client)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
-                   std::shared_ptr<Context> context, zx::channel server);
+                   zx::channel server);
 
   void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override;
 
