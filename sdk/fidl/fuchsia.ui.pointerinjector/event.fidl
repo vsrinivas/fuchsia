@@ -1,0 +1,69 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointerinjector;
+
+using zx;
+
+/// The possible states of a pointer event stream's state machine.
+///
+/// A typical pointer will move through this state machine:
+/// ADD - CHANGE* - REMOVE
+enum EventPhase {
+    /// The device has started tracking the pointer.
+    ADD = 1;
+
+    /// The device has reported an update to the pointer state.
+    CHANGE = 2;
+
+    /// The device has stopped tracking the pointer.
+    REMOVE = 3;
+
+    /// The event stream is no longer available.
+    CANCEL = 4;
+};
+
+/// A description of each sampled data point for a pointer device.
+/// All fields are required.
+table PointerSample {
+    /// An identifier of the pointer that issued this event.
+    /// It is unique only to a specific pointer device.
+    3: uint32 pointer_id;
+
+    /// The state of this event in the pointer event stream's state machine.
+    3: EventPhase phase;
+
+    /// The position of this event, in the viewport's coordinate system.
+    4: Point2 position_in_viewport;
+};
+
+/// A selection of FIFO data sent over the channel.
+/// Each data may have a different issuance policy.
+flexible union Data {
+    /// The parameters of the viewport, sufficient for a client to correctly
+    /// interpret the position and scale of pointer events dispatched to it.
+    /// - It is issued on every change to the viewport.
+    1: Viewport viewport;
+
+    /// A description of each sampled data point in a pointer event stream.
+    /// - It is issued on every sample in the pointer event stream.
+    2: PointerSample pointer_sample;
+};
+
+// A per-device collection of pointer-related data, sent from server to client.
+table Event {
+    /// The time when this event was observed.
+    ///
+    /// Required.
+    1: zx.time timestamp;
+
+    /// The event's data.
+    ///
+    /// Required.
+    2: Data data;
+
+    /// An identifier to correlate this event's send/receive occurrence across
+    /// component boundaries or abstraction layers.
+    6: uint64 trace_flow_id;
+};

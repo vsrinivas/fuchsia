@@ -1,0 +1,88 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointerinjector;
+
+const uint32 MAX_INJECT = 128;
+
+/// A coordination mechanism to clearly define the *injecting* of pointer events
+/// into the scene (injection policy, injection context, etc), for *dispatching*
+/// pointer events to UI clients (referenced by |fuchsia.ui.views.ViewRef|).
+///
+/// NOTE WELL! ONLY COMPONENTS IN THE TRUSTED COMPUTING BASE SHOULD BE GRANTED
+///            ACCESS TO THIS PROTOCOL.
+/// (1) The injector device acts with the user's authority. UI clients cannot
+///     tell the difference between a real user and an injector device.
+/// (2) The context is self-specified when registering the injector device. An
+///     injector device that gains access to a sensitive context will operate in
+///     that scope.
+/// (3) The injected events may be arbitrary. An injector device can inject
+///     whatever it wants to the clients it can reach.
+///
+/// This protocol defines the context and target for an injector |Device|,
+/// places a viewport in spatial relation to the target, and connects the
+/// |Device| to the viewport. These parameters are set up in the |Config|. A
+/// |Device| may *inject* pointer events on the viewport, but the *dispatch* of
+/// pointer events to UI clients in the target will depend on the dispatch
+/// policy and the scene topology.
+///
+/// A |Device| operates within a context, and it serves two purposes:
+/// (1) Scoping. It confirms the |Device|'s authority to inject pointer events
+///     on the specified target.
+/// (2) Coordinate system. It provides the reference coordinate system to define
+///     the viewport's position and size, relative to the target.
+///
+/// Guarantees. A |Device| is directed at a specified target in the scene, and
+/// such a target is afforded some guarantees against snooping and interference
+/// from UI clients outside the target's view tree ("non-target clients").
+/// Non-target clients never have injected events dispatched to them: a |Device|
+/// preserves *confidentiality* for target clients.  Non-target clients never
+/// block injected events from reaching the target on injection, or from
+/// reaching target clients on dispatch: a |Device| preserves *integrity* and
+/// *availability* for target clients. However, the |Device| itself is subject
+/// to disruption by ancestor views of the target (see connectivity invariant).
+///
+/// Note. This protocol, and its policies, are *not* a sufficient guard against
+///       UI redress attacks! The confidentiality, integrity, and availability
+///       guarantees apply only with respect to non-target clients. Within a
+///       target, UI redress attacks can still happen, between target clients.
+///
+/// Connectivity invariant. A |Device| operates in a stable view tree that is
+/// connected to the root view. When either the target, or both context and
+/// target, are disconnected from the view tree by a UI client, the |Device|
+/// channel is closed. If an event stream was in flight, the server dispatches a
+/// final CANCEL event following channel closure; this CANCEL event is then
+/// propagated according to dispatch policy.
+[Discoverable]
+protocol Registry {
+    /// Sets up a context for a |Device|, the target for the |Device|, and
+    /// directs the |Device| at the target via a viewport, positioned in the
+    /// context. These parameters are specified in a |Config|.
+    ///
+    /// If |config| is invalid (e.g., missing important data), the |Device|
+    /// request will be denied: the channel will be closed.
+    ///
+    /// The return event tells the caller that (1) the server has processed the
+    /// call, and (2) the |Device| is connected.
+    Register(Config config, request<Device> injector) -> ();
+};
+
+/// The channel for injecting pointer events into a target.
+/// The associated |Config| applies to injected pointer events.
+///
+/// A |Device| may *inject* pointer events into a target in the scene, but the
+/// *dispatch* of pointer events to UI clients within that target's view tree
+/// will depend on the dispatch policy and the scene topology.
+protocol Device {
+    /// Injects events into a target.
+    ///
+    /// Batching: The caller is expected to batch-inject all events that share the
+    /// same timestamp (e.g., multiple finger samples). There may be multiple such
+    /// batches per injection call.
+    ///
+    /// Flow control: The caller is allowed at most one in-flight |Inject| call
+    /// at at time: subsequent |Inject| calls must wait until the acknowledgment
+    /// returns. Non-compliance results in channel closure.
+    Inject(vector<Event>:MAX_INJECT events) -> ();
+};

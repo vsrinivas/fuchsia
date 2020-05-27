@@ -1,0 +1,180 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.pointerinjector;
+
+using fuchsia.ui.views;
+
+/// A floating-point two-dimensional point.
+/// - The values are placed in (x, y) order.
+using Point2 = array<float32>:2;
+
+/// A floating-point pair of points, representing minimal and maximal extents.
+/// - The values are placed in (minimal, maximal) order.
+using Extents = array<Point2>:2;
+
+/// A floating-point 3x3 matrix.
+/// - The values are placed in column-major order.
+using Mat3 = array<float32>:9;
+
+/// A specification for an injector |Device|.
+///
+/// All fields required.
+table Config {
+    /// An identifier for the pointer device that issues pointer event streams.
+    1: uint32 device_id;
+
+    /// A characterization of the pointer device.
+    2: DeviceType device_type;
+
+    /// The scope and coordinate system of the injector |Device|.
+    ///
+    /// Note: To avoid circular injection scenarios, |context| must be a
+    ///       strict ancestor of |target|.
+    3: Context context;
+
+    /// The region where dispatch is attempted for injected events.
+    ///
+    /// Note: To avoid circular injection scenarios, |target| must be a strict
+    ///       descendant of |context|.
+    4: Target target;
+
+    /// The initial viewport for injected events. Subsequent modifications to
+    /// the viewport can also be sent synchronously with injected events.
+    5: Viewport viewport;
+
+    /// A specification of the UI clients in |target| that may have injected
+    /// events dispatched to them.
+    ///
+    /// For example, if |dispatch_policy| is |EXCLUSIVE|, then only |target| may
+    /// have injected events dispatched to it, regardless of other factors, such
+    /// as surface occlusion by clients inside and outside of |target|.
+    6: DispatchPolicy dispatch_policy;
+};
+
+/// A characterization of a device that issues pointer event streams.
+enum DeviceType {
+    /// A device intended for manipulation by direct contact over its surface.
+    TOUCH = 1;
+};
+
+/// The region from which injection is attempted for injected events. As the
+/// context, it serves two purposes:
+/// (1) Scoping. It confirms the |Device|'s authority to inject pointer events
+///     on the specified target. Specifically, the context must be a view-tree
+///     ancestor of the target.
+/// (2) Coordinate System. It provides the reference coordinate system to define
+///     the viewport's position and size, relative to the target.
+union Context {
+    /// A Scenic view from which injection is attempted for injected events.
+    /// - This view must be connected to the scene graph for injection.
+    /// - Injected events are confined to this view and its sub-views.
+    1: fuchsia.ui.views.ViewRef view;
+};
+
+/// The region in which dispatch is attempted for injected events.
+/// The particular dispatch policy is specified in |Config|.
+union Target {
+    /// A Scenic view in which dispatch is attempted for injected events.
+    /// - This view must be connected to the scene graph for dispatch.
+    /// - Injected events are confined to this view and its sub-views.
+    1: fuchsia.ui.views.ViewRef view;
+};
+
+/// A rectangular region that directs injected events into a target.
+///
+/// The viewport relates a pointer's position across multiple independent
+/// coordinate systems: the context, the viewport, and the dispatch clients.
+/// Intuitively, the viewport is how a pointer's position is mapped to an
+/// interactive part of the scene.
+///
+/// A matrix is used to relate the viewport coordinate system to the context
+/// coordinate system. A pair of extents defines the viewport's size in the
+/// viewport coordinate system. Together, they define the viewport's placement
+/// in the context coordinate system.
+///
+/// The viewport coordinate system is used to convey a pointer's coordinates in
+/// a scale-invariant way to dispatch clients, so that gestures can be
+/// interpreted correctly under effects like magnification. The context defines
+/// the viewport's minimal and maximal extents in the viewport coordinate
+/// system.
+/// - The boundary of the viewport, a rectangle, is axis aligned with the
+///   viewport coordinate system; however it may otherwise be freely positioned
+///   ("float") within it: there is translation and scaling, but no rotation.
+/// - Floating gives the injector some choice in how to convey coordinates, such
+///   as in Vulkan NDC, or in display pixel coordinates.
+/// - The viewport rectangle defines a latch region used in dispatch (described
+///   below).
+///
+/// A dispatch client receives a pointer's coordinates in the viewport
+/// coordinate system, along with a matrix to convert coordinates from the
+/// viewport coordinate system to the dispatch client's coordinate system.
+///
+/// All fields required.
+table Viewport {
+    /// The viewport's minimal and maximal extents in the viewport coordinate
+    /// system.
+    1: Extents viewport_extents;
+
+    /// A transformation matrix that describes how to map the viewport
+    /// coordinate system to the context coordinate system.
+    ///
+    /// This transform, together with |viewport_extents|, defines the viewport's
+    /// placement in the context coordinate system.
+    ///
+    /// This transform must be an invertible matrix (i.e., has a non-zero
+    /// determinant), which guarantees it describes a bijection between the
+    /// viewport coordinate system and the context coordinate system. A
+    /// non-invertible matrix is rejected.
+    2: Mat3 viewport_to_context_transform;
+};
+
+/// A specification of the UI clients that may have injected events dispatched
+/// to them in an |Target|. One is specified in |Config|.
+///
+/// A useful concept is "latching", where one or more clients may start
+/// receiving the pointer event stream, prior to assignment of stream ownership.
+/// After ownership is assigned (e.g., through a gesture disambiguation
+/// protocol), non-owning clients have their latch terminated -- they stop
+/// receiving the pointer event stream.
+/// - A client's latch does not itself confer stream ownership (receiving the
+///   entire pointer event stream); gesture disambiguation or device termination
+///   may prematurely end the stream dispatched to that client.
+/// - It's possible for a client to latch while hidden from the user (i.e.,
+///   manipulate a surface that is invisible to the user), where the occluding
+///   surface is owned by a client outside of |Target|. Conversely, these
+///   occluding clients cannot latch, because latched clients must be in
+///   |Target|'s view tree.
+enum DispatchPolicy {
+    /// A single client latches onto a pointer event stream, where:
+    /// - the pointer event stream starts within the viewport rectangle,
+    /// - the latch happens on the ADD phase of the pointer event stream,
+    /// - the client is the |Target| itself.
+    /// Ownership is assigned immediately to the client.
+    ///
+    /// Note: This policy guarantees confidentiality, integrity, and
+    ///       availability of dispatch to the client, but by itself, does *not*
+    ///       confer immunity against UI redress attacks.
+    EXCLUSIVE_TARGET = 1;
+
+    /// Multiple clients may latch onto a pointer stream, where:
+    /// - the pointer stream starts within the viewport rectangle,
+    /// - a hit test is performed on the ADD phase of the pointer event stream,
+    ///   which returns the top-most surface (in paint order) in the |Target|'s
+    ///   view tree,
+    /// - the top-most surface's client latches onto the pointer stream,
+    /// - the client's ancestors in the |Target|'s view tree also latch onto the
+    ///   pointer stream.
+    ///
+    /// With multiple latches, a pointer stream is dispatched in parallel to
+    /// each latched client, until ownership is assigned via gesture
+    /// disambiguation. The owner client will continue to receive the pointer
+    /// stream, and non-owners will receive a final CANCEL event for the stream.
+    ///
+    /// Note: It's possible for no clients to latch, if the hit test fails to
+    ///       hit any surface in any sub-view of |Target|.
+    /// Note: Each client will have its own copy of the viewport, placed
+    ///       accordingly in its own coordinate system.
+    TOP_HIT_AND_ANCESTORS_IN_TARGET = 2;
+};
