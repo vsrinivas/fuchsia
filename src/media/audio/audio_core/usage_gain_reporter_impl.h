@@ -18,7 +18,6 @@
 
 namespace media::audio {
 
-// TODO(50073): Serve on the FIDL thread
 class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
  public:
   explicit UsageGainReporterImpl(Context* context)
