@@ -81,9 +81,7 @@ void ViewManager::RegisterViewForSemantics(
   auto annotation_view = annotation_view_factory_->CreateAndInitAnnotationView(
       fidl::Clone(view_ref), context_,
       // TODO: add callbacks
-      []() {},
-      []() {},
-      []() {});
+      []() {}, []() {}, []() {});
   view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(
       std::move(view_ref), std::move(view_semantics), std::move(annotation_view));
 }
@@ -225,6 +223,7 @@ void ViewManager::PerformAccessibilityAction(
   if (!tree_weak_ptr) {
     FX_LOGS(ERROR) << "ViewManager::PerformAccessibilityAction: No semantic tree found for koid: "
                    << koid;
+    callback(false);
     return;
   }
 

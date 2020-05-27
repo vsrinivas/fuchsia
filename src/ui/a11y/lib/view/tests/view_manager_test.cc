@@ -255,6 +255,25 @@ TEST_F(ViewManagerTest, SemanticsSourcePerformAction) {
   EXPECT_EQ(semantic_provider_->GetRequestedActionNodeId(), 0u);
 }
 
+TEST_F(ViewManagerTest, SemanticsSourcePerformActionFailsBecausePointsToWrongTree) {
+  view_manager_->SetSemanticsEnabled(true);
+  RunLoopUntilIdle();
+
+  AddNodeToTree(0u, "test_label");
+  bool callback_ran = false;
+  view_manager_->PerformAccessibilityAction(
+      semantic_provider_->koid() +
+          1 /*to simulate a koid that does not match the one we are expeting*/,
+      0u, fuchsia::accessibility::semantics::Action::DEFAULT, [&callback_ran](bool result) {
+        callback_ran = true;
+        EXPECT_FALSE(result);
+      });
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(callback_ran);
+}
+
 TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
