@@ -236,6 +236,31 @@ class PrettyRecursiveVariant : public PrettyType {
   const std::string no_value_string_;
 };
 
+// Pretty-printer for a value inside some kind of container. This acts like a smart pointer but the
+// contained value isn't a pointer. This is for thigs like std::atomic or std::reference_wrapper.
+//
+// Currently this is formatted like "typename(value)". For some types it might be nice to format
+// them just as the value, but the confusing part is that it won't behave exactly like the value in
+// expressions.
+class PrettyWrappedValue : public PrettyType {
+ public:
+  PrettyWrappedValue(const std::string& name, const std::string& open_bracket,
+                     const std::string& close_bracket, const std::string& expression)
+      : name_(name),
+        open_bracket_(open_bracket),
+        close_bracket_(close_bracket),
+        expression_(expression) {}
+
+  void Format(FormatNode* node, const FormatOptions& options,
+              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) override;
+
+ private:
+  const std::string name_;
+  const std::string open_bracket_;
+  const std::string close_bracket_;
+  const std::string expression_;
+};
+
 // Decodes a zx_status_t to the #define value.
 class PrettyZxStatusT : public PrettyType {
  public:

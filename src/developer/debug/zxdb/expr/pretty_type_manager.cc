@@ -180,6 +180,11 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
                     std::make_unique<PrettyMapIterator>());
   cpp_.emplace_back(InternalGlob("std::__2::__map_const_iterator<*>"),
                     std::make_unique<PrettyMapIterator>());
+
+  // std::atomic
+  cpp_.emplace_back(
+      InternalGlob("std::__2::atomic<*>"),
+      std::make_unique<PrettyWrappedValue>("std::atomic", "(", ")", "__a_.__a_value"));
 }
 
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {

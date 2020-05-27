@@ -365,6 +365,18 @@ void PrettyRecursiveVariant::Format(FormatNode* node, const FormatOptions& optio
   EvalExpressionOn(context, node->value(), index_expr_, std::move(eval_index_cb));
 }
 
+void PrettyWrappedValue::Format(FormatNode* node, const FormatOptions& options,
+                                const fxl::RefPtr<EvalContext>& context,
+                                fit::deferred_callback cb) {
+  FormatWrapper(node, name_, open_bracket_, close_bracket_, "",
+                [object = node->value(), expr = expression_](
+                    fxl::RefPtr<EvalContext> context,
+                    fit::callback<void(const Err& err, ExprValue value)> cb) {
+                  EvalExpressionOn(context, object, expr,
+                                   ErrOrValue::FromPairCallback(std::move(cb)));
+                });
+}
+
 PrettyZxStatusT::PrettyZxStatusT() : PrettyType({}) {}
 
 void PrettyZxStatusT::Format(FormatNode* node, const FormatOptions& options,

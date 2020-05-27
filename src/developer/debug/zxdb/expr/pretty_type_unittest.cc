@@ -106,4 +106,30 @@ TEST_F(PrettyTypeTest, RecursiveVariant) {
       GetDebugTreeForFormatNode(&double_node));
 }
 
+TEST_F(PrettyTypeTest, PrettyWrappedValue) {
+  // Make a structure with one value that will be our pretty-printed value.
+  auto structure =
+      MakeCollectionType(DwarfTag::kStructureType, "TestStruct", {{"value", MakeInt32Type()}});
+  ExprValue value(static_cast<int32_t>(42), structure);
+
+  PrettyWrappedValue pretty("TestStruct", "[<", ">]", "value");
+
+  FormatNode node("result", value);
+  node.set_type("TestStruct");
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  FormatOptions options;
+
+  bool complete = false;
+  pretty.Format(&node, options, eval_context,
+                fit::defer_callback([&complete]() { complete = true; }));
+  EXPECT_TRUE(complete);  // Expect synchronous completion.
+  SyncFillAndDescribeFormatNode(eval_context, node.children()[0].get(), options);
+  EXPECT_EQ(
+      "result = TestStruct, TestStruct\n"
+      "   = int32_t, 42\n",
+      GetDebugTreeForFormatNode(&node));
+  EXPECT_EQ("[<", node.wrapper_prefix());
+  EXPECT_EQ(">]", node.wrapper_suffix());
+}
+
 }  // namespace zxdb
