@@ -45,13 +45,17 @@ Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 options (before the `ASAN_OPTIONS` environment variable is read at
 runtime).  This can be set as a build argument to affect most "asan"
 variants in `known_variants` (which see), or overridden in
-toolchain_args in one of those variants.  Note that setting this
-nonempty may conflict with programs that define their own
-`__asan_default_options` C function.
+toolchain_args in one of those variants.
 
-**Current value (from the default):** `""`
+The default is ":" which doesn't affect any ASan behavior, but ensures that
+the ASan initializers run for all executable targets, including those that
+do not link C/C++ code. Note that this may conflict with programs that
+define their own `__asan_default_options` C function. Set this option to
+the empty string to support this.
 
-From //build/config/sanitizers/BUILD.gn:16
+**Current value (from the default):** `":"`
+
+From //build/config/sanitizers/BUILD.gn:20
 
 ### audio_core_trace_enabled
 Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
@@ -638,7 +642,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/8e2a8bee43dde42596688f89f54c8e9aa093d740/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/5a47b247974065a21d4b0784970e0431f66efce9/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -653,7 +657,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/8e2a8bee43dde42596688f89f54c8e9aa093d740/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/5a47b247974065a21d4b0784970e0431f66efce9/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -692,18 +696,12 @@ dart_debug/dart_product.
 
 From //third_party/dart/runtime/runtime_args.gni:28
 
-### dart_snapshot_kind
-
-**Current value (from the default):** `"kernel"`
-
-From //third_party/dart/utils/application_snapshot.gni:15
-
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/8e2a8bee43dde42596688f89f54c8e9aa093d740/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/5a47b247974065a21d4b0784970e0431f66efce9/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -1031,7 +1029,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/8e2a8bee43dde42596688f89f54c8e9aa093d740/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/5a47b247974065a21d4b0784970e0431f66efce9/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1046,14 +1044,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/8e2a8bee43dde42596688f89f54c8e9aa093d740/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/5a47b247974065a21d4b0784970e0431f66efce9/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/8e2a8bee43dde42596688f89f54c8e9aa093d740/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/5a47b247974065a21d4b0784970e0431f66efce9/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -2362,7 +2360,7 @@ nonempty may conflict with programs that define their own
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //build/config/sanitizers/BUILD.gn:31
+From //build/config/sanitizers/BUILD.gn:35
 
 ### universal_variants
 
