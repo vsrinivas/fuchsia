@@ -87,6 +87,7 @@ impl ToSelectorArguments for ComponentSelector {
 /// Reader service.
 pub struct InspectDataFetcher {
     selectors: Vec<String>,
+    should_retry: bool,
     timeout: Duration,
 }
 
@@ -95,12 +96,18 @@ impl InspectDataFetcher {
     ///  - Maximum retries: 2^64-1
     ///  - Timeout: 5 seconds
     pub fn new() -> Self {
-        Self { timeout: DEFAULT_TIMEOUT_SECS.seconds(), selectors: vec![] }
+        Self { timeout: DEFAULT_TIMEOUT_SECS.seconds(), selectors: vec![], should_retry: true }
     }
 
     /// Requests a single component tree (or sub-tree).
     pub fn add_selector(mut self, selector: impl ToSelectorArguments) -> Self {
         self.selectors.extend(selector.to_selector_arguments().into_iter());
+        self
+    }
+
+    /// Requests to retry when an empty result is received.
+    pub fn retry_if_empty(mut self, retry: bool) -> Self {
+        self.should_retry = retry;
         self
     }
 
@@ -206,7 +213,7 @@ impl InspectDataFetcher {
                 }
             }
 
-            if result.is_empty() {
+            if result.is_empty() && self.should_retry {
                 // Retry with delay to ensure data appears if the reader is called right after the
                 // component started, before the archivist knows about it.
                 fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;

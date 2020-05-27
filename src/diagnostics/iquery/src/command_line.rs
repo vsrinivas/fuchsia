@@ -63,7 +63,7 @@ impl Command for CommandLine {
     type Result = ();
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        execute_and_format!(self, [List, Show]);
+        execute_and_format!(self, [List, Selectors, Show]);
         Ok(())
     }
 }

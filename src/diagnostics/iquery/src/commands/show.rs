@@ -10,11 +10,7 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
-    fuchsia_inspect::testing::InspectDataFetcher,
-    fuchsia_inspect_node_hierarchy::{
-        serialization::{HierarchyDeserializer, RawJsonNodeHierarchySerializer},
-        NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::NodeHierarchy,
     serde::Serialize,
     std::cmp::Ordering,
 };
@@ -59,34 +55,11 @@ impl Command for ShowCommand {
 
         // TODO(fxbug.dev/45458): support filtering per manifest name.
         // TODO(fxbug.dev/45458): support printing in TEXT.
-
-        let mut fetcher = InspectDataFetcher::new();
-        // We support receiving the moniker or a tree selector
-        for selector in &self.selectors {
-            if selector.contains(":") {
-                fetcher = fetcher.add_selector(selector.as_ref());
-            } else {
-                fetcher = fetcher.add_selector(format!("{}:root", selector));
-            }
-        }
-        let mut results = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
-
-        let mut results = results
-            .as_array_mut()
-            .ok_or(Error::ArchiveInvalidJson)?
+        let mut results = utils::fetch_data(&self.selectors)
+            .await?
             .into_iter()
-            .map(|result| {
-                let payload =
-                    result.get_mut("payload").ok_or(Error::archive_missing_property("payload"))?;
-                let mut hierarchy: NodeHierarchy<String> =
-                    RawJsonNodeHierarchySerializer::deserialize(payload.take())
-                        .map_err(|_| Error::ArchiveInvalidJson)?;
-                hierarchy.sort();
-                let moniker = utils::get_moniker_from_result(&result)?;
-                Ok(ShowCommandResultItem { moniker, payload: hierarchy })
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-
+            .map(|(moniker, payload)| ShowCommandResultItem { moniker, payload })
+            .collect::<Vec<_>>();
         results.sort();
 
         Ok(results)
