@@ -10,10 +10,14 @@ declare_args() {
   # options (before the `ASAN_OPTIONS` environment variable is read at
   # runtime).  This can be set as a build argument to affect most "asan"
   # variants in `known_variants` (which see), or overridden in
-  # toolchain_args in one of those variants.  Note that setting this
-  # nonempty may conflict with programs that define their own
-  # `__asan_default_options` C function.
-  asan_default_options = ""
+  # toolchain_args in one of those variants.
+  #
+  # The default is ":" which doesn't affect any ASan behavior, but ensures that
+  # the ASan initializers run for all executable targets, including those that
+  # do not link C/C++ code. Note that this may conflict with programs that
+  # define their own `__asan_default_options` C function. Set this option to
+  # the empty string to support this.
+  asan_default_options = ":"
   if (is_fuchsia) {
     # TODO(45047): Temporary until all lsan bugs are filed and marked with
     # deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
