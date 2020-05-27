@@ -89,9 +89,7 @@ aggregate_manifest("legacy-aux") {
     ":lib.libunwind.so.1",
   ]
 
-  lib_names = [
-    "fdio",
-  ]
+  lib_names = [ "fdio" ]
   lib_variants = [
     "asan",
     "asan-ubsan",
@@ -522,6 +520,7 @@ aggregate_manifest("migrated-image") {
 aggregate_manifest("migrated-aux") {
   deps = [
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest-manifest",
+    "//src/devices/block/bin/biotime:biotime-test-manifest",
     "//src/devices/block/drivers/ahci:ahci-unittest-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
     "//src/devices/block/drivers/gpt:gpt-device-test-manifest",
@@ -540,6 +539,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/pci/lib/device-protocol-pci/test:device-protocol-pci-test-manifest",
     "//src/devices/power/drivers/as370-power:as370-power-test-manifest",
     "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test-manifest",
+    "//src/devices/rtc/drivers/fallback:fallback-rtc-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-manifest",
     "//src/devices/serial/drivers/uart16550:uart16550-test-manifest",
     "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
@@ -552,6 +552,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tests/ddk-power:ddk-power-manifest",
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
+    "//src/devices/tests/devfs:devfs-manifest",
     "//src/devices/tests/devhost-test:devhost-test-manifest",
     "//src/devices/tests/mock-device:mock-device-manifest",
     "//src/devices/tests/sysdev:sysdev-manifest",
@@ -636,7 +637,6 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/uart/test:uart-unittests-manifest",
     "//zircon/system/ulib/unittest/test:unittest-manifest",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
-    "//src/devices/block/bin/biotime:biotime-test-manifest",
     "//zircon/system/utest/core:c11-condvar-manifest",
     "//zircon/system/utest/core:c11-mutex-manifest",
     "//zircon/system/utest/core:c11-thread-manifest",
@@ -676,10 +676,8 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/core:version-manifest",
     "//zircon/system/utest/core:vmar-manifest",
     "//zircon/system/utest/core:vmo-manifest",
-    "//src/devices/tests/devfs:devfs-manifest",
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
     "//zircon/system/utest/evil:evil-manifest",
-    "//src/devices/rtc/drivers/fallback:fallback-rtc-manifest",
     "//zircon/system/utest/fidl:fidl-handle-policy-test-app-manifest",
     "//zircon/system/utest/fidl:fidl-manifest",
     "//zircon/system/utest/fs:fs-manifest",
@@ -725,6 +723,7 @@ aggregate_manifest("migrated-tests") {
   deps = [
     "//src/connectivity/ethernet/drivers/asix-88179:usb-virtual-bus-asix-88179-manifest",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest-manifest",
+    "//src/devices/block/bin/biotime:biotime-test-manifest",
     "//src/devices/block/drivers/ahci:ahci-unittest-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
     "//src/devices/block/drivers/gpt:gpt-device-test-manifest",
@@ -743,6 +742,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/pci/lib/device-protocol-pci/test:device-protocol-pci-test-manifest",
     "//src/devices/power/drivers/as370-power:as370-power-test-manifest",
     "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test-manifest",
+    "//src/devices/rtc/drivers/fallback:fallback-rtc-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-manifest",
     "//src/devices/serial/drivers/uart16550:uart16550-test-manifest",
     "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
@@ -755,6 +755,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/ddk-power:ddk-power-manifest",
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
+    "//src/devices/tests/devfs:devfs-manifest",
     "//src/devices/tests/devhost-test:devhost-test-manifest",
     "//src/devices/tests/mock-device:mock-device-manifest",
     "//src/devices/tests/sysdev:sysdev-manifest",
@@ -840,7 +841,6 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/uart/test:uart-unittests-manifest",
     "//zircon/system/ulib/unittest/test:unittest-manifest",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-manifest",
-    "//src/devices/block/bin/biotime:biotime-test-manifest",
     "//zircon/system/utest/core:c11-condvar-manifest",
     "//zircon/system/utest/core:c11-mutex-manifest",
     "//zircon/system/utest/core:c11-thread-manifest",
@@ -880,10 +880,8 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/core:version-manifest",
     "//zircon/system/utest/core:vmar-manifest",
     "//zircon/system/utest/core:vmo-manifest",
-    "//src/devices/tests/devfs:devfs-manifest",
     "//zircon/system/utest/dlfcn:dlfcn-manifest",
     "//zircon/system/utest/evil:evil-manifest",
-    "//src/devices/rtc/drivers/fallback:fallback-rtc-manifest",
     "//zircon/system/utest/fidl:fidl-manifest",
     "//zircon/system/utest/fs:fs-manifest",
     "//zircon/system/utest/fs-bench:fs-bench-manifest",
