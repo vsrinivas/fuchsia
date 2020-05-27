@@ -370,6 +370,9 @@ if (toolchain_variant.with_shared) {
         link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
         metadata = {
+          # NOTE: No metadata keys for link_output_rspfile() here to let
+          # the ones from the -shared toolchain target to be collected instead.
+
           binaries = []
 
           if (defined(invoker.metadata)) {
@@ -451,6 +454,8 @@ if (toolchain_variant.with_shared) {
         output_file = "$output_dir/$output_file_name"
         rebased_output_file = rebase_path(output_file, root_build_dir)
 
+        link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+
         # Note: the manifest-related metadata is added to the builder target as
         # some targets (e.g. drivers) depend on it directly in the builder
         # toolchain.
@@ -459,6 +464,10 @@ if (toolchain_variant.with_shared) {
           variant_dir = "${toolchain_variant.name}/"
         }
         metadata = {
+          # Used by link_output_rspfile(), see its documentation for details
+          link_output_path = [ rebase_path(link_output_file, root_build_dir) ]
+          link_output_barrier = []
+
           migrated_manifest_lines =
               [ "lib/${variant_dir}$output_file_name=$rebased_output_file" ]
         }
@@ -1232,9 +1241,9 @@ template("executable") {
       add_migration_metadata = !defined(meta.migrated_manifest_lines)
       not_needed([ "meta" ])
     }
-    if (add_migration_metadata) {
-      rebased_output_file = rebase_path(output_file, root_build_dir)
-    }
+
+    rebased_output_file = rebase_path(output_file, root_build_dir)
+    rebased_link_output_file = rebase_path(link_output_file, root_build_dir)
 
     metadata = {
       binaries = []
@@ -1249,8 +1258,8 @@ template("executable") {
           label = get_label_info(":$target_name", "label_with_toolchain")
           cpu = current_cpu
           os = current_os
-          debug = rebase_path(link_output_file, root_build_dir)
-          dist = rebase_path(output_file, root_build_dir)
+          debug = rebased_link_output_file
+          dist = rebased_output_file
           if (current_os != "mac" && current_os != "win") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
@@ -1268,7 +1277,7 @@ template("executable") {
             label = get_label_info(":$target_name", "label_with_toolchain")
             name = output_name
             os = current_os
-            path = rebase_path(output_file, root_build_dir)
+            path = rebased_output_file
           },
         ]
       }
@@ -1276,6 +1285,10 @@ template("executable") {
       if (add_migration_metadata) {
         migrated_manifest_lines = [ "bin/$output_name=$rebased_output_file" ]
       }
+
+      # Used by link_output_rspfile(), see its documentation for details.
+      link_output_path = [ rebased_link_output_file ]
+      link_output_barrier = []
     }
   }
 }
@@ -1327,9 +1340,8 @@ template("loadable_module") {
       add_migration_metadata = !defined(meta.migrated_manifest_lines)
       not_needed([ "meta" ])
     }
-    if (add_migration_metadata) {
-      rebased_output_file = rebase_path(output_file, root_build_dir)
-    }
+    rebased_output_file = rebase_path(output_file, root_build_dir)
+    rebased_link_output_file = rebase_path(link_output_file, root_build_dir)
 
     metadata = {
       binaries = []
@@ -1344,8 +1356,8 @@ template("loadable_module") {
           label = get_label_info(":$target_name", "label_with_toolchain")
           cpu = current_cpu
           os = current_os
-          debug = rebase_path(link_output_file, root_build_dir)
-          dist = rebase_path(output_file, root_build_dir)
+          debug = rebased_link_output_file
+          dist = rebased_output_file
           if (current_os != "mac" && current_os != "win") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
@@ -1360,6 +1372,10 @@ template("loadable_module") {
         migrated_manifest_lines =
             [ "lib/$output_file_name=$rebased_output_file" ]
       }
+
+      # Used by link_output_rspfile()
+      link_output_path = [ rebased_link_output_file ]
+      link_output_barrier = []
     }
   }
 }

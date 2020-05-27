@@ -27,9 +27,7 @@ template("host_tool_redirect") {
     cpu = host_cpu
     os = host_os
     direct = true
-    deps = [
-      invoker.tool,
-    ]
+    deps = [ invoker.tool ]
   }
 }
 
@@ -58,12 +56,8 @@ template("_host_tool_action_target") {
   generated_file(rspfile_target) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":$action_target" ]
-    deps = [
-      ":$tool_target",
-    ]
-    outputs = [
-      rspfile,
-    ]
+    deps = [ ":$tool_target" ]
+    outputs = [ rspfile ]
     data_keys = [ "host_tool_rspfile" ]
     walk_keys = [ "host_tool_barrier" ]
   }
@@ -117,9 +111,11 @@ template("_host_tool_action_target") {
       # any sort of action target as an opaque atom.
       action_barrier = []
 
+      # Used by link_output_rspfile(), see its documentation for details.
       # Never follow the deps to find link outputs from invoker.tool.
       # TODO: Maybe should still follow invoker.deps?
-      link_barrier = []
+      link_output_barrier = []
+
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }

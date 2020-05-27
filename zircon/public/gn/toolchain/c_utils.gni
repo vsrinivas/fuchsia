@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+if (!defined(zx) || zx != "/") {
+  import("//build/config/clang/clang.gni")
+}
+
 # Like action() but using utility binaries from the C/C++ toolchain.
 # This is the way to use `nm`, `objcopy`, etc.
 #
@@ -62,6 +66,10 @@ template("toolchain_utils_action") {
          "toolchain_utils_action(\"$target_name\") requires `utils`")
 
   if (defined(invoker.variant_target)) {
+    assert(
+        zx == "/",
+        "fxb/51971: toolchain_utils_action() with variant_target is not available in the GN build yet!")
+
     target_type = "_variant_target"
     extra_params = {
       target = {
@@ -79,34 +87,55 @@ template("toolchain_utils_action") {
 
   utils_inputs = []
   utils_paths = []
-  if (toolchain.tool_dir != "") {
-    # The toolchain binaries are in a specified location (e.g. a prebuilt).
-    foreach(util, invoker.utils) {
-      if (util == "cc") {
-        util = toolchain.cc
-      } else {
-        util = "${toolchain.tool_prefix}${util}"
+  if (zx == "/") {
+    # ZN Build
+    if (toolchain.tool_dir != "") {
+      # The toolchain binaries are in a specified location (e.g. a prebuilt).
+      foreach(util, invoker.utils) {
+        if (util == "cc") {
+          util = toolchain.cc
+        } else {
+          util = "${toolchain.tool_prefix}${util}"
+        }
+        util = "${toolchain.tool_dir}/${util}"
+        utils_inputs += [ util ]
+        utils_paths += [ rebase_path(util, root_build_dir) ]
       }
-      util = "${toolchain.tool_dir}/${util}"
-      utils_inputs += [ util ]
-      utils_paths += [ rebase_path(util, root_build_dir) ]
+    } else {
+      # The toolchain binaries are just found in the system PATH.
+      # They won't be used as dependencies.
+      if (!defined(script)) {
+        # If there's no script, utils_paths[0] will become the script.
+        # But the script has to be a known location that's a dependency.
+        # So use a dummy wrapper as the script.
+        script = "/usr/bin/env"
+      }
+      foreach(util, invoker.utils) {
+        if (util == "cc") {
+          util = toolchain.cc
+        } else {
+          util = "${toolchain.tool_prefix}${util}"
+        }
+        utils_paths += [ util ]
+      }
     }
   } else {
-    # The toolchain binaries are just found in the system PATH.
-    # They won't be used as dependencies.
-    if (!defined(script)) {
-      # If there's no script, utils_paths[0] will become the script.
-      # But the script has to be a known location that's a dependency.
-      # So use a dummy wrapper as the script.
-      script = "/usr/bin/env"
-    }
+    # The GN build only supports prebuilt Clang at the moment.
     foreach(util, invoker.utils) {
       if (util == "cc") {
-        util = toolchain.cc
+        util = "clang"
       } else {
-        util = "${toolchain.tool_prefix}${util}"
+        util = "llvm-${util}"
       }
-      utils_paths += [ util ]
+
+      # NOTE: clang_prefix is already rebased to root_build_dir, so compute its
+      # path relative to the root source directory. Note that rebase_path() always
+      # return a path relative to the new base, so prepend "//" to fix it, otherwise
+      # the result will be interpreted as relative to this BUILD.gn file.
+      rebased_util_path = "${clang_prefix}/${util}"
+      util_path = "//" + rebase_path(rebased_util_path, "//", root_build_dir)
+      utils_inputs += [ util_path ]
+      utils_paths += [ rebased_util_path ]
     }
   }
 
@@ -175,8 +204,19 @@ template("link_output_rspfile") {
                              "testonly",
                              "visibility",
                            ])
-    data_keys = [ "link_output" ]
-    walk_keys = [ "link_barrier" ]
+
+    # Every terminal target provides these metadata keys.  The first is
+    # used as the data key for the output of the link, as a file name
+    # relative to $root_build_dir appropriate for command-line contexts.
+    # The second is used as a walk key to provide a dependency barrier
+    # against e.g. shared_library() deps or other executable() data_deps.
+    #
+    # Used in: //zircon/public/gn/BUILDCONFIG.gn
+    # Used in: //build/config/BUILDCONFIG.gn
+
+    data_keys = [ "link_output_path" ]
+    walk_keys = [ "link_output_barrier" ]
+
     output_conversion = "list lines"
   }
 }
@@ -187,7 +227,7 @@ template("link_output_rspfile") {
 #
 #   deps
 #     Required: Dependencies leading to a linking target (e.g. executable).
-#     The ${metadata.link_output} key is used to find the input ELF file.
+#     The ${metadata.link_output_path} key is used to find the input ELF file.
 #     Type: list(label)
 #
 #   output_name

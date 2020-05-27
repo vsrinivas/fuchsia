@@ -202,22 +202,16 @@ template("shared_library") {
 
       metadata = {
         binaries = []
-        link_barrier = []
-        link_output = []
+
+        # Used by link_output_rspfile(), see its documentation for details.
+        link_output_barrier = []
+        link_output_path = []
 
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
         }
 
-        # Every terminal target provides these metadata keys.  The first is
-        # used as the data key for the output of the link, as a file name
-        # relative to $root_build_dir appropriate for command-line contexts.
-        # The second is used as a walk key to provide a dependency barrier
-        # against e.g. shared_library() deps or other executable() data_deps.
-        # The last is provided only on ELF platforms, to indicate all the link
-        # outputs that should be checked for a build ID if collecting an
-        # exhaustive list via metadata.
-        link_output += [ rebase_path(link_output_file, root_build_dir) ]
+        link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
         # For build_api_module("binaries") in $zx/BUILD.gn.
         binaries += [
@@ -579,7 +573,7 @@ template("library") {
               }
             } else {
               if (get_label_info(dep, "name") == "static" ||
-                         get_label_info(dep, "name") == "shared") {
+                  get_label_info(dep, "name") == "shared") {
                 dep = get_path_info(get_label_info(dep, "dir"), "name")
                 deps += [ "//zircon/public/lib/$dep" ]
               } else {
@@ -1397,22 +1391,16 @@ template("_basic_executable") {
 
     metadata = {
       binaries = []
-      link_barrier = []
-      link_output = []
+
+      # Used by link_output_rspfile(), see its documentation for details.
+      link_output_barrier = []
+      link_output_path = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
 
-      # Every terminal target provides these metadata keys.  The first is
-      # used as the data key for the output of the link, as a file name
-      # relative to $root_build_dir appropriate for command-line contexts.
-      # The second is used as a walk key to provide a dependency barrier
-      # against e.g. shared_library() deps or other executable() data_deps.
-      # The last is provided only on ELF platforms, to indicate all the link
-      # outputs that should be checked for a build ID if collecting an
-      # exhaustive list via metadata.
-      link_output += [ rebase_path(link_output_file, root_build_dir) ]
+      link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
       # For build_api_module("binaries") in $zx/BUILD.gn.
       binaries += [
@@ -1782,22 +1770,16 @@ template("_loadable_module") {
 
     metadata = {
       binaries = []
-      link_barrier = []
-      link_output = []
+
+      # Used by link_output_rspfile(), see its documentation for details.
+      link_output_barrier = []
+      link_output_path = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
 
-      # Every terminal target provides these metadata keys.  The first is
-      # used as the data key for the output of the link, as a file name
-      # relative to $root_build_dir appropriate for command-line contexts.
-      # The second is used as a walk key to provide a dependency barrier
-      # against e.g. shared_library() deps or other executable() data_deps.
-      # The last is provided only on ELF platforms, to indicate all the link
-      # outputs that should be checked for a build ID if collecting an
-      # exhaustive list via metadata.
-      link_output += [ rebase_path(link_output_file, root_build_dir) ]
+      link_output_path += [ rebase_path(link_output_file, root_build_dir) ]
 
       # For build_api_module("binaries") in $zx/BUILD.gn.
       binaries += [
