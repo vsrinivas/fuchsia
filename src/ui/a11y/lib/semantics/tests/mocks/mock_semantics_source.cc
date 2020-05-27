@@ -31,17 +31,16 @@ void MockSemanticsSource::CreateSemanticNode(zx_koid_t koid,
 
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetSemanticNode(
     zx_koid_t koid, uint32_t node_id) const {
-  if (nodes_.find(koid) == nodes_.end()) {
+  const auto it = nodes_.find(koid);
+  if (it == nodes_.end()) {
     return nullptr;
   }
-
-  auto& nodes_for_view = nodes_.at(koid);
-
-  if (nodes_for_view.find(node_id) == nodes_for_view.end()) {
+  const auto& nodes_for_view = it->second;
+  const auto node_it = nodes_for_view.find(node_id);
+  if (node_it == nodes_for_view.end()) {
     return nullptr;
   }
-
-  return &(nodes_for_view.at(node_id));
+  return &node_it->second;
 }
 
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
@@ -112,6 +111,7 @@ void MockSemanticsSource::PerformAccessibilityAction(
     fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
         callback) {
   requested_actions_[koid].emplace_back(node_id, action);
+  callback(true);
 }
 
 const std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>&
