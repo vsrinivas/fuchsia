@@ -540,29 +540,25 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
     return ZX_ERR_NO_MEMORY;
   }
   fbl::AutoLock lock(&capture_lock_);
-  zx_status_t status, status2;
-  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection, &status2,
-                                                                  &collection_info);
-  if (status != ZX_OK) {
-    return status;
+  auto result =
+      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(collection));
+  if (!result.ok()) {
+    return result.status();
   }
-  if (status2 != ZX_OK) {
-    return status2;
+  if (result->status != ZX_OK) {
+    return result->status;
   }
 
-  fbl::Vector<zx::vmo> vmos;
-  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
-    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
-  }
+  sysmem::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
 
-  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+  if (!collection_info.settings.has_image_format_constraints ||
+      index >= collection_info.buffer_count) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   // Ensure the proper format
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  fuchsia_sysmem_PixelFormatType_BGR24);
+                  sysmem::PixelFormatType::BGR24);
 
   // Allocate a canvas for the capture image
   canvas_info_t canvas_info = {};
@@ -573,9 +569,9 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   canvas_info.endianness = kCanvasLittleEndian64Bit;
   canvas_info.flags = CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE;
   uint8_t canvas_idx;
-  status = amlogic_canvas_config(&canvas_, vmos[index].release(),
-                                 collection_info.buffers[index].vmo_usable_start, &canvas_info,
-                                 &canvas_idx);
+  zx_status_t status = amlogic_canvas_config(&canvas_, collection_info.buffers[index].vmo.release(),
+                                             collection_info.buffers[index].vmo_usable_start,
+                                             &canvas_info, &canvas_idx);
   if (status != ZX_OK) {
     DISP_ERROR("Could not configure canvas %d\n", status);
     return status;
