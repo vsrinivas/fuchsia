@@ -162,6 +162,7 @@ void PressureNotifier::FileCrashReport() {
 
   fuchsia::feedback::CrashReport report;
   report.set_program_name("system");
+  report.set_program_uptime(zx_clock_get_monotonic());
   report.set_specific_report(std::move(specific_report));
 
   crash_reporter->File(std::move(report),
