@@ -298,6 +298,7 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
                                  const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogEventWithAggregation";
+  auto day_index = CurrentDayIndex(clock);
   for (uint32_t index : kFeaturesActiveIndices) {
     if (!logger->LogEvent(cobalt_registry::kFeaturesActiveMetricId, index)) {
       FX_LOGS(INFO) << "Failed to log event with index " << index << ".";
@@ -312,6 +313,13 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
     return false;
   }
 
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
   // Expect to generate |kNumAggregatedObservations| for each day in the
   // backfill period, plus the current day. Expect to generate no observations
   // when GenerateObservations is called for the second time on the same day.
@@ -321,11 +329,11 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterfa
     expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
     expect_no_obs[pair.first] = 0;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expected_num_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogEventWithAggregation : FAIL";
     return false;
   }
@@ -343,6 +351,7 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
     expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
     expect_no_obs[pair.first] = 0;
   }
+  auto day_index = CurrentDayIndex(clock);
   for (uint32_t index : kConnectionAttemptsIndices) {
     for (std::string component : kConnectionAttemptsComponentNames) {
       if (index != 0) {
@@ -361,11 +370,19 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
       }
     }
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expected_num_obs)) {
+
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
     return false;
   }
@@ -386,6 +403,8 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
     expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
     expect_no_obs[pair.first] = 0;
   }
+
+  auto day_index = CurrentDayIndex(clock);
   for (uint32_t index : kStreamingTimeIndices) {
     for (std::string component : kStreamingTimeComponentNames) {
       // Log a duration depending on the index.
@@ -403,11 +422,19 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
       }
     }
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expected_num_obs)) {
+
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
     return false;
   }
-  if (!GenerateObsAndCheckCount(CurrentDayIndex(clock), cobalt_controller, expect_no_obs)) {
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
     FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregation : FAIL";
     return false;
   }

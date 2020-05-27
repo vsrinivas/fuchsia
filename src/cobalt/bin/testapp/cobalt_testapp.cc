@@ -53,6 +53,15 @@ constexpr uint32_t kInfiniteTime = 999999999;
     return false;                                     \
   }
 
+#define CONNECT_AND_TRY_TEST_TWICE(test, backfill_days) \
+  Connect(kInfiniteTime, 0, backfill_days, false, 0);   \
+  if (!(test)) {                                        \
+    Connect(kInfiniteTime, 0, backfill_days, false, 0); \
+    if (!(test)) {                                      \
+      return false;                                     \
+    }                                                   \
+  }
+
 bool CobaltTestApp::RunTests() {
   // With the following values for the scheduling parameters we are
   // essentially configuring the ShippingManager to be in manual mode. It will
@@ -84,13 +93,15 @@ void CobaltTestApp::SetChannel(const std::string &current_channel) {
 }
 
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
-  CONNECT_AND_TRY_TEST(
+  // TODO(fxb/52750) We try each of these tests twice in case the failure
+  // reason is that the calendar date has changed mid-test.
+  CONNECT_AND_TRY_TEST_TWICE(
       TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
       backfill_days);
-  CONNECT_AND_TRY_TEST(
+  CONNECT_AND_TRY_TEST_TWICE(
       TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
       backfill_days);
-  CONNECT_AND_TRY_TEST(
+  CONNECT_AND_TRY_TEST_TWICE(
       TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
       backfill_days);
 
