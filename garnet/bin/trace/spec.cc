@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
+#include <sstream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -298,11 +299,21 @@ bool DecodeMeasureTimeBetween(const rapidjson::Value& value, measure::TimeBetwee
 
 bool DecodeSpec(const std::string& json, Spec* spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = json_parser::InitSchemaDeprecated(kRootSchema);
-  auto duration_schema = json_parser::InitSchemaDeprecated(kDurationSchema);
-  auto time_between_schema = json_parser::InitSchemaDeprecated(kTimeBetweenSchema);
-  auto argument_value_schema = json_parser::InitSchemaDeprecated(kArgumentValueSchema);
-  if (!root_schema || !duration_schema || !time_between_schema || !argument_value_schema) {
+  auto root_schema_result = json_parser::InitSchema(kRootSchema);
+  auto duration_schema_result = json_parser::InitSchema(kDurationSchema);
+  auto time_between_schema_result = json_parser::InitSchema(kTimeBetweenSchema);
+  auto argument_value_schema_result = json_parser::InitSchema(kArgumentValueSchema);
+  auto schema_results = {&root_schema_result, &duration_schema_result, &time_between_schema_result,
+                         &argument_value_schema_result};
+  std::stringstream error_stream;
+  for (auto* schema_result : schema_results) {
+    if (schema_result->is_error()) {
+      error_stream << schema_result->error_value().ToString() << "\n";
+    }
+  }
+  auto error_str = error_stream.str();
+  if (!error_str.empty()) {
+    FX_LOGS(ERROR) << "Error parsing schema(s):\n" << error_str;
     return false;
   }
 
@@ -316,7 +327,9 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
                    << GetParseError_En(code);
     return false;
   }
-  if (!json_parser::ValidateSchemaDeprecated(document, *root_schema)) {
+  auto validation_result = json_parser::ValidateSchema(document, root_schema_result.value());
+  if (validation_result.is_error()) {
+    FX_LOGS(ERROR) << "Error validating json: " << validation_result.error_value();
     return false;
   }
 
@@ -410,24 +423,37 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
     if (type == kMeasureDurationType) {
       measure::DurationSpec spec;
       spec.common = std::move(common);
-      if (!json_parser::ValidateSchemaDeprecated(measurement, *duration_schema) ||
-          !DecodeMeasureDuration(measurement, &spec)) {
+      auto validation_result =
+          json_parser::ValidateSchema(measurement, duration_schema_result.value());
+      if (validation_result.is_error() || !DecodeMeasureDuration(measurement, &spec)) {
+        if (validation_result.is_error()) {
+          FX_LOGS(ERROR) << "Error validating json: " << validation_result.error_value();
+        }
         return false;
       }
       result.measurements->duration.push_back(std::move(spec));
     } else if (type == kMeasureTimeBetweenType) {
       measure::TimeBetweenSpec spec;
       spec.common = std::move(common);
-      if (!json_parser::ValidateSchemaDeprecated(measurement, *time_between_schema) ||
-          !DecodeMeasureTimeBetween(measurement, &spec)) {
+
+      auto validation_result =
+          json_parser::ValidateSchema(measurement, time_between_schema_result.value());
+      if (validation_result.is_error() || !DecodeMeasureTimeBetween(measurement, &spec)) {
+        if (validation_result.is_error()) {
+          FX_LOGS(ERROR) << "Error validating json: " << validation_result.error_value();
+        }
         return false;
       }
       result.measurements->time_between.push_back(std::move(spec));
     } else if (type == kMeasureArgumentValueType) {
       measure::ArgumentValueSpec spec;
       spec.common = std::move(common);
-      if (!json_parser::ValidateSchemaDeprecated(measurement, *argument_value_schema) ||
-          !DecodeMeasureArgumentValue(measurement, &spec)) {
+      auto validation_result =
+          json_parser::ValidateSchema(measurement, argument_value_schema_result.value());
+      if (validation_result.is_error() || !DecodeMeasureArgumentValue(measurement, &spec)) {
+        if (validation_result.is_error()) {
+          FX_LOGS(ERROR) << "Error validating json: " << validation_result.error_value();
+        }
         return false;
       }
       result.measurements->argument_value.push_back(std::move(spec));
