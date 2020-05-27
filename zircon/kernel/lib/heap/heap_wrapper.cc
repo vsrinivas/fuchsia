@@ -16,9 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
-#include <zircon/listnode.h>
 
 #include <arch/ops.h>
+#include <fbl/intrusive_double_list.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <vm/physmap.h>
@@ -45,9 +45,7 @@ static bool heap_trace = false;
 // keep a list of unique caller:size sites in a list
 namespace {
 
-struct alloc_stat {
-  list_node node;
-
+struct alloc_stat : fbl::DoublyLinkedListable<alloc_stat*> {
   void* caller;
   size_t size;
 
@@ -58,7 +56,7 @@ const size_t num_stats = 1024;
 size_t next_unused_stat = 0;
 alloc_stat stats[num_stats];
 
-list_node stat_list = LIST_INITIAL_VALUE(stat_list);
+fbl::DoublyLinkedList<alloc_stat*> stat_list;
 SpinLock stat_lock;
 
 void add_stat(void* caller, size_t size) {
@@ -69,12 +67,11 @@ void add_stat(void* caller, size_t size) {
   AutoSpinLock guard(&stat_lock);
 
   // look for an existing stat, bump the count and move to head if found
-  alloc_stat* s;
-  list_for_every_entry (&stat_list, s, alloc_stat, node) {
-    if (s->caller == caller && s->size == size) {
-      s->count++;
-      list_delete(&s->node);
-      list_add_head(&stat_list, &s->node);
+  for (alloc_stat& s : stat_list) {
+    if (s.caller == caller && s.size == size) {
+      s.count++;
+      stat_list.erase(s);
+      stat_list.push_front(&s);
       return;
     }
   }
@@ -83,11 +80,11 @@ void add_stat(void* caller, size_t size) {
   if (unlikely(next_unused_stat >= num_stats))
     return;
 
-  s = &stats[next_unused_stat++];
+  alloc_stat* s = &stats[next_unused_stat++];
   s->caller = caller;
   s->size = size;
   s->count = 1;
-  list_add_head(&stat_list, &s->node);
+  stat_list.push_front(s);
 }
 
 void dump_stats() {
@@ -98,29 +95,27 @@ void dump_stats() {
   AutoSpinLock guard(&stat_lock);
 
   // remove all of them from the list
-  alloc_stat* s;
-  while ((s = list_remove_head_type(&stat_list, alloc_stat, node)))
-    ;
+  stat_list.clear();
 
   // reinsert all of the entries, sorted by size
   for (size_t i = 0; i < next_unused_stat; i++) {
     bool added = false;
-    list_for_every_entry (&stat_list, s, alloc_stat, node) {
-      if (stats[i].size >= s->size) {
-        list_add_before(&s->node, &stats[i].node);
+    for (alloc_stat& s : stat_list) {
+      if (stats[i].size >= s.size) {
+        stat_list.insert(s, &stats[i]);
         added = true;
         break;
       }
     }
     // fell off the end
     if (!added) {
-      list_add_tail(&stat_list, &stats[i].node);
+      stat_list.push_back(&stats[i]);
     }
   }
 
   // dump the list of stats
-  list_for_every_entry (&stat_list, s, alloc_stat, node) {
-    printf("size %8zu count %8" PRIu64 " caller %p\n", s->size, s->count, s->caller);
+  for (alloc_stat& s : stat_list) {
+    printf("size %8zu count %8" PRIu64 " caller %p\n", s.size, s.count, s.caller);
   }
 
   if (next_unused_stat >= num_stats) {
