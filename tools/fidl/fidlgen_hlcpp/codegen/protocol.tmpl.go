@@ -149,14 +149,9 @@ class {{ .RequestDecoderName }} {
       case internal::{{ .Name }}:
           {{- end }}
       {
-          {{- if .Request }}
-            {{- range $index, $param := .Request }}
-        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .Offset }});
-            {{- end }}
-          {{- end }}
         {{ .Name }}(
           {{- range $index, $param := .Request -}}
-            {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+            {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .Offset }})
           {{- end -}}
         );
         break;
@@ -217,12 +212,9 @@ class {{ .ResponseDecoderName }} {
       case internal::{{ .Name }}:
           {{- end }}
       {
-            {{- range $index, $param := .Response }}
-        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .Offset }});
-            {{- end }}
         {{ .Name }}(
           {{- range $index, $param := .Response -}}
-            {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+            {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .Offset }})
           {{- end -}}
         );
         break;
@@ -419,13 +411,10 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
       }
         {{- if .Response }}
       ::fidl::Decoder decoder(std::move(message));
-          {{- range $index, $param := .Response }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
-          {{- end }}
         {{- end }}
       {{ .Name }}(
         {{- range $index, $param := .Response -}}
-          {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }})
         {{- end -}}
       );
       break;
@@ -463,13 +452,10 @@ class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler
     }
       {{- if .Response }}
     ::fidl::Decoder decoder(std::move(message));
-        {{- range $index, $param := .Response }}
-    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
-        {{- end }}
       {{- end }}
     callback_(
       {{- range $index, $param := .Response -}}
-        {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }})
       {{- end -}}
     );
     return ZX_OK;
@@ -567,13 +553,10 @@ zx_status_t {{ .StubName }}::Dispatch_(
     {
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
-          {{- range $index, $param := .Request }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
-          {{- end }}
         {{- end }}
       impl_->{{ .Name }}(
         {{- range $index, $param := .Request -}}
-          {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }})
         {{- end -}}
         {{- if .HasResponse -}}
           {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))

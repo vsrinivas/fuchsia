@@ -112,8 +112,7 @@ class Top_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kTop_GetFoo_Ordinal:
       case internal::kTop_GetFoo_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::bottom::Foo>(&response_decoder, 16);
-        GetFoo(std::move(arg0));
+        GetFoo(::fidl::DecodeAs<::bottom::Foo>(&response_decoder, 16));
         break;
       }
       default: {

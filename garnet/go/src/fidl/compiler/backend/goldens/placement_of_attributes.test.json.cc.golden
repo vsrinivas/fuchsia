@@ -102,8 +102,7 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
     case internal::kExampleProtocol_Method_Ordinal:
     case internal::kExampleProtocol_Method_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::exampleusing::Empty>(&decoder, 16);
-      impl_->Method(std::move(arg0));
+      impl_->Method(::fidl::DecodeAs<::exampleusing::Empty>(&decoder, 16));
       break;
     }
     default: {

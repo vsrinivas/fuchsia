@@ -104,9 +104,8 @@ class Parent_GetChild_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 =
-        ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(
+        ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -149,8 +148,7 @@ class Parent_GetChildRequest_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -261,17 +259,15 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
     case internal::kParent_TakeChild_Ordinal:
     case internal::kParent_TakeChild_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 =
-          ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&decoder, 16);
-      impl_->TakeChild(std::move(arg0));
+      impl_->TakeChild(
+          ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&decoder, 16));
       break;
     }
     case internal::kParent_TakeChildRequest_Ordinal:
     case internal::kParent_TakeChildRequest_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 =
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&decoder, 16);
-      impl_->TakeChildRequest(std::move(arg0));
+      impl_->TakeChildRequest(
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&decoder, 16));
       break;
     }
     default: {

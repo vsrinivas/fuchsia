@@ -550,9 +550,8 @@ zx_status_t ChannelProtocol_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
-      auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
-      EventA(std::move(arg0), std::move(arg1));
+      EventA(::fidl::DecodeAs<int64_t>(&decoder, 16),
+             ::fidl::DecodeAs<int64_t>(&decoder, 24));
       break;
     }
     default: {
@@ -591,8 +590,7 @@ class ChannelProtocol_MethodB_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -638,8 +636,7 @@ class ChannelProtocol_MutateSocket_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -737,26 +734,23 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
     case internal::kChannelProtocol_MethodA_Ordinal:
     case internal::kChannelProtocol_MethodA_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
-      auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
-      impl_->MethodA(std::move(arg0), std::move(arg1));
+      impl_->MethodA(::fidl::DecodeAs<int64_t>(&decoder, 16),
+                     ::fidl::DecodeAs<int64_t>(&decoder, 24));
       break;
     }
     case internal::kChannelProtocol_MethodB_Ordinal:
     case internal::kChannelProtocol_MethodB_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
-      auto arg1 = ::fidl::DecodeAs<int64_t>(&decoder, 24);
-      impl_->MethodB(std::move(arg0), std::move(arg1),
+      impl_->MethodB(::fidl::DecodeAs<int64_t>(&decoder, 16),
+                     ::fidl::DecodeAs<int64_t>(&decoder, 24),
                      ChannelProtocol_MethodB_Responder(std::move(response)));
       break;
     }
     case internal::kChannelProtocol_MutateSocket_Ordinal:
     case internal::kChannelProtocol_MutateSocket_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::zx::socket>(&decoder, 16);
       impl_->MutateSocket(
-          std::move(arg0),
+          ::fidl::DecodeAs<::zx::socket>(&decoder, 16),
           ChannelProtocol_MutateSocket_Responder(std::move(response)));
       break;
     }
@@ -988,8 +982,7 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-      OnWithResponse(std::move(arg0));
+      OnWithResponse(::fidl::DecodeAs<::std::string>(&decoder, 16));
       break;
     }
     default: {
@@ -1092,8 +1085,7 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -1217,8 +1209,7 @@ class WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -1396,8 +1387,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
     case internal::
         kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-      impl_->WithRequestNoResponse(std::move(arg0));
+      impl_->WithRequestNoResponse(
+          ::fidl::DecodeAs<::std::string>(&decoder, 16));
       break;
     }
     case internal::
@@ -1405,9 +1396,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
     case internal::
         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
       impl_->WithRequestEmptyResponse(
-          std::move(arg0),
+          ::fidl::DecodeAs<::std::string>(&decoder, 16),
           WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(
               std::move(response)));
       break;
@@ -1417,9 +1407,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
     case internal::
         kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
       impl_->WithRequestWithResponse(
-          std::move(arg0),
+          ::fidl::DecodeAs<::std::string>(&decoder, 16),
           WithAndWithoutRequestResponse_WithRequestWithResponse_Responder(
               std::move(response)));
       break;
@@ -1844,9 +1833,8 @@ class WithErrorSyntax_ResponseAsStruct_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 =
-        ::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
+        &decoder, 16));
     return ZX_OK;
   }
 
@@ -1894,9 +1882,8 @@ class WithErrorSyntax_ErrorAsPrimitive_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 =
-        ::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
+        &decoder, 16));
     return ZX_OK;
   }
 
@@ -1944,9 +1931,8 @@ class WithErrorSyntax_ErrorAsEnum_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 =
-        ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(
+        ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(&decoder, 16));
     return ZX_OK;
   }
 

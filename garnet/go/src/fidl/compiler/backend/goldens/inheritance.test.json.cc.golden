@@ -83,8 +83,7 @@ class super_foo_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -157,8 +156,8 @@ zx_status_t super_Stub::Dispatch_(::fidl::Message message,
     case internal::ksuper_foo_Ordinal:
     case internal::ksuper_foo_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-      impl_->foo(std::move(arg0), super_foo_Responder(std::move(response)));
+      impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
+                 super_foo_Responder(std::move(response)));
       break;
     }
     default: {
@@ -264,8 +263,7 @@ class sub_foo_ResponseHandler final : public ::fidl::internal::MessageHandler {
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<int64_t>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -337,8 +335,8 @@ zx_status_t sub_Stub::Dispatch_(::fidl::Message message,
     case internal::ksub_foo_Ordinal:
     case internal::ksub_foo_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<::std::string>(&decoder, 16);
-      impl_->foo(std::move(arg0), sub_foo_Responder(std::move(response)));
+      impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
+                 sub_foo_Responder(std::move(response)));
       break;
     }
     default: {

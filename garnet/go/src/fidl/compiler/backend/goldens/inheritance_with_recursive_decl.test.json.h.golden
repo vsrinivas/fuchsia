@@ -89,9 +89,8 @@ class Parent_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kParent_First_Ordinal:
       case internal::kParent_First_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
-            &request_decoder, 16);
-        First(std::move(arg0));
+        First(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
+            &request_decoder, 16));
         break;
       }
       default: {
@@ -239,16 +238,14 @@ class Child_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kChild_First_Ordinal:
       case internal::kChild_First_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
-            &request_decoder, 16);
-        First(std::move(arg0));
+        First(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
+            &request_decoder, 16));
         break;
       }
       case internal::kChild_Second_Ordinal:
       case internal::kChild_Second_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
-            &request_decoder, 16);
-        Second(std::move(arg0));
+        Second(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
+            &request_decoder, 16));
         break;
       }
       default: {

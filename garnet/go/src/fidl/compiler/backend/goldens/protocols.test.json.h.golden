@@ -543,22 +543,19 @@ class ChannelProtocol_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kChannelProtocol_MethodA_Ordinal:
       case internal::kChannelProtocol_MethodA_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<int64_t>(&request_decoder, 16);
-        auto arg1 = ::fidl::DecodeAs<int64_t>(&request_decoder, 24);
-        MethodA(std::move(arg0), std::move(arg1));
+        MethodA(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
+                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
         break;
       }
       case internal::kChannelProtocol_MethodB_Ordinal:
       case internal::kChannelProtocol_MethodB_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<int64_t>(&request_decoder, 16);
-        auto arg1 = ::fidl::DecodeAs<int64_t>(&request_decoder, 24);
-        MethodB(std::move(arg0), std::move(arg1));
+        MethodB(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
+                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
         break;
       }
       case internal::kChannelProtocol_MutateSocket_Ordinal:
       case internal::kChannelProtocol_MutateSocket_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::zx::socket>(&request_decoder, 16);
-        MutateSocket(std::move(arg0));
+        MutateSocket(::fidl::DecodeAs<::zx::socket>(&request_decoder, 16));
         break;
       }
       default: {
@@ -615,21 +612,18 @@ class ChannelProtocol_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kChannelProtocol_EventA_Ordinal:
       case internal::kChannelProtocol_EventA_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<int64_t>(&response_decoder, 16);
-        auto arg1 = ::fidl::DecodeAs<int64_t>(&response_decoder, 24);
-        EventA(std::move(arg0), std::move(arg1));
+        EventA(::fidl::DecodeAs<int64_t>(&response_decoder, 16),
+               ::fidl::DecodeAs<int64_t>(&response_decoder, 24));
         break;
       }
       case internal::kChannelProtocol_MethodB_Ordinal:
       case internal::kChannelProtocol_MethodB_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<int64_t>(&response_decoder, 16);
-        MethodB(std::move(arg0));
+        MethodB(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
         break;
       }
       case internal::kChannelProtocol_MutateSocket_Ordinal:
       case internal::kChannelProtocol_MutateSocket_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::zx::socket>(&response_decoder, 16);
-        MutateSocket(std::move(arg0));
+        MutateSocket(::fidl::DecodeAs<::zx::socket>(&response_decoder, 16));
         break;
       }
       default: {
@@ -816,24 +810,24 @@ class WithAndWithoutRequestResponse_RequestDecoder {
           kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
       case internal::
           kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&request_decoder, 16);
-        WithRequestNoResponse(std::move(arg0));
+        WithRequestNoResponse(
+            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
         break;
       }
       case internal::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
       case internal::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&request_decoder, 16);
-        WithRequestEmptyResponse(std::move(arg0));
+        WithRequestEmptyResponse(
+            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
         break;
       }
       case internal::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
       case internal::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&request_decoder, 16);
-        WithRequestWithResponse(std::move(arg0));
+        WithRequestWithResponse(
+            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
         break;
       }
       default: {
@@ -914,8 +908,8 @@ class WithAndWithoutRequestResponse_ResponseDecoder {
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
       case internal::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&response_decoder, 16);
-        NoRequestWithResponse(std::move(arg0));
+        NoRequestWithResponse(
+            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
         break;
       }
       case internal::
@@ -929,8 +923,8 @@ class WithAndWithoutRequestResponse_ResponseDecoder {
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
       case internal::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&response_decoder, 16);
-        WithRequestWithResponse(std::move(arg0));
+        WithRequestWithResponse(
+            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
         break;
       }
       case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
@@ -941,8 +935,7 @@ class WithAndWithoutRequestResponse_ResponseDecoder {
       }
       case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
       case internal::kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&response_decoder, 16);
-        OnWithResponse(std::move(arg0));
+        OnWithResponse(::fidl::DecodeAs<::std::string>(&response_decoder, 16));
         break;
       }
       default: {
@@ -1285,23 +1278,22 @@ class WithErrorSyntax_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
       case internal::kWithErrorSyntax_ResponseAsStruct_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
-            &response_decoder, 16);
-        ResponseAsStruct(std::move(arg0));
+        ResponseAsStruct(
+            ::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
+                &response_decoder, 16));
         break;
       }
       case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
       case internal::kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
-            &response_decoder, 16);
-        ErrorAsPrimitive(std::move(arg0));
+        ErrorAsPrimitive(
+            ::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
+                &response_decoder, 16));
         break;
       }
       case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
       case internal::kWithErrorSyntax_ErrorAsEnum_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(
-            &response_decoder, 16);
-        ErrorAsEnum(std::move(arg0));
+        ErrorAsEnum(::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(
+            &response_decoder, 16));
         break;
       }
       default: {

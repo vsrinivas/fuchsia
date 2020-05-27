@@ -122,16 +122,14 @@ class Parent_RequestDecoder {
       }
       case internal::kParent_TakeChild_Ordinal:
       case internal::kParent_TakeChild_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
-            &request_decoder, 16);
-        TakeChild(std::move(arg0));
+        TakeChild(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
+            &request_decoder, 16));
         break;
       }
       case internal::kParent_TakeChildRequest_Ordinal:
       case internal::kParent_TakeChildRequest_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
-            &request_decoder, 16);
-        TakeChildRequest(std::move(arg0));
+        TakeChildRequest(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
+            &request_decoder, 16));
         break;
       }
       default: {
@@ -183,16 +181,14 @@ class Parent_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kParent_GetChild_Ordinal:
       case internal::kParent_GetChild_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
-            &response_decoder, 16);
-        GetChild(std::move(arg0));
+        GetChild(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
+            &response_decoder, 16));
         break;
       }
       case internal::kParent_GetChildRequest_Ordinal:
       case internal::kParent_GetChildRequest_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
-            &response_decoder, 16);
-        GetChildRequest(std::move(arg0));
+        GetChildRequest(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
+            &response_decoder, 16));
         break;
       }
       default: {

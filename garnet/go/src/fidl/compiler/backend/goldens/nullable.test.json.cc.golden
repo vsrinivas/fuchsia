@@ -232,8 +232,7 @@ class SimpleProtocol_Add_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<int32_t>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<int32_t>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -310,9 +309,8 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
     case internal::kSimpleProtocol_Add_Ordinal:
     case internal::kSimpleProtocol_Add_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<int32_t>(&decoder, 16);
-      auto arg1 = ::fidl::DecodeAs<int32_t>(&decoder, 20);
-      impl_->Add(std::move(arg0), std::move(arg1),
+      impl_->Add(::fidl::DecodeAs<int32_t>(&decoder, 16),
+                 ::fidl::DecodeAs<int32_t>(&decoder, 20),
                  SimpleProtocol_Add_Responder(std::move(response)));
       break;
     }

@@ -206,8 +206,7 @@ class Example_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kExample_foo_Ordinal:
       case internal::kExample_foo_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<::std::string>(&request_decoder, 16);
-        foo(std::move(arg0));
+        foo(::fidl::DecodeAs<::std::string>(&request_decoder, 16));
         break;
       }
       default: {
@@ -250,8 +249,7 @@ class Example_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kExample_foo_Ordinal:
       case internal::kExample_foo_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<Example_foo_Result>(&response_decoder, 16);
-        foo(std::move(arg0));
+        foo(::fidl::DecodeAs<Example_foo_Result>(&response_decoder, 16));
         break;
       }
       default: {

@@ -99,8 +99,7 @@ zx_status_t EmptyProtocol_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<Empty>(&decoder, 16);
-      Receive(std::move(arg0));
+      Receive(::fidl::DecodeAs<Empty>(&decoder, 16));
       break;
     }
     default: {
@@ -140,8 +139,7 @@ class EmptyProtocol_SendAndReceive_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<Empty>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<Empty>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -223,16 +221,14 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
     case internal::kEmptyProtocol_Send_Ordinal:
     case internal::kEmptyProtocol_Send_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<Empty>(&decoder, 16);
-      impl_->Send(std::move(arg0));
+      impl_->Send(::fidl::DecodeAs<Empty>(&decoder, 16));
       break;
     }
     case internal::kEmptyProtocol_SendAndReceive_Ordinal:
     case internal::kEmptyProtocol_SendAndReceive_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<Empty>(&decoder, 16);
       impl_->SendAndReceive(
-          std::move(arg0),
+          ::fidl::DecodeAs<Empty>(&decoder, 16),
           EmptyProtocol_SendAndReceive_Responder(std::move(response)));
       break;
     }

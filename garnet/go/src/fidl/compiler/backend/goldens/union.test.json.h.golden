@@ -1257,17 +1257,16 @@ class TestProtocol_ResponseDecoder {
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
       case internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
-        auto arg0 =
-            ::fidl::DecodeAs<StrictBoundedXUnion>(&response_decoder, 16);
-        StrictXUnionHenceResponseMayBeStackAllocated(std::move(arg0));
+        StrictXUnionHenceResponseMayBeStackAllocated(
+            ::fidl::DecodeAs<StrictBoundedXUnion>(&response_decoder, 16));
         break;
       }
       case internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
       case internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<OlderSimpleUnion>(&response_decoder, 16);
-        FlexibleXUnionHenceResponseMustBeHeapAllocated(std::move(arg0));
+        FlexibleXUnionHenceResponseMustBeHeapAllocated(
+            ::fidl::DecodeAs<OlderSimpleUnion>(&response_decoder, 16));
         break;
       }
       default: {

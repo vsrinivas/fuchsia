@@ -99,9 +99,8 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
     case internal::kParent_First_Ordinal:
     case internal::kParent_First_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 =
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
-      impl_->First(std::move(arg0));
+      impl_->First(
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
       break;
     }
     default: {
@@ -228,17 +227,15 @@ zx_status_t Child_Stub::Dispatch_(::fidl::Message message,
     case internal::kChild_First_Ordinal:
     case internal::kChild_First_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 =
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
-      impl_->First(std::move(arg0));
+      impl_->First(
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
       break;
     }
     case internal::kChild_Second_Ordinal:
     case internal::kChild_Second_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 =
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16);
-      impl_->Second(std::move(arg0));
+      impl_->Second(
+          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
       break;
     }
     default: {

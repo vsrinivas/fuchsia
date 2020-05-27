@@ -81,8 +81,7 @@ class Top_GetFoo_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<::bottom::Foo>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<::bottom::Foo>(&decoder, 16));
     return ZX_OK;
   }
 

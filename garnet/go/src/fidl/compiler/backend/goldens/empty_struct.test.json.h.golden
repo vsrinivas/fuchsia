@@ -106,14 +106,12 @@ class EmptyProtocol_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kEmptyProtocol_Send_Ordinal:
       case internal::kEmptyProtocol_Send_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<Empty>(&request_decoder, 16);
-        Send(std::move(arg0));
+        Send(::fidl::DecodeAs<Empty>(&request_decoder, 16));
         break;
       }
       case internal::kEmptyProtocol_SendAndReceive_Ordinal:
       case internal::kEmptyProtocol_SendAndReceive_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<Empty>(&request_decoder, 16);
-        SendAndReceive(std::move(arg0));
+        SendAndReceive(::fidl::DecodeAs<Empty>(&request_decoder, 16));
         break;
       }
       default: {
@@ -161,14 +159,12 @@ class EmptyProtocol_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kEmptyProtocol_Receive_Ordinal:
       case internal::kEmptyProtocol_Receive_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<Empty>(&response_decoder, 16);
-        Receive(std::move(arg0));
+        Receive(::fidl::DecodeAs<Empty>(&response_decoder, 16));
         break;
       }
       case internal::kEmptyProtocol_SendAndReceive_Ordinal:
       case internal::kEmptyProtocol_SendAndReceive_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<Empty>(&response_decoder, 16);
-        SendAndReceive(std::move(arg0));
+        SendAndReceive(::fidl::DecodeAs<Empty>(&response_decoder, 16));
         break;
       }
       default: {

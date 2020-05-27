@@ -251,9 +251,8 @@ class SimpleProtocol_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kSimpleProtocol_Add_Ordinal:
       case internal::kSimpleProtocol_Add_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<int32_t>(&request_decoder, 16);
-        auto arg1 = ::fidl::DecodeAs<int32_t>(&request_decoder, 20);
-        Add(std::move(arg0), std::move(arg1));
+        Add(::fidl::DecodeAs<int32_t>(&request_decoder, 16),
+            ::fidl::DecodeAs<int32_t>(&request_decoder, 20));
         break;
       }
       default: {
@@ -295,8 +294,7 @@ class SimpleProtocol_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kSimpleProtocol_Add_Ordinal:
       case internal::kSimpleProtocol_Add_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<int32_t>(&response_decoder, 16);
-        Add(std::move(arg0));
+        Add(::fidl::DecodeAs<int32_t>(&response_decoder, 16));
         break;
       }
       default: {

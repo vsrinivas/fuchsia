@@ -458,8 +458,7 @@ class Protocol_RequestStrictResponseFlexible_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<FlexibleFoo>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<FlexibleFoo>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -509,8 +508,7 @@ class Protocol_RequestFlexibleResponseStrict_ResponseHandler final
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
-    auto arg0 = ::fidl::DecodeAs<StrictFoo>(&decoder, 16);
-    callback_(std::move(arg0));
+    callback_(::fidl::DecodeAs<StrictFoo>(&decoder, 16));
     return ZX_OK;
   }
 
@@ -610,19 +608,19 @@ zx_status_t Protocol_Stub::Dispatch_(
     case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
     case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<StrictFoo>(&decoder, 16);
       impl_->RequestStrictResponseFlexible(
-          std::move(arg0), Protocol_RequestStrictResponseFlexible_Responder(
-                               std::move(response)));
+          ::fidl::DecodeAs<StrictFoo>(&decoder, 16),
+          Protocol_RequestStrictResponseFlexible_Responder(
+              std::move(response)));
       break;
     }
     case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
-      auto arg0 = ::fidl::DecodeAs<FlexibleFoo>(&decoder, 16);
       impl_->RequestFlexibleResponseStrict(
-          std::move(arg0), Protocol_RequestFlexibleResponseStrict_Responder(
-                               std::move(response)));
+          ::fidl::DecodeAs<FlexibleFoo>(&decoder, 16),
+          Protocol_RequestFlexibleResponseStrict_Responder(
+              std::move(response)));
       break;
     }
     default: {

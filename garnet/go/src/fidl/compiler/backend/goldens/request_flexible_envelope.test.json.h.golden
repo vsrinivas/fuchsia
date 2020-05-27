@@ -277,14 +277,14 @@ class Protocol_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
       case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<StrictFoo>(&request_decoder, 16);
-        RequestStrictResponseFlexible(std::move(arg0));
+        RequestStrictResponseFlexible(
+            ::fidl::DecodeAs<StrictFoo>(&request_decoder, 16));
         break;
       }
       case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
       case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<FlexibleFoo>(&request_decoder, 16);
-        RequestFlexibleResponseStrict(std::move(arg0));
+        RequestFlexibleResponseStrict(
+            ::fidl::DecodeAs<FlexibleFoo>(&request_decoder, 16));
         break;
       }
       default: {
@@ -334,14 +334,14 @@ class Protocol_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
       case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<FlexibleFoo>(&response_decoder, 16);
-        RequestStrictResponseFlexible(std::move(arg0));
+        RequestStrictResponseFlexible(
+            ::fidl::DecodeAs<FlexibleFoo>(&response_decoder, 16));
         break;
       }
       case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
       case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
-        auto arg0 = ::fidl::DecodeAs<StrictFoo>(&response_decoder, 16);
-        RequestFlexibleResponseStrict(std::move(arg0));
+        RequestFlexibleResponseStrict(
+            ::fidl::DecodeAs<StrictFoo>(&response_decoder, 16));
         break;
       }
       default: {

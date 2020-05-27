@@ -141,9 +141,7 @@ class ExampleProtocol_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kExampleProtocol_Method_Ordinal:
       case internal::kExampleProtocol_Method_GenOrdinal: {
-        auto arg0 =
-            ::fidl::DecodeAs<::exampleusing::Empty>(&request_decoder, 16);
-        Method(std::move(arg0));
+        Method(::fidl::DecodeAs<::exampleusing::Empty>(&request_decoder, 16));
         break;
       }
       default: {
