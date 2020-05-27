@@ -18,31 +18,22 @@ use {
     serde::Serialize,
 };
 
-const TEST_COMPONENT_URL: &'static str =
+const BASIC_COMPONENT_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx";
+const TEST_COMPONENT_URL: &'static str =
+    "fuchsia-pkg://fuchsia.com/iquery_tests#meta/test_component.cmx";
+
+/// Creates a new environment named `env_label` and a starts the basic component under it.
+pub async fn start_basic_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
+    let (env, app) = launch(env_label, BASIC_COMPONENT_URL)?;
+    wait_for_out_ready(&app).await?;
+    Ok((env, app))
+}
 
 /// Creates a new environment named `env_label` and a starts the test component under it.
-pub async fn start_basic_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
-    let mut service_fs = ServiceFs::new();
-    let env = service_fs.create_nested_environment(env_label)?;
-    let app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
-    fasync::spawn(service_fs.collect());
-
-    let mut component_stream = app.controller().take_event_stream();
-    match component_stream
-        .next()
-        .await
-        .expect("component event stream ended before termination event")?
-    {
-        ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-            return Err(format_err!(
-                "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                return_code,
-                termination_reason
-            ));
-        }
-        ComponentControllerEvent::OnDirectoryReady {} => {}
-    }
+pub async fn start_test_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
+    let (env, app) = launch(env_label, TEST_COMPONENT_URL)?;
+    wait_for_out_ready(&app).await?;
     Ok((env, app))
 }
 
@@ -53,6 +44,32 @@ pub fn assert_result<T: Serialize>(result: T, expected: &str) {
         serde_json::from_str(&cleanup_timestamps(result)).expect("cleaned result is json");
     let expected: serde_json::Value = serde_json::from_str(expected).expect("expected is json");
     assert_eq!(result, expected);
+}
+
+fn launch(env_label: &str, url: impl Into<String>) -> Result<(NestedEnvironment, App), Error> {
+    let mut service_fs = ServiceFs::new();
+    let env = service_fs.create_nested_environment(env_label)?;
+    let app = client::launch(&env.launcher(), url.into(), None)?;
+    fasync::spawn(service_fs.collect());
+    Ok((env, app))
+}
+
+async fn wait_for_out_ready(app: &App) -> Result<(), Error> {
+    let mut component_stream = app.controller().take_event_stream();
+    match component_stream
+        .next()
+        .await
+        .expect("component event stream ended before termination event")?
+    {
+        ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
+            Err(format_err!(
+                "Component terminated unexpectedly. Code: {}. Reason: {:?}",
+                return_code,
+                termination_reason
+            ))
+        }
+        ComponentControllerEvent::OnDirectoryReady {} => Ok(()),
+    }
 }
 
 /// Cleans-up instances of `"start_timestamp_nanos": 7762005786231` by

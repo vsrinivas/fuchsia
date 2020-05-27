@@ -1,6 +1,6 @@
 [
   {
-    "moniker": "test/basic_component.cmx",
+    "moniker": "show-test/basic_component.cmx",
     "payload": {
       "root": {
         "fuchsia.inspect.Health": {
@@ -11,7 +11,7 @@
     }
   },
   {
-    "moniker": "test2/basic_component.cmx",
+    "moniker": "show-test2/basic_component.cmx",
     "payload": {
       "root": {
         "iquery": "rocks"
@@ -19,7 +19,7 @@
     }
   },
   {
-    "moniker": "test3/basic_component.cmx",
+    "moniker": "show-test3/basic_component.cmx",
     "payload": {
       "root": {
         "fuchsia.inspect.Health": {

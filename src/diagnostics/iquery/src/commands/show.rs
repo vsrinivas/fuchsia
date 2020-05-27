@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{commands::types::*, types::Error},
+    crate::{
+        commands::{types::*, utils},
+        types::Error,
+    },
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
@@ -68,8 +71,6 @@ impl Command for ShowCommand {
         }
         let mut results = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
 
-        // TODO(fxbug.dev/52641): we need to convert the payload to a NodeHierarchy to be able to
-        // sort it. it would be better request the Archivist to do this itself.
         let mut results = results
             .as_array_mut()
             .ok_or(Error::ArchiveInvalidJson)?
@@ -81,12 +82,7 @@ impl Command for ShowCommand {
                     RawJsonNodeHierarchySerializer::deserialize(payload.take())
                         .map_err(|_| Error::ArchiveInvalidJson)?;
                 hierarchy.sort();
-                let moniker = result
-                    .get("moniker")
-                    .ok_or(Error::archive_missing_property("moniker"))?
-                    .as_str()
-                    .ok_or(Error::ArchiveInvalidJson)?
-                    .to_string();
+                let moniker = utils::get_moniker_from_result(&result)?;
                 Ok(ShowCommandResultItem { moniker, payload: hierarchy })
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -109,17 +105,20 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn show_json() {
-        let (_env, _app) = testing::start_basic_component("test").await.expect("create comp 1");
-        let (_env2, _app2) = testing::start_basic_component("test2").await.expect("create comp 2");
-        let (_env3, _app3) = testing::start_basic_component("test3").await.expect("create comp 3");
+        let (_env, _app) =
+            testing::start_basic_component("show-test").await.expect("create comp 1");
+        let (_env2, _app2) =
+            testing::start_basic_component("show-test2").await.expect("create comp 2");
+        let (_env3, _app3) =
+            testing::start_basic_component("show-test3").await.expect("create comp 3");
         let mut result;
         loop {
             let command = ShowCommand {
                 manifest_name: None,
                 selectors: vec![
-                    "test/basic_component.cmx:root/fuchsia.inspect.Health".to_string(),
-                    "test2/basic_component.cmx:root:iquery".to_string(),
-                    "test3/basic_component.cmx".to_string(),
+                    "show-test/basic_component.cmx:root/fuchsia.inspect.Health".to_string(),
+                    "show-test2/basic_component.cmx:root:iquery".to_string(),
+                    "show-test3/basic_component.cmx".to_string(),
                 ],
             };
             result = command.execute().await.expect("successful execution");

@@ -60,11 +60,15 @@ test_package("iquery_tests") {
   deps = [
     ":bin_test",
     "test/basic_component:iquery_basic_component",
+    "test/example_component:iquery_example_component",
   ]
 
   binaries = [
     {
       name = "iquery_basic_component"
+    },
+    {
+      name = "iquery_example_component"
     },
   ]
 
@@ -78,6 +82,10 @@ test_package("iquery_tests") {
     {
       path = rebase_path("meta/iquery_basic_component.cmx")
       dest = "basic_component.cmx"
+    },
+    {
+      path = rebase_path("meta/iquery_test_component.cmx")
+      dest = "test_component.cmx"
     },
   ]
 }
