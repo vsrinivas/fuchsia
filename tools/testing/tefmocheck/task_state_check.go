@@ -32,7 +32,7 @@ func (c taskFailureCheck) Name() string {
 type taskInternalFailureCheck struct{}
 
 func (c taskInternalFailureCheck) Check(to *TestingOutputs) bool {
-	return to.SwarmingSummary.Results.InternalFailure
+	return to.SwarmingSummary.Results.State == "COMPLETED" && to.SwarmingSummary.Results.InternalFailure
 }
 
 func (c taskInternalFailureCheck) Name() string {
@@ -42,9 +42,8 @@ func (c taskInternalFailureCheck) Name() string {
 // TaskStateChecks contains checks to cover every possible state.
 // A task can only be in one state, so their relative order doesn't matter.
 var TaskStateChecks []FailureModeCheck = []FailureModeCheck{
-	// If internal failure, state is not reliable, so check this first.
-	taskInternalFailureCheck{},
 	// Covers state == COMPLETED.
+	taskInternalFailureCheck{},
 	taskFailureCheck{},
 	// All other states.
 	taskStateCheck{State: "BOT_DIED"},
