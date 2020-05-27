@@ -236,7 +236,15 @@ impl SystemShutdownHandler {
                             let result = self.handle_suspend(state, None).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
-                        fpowercontrol::AdminRequest::Suspend2 { request: _, responder: _ } => (),
+                        fpowercontrol::AdminRequest::Suspend2 { request, responder } => {
+                            if let Some(state) = request.state {
+                                let result = self.handle_suspend(state, None).await;
+                                let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                            } else {
+                                let _ =
+                                    responder.send(&mut Err(zx_status::INVALID_ARGS.into_raw()));
+                            }
+                        }
                     }
                 }
                 Ok(())
