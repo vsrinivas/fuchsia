@@ -8,11 +8,9 @@ import("//build/test.gni")
 executable("test") {
   output_name = "gdc-test"
   testonly = true
-  sources = [
-    "../gdc-task.cc",
-    "../gdc.cc",
-    "task-test.cc",
-  ]
+
+  sources = [ "task-test.cc" ]
+
   deps = [
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -20,7 +18,7 @@ executable("test") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
-    "//src/camera/drivers/hw_accel/task:camera-task",
+    "//src/camera/drivers/hw_accel/gdc:source",
     "//src/camera/drivers/test_utils",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",

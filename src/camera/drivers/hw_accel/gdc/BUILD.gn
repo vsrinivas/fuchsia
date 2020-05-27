@@ -4,15 +4,17 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("//src/camera/debug.gni")
 
-driver_module("gdc-driver") {
-  output_name = "gdc"
+source_set("source") {
+  defines = [ camera_debug_define ]
+  visibility = [ "../*" ]
   sources = [
     "gdc-task.cc",
     "gdc.cc",
-    "test/gdc-on-device-test.cc",
   ]
-  deps = [
+
+  public_deps = [
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gdc",
@@ -43,13 +45,20 @@ driver_module("gdc-driver") {
     "//zircon/system/ulib/syslog",
   ]
 
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
+driver_module("driver") {
+  output_name = "gdc"
+  deps = [ ":source" ]
+
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 driver_package("gdc") {
-  deps = [ ":gdc-driver" ]
+  deps = [ ":driver" ]
 
   drivers = [
     {
