@@ -22,6 +22,9 @@ toc:
 - title: "Configure editors"
   section:
   - include: /docs/development/editors/_toc.yaml
+- title: "FIDL"
+  section:
+  - include: /docs/development/languages/fidl/_toc.yaml
 - title: "Modify the kernel"
   section:
   - include: /docs/development/kernel/_toc.yaml

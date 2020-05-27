@@ -17,9 +17,6 @@ toc:
 - title: "Dart"
   section:
   - include: /docs/development/languages/dart/_toc.yaml
-- title: "FIDL"
-  section:
-  - include: /docs/development/languages/fidl/_toc.yaml
 - title: "Go"
   section:
   - include: /docs/development/languages/go/_toc.yaml
