@@ -328,6 +328,13 @@ class GptDevicePartitionerTests : public zxtest::Test {
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, num_blocks, block_size_, disk));
   }
 
+  // Create GPT from a device.
+  void CreateGptDevice(BlockDevice* device, std::unique_ptr<gpt::GptDevice>* gpt) {
+    ASSERT_OK(gpt::GptDevice::Create(device->fd(), /*block_size=*/device->block_size(),
+                                     /*blocks=*/device->block_count(), gpt));
+    ASSERT_OK((*gpt)->Sync());
+  }
+
   IsolatedDevmgr devmgr_;
   const uint32_t block_size_;
 };
@@ -354,8 +361,7 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutFvmFails) {
 
   // Set up a valid GPT.
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
-  ASSERT_OK(gpt->Sync());
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NE(paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(),
@@ -508,16 +514,11 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_AddedPartitionRemovedAfterWipePartiti
 }
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
-  // 32 GiB disk.
-  constexpr uint64_t kBlockSize = 512;
-  constexpr uint64_t kBlockCount = (32LU << 30) / kBlockSize;
-
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &gpt_dev));
 
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
-  ASSERT_OK(gpt->Sync());
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
   // Write initial partitions to disk.
   const std::array<PartitionDescription, 10> partitions_at_start{
@@ -546,7 +547,7 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
   ASSERT_OK(partitioner->InitPartitionTables());
 
   // Ensure the final partition layout looks like we expect it to.
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
   const std::array<PartitionDescription, 10> partitions_at_end{
       PartitionDescription{"efi", kEfiType, 0x22, 0x1},
       PartitionDescription{GUID_EFI_NAME, kEfiType, 0x23, 0x8000},
@@ -632,13 +633,6 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_ValidatePayload) {
 class CrosDevicePartitionerTests : public GptDevicePartitionerTests {
  protected:
   CrosDevicePartitionerTests() : GptDevicePartitionerTests(fbl::String(), 512) {}
-
-  // Create GPT from a device.
-  void CreateGptDevice(BlockDevice* device, std::unique_ptr<gpt::GptDevice>* gpt) {
-    ASSERT_OK(gpt::GptDevice::Create(device->fd(), /*block_size=*/device->block_size(),
-                                     /*blocks=*/device->block_count(), gpt));
-    ASSERT_OK((*gpt)->Sync());
-  }
 
   // Create a DevicePartition for a device.
   void CreatePartitioner(BlockDevice* device,
@@ -986,8 +980,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutFvmFails) {
 
   // Set up a valid GPT.
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
-  ASSERT_OK(gpt->Sync());
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NE(paver::SherlockPartitioner::Initialize(devmgr_.devfs_root().duplicate(), std::nullopt,
@@ -1014,8 +1007,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
   ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
 
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), block_size_, kBlockCount, &gpt));
-  ASSERT_OK(gpt->Sync());
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
   const PartitionDescription kStartingPartitions[] = {
       {"bootloader", kDummyType, 0x22, 0x2000},   {"reserved", kDummyType, 0x12000, 0x20000},
@@ -1046,7 +1038,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
 
   ASSERT_OK(partitioner->InitPartitionTables());
 
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
   // Ensure the final partition layout looks like we expect it to.
   const PartitionDescription kFinalPartitions[] = {
@@ -1088,8 +1080,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_FindBootloader) {
   ASSERT_NO_FATAL_FAILURES(CreateDisk(&gpt_dev));
 
   std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
-  ASSERT_OK(gpt->Sync());
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
   std::unique_ptr<paver::DevicePartitioner> partitioner;
