@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/utils/errors.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/file/file_writer.h"
@@ -39,8 +40,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
                                     const std::optional<zx::time_utc>& current_time,
                                     const ::fit::result<std::string, Error>& device_id,
-                                    const std::string& build_version,
-                                    const ::fit::result<std::string, Error>& channel,
+                                    const ErrorOr<std::string>& os_version, const Product& product,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump);

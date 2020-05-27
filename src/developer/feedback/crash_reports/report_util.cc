@@ -144,16 +144,40 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
                                const ::fit::result<std::string, Error>& device_id,
-                               const std::string& build_version,
-                               const ::fit::result<std::string, Error>& channel,
+                               const ErrorOr<std::string>& os_version, const Product& product,
                                const bool should_process,
                                std::map<std::string, std::string>* annotations) {
-  (*annotations)["product"] = "Fuchsia";
-  (*annotations)["version"] = build_version;
+  // Product.
+  (*annotations)["product"] = product.name;
+  if (product.version.HasValue()) {
+    (*annotations)["version"] = product.version.Value();
+  } else {
+    (*annotations)["version"] = "<unknown>";
+    (*annotations)["debug.version.error"] = ToReason(product.version.Error());
+  }
+  if (product.channel.HasValue()) {
+    (*annotations)["channel"] = product.channel.Value();
+  } else {
+    // "channel" is a required field on the crash server that defaults to the empty string. But on
+    // Fuchsia, the system update channel can be the empty string in the case of a fresh pave
+    // typically. So in case the channel is unavailable, we set the value to "<unknown>" to
+    // distinguish it from the default empty string value it would get on the crash server.
+    (*annotations)["channel"] = "<unknown>";
+    (*annotations)["debug.channel.error"] = ToReason(product.channel.Error());
+  }
+
+  // Program.
   // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
   (*annotations)["ptype"] = program_name;
+
+  // OS.
   (*annotations)["osName"] = "Fuchsia";
-  (*annotations)["osVersion"] = build_version;
+  if (os_version.HasValue()) {
+    (*annotations)["osVersion"] = os_version.Value();
+  } else {
+    (*annotations)["osVersion"] = "<unknown>";
+    (*annotations)["debug.os.version.error"] = ToReason(os_version.Error());
+  }
 
   // We set the report time only if we were able to get an accurate one.
   if (current_time.has_value()) {
@@ -169,17 +193,6 @@ void AddCrashServerAnnotations(const std::string& program_name,
   } else {
     (*annotations)["debug.guid.set"] = "false";
     (*annotations)["debug.device-id.error"] = ToReason(device_id.error());
-  }
-
-  // "channel" is a required field on the crash server that defaults to the empty string. But on
-  // Fuchsia, the system update channel can be the empty string in the case of a fresh pave
-  // typically. So in case the channel is unavailable, we set the value to "<unknown>" to
-  // distinguish it from the default empty string value it would get on the crash server.
-  if (channel.is_ok()) {
-    (*annotations)["channel"] = channel.value();
-  } else {
-    (*annotations)["channel"] = "<unknown>";
-    (*annotations)["debug.channel.error"] = ToReason(channel.error());
   }
 
   // Not all reports need to be processed by the crash server.
@@ -230,8 +243,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
                                     const std::optional<zx::time_utc>& current_time,
                                     const ::fit::result<std::string, Error>& device_id,
-                                    const std::string& build_version,
-                                    const ::fit::result<std::string, Error>& channel,
+                                    const ErrorOr<std::string>& os_version, const Product& product,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump) {
@@ -244,7 +256,7 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                    &should_process);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, current_time, device_id, build_version, channel,
+  AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
                             should_process, annotations);
 
   // Bugreport annotations and attachment common to all crash reports.

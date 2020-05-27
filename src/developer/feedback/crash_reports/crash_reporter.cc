@@ -20,8 +20,10 @@
 
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/crash_server.h"
+#include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/crash_reports/report_util.h"
 #include "src/developer/feedback/utils/cobalt/metrics.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fidl/channel_provider_ptr.h"
 #include "src/developer/feedback/utils/fit/timeout.h"
 #include "src/lib/files/file.h"
@@ -68,11 +70,11 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
 
 namespace {
 
-std::string ReadStringFromFile(const std::string& filepath) {
+ErrorOr<std::string> ReadStringFromFile(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
     FX_LOGS(ERROR) << "Failed to read content from " << filepath;
-    return "<unknown>";
+    return Error::kFileReadFailure;
   }
   return fxl::TrimString(content, "\r\n").ToString();
 }
@@ -146,6 +148,13 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                 auto channel = std::move(std::get<1>(results.value()));
                 auto device_id = std::move(std::get<2>(results.value()));
 
+                // TODO(48451): get Product from CrashRegister.
+                const Product product{.name = "Fuchsia",
+                                      .version = build_version_,
+                                      .channel = channel.is_ok()
+                                                     ? ErrorOr<std::string>(channel.value())
+                                                     : ErrorOr<std::string>(channel.error())};
+
                 const std::string program_name = report.program_name();
 
                 std::map<std::string, std::string> annotations;
@@ -153,7 +162,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                 std::optional<fuchsia::mem::Buffer> minidump;
                 BuildAnnotationsAndAttachments(
                     std::move(report), std::move(bugreport), utc_provider_.CurrentTime(), device_id,
-                    build_version_, channel, &annotations, &attachments, &minidump);
+                    build_version_, product, &annotations, &attachments, &minidump);
 
                 if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                                  annotations)) {

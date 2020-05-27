@@ -19,6 +19,7 @@
 #include "src/developer/feedback/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/feedback/crash_reports/queue.h"
 #include "src/developer/feedback/crash_reports/settings.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fidl/data_provider_ptr.h"
 #include "src/developer/feedback/utils/fidl/device_id_provider_ptr.h"
 #include "src/developer/feedback/utils/utc_time_provider.h"
@@ -66,7 +67,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   PrivacySettingsWatcher privacy_settings_watcher_;
   fidl::DataProviderPtr data_provider_ptr_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
-  const std::string build_version_;
+  const ErrorOr<std::string> build_version_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);
 };

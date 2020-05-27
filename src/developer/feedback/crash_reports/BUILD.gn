@@ -155,6 +155,7 @@ source_set("crash_reporter") {
   public_deps = [
     ":crash_server",
     ":privacy_settings_ptr",
+    ":product",
     ":queue",
     ":settings",
     "//sdk/fidl/fuchsia.feedback",
@@ -289,6 +290,7 @@ source_set("report_util") {
   ]
 
   public_deps = [
+    ":product",
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/utils:errors",
     "//third_party/crashpad/client",
