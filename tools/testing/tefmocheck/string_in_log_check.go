@@ -39,5 +39,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// These may be in the output of tests, but the syslog doesn't contain any test output.
 	ret = append(ret, stringInLogCheck{String: "ASSERT FAILED", Log: SyslogType})
 	ret = append(ret, stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Log: SyslogType})
+	// For fxbug.dev/47649.
+	ret = append(ret, stringInLogCheck{String: "kvm run failed Bad address", Log: SwarmingOutputType})
 	return ret
 }
