@@ -10,18 +10,14 @@ use crate::switchboard::base::{
 use crate::switchboard::clock;
 
 use anyhow::{format_err, Error};
-
-use fuchsia_inspect::component;
+use fuchsia_async as fasync;
+use fuchsia_inspect::{self as inspect, component};
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
-use std::collections::HashMap;
+use futures::stream::StreamExt;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::SystemTime;
-
-use fuchsia_async as fasync;
-use fuchsia_inspect as inspect;
-use futures::stream::StreamExt;
-use std::collections::VecDeque;
 
 type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
 
@@ -67,6 +63,15 @@ impl ListenSessionImpl {
     }
 }
 
+/// Information about a switchboard setting to be written to inspect.
+struct SettingTypeInfo {
+    /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
+    last_requests: VecDeque<RequestInfo>,
+
+    /// Node of this info.
+    node: inspect::Node,
+}
+
 /// Information about a switchboard request to be written to inspect.
 ///
 /// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
@@ -77,9 +82,6 @@ struct RequestInfo {
 
     /// Node of this info.
     _node: inspect::Node,
-
-    /// Debug string representation of the SettingType of this request.
-    _setting_type: inspect::StringProperty,
 
     /// Debug string representation of this SettingRequest.
     _request: inspect::StringProperty,
@@ -154,8 +156,8 @@ pub struct SwitchboardImpl {
     listeners: ListenerMap,
     /// registry messenger
     registry_messenger: core::message::Messenger,
-    /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
-    last_requests: VecDeque<RequestInfo>,
+    /// Last requests for inspect to save.
+    last_requests: HashMap<SettingType, SettingTypeInfo>,
     /// Inspect node to record last requests to.
     inspect_node: fuchsia_inspect::Node,
 }
@@ -187,7 +189,7 @@ impl SwitchboardImpl {
             listen_cancellation_sender: cancel_listen_tx,
             listeners: HashMap::new(),
             registry_messenger: registry_messenger,
-            last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
+            last_requests: HashMap::new(),
             inspect_node: inspect_node,
         }));
 
@@ -265,11 +267,19 @@ impl SwitchboardImpl {
 
     /// Write a request to inspect.
     fn record_request(&mut self, setting_type: SettingType, request: SettingRequest) {
-        if self.last_requests.len() >= INSPECT_REQUESTS_COUNT {
-            self.last_requests.pop_back();
+        let inspect_node = &self.inspect_node;
+        let setting_type_info =
+            self.last_requests.entry(setting_type).or_insert_with(|| SettingTypeInfo {
+                last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
+                node: inspect_node.create_child(format!("{:?}", setting_type)),
+            });
+
+        let last_requests = &mut setting_type_info.last_requests;
+        if last_requests.len() >= INSPECT_REQUESTS_COUNT {
+            last_requests.pop_back();
         }
 
-        let count = match self.last_requests.front() {
+        let count = match last_requests.front() {
             Some(req) => req.count + 1,
             None => 0,
         };
@@ -278,14 +288,12 @@ impl SwitchboardImpl {
             Err(_) => 0,
         };
         // std::u64::MAX maxes out at 20 digits.
-        let node = self.inspect_node.create_child(format!("{:020}", count));
-        let setting_property = node.create_string("setting_type", format!("{:?}", setting_type));
+        let node = setting_type_info.node.create_child(format!("{:020}", count));
         let request_property = node.create_string("request", format!("{:?}", request));
         let timestamp = node.create_string("timestamp", timestamp.to_string());
-        self.last_requests.push_front(RequestInfo {
+        last_requests.push_front(RequestInfo {
             count,
             _node: node,
-            _setting_type: setting_property,
             _request: request_property,
             _timestamp: timestamp,
         });
@@ -383,7 +391,10 @@ mod tests {
     use crate::message::base::Audience;
     use crate::message::receptor::Receptor;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::{
+        assert_inspect_tree,
+        testing::{AnyProperty, TreeAssertion},
+    };
 
     async fn retrieve_and_verify_action(
         receptor: &mut Receptor<core::Payload, core::Address>,
@@ -586,6 +597,10 @@ mod tests {
             .request(SettingType::Display, SettingRequest::SetAutoBrightness(false))
             .await
             .ok();
+        switchboard_client
+            .request(SettingType::Display, SettingRequest::SetAutoBrightness(false))
+            .await
+            .ok();
 
         switchboard_client
             .request(
@@ -602,15 +617,76 @@ mod tests {
 
         assert_inspect_tree!(inspector, root: {
             switchboard: {
-                "00000000000000000000": {
-                    setting_type: "Display",
-                    request: "SetAutoBrightness(false)",
-                    timestamp: "0",
+                "Display": {
+                    "00000000000000000000": {
+                        request: "SetAutoBrightness(false)",
+                        timestamp: "0",
+                    },
+                    "00000000000000000001": {
+                        request: "SetAutoBrightness(false)",
+                        timestamp: "0",
+                    },
                 },
-                "00000000000000000001": {
-                    setting_type: "Intl",
-                    request: "SetIntlInfo(IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None })",
-                    timestamp: "0",
+                "Intl": {
+                    "00000000000000000000": {
+                        request: "SetIntlInfo(IntlInfo { locales: Some([LocaleId { id: \"en-US\" }]), temperature_unit: Some(Celsius), time_zone_id: Some(\"UTC\"), hour_cycle: None })",
+                        timestamp: "0",
+                    }
+                }
+            }
+        });
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn inspect_queue_test() {
+        clock::mock::set(SystemTime::UNIX_EPOCH);
+
+        let inspector = inspect::Inspector::new();
+        let inspect_node = inspector.root().create_child("switchboard");
+        let switchboard_client =
+            SwitchboardBuilder::create().inspect_node(inspect_node).build().await.unwrap();
+
+        // Send one request of a different type to show the queue doesn't wipe out other setting types
+        switchboard_client
+            .request(
+                SettingType::Intl,
+                SettingRequest::SetIntlInfo(IntlInfo {
+                    locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+                    temperature_unit: Some(TemperatureUnit::Celsius),
+                    time_zone_id: Some("UTC".to_string()),
+                    hour_cycle: None,
+                }),
+            )
+            .await
+            .ok();
+
+        // Send one more than the max requests to make sure they get pushed off the end of the queue
+        for i in 0..26u8 {
+            println!("{}", i);
+            switchboard_client
+                .request(SettingType::Display, SettingRequest::SetAutoBrightness(false))
+                .await
+                .ok();
+        }
+
+        // ensures we have 25 items and that the queue dropped the earliest one when hitting the limit
+        fn display_subtree_assertion() -> TreeAssertion {
+            let mut tree_assertion = TreeAssertion::new("Display", true);
+            for i in 1..26 {
+                tree_assertion
+                    .add_child_assertion(TreeAssertion::new(&format!("{:020}", i), false));
+            }
+            tree_assertion
+        };
+
+        assert_inspect_tree!(inspector, root: {
+            switchboard: {
+                display_subtree_assertion(),
+                "Intl": {
+                    "00000000000000000000": {
+                        request: AnyProperty,
+                        timestamp: "0",
+                    }
                 }
             }
         });
