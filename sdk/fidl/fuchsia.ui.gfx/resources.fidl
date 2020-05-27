@@ -139,7 +139,8 @@ struct ViewArgs {
 /// must be unique - do not clone it.
 struct ViewArgs3 {
     fuchsia.ui.views.ViewToken token;
-    /// `control_ref.reference` must have full rights (i.e., with signaling).
+    /// `control_ref.reference` must have default eventpair rights (i.e., with
+    /// signaling), minus ZX_RIGHT_DUPLICATE.
     fuchsia.ui.views.ViewRefControl control_ref;
     /// `view_ref.reference` must have basic rights (i.e., no signaling).
     fuchsia.ui.views.ViewRef view_ref;
