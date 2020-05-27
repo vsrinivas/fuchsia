@@ -662,91 +662,73 @@ func TestStaticIPConfiguration(t *testing.T) {
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
-	d := deviceForAddEth(ethernet.Info{}, t)
-	d.StopImpl = func() error { return nil }
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, test := range []struct {
+		name     string
+		features uint32
+	}{
+		{name: "default"},
+		{name: "wlan", features: ethernet.InfoFeatureWlan},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			d := deviceForAddEth(ethernet.Info{Features: test.features}, t)
+			d.StopImpl = func() error { return nil }
+			ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := ifs.controller.Close(); err != nil {
+					t.Errorf("ifs.controller.Close() = %s", err)
+				}
+			}()
+			name := ifs.ns.name(ifs.nicid)
+			result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
+			if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+				t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
+			}
 
-	name := ifs.ns.name(ifs.nicid)
+			if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
+				t.Errorf("stack.GetMainNICAddress(%d, %d): %s", ifs.nicid, ipv4.ProtocolNumber, err)
+			} else if got := mainAddr.Address; got != testV4Address {
+				t.Errorf("got stack.GetMainNICAddress(%d, %d).Addr = %#v, want = %#v", ifs.nicid, ipv4.ProtocolNumber, got, testV4Address)
+			}
 
-	result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
-	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
-		t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
-	}
+			ifs.mu.Lock()
+			if ifs.mu.dhcp.enabled {
+				t.Error("expected dhcp state to be disabled initially")
+			}
+			ifs.mu.Unlock()
 
-	if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
-		t.Errorf("stack.GetMainNICAddress(%d, %d): %s", ifs.nicid, ipv4.ProtocolNumber, err)
-	} else if got := mainAddr.Address; got != testV4Address {
-		t.Errorf("got stack.GetMainNICAddress(%d, %d).Addr = %#v, want = %#v", ifs.nicid, ipv4.ProtocolNumber, got, testV4Address)
-	}
+			ifs.controller.Down()
 
-	ifs.mu.Lock()
-	if ifs.mu.dhcp.enabled {
-		t.Error("expected dhcp state to be disabled initially")
-	}
-	ifs.mu.Unlock()
+			ifs.mu.Lock()
+			if ifs.mu.dhcp.enabled {
+				t.Error("expected dhcp state to remain disabled after bringing interface down")
+			}
+			if ifs.mu.dhcp.running() {
+				t.Error("expected dhcp state to remain stopped after bringing interface down")
+			}
+			ifs.mu.Unlock()
 
-	ifs.controller.Down()
+			ifs.controller.Up()
 
-	ifs.mu.Lock()
-	if ifs.mu.dhcp.enabled {
-		t.Error("expected dhcp state to remain disabled after bringing interface down")
-	}
-	if ifs.mu.dhcp.running() {
-		t.Error("expected dhcp state to remain stopped after bringing interface down")
-	}
-	ifs.mu.Unlock()
+			ifs.mu.Lock()
+			if ifs.mu.dhcp.enabled {
+				t.Error("expected dhcp state to remain disabled after restarting interface")
+			}
+			ifs.mu.Unlock()
 
-	ifs.controller.Up()
+			ifs.setDHCPStatus(name, true)
 
-	ifs.mu.Lock()
-	if ifs.mu.dhcp.enabled {
-		t.Error("expected dhcp state to remain disabled after restarting interface")
-	}
-	ifs.mu.Unlock()
-
-	ifs.setDHCPStatus(name, true)
-
-	ifs.mu.Lock()
-	if !ifs.mu.dhcp.enabled {
-		t.Error("expected dhcp state to become enabled after manually enabling it")
-	}
-	if !ifs.mu.dhcp.running() {
-		t.Error("expected dhcp state running")
-	}
-	ifs.mu.Unlock()
-}
-
-func TestWLANStaticIPConfiguration(t *testing.T) {
-	ns := Netstack{
-		stack: tcpipstack.New(tcpipstack.Options{
-			NetworkProtocols: []tcpipstack.NetworkProtocol{
-				arp.NewProtocol(),
-				ipv4.NewProtocol(),
-				ipv6.NewProtocol(),
-			},
-		}),
-	}
-
-	addr := fidlconv.ToNetIpAddress(testV4Address)
-	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
-	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
-	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
-	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
-		t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
-	}
-
-	if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
-		t.Errorf("stack.GetMainNICAddress(%d, %d): %s", ifs.nicid, ipv4.ProtocolNumber, err)
-	} else if got := mainAddr.Address; got != testV4Address {
-		t.Errorf("got stack.GetMainNICAddress(%d, %d).Addr = %#v, want = %#v", ifs.nicid, ipv4.ProtocolNumber, got, testV4Address)
+			ifs.mu.Lock()
+			if !ifs.mu.dhcp.enabled {
+				t.Error("expected dhcp state to become enabled after manually enabling it")
+			}
+			if !ifs.mu.dhcp.running() {
+				t.Error("expected dhcp state running")
+			}
+			ifs.mu.Unlock()
+		})
 	}
 }
 
