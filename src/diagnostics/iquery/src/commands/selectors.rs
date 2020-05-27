@@ -13,7 +13,7 @@ pub struct SelectorsCommand {
     #[argh(option)]
     /// the name of the manifest file that we are interested in. If this is provided, the output
     /// will only contain monikers for components whose url contains the provided name.
-    pub manifest_name: String,
+    pub manifest_name: Option<String>,
 
     #[argh(positional)]
     /// component or tree selectors for which the selectors should be queried. Minimum: 1.

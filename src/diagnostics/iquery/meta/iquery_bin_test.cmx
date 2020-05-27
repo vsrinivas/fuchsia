@@ -1,10 +1,23 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/iquery_bin_test"
     },
     "sandbox": {
         "features": [
             "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

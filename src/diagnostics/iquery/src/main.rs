@@ -4,9 +4,9 @@
 
 use {
     crate::{
+        command_line::CommandLine,
         commands::Command,
         deprecated_options::{usage, DeprecatedOptions, ModeCommand, OptionsReadError},
-        options::Options,
         result::IqueryResult,
     },
     anyhow::Error,
@@ -15,14 +15,17 @@ use {
     std::{env, path::Path},
 };
 
+mod command_line;
 mod commands;
 mod deprecated_commands;
 mod deprecated_options;
 mod formatting;
 mod location;
-mod options;
 mod result;
 mod types;
+
+#[cfg(test)]
+mod testing;
 
 /// Exceute the command specified in the |options|.
 async fn legacy_execute(options: &DeprecatedOptions) -> Vec<Result<IqueryResult, Error>> {
@@ -91,13 +94,11 @@ async fn main() -> Result<(), Error> {
     // interface.
     let strings: Vec<String> = std::env::args().collect();
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
-    match Options::from_args(&[strs[0]], &strs[1..]) {
-        Ok(options) => {
-            match options.command.execute().await {
-                Ok(()) => {}
-                Err(err) => eprintln!("{}", err),
-            };
-        }
+    match CommandLine::from_args(&[strs[0]], &strs[1..]) {
+        Ok(command_line) => match command_line.execute().await {
+            Ok(()) => {}
+            Err(err) => eprintln!("{}", err),
+        },
         Err(early_exit) => match early_exit.status {
             Ok(()) => {
                 println!("{}", early_exit.output);

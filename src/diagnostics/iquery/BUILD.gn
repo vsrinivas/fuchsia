@@ -17,10 +17,12 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//src/lib/syslog/rust:syslog",
@@ -28,14 +30,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -53,11 +57,27 @@ package("iquery") {
 }
 
 test_package("iquery_tests") {
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "test/basic_component:iquery_basic_component",
+  ]
+
+  binaries = [
+    {
+      name = "iquery_basic_component"
+    },
+  ]
 
   tests = [
     {
       name = "iquery_bin_test"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/iquery_basic_component.cmx")
+      dest = "basic_component.cmx"
     },
   ]
 }

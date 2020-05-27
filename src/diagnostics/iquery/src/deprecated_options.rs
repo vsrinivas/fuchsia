@@ -4,8 +4,8 @@
 
 use {
     crate::{formatting::*, location::all_locations, types::Format},
-    anyhow::{format_err, Error},
-    std::{env, fmt, str::FromStr},
+    anyhow::Error,
+    std::{env, fmt},
 };
 
 #[derive(Clone, Debug)]
@@ -44,18 +44,6 @@ pub enum PathFormat {
     Absolute,
     Full,
     Display,
-}
-
-impl FromStr for Format {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "text" => Ok(Format::Text),
-            "json" => Ok(Format::Json),
-            _ => Err(format_err!("Unknown format")),
-        }
-    }
 }
 
 pub fn usage() -> String {

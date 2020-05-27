@@ -16,7 +16,7 @@ pub struct ListCommand {
     #[argh(option)]
     /// the name of the manifest file that we are interested in. If this is provided, the output
     /// will only contain monikers for components whose url contains the provided name.
-    pub manifest_name: String,
+    pub manifest_name: Option<String>,
 
     #[argh(switch)]
     /// also print the URL of the component.
