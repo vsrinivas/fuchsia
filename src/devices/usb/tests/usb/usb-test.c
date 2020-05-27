@@ -125,13 +125,14 @@ static bool usb_bulk_scatter_gather_test(void) {
       .len = 230,
   };
   fuchsia_hardware_usb_tester_SgList sg_list = {
-      .entries = {
-          {.length = 10, .offset = 100},
-          {.length = 30, .offset = 1000},
-          {.length = 100, .offset = 4000},
-          {.length = 40, .offset = 5000},
-          {.length = 50, .offset = 10000},
-      },
+      .entries =
+          {
+              {.length = 10, .offset = 100},
+              {.length = 30, .offset = 1000},
+              {.length = 100, .offset = 4000},
+              {.length = 40, .offset = 5000},
+              {.length = 50, .offset = 10000},
+          },
       .len = 5,
   };
 
