@@ -25,6 +25,7 @@ type DeviceConfig struct {
 	DeviceName       string
 	deviceHostname   string
 	sshPrivateKey    ssh.Signer
+	SerialSocketPath string
 }
 
 func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
@@ -36,6 +37,7 @@ func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
 	fs.StringVar(&c.DeviceName, "device", os.Getenv("FUCHSIA_NODENAME"), "device name")
 	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
 	fs.StringVar(&c.deviceFinderPath, "device-finder-path", filepath.Join(testDataPath, "device-finder"), "device-finder tool path")
+	fs.StringVar(&c.SerialSocketPath, "device-serial", os.Getenv("FUCHSIA_SERIAL_SOCKET"), "device serial path")
 
 	return c
 }
@@ -51,7 +53,7 @@ func (c *DeviceConfig) DeviceHostname(ctx context.Context) (string, error) {
 		var deviceList string
 		deviceList, err = c.DeviceFinder(ctx, "list", "-netboot", "-ipv4=false", "-timeout=1s", "-full")
 		if err != nil {
-			return "", fmt.Errorf("ERROR: Failed to list devices: %s", err)
+			return "", fmt.Errorf("ERROR: Failed to list devices: %w", err)
 		}
 		if strings.Contains(deviceList, "\n") {
 			return "", fmt.Errorf("ERROR: Found multiple devices. Use -device to specify one.")

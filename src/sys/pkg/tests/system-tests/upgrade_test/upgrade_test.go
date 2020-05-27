@@ -20,9 +20,9 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/errutil"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/pave"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/script"
-
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -59,19 +59,26 @@ func TestOTA(t *testing.T) {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
+	if err := doTest(ctx); err != nil {
+		errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err)
+		t.Fatal(err)
+	}
+}
+
+func doTest(ctx context.Context) error {
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
-		logger.Fatalf(ctx, "failed to get output directory: %v", err)
+		return fmt.Errorf("failed to get output directory: %w", err)
 	}
 	defer cleanup()
 
 	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to create ota test client: %s", err)
+		return fmt.Errorf("failed to create ota test client: %w", err)
 	}
 	defer deviceClient.Close()
 
-	l = logger.NewLogger(
+	l := logger.NewLogger(
 		logger.TraceLevel,
 		color.NewColor(color.ColorAuto),
 		os.Stdout,
@@ -83,12 +90,12 @@ func TestOTA(t *testing.T) {
 
 	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to get downgrade build: %v", err)
+		return fmt.Errorf("failed to get downgrade build: %w", err)
 	}
 
 	upgradeBuild, err := c.getUpgradeBuild(ctx, outputDir)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to get upgrade build: %v", err)
+		return fmt.Errorf("failed to get upgrade build: %w", err)
 	}
 
 	ch := make(chan *sl4f.Client, 1)
@@ -97,7 +104,7 @@ func TestOTA(t *testing.T) {
 		ch <- rpcClient
 		return err
 	}); err != nil {
-		t.Fatalf("Device failed to initialize: %v", err)
+		return fmt.Errorf("device failed to initialize: %w", err)
 	}
 
 	rpcClient := <-ch
@@ -107,7 +114,7 @@ func TestOTA(t *testing.T) {
 		}
 	}()
 
-	testOTAs(ctx, deviceClient, upgradeBuild, &rpcClient)
+	return testOTAs(ctx, deviceClient, upgradeBuild, &rpcClient)
 }
 
 func testOTAs(
@@ -115,16 +122,18 @@ func testOTAs(
 	device *device.Client,
 	build artifacts.Build,
 	rpcClient **sl4f.Client,
-) {
+) error {
 	for i := 1; i <= c.cycleCount; i++ {
 		logger.Infof(ctx, "OTA Attempt %d", i)
 
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
 			return doTestOTAs(ctx, device, build, rpcClient)
 		}); err != nil {
-			logger.Fatalf(ctx, "OTA Attempt %d failed: %s", i, err)
+			return fmt.Errorf("OTA Attempt %d failed: %w", i, err)
 		}
 	}
+
+	return nil
 }
 
 func doTestOTAs(

@@ -17,9 +17,9 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/errutil"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/pave"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/script"
-
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -56,19 +56,26 @@ func TestReboot(t *testing.T) {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
+	if err := doTest(ctx); err != nil {
+		errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err)
+		t.Fatal(err)
+	}
+}
+
+func doTest(ctx context.Context) error {
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
-		t.Fatal(err)
+		return fmt.Errorf("failed to get output directory: %w", err)
 	}
 	defer cleanup()
 
 	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
-		logger.Fatalf(ctx, "faied to create ota test client: %s", err)
+		return fmt.Errorf("failed to create ota test client: %w", err)
 	}
 	defer deviceClient.Close()
 
-	l = logger.NewLogger(
+	l := logger.NewLogger(
 		logger.TraceLevel,
 		color.NewColor(color.ColorAuto),
 		os.Stdout,
@@ -80,7 +87,7 @@ func TestReboot(t *testing.T) {
 
 	build, err := c.getBuild(ctx, outputDir)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to get downgrade build: %v", err)
+		return fmt.Errorf("failed to get downgrade build: %w", err)
 	}
 
 	ch := make(chan *sl4f.Client, 1)
@@ -89,7 +96,7 @@ func TestReboot(t *testing.T) {
 		ch <- rpcClient
 		return err
 	}); err != nil {
-		logger.Fatalf(ctx, "initialization failed: %v", err)
+		return fmt.Errorf("initialization failed: %w", err)
 	}
 
 	rpcClient := <-ch
@@ -99,7 +106,7 @@ func TestReboot(t *testing.T) {
 		}
 	}()
 
-	testReboot(ctx, deviceClient, build, &rpcClient)
+	return testReboot(ctx, deviceClient, build, &rpcClient)
 }
 
 func testReboot(
@@ -107,7 +114,7 @@ func testReboot(
 	device *device.Client,
 	build artifacts.Build,
 	rpcClient **sl4f.Client,
-) {
+) error {
 	for i := 1; i <= c.cycleCount; i++ {
 		logger.Infof(ctx, "Reboot Attempt %d", i)
 
@@ -117,9 +124,11 @@ func testReboot(
 		if err := util.RunWithTimeout(ctx, c.cycleTimeout, func() error {
 			return doTestReboot(ctx, device, build, rpcClient)
 		}); err != nil {
-			logger.Fatalf(ctx, "Reboot Cycle %d failed: %v", i, err)
+			return fmt.Errorf("Reboot Cycle %d failed: %w", i, err)
 		}
 	}
+
+	return nil
 }
 
 func doTestReboot(
