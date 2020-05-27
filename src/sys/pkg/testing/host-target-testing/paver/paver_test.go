@@ -198,16 +198,7 @@ func TestOverrideSlotA(t *testing.T) {
 	}
 }
 
-func TestOverrideSlotAWithVBMeta(t *testing.T) {
-	zirconAFile, err := ioutil.TempFile("", "zircona.*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		zirconAFile.Close()
-		os.Remove(zirconAFile.Name())
-	}()
-
+func TestOverrideVBMetaA(t *testing.T) {
 	vbMetaAFile, err := ioutil.TempFile("", "vbmetaa.*")
 	if err != nil {
 		t.Fatal(err)
@@ -218,29 +209,21 @@ func TestOverrideSlotAWithVBMeta(t *testing.T) {
 	}()
 
 	_, paverArgs, err := CreateAndRunPaver(
-		OverrideSlotAWithVBMeta(zirconAFile.Name(), vbMetaAFile.Name()))
+		OverrideVBMetaA(vbMetaAFile.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var zirconAPath string
 	var vbmetaAPath string
 	for i, arg := range paverArgs {
-		if arg == "--zircona" {
-			if i+1 < len(paverArgs) {
-				zirconAPath = paverArgs[i+1]
-			}
-		} else if arg == "--vbmetaa" {
+		if arg == "--vbmetaa" {
 			if i+1 < len(paverArgs) {
 				vbmetaAPath = paverArgs[i+1]
 			}
 		}
 	}
 
-	if zirconAPath != zirconAFile.Name() {
-		t.Fatalf("Missing zircon A image in paver arguments.")
-	}
 	if vbmetaAPath != vbMetaAFile.Name() {
-		t.Fatalf("Missing zircon A image in paver arguments.")
+		t.Fatalf("Missing vbmeta A image in paver arguments.")
 	}
 }

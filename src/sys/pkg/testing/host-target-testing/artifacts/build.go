@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/paver"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
@@ -21,8 +22,17 @@ type Build interface {
 	// GetPackageRepository returns a Repository for this build.
 	GetPackageRepository(ctx context.Context) (*packages.Repository, error)
 
+	// GetPaverDir downloads and returns the directory containing the paver scripts.
+	GetPaverDir(ctx context.Context) (string, error)
+
 	// GetPaver downloads and returns a paver for the build.
 	GetPaver(ctx context.Context) (paver.Paver, error)
+
+	// GetSshPublicKey returns the SSH public key used by this build's paver.
+	GetSshPublicKey() ssh.PublicKey
+
+	// GetVbmetaPath downloads and returns a path to the zircon-a vbmeta image.
+	GetVbmetaPath(ctx context.Context) (string, error)
 }
 
 type ArchiveBuild struct {
@@ -87,6 +97,10 @@ func (b *ArchiveBuild) GetBuildArchive(ctx context.Context) (string, error) {
 	return b.buildArchiveDir, nil
 }
 
+func (b *ArchiveBuild) GetPaverDir(ctx context.Context) (string, error) {
+	return b.GetBuildArchive(ctx)
+}
+
 // GetPaver downloads and returns a paver for the build.
 func (b *ArchiveBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	buildArchiveDir, err := b.GetBuildArchive(ctx)
@@ -98,6 +112,18 @@ func (b *ArchiveBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	paveZedbootScript := filepath.Join(buildArchiveDir, "pave-zedboot.sh")
 
 	return paver.NewBuildPaver(paveZedbootScript, paveScript, paver.SSHPublicKey(b.sshPublicKey))
+}
+
+func (b *ArchiveBuild) GetSshPublicKey() ssh.PublicKey {
+	return b.sshPublicKey
+}
+
+func (b *ArchiveBuild) GetVbmetaPath(ctx context.Context) (string, error) {
+	buildArchiveDir, err := b.GetBuildArchive(ctx)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(buildArchiveDir, "zircon-a.vbmeta"), nil
 }
 
 func (b *ArchiveBuild) Pave(ctx context.Context, deviceName string) error {
@@ -130,10 +156,88 @@ func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context) (*packages.R
 	return packages.NewRepository(filepath.Join(b.dir, "amber-files"))
 }
 
+func (b *FuchsiaDirBuild) GetPaverDir(ctx context.Context) (string, error) {
+	return b.dir, nil
+}
+
 func (b *FuchsiaDirBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	return paver.NewBuildPaver(
 		filepath.Join(b.dir, "pave-zedboot.sh"),
 		filepath.Join(b.dir, "pave.sh"),
 		paver.SSHPublicKey(b.sshPublicKey),
 	)
+}
+
+func (b *FuchsiaDirBuild) GetSshPublicKey() ssh.PublicKey {
+	return b.sshPublicKey
+}
+
+func (b *FuchsiaDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
+	return filepath.Join(b.dir, "fuchsia.vbmeta"), nil
+}
+
+func addArgsToVbmeta(ctx context.Context, avbtool *avb.AVBTool, destVbmeta string, srcVbmeta string, bootArguments map[string]string) error {
+	// TODO build a ZBI and populate it with the boot args to be baked into the vbmeta.
+	var props map[string]string
+
+	return avbtool.MakeVBMetaImage(ctx, destVbmeta, srcVbmeta, props)
+}
+
+type OmahaBuild struct {
+	build    Build
+	omahaUrl string
+	avbtool  *avb.AVBTool
+}
+
+func NewOmahaBuild(build Build, omahaUrl string, avbtool *avb.AVBTool) *OmahaBuild {
+	return &OmahaBuild{build: build, omahaUrl: omahaUrl, avbtool: avbtool}
+}
+
+// GetPackageRepository returns a Repository for this build.
+func (b *OmahaBuild) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
+	return b.build.GetPackageRepository(ctx)
+}
+
+func (b *OmahaBuild) GetPaverDir(ctx context.Context) (string, error) {
+	return b.build.GetPaverDir(ctx)
+}
+
+// GetPaver downloads and returns a paver for the build.
+func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
+	paverDir, err := b.GetPaverDir(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	paveScript := filepath.Join(paverDir, "pave.sh")
+	paveZedbootScript := filepath.Join(paverDir, "pave-zedboot.sh")
+
+	bootArgs := map[string]string{
+		"omaha_url": b.omahaUrl,
+	}
+	destVbmeta := filepath.Join(paverDir, "zircon-a-omaha-test.vbmeta")
+	srcVbmeta, err := b.GetVbmetaPath(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = addArgsToVbmeta(ctx, b.avbtool, destVbmeta, srcVbmeta, bootArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	return paver.NewBuildPaver(
+		paveZedbootScript,
+		paveScript,
+		paver.SSHPublicKey(b.GetSshPublicKey()),
+		paver.OverrideVBMetaA(destVbmeta),
+	)
+}
+
+func (b *OmahaBuild) GetSshPublicKey() ssh.PublicKey {
+	return b.build.GetSshPublicKey()
+}
+
+func (b *OmahaBuild) GetVbmetaPath(ctx context.Context) (string, error) {
+	return b.build.GetVbmetaPath(ctx)
 }

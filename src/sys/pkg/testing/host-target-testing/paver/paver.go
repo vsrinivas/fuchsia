@@ -68,13 +68,9 @@ func OverrideSlotA(imgPath string) BuildPaverOption {
 	}
 }
 
-// Sets the paths to the images that the Paver will use to override the ZIRCON-A
-// ZBIAVB and the vbmeta_a image.
-func OverrideSlotAWithVBMeta(imgPath string, vbmetaPath string) BuildPaverOption {
+// Sets the paths to the images that the Paver will use to override vbmeta_a.
+func OverrideVBMetaA(vbmetaPath string) BuildPaverOption {
 	return func(p *BuildPaver) error {
-		if err := OverrideSlotA(imgPath)(p); err != nil {
-			return err
-		}
 		if _, err := os.Stat(vbmetaPath); err != nil {
 			return err
 		}
