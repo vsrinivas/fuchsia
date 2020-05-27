@@ -19,8 +19,7 @@ namespace zxdb {
 namespace {
 
 bool IsNameFirstChar(char c) {
-  // '$' isn't valid in C but we use this as the indicator for special identifiers.
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '$';
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~';
 }
 
 bool IsNameContinuingChar(char c) { return IsNameFirstChar(c) || (c >= '0' && c <= '9'); }
@@ -115,6 +114,19 @@ bool ExprTokenizer::Tokenize() {
     tokens_.emplace_back(record.type, token_value, token_begin);
   }
   return !has_error();
+}
+
+// static
+bool ExprTokenizer::IsNameToken(std::string_view input) {
+  if (input.empty())
+    return false;
+  if (!IsNameFirstChar(input[0]))
+    return false;
+  for (size_t i = 1; i < input.size(); i++) {
+    if (!IsNameContinuingChar(input[i]))
+      return false;
+  }
+  return true;
 }
 
 // static

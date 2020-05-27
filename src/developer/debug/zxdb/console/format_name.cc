@@ -8,6 +8,7 @@
 
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
+#include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
@@ -65,21 +66,6 @@ bool FormatRustClosure(const Function* function, OutputBuffer* out) {
   // lambda is redundant.
   out->Append("λ");
   return true;
-}
-
-// Checks to see if this identifier component will parse by itself using the expression parser
-// (returns false) or if it needs escaping to be identified as an identifier (returns true).
-bool IdentifierComponentNeedsEscaping(const std::string& comp) {
-  if (comp.empty())
-    return true;  // Empty identifier components need escaping just to identify them.
-  if (isdigit(comp[0]))
-    return true;  // Starting with a number implies escaping.
-
-  for (char c : comp) {
-    if (!isalnum(c) && c != '_')
-      return true;
-  }
-  return false;
 }
 
 // Escapes the given identifier component. This does not put the "$(...) around it, but handles the
@@ -201,7 +187,7 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
         // Provide names for anonymous components.
         result.Append(Syntax::kComment, kAnonIdentifierComponentName);
       } else {
-        bool needs_escaping = IdentifierComponentNeedsEscaping(name);
+        bool needs_escaping = !ExprTokenizer::IsNameToken(name);
         if (needs_escaping)
           result.Append(Syntax::kComment, "$(");
 

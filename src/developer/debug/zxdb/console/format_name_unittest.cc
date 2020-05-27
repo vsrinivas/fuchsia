@@ -177,7 +177,7 @@ TEST(FormatName, FormatSpecialIdentifier) {
       FormatIdentifier(ident, global_opts).GetDebugString());
 }
 
-// Tests printing components that need escaping.
+// Tests printing components with respect to escaping.
 TEST(FormatName, EscapeComponent) {
   FormatIdentifierOptions global_opts;
 
@@ -189,6 +189,10 @@ TEST(FormatName, EscapeComponent) {
       "kNormal \"1two\", "
       "kComment \")\"",
       FormatIdentifier(ident, global_opts).GetDebugString());
+
+  // Destructors don't need escaping: ~ is a valid character.
+  ident.components()[0] = ParsedIdentifierComponent("~MyClass");
+  EXPECT_EQ("kNormal \"~MyClass\"", FormatIdentifier(ident, global_opts).GetDebugString());
 
   // Random bad characters.
   ident.components()[0] = ParsedIdentifierComponent("h$ello \\world");
