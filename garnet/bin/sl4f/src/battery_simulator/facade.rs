@@ -7,7 +7,8 @@ use anyhow::Error;
 use fidl_fuchsia_power as fpower;
 use fidl_fuchsia_power_test as spower;
 use fuchsia_component::client::connect_to_service;
-use fuchsia_syslog::macros::fx_log_err;
+use fuchsia_syslog::macros::{fx_log_err, fx_log_warn};
+use fuchsia_zircon::Status;
 use parking_lot::RwLock;
 use serde_json::Value;
 use std::time::Duration;
@@ -227,11 +228,15 @@ impl BatterySimulatorFacade {
     }
 
     /// Returns the simulated battery info
-    pub async fn get_simulated_battery_info(&self) -> Result<fpower::BatteryInfo, Error> {
+    pub async fn get_simulated_battery_info(&self) -> Result<Option<fpower::BatteryInfo>, Error> {
         self.check_proxy()?;
         match self.inner.read().proxy.clone() {
             Some(p) => match p.get_battery_info().await {
-                Ok(battery_info) => Ok(battery_info),
+                Ok(battery_info) => Ok(Some(battery_info)),
+                Err(fidl::Error::ClientChannelClosed(Status::PEER_CLOSED)) => {
+                    fx_log_warn!("Battery Simulator not available.");
+                    Ok(None)
+                }
                 Err(e) => fx_err_and_bail!(
                     &with_line!(TAG),
                     format_err!("Couldn't get BatteryInfo {}", e)
@@ -242,11 +247,15 @@ impl BatterySimulatorFacade {
     }
 
     /// Returns a boolean value indicating if the device is simulating the battery state
-    pub async fn get_simulating_state(&self) -> Result<bool, Error> {
+    pub async fn get_simulating_state(&self) -> Result<Option<bool>, Error> {
         self.check_proxy()?;
         match self.inner.read().proxy.clone() {
             Some(p) => match p.is_simulating().await {
-                Ok(simulation_state) => Ok(simulation_state),
+                Ok(simulation_state) => Ok(Some(simulation_state)),
+                Err(fidl::Error::ClientChannelClosed(Status::PEER_CLOSED)) => {
+                    fx_log_warn!("Battery Simulator not available.");
+                    Ok(None)
+                }
                 Err(e) => fx_err_and_bail!(
                     &with_line!(TAG),
                     format_err!("Couldn't get simulation state {}", e)
@@ -279,10 +288,17 @@ mod tests {
         assert!(res.is_ok(), "Failed to disconnect");
         // Check if simulating
         let simulation_state = facade.get_simulating_state().await;
-        assert_eq!(simulation_state.unwrap(), true);
-        // Reconnect real battery
-        let res = facade.reconnect_real_battery();
-        assert!(res.is_ok(), "Failed to reconnect");
+        // When getting the state back, note that the DUT may not include
+        // battery support, so it may be empty. This is not a test failure.
+        match simulation_state.unwrap() {
+            Some(state) => {
+                assert_eq!(state, true);
+                // Reconnect real battery
+                let res = facade.reconnect_real_battery();
+                assert!(res.is_ok(), "Failed to reconnect");
+            }
+            None => fx_log_warn!("No battery state provided, skipping check"),
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -304,11 +320,18 @@ mod tests {
         assert!(res.is_ok(), "Failed to set battery percentage");
         // Get BatteryInfo
         let battery_info = facade.get_simulated_battery_info().await;
-        assert!(battery_info.is_ok(), "Did not get battery info");
-        assert_eq!(battery_info.unwrap().level_percent.unwrap(), 12.0);
-        // Reconnect real battery
-        let res = facade.reconnect_real_battery();
-        assert!(res.is_ok(), "Failed to reconnect");
+        assert!(battery_info.is_ok(), "Failed to get battery info");
+        // When getting the battery info back, note that the DUT may not include
+        // battery support, so info may be empty. This is not a test failure.
+        match battery_info.unwrap() {
+            Some(info) => {
+                assert_eq!(info.level_percent.unwrap(), 12.0);
+                // Reconnect real battery
+                let res = facade.reconnect_real_battery();
+                assert!(res.is_ok(), "Failed to reconnect");
+            }
+            None => fx_log_warn!("No battery info provided, skipping check"),
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -330,10 +353,15 @@ mod tests {
         assert!(res.is_ok(), "Failed to set battery percentage");
         // Get BatteryInfo
         let battery_info = facade.get_simulated_battery_info().await;
-        assert!(battery_info.is_ok(), "Did not get battery info");
-        assert_eq!(battery_info.unwrap().charge_source.unwrap(), fpower::ChargeSource::Wireless);
-        // Reconnect real battery
-        let res = facade.reconnect_real_battery();
-        assert!(res.is_ok(), "Failed to reconnect");
+        assert!(battery_info.is_ok(), "Failed to get battery info");
+        match battery_info.unwrap() {
+            Some(info) => {
+                assert_eq!(info.charge_source.unwrap(), fpower::ChargeSource::Wireless);
+                // Reconnect real battery
+                let res = facade.reconnect_real_battery();
+                assert!(res.is_ok(), "Failed to reconnect");
+            }
+            None => fx_log_warn!("No battery info provided, skipping check"),
+        }
     }
 }
