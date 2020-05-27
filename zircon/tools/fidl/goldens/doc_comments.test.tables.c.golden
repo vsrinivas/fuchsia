@@ -12,12 +12,10 @@ extern const struct FidlCodedBits test_name_MyBitsTable;
 
 
 extern const struct FidlCodedStruct test_name_InterfaceMethodRequestTable;
-static const struct FidlStructField Fields32test_name_InterfaceMethodRequest[] = {};
-const struct FidlCodedStruct test_name_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .fields=Fields32test_name_InterfaceMethodRequest, .field_count=0u, .size=16u, .name="test.name/InterfaceMethodRequest"};
+const struct FidlCodedStruct test_name_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/InterfaceMethodRequest"};
 
 extern const struct FidlCodedStruct test_name_InterfaceOnEventEventTable;
-static const struct FidlStructField Fields31test_name_InterfaceOnEventEvent[] = {};
-const struct FidlCodedStruct test_name_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .fields=Fields31test_name_InterfaceOnEventEvent, .field_count=0u, .size=16u, .name="test.name/InterfaceOnEventEvent"};
+const struct FidlCodedStruct test_name_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/InterfaceOnEventEvent"};
 
 
 static const struct FidlXUnionField Fields15test_name_Union[] = {

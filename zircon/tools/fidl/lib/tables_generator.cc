@@ -189,16 +189,20 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
 }
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
-  Emit(&tables_file_, "static const struct FidlStructField ");
-  Emit(&tables_file_, NameFields(struct_type.coded_name));
-  Emit(&tables_file_, "[] = ");
-  GenerateArray(struct_type.fields);
-  Emit(&tables_file_, ";\n");
+  std::string fields_array_name = NameFields(struct_type.coded_name);
+
+  if (!struct_type.fields.empty()) {
+    Emit(&tables_file_, "static const struct FidlStructField ");
+    Emit(&tables_file_, fields_array_name);
+    Emit(&tables_file_, "[] = ");
+    GenerateArray(struct_type.fields);
+    Emit(&tables_file_, ";\n");
+  }
 
   Emit(&tables_file_, "const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(struct_type.coded_name));
   Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .fields=");
-  Emit(&tables_file_, NameFields(struct_type.coded_name));
+  Emit(&tables_file_, struct_type.fields.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .field_count=");
   Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
   Emit(&tables_file_, ", .size=");
@@ -209,16 +213,20 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
 }
 
 void TablesGenerator::Generate(const coded::TableType& table_type) {
-  Emit(&tables_file_, "static const struct FidlTableField ");
-  Emit(&tables_file_, NameFields(table_type.coded_name));
-  Emit(&tables_file_, "[] = ");
-  GenerateArray(table_type.fields);
-  Emit(&tables_file_, ";\n");
+  std::string fields_array_name = NameFields(table_type.coded_name);
+
+  if (!table_type.fields.empty()) {
+    Emit(&tables_file_, "static const struct FidlTableField ");
+    Emit(&tables_file_, NameFields(table_type.coded_name));
+    Emit(&tables_file_, "[] = ");
+    GenerateArray(table_type.fields);
+    Emit(&tables_file_, ";\n");
+  }
 
   Emit(&tables_file_, "const struct FidlCodedTable ");
   Emit(&tables_file_, NameTable(table_type.coded_name));
   Emit(&tables_file_, " = {.tag=kFidlTypeTable, .fields=");
-  Emit(&tables_file_, NameFields(table_type.coded_name));
+  Emit(&tables_file_, table_type.fields.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .field_count=");
   Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
   Emit(&tables_file_, ", .name=\"");
@@ -227,18 +235,22 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
 }
 
 void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
-  Emit(&tables_file_, "static const struct FidlXUnionField ");
-  Emit(&tables_file_, NameFields(xunion_type.coded_name));
-  Emit(&tables_file_, "[] = ");
-  GenerateArray(xunion_type.fields);
-  Emit(&tables_file_, ";\n");
+  std::string fields_array_name = NameFields(xunion_type.coded_name);
+
+  if (!xunion_type.fields.empty()) {
+    Emit(&tables_file_, "static const struct FidlXUnionField ");
+    Emit(&tables_file_, NameFields(xunion_type.coded_name));
+    Emit(&tables_file_, "[] = ");
+    GenerateArray(xunion_type.fields);
+    Emit(&tables_file_, ";\n");
+  }
 
   Emit(&tables_file_, "const struct FidlCodedXUnion ");
   Emit(&tables_file_, NameTable(xunion_type.coded_name));
   Emit(&tables_file_, " = {.tag=kFidlTypeXUnion, .field_count=");
   Emit(&tables_file_, static_cast<uint32_t>(xunion_type.fields.size()));
   Emit(&tables_file_, ", .fields=");
-  Emit(&tables_file_, NameFields(xunion_type.coded_name));
+  Emit(&tables_file_, xunion_type.fields.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .nullable=");
   Emit(&tables_file_, xunion_type.nullability);
   Emit(&tables_file_, ", .name=\"");
@@ -262,16 +274,19 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   Emit(&tables_file_, NameTable(message_type.coded_name));
   Emit(&tables_file_, ";\n");
 
-  Emit(&tables_file_, "static const struct FidlStructField ");
-  Emit(&tables_file_, NameFields(message_type.coded_name));
-  Emit(&tables_file_, "[] = ");
-  GenerateArray(message_type.fields);
-  Emit(&tables_file_, ";\n");
+  std::string fields_array_name = NameFields(message_type.coded_name);
+  if (!message_type.fields.empty()) {
+    Emit(&tables_file_, "static const struct FidlStructField ");
+    Emit(&tables_file_, fields_array_name);
+    Emit(&tables_file_, "[] = ");
+    GenerateArray(message_type.fields);
+    Emit(&tables_file_, ";\n");
+  }
 
   Emit(&tables_file_, "const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(message_type.coded_name));
   Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .fields=");
-  Emit(&tables_file_, NameFields(message_type.coded_name));
+  Emit(&tables_file_, message_type.fields.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .field_count=");
   Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
   Emit(&tables_file_, ", .size=");

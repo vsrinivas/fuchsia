@@ -6,11 +6,9 @@
 
 
 extern const struct FidlCodedStruct test_name_SecondProtocolMethodOnSecondRequestTable;
-static const struct FidlStructField Fields45test_name_SecondProtocolMethodOnSecondRequest[] = {};
-const struct FidlCodedStruct test_name_SecondProtocolMethodOnSecondRequestTable = {.tag=kFidlTypeStruct, .fields=Fields45test_name_SecondProtocolMethodOnSecondRequest, .field_count=0u, .size=16u, .name="test.name/SecondProtocolMethodOnSecondRequest"};
+const struct FidlCodedStruct test_name_SecondProtocolMethodOnSecondRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/SecondProtocolMethodOnSecondRequest"};
 
 extern const struct FidlCodedStruct test_name_FirstProtocolMethodOnFirstRequestTable;
-static const struct FidlStructField Fields43test_name_FirstProtocolMethodOnFirstRequest[] = {};
-const struct FidlCodedStruct test_name_FirstProtocolMethodOnFirstRequestTable = {.tag=kFidlTypeStruct, .fields=Fields43test_name_FirstProtocolMethodOnFirstRequest, .field_count=0u, .size=16u, .name="test.name/FirstProtocolMethodOnFirstRequest"};
+const struct FidlCodedStruct test_name_FirstProtocolMethodOnFirstRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/FirstProtocolMethodOnFirstRequest"};
 
 

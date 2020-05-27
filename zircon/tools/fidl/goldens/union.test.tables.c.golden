@@ -61,8 +61,7 @@ static const struct FidlCodedString String16nonnullableTable = {.tag=kFidlTypeSt
 static const struct FidlCodedVector Vector4294967295nonnullable19String16nonnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&String16nonnullableTable), .max_count=4294967295u, .element_size=16u, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
-static const struct FidlStructField Fields78fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest[] = {};
-const struct FidlCodedStruct fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = {.tag=kFidlTypeStruct, .fields=Fields78fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest, .field_count=0u, .size=16u, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest"};
+const struct FidlCodedStruct fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 static const struct FidlStructField Fields79fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
@@ -71,8 +70,7 @@ static const struct FidlStructField Fields79fidl_test_json_TestProtocolStrictXUn
 const struct FidlCodedStruct fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = {.tag=kFidlTypeStruct, .fields=Fields79fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, .field_count=1u, .size=40u, .name="fidl.test.json/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse"};
 
 extern const struct FidlCodedStruct fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
-static const struct FidlStructField Fields80fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest[] = {};
-const struct FidlCodedStruct fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = {.tag=kFidlTypeStruct, .fields=Fields80fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest, .field_count=0u, .size=16u, .name="fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest"};
+const struct FidlCodedStruct fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="fidl.test.json/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 static const struct FidlStructField Fields81fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
@@ -297,8 +295,7 @@ static const struct FidlXUnionField Fields37fidl_test_json_ExplicitFooNullableRe
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable), .ordinal=2u}
 };
 const struct FidlCodedXUnion fidl_test_json_ExplicitFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields37fidl_test_json_ExplicitFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/ExplicitFoo", .strictness=kFidlStrictness_Flexible};
-static const struct FidlStructField Fields20fidl_test_json_Empty[] = {};
-const struct FidlCodedStruct fidl_test_json_EmptyTable = {.tag=kFidlTypeStruct, .fields=Fields20fidl_test_json_Empty, .field_count=0u, .size=1u, .name="fidl.test.json/Empty"};
+const struct FidlCodedStruct fidl_test_json_EmptyTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=1u, .name="fidl.test.json/Empty"};
 
 static const struct FidlXUnionField Fields42fidl_test_json_XUnionContainingEmptyStruct[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_json_EmptyTable), .ordinal=1u}

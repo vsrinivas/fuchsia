@@ -57,20 +57,16 @@ static const struct FidlStructField Fields45test_name_ChannelProtocolMutateSocke
 const struct FidlCodedStruct test_name_ChannelProtocolMutateSocketResponseTable = {.tag=kFidlTypeStruct, .fields=Fields45test_name_ChannelProtocolMutateSocketResponse, .field_count=1u, .size=24u, .name="test.name/ChannelProtocolMutateSocketResponse"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
-static const struct FidlStructField Fields65test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest[] = {};
-const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable = {.tag=kFidlTypeStruct, .fields=Fields65test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest"};
+const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
-static const struct FidlStructField Fields68test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest[] = {};
-const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable = {.tag=kFidlTypeStruct, .fields=Fields68test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest"};
+const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
-static const struct FidlStructField Fields69test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse[] = {};
-const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable = {.tag=kFidlTypeStruct, .fields=Fields69test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse"};
+const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
-static const struct FidlStructField Fields67test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest[] = {};
-const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable = {.tag=kFidlTypeStruct, .fields=Fields67test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest"};
+const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest"};
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
@@ -93,8 +89,7 @@ static const struct FidlStructField Fields70test_name_WithAndWithoutRequestRespo
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable = {.tag=kFidlTypeStruct, .fields=Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, .field_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
-static const struct FidlStructField Fields71test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse[] = {};
-const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable = {.tag=kFidlTypeStruct, .fields=Fields71test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse"};
+const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 static const struct FidlStructField Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest[] = {
@@ -109,8 +104,7 @@ static const struct FidlStructField Fields70test_name_WithAndWithoutRequestRespo
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable = {.tag=kFidlTypeStruct, .fields=Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse, .field_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
-static const struct FidlStructField Fields59test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent[] = {};
-const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable = {.tag=kFidlTypeStruct, .fields=Fields59test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent"};
+const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 static const struct FidlStructField Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent[] = {
@@ -119,8 +113,7 @@ static const struct FidlStructField Fields58test_name_WithAndWithoutRequestRespo
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnWithResponseEventTable = {.tag=kFidlTypeStruct, .fields=Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent, .field_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseOnWithResponseEvent"};
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructRequestTable;
-static const struct FidlStructField Fields48test_name_WithErrorSyntaxResponseAsStructRequest[] = {};
-const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructRequestTable = {.tag=kFidlTypeStruct, .fields=Fields48test_name_WithErrorSyntaxResponseAsStructRequest, .field_count=0u, .size=16u, .name="test.name/WithErrorSyntaxResponseAsStructRequest"};
+const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithErrorSyntaxResponseAsStructRequest"};
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructResponseTable;
 static const struct FidlStructField Fields49test_name_WithErrorSyntaxResponseAsStructResponse[] = {
@@ -129,8 +122,7 @@ static const struct FidlStructField Fields49test_name_WithErrorSyntaxResponseAsS
 const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructResponseTable = {.tag=kFidlTypeStruct, .fields=Fields49test_name_WithErrorSyntaxResponseAsStructResponse, .field_count=1u, .size=40u, .name="test.name/WithErrorSyntaxResponseAsStructResponse"};
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
-static const struct FidlStructField Fields48test_name_WithErrorSyntaxErrorAsPrimitiveRequest[] = {};
-const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable = {.tag=kFidlTypeStruct, .fields=Fields48test_name_WithErrorSyntaxErrorAsPrimitiveRequest, .field_count=0u, .size=16u, .name="test.name/WithErrorSyntaxErrorAsPrimitiveRequest"};
+const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithErrorSyntaxErrorAsPrimitiveRequest"};
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 static const struct FidlStructField Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse[] = {
@@ -139,8 +131,7 @@ static const struct FidlStructField Fields49test_name_WithErrorSyntaxErrorAsPrim
 const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable = {.tag=kFidlTypeStruct, .fields=Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse, .field_count=1u, .size=40u, .name="test.name/WithErrorSyntaxErrorAsPrimitiveResponse"};
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-static const struct FidlStructField Fields43test_name_WithErrorSyntaxErrorAsEnumRequest[] = {};
-const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumRequestTable = {.tag=kFidlTypeStruct, .fields=Fields43test_name_WithErrorSyntaxErrorAsEnumRequest, .field_count=0u, .size=16u, .name="test.name/WithErrorSyntaxErrorAsEnumRequest"};
+const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/WithErrorSyntaxErrorAsEnumRequest"};
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 static const struct FidlStructField Fields44test_name_WithErrorSyntaxErrorAsEnumResponse[] = {
@@ -166,8 +157,7 @@ static const struct FidlXUnionField Fields60test_name_WithErrorSyntax_ResponseAs
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=2u}
 };
 const struct FidlCodedXUnion test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict};
-static const struct FidlStructField Fields51test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
-const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.tag=kFidlTypeStruct, .fields=Fields51test_name_WithErrorSyntax_ErrorAsPrimitive_Response, .field_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response"};
+const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response"};
 
 static const struct FidlXUnionField Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable), .ordinal=1u},
@@ -179,8 +169,7 @@ static const struct FidlXUnionField Fields60test_name_WithErrorSyntax_ErrorAsPri
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=2u}
 };
 const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict};
-static const struct FidlStructField Fields46test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
-const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.tag=kFidlTypeStruct, .fields=Fields46test_name_WithErrorSyntax_ErrorAsEnum_Response, .field_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response"};
+const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response"};
 
 static bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
 const struct FidlCodedEnum test_name_ErrorEnunTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_ErrorEnun, .name="test.name/ErrorEnun"};

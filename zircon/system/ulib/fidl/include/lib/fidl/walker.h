@@ -373,16 +373,16 @@ Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
   const FidlTableField* next_field = coded_table->fields;
   const FidlTableField* end_field = coded_table->fields + coded_table->field_count;
   for (uint32_t field_index = 0; field_index < envelope_vector_ptr->count; field_index++) {
-    uint32_t ordinal = field_index + 1;
-    Position envelope_position =
-        envelope_vector_position + field_index * uint32_t(sizeof(fidl_envelope_t));
-    auto envelope_ptr = PtrTo<fidl_envelope_t>(envelope_position);
-
+    const uint32_t ordinal = field_index + 1;
     const FidlTableField* known_field = nullptr;
     if (next_field < end_field && next_field->ordinal == ordinal) {
       known_field = next_field;
       next_field++;
     }
+    Position envelope_position =
+        envelope_vector_position + field_index * uint32_t(sizeof(fidl_envelope_t));
+    auto envelope_ptr = PtrTo<fidl_envelope_t>(envelope_position);
+
     const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
     status = visitor_->EnterEnvelope(envelope_position, envelope_ptr, payload_type);
     FIDL_STATUS_GUARD(status);

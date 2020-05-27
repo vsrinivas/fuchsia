@@ -31,6 +31,5 @@ static const struct FidlStructField Fields50fidl_test_json_EmptyProtocolSendAndR
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveResponseTable = {.tag=kFidlTypeStruct, .fields=Fields50fidl_test_json_EmptyProtocolSendAndReceiveResponse, .field_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendAndReceiveResponse"};
 
 
-static const struct FidlStructField Fields20fidl_test_json_Empty[] = {};
-const struct FidlCodedStruct fidl_test_json_EmptyTable = {.tag=kFidlTypeStruct, .fields=Fields20fidl_test_json_Empty, .field_count=0u, .size=1u, .name="fidl.test.json/Empty"};
+const struct FidlCodedStruct fidl_test_json_EmptyTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=1u, .name="fidl.test.json/Empty"};
 

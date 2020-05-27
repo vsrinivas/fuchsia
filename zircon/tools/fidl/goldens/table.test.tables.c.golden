@@ -36,6 +36,5 @@ static const struct FidlTableField Fields31fidl_test_json_NewerSimpleTable[] = {
 };
 const struct FidlCodedTable fidl_test_json_NewerSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields31fidl_test_json_NewerSimpleTable, .field_count=3u, .name="fidl.test.json/NewerSimpleTable"};
 
-static const struct FidlTableField Fields25fidl_test_json_EmptyTable[] = {};
-const struct FidlCodedTable fidl_test_json_EmptyTableTable = {.tag=kFidlTypeTable, .fields=Fields25fidl_test_json_EmptyTable, .field_count=0u, .name="fidl.test.json/EmptyTable"};
+const struct FidlCodedTable fidl_test_json_EmptyTableTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .name="fidl.test.json/EmptyTable"};
 
