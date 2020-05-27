@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    bt_a2dp::codec::MediaCodecConfig,
     bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
     fuchsia_bluetooth::types::PeerId,
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
 };
 
+use crate::codec::MediaCodecConfig;
 use crate::media_task::{MediaTask, MediaTaskBuilder};
 
 pub struct Stream {
@@ -177,23 +177,17 @@ impl Streams {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
 
-    use crate::media_task::tests::TestMediaTaskBuilder;
-
-    use bt_a2dp::media_types::*;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::pin_mut;
     use std::convert::TryInto;
     use std::task::Poll;
 
-    pub fn build_test_streams() -> Streams {
-        let mut streams = Streams::new();
-        streams.insert(make_stream(1));
-        streams
-    }
+    use crate::media_task::tests::TestMediaTaskBuilder;
+    use crate::media_types::*;
 
     fn sbc_mediacodec_capability() -> avdtp::ServiceCapability {
         let sbc_codec_info = SbcCodecInfo::new(
@@ -214,7 +208,7 @@ pub mod tests {
         }
     }
 
-    pub fn make_sbc_endpoint(seid: u8) -> StreamEndpoint {
+    fn make_sbc_endpoint(seid: u8) -> StreamEndpoint {
         StreamEndpoint::new(
             seid,
             avdtp::MediaType::Audio,

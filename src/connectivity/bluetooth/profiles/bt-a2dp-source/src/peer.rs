@@ -4,6 +4,7 @@
 
 use {
     anyhow::Context,
+    bt_a2dp::stream,
     bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpointId},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
@@ -21,8 +22,6 @@ use {
         sync::{Arc, Weak},
     },
 };
-
-use crate::stream;
 
 pub struct Peer {
     /// The id of the peer we are connected to.
@@ -433,6 +432,7 @@ impl PeerInner {
 mod tests {
     use super::*;
 
+    use bt_a2dp::media_task::tests::TestMediaTaskBuilder;
     use bt_a2dp::media_types::*;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::ErrorCode;
@@ -445,14 +445,48 @@ mod tests {
     use std::convert::TryInto;
     use std::task::Poll;
 
-    use crate::media_task::tests::TestMediaTaskBuilder;
-
     fn setup_avdtp_peer() -> (avdtp::Peer, zx::Socket) {
         let (remote, signaling) =
             zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
 
         let peer = avdtp::Peer::new(signaling).expect("create peer failure");
         (peer, remote)
+    }
+
+    fn build_test_streams() -> stream::Streams {
+        let mut streams = stream::Streams::new();
+        let s = stream::Stream::build(make_sbc_endpoint(1), TestMediaTaskBuilder::new().builder());
+        streams.insert(s);
+        streams
+    }
+
+    fn sbc_mediacodec_capability() -> avdtp::ServiceCapability {
+        let sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::MANDATORY_SRC,
+            SbcSubBands::MANDATORY_SRC,
+            SbcAllocation::MANDATORY_SRC,
+            SbcCodecInfo::BITPOOL_MIN,
+            SbcCodecInfo::BITPOOL_MAX,
+        )
+        .expect("SBC codec info");
+
+        ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: sbc_codec_info.to_bytes().to_vec(),
+        }
+    }
+
+    fn make_sbc_endpoint(seid: u8) -> avdtp::StreamEndpoint {
+        avdtp::StreamEndpoint::new(
+            seid,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Source,
+            vec![avdtp::ServiceCapability::MediaTransport, sbc_mediacodec_capability()],
+        )
+        .expect("endpoint creation should succeed")
     }
 
     pub(crate) fn recv_remote(remote: &zx::Socket) -> Result<Vec<u8>, zx::Status> {
@@ -470,8 +504,7 @@ mod tests {
         let (avdtp, remote) = setup_avdtp_peer();
         let (profile_proxy, requests) =
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
-        let peer =
-            Peer::create(PeerId(1), avdtp, stream::tests::build_test_streams(), profile_proxy);
+        let peer = Peer::create(PeerId(1), avdtp, build_test_streams(), profile_proxy);
 
         (remote, requests, peer)
     }
@@ -1000,10 +1033,7 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
         let mut streams = stream::Streams::new();
         let mut test_builder = TestMediaTaskBuilder::new();
-        streams.insert(stream::Stream::build(
-            stream::tests::make_sbc_endpoint(1),
-            test_builder.builder(),
-        ));
+        streams.insert(stream::Stream::build(make_sbc_endpoint(1), test_builder.builder()));
         let next_task_fut = test_builder.next_task();
         pin_mut!(next_task_fut);
 
@@ -1013,7 +1043,7 @@ mod tests {
         let discover_fut = remote_peer.discover();
         pin_mut!(discover_fut);
 
-        let expected = vec![stream::tests::make_sbc_endpoint(1).information()];
+        let expected = vec![make_sbc_endpoint(1).information()];
         match exec.run_until_stalled(&mut discover_fut) {
             Poll::Ready(Ok(res)) => assert_eq!(res, expected),
             x => panic!("Expected discovery to complete and got {:?}", x),

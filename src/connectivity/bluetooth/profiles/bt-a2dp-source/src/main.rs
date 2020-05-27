@@ -8,7 +8,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::media_types::*,
+    bt_a2dp::{media_types::*, stream},
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
@@ -31,11 +31,10 @@ use {
 };
 
 mod encoding;
-mod media_task;
 mod pcm_audio;
 mod peer;
+mod source_task;
 mod sources;
-mod stream;
 
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
@@ -82,7 +81,7 @@ const MAX_BITRATE_AAC: u32 = 250000;
 fn build_local_streams(source_type: AudioSourceType) -> avdtp::Result<stream::Streams> {
     // TODO(BT-533): detect codecs, add streams for each codec
 
-    let source_task_builder = media_task::SourceTaskBuilder::new(source_type);
+    let source_task_builder = source_task::SourceTaskBuilder::new(source_type);
     let mut streams = stream::Streams::new();
 
     let sbc_codec_info = SbcCodecInfo::new(
