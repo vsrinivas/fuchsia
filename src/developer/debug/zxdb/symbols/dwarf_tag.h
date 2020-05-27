@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_TAG_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_TAG_H_
 
+#include <string>
+
 namespace zxdb {
 
 enum class DwarfTag : int {
@@ -181,6 +183,11 @@ enum class DwarfTag : int {
   kRvalueReferenceType = 0x42,
   kTemplateAlias = 0x43,
 
+  // -----------------------------------------------------------------------------------------------
+
+  // Identifies one-past-the-end of the tags where we define constants. For range checking.
+  kLastDefined,
+
   // User-defined range.
   kLoUser = 0x4080,
   kHiUser = 0xffff,
@@ -201,6 +208,10 @@ bool DwarfTagIsEitherReference(DwarfTag tag);
 
 // Returns true if the tag is any reference type or a pointer.
 bool DwarfTagIsPointerOrReference(DwarfTag tag);
+
+// Converts the tag to a string, optionally including the numeric value. Invalid or unknown values
+// will be formatted as "<undefined>" and will always include the numeric value.
+std::string DwarfTagToString(DwarfTag tag, bool include_number = false);
 
 }  // namespace zxdb
 

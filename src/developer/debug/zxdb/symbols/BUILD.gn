@@ -245,6 +245,7 @@ source_set("tests") {
     "dwarf_expr_eval_unittest.cc",
     "dwarf_location_unittest.cc",
     "dwarf_symbol_factory_unittest.cc",
+    "dwarf_tag_unittest.cc",
     "dwarf_test_util.cc",
     "dwarf_test_util.h",
     "elf_symbol_record_unittest.cc",

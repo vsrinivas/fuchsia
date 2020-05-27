@@ -37,6 +37,9 @@ class BaseType final : public Type {
   static constexpr int kBaseTypeUnsignedChar = 0x08;
   static constexpr int kBaseTypeUTF = 0x10;  // Byte size defines encoding.
 
+  // Converts the int to a base type, optionally including the numeric value.
+  static std::string BaseTypeToString(int base_type, bool include_number = false);
+
   // Returns wiether the given base type is a signed integer.
   static bool IsSigned(int base_type);
 

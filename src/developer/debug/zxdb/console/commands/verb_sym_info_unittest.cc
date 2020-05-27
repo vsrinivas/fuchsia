@@ -72,7 +72,8 @@ TEST_F(VerbSymInfo, PLTFunctionInfo) {
   ASSERT_EQ(
       "ELF PLT symbol: zx_channel_write\n"
       "  Address: 0x100500\n"
-      "  Size: 0x8\n",
+      "  Size: 0x8\n"
+      "\n",
       event.output.AsString());
 }
 

@@ -12,17 +12,14 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
+#include "src/developer/debug/zxdb/console/format_symbol.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/symbols/data_member.h"
-#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
-#include "src/developer/debug/zxdb/symbols/function.h"
-#include "src/developer/debug/zxdb/symbols/process_symbols.h"
-#include "src/developer/debug/zxdb/symbols/type.h"
-#include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/developer/debug/zxdb/symbols/code_block.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -42,134 +39,6 @@ Example
   sym-info i
   thread 1 frame 4 sym-info i
 )";
-
-void DumpVariableLocation(const SymbolContext& symbol_context, const VariableLocation& loc,
-                          OutputBuffer* out) {
-  if (loc.is_null()) {
-    out->Append("  DWARF location: <no location info>\n");
-    return;
-  }
-
-  out->Append("  DWARF location (address range + DWARF expression bytes):\n");
-  for (const auto& entry : loc.locations()) {
-    // Address range.
-    if (entry.begin == 0 && entry.end == 0) {
-      out->Append("    <always valid>:");
-    } else {
-      out->Append(fxl::StringPrintf(
-          "    [0x%" PRIx64 ", 0x%" PRIx64 "):", symbol_context.RelativeToAbsolute(entry.begin),
-          symbol_context.RelativeToAbsolute(entry.end)));
-    }
-
-    // Dump the raw DWARF expression bytes. In the future we can decode if necessary (check LLVM's
-    // "dwarfdump" utility which can do this).
-    for (uint8_t byte : entry.expression)
-      out->Append(fxl::StringPrintf(" 0x%02x", byte));
-    out->Append("\n");
-  }
-}
-
-// Appends a type description for another synbol dump section.
-void DumpTypeDescription(const LazySymbol& lazy_type, OutputBuffer* out) {
-  out->Append("  Type: ");
-  if (const Type* type = lazy_type.Get()->AsType()) {
-    // Use GetFullName() instead of GetIdentifier() because modified types like pointers don't
-    // map onto identifiers.
-    out->Append(type->GetFullName());
-  } else {
-    out->Append(Syntax::kError, "[Bad type]");
-  }
-  out->Append("\n");
-}
-
-// ProcessSymbols can be null which will produce relative addresses.
-void DumpVariableInfo(const ProcessSymbols* process_symbols, const Variable* variable,
-                      OutputBuffer* out) {
-  out->Append(Syntax::kHeading, "Variable: ");
-  out->Append(Syntax::kVariable, variable->GetAssignedName());
-  out->Append("\n");
-  DumpTypeDescription(variable->type(), out);
-  out->Append(fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(variable->tag())));
-
-  DumpVariableLocation(variable->GetSymbolContext(process_symbols), variable->location(), out);
-}
-
-void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
-  out->Append(Syntax::kHeading, "Data member: ");
-  out->Append(Syntax::kVariable, data_member->GetFullName() + "\n");
-
-  auto parent = data_member->parent().Get();
-  out->Append("  Contained in: ");
-  out->Append(FormatIdentifier(parent->GetIdentifier(), FormatIdentifierOptions()));
-  out->Append("\n");
-
-  DumpTypeDescription(data_member->type(), out);
-  out->Append(fxl::StringPrintf("  Offset within container: %" PRIu32 "\n",
-                                data_member->member_location()));
-  out->Append(
-      fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(data_member->tag())));
-}
-
-void DumpTypeInfo(const Type* type, OutputBuffer* out) {
-  out->Append(Syntax::kHeading, "Type: ");
-  out->Append(FormatIdentifier(type->GetIdentifier(), FormatIdentifierOptions()));
-  out->Append("\n");
-
-  out->Append(fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(type->tag())));
-}
-
-void DumpFunctionInfo(const ProcessSymbols* process_symbols, const Function* function,
-                      OutputBuffer* out) {
-  if (function->is_inline())
-    out->Append(Syntax::kHeading, "Inline function: ");
-  else
-    out->Append(Syntax::kHeading, "Function: ");
-
-  FormatFunctionNameOptions opts;
-  opts.name.bold_last = true;
-  opts.params = FormatFunctionNameOptions::kParamTypes;
-
-  out->Append(FormatFunctionName(function, opts));
-  out->Append("\n");
-
-  // Code ranges.
-  AddressRanges ranges =
-      function->GetAbsoluteCodeRanges(function->GetSymbolContext(process_symbols));
-  if (ranges.empty()) {
-    out->Append("  No code ranges.\n");
-  } else {
-    out->Append("  Code ranges [begin, end-non-inclusive):\n");
-    for (const auto& range : ranges)
-      out->Append("    " + range.ToString() + "\n");
-  }
-}
-
-void DumpOtherSymbol(const ProcessSymbols* process_symbols, const Symbol* symbol,
-                     OutputBuffer* out) {
-  SymbolContext symbol_context = symbol->GetSymbolContext(process_symbols);
-
-  if (const ElfSymbol* elf_symbol = symbol->AsElfSymbol()) {
-    switch (elf_symbol->elf_type()) {
-      case ElfSymbolType::kNormal:
-        out->Append(Syntax::kHeading, "ELF symbol: ");
-        break;
-      case ElfSymbolType::kPlt:
-        out->Append(Syntax::kHeading, "ELF PLT symbol: ");
-        break;
-    }
-    out->Append(elf_symbol->linkage_name() + "\n");
-
-    out->Append("  Address: " +
-                to_hex_string(symbol_context.RelativeToAbsolute(elf_symbol->relative_address())) +
-                "\n");
-    out->Append("  Size: " + to_hex_string(elf_symbol->size()) + "\n");
-  } else {
-    // Everything else. Currently there aren't other sources of this type of symbol so display
-    // something generic.
-    out->Append(Syntax::kHeading, "Other symbol: ");
-    out->Append(symbol->GetFullName() + "\n");
-  }
-}
 
 // Demangles specifically for sym-info (this attempts to filter out simple type remapping which
 // would normally be desirable for a generic demangler). Returns a nullopt on failure.
@@ -267,42 +136,31 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
   for (const FoundName& found : found_items) {
     switch (found.kind()) {
       case FoundName::kNone:
-        break;
+        continue;
       case FoundName::kVariable:
-        // This uses the symbol context from the current frame's location. This usually works as
-        // all local variables will necessarily be from the current module. DumpVariableInfo
-        // only needs the symbol context for showing valid code ranges, which globals from other
-        // modules won't have.
-        //
-        // TODO(bug 41540) look up the proper symbol context for the variable symbol object. As
-        // described above this won't change most things, but we might start needing the symbol
-        // context for more stuff, and it's currently very brittle.
-        DumpVariableInfo(process_symbols, found.variable(), &out);
-        found_item = true;
+        out.Append(FormatSymbol(process_symbols, found.variable()));
         break;
       case FoundName::kMemberVariable:
-        DumpDataMemberInfo(found.member().data_member(), &out);
-        found_item = true;
+        out.Append(FormatSymbol(process_symbols, found.member().data_member()));
         break;
       case FoundName::kNamespace:
         // Probably useless to display info on a namespace.
-        break;
+        continue;
       case FoundName::kTemplate:
         // TODO(brettw) it would be nice to list all template specializations here.
-        break;
+        continue;
       case FoundName::kType:
-        DumpTypeInfo(found.type().get(), &out);
-        found_item = true;
+        out.Append(FormatSymbol(process_symbols, found.type().get()));
         break;
       case FoundName::kFunction:
-        DumpFunctionInfo(process_symbols, found.function().get(), &out);
-        found_item = true;
+        out.Append(FormatSymbol(process_symbols, found.function().get()));
         break;
       case FoundName::kOtherSymbol:
-        DumpOtherSymbol(process_symbols, found.other_symbol().get(), &out);
-        found_item = true;
+        out.Append(FormatSymbol(process_symbols, found.other_symbol().get()));
         break;
     }
+    found_item = true;
+    out.Append("\n");
   }
 
   if (!found_item) {

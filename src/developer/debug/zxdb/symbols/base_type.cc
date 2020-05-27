@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 
+#include "src/lib/fxl/strings/string_printf.h"
+
 namespace zxdb {
 
 // Storage for constants.
@@ -28,6 +30,30 @@ BaseType::BaseType(int base_type, uint32_t byte_size, const std::string& name)
 BaseType::~BaseType() = default;
 
 const BaseType* BaseType::AsBaseType() const { return this; }
+
+// static
+std::string BaseType::BaseTypeToString(int base_type, bool include_number) {
+  const char* name = nullptr;
+  switch (base_type) {
+      // clang-format off
+    case kBaseTypeNone:         name = "<none>";               break;
+    case kBaseTypeAddress:      name = "DW_ATE_address";       break;
+    case kBaseTypeBoolean:      name = "DW_ATE_boolean";       break;
+    case kBaseTypeFloat:        name = "DW_ATE_float";         break;
+    case kBaseTypeSigned:       name = "DW_ATE_signed";        break;
+    case kBaseTypeSignedChar:   name = "DW_ATE_signed_char";   break;
+    case kBaseTypeUnsigned:     name = "DW_ATE_unsigned";      break;
+    case kBaseTypeUnsignedChar: name = "DW_ATE_unsigned_char"; break;
+    case kBaseTypeUTF:          name = "DW_ATE_UTF";           break;
+    // clang-format on
+    default:
+      // Always print the number for unknown names.
+      return fxl::StringPrintf("<undefined (0x%02x)>", static_cast<unsigned>(base_type));
+  }
+  if (!include_number)
+    return name;
+  return fxl::StringPrintf("%s (0x%02x)", name, static_cast<unsigned>(base_type));
+}
 
 // static
 bool BaseType::IsSigned(int base_type) {
