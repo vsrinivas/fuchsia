@@ -7,31 +7,33 @@
 #ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_CHRONO
 #define ZIRCON_KERNEL_LIB_KTL_INCLUDE_CHRONO
 
-// libc++'s <atomic> includes this file.  The real libc++ implementation is
-// not kernel-friendly.  We just need enough declarations for the uses in
-// <atomic> to be harmless.  They are not used in the <ktl/atomic.h> subset.
+// libc++'s <atomic> includes this file via <__threading_support>.  The real
+// libc++ implementation contains pieces that are not kernel-friendly.  To wit,
+// they declare inline function returning floating-point types, which GCC does
+// not allow when floating-point code generation is disabled.
+//
+// The problematic portions of <chrono> are inside `#if _LIBCPP_STD_VER > 11`
+// conditionals.  The subset of the <chrono> API required for <atomic> does not
+// include anything post-C++11.  So the kernel can use the libc++ header if it
+// sees `_LIBCPP_STD_VER` as 11.  However, the other headers included by
+// <chrono> need to declare their full APIs.  So first `#include` all those
+// directly so they are evaluated with the normal `_LIBCPP_STD_VER` setting.
+// Then momentarily redefine `_LIBCPP_STD_VER` while including <chrono> itself.
 
-_LIBCPP_BEGIN_NAMESPACE_STD
+#include <__config>
+#include <__debug>
+#include <ctime>
+#include <limits>
+#include <ratio>
+#include <type_traits>
+#include <version>
 
-namespace chrono {
+#pragma push_macro("_LIBCPP_STD_VER")
+#undef _LIBCPP_STD_VER
+#define _LIBCPP_STD_VER 11
 
-struct nanoseconds {
-  nanoseconds() {}
-  template <typename T>
-  constexpr explicit nanoseconds(T) {}
-  static nanoseconds zero() { return {}; }
-  nanoseconds operator/(int);
-};
+#include_next <chrono>
 
-using microseconds = nanoseconds;
-using milliseconds = nanoseconds;
-using seconds = nanoseconds;
-
-template <class ToDuration>
-ToDuration duration_cast(nanoseconds);
-
-};  // namespace chrono
-
-_LIBCPP_END_NAMESPACE_STD
+#pragma pop_macro("_LIBCPP_STD_VER")
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_CHRONO
