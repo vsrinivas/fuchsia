@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use super::error::StreamError;
-use super::message::{Message, MAX_DATAGRAM_LEN};
+use super::message::Message;
 use crate::logs::stats::ComponentLogStats;
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
-    io::{self, AsyncRead},
+    io,
     lock::Mutex,
     ready,
     task::{Context, Poll},
@@ -24,7 +24,7 @@ pub struct LogMessageSocket {
     /// that hold these stats are dropped, so is the inspect node.
     stats: Arc<Mutex<ComponentLogStats>>,
     socket: fasync::Socket,
-    buffer: [u8; MAX_DATAGRAM_LEN],
+    buffer: Vec<u8>,
 }
 
 impl LogMessageSocket {
@@ -34,12 +34,7 @@ impl LogMessageSocket {
         stats: Arc<Mutex<ComponentLogStats>>,
         source: Arc<SourceIdentity>,
     ) -> Result<Self, io::Error> {
-        Ok(Self {
-            socket: fasync::Socket::from_socket(socket)?,
-            buffer: [0; MAX_DATAGRAM_LEN],
-            stats,
-            source,
-        })
+        Ok(Self { socket: fasync::Socket::from_socket(socket)?, buffer: Vec::new(), stats, source })
     }
 
     /// What we know of the identity of the writer of these logs.
@@ -53,20 +48,20 @@ impl Stream for LogMessageSocket {
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let &mut Self { ref mut socket, ref mut buffer, .. } = &mut *self;
-        let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
-
-        let parsed = if len > 0 {
-            let message = Message::from_logger(&buffer[..len]);
-            if let Ok(message) = &message {
-                let mut stats = self.stats.lock();
-                let component_log_stats = ready!(Pin::new(&mut stats).poll(cx));
-                component_log_stats.record_log(&message);
+        Poll::Ready(match ready!(Pin::new(socket).poll_datagram(cx, buffer)) {
+            Ok(_) => {
+                let res = Message::from_logger(buffer.as_slice());
+                buffer.clear();
+                if let Ok(message) = &res {
+                    let mut stats = self.stats.lock();
+                    let component_log_stats = ready!(Pin::new(&mut stats).poll(cx));
+                    component_log_stats.record_log(&message);
+                }
+                Some(res)
             }
-            Some(message)
-        } else {
-            None
-        };
-        Poll::Ready(parsed)
+            Err(zx::Status::PEER_CLOSED) => None,
+            Err(e) => Some(Err(StreamError::Io { source: e.into_io_error() })),
+        })
     }
 }
 
