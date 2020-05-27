@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "src/developer/feedback/crash_reports/config.h"
+#include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/crash_reports/settings.h"
 #include "src/developer/feedback/utils/inspect_node_manager.h"
 #include "src/developer/feedback/utils/inspect_protocol_stats.h"
@@ -38,8 +39,14 @@ class InspectManager {
   // Records the current size of the queue of pending reports.
   void SetQueueSize(uint64_t size);
 
+  // Updates stats related to fuchsia.feedback.CrashReportingProductRegister.
+  void UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update);
+
   // Updates stats related to fuchsia.feedback.CrashReporter.
   void UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update);
+
+  // Upserts the mapping component URL to Product that a client registered.
+  void UpsertComponentToProductMapping(const std::string& component_url, const Product& product);
 
   // Increase the total number of cleaned reports by |num_cleaned|.
   void IncreaseReportsCleanedBy(uint64_t num_cleaned);
@@ -130,6 +137,13 @@ class InspectManager {
     std ::string path_;
   };
 
+  // Inspect node for a single product.
+  struct Product {
+    inspect::StringProperty name;
+    inspect::StringProperty version;
+    inspect::StringProperty channel;
+  };
+
   InspectNodeManager node_manager_;
   const timekeeper::Clock& clock_;
 
@@ -137,10 +151,14 @@ class InspectManager {
   Settings settings_;
   Database database_;
   Queue queue_;
+  InspectProtocolStats crash_register_stats_;
   InspectProtocolStats crash_reporter_stats_;
 
   // Maps a local report ID to a |Report|.
   std::map<std::string, Report> reports_;
+
+  // Maps a component URL to a |Product|.
+  std::map<std::string, Product> component_to_products_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };

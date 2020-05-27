@@ -7,6 +7,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -16,10 +17,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/constants.h"
+#include "src/developer/feedback/crash_reports/errors.h"
+#include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/crash_reports/settings.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
 
@@ -38,6 +41,8 @@ using testing::IsEmpty;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
+
+constexpr char kComponentUrl[] = "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx";
 
 constexpr zx::time_utc kTime1(0);
 constexpr zx::time_utc kTime2((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
@@ -160,9 +165,8 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
 }
 
 TEST_F(InspectManagerTest, Succeed_AddReport_ProgramNameHasBackslashes) {
-  const std::string program_name = "fuchsia-pkg://fuchsia.com/foo_bar.cmx";
   clock_.Set(kTime1);
-  EXPECT_TRUE(inspect_manager_->AddReport(program_name, "local_report_id_1"));
+  EXPECT_TRUE(inspect_manager_->AddReport(kComponentUrl, "local_report_id_1"));
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -170,7 +174,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_ProgramNameHasBackslashes) {
           ChildrenMatch(Contains(AllOf(
               NodeMatches(NameMatches("reports")),
               ChildrenMatch(ElementsAre(AllOf(
-                  NodeMatches(NameMatches(program_name)),
+                  NodeMatches(NameMatches(kComponentUrl)),
                   ChildrenMatch(ElementsAre(NodeMatches(AllOf(
                       NameMatches("local_report_id_1"),
                       PropertyList(ElementsAre(StringIs("creation_time", kTime1Str)))))))))))))))));
@@ -457,6 +461,73 @@ TEST_F(InspectManagerTest, Check_CanAccessMultipleReportsForTheSameProgram) {
     EXPECT_TRUE(inspect_manager_->MarkReportAsUploaded(fxl::StringPrintf("local_report_id_%zu", i),
                                                        "server_report_id"));
   }
+}
+
+TEST_F(InspectManagerTest, UpsertComponentToProductMapping) {
+  // 1. We insert a product with all the fields set.
+  const Product product{.name = "some name",
+                        .version = ErrorOr<std::string>("some version"),
+                        .channel = ErrorOr<std::string>("some channel")};
+  inspect_manager_->UpsertComponentToProductMapping(kComponentUrl, product);
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("crash_register")),
+                                 ChildrenMatch(Contains(AllOf(
+                                     NodeMatches(NameMatches("mappings")),
+                                     ChildrenMatch(UnorderedElementsAreArray({
+                                         NodeMatches(AllOf(NameMatches(kComponentUrl),
+                                                           PropertyList(UnorderedElementsAreArray({
+                                                               StringIs("name", "some name"),
+                                                               StringIs("version", "some version"),
+                                                               StringIs("channel", "some channel"),
+                                                           })))),
+                                     })))))))));
+
+  // 2. We insert the same product under a different component URL.
+  const std::string another_component_url = std::string(kComponentUrl) + "2";
+  inspect_manager_->UpsertComponentToProductMapping(another_component_url, product);
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("crash_register")),
+                                 ChildrenMatch(Contains(AllOf(
+                                     NodeMatches(NameMatches("mappings")),
+                                     ChildrenMatch(UnorderedElementsAreArray({
+                                         NodeMatches(AllOf(NameMatches(kComponentUrl),
+                                                           PropertyList(UnorderedElementsAreArray({
+                                                               StringIs("name", "some name"),
+                                                               StringIs("version", "some version"),
+                                                               StringIs("channel", "some channel"),
+                                                           })))),
+                                         NodeMatches(AllOf(NameMatches(another_component_url),
+                                                           PropertyList(UnorderedElementsAreArray({
+                                                               StringIs("name", "some name"),
+                                                               StringIs("version", "some version"),
+                                                               StringIs("channel", "some channel"),
+                                                           })))),
+                                     })))))))));
+
+  // 3. We update the product under the first component URL with some missing fields.
+  const Product another_product{.name = "some other name",
+                                .version = ErrorOr<std::string>(Error::kMissingValue),
+                                .channel = ErrorOr<std::string>(Error::kMissingValue)};
+  inspect_manager_->UpsertComponentToProductMapping(kComponentUrl, another_product);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(AllOf(
+                  NodeMatches(NameMatches("crash_register")),
+                  ChildrenMatch(Contains(AllOf(
+                      NodeMatches(NameMatches("mappings")),
+                      ChildrenMatch(UnorderedElementsAreArray({
+                          NodeMatches(AllOf(NameMatches(kComponentUrl),
+                                            PropertyList(UnorderedElementsAreArray({
+                                                StringIs("name", "some other name"),
+                                                StringIs("version", ToReason(Error::kMissingValue)),
+                                                StringIs("channel", ToReason(Error::kMissingValue)),
+                                            })))),
+                          NodeMatches(AllOf(NameMatches(another_component_url),
+                                            PropertyList(UnorderedElementsAreArray({
+                                                StringIs("name", "some name"),
+                                                StringIs("version", "some version"),
+                                                StringIs("channel", "some channel"),
+                                            })))),
+                      })))))))));
 }
 
 }  // namespace

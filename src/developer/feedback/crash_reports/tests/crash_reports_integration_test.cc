@@ -28,12 +28,12 @@ class CrashReportsIntegrationTest : public testing::Test {
  public:
   void SetUp() override {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
+    environment_services_->Connect(crash_register_.NewRequest());
     environment_services_->Connect(crash_reporter_.NewRequest());
     fake_cobalt_ = std::make_unique<fakes::Cobalt>(environment_services_);
   }
 
  protected:
-  // Returns true if a response is received.
   void FileCrashReport() {
     fuchsia::feedback::CrashReport report;
     report.set_program_name("crashing_program");
@@ -43,13 +43,27 @@ class CrashReportsIntegrationTest : public testing::Test {
     EXPECT_TRUE(out_result.is_response());
   }
 
+  void RegisterProduct() {
+    fuchsia::feedback::CrashReportingProduct product;
+    product.set_name("some name");
+    product.set_version("some version");
+    product.set_channel("some channel");
+
+    EXPECT_EQ(crash_register_->Upsert("some/component/URL", std::move(product)), ZX_OK);
+  }
+
  private:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
+  fuchsia::feedback::CrashReportingProductRegisterSyncPtr crash_register_;
   fuchsia::feedback::CrashReporterSyncPtr crash_reporter_;
 
  protected:
   std::unique_ptr<fakes::Cobalt> fake_cobalt_;
 };
+
+// Smoke-tests the actual service for fuchsia.feedback.CrashReportingProductRegister, connecting
+// through FIDL.
+TEST_F(CrashReportsIntegrationTest, CrashRegister_SmokeTest) { RegisterProduct(); }
 
 // Smoke-tests the actual service for fuchsia.feedback.CrashReporter, connecting through FIDL.
 TEST_F(CrashReportsIntegrationTest, CrashReporter_SmokeTest) {

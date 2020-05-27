@@ -75,12 +75,22 @@ MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<InfoContext> info_context, Config config,
                          std::unique_ptr<CrashReporter> crash_reporter)
     : dispatcher_(dispatcher),
-      info_(std::move(info_context)),
+      info_(info_context),
       config_(std::move(config)),
+      crash_register_(info_context),
       crash_reporter_(std::move(crash_reporter)) {
   FX_CHECK(crash_reporter_);
 
   info_.ExposeConfig(config_);
+}
+
+void MainService::HandleCrashRegisterRequest(
+    ::fidl::InterfaceRequest<fuchsia::feedback::CrashReportingProductRegister> request) {
+  crash_register_connections_.AddBinding(
+      &crash_register_, std::move(request), dispatcher_, [this](const zx_status_t status) {
+        info_.UpdateCrashRegisterProtocolStats(&InspectProtocolStats::CloseConnection);
+      });
+  info_.UpdateCrashRegisterProtocolStats(&InspectProtocolStats::NewConnection);
 }
 
 void MainService::HandleCrashReporterRequest(

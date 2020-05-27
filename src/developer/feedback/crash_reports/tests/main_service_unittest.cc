@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crash_reports/main_service.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -131,12 +132,19 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
                   NodeMatches(NameMatches("reports")),
                   NodeMatches(NameMatches("queue")),
               }))),
-          AllOf(NodeMatches(NameMatches("fidl")), ChildrenMatch(ElementsAre(NodeMatches(AllOf(
-                                                      NameMatches("fuchsia.feedback.CrashReporter"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          UintIs("current_num_connections", 0u),
-                                                          UintIs("total_num_connections", 0u),
-                                                      }))))))))));
+          AllOf(NodeMatches(NameMatches("fidl")),
+                ChildrenMatch(UnorderedElementsAreArray({
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("current_num_connections", 0u),
+                                          UintIs("total_num_connections", 0u),
+                                      })))),
+                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                      PropertyList(UnorderedElementsAreArray({
+                                          UintIs("current_num_connections", 0u),
+                                          UintIs("total_num_connections", 0u),
+                                      })))),
+                }))))));
 }
 
 TEST_F(MainServiceTest, CrashReporter_CheckInspect) {
@@ -151,11 +159,11 @@ TEST_F(MainServiceTest, CrashReporter_CheckInspect) {
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("fidl")),
-          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          UintIs("current_num_connections", 3u),
-                                                          UintIs("total_num_connections", 3u),
-                                                      }))))))))));
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("current_num_connections", 3u),
+                                                       UintIs("total_num_connections", 3u),
+                                                   }))))))))));
 
   // Close 1 connection.
   crash_reporters[1].Unbind();
@@ -164,11 +172,11 @@ TEST_F(MainServiceTest, CrashReporter_CheckInspect) {
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("fidl")),
-          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          UintIs("current_num_connections", 2u),
-                                                          UintIs("total_num_connections", 3u),
-                                                      }))))))))));
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("current_num_connections", 2u),
+                                                       UintIs("total_num_connections", 3u),
+                                                   }))))))))));
 
   // Add 1 new connection.
   main_service_->HandleCrashReporterRequest(crash_reporters[3].NewRequest());
@@ -176,11 +184,11 @@ TEST_F(MainServiceTest, CrashReporter_CheckInspect) {
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("fidl")),
-          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          UintIs("current_num_connections", 3u),
-                                                          UintIs("total_num_connections", 4u),
-                                                      }))))))))));
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("current_num_connections", 3u),
+                                                       UintIs("total_num_connections", 4u),
+                                                   }))))))))));
 
   // Close remaining connections.
   crash_reporters[0].Unbind();
@@ -191,11 +199,66 @@ TEST_F(MainServiceTest, CrashReporter_CheckInspect) {
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("fidl")),
-          ChildrenMatch(ElementsAre(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                                      PropertyList(UnorderedElementsAreArray({
-                                                          UintIs("current_num_connections", 0u),
-                                                          UintIs("total_num_connections", 4u),
-                                                      }))))))))));
+          ChildrenMatch(Contains(NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
+                                                   PropertyList(UnorderedElementsAreArray({
+                                                       UintIs("current_num_connections", 0u),
+                                                       UintIs("total_num_connections", 4u),
+                                                   }))))))))));
+}
+
+TEST_F(MainServiceTest, CrashRegister_CheckInspect) {
+  const size_t kNumConnections = 4;
+  fuchsia::feedback::CrashReportingProductRegisterSyncPtr crash_registers[kNumConnections];
+
+  // Add 3 new connections.
+  main_service_->HandleCrashRegisterRequest(crash_registers[0].NewRequest());
+  main_service_->HandleCrashRegisterRequest(crash_registers[1].NewRequest());
+  main_service_->HandleCrashRegisterRequest(crash_registers[2].NewRequest());
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("fidl")),
+                                 ChildrenMatch(Contains(NodeMatches(AllOf(
+                                     NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                     PropertyList(UnorderedElementsAreArray({
+                                         UintIs("current_num_connections", 3u),
+                                         UintIs("total_num_connections", 3u),
+                                     }))))))))));
+
+  // Close 1 connection.
+  crash_registers[1].Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("fidl")),
+                                 ChildrenMatch(Contains(NodeMatches(AllOf(
+                                     NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                     PropertyList(UnorderedElementsAreArray({
+                                         UintIs("current_num_connections", 2u),
+                                         UintIs("total_num_connections", 3u),
+                                     }))))))))));
+
+  // Add 1 new connection.
+  main_service_->HandleCrashRegisterRequest(crash_registers[3].NewRequest());
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("fidl")),
+                                 ChildrenMatch(Contains(NodeMatches(AllOf(
+                                     NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                     PropertyList(UnorderedElementsAreArray({
+                                         UintIs("current_num_connections", 3u),
+                                         UintIs("total_num_connections", 4u),
+                                     }))))))))));
+
+  // Close remaining connections.
+  crash_registers[0].Unbind();
+  crash_registers[2].Unbind();
+  crash_registers[3].Unbind();
+  RunLoopUntilIdle();
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                 NodeMatches(NameMatches("fidl")),
+                                 ChildrenMatch(Contains(NodeMatches(AllOf(
+                                     NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
+                                     PropertyList(UnorderedElementsAreArray({
+                                         UintIs("current_num_connections", 0u),
+                                         UintIs("total_num_connections", 4u),
+                                     }))))))))));
 }
 
 }  // namespace

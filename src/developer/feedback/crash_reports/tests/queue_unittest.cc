@@ -5,6 +5,7 @@
 #include "src/developer/feedback/crash_reports/queue.h"
 
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -12,7 +13,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crash_reports/constants.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/settings.h"

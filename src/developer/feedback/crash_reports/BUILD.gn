@@ -88,6 +88,7 @@ source_set("main_service") {
 
   public_deps = [
     ":config",
+    ":crash_register",
     ":crash_reporter",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
@@ -125,6 +126,24 @@ source_set("constants") {
   sources = [ "constants.h" ]
 
   visibility = [ "//src/developer/feedback/crash_reports/*" ]
+}
+
+source_set("crash_register") {
+  sources = [
+    "crash_register.cc",
+    "crash_register.h",
+  ]
+
+  public_deps = [
+    ":product",
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/crash_reports/info",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
+  ]
 }
 
 source_set("crash_reporter") {
@@ -231,6 +250,12 @@ source_set("privacy_settings_ptr") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
   ]
+}
+
+source_set("product") {
+  sources = [ "product.h" ]
+
+  public_deps = [ "//src/developer/feedback/utils:errors" ]
 }
 
 source_set("queue") {

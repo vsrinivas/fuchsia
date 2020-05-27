@@ -44,6 +44,13 @@ int main(int argc, const char** argv) {
           [&main_service](::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
             main_service->HandleCrashReporterRequest(std::move(request));
           }));
+  // fuchsia.feedback.CrashReportingProductRegister
+  context->outgoing()->AddPublicService(
+      ::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReportingProductRegister>(
+          [&main_service](
+              ::fidl::InterfaceRequest<fuchsia::feedback::CrashReportingProductRegister> request) {
+            main_service->HandleCrashRegisterRequest(std::move(request));
+          }));
 
   loop.Run();
 

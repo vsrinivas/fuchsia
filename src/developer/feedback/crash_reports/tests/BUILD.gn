@@ -40,6 +40,9 @@ group("tests") {
 test_package("crash-reports-tests") {
   tests = [
     {
+      name = "crash_register_unittest"
+    },
+    {
       name = "crash_reporter_unittest"
     },
     {
@@ -153,6 +156,7 @@ test_package("crash-reports-tests") {
 
   deps = [
     ":config_unittest",
+    ":crash_register_unittest",
     ":crash_reporter_unittest",
     ":crash_reports_integration_test",
     ":database_unittest",
@@ -176,6 +180,26 @@ executable("config_unittest") {
   deps = [
     "//src/developer/feedback/crash_reports:config",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("crash_register_unittest") {
+  testonly = true
+
+  sources = [ "crash_register_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/crash_reports:crash_register",
+    "//src/developer/feedback/crash_reports/info",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 }
@@ -247,6 +271,7 @@ executable("main_service_unittest") {
   sources = [ "main_service_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:constants",
@@ -305,6 +330,7 @@ executable("inspect_manager_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/crash_reports:constants",
+    "//src/developer/feedback/crash_reports:errors",
     "//src/developer/feedback/crash_reports/info:inspect_manager",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/fxl",
@@ -347,7 +373,7 @@ executable("queue_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crash_reports:constants",
     "//src/developer/feedback/crash_reports:queue",
-    "//src/developer/feedback/crash_reports/info:info",
+    "//src/developer/feedback/crash_reports/info",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",

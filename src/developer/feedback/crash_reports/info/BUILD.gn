@@ -7,6 +7,8 @@
 ###############################################################################
 source_set("info") {
   sources = [
+    "crash_register_info.cc",
+    "crash_register_info.h",
     "crash_reporter_info.cc",
     "crash_reporter_info.h",
     "database_info.cc",
@@ -23,6 +25,7 @@ source_set("info") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/crash_reports:config",
+    "//src/developer/feedback/crash_reports:product",
     "//src/developer/feedback/crash_reports:settings",
     "//src/developer/feedback/utils:inspect_protocol_stats",
     "//src/developer/feedback/utils/cobalt",
@@ -43,6 +46,8 @@ source_set("inspect_manager") {
   public_deps = [
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/crash_reports:config",
+    "//src/developer/feedback/crash_reports:errors",
+    "//src/developer/feedback/crash_reports:product",
     "//src/developer/feedback/crash_reports:settings",
     "//src/developer/feedback/utils:inspect_node_manager",
     "//src/lib/fxl",

@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crash_reports/config.h"
+#include "src/developer/feedback/crash_reports/crash_register.h"
 #include "src/developer/feedback/crash_reports/crash_reporter.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/info/main_service_info.h"
@@ -41,6 +42,9 @@ class MainService {
 
   // FIDL protocol handlers.
   //
+  // fuchsia.feedback.CrashReportingProductRegister
+  void HandleCrashRegisterRequest(
+      ::fidl::InterfaceRequest<fuchsia::feedback::CrashReportingProductRegister> request);
   // fuchsia.feedback.CrashReporter
   void HandleCrashReporterRequest(
       ::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request);
@@ -53,6 +57,9 @@ class MainService {
   async_dispatcher_t* dispatcher_;
   MainServiceInfo info_;
   const Config config_;
+
+  CrashRegister crash_register_;
+  ::fidl::BindingSet<fuchsia::feedback::CrashReportingProductRegister> crash_register_connections_;
 
   std::unique_ptr<CrashReporter> crash_reporter_;
   ::fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_connections_;

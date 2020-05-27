@@ -17,6 +17,10 @@ void MainServiceInfo::ExposeConfig(const feedback::Config& config) {
   context_->InspectManager().ExposeConfig(config);
 }
 
+void MainServiceInfo::UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update) {
+  context_->InspectManager().UpdateCrashRegisterProtocolStats(update);
+}
+
 void MainServiceInfo::UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update) {
   context_->InspectManager().UpdateCrashReporterProtocolStats(update);
 }

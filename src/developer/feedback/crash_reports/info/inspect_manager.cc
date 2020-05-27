@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "src/developer/feedback/crash_reports/constants.h"
+#include "src/developer/feedback/crash_reports/errors.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
@@ -44,6 +45,7 @@ InspectManager::Report::Report(const std::string& program_name,
 InspectManager::InspectManager(inspect::Node* root_node, const timekeeper::Clock& clock)
     : node_manager_(root_node),
       clock_(clock),
+      crash_register_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister"),
       crash_reporter_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReporter") {
   node_manager_.Get("/config/crash_server");
   node_manager_.Get("/crash_reporter/database");
@@ -158,6 +160,10 @@ void InspectManager::SetQueueSize(const uint64_t size) {
   }
 }
 
+void InspectManager::UpdateCrashRegisterProtocolStats(InspectProtocolStatsUpdateFn update) {
+  std::invoke(update, crash_register_stats_);
+}
+
 void InspectManager::UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdateFn update) {
   std::invoke(update, crash_reporter_stats_);
 }
@@ -199,6 +205,23 @@ void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
   database_.max_crashpad_database_size_in_kb =
       node_manager_.Get("/crash_reporter/database")
           .CreateUint("max_crashpad_database_size_in_kb", max_crashpad_database_size_in_kb);
+}
+
+void InspectManager::UpsertComponentToProductMapping(const std::string& component_url,
+                                                     const feedback::Product& product) {
+  const std::string path =
+      JoinPath("/crash_register/mappings", InspectNodeManager::SanitizeString(component_url));
+  inspect::Node& node = node_manager_.Get(path);
+
+  component_to_products_[component_url] = Product{
+      .name = node.CreateString("name", product.name),
+      .version = node.CreateString("version", product.version.HasValue()
+                                                  ? product.version.Value()
+                                                  : ToReason(product.version.Error())),
+      .channel = node.CreateString("channel", product.channel.HasValue()
+                                                  ? product.channel.Value()
+                                                  : ToReason(product.channel.Error())),
+  };
 }
 
 }  // namespace feedback
