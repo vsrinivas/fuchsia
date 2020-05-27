@@ -42,9 +42,6 @@ static_assert(MAX_OPS_PER_PAGE_DEF == MAX_OPS_PER_PAGE,
 typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t aux,
                                memmov_ops_t* ops, void* new_kernel_addr);
 
-// Save the crashlog for propagation to the next kernel.
-void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo);
-
 /* Allow the platform to patch the zbi structure with any platform specific
  * data that might be necessary for the kernel that mexec is chain-loading.
  */

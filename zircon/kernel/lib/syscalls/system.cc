@@ -7,6 +7,7 @@
 #include <align.h>
 #include <debug.h>
 #include <lib/cmdline.h>
+#include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
 #include <mexec.h>
@@ -247,9 +248,6 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
   return ZX_OK;
 }
 
-static fbl::RefPtr<VmObject> stashed_crashlog;
-void mexec_stash_crashlog(fbl::RefPtr<VmObject> vmo) { stashed_crashlog = ktl::move(vmo); }
-
 // zx_status_t zx_system_mexec_payload_get
 zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void> user_buffer,
                                          size_t buffer_size) {
@@ -288,6 +286,8 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
     return result;
   }
 
+  // Propagate any stashed crashlog to the next kernel.
+  const fbl::RefPtr<VmObject> stashed_crashlog = crashlog_get_stashed();
   if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
     size_t crashlog_len = stashed_crashlog->size();
     uint8_t* bootdata_section;

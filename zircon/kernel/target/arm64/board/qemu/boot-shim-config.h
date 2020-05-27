@@ -7,6 +7,7 @@
 #define HAS_DEVICE_TREE 1
 #define USE_DEVICE_TREE_CPU_COUNT 1
 #define USE_DEVICE_TREE_GIC_VERSION 1
+#define USE_DEVICE_TREE_TOP_OF_RAM 1
 #define PRINT_DEVICE_TREE 0
 // leave the kernel in place where the ZBI was placed to save some boot
 // time on KVM hosted qemu machines
@@ -97,12 +98,28 @@ static void add_cpu_topology(zbi_header_t* zbi) {
                    &nodes, sizeof(zbi_topology_node_t) * cpu_count);
 }
 
+static uint64_t top_of_ram;
+
+static void set_top_of_ram(uint64_t top) {
+  if (top > top_of_ram) {
+    top_of_ram = top;
+  }
+}
+
 static void append_board_boot_item(zbi_header_t* bootdata) {
   add_cpu_topology(bootdata);
 
   // add memory configuration
   append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
                    sizeof(zbi_mem_range_t) * countof(mem_config));
+
+  // add some "nvram" for storing the crashlog
+  const uint64_t crashlog_length = 0x10000;
+  const zbi_nvram_t crashlog = {
+      .base = top_of_ram - crashlog_length,
+      .length = crashlog_length,
+  };
+  append_boot_item(bootdata, ZBI_TYPE_NVRAM, 0, &crashlog, sizeof(crashlog));
 
   // add kernel drivers
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, &uart_driver,

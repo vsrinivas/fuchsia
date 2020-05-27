@@ -9,6 +9,8 @@
 
 #include <zircon/boot/crash-reason.h>
 
+#include <vm/vm_object.h>
+
 #if defined(__aarch64__)
 
 #include <arch/arm64.h>
@@ -30,5 +32,11 @@ extern crashlog_t crashlog;
 // is OOM, then a different preamble will be used, and the backtrace will not be
 // included.
 size_t crashlog_to_string(char* out, const size_t len, zircon_crash_reason_t reason);
+
+// Stash the recovered crashlog for later retrieval with |crashlog_get_stashed|.
+void crashlog_stash(fbl::RefPtr<VmObject> crashlog);
+
+// Returns the previously stashed recovered crashlog, or nullptr.
+fbl::RefPtr<VmObject> crashlog_get_stashed();
 
 #endif  // ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_

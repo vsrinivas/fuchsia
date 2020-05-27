@@ -189,6 +189,9 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
 #if USE_DEVICE_TREE_GIC_VERSION
   set_gic_version(ctx->gic_version);
 #endif
+#if USE_DEVICE_TREE_TOP_OF_RAM
+  set_top_of_ram(ctx->memory_base + ctx->memory_size);
+#endif
 
   // Use the device tree initrd as the ZBI.
   return (void*)ctx->initrd_start;

@@ -64,6 +64,7 @@ if (is_kernel) {
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/crashlog",
       "$zx/kernel/lib/crypto",
       "$zx/kernel/lib/fbl",
       "$zx/kernel/lib/gfxconsole",

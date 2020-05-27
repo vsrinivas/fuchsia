@@ -9,6 +9,7 @@
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
+#include <lib/crashlog.h>
 #include <lib/elf-psabi/sp.h>
 #include <lib/instrumentation/vmo.h>
 #include <lib/userabi/rodso.h>
@@ -164,7 +165,11 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
   }
 
   crashlog_vmo->set_name(kCrashlogVmoName, sizeof(kCrashlogVmoName) - 1);
-  mexec_stash_crashlog(crashlog_vmo);
+
+  // Stash the recovered crashlog so that it may be propagated to the next
+  // kernel instance in case we later mexec.
+  crashlog_stash(crashlog_vmo);
+
   *out = ktl::move(crashlog_vmo);
   *out_size = size;
 
