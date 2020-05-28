@@ -197,6 +197,7 @@ synstructure = "0.12.1"
 tar = "0.4.25"
 termios = "0.3.2"
 tokio = "0.1.22"
+zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 
 # For crates that we don't want to vendor, create a dummy package in tiny_mirrors/ (see existing
 # examples).

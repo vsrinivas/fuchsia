@@ -723,6 +723,11 @@ group("xml-rs") {
   deps = [ ":xml-rs-v0_8_0" ]
 }
 
+if (!is_fuchsia) {
+  group("zip") {
+    deps = [ ":zip-v0_5_5" ]
+  }
+}
 rust_library("adler32-v1_0_4") {
   crate_name = "adler32"
   crate_root = "//third_party/rust_crates/vendor/adler32/src/lib.rs"
@@ -5341,6 +5346,27 @@ rust_library("png-v0_14_0") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"deflate\"",
     "--cfg=feature=\"png-encoding\"",
+  ]
+}
+
+rust_library("podio-v0_1_6") {
+  crate_name = "podio"
+  crate_root = "//third_party/rust_crates/vendor/podio/src/lib.rs"
+  output_name = "podio-9f03c94555630577"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=9f03c94555630577",
+    "-Cextra-filename=-9f03c94555630577",
   ]
 }
 
@@ -10282,5 +10308,31 @@ rust_library("xml-rs-v0_8_0") {
     "--edition=2015",
     "-Cmetadata=b4c35f2449a37a92",
     "-Cextra-filename=-b4c35f2449a37a92",
+  ]
+}
+
+rust_library("zip-v0_5_5") {
+  crate_name = "zip"
+  crate_root = "//third_party/rust_crates/vendor/zip/src/lib.rs"
+  output_name = "zip-ac1fb914318fbe66"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":crc32fast-v1_2_0" ]
+  deps += [ ":flate2-v1_0_14" ]
+  deps += [ ":podio-v0_1_6" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=ac1fb914318fbe66",
+    "-Cextra-filename=-ac1fb914318fbe66",
+    "--cfg=feature=\"deflate\"",
+    "--cfg=feature=\"flate2\"",
   ]
 }
