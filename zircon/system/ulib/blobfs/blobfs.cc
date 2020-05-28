@@ -27,6 +27,7 @@
 
 #include <blobfs/compression-settings.h>
 #include <blobfs/fsck.h>
+#include <block-client/cpp/pass-through-read-only-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
@@ -200,6 +201,15 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
           FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
           return status;
         }
+        {
+          // Change to true to enable fsck at the end of every transaction, which is useful to check
+          // that every transaction leaves the file system in a consistent state.
+          bool fsck_at_end_of_every_transaction = false;
+          if (fsck_at_end_of_every_transaction) {
+            fs->journal_->set_write_metadata_callback(
+                fit::bind_member(fs.get(), &Blobfs::FsckAtEndOfTransaction));
+          }
+        }
         break;
       case blobfs::Writability::ReadOnlyFilesystem:
         // Journal uninitialized.
@@ -218,7 +228,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   // Validate the FVM after replaying the journal.
-  status = CheckFvmConsistency(&fs->info_, fs->Device());
+  status = CheckFvmConsistency(&fs->info_, fs->Device(),
+                               /*repair=*/options->writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: FVM info check failed\n");
     return status;
@@ -899,6 +910,22 @@ zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t
   }
 
   return status;
+}
+
+void Blobfs::FsckAtEndOfTransaction(zx_status_t status) {
+  if (status == ZX_OK) {
+    std::scoped_lock lock(fsck_at_end_of_transaction_mutex_);
+    auto device =
+        std::make_unique<block_client::PassThroughReadOnlyBlockDevice>(block_device_.get());
+    MountOptions options;
+    options.writability = Writability::ReadOnlyDisk;
+    ZX_ASSERT(Fsck(std::move(device), &options) == ZX_OK);
+  }
+}
+
+zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& operations) {
+  std::shared_lock lock(fsck_at_end_of_transaction_mutex_);
+  return TransactionManager::RunRequests(operations);
 }
 
 }  // namespace blobfs

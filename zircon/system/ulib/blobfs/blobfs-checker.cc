@@ -124,12 +124,8 @@ zx_status_t BlobfsChecker::Check() {
   return CheckAllocatedCounts();
 }
 
-BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs)
-    : blobfs_(std::move(blobfs)),
-      alloc_inodes_(0),
-      alloc_blocks_(0),
-      error_blobs_(0),
-      inode_blocks_(0) {}
+BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options options)
+    : blobfs_(std::move(blobfs)), options_(options) {}
 
 zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
 #ifdef __Fuchsia__
@@ -143,7 +139,7 @@ zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
     }
   }
 
-  status = CheckFvmConsistency(&blobfs_->Info(), blobfs_->Device());
+  status = CheckFvmConsistency(&blobfs_->Info(), blobfs_->Device(), options_.repair);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Inconsistent metadata does not match FVM: %d\n", status);
     return status;
@@ -153,7 +149,7 @@ zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
 }
 
 #ifdef __Fuchsia__
-zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device) {
+zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, bool repair) {
   if ((info->flags & kBlobFlagFVM) == 0) {
     return ZX_OK;
   }
@@ -211,7 +207,7 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device) {
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    if (fvm_count > blobfs_count) {
+    if (fvm_count > blobfs_count && repair) {
       // If FVM reports more slices than we expect, try to free remainder.
       uint64_t offset = start_slices[i] + blobfs_count;
       uint64_t length = fvm_count - blobfs_count;

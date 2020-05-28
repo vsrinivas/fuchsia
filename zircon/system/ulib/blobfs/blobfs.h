@@ -20,6 +20,7 @@
 #include <lib/zx/vmo.h>
 
 #include <memory>
+#include <shared_mutex>
 
 #include <bitmap/raw-bitmap.h>
 #include <blobfs/common.h>
@@ -195,6 +196,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   BlobLoader& loader() { return loader_; }
 
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override;
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -268,6 +271,10 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Updates the flags field in superblock.
   void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);
 
+  // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
+  // to be sure that all transactions leave the file system in a good state.
+  void FsckAtEndOfTransaction(zx_status_t status);
+
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
 
@@ -303,6 +310,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   bool paging_enabled_ = false;
 
   BlobLoader loader_;
+  std::shared_mutex fsck_at_end_of_transaction_mutex_;
 };
 
 }  // namespace blobfs

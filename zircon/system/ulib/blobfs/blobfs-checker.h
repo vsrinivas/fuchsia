@@ -17,7 +17,17 @@ namespace blobfs {
 
 class BlobfsChecker {
  public:
-  explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs);
+  struct Options {
+    // If true, repair simple issues.
+    bool repair = true;
+  };
+
+  explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs)
+      : BlobfsChecker(std::move(blobfs), {}) {}
+  explicit BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options option);
+
+  BlobfsChecker(const BlobfsChecker&) = delete;
+  BlobfsChecker& operator =(const BlobfsChecker&) = delete;
 
   // Initialize validates the underlying FVM partition and optionally replays the journal.
   zx_status_t Initialize(bool apply_journal);
@@ -28,12 +38,12 @@ class BlobfsChecker {
   zx_status_t Check();
 
  private:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsChecker);
   std::unique_ptr<Blobfs> blobfs_;
   uint32_t alloc_inodes_ = 0;
   uint32_t alloc_blocks_ = 0;
   uint32_t error_blobs_ = 0;
   uint32_t inode_blocks_ = 0;
+  const Options options_;
 
   void TraverseInodeBitmap();
   void TraverseBlockBitmap();
@@ -45,7 +55,7 @@ class BlobfsChecker {
 // volume manager.
 //
 // If the results are inconsistent, update the FVM's allocation accordingly.
-zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device);
+zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, bool repair);
 #endif  // __Fuchsia__
 
 }  // namespace blobfs

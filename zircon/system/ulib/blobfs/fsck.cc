@@ -31,7 +31,11 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
     FS_TRACE_ERROR("blobfs: Cannot create filesystem for checking\n");
     return status;
   }
-  BlobfsChecker checker(std::move(blobfs));
+  BlobfsChecker::Options checker_options;
+  if (options->writability == Writability::ReadOnlyDisk) {
+    checker_options.repair = false;
+  }
+  BlobfsChecker checker(std::move(blobfs), checker_options);
 
   // Apply writeback and validate FVM data before walking the contents of the filesystem.
   status = checker.Initialize(options->journal);
