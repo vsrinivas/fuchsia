@@ -78,7 +78,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_no_selectors() {
         let command = SelectorsCommand { manifest_name: None, selectors: vec![] };
-        matches!(command.execute().await, Err(Error::InvalidArguments(_)));
+        assert!(matches!(command.execute().await, Err(Error::InvalidArguments(_))));
     }
 
     #[fasync::run_singlethreaded(test)]

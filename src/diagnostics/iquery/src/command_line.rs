@@ -50,10 +50,6 @@ macro_rules! execute_and_format {
                     }
                 }
             )*
-            _ => {
-                // TODO(fxbug.dev/45458): implement the rest of commands
-                unimplemented!()
-            }
         }
     }
 }
@@ -63,7 +59,7 @@ impl Command for CommandLine {
     type Result = ();
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        execute_and_format!(self, [List, Selectors, Show]);
+        execute_and_format!(self, [List, Selectors, Show, ShowFile]);
         Ok(())
     }
 }

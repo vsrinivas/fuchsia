@@ -23,6 +23,9 @@ pub enum Error {
 
     #[error("Failed formatting the command response: {}", _0)]
     InvalidCommandResponse(serde_json::Error),
+
+    #[error("Failed parsing glob {}: {}", _0, _1)]
+    ParsePath(String, anyhow::Error),
 }
 
 impl Error {

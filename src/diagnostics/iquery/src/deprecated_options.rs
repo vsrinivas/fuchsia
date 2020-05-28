@@ -311,14 +311,4 @@ mod tests {
         assert!(options.recursive);
         assert_eq!(options.path, vec![tmpfile.to_string_lossy().to_string()]);
     }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn parse_report_unknown_path() {
-        let opts = "iquery --report PATH".split(" ").into_iter().map(|s| s.to_string());
-        let result = DeprecatedOptions::read(opts.into_iter()).await;
-        match result {
-            Err(OptionsReadError::AllLocationsError(_)) => {}
-            r => panic!("unexpected result: {:?}", r),
-        }
-    }
 }

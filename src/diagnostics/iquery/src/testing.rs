@@ -41,7 +41,7 @@ pub async fn start_test_component(env_label: &str) -> Result<(NestedEnvironment,
 pub fn assert_result<T: Serialize>(result: T, expected: &str) {
     let result = serde_json::to_string_pretty(&result).expect("result is json");
     let result: serde_json::Value =
-        serde_json::from_str(&cleanup_timestamps(result)).expect("cleaned result is json");
+        serde_json::from_str(&cleanup_variable_strings(result)).expect("cleaned result is json");
     let expected: serde_json::Value = serde_json::from_str(expected).expect("expected is json");
     assert_eq!(result, expected);
 }
@@ -72,9 +72,15 @@ async fn wait_for_out_ready(app: &App) -> Result<(), Error> {
     }
 }
 
-/// Cleans-up instances of `"start_timestamp_nanos": 7762005786231` by
-/// `"start_timestamp_nanos": TIMESTAMP`
-fn cleanup_timestamps(string: String) -> String {
+/// Cleans-up instances of:
+/// - `"start_timestamp_nanos": 7762005786231` by `"start_timestamp_nanos": TIMESTAMP`
+/// - instance ids by INSTANCE_ID
+fn cleanup_variable_strings(string: String) -> String {
+    // Replace start_timestamp_nanos in fuchsia.inspect.Health entries.
     let re = Regex::new("\"start_timestamp_nanos\": \\d+").unwrap();
-    re.replace_all(&string, "\"start_timestamp_nanos\": \"TIMESTAMP\"").to_string()
+    let string = re.replace_all(&string, "\"start_timestamp_nanos\": \"TIMESTAMP\"").to_string();
+
+    // Replace instance IDs in paths.
+    let re = Regex::new("/\\d+/").unwrap();
+    re.replace_all(&string, "/INSTANCE_ID/").to_string()
 }

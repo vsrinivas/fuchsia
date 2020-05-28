@@ -54,7 +54,6 @@ impl Command for ShowCommand {
         }
 
         // TODO(fxbug.dev/45458): support filtering per manifest name.
-        // TODO(fxbug.dev/45458): support printing in TEXT.
         let mut results = utils::fetch_data(&self.selectors)
             .await?
             .into_iter()
@@ -73,7 +72,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_no_selectors() {
         let command = ShowCommand { manifest_name: None, selectors: vec![] };
-        matches!(command.execute().await, Err(Error::InvalidArguments(_)));
+        assert!(matches!(command.execute().await, Err(Error::InvalidArguments(_))));
     }
 
     #[fasync::run_singlethreaded(test)]
