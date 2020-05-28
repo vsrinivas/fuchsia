@@ -70,10 +70,11 @@ class FakeSessionShell : public modular_testing::FakeComponent {
     session_shell_impl_.set_detach_delay(std::move(detach_delay));
   }
 
- private:
+ protected:
   // |modular_testing::FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
+ private:
   modular_testing::SessionShellImpl session_shell_impl_;
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
