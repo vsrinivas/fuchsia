@@ -146,23 +146,44 @@ participate in the test. See [below](#unit-tests) for templates that specialize
 in unit testing.
 
 ```gn
-import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/components.gni")
+
+executable("my_test") {
+  sources = [ "my_test.cc" ]
+  testonly = true
+}
 
 fuchsia_component("my-test-component") {
   testonly = true
-  ...
+  manifest = "meta/my_test.cmx"
+  resources = [
+    {
+      source = "$root_out_dir/my_test"
+      destination = "bin/my_test"
+    }
+  ]
+  deps = [ ":my_test" ]
+}
+
+executable("my_program_under_test") {
+  sources = [ "my_program_under_test.cc" ]
 }
 
 fuchsia_component("my-other-component-under-test") {
-  ...
+  manifest = "meta/my_component_under_test.cmx"
+  resources = [
+    {
+      source = "$root_out_dir/my_program_under_test"
+      destination = "bin/my_program_under_test"
+    }
+  ]
+  deps = [ ":my_program_under_test" ]
 }
 
 fuchsia_test_package("my-integration-test") {
   tests = [ ":my-test-component" ]
   components = [ ":my-other-component-under-test" ]
-  environments = [
-    vim2_env,
-  ]
+  environments = [ vim2_env ]
 }
 
 group("tests") {
@@ -269,7 +290,7 @@ them.
    * {Rust}
 
    ```gn
-   import("//src/sys/build/fuchsia_cpp_unittest.gni")
+   import("//src/sys/build/components.gni")
 
    fuchsia_rust_unittest("my-unittest") {
      # Alternatively put sources under `src/` and remove the line above
@@ -330,6 +351,8 @@ depend on them. For this, use
 {% verbatim %}
 
 ```gn
+import("//src/sys/build/components.gni")
+
 fuchsia_resources("roboto_family") {
   sources = [
     "Roboto-Black.ttf",
