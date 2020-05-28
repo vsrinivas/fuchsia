@@ -170,7 +170,7 @@ bool EmptyPartitionRecoveryTest() {
   // Second, wait for the data partition to be formatted.
   char data_path[PATH_MAX];
   snprintf(data_path, sizeof(data_path), "%s/zxcrypt/unsealed/block", fvm_block_path);
-  EXPECT_TRUE(recovery->WaitForDiskFormat(data_path, DISK_FORMAT_MINFS, zx::duration(zx::sec(5))));
+  EXPECT_TRUE(recovery->WaitForDiskFormat(data_path, DISK_FORMAT_MINFS, zx::duration(zx::sec(10))));
 
   END_TEST;
 }
