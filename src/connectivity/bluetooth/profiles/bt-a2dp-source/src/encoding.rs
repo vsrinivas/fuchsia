@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{format_err, Context as _, Error};
 use bitfield::bitfield;
 use bt_a2dp as a2dp;
 use fidl_fuchsia_media::{AudioFormat, AudioUncompressedFormat, DomainFormat, PcmFormat};
+use fuchsia_async as fasync;
 use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
+use fuchsia_syslog::fx_log_info;
 use fuchsia_trace as trace;
+use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
     io::AsyncWrite,
     stream::BoxStream,
     task::{Context, Poll},
-    Stream, StreamExt,
+    FutureExt, Stream, StreamExt,
 };
 use std::{collections::VecDeque, pin::Pin};
-
-use fuchsia_syslog::fx_log_info;
 
 pub struct RtpPacketBuilder {
     /// The number of frames to be included in each packet
@@ -103,6 +104,11 @@ pub struct EncodedStream {
 }
 
 impl EncodedStream {
+    /// Build a new EncodedStream which produces encoded frames from the given `source`.
+    /// Returns an error if codec setup fails. Successfully building a EncodedStream does not
+    /// guarantee that the system can encode - many errors can only be detected once encoding
+    /// is attempted.  EncodedStream produces a Some(Err) result in these cases.  It is
+    /// recommended to confirm that the system can encode using `EncodedStream::test()` first.
     pub fn build(
         input_format: PcmFormat,
         source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
@@ -131,6 +137,27 @@ impl EncodedStream {
             encoder_input_cursor: 0,
             pcm_bytes_per_encoded_packet,
         })
+    }
+
+    /// Run a preliminary test for a encoding audio in `input_format` into the codec `config`.
+    pub async fn test(
+        input_format: PcmFormat,
+        config: &a2dp::codec::MediaCodecConfig,
+    ) -> Result<(), Error> {
+        let silence_source = SilenceStream::build(input_format.clone());
+        let mut encoder = EncodedStream::build(input_format, silence_source.boxed(), config)
+            .context("Building encoder")?;
+        match encoder.next().await {
+            Some(Ok(encoded_frame)) => {
+                if encoded_frame.is_empty() {
+                    Err(format_err!("Encoded frame was empty"))
+                } else {
+                    Ok(())
+                }
+            }
+            Some(Err(e)) => Err(e),
+            None => Err(format_err!("SBC encoder ended stream")),
+        }
     }
 }
 
@@ -183,16 +210,52 @@ impl Stream for EncodedStream {
     }
 }
 
+const PCM_SAMPLE_SIZE: usize = 2;
+
+struct SilenceStream {
+    pcm_format: PcmFormat,
+    next_frame_timer: fasync::Timer,
+    /// the last time we delivered frames.
+    last_frame_time: Option<zx::Time>,
+}
+
+impl futures::Stream for SilenceStream {
+    type Item = fuchsia_audio_device_output::Result<Vec<u8>>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let now = zx::Time::get(zx::ClockId::Monotonic);
+        if self.last_frame_time.is_none() {
+            self.last_frame_time = Some(now - 1.second());
+        }
+        let last_time = self.last_frame_time.as_ref().unwrap().clone();
+        let repeats = (now - last_time).into_seconds();
+        if repeats == 0 {
+            self.next_frame_timer = fasync::Timer::new((last_time + 1.second()).into());
+            let poll = self.next_frame_timer.poll_unpin(cx);
+            assert_eq!(Poll::Pending, poll);
+            return Poll::Pending;
+        }
+        // Generate one second of silence.
+        let pcm_frame_size = self.pcm_format.channel_map.len() * PCM_SAMPLE_SIZE;
+        let buffer = vec![0; self.pcm_format.frames_per_second as usize * pcm_frame_size];
+        self.last_frame_time = Some(last_time + 1.second());
+        Poll::Ready(Some(Ok(buffer)))
+    }
+}
+
+impl SilenceStream {
+    fn build(pcm_format: PcmFormat) -> Self {
+        Self {
+            pcm_format,
+            next_frame_timer: fasync::Timer::new(fasync::Time::INFINITE_PAST),
+            last_frame_time: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use bt_avdtp as avdtp;
-    use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode};
-    use fuchsia_async::{self as fasync};
-    use fuchsia_zircon::{self as zx, DurationNum};
-    use futures::FutureExt;
-    use std::convert::TryFrom;
 
     #[test]
     fn test_packet_builder_sbc() {
@@ -239,112 +302,5 @@ mod tests {
 
         assert_eq!(expected.len(), result.len());
         assert_eq!(expected, &result[0..expected.len()]);
-    }
-
-    struct SilenceStream {
-        pcm_format: PcmFormat,
-        next_frame_timer: fasync::Timer,
-        /// the last time we delivered frames.
-        last_frame_time: Option<zx::Time>,
-    }
-
-    const PCM_SAMPLE_SIZE: usize = 2;
-
-    impl futures::Stream for SilenceStream {
-        type Item = fuchsia_audio_device_output::Result<Vec<u8>>;
-
-        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-            let now = zx::Time::get(zx::ClockId::Monotonic);
-            if self.last_frame_time.is_none() {
-                self.last_frame_time = Some(now - 1.second());
-            }
-            let last_time = self.last_frame_time.as_ref().unwrap().clone();
-            let repeats = (now - last_time).into_seconds();
-            if repeats == 0 {
-                self.next_frame_timer = fasync::Timer::new((last_time + 1.second()).into());
-                let poll = self.next_frame_timer.poll_unpin(cx);
-                assert_eq!(Poll::Pending, poll);
-                return Poll::Pending;
-            }
-            // Generate one second of silence.
-            let pcm_frame_size = self.pcm_format.channel_map.len() * PCM_SAMPLE_SIZE;
-            let buffer = vec![0; self.pcm_format.frames_per_second as usize * pcm_frame_size];
-            self.last_frame_time = Some(last_time + 1.second());
-            Poll::Ready(Some(Ok(buffer)))
-        }
-    }
-
-    impl SilenceStream {
-        fn build(pcm_format: PcmFormat) -> Self {
-            Self {
-                pcm_format,
-                next_frame_timer: fasync::Timer::new(fasync::Time::INFINITE_PAST),
-                last_frame_time: None,
-            }
-        }
-    }
-
-    fn pcm_format() -> PcmFormat {
-        PcmFormat {
-            pcm_mode: AudioPcmMode::Linear,
-            bits_per_sample: 16,
-            frames_per_second: 48000,
-            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-        }
-    }
-
-    #[test]
-    fn test_sbc_encodes_correctly() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
-        let sbc_capability = &avdtp::ServiceCapability::MediaCodec {
-            media_type: avdtp::MediaType::Audio,
-            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-            codec_extra: vec![0x11, 0x15, 2, 53],
-        };
-
-        let sbc_config =
-            a2dp::codec::MediaCodecConfig::try_from(sbc_capability).expect("config builds");
-        // Maybe just replace this with future::repeat(0)
-        let silence_source = SilenceStream::build(pcm_format());
-        let mut encoder = EncodedStream::build(pcm_format(), silence_source.boxed(), &sbc_config)
-            .expect("building Stream works");
-        let mut next_frame_fut = encoder.next();
-
-        match exec.run_singlethreaded(&mut next_frame_fut) {
-            Some(Ok(enc_frame)) => {
-                // TODO(45775) validate encoder settings match what we specified in sbc_settings
-                assert!(!enc_frame.is_empty());
-            }
-            Some(Err(e)) => panic!("Uexpected error encoding: {}", e),
-            None => panic!("Encoder finished without a frame"),
-        }
-    }
-
-    #[test]
-    fn test_aac_encodes_correctly() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
-        let aac_capability = &avdtp::ServiceCapability::MediaCodec {
-            media_type: avdtp::MediaType::Audio,
-            codec_type: avdtp::MediaCodecType::AUDIO_AAC,
-            codec_extra: vec![128, 1, 4, 4, 226, 0],
-        };
-        let aac_config =
-            a2dp::codec::MediaCodecConfig::try_from(aac_capability).expect("config builds");
-        // Maybe just replace this with future::repeat(0)
-        let silence_source = SilenceStream::build(pcm_format());
-        let mut encoder = EncodedStream::build(pcm_format(), silence_source.boxed(), &aac_config)
-            .expect("building Stream works");
-        let mut next_frame_fut = encoder.next();
-
-        match exec.run_singlethreaded(&mut next_frame_fut) {
-            Some(Ok(enc_frame)) => {
-                // TODO(45775) validate encoder settings match what we specified in aac_settings
-                assert!(!enc_frame.is_empty());
-            }
-            Some(Err(e)) => panic!("Uexpected error encoding: {}", e),
-            None => panic!("Encoder finished without a frame"),
-        }
     }
 }

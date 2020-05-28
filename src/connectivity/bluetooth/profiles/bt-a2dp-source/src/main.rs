@@ -8,11 +8,12 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
-    bt_a2dp::{media_types::*, stream},
+    bt_a2dp::{codec::MediaCodecConfig, media_types::*, stream},
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_component::LifecycleState,
+    fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak, LazyEntry},
@@ -20,7 +21,7 @@ use {
         types::{PeerId, Uuid},
     },
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
+    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{self, select, StreamExt, TryStreamExt},
     parking_lot::Mutex,
@@ -36,6 +37,7 @@ mod peer;
 mod source_task;
 mod sources;
 
+use crate::encoding::EncodedStream;
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
 use sources::AudioSourceType;
@@ -140,6 +142,17 @@ fn build_local_streams(source_type: AudioSourceType) -> avdtp::Result<stream::St
     fx_vlog!(1, "AAC stream added at SEID {}", AAC_SEID);
 
     Ok(streams)
+}
+
+async fn test_encode_sbc() -> Result<(), Error> {
+    // all sinks must support these options
+    let required_format = PcmFormat {
+        pcm_mode: AudioPcmMode::Linear,
+        bits_per_sample: 16,
+        frames_per_second: 48000,
+        channel_map: vec![AudioChannelId::Lf],
+    };
+    EncodedStream::test(required_format, &MediaCodecConfig::min_sbc()).await
 }
 
 struct Peers {
@@ -414,6 +427,12 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-source"]).expect("Can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    // Check to see that we can encode SBC audio.
+    // This is a requireement of A2DP 1.3: Section 4.2
+    if let Err(e) = test_encode_sbc().await {
+        fx_log_err!("Can't encode SBC Audio: {:?}", e);
+        return Ok(());
+    }
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
     let mut fs = ServiceFs::new();
@@ -559,6 +578,14 @@ mod tests {
             Poll::Ready(Ok(())) => {}
             x => panic!("Expected a response from the result, got {:?}", x),
         };
+    }
+
+    #[test]
+    fn test_encoding_fails_in_test_environment() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let result = exec.run_singlethreaded(test_encode_sbc());
+
+        assert!(result.is_err());
     }
 
     fn setup_peers_test() -> (fasync::Executor, PeerId, Peers, ProfileRequestStream) {

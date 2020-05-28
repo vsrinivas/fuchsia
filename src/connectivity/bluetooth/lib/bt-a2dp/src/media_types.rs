@@ -166,6 +166,18 @@ impl SbcCodecInfo {
         SbcChannelMode::from_bits_truncate(self.0.channel_mode())
     }
 
+    /// Returns the number of channels selected.
+    /// Returns Error::OutOfRange if both mono and stereo are selected.
+    pub fn channel_count(&self) -> avdtp::Result<usize> {
+        let chan_mode = self.channel_mode();
+        if chan_mode == SbcChannelMode::MONO {
+            return Ok(1);
+        } else if !chan_mode.is_empty() && (chan_mode & SbcChannelMode::MONO).is_empty() {
+            return Ok(2);
+        }
+        Err(avdtp::Error::OutOfRange)
+    }
+
     pub fn max_bitpool(&self) -> u8 {
         self.0.maxbitpoolval()
     }
@@ -329,6 +341,17 @@ impl AacCodecInfo {
         AacChannels::from_bits_truncate(self.0.channels())
     }
 
+    /// Returns the number of channels selected.
+    /// Returns Error::OutOfRange if both mono and stereo are selected.
+    pub fn channel_count(&self) -> avdtp::Result<usize> {
+        let count = match self.channels() {
+            AacChannels::ONE => 1,
+            AacChannels::TWO => 2,
+            _ => return Err(avdtp::Error::OutOfRange),
+        };
+        Ok(count)
+    }
+
     /// Returns the sampling frequeency selected, in hz.
     /// Returns Error::OutOfRange if multiple frequencies are selected.
     pub fn sampling_frequency(&self) -> avdtp::Result<u32> {
@@ -419,6 +442,7 @@ mod tests {
             250,
         )
         .expect("Couldn't create sbc media codec info.");
+        assert_matches!(sbc_codec_info.channel_count(), Err(avdtp::Error::OutOfRange));
         let res = sbc_codec_info.to_bytes();
         assert_eq!(vec![0x00, 0x00, 2, 250], res);
 
@@ -433,6 +457,7 @@ mod tests {
             SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
         )
         .expect("Couldn't create sbc media codec info.");
+        assert_matches!(sbc_codec_info.channel_count(), Err(avdtp::Error::OutOfRange));
         let res = sbc_codec_info.to_bytes();
         assert_eq!(vec![0xFF, 0xFF, 2, 250], res);
 
@@ -478,6 +503,31 @@ mod tests {
 
         let too_big = vec![0, 0, 0, 0, 0];
         assert_matches!(SbcCodecInfo::try_from(&too_big[..]), Err(avdtp::Error::OutOfRange));
+
+        // Mono and Stereo
+        let sbc_codec_info: SbcCodecInfo = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ,
+            SbcChannelMode::MONO,
+            SbcBlockCount::MANDATORY_SRC,
+            SbcSubBands::MANDATORY_SRC,
+            SbcAllocation::MANDATORY_SRC,
+            2,
+            250,
+        )
+        .expect("Couldn't create sbc media codec info.");
+        assert_matches!(sbc_codec_info.channel_count(), Ok(1));
+
+        let sbc_codec_info: SbcCodecInfo = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::MANDATORY_SRC,
+            SbcSubBands::MANDATORY_SRC,
+            SbcAllocation::MANDATORY_SRC,
+            2,
+            250,
+        )
+        .expect("Couldn't create sbc media codec info.");
+        assert_matches!(sbc_codec_info.channel_count(), Ok(2));
     }
 
     #[test]
@@ -503,6 +553,7 @@ mod tests {
             8388607, // Largest 23-bit bit rate.
         )
         .expect("Error creating aac media codec info.");
+        assert_matches!(aac_codec_info.channel_count(), Err(avdtp::Error::OutOfRange));
         let res = aac_codec_info.to_bytes();
         assert_eq!(vec![0xF0, 0xFF, 0xFC, 0xFF, 0xFF, 0xFF], res);
 
@@ -515,6 +566,7 @@ mod tests {
             0,
         )
         .expect("Error creating aac media codec info.");
+        assert_matches!(aac_codec_info.channel_count(), Err(avdtp::Error::OutOfRange));
         let res = aac_codec_info.to_bytes();
         assert_eq!(vec![0x00, 0x00, 0x00, 0x80, 0x00, 0x00], res);
 
@@ -544,8 +596,20 @@ mod tests {
             0xAAFF, // Arbitrary
         )
         .expect("Error creating aac media codec info.");
+        assert_matches!(aac_codec_info.channel_count(), Ok(1));
         let res = aac_codec_info.to_bytes();
         assert_eq!(vec![0x80, 0x01, 0x08, 0x00, 0xAA, 0xFF], res);
+
+        // A2DP Source with two channels
+        let aac_codec_info = AacCodecInfo::new(
+            AacObjectType::MANDATORY_SRC,
+            AacSamplingFrequency::FREQ44100HZ,
+            AacChannels::TWO,
+            false,  // VBR is optional in SRC.
+            0xAAFF, // Arbitrary
+        )
+        .expect("Error creating aac media codec info.");
+        assert_matches!(aac_codec_info.channel_count(), Ok(2));
 
         // Out of range bit rate.
         let aac_codec_info = AacCodecInfo::new(

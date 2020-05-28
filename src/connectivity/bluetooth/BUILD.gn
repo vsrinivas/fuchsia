@@ -50,7 +50,7 @@ group("tests") {
     "lib/fuchsia-bluetooth:tests",
     "profiles/bt-a2dp-manager:bt-a2dp-manager-tests",
     "profiles/bt-a2dp-sink:tests",
-    "profiles/bt-a2dp-source:bt-a2dp-source-tests",
+    "profiles/bt-a2dp-source:tests",
     "profiles/bt-avrcp:tests",
     "profiles/bt-avrcp-target:tests",
     "tests",

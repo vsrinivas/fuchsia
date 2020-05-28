@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_trace as trace,
     futures::{
         future::{AbortHandle, Abortable},
@@ -46,8 +46,10 @@ impl MediaTaskBuilder for SourceTaskBuilder {
         };
 
         let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)?;
-        let _test_encoded_stream =
-            EncodedStream::build(pcm_format.clone(), source_stream, codec_config)?;
+        if let Err(e) = EncodedStream::build(pcm_format.clone(), source_stream, codec_config) {
+            fx_vlog!(2, "SourceTaskBuilder: can't build encoded stream: {:?}", e);
+            return Err(e);
+        }
         Ok(Box::new(ConfiguredSourceTask::build(
             pcm_format,
             self.source_type,

@@ -147,6 +147,20 @@ impl MediaCodecConfig {
         Ok(encoder_settings)
     }
 
+    /// The number of channels that is selected in the configuration.  Returns OutOfRange if
+    /// the configuration supports a range of channel counts.
+    pub fn channel_count(&self) -> avdtp::Result<usize> {
+        match self.codec_type {
+            MediaCodecType::AUDIO_SBC => {
+                SbcCodecInfo::try_from(self.codec_extra())?.channel_count()
+            }
+            MediaCodecType::AUDIO_AAC => {
+                AacCodecInfo::try_from(self.codec_extra())?.channel_count()
+            }
+            _ => unreachable!(),
+        }
+    }
+
     /// The number of frames that should be included when building a packet to send to a peer.
     pub fn frames_per_packet(&self) -> usize {
         match self.codec_type {
