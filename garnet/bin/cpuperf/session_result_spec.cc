@@ -69,8 +69,9 @@ std::string SessionResultSpec::GetTraceFilePath(size_t iter_num, size_t trace_nu
 
 bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spec) {
   // Initialize schemas for JSON validation.
-  auto root_schema = json_parser::InitSchemaDeprecated(kRootSchema);
-  if (!root_schema) {
+  auto root_schema_result = json_parser::InitSchema(kRootSchema);
+  if (root_schema_result.is_error()) {
+    FX_LOGS(ERROR) << "Invalid schema: " << root_schema_result.error_value().ToString();
     return false;
   }
 
@@ -84,7 +85,11 @@ bool DecodeSessionResultSpec(const std::string& json, SessionResultSpec* out_spe
                    << GetParseError_En(code);
     return false;
   }
-  if (!json_parser::ValidateSchemaDeprecated(document, *root_schema, "session result spec")) {
+  auto root_schema = std::move(root_schema_result.value());
+  auto validation_result =
+      json_parser::ValidateSchema(document, root_schema, "session result spec");
+  if (validation_result.is_error()) {
+    FX_LOGS(ERROR) << "json validation failed: " << validation_result.error_value();
     return false;
   }
 
