@@ -13,17 +13,6 @@
 
 #include <arch/arch_ops.h>
 #include <arch/spinlock.h>
-
-// spin lock irq save flags:
-
-// Possible future flags:
-// SPIN_LOCK_FLAG_PMR_MASK         = 0x000000ff
-// SPIN_LOCK_FLAG_PREEMPTION       = 0x00000100
-// SPIN_LOCK_FLAG_SET_PMR          = 0x00000200
-
-// Generic flags
-#define SPIN_LOCK_FLAG_INTERRUPTS ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS
-
 #include <lockdep/lock_policy.h>
 #include <lockdep/lock_traits.h>
 
@@ -51,17 +40,15 @@ class TA_CAP("mutex") SpinLock {
   bool IsHeld() { return arch_spin_lock_held(&spinlock_); }
 
   // Acquire spin lock, but save disable and save interrupt state first.
-  void AcquireIrqSave(spin_lock_saved_state_t& state,
-                      spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) TA_ACQ() {
-    arch_interrupt_save(&state, flags);
+  void AcquireIrqSave(spin_lock_saved_state_t& state) TA_ACQ() {
+    arch_interrupt_save(&state);
     Acquire();
   }
 
   // Restore interrupt state before unlocking.
-  void ReleaseIrqRestore(spin_lock_saved_state_t state,
-                         spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) TA_REL() {
+  void ReleaseIrqRestore(spin_lock_saved_state_t state) TA_REL() {
     Release();
-    arch_interrupt_restore(state, flags);
+    arch_interrupt_restore(state);
   }
 
   void AssertHeld() TA_ASSERT() { DEBUG_ASSERT(IsHeld()); }
@@ -138,25 +125,15 @@ LOCK_DEP_POLICY_OPTION(SpinLock, NoIrqSave, NoIrqSavePolicy);
 struct IrqSavePolicy {
   // State and flags required to save irq state.
   struct State {
-    // This constructor receives the extra arguments passed to Guard when
-    // locking an instrumented SpinLock like this:
-    //
-    //     Guard<SpinLock, IrqSave> guard{&a_spin_lock, |flags|};
-    //
-    // The extra argument to Guard is optional because this constructor has
-    // a default value.
-    State(spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) : flags{flags} {}
-
-    spin_lock_save_flags_t flags;
     spin_lock_saved_state_t state;
   };
 
   static bool Acquire(SpinLock* lock, State* state) TA_ACQ(lock) {
-    lock->AcquireIrqSave(state->state, state->flags);
+    lock->AcquireIrqSave(state->state);
     return true;
   }
   static void Release(SpinLock* lock, State* state) TA_REL(lock) {
-    lock->ReleaseIrqRestore(state->state, state->flags);
+    lock->ReleaseIrqRestore(state->state);
   }
   static void AssertHeld(const SpinLock& lock) TA_ASSERT(lock) {
     const_cast<SpinLock*>(&lock)->AssertHeld();

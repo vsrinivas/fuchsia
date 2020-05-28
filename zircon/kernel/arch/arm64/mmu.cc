@@ -1209,7 +1209,7 @@ void arch_zero_page(void* _ptr) {
 zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) {
   // disable interrupts around this operation to make the at/par instruction combination atomic
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+  arch_interrupt_save(&state);
 
   if (user) {
     if (write) {
@@ -1227,7 +1227,7 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
 
   uint64_t par = __arm_rsr64("par_el1");
 
-  arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+  arch_interrupt_restore(state);
 
   // if bit 0 is clear, the translation succeeded
   if (BIT(par, 0)) {

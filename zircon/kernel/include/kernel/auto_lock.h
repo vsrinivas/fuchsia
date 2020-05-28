@@ -39,8 +39,7 @@ class TA_SCOPED_CAP AutoSpinLockNoIrqSave {
 
 class TA_SCOPED_CAP AutoSpinLock {
  public:
-  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock)
-      : spinlock_(lock) {
+  __WARN_UNUSED_CONSTRUCTOR explicit AutoSpinLock(SpinLock* lock) TA_ACQ(lock) : spinlock_(lock) {
     DEBUG_ASSERT(lock);
     spinlock_->AcquireIrqSave(state_);
   }

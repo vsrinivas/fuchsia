@@ -128,13 +128,13 @@ void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
 
 int DpcSystem::WorkerThread(void* arg) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, SPIN_LOCK_FLAG_INTERRUPTS);
+  arch_interrupt_save(&state);
 
   struct percpu* cpu = get_local_percpu();
   Event* event = &cpu->dpc_event;
   fbl::DoublyLinkedList<Dpc*>& list = cpu->dpc_list;
 
-  arch_interrupt_restore(state, SPIN_LOCK_FLAG_INTERRUPTS);
+  arch_interrupt_restore(state);
 
   for (;;) {
     // wait for a dpc to fire

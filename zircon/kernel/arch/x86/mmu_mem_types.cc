@@ -132,9 +132,9 @@ void x86_pat_sync(cpu_mask_t targets) {
     // Directly call the task without IPIs as its redundant and we might still
     // be in early init where we cannot call mp_sync_exec
     spin_lock_saved_state_t irqstate;
-    arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
+    arch_interrupt_save(&irqstate);
     x86_pat_sync_task(&context);
-    arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
+    arch_interrupt_restore(irqstate);
   } else {
     mp_sync_exec(MP_IPI_TARGET_MASK, targets, x86_pat_sync_task, &context);
   }

@@ -126,7 +126,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
 
   // disable interrupts so our current CPU doesn't change
   spin_lock_saved_state_t irqstate;
-  arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
+  arch_interrupt_save(&irqstate);
   arch::ThreadMemoryBarrier();
 
   const uint local_cpu = arch_curr_cpu_num();
@@ -174,7 +174,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   arch::ThreadMemoryBarrier();
 
   // we can take interrupts again once we've executed our task
-  arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
+  arch_interrupt_restore(irqstate);
 
   bool ints_disabled = arch_ints_disabled();
   // wait for all other CPUs to be done with the context

@@ -136,7 +136,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
 
   zx_status_t status = ZX_OK;
   do {
@@ -171,6 +171,6 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, IoBitmap::UpdateTask, &task_context);
   }
 
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
   return status;
 }

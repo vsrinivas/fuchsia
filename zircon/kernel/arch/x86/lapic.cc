@@ -220,11 +220,11 @@ void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_del
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST(dst_apic_id));
   lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
   apic_wait_for_ipi_send();
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
@@ -243,10 +243,10 @@ void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm) {
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
   apic_wait_for_ipi_send();
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 static void pv_mask_ipi(cpu_mask_t mask, uint32_t request) {
@@ -291,11 +291,11 @@ void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_m
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
   lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
   apic_wait_for_ipi_send();
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 // Broadcast to everyone excluding self
@@ -314,11 +314,11 @@ void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode d
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_write(LAPIC_REG_IRQ_CMD_HIGH, ICR_DST_BROADCAST);
   lapic_reg_write(LAPIC_REG_IRQ_CMD_LOW, request);
   apic_wait_for_ipi_send();
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 void apic_send_mask_ipi(uint8_t vector, cpu_mask_t mask, enum apic_interrupt_delivery_mode dm) {
@@ -393,26 +393,26 @@ uint32_t apic_timer_current_count(void) { return lapic_reg_read(LAPIC_REG_CURREN
 
 void apic_timer_mask(void) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_or(LAPIC_REG_LVT_TIMER, LVT_MASKED);
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 void apic_timer_unmask(void) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_and(LAPIC_REG_LVT_TIMER, ~LVT_MASKED);
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 void apic_timer_stop(void) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_write(LAPIC_REG_INIT_COUNT, 0);
   if (x86_feature_test(X86_FEATURE_TSC_DEADLINE)) {
     write_msr(X86_MSR_IA32_TSC_DEADLINE, 0);
   }
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked) {
@@ -423,7 +423,7 @@ zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked)
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
 
   status = apic_timer_set_divide_value(divisor);
   if (status != ZX_OK) {
@@ -432,7 +432,7 @@ zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked)
   lapic_reg_write(LAPIC_REG_LVT_TIMER, timer_config);
   lapic_reg_write(LAPIC_REG_INIT_COUNT, count);
 cleanup:
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
   return status;
 }
 
@@ -445,7 +445,7 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
   }
 
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
 
   lapic_reg_write(LAPIC_REG_LVT_TIMER, timer_config);
   // Intel recommends using an MFENCE to ensure the LVT_TIMER_ADDR write
@@ -454,13 +454,13 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
   arch::DeviceMemoryBarrier();
   write_msr(X86_MSR_IA32_TSC_DEADLINE, deadline);
 
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 zx_status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
   zx_status_t status = ZX_OK;
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
 
   status = apic_timer_set_divide_value(divisor);
   if (status != ZX_OK) {
@@ -469,7 +469,7 @@ zx_status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
   lapic_reg_write(LAPIC_REG_LVT_TIMER, LVT_VECTOR(X86_INT_APIC_TIMER) | LVT_TIMER_MODE_PERIODIC);
   lapic_reg_write(LAPIC_REG_INIT_COUNT, count);
 cleanup:
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
   return status;
 }
 
@@ -496,16 +496,16 @@ static void apic_pmi_init(void) {
 
 void apic_pmi_mask(void) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_or(LAPIC_REG_LVT_PERF, LVT_MASKED);
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 void apic_pmi_unmask(void) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
   lapic_reg_and(LAPIC_REG_LVT_PERF, ~LVT_MASKED);
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 static int cmd_apic(int argc, const cmd_args* argv, uint32_t flags) {
@@ -559,7 +559,7 @@ static int cmd_apic(int argc, const cmd_args* argv, uint32_t flags) {
 
 void apic_local_debug(void) {
   spin_lock_saved_state_t state;
-  arch_interrupt_save(&state, 0);
+  arch_interrupt_save(&state);
 
   printf("apic %02x:\n", apic_local_id());
   printf("  version: %08x:\n", lapic_reg_read(LAPIC_REG_VERSION));
@@ -572,7 +572,7 @@ void apic_local_debug(void) {
   for (int i = 0; i < 8; ++i)
     printf("  isr %d: %08x\n", i, lapic_reg_read(LAPIC_REG_IN_SERVICE(i)));
 
-  arch_interrupt_restore(state, 0);
+  arch_interrupt_restore(state);
 }
 
 STATIC_COMMAND_START

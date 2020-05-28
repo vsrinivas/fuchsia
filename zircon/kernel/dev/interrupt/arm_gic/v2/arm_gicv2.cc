@@ -39,7 +39,6 @@
 #define IFRAME_PC(frame) ((frame)->elr)
 
 static SpinLock gicd_lock;
-#define GICD_LOCK_FLAGS SPIN_LOCK_FLAG_INTERRUPTS
 
 // values read from zbi
 vaddr_t arm_gicv2_gic_base = 0;
@@ -120,7 +119,7 @@ static void gic_init_percpu_early() {
   spin_lock_saved_state_t state;
   bool resume_gicd = false;
 
-  gicd_lock.AcquireIrqSave(state, GICD_LOCK_FLAGS);
+  gicd_lock.AcquireIrqSave(state);
   if (!(GICREG(0, GICD_CTLR) & 1)) {
     dprintf(SPEW, "%s: distributor is off, calling arm_gic_init instead\n", __func__);
     arm_gic_init();
@@ -128,7 +127,7 @@ static void gic_init_percpu_early() {
   } else {
     gic_init_percpu_early();
   }
-  gicd_lock.ReleaseIrqRestore(state, GICD_LOCK_FLAGS);
+  gicd_lock.ReleaseIrqRestore(state);
   suspend_resume_fiq(true, resume_gicd);
 }
 
