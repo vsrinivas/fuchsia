@@ -37,6 +37,14 @@ source_set("path") {
   public = [ "path.h" ]
 }
 
+source_set("io-interfaces") {
+  public = [
+    "reader.h",
+    "writer.h",
+  ]
+  public_deps = [ "//zircon/public/lib/fbl" ]
+}
+
 source_set("extent") {
   sources = [ "extent.cc" ]
   public = [ "extent.h" ]

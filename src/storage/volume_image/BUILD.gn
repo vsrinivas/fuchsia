@@ -12,14 +12,12 @@ source_set("volume-descriptor") {
     "volume_descriptor.cc",
   ]
   public = [
-    "block_io.h",
     "options.h",
     "volume_descriptor.h",
   ]
   public_deps = [
     "utils:guid",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
 }

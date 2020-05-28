@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "src/storage/volume_image/block_io.h"
 #include "src/storage/volume_image/fvm/address_descriptor.h"
+#include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/volume_descriptor.h"
 
 namespace storage::volume_image {
@@ -24,7 +24,7 @@ class Partition {
  public:
   Partition() = default;
   Partition(VolumeDescriptor volume_descriptor, AddressDescriptor address_descriptor,
-            std::unique_ptr<BlockReader> reader)
+            std::unique_ptr<Reader> reader)
       : volume_(std::move(volume_descriptor)),
         address_(std::move(address_descriptor)),
         reader_(std::move(reader)) {}
@@ -42,7 +42,7 @@ class Partition {
 
   // Returns the reader for this partition, which allows reading the volume data from the source
   // address space.
-  const BlockReader* reader() const { return reader_.get(); }
+  const Reader* reader() const { return reader_.get(); }
 
  private:
   // Information about the volume in this partition.
@@ -53,7 +53,7 @@ class Partition {
   AddressDescriptor address_ = {};
 
   // Mechanism for reading volume data.
-  std::unique_ptr<BlockReader> reader_ = nullptr;
+  std::unique_ptr<Reader> reader_ = nullptr;
 };
 
 }  // namespace storage::volume_image

@@ -12,7 +12,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "src/storage/volume_image/block_io.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/guid.h"
 

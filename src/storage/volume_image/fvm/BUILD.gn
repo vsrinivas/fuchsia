@@ -18,9 +18,10 @@ source_set("options") {
 
 source_set("partition") {
   public = [ "partition.h" ]
-  deps = [
+  public_deps = [
     ":address-descriptor",
     "//src/storage/volume_image:volume-descriptor",
+    "//src/storage/volume_image/utils:io-interfaces",
   ]
 }
 
