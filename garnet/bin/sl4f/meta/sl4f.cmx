@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/camera",
             "class/i2c",
             "class/input-report",
             "class/light",
@@ -20,6 +21,7 @@
             "fuchsia.bluetooth.gatt.Server",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.camera2.hal.Controller",
             "fuchsia.developer.tiles.Controller",
             "fuchsia.device.NameProvider",
             "fuchsia.diagnostics.ArchiveAccessor",
@@ -28,6 +30,7 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.hardware.camera.Device",
             "fuchsia.hardware.gpio.Gpio",
             "fuchsia.hardware.i2c",
             "fuchsia.hardware.light.Light",
