@@ -36,7 +36,7 @@ need to build your Fuchsia image to include the test in the build artifacts:
     `--with` option:
 
     ```posix-terminal
-    fx set workstation.qemu-x64 --with //src/tests/end_to_end/screen_is_not_black:test
+    fx set workstation.x64 --with //src/tests/end_to_end/screen_is_not_black:test
     ```
 
     `//src/tests/end_to_end/screen_is_not_black` is a test directory in the

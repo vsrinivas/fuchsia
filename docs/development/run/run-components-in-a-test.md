@@ -38,7 +38,7 @@ Configure and build your Fuchsia image to include the test component:
     option:
 
     ```posix-terminal
-    fx set core.qemu-x64 --with //examples/components/basic:hello-world-tests
+    fx set core.x64 --with //examples/components/basic:hello-world-tests
     ```
 
     `//examples/components/basic` is the directory of the example package and
