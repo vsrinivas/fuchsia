@@ -3,34 +3,42 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart.gni")
+import("//build/dart/dart_tool.gni")
+import("//build/dart/test.gni")
 import("//build/testing/platforms.gni")
 import("//build/testing/test_spec.gni")
 
-if (current_toolchain == host_toolchain) {
-  # This script does not require building anything to function, but the test_spec
-  # template expects that ever test depends on something.
-  group("empty") {
-  }
+dart_tool("blobstats") {
+  package_name = "blobstats"
+  main_dart = "bin/main.dart"
 
-  # This runs the blobstats script in a way similar to how developers invoke it
-  # and tests that it exits with a successful exit code.
-  test_spec("blobstats_host_test") {
-    target = ":empty"
-    dart_binary = rebase_path("$dart_sdk/bin/dart")
-    packages_file = rebase_path("blobstats.packages")
-    blobstats_dart_file = rebase_path("blobstats.dart")
-    command = [
-      dart_binary,
-      "--packages=$packages_file",
-      blobstats_dart_file,
-      "--output=" + rebase_path(target_out_dir),
-    ]
-    path = rebase_path("$dart_sdk/bin/dart", root_build_dir)
-    environments = [ host_env ]
-  }
+  sources = [
+    "blob.dart",
+    "blobstats.dart",
+    "dart_package.dart",
+    "package.dart",
+  ]
+
+  deps = [
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/convert",
+    "//third_party/dart-pkg/pub/io",
+    "//third_party/dart-pkg/pub/path",
+  ]
+}
+
+dart_test("blobstats_tests") {
+  sources = [ "blobstats_test.dart" ]
+
+  deps = [
+    ":blobstats_dart_library",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/test",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":blobstats_host_test($host_toolchain)" ]
+  deps = [ ":blobstats_tests($host_toolchain)" ]
 }

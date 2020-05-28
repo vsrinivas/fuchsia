@@ -22,4 +22,4 @@ cd "${FUCHSIA_BUILD_DIR}"
 
 exec "${PREBUILT_DART}" \
   --packages="${FUCHSIA_DIR}/scripts/blobstats/blobstats.packages" \
-  "${FUCHSIA_DIR}/scripts/blobstats/blobstats.dart" "$@"
+  "${FUCHSIA_DIR}/scripts/blobstats/bin/main.dart" "$@"
