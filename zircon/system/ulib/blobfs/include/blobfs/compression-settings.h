@@ -36,7 +36,7 @@ struct CompressionSettings {
   // Compression algorithm to use when storing blobs.
   // Blobs that are already stored on disk using another compression algorithm from disk are not
   // affected by this flag.
-  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::CHUNKED;
+  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::ZSTD_SEEKABLE;
   // Write compression aggressiveness. Currently only used for ZSTD* and CHUNKED algorithms.
   // If set to std::nullopt, an implementation-defined default is used.
   std::optional<int> compression_level;
