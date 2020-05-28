@@ -244,16 +244,19 @@ class VmObjectPaged final : public VmObject {
   zx_status_t ReadWriteInternalLocked(uint64_t offset, size_t len, bool write, T copyfunc,
                                       Guard<Mutex>* guard) TA_REQ(lock_);
 
-  // Searches for info for initialization of a page being commited into |this| at |offset|.
+  // Searches for the the initial content for |this| at |offset|. The result could be used to
+  // initialize a commit, or compare an existing commit with the original. The initial content
+  // is a reference to a VmPageOrMarker as there could be an explicit vm_page of content, an
+  // explicit zero page of content via a marker, or no initial content. Determining the meaning of
+  // no initial content (i.e. whether it is zero or something else) is left up to the caller.
   //
   // If an ancestor has a committed page which corresponds to |offset|, returns that page
   // as well as the VmObjectPaged and offset which own the page. If no ancestor has a committed
   // page for the offset, returns null as well as the VmObjectPaged/offset which need to be queried
   // to populate the page.
-  //
-  // It is an error to call this when |this| has a committed page at |offset|.
-  vm_page_t* FindInitialPageContentLocked(uint64_t offset, uint pf_flags, VmObjectPaged** owner_out,
-                                          uint64_t* owner_offset_out) TA_REQ(lock_);
+  VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
+                                               VmObjectPaged** owner_out,
+                                               uint64_t* owner_offset_out) TA_REQ(lock_);
 
   // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns

@@ -1766,15 +1766,13 @@ void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t
   DEBUG_ASSERT(last_contig->page_list_.Lookup(last_contig_offset)->Page()->object.pin_count == 1);
 }
 
-vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
-                                                       VmObjectPaged** owner_out,
-                                                       uint64_t* owner_offset_out) {
-  DEBUG_ASSERT(page_list_.Lookup(offset) == nullptr || page_list_.Lookup(offset)->IsEmpty());
-
+VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
+                                                            VmObjectPaged** owner_out,
+                                                            uint64_t* owner_offset_out) {
   // Search up the clone chain for any committed pages. cur_offset is the offset
   // into cur we care about. The loop terminates either when that offset contains
   // a committed page or when that offset can't reach into the parent.
-  vm_page_t* page = nullptr;
+  VmPageOrMarker* page = nullptr;
   VmObjectPaged* cur = this;
   AssertHeld(cur->lock_);
   uint64_t cur_offset = offset;
@@ -1799,11 +1797,7 @@ vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_
     cur_offset = parent_offset;
     VmPageOrMarker* p = cur->page_list_.Lookup(parent_offset);
     if (p && !p->IsEmpty()) {
-      // If we found a page we want to return it, and if we found a marker we should stop
-      // searching.
-      if (p->IsPage()) {
-        page = p->Page();
-      }
+      page = p;
       break;
     }
   }
@@ -1870,51 +1864,59 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
                                  page_out, pa_out);
   }
 
-  bool is_marker = false;
-
-  {
-    // see if we already have a page at that offset.
-    VmPageOrMarker* p = page_list_.Lookup(offset);
-    if (p) {
-      if (p->IsMarker()) {
-        is_marker = true;
-      } else if (p->IsPage()) {
-        vm_page_t* page = p->Page();
-        UpdateOnAccessLocked(page, offset);
-        if (page_out) {
-          *page_out = page;
-        }
-        if (pa_out) {
-          *pa_out = page->paddr();
-        }
-        return ZX_OK;
-      }
+  VmPageOrMarker* page_or_mark = page_list_.Lookup(offset);
+  vm_page* p = nullptr;
+  VmObjectPaged* page_owner;
+  uint64_t owner_offset;
+  if (page_or_mark && page_or_mark->IsPage()) {
+    // This is the common case where we have the page and don't need to do anything more, so
+    // return it straight away.
+    vm_page_t* p = page_or_mark->Page();
+    UpdateOnAccessLocked(p, offset);
+    if (page_out) {
+      *page_out = p;
     }
+    if (pa_out) {
+      *pa_out = p->paddr();
+    }
+    return ZX_OK;
   }
 
-  vm_page* p = nullptr;
+  // Get content from parent if available, otherwise accept we are the owner of the yet to exist
+  // page.
+  if ((!page_or_mark || page_or_mark->IsEmpty()) && parent_) {
+    page_or_mark = FindInitialPageContentLocked(offset, pf_flags, &page_owner, &owner_offset);
+  } else {
+    page_owner = this;
+    owner_offset = offset;
+  }
+
+  // At this point we might not have an actual page, but we should at least have a notional owner.
+  DEBUG_ASSERT(page_owner);
 
   __UNUSED char pf_string[5];
   LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, offset, pf_flags,
           vmm_pf_flags_to_string(pf_flags, pf_string));
 
-  VmObjectPaged* page_owner;
-  uint64_t owner_offset;
-  if (!parent_ || is_marker) {
-    // Avoid the function call in the common case.
-    page_owner = this;
-    owner_offset = offset;
+  // We need to turn this potential page or marker into a real vm_page_t. This means failing cases
+  // that we cannot handle, determining whether we can substitute the zero_page and potentially
+  // consulting a page_source.
+  if (page_or_mark && page_or_mark->IsPage()) {
+    p = page_or_mark->Page();
   } else {
-    p = FindInitialPageContentLocked(offset, pf_flags, &page_owner, &owner_offset);
-  }
-
-  if (!p) {
-    // If we're not being asked to sw or hw fault in the page, return not found.
+    // If we don't have a real page and we're not sw or hw faulting in the page, return not found.
     if ((pf_flags & VMM_PF_FLAG_FAULT_MASK) == 0) {
       return ZX_ERR_NOT_FOUND;
     }
 
-    if (page_owner->page_source_) {
+    // We need to get a real page as our initial content. At this point we are either starting from
+    // the zero page, or something supplied from a page source. The page source only fills in if we
+    // have a true absence of content.
+    if ((page_or_mark && page_or_mark->IsMarker()) || !page_owner->page_source_) {
+      // Either no relevant page source or this is a known marker, in which case the content is
+      // the zero page.
+      p = vm_get_zero_page();
+    } else {
       zx_status_t status =
           page_owner->page_source_->GetPage(owner_offset, page_request, &p, nullptr);
       // Pager page sources will never synchronously return a page.
@@ -1923,17 +1925,16 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       if (page_owner != this && status == ZX_ERR_NOT_FOUND) {
         // The default behavior of clones of detached pager VMOs fault in zero
         // pages instead of propagating the pager's fault.
-        // TODO(stevensd): Add an arg to zx_vmo_create_child to optionally fault here.
+        // TODO: Add an arg to zx_vmo_create_child to optionally fault here.
         p = vm_get_zero_page();
       } else {
         return status;
       }
-    } else {
-      // If there's no page source, we're using an anonymous page. It's not
-      // necessary to fault a writable page directly into the owning VMO.
-      p = vm_get_zero_page();
     }
   }
+
+  // If we made it this far we must have some valid vm_page in |p|. Although this may be the zero
+  // page, the rest of this function is tolerant towards correctly forking it.
   DEBUG_ASSERT(p);
   // It's possible that we are going to fork the page, and the user isn't actually going to directly
   // use `p`, but creating the fork still uses `p` so we want to consider it accessed.
@@ -2447,9 +2448,14 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
                                         TA_REQ(lock_) -> const InitialPageContent& {
       if (!initial_content_.inited) {
         DEBUG_ASSERT(can_see_parent);
-        initial_content_.page =
+        VmPageOrMarker* page_or_marker =
             FindInitialPageContentLocked(offset, VMM_PF_FLAG_WRITE, &initial_content_.page_owner,
                                          &initial_content_.owner_offset);
+        // We only care about the parent having a 'true' vm_page for content. If the parent has a
+        // marker then it's as if the parent has no content since that's a zero page anyway, which
+        // is what we are trying to achieve.
+        initial_content_.page =
+            page_or_marker && page_or_marker->IsPage() ? page_or_marker->Page() : nullptr;
         initial_content_.inited = true;
       }
       return initial_content_;

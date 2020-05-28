@@ -146,6 +146,23 @@ TEST(VmoZeroTestCase, Contiguous) {
   EXPECT_EQ(phys_addr, phys_addr2);
 }
 
+TEST(VmoZeroTestCase, ContentInParentAndChild) {
+  zx::vmo parent;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE * 2, 0, &parent));
+  VmoWrite(parent, 1, 0);
+
+  zx::vmo child;
+  // Create a child of both pages, and then just fork the first 1
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE * 2, &child));
+  VmoWrite(child, 2, 0);
+
+  // As page 2 is still CoW with the parent page 1 cannot be decommitted as it would then see old
+  // parent data.
+  EXPECT_OK(child.op_range(ZX_VMO_OP_ZERO, 0, PAGE_SIZE, NULL, 0));
+
+  VmoCheck(child, 0, 0);
+}
+
 TEST(VmoZeroTestCase, EmptyCowChildren) {
   zx::vmo parent;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE * 2, 0, &parent));
