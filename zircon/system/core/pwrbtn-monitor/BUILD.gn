@@ -27,10 +27,10 @@ executable("pwrbtn-monitor") {
   sources = [ "pwrbtn-monitor.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid-parser",

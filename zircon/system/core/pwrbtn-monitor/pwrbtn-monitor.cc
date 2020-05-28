@@ -4,8 +4,8 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/hardware/input/llcpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -26,11 +26,14 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
+#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 
 #define INPUT_PATH "/input"
+
+namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 namespace {
 
@@ -137,19 +140,20 @@ zx_status_t send_poweroff() {
     return ZX_ERR_INTERNAL;
   }
 
-  const char* service = "/svc/" fuchsia_device_manager_Administrator_Name;
-  status = fdio_service_connect(service, channel_remote.release());
+  auto service = fbl::StringPrintf("/svc/%s", power_fidl::statecontrol::Admin::Name);
+  status = fdio_service_connect(service.c_str(), channel_remote.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "failed to connect to service %s: %d\n", service, status);
+    fprintf(stderr, "failed to connect to service %s: %d\n", service.c_str(), status);
     return ZX_ERR_INTERNAL;
   }
 
-  zx_status_t call_status;
-  status = fuchsia_device_manager_AdministratorSuspend(channel_local.get(),
-                                                       DEVICE_SUSPEND_FLAG_POWEROFF, &call_status);
-  if (status != ZX_OK || call_status != ZX_OK) {
-    fprintf(stderr, "Call to %s failed: ret: %d  remote: %d\n", service, status, call_status);
-    return status != ZX_OK ? status : call_status;
+  auto admin_client = power_fidl::statecontrol::Admin::SyncClient(std::move(channel_local));
+  auto resp = admin_client.Suspend(power_fidl::statecontrol::SystemPowerState::POWEROFF);
+
+  if (resp.status() != ZX_OK) {
+    fprintf(stderr, "Call to %s failed: ret: %s, %s\n", service.c_str(),
+            zx_status_get_string(resp.status()), resp.error());
+    return resp.status();
   }
 
   return ZX_OK;
