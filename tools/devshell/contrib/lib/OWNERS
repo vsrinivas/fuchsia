@@ -1,6 +1,5 @@
 per-file debug.sh=brettw@google.com
 per-file debug.sh=sadmac@google.com
 per-file debug.sh=jeremymanson@google.com
-per-file serial.sh=donosoc@google.com
 
 # COMPONENT: DeveloperExperience>fx
