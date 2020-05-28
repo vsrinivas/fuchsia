@@ -15,10 +15,12 @@ LastRebootInfoProvider::LastRebootInfoProvider(const RebootLog& reboot_log) {
     last_reboot_.set_uptime(reboot_log.Uptime().get());
   }
 
-  last_reboot_.set_graceful(IsGraceful(reboot_log.RebootReason()));
+  if (const auto graceful = OptionallyGraceful(reboot_log.RebootReason()); graceful.has_value()) {
+    last_reboot_.set_graceful(graceful.value());
+  }
 
-  const auto fidl_reboot_reason = ToFidlRebootReason(reboot_log.RebootReason());
-  if (fidl_reboot_reason.has_value()) {
+  if (const auto fidl_reboot_reason = ToFidlRebootReason(reboot_log.RebootReason());
+      fidl_reboot_reason.has_value()) {
     last_reboot_.set_reason(fidl_reboot_reason.value());
   }
 }

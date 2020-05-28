@@ -68,5 +68,14 @@ TEST(LastRebootInfoProviderTest, Succeed_DoesNotHaveUptime) {
   EXPECT_FALSE(last_reboot.has_uptime());
 }
 
+TEST(LastRebootInfoProviderTest, Succeed_NotParseable) {
+  const RebootReason reboot_reason = RebootReason::kNotParseable;
+
+  const auto last_reboot = GetLastReboot(reboot_reason);
+
+  EXPECT_FALSE(last_reboot.has_graceful());
+  EXPECT_FALSE(last_reboot.has_reason());
+}
+
 }  // namespace
 }  // namespace feedback

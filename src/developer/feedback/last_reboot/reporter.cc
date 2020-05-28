@@ -54,7 +54,9 @@ void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reportin
   cobalt_.LogOccurrence(ToCobaltRebootReason(reboot_log.RebootReason()));
 
   // We don't want to file a crash report on graceful  or cold reboots.
-  if (IsGraceful(reboot_log.RebootReason()) || reboot_log.RebootReason() == RebootReason::kCold) {
+  if (const auto graceful = OptionallyGraceful(reboot_log.RebootReason());
+      (graceful.has_value() && graceful.value()) ||
+      reboot_log.RebootReason() == RebootReason::kCold) {
     return;
   }
 

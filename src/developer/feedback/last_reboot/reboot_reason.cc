@@ -36,7 +36,11 @@ std::string ToString(const RebootReason reboot_reason) {
 
 }  // namespace
 
-bool IsGraceful(const RebootReason reboot_reason) {
+std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
+  if (reboot_reason == RebootReason::kNotSet || reboot_reason == RebootReason::kNotParseable) {
+    return std::nullopt;
+  }
+
   return reboot_reason == RebootReason::kGenericGraceful;
 }
 

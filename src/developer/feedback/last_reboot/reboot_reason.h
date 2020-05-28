@@ -34,7 +34,7 @@ enum class RebootReason {
   kBrownout,
 };
 
-bool IsGraceful(RebootReason reboot_reason);
+std::optional<bool> OptionallyGraceful(RebootReason reboot_reason);
 cobalt::RebootReason ToCobaltRebootReason(RebootReason reboot_reason);
 std::string ToCrashSignature(RebootReason reboot_reason);
 std::string ToCrashProgramName(RebootReason reboot_reason);
