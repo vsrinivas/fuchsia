@@ -7,16 +7,52 @@
 
 #include <lib/zx/status.h>
 
+#include <fs-management/format.h>
+
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 
 namespace fs_test {
 
-// Base class for all supported file systems.
+class FileSystem;
+
+struct TestFileSystemOptions {
+  static TestFileSystemOptions DefaultMinfs();
+  static TestFileSystemOptions DefaultMemfs();
+
+  std::string description;
+  bool use_fvm = false;
+  uint64_t device_block_size = 0;
+  uint64_t device_block_count = 0;
+  uint64_t fvm_slice_size = 0;
+  const FileSystem* file_system = nullptr;
+};
+
+std::ostream& operator<<(std::ostream& out, const TestFileSystemOptions& options);
+
+std::vector<TestFileSystemOptions> AllTestFileSystems();
+
+// A file system instance is a specific instance created for test purposes.
+class FileSystemInstance {
+ public:
+  virtual ~FileSystemInstance() = default;
+  virtual zx::status<> Mount(const std::string& mount_path) = 0;
+
+ protected:
+  // A wrapper around fs-management that can be used by subclasses if they so wish.
+  static zx::status<> Mount(const std::string& device_path, const std::string& mount_path,
+                            disk_format_t format);
+};
+
+// Base class for all supported file systems. It is a factory class that generates
+// instances of FileSystemInstance subclasses.
 class FileSystem {
  public:
-  virtual zx::status<> Format(const std::string& device_path) const = 0;
-  virtual zx::status<> Mount(const std::string& device_path,
-                             const std::string& mount_path) const = 0;
+  virtual zx::status<std::unique_ptr<FileSystemInstance>> Make(
+      const TestFileSystemOptions& options) const = 0;
+
+ protected:
+  // A wrapper around fs-management that can be used by subclasses if they so wish.
+  static zx::status<> Format(const std::string& device_path, disk_format_t format);
 };
 
 // Template that implementations can use to gain the SharedInstance method.
@@ -32,24 +68,22 @@ class FileSystemImpl : public FileSystem {
 // Support for Minfs.
 class MinfsFileSystem : public FileSystemImpl<MinfsFileSystem> {
  public:
-  zx::status<> Format(const std::string& device_path) const override;
-  zx::status<> Mount(const std::string& device_path, const std::string& mount_path) const override;
+  zx::status<std::unique_ptr<FileSystemInstance>> Make(
+      const TestFileSystemOptions& options) const override;
 };
 
-// Helper that creates a ram-disk with, optionally, an FVM partition and then formats and mounts a
-// file system.
+// Support for Memfs.
+class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
+ public:
+  zx::status<std::unique_ptr<FileSystemInstance>> Make(
+      const TestFileSystemOptions& options) const override;
+};
+
+// Helper that creates a test file system with the given options and will clean-up upon destruction.
 class TestFileSystem {
  public:
-  struct Options {
-    bool use_fvm = true;
-    uint64_t device_block_size = 512;
-    uint64_t device_block_count = 131'072;
-    uint64_t fvm_slice_size = 1'048'576;
-    const FileSystem* file_system = &MinfsFileSystem::SharedInstance();
-  };
-
   // Creates and returns a test file system.
-  static zx::status<TestFileSystem> Create(const Options& options);
+  static zx::status<TestFileSystem> Create(const TestFileSystemOptions& options);
 
   TestFileSystem(TestFileSystem&&) = default;
   TestFileSystem& operator=(TestFileSystem&&) = default;
@@ -59,10 +93,12 @@ class TestFileSystem {
   const std::string& mount_path() const { return mount_path_; }
 
  private:
-  TestFileSystem(isolated_devmgr::RamDisk ram_disk, const std::string& mount_path)
-      : ram_disk_(std::move(ram_disk)), mount_path_(mount_path) {}
+  TestFileSystem(const TestFileSystemOptions& options,
+                 std::unique_ptr<FileSystemInstance> file_system, const std::string& mount_path)
+      : options_(options), file_system_(std::move(file_system)), mount_path_(mount_path) {}
 
-  isolated_devmgr::RamDisk ram_disk_;
+  TestFileSystemOptions options_;
+  std::unique_ptr<FileSystemInstance> file_system_;
   std::string mount_path_;
 };
 

@@ -264,6 +264,25 @@ zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const mount_optio
 }
 
 __EXPORT
+zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
+  zx_status_t status;
+  zx::channel mount_point, mount_point_server;
+  if ((status = zx::channel::create(0, &mount_point, &mount_point_server)) != ZX_OK) {
+    return status;
+  }
+  if ((status = fdio_open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN,
+                          mount_point_server.release())) != ZX_OK) {
+    return status;
+  }
+  fio::DirectoryAdmin::SyncClient mount_client(std::move(mount_point));
+  auto resp = mount_client.Mount(zx::channel(root_handle));
+  if (!resp.ok()) {
+    return resp.status();
+  }
+  return resp.value().s;
+}
+
+__EXPORT
 zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
                   const mount_options_t* options, LaunchCallback cb) {
   zx_status_t status;
@@ -278,20 +297,7 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
     return MakeDirAndRemoteMount(mount_path, std::move(data_root));
   }
 
-  zx::channel mount_point, mount_point_server;
-  if ((status = zx::channel::create(0, &mount_point, &mount_point_server)) != ZX_OK) {
-    return status;
-  }
-  if ((status = fdio_open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN,
-                          mount_point_server.release())) != ZX_OK) {
-    return status;
-  }
-  fio::DirectoryAdmin::SyncClient mount_client(std::move(mount_point));
-  auto resp = mount_client.Mount(std::move(data_root));
-  if (!resp.ok()) {
-    return resp.status();
-  }
-  return resp.value().s;
+  return mount_root_handle(data_root.release(), mount_path);
 }
 
 __EXPORT

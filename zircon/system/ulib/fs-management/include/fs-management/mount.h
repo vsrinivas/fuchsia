@@ -56,6 +56,9 @@ zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
 zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
                    LaunchCallback cb);
 
+// Mounts the file system being served via root_handle (which is consumed) at mount_path.
+zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path);
+
 // Umount the filesystem process.
 //
 // Returns ZX_ERR_BAD_STATE if mount_path could not be opened.
