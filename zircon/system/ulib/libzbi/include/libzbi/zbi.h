@@ -109,7 +109,7 @@ zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err);
 //
 // Returns:
 //     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If base is NULL.
+//     ZBI_RESULT_ERROR - If base or the callback is NULL.
 //     ZBI_RESULT_ERR_TRUNCATED - If the next entry would read past the ZBI.
 //     An error returned by the callback.
 zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, void* cookie);

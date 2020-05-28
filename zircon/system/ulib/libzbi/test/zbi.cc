@@ -8,6 +8,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
+#include <cstring>
 #include <memory>
 
 #include <fbl/auto_call.h>
@@ -497,6 +498,141 @@ static bool ZbiTestCheckCompleteTestZbiMissingBootfs() {
   END_TEST;
 }
 
+static zbi_result_t count_items_callback(zbi_header_t* header, void* payload, void* cookie) {
+  *reinterpret_cast<uint32_t*>(cookie) += 1;
+
+  return ZBI_RESULT_OK;
+}
+
+static bool ZbiTestForEachTestZbiNull() {
+  BEGIN_TEST;
+
+  ASSERT_EQ(zbi_for_each(nullptr, count_items_callback, nullptr), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestForEachTestZbiNullCallback() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_for_each(&container, nullptr, nullptr), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestForEachTestZbiContainer() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  uint32_t count = 0;
+
+  // The callback should be invoked with ZBI items and not the container.
+  EXPECT_EQ(zbi_for_each(&container, count_items_callback, &count), ZBI_RESULT_OK);
+  ASSERT_EQ(count, 0);
+
+  END_TEST;
+}
+
+static bool ZbiTestForEachTestZbiTruncated() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  // Container length does not include the size of the container header
+  zbi->header.length = offsetof(test_zbi_t, cmdline_payload) - sizeof(zbi_header_t);
+  uint32_t count = 0;
+
+  // Expect the first two entries to be counted.
+  EXPECT_EQ(zbi_for_each(zbi, count_items_callback, &count), ZBI_RESULT_ERR_TRUNCATED);
+  ASSERT_EQ(count, 2);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestForEachTestZbiItems() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  uint32_t count = 0;
+
+  EXPECT_EQ(zbi_for_each(zbi, count_items_callback, &count), ZBI_RESULT_OK);
+  ASSERT_EQ(count, 4);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static zbi_result_t modify_payload_callback(zbi_header_t* header, void* payload, void* cookie) {
+  if (cookie)
+    return ZBI_RESULT_ERROR;
+
+  std::memset(payload, 'B', 1);
+
+  return ZBI_RESULT_OK;
+}
+
+static bool ZbiTestForEachTestZbiItemsNoCookie() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  std::memset(zbi->kernel_payload, 'A', 1);
+  std::memset(zbi->cmdline_payload, 'A', 1);
+  std::memset(zbi->ramdisk_payload, 'A', 1);
+  std::memset(zbi->bootfs_payload, 'A', 1);
+
+  EXPECT_EQ(zbi_for_each(zbi, modify_payload_callback, nullptr), ZBI_RESULT_OK);
+
+  EXPECT_EQ(zbi->kernel_payload[0], 'B');
+  EXPECT_EQ(zbi->cmdline_payload[0], 'B');
+  EXPECT_EQ(zbi->ramdisk_payload[0], 'B');
+  EXPECT_EQ(zbi->bootfs_payload[0], 'B');
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static zbi_result_t modify_payload_then_error_callback(zbi_header_t* header, void* payload,
+                                                       void* cookie) {
+  auto* count = reinterpret_cast<uint32_t*>(cookie);
+  if (*count > 0) {
+    return ZBI_RESULT_ERROR;
+  }
+
+  std::memset(payload, 'B', 1);
+  *count += 1;
+
+  return ZBI_RESULT_OK;
+}
+
+static bool ZbiTestForEachTestZbiItemsCallbackError() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  std::memset(zbi->kernel_payload, 'A', 1);
+  std::memset(zbi->cmdline_payload, 'A', 1);
+  std::memset(zbi->ramdisk_payload, 'A', 1);
+  std::memset(zbi->bootfs_payload, 'A', 1);
+  uint32_t count = 0;
+
+  // Only the first entry should be modified.
+  EXPECT_EQ(zbi_for_each(zbi, modify_payload_then_error_callback, &count), ZBI_RESULT_ERROR);
+
+  EXPECT_EQ(count, 1);
+  EXPECT_EQ(zbi->kernel_payload[0], 'B');
+  EXPECT_EQ(zbi->cmdline_payload[0], 'A');
+  EXPECT_EQ(zbi->ramdisk_payload[0], 'A');
+  EXPECT_EQ(zbi->bootfs_payload[0], 'A');
+
+  free(zbi);
+
+  END_TEST;
+}
+
 static bool ZbiTestBasic(void) {
   BEGIN_TEST;
   uint8_t* test_zbi = get_test_zbi();
@@ -950,6 +1086,14 @@ RUN_TEST(ZbiTestCheckCompleteTestZbiTruncated)
 RUN_TEST(ZbiTestCheckCompleteTestZbiWrongArch)
 RUN_TEST(ZbiTestCheckCompleteTestZbiWrongArchWithErr)
 RUN_TEST(ZbiTestCheckCompleteTestZbiMissingBootfs)
+
+RUN_TEST(ZbiTestForEachTestZbiNull)
+RUN_TEST(ZbiTestForEachTestZbiNullCallback)
+RUN_TEST(ZbiTestForEachTestZbiContainer)
+RUN_TEST(ZbiTestForEachTestZbiTruncated)
+RUN_TEST(ZbiTestForEachTestZbiItems)
+RUN_TEST(ZbiTestForEachTestZbiItemsNoCookie)
+RUN_TEST(ZbiTestForEachTestZbiItemsCallbackError)
 
 // Basic tests.
 RUN_TEST(ZbiTestBasic)

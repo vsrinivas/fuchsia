@@ -141,6 +141,10 @@ zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err) {
 }
 
 zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, void* cookie) {
+  if (!base || !callback) {
+    return ZBI_RESULT_ERROR;
+  }
+
   zbi_header_t* header = (zbi_header_t*)(base);
 
   // Skip container header.
