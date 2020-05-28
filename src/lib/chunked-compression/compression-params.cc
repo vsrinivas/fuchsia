@@ -34,11 +34,12 @@ int CompressionParams::MaxCompressionLevel() { return ZSTD_maxCLevel(); }
 
 size_t CompressionParams::ChunkSizeForInputSize(size_t len, size_t target_size) {
   size_t rounded_target = fbl::round_up(target_size, MinChunkSize());
-  if (len / rounded_target <= kChunkArchiveMaxFrames) {
+  if (HeaderWriter::NumFramesForDataSize(len, rounded_target) <= kChunkArchiveMaxFrames) {
     return rounded_target;
   }
   // For larger files, just max out the number of frames.
-  size_t lower_bound_frame_size = len / kChunkArchiveMaxFrames;
+  size_t lower_bound_frame_size =
+      fbl::round_up(len, kChunkArchiveMaxFrames) / kChunkArchiveMaxFrames;
   return fbl::round_up(lower_bound_frame_size, MinChunkSize());
 }
 

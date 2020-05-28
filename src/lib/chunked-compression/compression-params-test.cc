@@ -29,9 +29,10 @@ TEST(CompressionParamsTest, ChunkSizeForInputSize) {
     // Everything up to 32376KiB should use 32KiB frames.
     // (This is the size of data for a full seek table with 32KiB frames.)
     // Above this, the algorithm tries to maximize the number of frames.
-    {32 * kMiB,       40 * kKiB},
-    {64 * kMiB,       72 * kKiB},
-    {128 * kMiB,      136 * kKiB},
+    {32736 * kKiB + 1, 40 * kKiB},
+    {32 * kMiB,        40 * kKiB},
+    {64 * kMiB,        72 * kKiB},
+    {128 * kMiB,       136 * kKiB},
   };
 
   for (const auto& params : kTestParams) {

@@ -292,4 +292,30 @@ TEST(StreamingChunkedCompressorTest, Compress_Update_TooManyBytes) {
   VerifyData(compressed_data.get(), compressed_len, 1u, len);
 }
 
+TEST(StreamingChunkedCompressorTest, Compress_MaxSeekTableEntries) {
+  size_t len = 8192ul * kChunkArchiveMaxFrames;
+  fbl::Array<uint8_t> buf(new uint8_t[8192ul], 8192ul);
+  memset(buf.get(), 0x00, buf.size());
+
+  CompressionParams params = { .chunk_size = 8192ul };
+  StreamingChunkedCompressor compressor(params);
+
+  size_t output_len = compressor.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[output_len], output_len);
+
+  ASSERT_EQ(compressor.Init(len, compressed_data.get(), compressed_data.size()), kStatusOk);
+
+  size_t consumed = 0;
+  while (consumed < len) {
+    size_t to_consume = fbl::min(buf.size(), len - consumed);
+    ASSERT_EQ(compressor.Update(buf.get(), to_consume), kStatusOk);
+    consumed += to_consume;
+  }
+
+  size_t compressed_len;
+  ASSERT_EQ(compressor.Final(&compressed_len), kStatusOk);
+
+  VerifyData(compressed_data.get(), compressed_len, kChunkArchiveMaxFrames, len);
+}
+
 }  // namespace chunked_compression
