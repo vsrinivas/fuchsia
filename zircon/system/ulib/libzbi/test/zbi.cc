@@ -22,6 +22,9 @@
 #include <libzbi/zbi-zx.h>
 #endif
 
+const char kTestKernel[] = "4567";
+constexpr size_t kKernelPayloadLen = ZBI_ALIGN(static_cast<uint32_t>(sizeof(kTestKernel)));
+
 const char kTestCmdline[] = "0123";
 constexpr size_t kCmdlinePayloadLen = ZBI_ALIGN(static_cast<uint32_t>(sizeof(kTestCmdline)));
 
@@ -37,6 +40,9 @@ typedef struct test_zbi {
   // Bootdata header.
   zbi_header_t header;
 
+  zbi_header_t kernel_hdr;
+  char kernel_payload[kKernelPayloadLen];
+
   zbi_header_t cmdline_hdr;
   char cmdline_payload[kCmdlinePayloadLen];
 
@@ -46,7 +52,9 @@ typedef struct test_zbi {
   zbi_header_t bootfs_hdr;
   char bootfs_payload[kBootfsPayloadLen];
 } test_zbi_t;
-static_assert(offsetof(test_zbi, cmdline_hdr) == sizeof(test_zbi::header));
+static_assert(offsetof(test_zbi, kernel_hdr) == sizeof(test_zbi::header));
+static_assert(offsetof(test_zbi, cmdline_hdr) ==
+              offsetof(test_zbi, kernel_payload[kKernelPayloadLen]));
 static_assert(offsetof(test_zbi, ramdisk_hdr) ==
               offsetof(test_zbi, cmdline_payload[kCmdlinePayloadLen]));
 static_assert(offsetof(test_zbi, bootfs_hdr) == offsetof(test_zbi, ramdisk_payload[kRdPayloadLen]));
@@ -80,6 +88,15 @@ static uint8_t* get_test_zbi_extra(const size_t extra_bytes) {
   result->header.type = ZBI_TYPE_CONTAINER;
   result->header.extra = ZBI_CONTAINER_MAGIC;
 
+  init_zbi_header(&result->kernel_hdr);
+#if defined(__aarch64__)
+  result->kernel_hdr.type = ZBI_TYPE_KERNEL_ARM64;
+#elif defined(__x86_64__) || defined(__i386__)
+  result->kernel_hdr.type = ZBI_TYPE_KERNEL_X64;
+#endif
+  strcpy(result->kernel_payload, kTestKernel);
+  result->kernel_hdr.length = static_cast<uint32_t>(sizeof(kTestKernel));
+
   init_zbi_header(&result->cmdline_hdr);
   result->cmdline_hdr.type = ZBI_TYPE_CMDLINE;
   strcpy(result->cmdline_payload, kTestCmdline);
@@ -110,6 +127,10 @@ static zbi_result_t check_contents(zbi_header_t* hdr, void* payload, void* cooki
   const char* actual = reinterpret_cast<const char*>(payload);
 
   switch (hdr->type) {
+    case ZBI_TYPE_KERNEL_X64:
+    case ZBI_TYPE_KERNEL_ARM64:
+      expected = kTestKernel;
+      break;
     case ZBI_TYPE_CMDLINE:
       expected = kTestCmdline;
       break;
@@ -294,6 +315,14 @@ static bool ZbiTestCheckTestZbiWithErr() {
   END_TEST;
 }
 
+static bool ZbiTestCheckTestZbiNull() {
+  BEGIN_TEST;
+
+  ASSERT_EQ(zbi_check(nullptr, nullptr), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
 static bool ZbiTestCheckFirstBadEntryIsMarked() {
   BEGIN_TEST;
 
@@ -380,6 +409,94 @@ static bool ZbiTestCheckTestZbiTruncated() {
   END_TEST;
 }
 
+static bool ZbiTestCheckCompleteTestZbi() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+
+  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_OK);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckCompleteTestZbiWithErr() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check_complete(zbi, &err), ZBI_RESULT_OK);
+
+  ASSERT_EQ(err, nullptr);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckCompleteTestZbiNull() {
+  BEGIN_TEST;
+
+  ASSERT_EQ(zbi_check_complete(nullptr, nullptr), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckCompleteTestZbiTruncated() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.length = 0;
+
+  ASSERT_EQ(zbi_check_complete(&container, nullptr), ZBI_RESULT_ERR_TRUNCATED);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckCompleteTestZbiWrongArch() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->kernel_hdr.type = 0;
+
+  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_INCOMPLETE_KERNEL);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckCompleteTestZbiWrongArchWithErr() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->kernel_hdr.type = 0;
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check_complete(zbi, &err), ZBI_RESULT_INCOMPLETE_KERNEL);
+
+  ASSERT_EQ(err, &zbi->kernel_hdr);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckCompleteTestZbiMissingBootfs() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->bootfs_hdr.type = ZBI_TYPE_CMDLINE;
+
+  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_INCOMPLETE_BOOTFS);
+
+  free(zbi);
+
+  END_TEST;
+}
+
 static bool ZbiTestBasic(void) {
   BEGIN_TEST;
   uint8_t* test_zbi = get_test_zbi();
@@ -402,7 +519,7 @@ static bool ZbiTestBasic(void) {
 
   ASSERT_EQ(result, ZBI_RESULT_OK, "content check failed");
 
-  ASSERT_EQ(count, 3, "bad bootdata item count");
+  ASSERT_EQ(count, 4, "bad bootdata item count");
 
   END_TEST;
 }
@@ -457,7 +574,7 @@ static bool ZbiTestTruncated(void) {
 
   ASSERT_NE(result, ZBI_RESULT_OK, "Truncated image not reported as truncated");
 
-  ASSERT_EQ(count, 3, "bad bootdata item count");
+  ASSERT_EQ(count, 4, "bad bootdata item count");
 
   END_TEST;
 }
@@ -575,6 +692,13 @@ static bool ZbiTestAppendMulti(void) {
   ASSERT_EQ(image.Check(nullptr), ZBI_RESULT_OK);
 
   zbi_result_t result;
+
+#if defined(__aarch64__)
+  result = image.AppendSection(sizeof(kTestKernel), ZBI_TYPE_KERNEL_ARM64, 0, 0, kTestKernel);
+#elif defined(__x86_64__) || defined(__i386__)
+  result = image.AppendSection(sizeof(kTestKernel), ZBI_TYPE_KERNEL_X64, 0, 0, kTestKernel);
+#endif
+  ASSERT_EQ(result, ZBI_RESULT_OK);
 
   result = image.AppendSection(sizeof(kTestCmdline), ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline);
   ASSERT_EQ(result, ZBI_RESULT_OK);
@@ -757,7 +881,7 @@ static bool ZbiZxTestOverflowAtPageBoundary() {
   ASSERT_EQ(zbi_append_section(ptr, kInitialAlloc, sizeof(kernel_data),
 #ifdef __aarch64__
                                ZBI_TYPE_KERNEL_ARM64,
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) || defined(__i386__)
                                ZBI_TYPE_KERNEL_X64,
 #endif
                                /*extra=*/0, /*flags=*/0, kernel_data),
@@ -811,12 +935,21 @@ RUN_TEST(ZbiTestCheckContainerBadCrc32)
 
 RUN_TEST(ZbiTestCheckTestZbi)
 RUN_TEST(ZbiTestCheckTestZbiWithErr)
+RUN_TEST(ZbiTestCheckTestZbiNull)
 RUN_TEST(ZbiTestCheckFirstBadEntryIsMarked)
 RUN_TEST(ZbiTestCheckTestZbiBadMagic)
 RUN_TEST(ZbiTestCheckTestZbiBadMagicWithErr)
 RUN_TEST(ZbiTestCheckTestZbiBadVersion)
 RUN_TEST(ZbiTestCheckTestZbiBadCrc32)
 RUN_TEST(ZbiTestCheckTestZbiTruncated)
+
+RUN_TEST(ZbiTestCheckCompleteTestZbi)
+RUN_TEST(ZbiTestCheckCompleteTestZbiWithErr)
+RUN_TEST(ZbiTestCheckCompleteTestZbiNull)
+RUN_TEST(ZbiTestCheckCompleteTestZbiTruncated)
+RUN_TEST(ZbiTestCheckCompleteTestZbiWrongArch)
+RUN_TEST(ZbiTestCheckCompleteTestZbiWrongArchWithErr)
+RUN_TEST(ZbiTestCheckCompleteTestZbiMissingBootfs)
 
 // Basic tests.
 RUN_TEST(ZbiTestBasic)

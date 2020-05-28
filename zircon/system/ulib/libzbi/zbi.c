@@ -70,6 +70,10 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload, void*
 
 static zbi_result_t zbi_check_internal(const void* base, uint32_t check_complete,
                                        zbi_header_t** err) {
+  if (!base) {
+    return ZBI_RESULT_ERROR;
+  }
+
   zbi_result_t res = ZBI_RESULT_OK;
   const zbi_header_t* header = base;
 
