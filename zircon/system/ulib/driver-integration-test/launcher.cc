@@ -29,7 +29,7 @@ const zbi_platform_id_t kPlatformId = []() {
   return plat_id;
 }();
 
-#define BOARD_REVISION_TEST      42
+#define BOARD_REVISION_TEST 42
 
 const zbi_board_info_t kBoardInfo = []() {
   zbi_board_info_t board_info = {};
@@ -139,6 +139,7 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* o
   devmgr_args.driver_search_paths.swap(args->driver_search_paths);
   devmgr_args.load_drivers.swap(args->load_drivers);
   devmgr_args.flat_namespace = std::move(args->flat_namespace);
+  devmgr_args.boot_args = std::move(args->boot_args);
   devmgr_args.disable_block_watcher = args->disable_block_watcher;
   devmgr_args.disable_netsvc = args->disable_netsvc;
   devmgr_args.get_boot_item = [args = std::move(cb_args)](uint32_t type, uint32_t extra,

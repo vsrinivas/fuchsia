@@ -34,6 +34,8 @@ class IsolatedDevmgr {
     fbl::Vector<board_test::DeviceEntry> device_list;
     // A list of kernel cmdline arguments to pass to the devmgr process.
     fbl::Vector<const char*> arguments;
+    // A map of boot arguments. See devmgr_lanucher::Args::boot_args.
+    std::map<std::string, std::string> boot_args;
     // A board name to appear.
     fbl::String board_name;
     // Board_revision
