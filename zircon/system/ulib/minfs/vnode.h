@@ -94,7 +94,7 @@ class VnodeMinfs : public fs::Vnode,
   void SetNextInode(ino_t ino) { inode_.next_inode = ino; }
   void SetLastInode(ino_t ino) { inode_.last_inode = ino; }
 
-  void AddLink() { inode_.link_count++; }
+  void AddLink();
 
   void MarkPurged() { inode_.magic = kMinfsMagicPurged; }
 
