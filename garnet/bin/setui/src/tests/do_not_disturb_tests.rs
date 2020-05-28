@@ -65,7 +65,6 @@ async fn set_dnd(
     if let Some(n) = night_mode_dnd {
         dnd_settings.night_mode_initiated_do_not_disturb = Some(n);
     }
-    println!("settings: {:?}", dnd_settings);
     dnd_proxy.set(dnd_settings).await.expect("set completed").expect("set successful");
 }
 

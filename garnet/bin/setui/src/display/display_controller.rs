@@ -8,7 +8,7 @@ use crate::registry::setting_handler::persist::{
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
-    DisplayInfo, SettingRequest, SettingResponse, SettingResponseResult,
+    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingResponseResult,
 };
 use async_trait::async_trait;
 
@@ -16,7 +16,11 @@ impl DeviceStorageCompatible for DisplayInfo {
     const KEY: &'static str = "display_info";
 
     fn default_value() -> Self {
-        DisplayInfo::new(false /*auto_brightness_enabled*/, 0.5 /*brightness_value*/)
+        DisplayInfo::new(
+            false,                 /*auto_brightness_enabled*/
+            0.5,                   /*brightness_value*/
+            LowLightMode::Disable, /*low_light_mode*/
+        )
     }
 }
 
@@ -44,27 +48,20 @@ impl controller::Handle for DisplayController {
                 Some(store_brightness(self.client.read().await, &self.client).await)
             }
             SettingRequest::SetBrightness(brightness_value) => {
-                Some(
-                    store_brightness(
-                        DisplayInfo::new(false /*auto_brightness_enabled*/, brightness_value),
-                        &self.client,
-                    )
-                    .await,
-                )
+                let mut display_info = self.client.read().await.clone();
+                display_info.auto_brightness = false;
+                display_info.manual_brightness_value = brightness_value;
+                Some(store_brightness(display_info, &self.client).await)
             }
             SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
-                let brightness_value: f32;
-                {
-                    let stored_value = self.client.read().await;
-                    brightness_value = stored_value.manual_brightness_value;
-                }
-                Some(
-                    store_brightness(
-                        DisplayInfo::new(auto_brightness_enabled, brightness_value),
-                        &self.client,
-                    )
-                    .await,
-                )
+                let mut display_info = self.client.read().await.clone();
+                display_info.auto_brightness = auto_brightness_enabled;
+                Some(store_brightness(display_info, &self.client).await)
+            }
+            SettingRequest::SetLowLightMode(low_light_mode) => {
+                let mut display_info = self.client.read().await.clone();
+                display_info.low_light_mode = low_light_mode;
+                Some(store_brightness(display_info, &self.client).await)
             }
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::Brightness(self.client.read().await))))

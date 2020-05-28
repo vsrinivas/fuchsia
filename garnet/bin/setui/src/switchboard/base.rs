@@ -134,6 +134,7 @@ pub enum SettingRequest {
     // Display requests.
     SetBrightness(f32),
     SetAutoBrightness(bool),
+    SetLowLightMode(LowLightMode),
 
     // Do not disturb requests.
     SetDnD(DoNotDisturbInfo),
@@ -208,14 +209,19 @@ pub struct AudioInfo {
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DisplayInfo {
-    /// The last brightness value that was manually set
+    /// The last brightness value that was manually set.
     pub manual_brightness_value: f32,
     pub auto_brightness: bool,
+    pub low_light_mode: LowLightMode,
 }
 
 impl DisplayInfo {
-    pub const fn new(auto_brightness: bool, manual_brightness_value: f32) -> DisplayInfo {
-        DisplayInfo { manual_brightness_value, auto_brightness }
+    pub const fn new(
+        auto_brightness: bool,
+        manual_brightness_value: f32,
+        low_light_mode: LowLightMode,
+    ) -> DisplayInfo {
+        DisplayInfo { manual_brightness_value, auto_brightness, low_light_mode }
     }
 }
 
@@ -241,6 +247,17 @@ impl DoNotDisturbInfo {
     pub const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
         DoNotDisturbInfo { user_dnd: Some(user_dnd), night_mode_dnd: Some(night_mode_dnd) }
     }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Hash, Eq)]
+pub enum LowLightMode {
+    /// Device should not be in low-light mode.
+    Disable,
+    /// Device should not be in low-light mode and should transition
+    /// out of it immediately.
+    DisableImmediately,
+    /// Device should be in low-light mode.
+    Enable,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

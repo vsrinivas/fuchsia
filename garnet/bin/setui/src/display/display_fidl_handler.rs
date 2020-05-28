@@ -2,10 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::fidl_hanging_get_result_responder, crate::fidl_processor::FidlProcessor,
-    crate::switchboard::base::*, crate::switchboard::hanging_get_handler::Sender,
-    fidl::endpoints::ServiceMarker, fidl_fuchsia_settings::*, fuchsia_async as fasync,
-    futures::future::LocalBoxFuture, futures::prelude::*,
+    crate::fidl_hanging_get_result_responder,
+    crate::fidl_processor::FidlProcessor,
+    crate::switchboard::base::{
+        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType,
+        SwitchboardClient,
+    },
+    crate::switchboard::hanging_get_handler::Sender,
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_settings::{
+        DisplayMarker, DisplayRequest, DisplayRequestStream, DisplaySettings,
+        DisplayWatchLightSensorResponder, DisplayWatchResponder, Error, LightSensorData,
+        LowLightMode as FidlLowLightMode,
+    },
+    fuchsia_async as fasync,
+    futures::future::LocalBoxFuture,
+    futures::prelude::*,
 };
 
 fidl_hanging_get_result_responder!(
@@ -38,6 +50,11 @@ impl From<SettingResponse> for DisplaySettings {
             let mut display_settings = fidl_fuchsia_settings::DisplaySettings::empty();
 
             display_settings.auto_brightness = Some(info.auto_brightness);
+            display_settings.low_light_mode = match info.low_light_mode {
+                LowLightMode::Enable => Some(FidlLowLightMode::Enable),
+                LowLightMode::Disable => Some(FidlLowLightMode::Disable),
+                LowLightMode::DisableImmediately => Some(FidlLowLightMode::DisableImmediately),
+            };
 
             if !info.auto_brightness {
                 display_settings.brightness_value = Some(info.manual_brightness_value);
@@ -56,6 +73,16 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
         request = Some(SettingRequest::SetBrightness(brightness_value));
     } else if let Some(enable_auto_brightness) = settings.auto_brightness {
         request = Some(SettingRequest::SetAutoBrightness(enable_auto_brightness));
+    } else if let Some(low_light_mode) = settings.low_light_mode {
+        request = match low_light_mode {
+            FidlLowLightMode::Enable => Some(SettingRequest::SetLowLightMode(LowLightMode::Enable)),
+            FidlLowLightMode::Disable => {
+                Some(SettingRequest::SetLowLightMode(LowLightMode::Disable))
+            }
+            FidlLowLightMode::DisableImmediately => {
+                Some(SettingRequest::SetLowLightMode(LowLightMode::DisableImmediately))
+            }
+        };
     }
     request
 }
@@ -110,7 +137,6 @@ pub fn spawn_display_fidl_handler(
                     #[allow(unreachable_patterns)]
                     match req {
                         DisplayRequest::WatchLightSensor { delta, responder } => {
-                            //let mut hanging_get_lock = light_sensor_hanging_get_handler.lock().await;
                             context
                                 .watch_with_change_fn(
                                     Box::new(

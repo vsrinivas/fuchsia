@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_settings::{DisplayProxy, DisplaySettings},
+    fidl_fuchsia_settings::{DisplayProxy, DisplaySettings, LowLightMode},
 };
 
 pub async fn command(
@@ -12,6 +12,7 @@ pub async fn command(
     brightness: Option<f32>,
     auto_brightness: Option<bool>,
     light_sensor: bool,
+    low_light_mode: Option<LowLightMode>,
 ) -> Result<String, Error> {
     let mut output = String::new();
 
@@ -41,6 +42,15 @@ pub async fn command(
     } else if light_sensor {
         let data = proxy.watch_light_sensor(0.0).await?;
         output.push_str(&format!("{:?}", data));
+    } else if let Some(mode) = low_light_mode {
+        let mut settings = DisplaySettings::empty();
+        settings.low_light_mode = Some(mode);
+
+        let mutate_result = proxy.set(settings).await?;
+        match mutate_result {
+            Ok(_) => output.push_str(&format!("Successfully set low_light_mode to {:?}", mode)),
+            Err(err) => output.push_str(&format!("{:?}", err)),
+        }
     } else {
         let setting = proxy.watch().await?;
 
@@ -67,6 +77,10 @@ fn describe_display_setting(display_setting: &DisplaySettings) -> String {
 
     if let Some(auto_brightness) = display_setting.auto_brightness {
         output.push_str(&format!("auto_brightness: {} ", auto_brightness))
+    }
+
+    if let Some(low_light_mode) = display_setting.low_light_mode {
+        output.push_str(&format!("low_light_mode: {:?} ", low_light_mode))
     }
 
     output.push_str("}");

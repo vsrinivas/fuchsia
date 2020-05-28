@@ -394,7 +394,11 @@ mod tests {
                     .unwrap();
             } else if let Some(value) = *self.id_to_send.read() {
                 callback
-                    .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(false, value)))))
+                    .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
+                        false,
+                        value,
+                        LowLightMode::Disable,
+                    )))))
                     .unwrap();
             }
             Ok(())

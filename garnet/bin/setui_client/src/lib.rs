@@ -75,6 +75,13 @@ pub enum SettingClient {
 
         #[structopt(short = "l", long = "light_sensor")]
         light_sensor: bool,
+
+        #[structopt(
+            short = "m",
+            long = "low_light_mode",
+            parse(try_from_str = "str_to_low_light_mode")
+        )]
+        low_light_mode: Option<fidl_fuchsia_settings::LowLightMode>,
     },
 
     #[structopt(name = "do_not_disturb")]
@@ -256,12 +263,17 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = device::command(device_service).await?;
             println!("Device: {}", output);
         }
-        SettingClient::Display { brightness, auto_brightness, light_sensor } => {
+        SettingClient::Display { brightness, auto_brightness, light_sensor, low_light_mode } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
-            let output =
-                display::command(display_service, brightness, auto_brightness, light_sensor)
-                    .await?;
+            let output = display::command(
+                display_service,
+                brightness,
+                auto_brightness,
+                light_sensor,
+                low_light_mode,
+            )
+            .await?;
             println!("Display: {}", output);
         }
         SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
@@ -366,6 +378,18 @@ fn str_to_time_zone(src: &&str) -> fidl_fuchsia_intl::TimeZoneId {
 
 fn str_to_locale(src: &str) -> fidl_fuchsia_intl::LocaleId {
     fidl_fuchsia_intl::LocaleId { id: src.to_string() }
+}
+
+fn str_to_low_light_mode(src: &str) -> Result<fidl_fuchsia_settings::LowLightMode, &str> {
+    if src.contains("enable") {
+        Ok(fidl_fuchsia_settings::LowLightMode::Enable)
+    } else if src.contains("disable") {
+        Ok(fidl_fuchsia_settings::LowLightMode::Disable)
+    } else if src.contains("disableimmediately") {
+        Ok(fidl_fuchsia_settings::LowLightMode::DisableImmediately)
+    } else {
+        Err("Couldn't parse low light mode")
+    }
 }
 
 fn str_to_interfaces(src: &&str) -> ConfigurationInterfaces {

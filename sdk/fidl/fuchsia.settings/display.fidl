@@ -56,6 +56,8 @@ table DisplaySettings {
     2: float32 brightness_value;
     /// User defined offset to the total auto brightness output [-1.0 - 1.0]
     3: float32 user_brightness_offset;
+    /// The low light mode state of the device.
+    4: LowLightMode low_light_mode;
 };
 
 table LightSensorData {
@@ -64,4 +66,14 @@ table LightSensorData {
 
     /// Color measured by light sensor in rgb.
     2: fuchsia.ui.types.ColorRgb color;
+};
+
+enum LowLightMode {
+    /// Device should not be in low-light mode.
+    DISABLE = 0;
+    /// Device should not be in low-light mode and should transition
+    /// out of it immediately.
+    DISABLE_IMMEDIATELY = 1;
+    /// Device should be in low-light mode.
+    ENABLE = 2;
 };
