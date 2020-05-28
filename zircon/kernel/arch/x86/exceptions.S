@@ -79,6 +79,7 @@ DATA(_isr_table)
 def_isr
 .endr
 
+.p2align 6
 FUNCTION_LABEL(interrupt_common)
     .cfi_startproc simple
     .cfi_signal_frame
