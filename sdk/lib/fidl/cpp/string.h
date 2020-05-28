@@ -284,12 +284,13 @@ struct CodingTraits<::std::string> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::string* value, size_t offset) {
+    const size_t size = value->size();
     fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
-    string->size = value->size();
+    string->size = size;
     string->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-    size_t base = encoder->Alloc(value->size());
+    size_t base = encoder->Alloc(size);
     char* payload = encoder->template GetPtr<char>(base);
-    memcpy(payload, value->data(), value->size());
+    memcpy(payload, value->data(), size);
   }
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, std::string* value, size_t offset) {
