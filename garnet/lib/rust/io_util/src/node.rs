@@ -18,28 +18,28 @@ use {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum OpenError {
-    #[error("while making a fidl proxy: {}", _0)]
+    #[error("while making a fidl proxy: {0}")]
     CreateProxy(#[source] fidl::Error),
 
-    #[error("while opening from namespace: {}", _0)]
-    Namespace(Status),
+    #[error("while opening from namespace: {0}")]
+    Namespace(#[source] Status),
 
-    #[error("while sending open request: {}", _0)]
+    #[error("while sending open request: {0}")]
     SendOpenRequest(#[source] fidl::Error),
 
     #[error("node event stream closed prematurely")]
     OnOpenEventStreamClosed,
 
-    #[error("while reading OnOpen event: {}", _0)]
+    #[error("while reading OnOpen event: {0}")]
     OnOpenDecode(#[source] fidl::Error),
 
-    #[error("open failed with status: {}", _0)]
-    OpenError(Status),
+    #[error("open failed with status: {0}")]
+    OpenError(#[source] Status),
 
     #[error("remote responded with success but provided no node info")]
     MissingOnOpenInfo,
 
-    #[error("expected node to be a {:?}, but got a {:?}", expected, actual)]
+    #[error("expected node to be a {expected:?}, but got a {actual:?}")]
     UnexpectedNodeKind { expected: Kind, actual: Kind },
 }
 
@@ -47,10 +47,10 @@ pub enum OpenError {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum CloneError {
-    #[error("while making a fidl proxy: {}", _0)]
+    #[error("while making a fidl proxy: {0}")]
     CreateProxy(#[source] fidl::Error),
 
-    #[error("while sending clone request: {}", _0)]
+    #[error("while sending clone request: {0}")]
     SendCloneRequest(#[source] fidl::Error),
 }
 
@@ -58,11 +58,11 @@ pub enum CloneError {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum CloseError {
-    #[error("while sending close request: {}", _0)]
-    SendCloseRequest(fidl::Error),
+    #[error("while sending close request: {0}")]
+    SendCloseRequest(#[source] fidl::Error),
 
-    #[error("close failed with status: {}", _0)]
-    CloseError(Status),
+    #[error("close failed with status: {0}")]
+    CloseError(#[source] Status),
 }
 
 /// The type of a filesystem node

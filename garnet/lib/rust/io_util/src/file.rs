@@ -15,34 +15,78 @@ use {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum ReadError {
-    #[error("while opening the file: {}", _0)]
+    #[error("while opening the file: {0}")]
     Open(#[from] OpenError),
 
-    #[error("read call failed: {}", _0)]
+    #[error("read call failed: {0}")]
     Fidl(#[from] fidl::Error),
 
-    #[error("read failed with status: {}", _0)]
-    ReadError(Status),
+    #[error("read failed with status: {0}")]
+    ReadError(#[source] Status),
 
-    #[error("file was not a utf-8 encoded string: {}", _0)]
+    #[error("file was not a utf-8 encoded string: {0}")]
     InvalidUtf8(#[from] std::string::FromUtf8Error),
+}
+
+/// An error encountered while reading a named file
+#[derive(Debug, Error)]
+#[error("error reading '{path}': {source}")]
+pub struct ReadNamedError {
+    path: String,
+
+    #[source]
+    source: ReadError,
+}
+
+impl ReadNamedError {
+    /// Returns the path associated with this error.
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// Unwraps the inner read error, discarding the associated path.
+    pub fn into_inner(self) -> ReadError {
+        self.source
+    }
 }
 
 /// An error encountered while writing a file
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum WriteError {
-    #[error("while creating the file: {}", _0)]
+    #[error("while creating the file: {0}")]
     Create(#[from] OpenError),
 
-    #[error("write call failed: {}", _0)]
+    #[error("write call failed: {0}")]
     Fidl(#[from] fidl::Error),
 
-    #[error("write failed with status: {}", _0)]
-    WriteError(Status),
+    #[error("write failed with status: {0}")]
+    WriteError(#[source] Status),
 
     #[error("file endpoint reported more bytes written than were provided")]
     Overwrite,
+}
+
+/// An error encountered while writing a named file
+#[derive(Debug, Error)]
+#[error("error writing '{path}': {source}")]
+pub struct WriteNamedError {
+    path: String,
+
+    #[source]
+    source: WriteError,
+}
+
+impl WriteNamedError {
+    /// Returns the path associated with this error.
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// Unwraps the inner write error, discarding the associated path.
+    pub fn into_inner(self) -> WriteError {
+        self.source
+    }
 }
 
 /// Opens the given `path` from the current namespace as a [`FileProxy`]. The target is not
@@ -67,19 +111,23 @@ pub async fn close(file: FileProxy) -> Result<(), CloseError> {
 /// absolute path.
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
-pub async fn write_in_namespace<D>(path: &str, data: D) -> Result<(), WriteError>
+pub async fn write_in_namespace<D>(path: &str, data: D) -> Result<(), WriteNamedError>
 where
     D: AsRef<[u8]>,
 {
-    let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-        | fidl_fuchsia_io::OPEN_FLAG_CREATE
-        | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
-    let file = open_in_namespace(path, flags)?;
+    async {
+        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+            | fidl_fuchsia_io::OPEN_FLAG_CREATE
+            | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
+        let file = open_in_namespace(path, flags)?;
 
-    write(&file, data).await?;
+        write(&file, data).await?;
 
-    let _ = close(file).await;
-    Ok(())
+        let _ = close(file).await;
+        Ok(())
+    }
+    .await
+    .map_err(|source| WriteNamedError { path: path.to_owned(), source })
 }
 
 /// Writes the given data into the given file.
@@ -119,10 +167,30 @@ pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
     Ok(out)
 }
 
+/// Reads all data from the file at `path` in the current namespace. The path must be an absolute
+/// path.
+pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {
+    async {
+        let file = open_in_namespace(path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
+        read(&file).await
+    }
+    .await
+    .map_err(|source| ReadNamedError { path: path.to_owned(), source: source.into() })
+}
+
 /// Reads a utf-8 encoded string from the given file's current offset to the end of the file.
 pub async fn read_to_string(file: &FileProxy) -> Result<String, ReadError> {
     let bytes = read(file).await?;
     let string = String::from_utf8(bytes)?;
+    Ok(string)
+}
+
+/// Reads a utf-8 encoded string from the file at `path` in the current namespace. The path must be
+/// an absolute path.
+pub async fn read_in_namespace_to_string(path: &str) -> Result<String, ReadNamedError> {
+    let bytes = read_in_namespace(path).await?;
+    let string = String::from_utf8(bytes)
+        .map_err(|source| ReadNamedError { path: path.to_owned(), source: source.into() })?;
     Ok(string)
 }
 
@@ -194,6 +262,17 @@ mod tests {
         // Verify contents.
         let contents = std::fs::read(&path).unwrap();
         assert_eq!(&contents, &new_data);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn write_in_namespace_fails_on_invalid_namespace_entry() {
+        assert_matches!(
+            write_in_namespace("/fake", b"").await,
+            Err(WriteNamedError { path, source: WriteError::Create(_) }) if path == "/fake"
+        );
+        let err = write_in_namespace("/fake", b"").await.unwrap_err();
+        assert_eq!(err.path(), "/fake");
+        assert_matches!(err.into_inner(), WriteError::Create(_));
     }
 
     // write
@@ -281,11 +360,40 @@ mod tests {
         assert_eq!(&contents[..], "ello World!\n".as_bytes());
     }
 
+    // read_in_namespace
+
+    #[fasync::run_singlethreaded(test)]
+    async fn read_in_namespace_reads_contents() {
+        let contents = read_in_namespace("/pkg/data/file").await.unwrap();
+        assert_eq!(&contents[..], DATA_FILE_CONTENTS.as_bytes());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn read_in_namespace_fails_on_invalid_namespace_entry() {
+        assert_matches!(
+            read_in_namespace("/fake").await,
+            Err(ReadNamedError { path, source: ReadError::Open(_) }) if path == "/fake"
+        );
+        let err = read_in_namespace("/fake").await.unwrap_err();
+        assert_eq!(err.path(), "/fake");
+        assert_matches!(err.into_inner(), ReadError::Open(_));
+    }
+
     // read_to_string
 
     #[fasync::run_singlethreaded(test)]
     async fn read_to_string_reads_data_file() {
         let file = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
         assert_eq!(read_to_string(&file).await.unwrap(), DATA_FILE_CONTENTS);
+    }
+
+    // read_in_namespace_to_string
+
+    #[fasync::run_singlethreaded(test)]
+    async fn read_in_namespace_to_string_reads_data_file() {
+        assert_eq!(
+            read_in_namespace_to_string("/pkg/data/file").await.unwrap(),
+            DATA_FILE_CONTENTS
+        );
     }
 }
