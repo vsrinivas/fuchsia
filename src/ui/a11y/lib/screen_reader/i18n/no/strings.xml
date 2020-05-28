@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">Overskrift</string>
+  <string name="role_button">Knapp</string>
+  <string name="role_checkbox">Avmerkingsboks</string>
+  <string name="role_combobox">Kombinasjonsfelt</string>
+  <string name="role_image">Bilde</string>
+  <string name="role_link">Link</string>
+  <string name="role_progressbar">Fremdriftslinje</string>
+  <string name="role_slider">Glidebryter</string>
+  <string name="role_tab">Fane</string>
+  <string name="role_radiobutton">Alternativknapp</string>
+  <string name="radio_button_selected">{name}, alternativknappen er valgt</string>
+  <string name="radio_button_unselected">{name}, valg av alternativknappen er opphevet</string>
+  <string name="role_table">Tabell</string>
+  <string name="table_summary">{table_name},        {table_rows} ganger {table_columns}</string>
+  <string name="cell_summary">Rad {row_index} kolonne {column_index}</string>
+  <string name="element_checked">Avmerket</string>
+  <string name="element_not_checked">Ikke avmerket</string>
+  <string name="element_partially_checked">Delvis avmerket</string>
+  <string name="element_disabled">Slått av</string>
+  <string name="element_expanded">Vises</string>
+  <string name="element_collapsed">Skjules</string>
+  <string name="heading_level_1">Overskrift 1</string>
+  <string name="heading_level_2">Overskrift 2</string>
+  <string name="heading_level_3">Overskrift 3</string>
+  <string name="heading_level_4">Overskrift 4</string>
+  <string name="heading_level_5">Overskrift 5</string>
+  <string name="heading_level_6">Overskrift 6</string>
+  <string name="role_list_item">Listeelement</string>
+  <string name="role_ordered_list">Ordnet liste</string>
+  <string name="role_list">Liste</string>
+  <string name="list_items">{num_items,plural, =0{uten elementer}=1{med ett element}other{med # elementer}}</string>
+  <string name="line_granularity">Linje</string>
+  <string name="word_granularity">Ord</string>
+  <string name="character_granularity">Tegn</string>
+  <string name="double_tap_hint">Dobbelttrykk for å aktivere</string>
+  <string name="last_element">Siste</string>
+  <string name="first_element">Første</string>
+  <string name="no_focus_alert">Ikke noe fokus. Trykk og utforsk for å finne elementer.</string>
+</resources>

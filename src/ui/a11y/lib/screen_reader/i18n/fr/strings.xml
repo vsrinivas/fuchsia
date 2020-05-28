@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">Titre</string>
+  <string name="role_button">Bouton</string>
+  <string name="role_checkbox">Case à cocher</string>
+  <string name="role_combobox">Boîte combinée</string>
+  <string name="role_image">Image</string>
+  <string name="role_link">Lien</string>
+  <string name="role_progressbar">Barre de progression</string>
+  <string name="role_slider">Curseur</string>
+  <string name="role_tab">Onglet</string>
+  <string name="role_radiobutton">Case d\'option</string>
+  <string name="radio_button_selected">{name}, case d\'option sélectionnée</string>
+  <string name="radio_button_unselected">{name}, case d\'option non sélectionnée</string>
+  <string name="role_table">Tableau</string>
+  <string name="table_summary">{table_name},        {table_rows} lignes et {table_columns} colonnes</string>
+  <string name="cell_summary">Ligne {row_index}, colonne {column_index}</string>
+  <string name="element_checked">Élément coché</string>
+  <string name="element_not_checked">Élément non coché</string>
+  <string name="element_partially_checked">Élément coché en partie</string>
+  <string name="element_disabled">Élément désactivé</string>
+  <string name="element_expanded">Élément développé</string>
+  <string name="element_collapsed">Élément réduit</string>
+  <string name="heading_level_1">Titre 1</string>
+  <string name="heading_level_2">Titre 2</string>
+  <string name="heading_level_3">Titre 3</string>
+  <string name="heading_level_4">Titre 4</string>
+  <string name="heading_level_5">Titre 5</string>
+  <string name="heading_level_6">Titre 6</string>
+  <string name="role_list_item">Élément de liste</string>
+  <string name="role_ordered_list">Liste numérotée</string>
+  <string name="role_list">Liste</string>
+  <string name="list_items">{num_items,plural, =0{sans aucun élément}=1{avec 1 élément}one{with # items}other{avec # éléments}}</string>
+  <string name="line_granularity">Ligne</string>
+  <string name="word_granularity">Mot</string>
+  <string name="character_granularity">Caractère</string>
+  <string name="double_tap_hint">Appuyer deux fois pour activer</string>
+  <string name="last_element">Dernier élément</string>
+  <string name="first_element">Premier élément</string>
+  <string name="no_focus_alert">Aucun élément sélectionné. Appuyez sur l\'écran et naviguez pour trouver un élément.</string>
+</resources>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">‏‮Heading‬‏</string>
+  <string name="role_button">‏‮Button‬‏</string>
+  <string name="role_checkbox">‏‮Check‬‏ ‏‮box‬‏</string>
+  <string name="role_combobox">‏‮Combo‬‏ ‏‮box‬‏</string>
+  <string name="role_image">‏‮Image‬‏</string>
+  <string name="role_link">‏‮Link‬‏</string>
+  <string name="role_progressbar">‏‮Progress‬‏ ‏‮bar‬‏</string>
+  <string name="role_slider">‏‮Slider‬‏</string>
+  <string name="role_tab">‏‮Tab‬‏</string>
+  <string name="role_radiobutton">‏‮Radio‬‏ ‏‮button‬‏</string>
+  <string name="radio_button_selected">{name}, ‏‮radio‬‏ ‏‮button‬‏ ‏‮selected‬‏</string>
+  <string name="radio_button_unselected">{name}, ‏‮radio‬‏ ‏‮button‬‏ ‏‮unselected‬‏</string>
+  <string name="role_table">‏‮Table‬‏</string>
+  <string name="table_summary">{table_name},        {table_rows} ‏‮by‬‏ {table_columns}</string>
+  <string name="cell_summary">‏‮Row‬‏ {row_index} ‏‮column‬‏ {column_index}</string>
+  <string name="element_checked">‏‮Checked‬‏</string>
+  <string name="element_not_checked">‏‮Not‬‏ ‏‮checked‬‏</string>
+  <string name="element_partially_checked">‏‮Partially‬‏ ‏‮checked‬‏</string>
+  <string name="element_disabled">‏‮Disabled‬‏</string>
+  <string name="element_expanded">‏‮Expanded‬‏</string>
+  <string name="element_collapsed">‏‮Collapsed‬‏</string>
+  <string name="heading_level_1">‏‮Heading‬‏ 1</string>
+  <string name="heading_level_2">‏‮Heading‬‏ 2</string>
+  <string name="heading_level_3">‏‮Heading‬‏ 3</string>
+  <string name="heading_level_4">‏‮Heading‬‏ 4</string>
+  <string name="heading_level_5">‏‮Heading‬‏ 5</string>
+  <string name="heading_level_6">‏‮Heading‬‏ 6</string>
+  <string name="role_list_item">‏‮List‬‏ ‏‮item‬‏</string>
+  <string name="role_ordered_list">‏‮Ordered‬‏ ‏‮list‬‏</string>
+  <string name="role_list">‏‮List‬‏</string>
+  <string name="list_items">{num_items,plural, =0{‏‮with‬‏ ‏‮no‬‏ ‏‮items‬‏}=1{‏‮with‬‏ ‏‮one‬‏ ‏‮item‬‏}two{‏‮with‬‏ # ‏‮items‬‏}few{‏‮with‬‏ # ‏‮items‬‏}many{‏‮with‬‏ # ‏‮items‬‏}other{‏‮with‬‏ # ‏‮items‬‏}}</string>
+  <string name="line_granularity">‏‮Line‬‏</string>
+  <string name="word_granularity">‏‮Word‬‏</string>
+  <string name="character_granularity">‏‮Character‬‏</string>
+  <string name="double_tap_hint">‏‮Double‬‏ ‏‮tap‬‏ ‏‮to‬‏ ‏‮activate‬‏</string>
+  <string name="last_element">‏‮Last‬‏</string>
+  <string name="first_element">‏‮First‬‏</string>
+  <string name="no_focus_alert">‏‮No‬‏ ‏‮focus‬‏. ‏‮Touch‬‏ ‏‮and‬‏ ‏‮explore‬‏ ‏‮to‬‏ ‏‮find‬‏ ‏‮items‬‏.</string>
+</resources>

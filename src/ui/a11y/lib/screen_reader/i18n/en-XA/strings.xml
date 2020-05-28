@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">[Ĥéåðîñĝ one]</string>
+  <string name="role_button">[Бûţţöñ one]</string>
+  <string name="role_checkbox">[Çĥéçķ бöx one two]</string>
+  <string name="role_combobox">[Çömбö бöx one two]</string>
+  <string name="role_image">[Îmåĝé one]</string>
+  <string name="role_link">[Ļîñķ one]</string>
+  <string name="role_progressbar">[Þŕöĝŕéšš бåŕ one two]</string>
+  <string name="role_slider">[Šļîðéŕ one]</string>
+  <string name="role_tab">[Ţåб one]</string>
+  <string name="role_radiobutton">[Ŕåðîö бûţţöñ one two]</string>
+  <string name="radio_button_selected">[ᐅ{name}ᐊ, ŕåðîö бûţţöñ šéļéçţéð one two three four five six]</string>
+  <string name="radio_button_unselected">[ᐅ{name}ᐊ, ŕåðîö бûţţöñ ûñšéļéçţéð one two three four five six]</string>
+  <string name="role_table">[Ţåбļé one]</string>
+  <string name="table_summary">[ᐅ{table_name}ᐊ,        ᐅ{table_rows}ᐊ бý ᐅ{table_columns}ᐊ one two three four five]</string>
+  <string name="cell_summary">[Ŕöŵ ᐅ{row_index}ᐊ çöļûmñ ᐅ{column_index}ᐊ one two three four]</string>
+  <string name="element_checked">[Çĥéçķéð one]</string>
+  <string name="element_not_checked">[Ñöţ çĥéçķéð one two]</string>
+  <string name="element_partially_checked">[Þåŕţîåļļý çĥéçķéð one two three]</string>
+  <string name="element_disabled">[Ðîšåбļéð one]</string>
+  <string name="element_expanded">[Éxþåñðéð one]</string>
+  <string name="element_collapsed">[Çöļļåþšéð one two]</string>
+  <string name="heading_level_1">[Ĥéåðîñĝ 1 one two]</string>
+  <string name="heading_level_2">[Ĥéåðîñĝ 2 one two]</string>
+  <string name="heading_level_3">[Ĥéåðîñĝ 3 one two]</string>
+  <string name="heading_level_4">[Ĥéåðîñĝ 4 one two]</string>
+  <string name="heading_level_5">[Ĥéåðîñĝ 5 one two]</string>
+  <string name="heading_level_6">[Ĥéåðîñĝ 6 one two]</string>
+  <string name="role_list_item">[Ļîšţ îţém one two]</string>
+  <string name="role_ordered_list">[Öŕðéŕéð ļîšţ one two]</string>
+  <string name="role_list">[Ļîšţ one]</string>
+  <string name="list_items">{num_items,plural, =0{[ŵîţĥ ñö îţémš one two]}=1{[ŵîţĥ öñé îţém one two]}other{[ŵîţĥ ᐅ#ᐊ îţémš one two three]}}</string>
+  <string name="line_granularity">[Ļîñé one]</string>
+  <string name="word_granularity">[Ŵöŕð one]</string>
+  <string name="character_granularity">[Çĥåŕåçţéŕ one two]</string>
+  <string name="double_tap_hint">[Ðöûбļé ţåþ ţö åçţîvåţé one two three four five]</string>
+  <string name="last_element">[Ļåšţ one]</string>
+  <string name="first_element">[Fîŕšţ one]</string>
+  <string name="no_focus_alert">[Ñö ƒöçûš. Ţöûçĥ åñð éxþļöŕé ţö ƒîñð îţémš. one two three four five six seven eight nine]</string>
+</resources>

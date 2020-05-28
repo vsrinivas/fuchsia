@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">제목</string>
+  <string name="role_button">버튼</string>
+  <string name="role_checkbox">체크박스</string>
+  <string name="role_combobox">콤보 상자</string>
+  <string name="role_image">이미지</string>
+  <string name="role_link">링크</string>
+  <string name="role_progressbar">진행률 표시줄</string>
+  <string name="role_slider">슬라이더</string>
+  <string name="role_tab">탭</string>
+  <string name="role_radiobutton">라디오 버튼</string>
+  <string name="radio_button_selected">{name}, 버튼 선택됨</string>
+  <string name="radio_button_unselected">{name}, 라디오 버튼 선택 해제됨</string>
+  <string name="role_table">표</string>
+  <string name="table_summary">{table_name},        {table_rows}행 {table_columns}열</string>
+  <string name="cell_summary">{row_index}행 {column_index}열</string>
+  <string name="element_checked">선택됨</string>
+  <string name="element_not_checked">선택되지 않음</string>
+  <string name="element_partially_checked">일부 선택됨</string>
+  <string name="element_disabled">사용 안함</string>
+  <string name="element_expanded">펼침</string>
+  <string name="element_collapsed">접힘</string>
+  <string name="heading_level_1">제목 1</string>
+  <string name="heading_level_2">제목 2</string>
+  <string name="heading_level_3">제목 3</string>
+  <string name="heading_level_4">제목 4</string>
+  <string name="heading_level_5">제목 5</string>
+  <string name="heading_level_6">제목 6</string>
+  <string name="role_list_item">목록 항목</string>
+  <string name="role_ordered_list">순서가 지정된 목록</string>
+  <string name="role_list">목록</string>
+  <string name="list_items">{num_items,plural, =0{항목 포함 안함}=1{항목 1개 포함}other{항목 #개 포함}}</string>
+  <string name="line_granularity">행</string>
+  <string name="word_granularity">단어</string>
+  <string name="character_granularity">문자</string>
+  <string name="double_tap_hint">활성화하려면 두 번 탭하기</string>
+  <string name="last_element">마지막</string>
+  <string name="first_element">첫번째</string>
+  <string name="no_focus_alert">포커스 없음. 항목을 찾으려면 터치하여 둘러보기.</string>
+</resources>

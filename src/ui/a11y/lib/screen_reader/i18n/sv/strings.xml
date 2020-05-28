@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">Rubrik</string>
+  <string name="role_button">Knapp</string>
+  <string name="role_checkbox">Kryssruta</string>
+  <string name="role_combobox">Kombinationsruta</string>
+  <string name="role_image">Bild</string>
+  <string name="role_link">Länk</string>
+  <string name="role_progressbar">Förloppsindikator</string>
+  <string name="role_slider">Skjutreglage</string>
+  <string name="role_tab">Flik</string>
+  <string name="role_radiobutton">Alternativknapp</string>
+  <string name="radio_button_selected">{name}, alternativknapp markerad</string>
+  <string name="radio_button_unselected">{name}, alternativknapp inte markerad</string>
+  <string name="role_table">Tabell</string>
+  <string name="table_summary">{table_name},        {table_rows} gånger {table_columns}</string>
+  <string name="cell_summary">Rad {row_index} kolumn {column_index}</string>
+  <string name="element_checked">Markerad</string>
+  <string name="element_not_checked">Inte markerad</string>
+  <string name="element_partially_checked">Delvis markerad</string>
+  <string name="element_disabled">Inaktiverad</string>
+  <string name="element_expanded">Utökad</string>
+  <string name="element_collapsed">Komprimerad</string>
+  <string name="heading_level_1">Rubrik 1</string>
+  <string name="heading_level_2">Rubrik 2</string>
+  <string name="heading_level_3">Rubrik 3</string>
+  <string name="heading_level_4">Rubrik 4</string>
+  <string name="heading_level_5">Rubrik 5</string>
+  <string name="heading_level_6">Rubrik 6</string>
+  <string name="role_list_item">Post i listan</string>
+  <string name="role_ordered_list">Sorterad lista</string>
+  <string name="role_list">Lista</string>
+  <string name="list_items">{num_items,plural, =0{utan objekt}=1{med ett objekt}other{med # objekt}}</string>
+  <string name="line_granularity">Linje</string>
+  <string name="word_granularity">Ord</string>
+  <string name="character_granularity">Tecken</string>
+  <string name="double_tap_hint">Aktivera genom att trycka snabbt två gånger</string>
+  <string name="last_element">Sista</string>
+  <string name="first_element">Första</string>
+  <string name="no_focus_alert">Inget i fokus. Tryck och utforska för att hitta objekt.</string>
+</resources>

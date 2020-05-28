@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string name="role_header">Intestazione</string>
+  <string name="role_button">Pulsante</string>
+  <string name="role_checkbox">Casella di controllo</string>
+  <string name="role_combobox">Casella combinata</string>
+  <string name="role_image">Immagine</string>
+  <string name="role_link">Link</string>
+  <string name="role_progressbar">Barra di avanzamento</string>
+  <string name="role_slider">Dispositivo di scorrimento</string>
+  <string name="role_tab">Scheda</string>
+  <string name="role_radiobutton">Pulsante di opzione</string>
+  <string name="radio_button_selected">{name}, pulsante di opzione selezionato</string>
+  <string name="radio_button_unselected">{name}, pulsante di opzione deselezionato</string>
+  <string name="role_table">Tabella</string>
+  <string name="table_summary">{table_name},        {table_rows} per {table_columns}</string>
+  <string name="cell_summary">Riga {row_index} colonna {column_index}</string>
+  <string name="element_checked">Elemento selezionato</string>
+  <string name="element_not_checked">Elemento non selezionato</string>
+  <string name="element_partially_checked">Elemento parzialmente selezionato</string>
+  <string name="element_disabled">Elemento non attivo</string>
+  <string name="element_expanded">Elemento espanso</string>
+  <string name="element_collapsed">Elemento compresso</string>
+  <string name="heading_level_1">Intestazione 1</string>
+  <string name="heading_level_2">Intestazione 2</string>
+  <string name="heading_level_3">Intestazione 3</string>
+  <string name="heading_level_4">Intestazione 4</string>
+  <string name="heading_level_5">Intestazione 5</string>
+  <string name="heading_level_6">Intestazione 6</string>
+  <string name="role_list_item">Voce elenco</string>
+  <string name="role_ordered_list">Elenco ordinato</string>
+  <string name="role_list">Elenco</string>
+  <string name="list_items">{num_items,plural, =0{senza voci}=1{con una voce}other{con # voci}}</string>
+  <string name="line_granularity">Riga</string>
+  <string name="word_granularity">Parola</string>
+  <string name="character_granularity">Carattere</string>
+  <string name="double_tap_hint">Tocca due volte per attivare</string>
+  <string name="last_element">Ultimo elemento</string>
+  <string name="first_element">Primo elemento</string>
+  <string name="no_focus_alert">Nessuno stato attivo. Tocca ed esplora per trovare gli elementi.</string>
+</resources>
