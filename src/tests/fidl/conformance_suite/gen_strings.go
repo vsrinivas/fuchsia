@@ -163,9 +163,8 @@ var cases = []testCase{
 	{invalidCase, "\xff\xfe", "BOMs in UTF-16 LE"},
 }
 
-// TODO(fxb/52031): We allow list only Go because UTF8 strings are not properly
-// escaped for Dart and Rust backend...
-// TODO(fxb/8014): and we lack support of UTF8 validation in HLCPP and LLCPP.
+// TODO(fxb/52031): Properly escape UTF-8 strings for the dart backend and
+// remove the allowlist.
 
 var successTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}

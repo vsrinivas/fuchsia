@@ -206,16 +206,12 @@ zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
       }
       struct ifreq* ifr = va_arg(va, struct ifreq*);
       fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
-      // TODO(https://fxbug.dev/8014): remove this validation when llcpp bindings enforce UTF-8
-      // encoding.
-      for (auto const& b : name) {
-        if (!isprint(b)) {
-          return ZX_ERR_NOT_FOUND;
-        }
-      }
       auto response = provider->InterfaceNameToIndex(std::move(name));
       status = response.status();
       if (status != ZX_OK) {
+        if (status == ZX_ERR_INVALID_ARGS) {
+          status = ZX_ERR_NOT_FOUND;
+        }
         return status;
       }
       auto const& result = response.Unwrap()->result;
