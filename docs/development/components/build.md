@@ -62,7 +62,7 @@ executable("my_program") {
 }
 
 fuchsia_component("my-component") {
-  manifest = "my_program.cmx"
+  manifest = "meta/my_program.cmx"
   resources = [
     {
       source = "$root_out_dir/my_program"
