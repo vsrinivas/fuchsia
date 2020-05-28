@@ -41,7 +41,6 @@ use std::rc::Rc;
 ///     3) Setting the termination system state on the Driver Manager
 ///
 /// Handles Messages:
-///     - ConnectChannelAtPath
 ///     - SetTerminationSystemState
 ///
 /// Sends Messages: N/A
@@ -182,6 +181,10 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
             devfs_proxy: registration.dir,
             inspect,
         });
+
+        // Make the global node reference available so that the `connect_proxy` function can access
+        // drivers provided by this node.
+        set_driver_manager_handler(node.clone());
 
         Ok(node)
     }
@@ -409,46 +412,6 @@ pub struct DriverManagerHandler {
 }
 
 impl DriverManagerHandler {
-    /// Handle the ConnectChannelAtPath message. The function uses `self.devfs_proxy` to connect to
-    /// the service specified by `path`.
-    async fn handle_connect_channel_at_path_message(
-        &self,
-        path: String,
-    ) -> Result<MessageReturn, PowerManagerError> {
-        fuchsia_trace::duration!(
-            "power_manager",
-            "DriverManagerHandler::handle_connect_channel_at_path_message",
-            "path" => path.as_str()
-        );
-
-        let result = {
-            let (client, server) = zx::Channel::create()
-                .map_err(|e| format_err!("Failed to create channel pair: {}", e))?;
-
-            match fdio::service_connect_at(self.devfs_proxy.as_ref(), &path, server) {
-                Ok(()) => Ok(MessageReturn::ConnectChannelAtPath(client)),
-                Err(e) => Err(PowerManagerError::GenericError(format_err!(
-                    "Failed to connect to driver at {}: {}",
-                    path,
-                    e
-                ))),
-            }
-        };
-
-        fuchsia_trace::instant!(
-            "power_manager",
-            "DriverManagerHandler::handle_connect_channel_at_path_message_result",
-            fuchsia_trace::Scope::Thread,
-            "result" => format!("{:?}", result).as_str()
-        );
-
-        if let Err(e) = &result {
-            self.inspect.log_driver_connect_error(&path, format!("{}", e))
-        }
-
-        result
-    }
-
     /// Handle the SetTerminationState message. The function uses `self.termination_state_proxy` to
     /// set the Driver Manager's termination state.
     async fn handle_set_termination_state_message(
@@ -498,6 +461,80 @@ impl DriverManagerHandler {
 
         result
     }
+
+    /// Wraps the associated `connect_proxy` function while adding tracing and error logging.
+    pub fn connect_proxy_with_logging<T: fidl::endpoints::ServiceMarker>(
+        &self,
+        path: &String,
+    ) -> Result<T::Proxy, anyhow::Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "DriverManagerHandler::connect_proxy",
+            "path" => path.as_str()
+        );
+
+        let result = self.connect_proxy::<T>(path);
+
+        fuchsia_trace::instant!(
+            "power_manager",
+            "DriverManagerHandler::connect_proxy_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result.as_ref().map(|_| "proxy")).as_str()
+        );
+
+        if let Err(e) = &result {
+            self.inspect.log_driver_connect_error(&path, format!("{}", e))
+        }
+
+        result
+    }
+
+    /// Create and connect a FIDL proxy to the service at `path` using `devfs_proxy`.
+    fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
+        &self,
+        path: &String,
+    ) -> Result<T::Proxy, anyhow::Error> {
+        let (proxy, server) = fidl::endpoints::create_proxy::<T>()
+            .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
+
+        fdio::service_connect_at(self.devfs_proxy.as_ref(), &path, server.into_channel())
+            .map_err(|s| anyhow::format_err!("Failed to connect to driver at {}: {}", path, s))?;
+
+        Ok(proxy)
+    }
+}
+
+// A global DriverManagerHandler reference that is used by the `connect_proxy` function to connect
+// to drivers that are made available through any channels managed by the DriverManagerHandler. The
+// `connect_proxy` function is publicly available to other nodes within PowerManager for connecting
+// to drivers accessible via the DriverManagerHandler node.
+thread_local!(
+    static DRIVER_MANAGER_HANDLER: RefCell<Option<Rc<DriverManagerHandler>>> = RefCell::new(None)
+);
+
+/// Set the global DriverManagerHandler reference.
+fn set_driver_manager_handler(driver_manager_handler: Rc<DriverManagerHandler>) {
+    DRIVER_MANAGER_HANDLER.with(|rc| {
+        rc.replace(Some(driver_manager_handler));
+    });
+}
+
+/// Create and connect a FIDL proxy to the service at `path` by using the global
+/// DriverManagerHandler reference, if it exists. This function is a simple wrapper around the
+/// DriverManagerHandler associated function `connect_proxy_with_logging`.
+pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
+    path: &String,
+) -> Result<T::Proxy, anyhow::Error> {
+    if path.starts_with("/dev") {
+        DRIVER_MANAGER_HANDLER.with(|rc| {
+            rc.borrow()
+                .as_ref()
+                .ok_or(format_err!("Missing DriverManagerHandler"))?
+                .connect_proxy_with_logging::<T>(path)
+        })
+    } else {
+        Err(format_err!("Invalid path {} (DriverManagerHandler only serves /dev paths)", path))
+    }
 }
 
 #[async_trait(?Send)]
@@ -508,9 +545,6 @@ impl Node for DriverManagerHandler {
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
-            Message::ConnectChannelAtPath(path) => {
-                self.handle_connect_channel_at_path_message(path.to_string()).await
-            }
             Message::SetTerminationSystemState(state) => {
                 self.handle_set_termination_state_message(*state).await
             }
@@ -601,19 +635,6 @@ mod tests {
         proxy
     }
 
-    /// Create a fake DriverManagerRegistration that contains proxy handles that are not connected
-    /// to any other end.
-    fn create_fake_registration() -> DriverManagerRegistration {
-        DriverManagerRegistration {
-            termination_state_proxy: fidl::endpoints::create_proxy::<
-                fdevicemgr::SystemStateTransitionMarker,
-            >()
-            .unwrap()
-            .0,
-            dir: fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap().0,
-        }
-    }
-
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
     #[fasync::run_singlethreaded(test)]
     async fn test_new_from_json() {
@@ -650,17 +671,23 @@ mod tests {
 
         // For this test, let the server succeed for the SystemPowerStateReboot state but give an
         // error for any other state (so that we can test error paths)
-        let mut registration = create_fake_registration();
-        registration.termination_state_proxy =
-            setup_fake_termination_state_service(|state| match state {
-                fdevicemgr::SystemPowerState::SystemPowerStateReboot => Ok(()),
-                _ => Err(zx::Status::INVALID_ARGS),
-            });
+        let termination_state_proxy = setup_fake_termination_state_service(|state| match state {
+            fdevicemgr::SystemPowerState::SystemPowerStateReboot => Ok(()),
+            _ => Err(zx::Status::INVALID_ARGS),
+        });
+
+        // Use a closed Directory channel so that we can verify connect_proxy errors
+        let (dir, dir_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
+        drop(dir_stream);
 
         let node = DriverManagerHandlerBuilder::new()
             .with_inspect_root(inspector.root())
             .with_registration_timeout(Seconds(60.0))
-            .with_driver_manager_registration(registration)
+            .with_driver_manager_registration(DriverManagerRegistration {
+                termination_state_proxy,
+                dir,
+            })
             .build()
             .await
             .unwrap();
@@ -681,8 +708,7 @@ mod tests {
 
         // Should fail so `driver_connect_errors` will be populated
         assert!(node
-            .handle_connect_channel_at_path_message("/dev/class/fake".to_string())
-            .await
+            .connect_proxy_with_logging::<fio::DirectoryMarker>(&"/dev/class/fake".to_string())
             .is_err());
 
         assert_inspect_tree!(
@@ -695,7 +721,7 @@ mod tests {
                     "driver_connect_errors": {
                         "0": {
                             "driver_path": "/dev/class/fake",
-                            "error": "Error: Failed to connect to driver at /dev/class/fake: PEER_CLOSED",
+                            "error": "Failed to connect to driver at /dev/class/fake: PEER_CLOSED",
                             "@time": inspect::testing::AnyProperty
                         }
                     },
@@ -830,12 +856,11 @@ mod tests {
         assert_eq!(channel_closed.get(), true);
     }
 
-    /// Tests that the DriverManagerHandler responds to the ConnectChannelAtPath message by
-    /// connecting a channel to the driver and returning a client end. The returned client end is
-    /// tests to be valid by verifying a message is able to successfully be passed from the client
-    /// end to the fake driver that was connected to.
+    /// Tests the DriverManagerHandler connect_proxy function by connecting a proxy to a fake
+    /// driver. The returned DirectoryProxy is tested to be valid by verifying a message is able to
+    /// successfully be passed from the client end to the fake driver that it was connected to.
     #[fasync::run_singlethreaded(test)]
-    async fn test_connect_to_driver_message() {
+    async fn test_connect_proxy() {
         let (dir_proxy, mut dir_stream) =
             fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
 
@@ -844,20 +869,14 @@ mod tests {
             dir: dir_proxy,
         };
 
-        let node = DriverManagerHandlerBuilder::new()
+        let _node = DriverManagerHandlerBuilder::new()
             .with_driver_manager_registration(registration)
             .build()
             .await
             .unwrap();
 
-        // Send the message to the node to retrieve the connection handle
-        let fake_client = match node
-            .handle_message(&Message::ConnectChannelAtPath("/dev/class/fake".to_string()))
-            .await
-        {
-            Ok(MessageReturn::ConnectChannelAtPath(client)) => client,
-            e => panic!("Unexpected response: {:?}", e),
-        };
+        // Connect to the fake driver
+        let proxy = connect_proxy::<fio::DirectoryMarker>(&"/dev/class/fake".to_string()).unwrap();
 
         // Verify the fake directory received the Open request, and capture the server end that is
         // meant to be bound to the driver
@@ -868,7 +887,7 @@ mod tests {
 
         // Write a message into the client end and verify the fake driver receives it
         let mut buf = zx::MessageBuf::new();
-        assert!(fake_client.write(b"Foo", &mut vec![]).is_ok());
+        assert!(proxy.write(b"Foo", &mut vec![]).is_ok());
         assert!(fake_driver.read(&mut buf).is_ok());
         assert_eq!(buf.bytes(), b"Foo");
     }
