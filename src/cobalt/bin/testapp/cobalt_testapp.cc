@@ -105,15 +105,6 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
       TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
       backfill_days);
 
-  // Run several times to make sure that it consistently passes.
-  for (int i = 0; i < 10; i++) {
-    Connect(kInfiniteTime, 0, backfill_days, true, 0);
-    if (!TestLogElapsedTimeWithAggregationWorkerRunning(&logger_, clock_.get(), &cobalt_controller_,
-                                                        backfill_days)) {
-      return false;
-    }
-  }
-
   return true;
 }
 
