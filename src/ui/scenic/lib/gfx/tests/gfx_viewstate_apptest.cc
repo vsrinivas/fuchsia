@@ -52,7 +52,7 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
 }
 
 TEST_F(ViewEmbedderTest, ProtectedVkcube) {
-  // vkcube_on_scenic does not produce protected content if platform does not allow. Check if
+  // vkcube-on-scenic does not produce protected content if platform does not allow. Check if
   // protected memory is available beforehand to skip these cases.
   {
     if (!scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues(
@@ -63,7 +63,7 @@ TEST_F(ViewEmbedderTest, ProtectedVkcube) {
 
   auto info = scenic::LaunchComponentAndCreateView(
       environment_->launcher_ptr(),
-      "fuchsia-pkg://fuchsia.com/vkcube-on-scenic#meta/vkcube_on_scenic.cmx",
+      "fuchsia-pkg://fuchsia.com/vkcube-on-scenic#meta/vkcube-on-scenic.cmx",
       {"--protected_output"});
 
   scenic::EmbedderView embedder_view(CreatePresentationContext());

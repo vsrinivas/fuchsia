@@ -10,13 +10,13 @@ import("//src/lib/vulkan/layers.gni")
 package("vkcube-on-scenic") {
   testonly = true
 
-  deps = [ ":vkcube_on_scenic" ]
-  binary = "vkcube_on_scenic"
+  deps = [ ":vkcube-on-scenic-executable" ]
+  binary = "vkcube-on-scenic"
 
   meta = [
     {
-      path = rebase_path("meta/vkcube_on_scenic.cmx")
-      dest = "vkcube_on_scenic.cmx"
+      path = rebase_path("meta/vkcube-on-scenic.cmx")
+      dest = "vkcube-on-scenic.cmx"
     },
   ]
 
@@ -36,13 +36,13 @@ package("vkcube-on-scenic") {
 package("vkcube-on-fb") {
   testonly = true
 
-  deps = [ ":vkcube_on_fb" ]
-  binary = "vkcube_on_fb"
+  deps = [ ":vkcube-on-fb-executable" ]
+  binary = "vkcube-on-fb"
 
   meta = [
     {
-      path = rebase_path("meta/vkcube_on_fb.cmx")
-      dest = "vkcube_on_fb.cmx"
+      path = rebase_path("meta/vkcube-on-fb.cmx")
+      dest = "vkcube-on-fb.cmx"
     },
   ]
 
@@ -62,13 +62,13 @@ package("vkcube-on-fb") {
 package("vkcube-skip-present") {
   testonly = true
 
-  deps = [ ":vkcube_skip_present" ]
-  binary = "vkcube_skip_present"
+  deps = [ ":vkcube-skip-present-executable" ]
+  binary = "vkcube-skip-present"
 
   meta = [
     {
-      path = rebase_path("meta/vkcube_skip_present.cmx")
-      dest = "vkcube_skip_present.cmx"
+      path = rebase_path("meta/vkcube-skip-present.cmx")
+      dest = "vkcube-skip-present.cmx"
     },
   ]
 
@@ -85,7 +85,8 @@ package("vkcube-skip-present") {
               image_pipe_swapchain_fb_skip_present.resources
 }
 
-executable("vkcube_on_scenic") {
+executable("vkcube-on-scenic-executable") {
+  output_name = "vkcube-on-scenic"
   sources = [
     "main.cc",
     "test_vk_cube.h",
@@ -109,7 +110,8 @@ executable("vkcube_on_scenic") {
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
-executable("vkcube_on_fb") {
+executable("vkcube-on-fb-executable") {
+  output_name = "vkcube-on-fb"
   sources = [
     "main.cc",
     "test_vk_cube.h",
@@ -130,7 +132,8 @@ executable("vkcube_on_fb") {
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
-executable("vkcube_skip_present") {
+executable("vkcube-skip-present-executable") {
+  output_name = "vkcube-skip-present"
   sources = [
     "main.cc",
     "test_vk_cube.h",
