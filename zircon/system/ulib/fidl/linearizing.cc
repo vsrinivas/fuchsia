@@ -87,7 +87,7 @@ class FidlLinearizer final
     // and may be set to 1 if the object is heap allocated. However, the original pointer has this
     // bit cleared. For vectors and strings, any value is accepted.
     auto object_ptr =
-        pointee_type == PointeeType::kVectorOrString
+        pointee_type == PointeeType::kVector || pointee_type == PointeeType::kString
             ? *object_ptr_ptr
             : reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(*object_ptr_ptr) &
                                       ~fidl::internal::kNonArrayTrackingPtrOwnershipMask);
@@ -102,6 +102,10 @@ class FidlLinearizer final
       SetError("object is too big to linearize into provided buffer", ZX_ERR_BUFFER_TOO_SMALL);
       return Status::kConstraintViolationError;
     }
+
+    // TODO(fxb/52215): For strings, it would most likely be more efficient
+    // to validate and copy at the same time. Currently, we memcpy when
+    // linearizing, and validate during encoding.
 
     // Copy the pointee to the desired location in secondary storage
     memcpy(&bytes_[next_out_of_line_], object_ptr, inline_size);

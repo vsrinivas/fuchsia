@@ -555,6 +555,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
   for (size_t p = 0; p < parts->size(); p++) {
     fvm::extent_descriptor_t* ext = GetExtent((*parts)[p].pd, 0);
     alloc_req_t alloc;
+    memset(&alloc, 0, sizeof(alloc));
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
     alloc.flags = (*parts)[p].active ? 0 : volume::ALLOCATE_PARTITION_FLAG_INACTIVE;

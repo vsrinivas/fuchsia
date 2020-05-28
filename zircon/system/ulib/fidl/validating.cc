@@ -79,10 +79,20 @@ class FidlValidator final
       SetError("message tried to access more than provided number of bytes");
       return Status::kMemoryError;
     }
-    auto status = ValidatePadding(&bytes_[next_out_of_line_ + inline_size],
-                                  new_offset - next_out_of_line_ - inline_size);
-    if (status != Status::kSuccess) {
-      return status;
+    {
+      auto status = ValidatePadding(&bytes_[next_out_of_line_ + inline_size],
+                                    new_offset - next_out_of_line_ - inline_size);
+      if (status != Status::kSuccess) {
+        return status;
+      }
+    }
+    if (pointee_type == PointeeType::kString) {
+      auto status = fidl_validate_string(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
+                                         inline_size);
+      if (status != ZX_OK) {
+        SetError("validator encountered invalid UTF8 string");
+        return Status::kConstraintViolationError;
+      }
     }
     *out_position = Position{next_out_of_line_};
     next_out_of_line_ = new_offset;

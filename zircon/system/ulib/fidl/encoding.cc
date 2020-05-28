@@ -91,6 +91,15 @@ class FidlEncoder final
     if (!ClaimOutOfLineStorage(static_cast<uint32_t>(inline_size), *object_ptr_ptr, out_position)) {
       return Status::kMemoryError;
     }
+    // Validate that we have a UTF8 string.
+    if (pointee_type == PointeeType::kString) {
+      auto status =
+          fidl_validate_string(reinterpret_cast<const char*>(*object_ptr_ptr), inline_size);
+      if (status != ZX_OK) {
+        SetError("encoder encountered invalid UTF8 string");
+        return Status::kConstraintViolationError;
+      }
+    }
     // Rewrite pointer as "present" placeholder
     *object_ptr_ptr = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     return Status::kSuccess;

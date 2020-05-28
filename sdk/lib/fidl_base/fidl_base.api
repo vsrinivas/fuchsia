@@ -9,6 +9,6 @@
   "pkg/fidl_base/include/lib/fidl/internal.h": "2e29c23416ea664addaa151a42f32011",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "a18e97bafa2f7e388422a7e721d6421d",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "7c1edfe5a4599f63358c3375668224c4",
-  "pkg/fidl_base/include/lib/fidl/visitor.h": "f66c2e1f55c91443b38f95de6d2f3da0",
-  "pkg/fidl_base/include/lib/fidl/walker.h": "8d91eb9ee1720d36fd04df68274141d5"
+  "pkg/fidl_base/include/lib/fidl/visitor.h": "2db7d7cd006656aef12e83c312d6a2b2",
+  "pkg/fidl_base/include/lib/fidl/walker.h": "942e63ec388783fae5ac6fa5c331c89b"
 }

@@ -2146,6 +2146,7 @@ TEST_F(FvmTest, TestMounting) {
 
   // Allocate one VPart
   alloc_req_t request;
+  memset(&request, 0, sizeof(request));
   request.slice_count = 1;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
@@ -2202,6 +2203,7 @@ TEST_F(FvmTest, TestMkfs) {
 
   // Allocate one VPart.
   alloc_req_t request;
+  memset(&request, 0, sizeof(request));
   request.slice_count = 1;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);

@@ -47,8 +47,13 @@ class IsolatedPersistentStorageTest : virtual public sys::testing::TestWithEnvir
     // Random file contents used since we don't explicitly clear /data contents
     // between test runs, and we want to ensure we aren't reading a file written
     // by a previous run.
+    // We keep the bytes in the 0 to 127 range to ensure the content is a valid
+    // UTF-8 string.
     char random_bytes[100];
     zx_cprng_draw(random_bytes, sizeof(random_bytes));
+    for (size_t i = 0; i < sizeof(random_bytes); i++) {
+      random_bytes[i] = random_bytes[i] & ~0x80;
+    }
     test_file_content_ = std::string(random_bytes, sizeof(random_bytes));
   }
 

@@ -551,7 +551,7 @@ Result Walker<VisitorImpl>::WalkString(const FidlCodedString* coded_string,
   FIDL_DEPTH_GUARD(array_depth);
   Position array_position;
   status = visitor_->VisitPointer(
-      position, VisitorImpl::PointeeType::kVectorOrString,
+      position, VisitorImpl::PointeeType::kString,
       &reinterpret_cast<Ptr<void>&>(const_cast<Ptr<char>&>(string_ptr->data)),
       static_cast<uint32_t>(size), &array_position);
   FIDL_STATUS_GUARD(status);
@@ -612,8 +612,8 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
   OutOfLineDepth array_depth = INCREASE_DEPTH(depth);
   FIDL_DEPTH_GUARD(array_depth);
   Position array_position;
-  status = visitor_->VisitPointer(position, VisitorImpl::PointeeType::kVectorOrString,
-                                  &vector_ptr->data, size, &array_position);
+  status = visitor_->VisitPointer(position, VisitorImpl::PointeeType::kVector, &vector_ptr->data,
+                                  size, &array_position);
   FIDL_STATUS_GUARD(status);
   if (coded_vector->element) {
     uint32_t stride = coded_vector->element_size;

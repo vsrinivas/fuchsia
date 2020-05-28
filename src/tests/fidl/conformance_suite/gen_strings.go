@@ -170,7 +170,7 @@ var cases = []testCase{
 var successTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 success("StringsValidCase{{ .index }}") {
-    bindings_allowlist = [go,rust,],
+    bindings_allowlist = [go,rust,cpp,llcpp,],
     value = StringWrapper {
         str: "{{ .escapedValue }}",
     },
@@ -201,7 +201,7 @@ success("StringsValidCase{{ .index }}") {
 var decodeFailureTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 encode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,],
+    bindings_allowlist = [go,cpp,llcpp,],
     value = StringWrapper {
         str: "{{ .escapedValue }}",
     },
@@ -210,7 +210,7 @@ encode_failure("StringsInvalidCase{{ .index }}") {
 
 {{ if .comment }}// {{ .comment }}{{ end }}
 decode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,rust,],
+    bindings_allowlist = [go,rust,cpp,llcpp,],
     type = StringWrapper,
     bytes = {
         old, v1 = [

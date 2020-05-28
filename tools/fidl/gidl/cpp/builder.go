@@ -13,9 +13,31 @@ import (
 
 	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
+
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 )
+
+func escapeStr(value string) string {
+	if fidlcommon.PrintableASCII(value) {
+		return strconv.Quote(value)
+	}
+	var (
+		buf    bytes.Buffer
+		src    = []byte(value)
+		dstLen = hex.EncodedLen(len(src))
+		dst    = make([]byte, dstLen)
+	)
+	hex.Encode(dst, src)
+	buf.WriteRune('"')
+	for i := 0; i < dstLen; i += 2 {
+		buf.WriteString("\\x")
+		buf.WriteByte(dst[i])
+		buf.WriteByte(dst[i+1])
+	}
+	buf.WriteRune('"')
+	return buf.String()
+}
 
 func newCppValueBuilder() cppValueBuilder {
 	return cppValueBuilder{}
@@ -65,24 +87,7 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 	case float64:
 		return fmt.Sprintf("%g", value)
 	case string:
-		if fidlcommon.PrintableASCII(value) {
-			return strconv.Quote(value)
-		}
-		var (
-			buf    bytes.Buffer
-			src    = []byte(value)
-			dstLen = hex.EncodedLen(len(src))
-			dst    = make([]byte, dstLen)
-		)
-		hex.Encode(dst, src)
-		buf.WriteRune('"')
-		for i := 0; i < dstLen; i += 2 {
-			buf.WriteString("\\x")
-			buf.WriteByte(dst[i])
-			buf.WriteByte(dst[i+1])
-		}
-		buf.WriteRune('"')
-		return buf.String()
+		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
 	case gidlir.Record:
 		return b.visitRecord(value, decl.(gidlmixer.RecordDeclaration))
 	case []interface{}:
