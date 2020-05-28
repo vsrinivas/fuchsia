@@ -5,6 +5,7 @@
 #include "driver_tests.h"
 
 #include <fuchsia/device/test/c/fidl.h>
+#include <getopt.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
@@ -15,8 +16,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
+uint32_t test_log_level = 0;
 using driver_integration_test::IsolatedDevmgr;
-
 const board_test::DeviceEntry kDeviceEntry = []() {
   board_test::DeviceEntry entry = {};
   strcpy(entry.name, kFakeBusDriverName);
@@ -54,6 +55,15 @@ TEST_F(PciDriverTests, TestRunner) {
   args.device_list.push_back(kDeviceEntry);
   args.disable_block_watcher = true;
   args.disable_netsvc = true;
+
+  switch (test_log_level) {
+    case 1:
+      args.boot_args["driver.fake_pci_bus_driver.log"] = "debug";
+      break;
+    case 2:
+      args.boot_args["driver.fake_pci_bus_driver.log"] = "trace";
+      break;
+  }
   zx_status_t st = IsolatedDevmgr::Create(&args, &devmgr_);
   ASSERT_OK(st);
 
@@ -79,4 +89,36 @@ TEST_F(PciDriverTests, TestRunner) {
   ASSERT_NE(report.test_count, 0);
   ASSERT_EQ(report.test_count, report.success_count);
   EXPECT_EQ(report.failure_count, 0);
+}
+
+int main(int argc, char* argv[]) {
+  int opt;
+  int v_position = 0;
+  while (!v_position && (opt = getopt(argc, argv, "hv")) != -1) {
+    switch (opt) {
+      case 'v':
+        test_log_level++;
+        v_position = optind - 1;
+        break;
+      case 'h':
+        fprintf(stderr,
+                "    Test-Specific Usage: %s [OPTIONS]\n\n"
+                "    [OPTIONS]\n"
+                "    -v                                                  Enable DEBUG logs\n"
+                "    -vv                                                 Enable TRACE logs\n\n",
+                argv[0]);
+        break;
+    }
+  }
+
+  // Do the minimal amount of work to forward the rest of the args to zxtest
+  // with our consumed '-v' / '-vv' removed. Don't worry about additional -v
+  // usage because the zxtest help will point out the invalid nature of it.
+  if (v_position) {
+    for (int p = v_position; p < argc - 1; p++) {
+      argv[p] = argv[p + 1];
+    }
+    argc--;
+  }
+  return RUN_ALL_TESTS(argc, argv);
 }
