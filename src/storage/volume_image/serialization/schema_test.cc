@@ -19,8 +19,8 @@ TEST(SchemaTest, VolumeDescriptorSchemaIsValid) {
   json_parser::JSONParser parser;
   auto document = parser.ParseFromString(schema_json, "volume_descriptor.schema.json");
   ASSERT_FALSE(parser.HasError()) << parser.error_str();
-  auto unique_schema = json_parser::InitSchemaDeprecated(schema_json);
-  ASSERT_NE(nullptr, unique_schema);
+  auto unique_schema_result = json_parser::InitSchema(schema_json);
+  ASSERT_TRUE(unique_schema_result.is_ok()) << unique_schema_result.error_value().ToString();
 }
 
 TEST(SchemaTest, AddressDescriptorSchemaIsValid) {
@@ -29,8 +29,8 @@ TEST(SchemaTest, AddressDescriptorSchemaIsValid) {
   json_parser::JSONParser parser;
   auto document = parser.ParseFromString(schema_json, "address_descriptor.schema.json");
   ASSERT_FALSE(parser.HasError()) << parser.error_str();
-  auto unique_schema = json_parser::InitSchemaDeprecated(schema_json);
-  ASSERT_NE(nullptr, unique_schema);
+  auto unique_schema_result = json_parser::InitSchema(schema_json);
+  ASSERT_TRUE(unique_schema_result.is_ok()) << unique_schema_result.error_value().ToString();
 }
 
 TEST(SchemaTest, VolumeImageSchemaIsValid) {
@@ -38,8 +38,8 @@ TEST(SchemaTest, VolumeImageSchemaIsValid) {
   json_parser::JSONParser parser;
   auto document = parser.ParseFromString(schema_json, "volume_image.schema.json");
   ASSERT_FALSE(parser.HasError()) << parser.error_str();
-  auto unique_schema = json_parser::InitSchemaDeprecated(schema_json);
-  ASSERT_NE(nullptr, unique_schema);
+  auto unique_schema_result = json_parser::InitSchema(schema_json);
+  ASSERT_TRUE(unique_schema_result.is_ok()) << unique_schema_result.error_value().ToString();
 }
 
 }  // namespace

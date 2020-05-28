@@ -42,10 +42,12 @@ TEST(VolumeDescriptorTest, SerializeReturnsSchemaValidData) {
   auto document =
       parser.ParseFromString(std::string(value.begin(), value.end()), "serialized.json");
   ASSERT_FALSE(parser.HasError()) << parser.error_str();
-  std::unique_ptr<rapidjson::SchemaDocument> schema =
-      json_parser::InitSchemaDeprecated(schema_json);
-  EXPECT_TRUE(json_parser::ValidateSchemaDeprecated(document, *schema,
-                                                    "VolumeDescriptor::Serialize output"));
+
+  auto schema_result = json_parser::InitSchema(schema_json);
+  ASSERT_TRUE(schema_result.is_ok()) << schema_result.error_value().ToString();
+  auto validation_result = json_parser::ValidateSchema(document, schema_result.value(),
+                                                       "VolumeDescriptor::Serialize output");
+  EXPECT_TRUE(validation_result.is_ok()) << validation_result.error_value();
 }
 
 std::string GetSerializedJson(fit::function<void(rapidjson::Document*)> mutator = nullptr) {
