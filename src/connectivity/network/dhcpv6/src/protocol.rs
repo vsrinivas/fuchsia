@@ -49,7 +49,7 @@ pub enum ProtocolError {
 /// [RFC 8415, Section 7.3]: https://tools.ietf.org/html/rfc8415#section-7.3
 #[derive(Debug, PartialEq, FromPrimitive, AsBytes)]
 #[repr(u8)]
-enum Dhcpv6MessageType {
+pub(crate) enum Dhcpv6MessageType {
     Solicit = 1,
     Advertise = 2,
     Request = 3,
@@ -121,13 +121,15 @@ impl TryFrom<u16> for Dhcpv6OptionCode {
 ///
 /// [options]: https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
 #[derive(Debug, PartialEq)]
-enum Dhcpv6Option<'a> {
+pub(crate) enum Dhcpv6Option<'a> {
     // TODO(jayzhuang): add more options.
     // https://tools.ietf.org/html/rfc8415#section-21.2
     ClientId(&'a Duid),
     // https://tools.ietf.org/html/rfc8415#section-21.3
     ServerId(&'a Duid),
     // https://tools.ietf.org/html/rfc8415#section-21.7
+    // TODO(jayzhuang): add validation, not all option codes can present in ORO.
+    // See https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
     Oro(Vec<Dhcpv6OptionCode>),
     // https://tools.ietf.org/html/rfc8415#section-21.8
     Preference(u8),
@@ -208,7 +210,7 @@ impl Dhcpv6Option<'_> {
     }
 }
 
-struct Dhcpv6OptionsImpl;
+pub(crate) struct Dhcpv6OptionsImpl;
 
 impl RecordsImplLayout for Dhcpv6OptionsImpl {
     type Context = ();
@@ -461,10 +463,10 @@ type TransactionId = [u8; 3];
 /// A DHCPv6 message as defined in [RFC 8415, Section 8].
 ///
 /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
-struct Dhcpv6Message<'a, B> {
-    msg_type: Dhcpv6MessageType,
-    transaction_id: &'a TransactionId,
-    options: Records<B, Dhcpv6OptionsImpl>,
+pub(crate) struct Dhcpv6Message<'a, B> {
+    pub(crate) msg_type: Dhcpv6MessageType,
+    pub(crate) transaction_id: &'a TransactionId,
+    pub(crate) options: Records<B, Dhcpv6OptionsImpl>,
 }
 
 impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
@@ -492,14 +494,14 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
     }
 }
 
-struct Dhcpv6MessageBuilder<'a> {
+pub(crate) struct Dhcpv6MessageBuilder<'a> {
     msg_type: Dhcpv6MessageType,
     transaction_id: TransactionId,
     options: RecordsSerializer<'a, Dhcpv6OptionsImpl, Dhcpv6Option<'a>, Iter<'a, Dhcpv6Option<'a>>>,
 }
 
 impl<'a> Dhcpv6MessageBuilder<'a> {
-    fn new(
+    pub(crate) fn new(
         msg_type: Dhcpv6MessageType,
         transaction_id: TransactionId,
         options: &'a [Dhcpv6Option<'a>],
