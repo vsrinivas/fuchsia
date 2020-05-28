@@ -1388,9 +1388,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         if (using_decl->maybe_type_ctor) {
           done_with_library_imports = true;
         } else if (done_with_library_imports) {
-          // TODO(FIDL-582): Give one week warning, then turn this into
-          // an error.
-          reporter_->ReportWarning(WarnLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
+          reporter_->ReportError(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_decl->span());
         }
         using_list.emplace_back(std::move(using_decl));
         return More;

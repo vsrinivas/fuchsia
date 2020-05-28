@@ -50,14 +50,14 @@ constexpr ErrorDef ErrDocCommentOnParameters("cannot have doc comment on paramet
 constexpr ErrorDef ErrXunionDeprecated("xunion is deprecated, please use `flexible union` instead");
 constexpr ErrorDef ErrStrictXunionDeprecated(
     "strict xunion is deprecated, please use `strict union` instead");
+constexpr ErrorDef ErrLibraryImportsMustBeGroupedAtTopOfFile(
+    "library imports must be grouped at top-of-file");
 constexpr WarningDef WarnCommentWithinDocCommentBlock(
     "cannot have comment within doc comment block");
 constexpr WarningDef WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");
 constexpr WarningDef WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
-constexpr WarningDef WarnLibraryImportsMustBeGroupedAtTopOfFile(
-    "library imports must be grouped at top-of-file");
 
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration

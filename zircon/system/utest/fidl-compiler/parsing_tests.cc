@@ -366,7 +366,7 @@ struct Empty {
   END_TEST;
 }
 
-bool warn_on_type_alias_before_imports() {
+bool error_on_type_alias_before_imports() {
   BEGIN_TEST;
 
   SharedAmongstLibraries shared;
@@ -390,11 +390,11 @@ struct UseDependent {
 )FIDL",
                       &shared);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_TRUE(library.Compile());
+  ASSERT_FALSE(library.Compile());
 
-  const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_ERR(warnings[0], fidl::WarnLibraryImportsMustBeGroupedAtTopOfFile);
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 
   END_TEST;
 }
@@ -609,7 +609,7 @@ RUN_TEST(bad_char_slash_test)
 RUN_TEST(bad_identifier_test)
 RUN_TEST(invalid_character_test)
 RUN_TEST(empty_struct_test)
-RUN_TEST(warn_on_type_alias_before_imports)
+RUN_TEST(error_on_type_alias_before_imports)
 RUN_TEST(multiline_comment_has_correct_source_span)
 RUN_TEST(doc_comment_blank_line_test)
 RUN_TEST(doc_comment_with_comment_blank_line_test)
