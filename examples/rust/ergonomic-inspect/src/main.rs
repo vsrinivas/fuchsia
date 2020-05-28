@@ -234,12 +234,18 @@ mod smart_pointers {
         let mut number = IValue::new(1337u16) // IValue is an IOwned smart pointer
             .with_inspect(inspector.root(), "my_number")?; // Attach to inspect tree
 
-        // Deref coercion, does not update inspect
-        *number = 1338;
-        *number += 1;
-        assert_inspect_tree!(inspector, root: { my_number: 1337u64 });
+        // Dereference the value behind the IValue, without mutating
+        assert_eq!(*number, 1337u16);
+        {
+            // Mutate value behind an IOwned smart pointer, using a scope guard
+            let mut number_guard = number.as_mut();
+            *number_guard = 1338;
+            *number_guard += 1;
 
-        number.iupdate(); // Manually update inspect
+            // Inspect state not yet updated
+            assert_inspect_tree!(inspector, root: { my_number: 1337u64 });
+        }
+        // When the guard goes out of scope, the inspect state is updated
         assert_inspect_tree!(inspector, root: { my_number: 1339u64 });
 
         number.iset(1340); // Sets the source value AND updates inspect
