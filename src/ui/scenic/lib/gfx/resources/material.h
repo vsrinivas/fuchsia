@@ -45,6 +45,7 @@ class Material : public Resource {
 
  private:
   escher::MaterialPtr escher_material_;
+  bool color_is_set_ = false;
   ImageBasePtr texture_;
 };
 

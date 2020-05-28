@@ -27,9 +27,17 @@ void Material::SetColor(float red, float green, float blue, float alpha) {
   // surface the |opaque| flag on the Scenic client API to support this.
   escher_material_->set_type(alpha == 1 ? escher::Material::Type::kOpaque
                                         : escher::Material::Type::kTranslucent);
+  color_is_set_ = true;
 }
 
-void Material::SetTexture(ImageBasePtr texture_image) { texture_ = std::move(texture_image); }
+void Material::SetTexture(ImageBasePtr texture_image) {
+  texture_ = std::move(texture_image);
+  // Set initial state as transparent until an Image is set.
+  if (!color_is_set_) {
+    escher_material_->set_color(escher::vec4(1, 1, 1, 0));
+    escher_material_->set_type(escher::Material::Type::kTranslucent);
+  }
+}
 
 void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
                                     escher::ImageLayoutUpdater* layout_updater) {
@@ -38,6 +46,11 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
   if (texture_) {
     texture_->UpdateEscherImage(gpu_uploader, layout_updater);
     escher_image = texture_->GetEscherImage();
+    // Switch to a default opaque material after we have an Image.
+    if (escher_image && !color_is_set_) {
+      escher_material_->set_color(escher::vec4(1, 1, 1, 1));
+      escher_material_->set_type(escher::Material::Type::kOpaque);
+    }
   }
   const escher::TexturePtr& old_escher_texture = escher_material_->texture();
 

@@ -41,6 +41,36 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
   }
 };
 
+// Check that ImagePipe attached Material is transparent until the first frame is presented.
+VK_TEST_F(ImagePipeRenderTest, TransparentUntilFirstUpdate) {
+  ResourceId next_id = 1;
+  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(frame_scheduler());
+  ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
+      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
+  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
+  pipe_material->SetTexture(image_pipe);
+
+  // Material is transparent before present.
+  Visit(pipe_material.get());
+  EXPECT_EQ(0u, pipe_material->alpha());
+
+  // Present an image and
+  constexpr uint32_t kImageId = 1;
+  constexpr size_t kImageDim = 50;
+  {
+    auto checkerboard = CreateVmoWithCheckerboardPixels(kImageDim, kImageDim);
+    auto image_info = CreateImageInfoForBgra8Image(kImageDim, kImageDim);
+    image_pipe->AddImage(kImageId, std::move(image_info), CopyVmo(checkerboard->vmo()), 0,
+                         GetVmoSize(checkerboard->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
+  }
+  image_pipe->PresentImage(kImageId, zx::time(1), {}, {}, /*callback=*/[](auto) {});
+  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
+
+  // Material is transparent before present.
+  Visit(pipe_material.get());
+  EXPECT_EQ(1u, pipe_material->alpha());
+}
+
 // Present two frames on the ImagePipe, making sure that image is
 // updated only after Visit().
 VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
