@@ -116,8 +116,9 @@ static zx_protocol_device_t device_invalid_ops = []() {
   ops.open = +[](void* ctx, zx_device_t**, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.close = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.unbind = +[](void* ctx) { device_invalid_fatal(ctx); };
-  ops.suspend = +[](void* ctx, uint8_t requested_state, bool enable_wake,
-                        uint8_t suspend_reason) { device_invalid_fatal(ctx); };
+  ops.suspend = +[](void* ctx, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
+    device_invalid_fatal(ctx);
+  };
   ops.resume = +[](void* ctx, uint32_t) { device_invalid_fatal(ctx); };
   ops.release = +[](void* ctx) { device_invalid_fatal(ctx); };
   ops.read =
@@ -559,7 +560,7 @@ void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_
       complete_bind_rebind = false;
     }
   }
-  if (complete_bind_rebind) {
+  if (complete_bind_rebind && dev->parent->complete_bind_rebind_after_init()) {
     if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
       bind_conn(status);
     }
@@ -756,7 +757,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
       {
         api_lock_.Release();
         dev->ops->suspend(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
-                              new_state_info.wakeup_enable, suspend_reason);
+                          new_state_info.wakeup_enable, suspend_reason);
         api_lock_.Acquire();
       }
       enum_lock_release();
@@ -820,7 +821,7 @@ void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
 
   if (dev->ops->suspend) {
     dev->ops->suspend(dev->ctx, static_cast<uint8_t>(requested_state),
-                          DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
+                      DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
     return;
   }
   dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,

@@ -334,6 +334,8 @@ struct zx_device
   bool Unbound();
 
   DriverHostContext* driver_host_context() const { return driver_host_context_; };
+  bool complete_bind_rebind_after_init() const { return complete_bind_rebind_after_init_; }
+  void set_complete_bind_rebind_after_init(bool value) { complete_bind_rebind_after_init_ = value; }
 
  private:
   explicit zx_device(DriverHostContext* ctx);
@@ -382,6 +384,7 @@ struct zx_device
   fbl::Mutex rebind_conn_lock_;
 
   fit::callback<void(zx_status_t)> rebind_conn_ TA_GUARDED(rebind_conn_lock_);
+  bool complete_bind_rebind_after_init_ = false;
 
   fbl::Mutex unbind_children_conn_lock_;
 

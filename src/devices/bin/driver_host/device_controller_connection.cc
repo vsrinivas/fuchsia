@@ -41,6 +41,7 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
     }
   }
   if (!complete_bind) {
+    dev->set_complete_bind_rebind_after_init(true);
     return;
   }
   if (auto bind_conn = dev->take_bind_conn(); bind_conn) {

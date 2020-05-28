@@ -763,7 +763,7 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
       reply_bind_rebind = false;
     }
   }
-  if (!reply_bind_rebind) {
+  if (!reply_bind_rebind || !dev->parent->complete_bind_rebind_after_init()) {
     return;
   }
   status = (status == ZX_OK) ? call_status : status;
