@@ -22,6 +22,7 @@ use {
 const ENV_NAME: &str = "settings_service_display_test_environment";
 const STARTING_BRIGHTNESS: f32 = 0.5;
 const CHANGED_BRIGHTNESS: f32 = 0.8;
+const CONTEXT_ID: u64 = 0;
 
 async fn setup_display_env() -> DisplayProxy {
     let service_gen = |service_name: &str,
@@ -176,7 +177,7 @@ async fn validate_restore(
         let store = storage_factory
             .lock()
             .await
-            .get_device_storage::<DisplayInfo>(StorageAccessContext::Test);
+            .get_device_storage::<DisplayInfo>(StorageAccessContext::Test, CONTEXT_ID);
         let info = DisplayInfo {
             manual_brightness_value: manual_brightness,
             auto_brightness,

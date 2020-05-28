@@ -9,24 +9,74 @@ use crate::registry::base::{Command, SettingHandlerFactory, State};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType, SwitchboardError,
 };
-use fuchsia_async as fasync;
 
 use anyhow::Error;
+use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
+use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
-use std::collections::HashMap;
+use futures::StreamExt;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+/// Tracks whether the listener is active and if there are any ongoing requests
+/// for a controller.
+#[derive(Clone, Debug)]
+struct ControllerState {
+    signature: handler::message::Signature,
+    active_requests: HashSet<u64>,
+}
+
+#[derive(Clone, Debug)]
+enum ActiveControllerRequest {
+    /// Request to add an active request from a ControllerState.
+    AddActive(SettingType, u64),
+    /// Request to remove an active request from a ControllerState.
+    RemoveActive(SettingType, u64),
+    /// Request to tear down a controller if it is ready.
+    Teardown(SettingType, handler::message::Signature),
+}
+
+impl ControllerState {
+    /// Creates a ControllerState struct with a handler [signature].
+    pub fn create(signature: handler::message::Signature) -> ControllerState {
+        Self { signature, active_requests: HashSet::new() }
+    }
+
+    /// Marks a request with [id] as active.
+    pub fn add_active_request(&mut self, id: u64) {
+        self.active_requests.insert(id);
+    }
+
+    /// Returns true if there are no active requests for this controller.
+    pub fn pending_requests_empty(&self) -> bool {
+        self.active_requests.is_empty()
+    }
+
+    /// Unmarks a request with [id] as active.
+    pub fn remove_active_request(&mut self, id: u64) -> bool {
+        self.active_requests.remove(&id)
+    }
+}
 
 pub struct RegistryImpl {
     messenger_client: core::message::Messenger,
-    active_controllers: HashMap<SettingType, handler::message::Signature>,
+    /// Controllers that are currently active. Wrapped in an Arc/Mutex because
+    /// it needs to be modified inside an fasync thread, and Self can't be passed
+    /// into the fasync thread.
+    active_controllers: HashMap<SettingType, ControllerState>,
+
     /// The current types being listened in on.
     active_listeners: Vec<SettingType>,
-    /// handler factory
+
+    /// Handler factory.
     handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-    /// Factory for creating messengers to communicate with handlers
+    /// Factory for creating messengers to communicate with handlers.
     controller_messenger_factory: handler::message::Factory,
-    /// Client for communicating with handlers
+    /// Client for communicating with handlers.
     controller_messenger_client: handler::message::Messenger,
+    /// Sender for passing messages about the active requests and controllers.
+    active_controller_sender: UnboundedSender<ActiveControllerRequest>,
 }
 
 impl RegistryImpl {
@@ -53,17 +103,22 @@ impl RegistryImpl {
         let (controller_messenger_client, mut controller_receptor) =
             controller_messenger_result.unwrap();
 
+        let (active_controller_sender, mut active_controller_receiver) =
+            futures::channel::mpsc::unbounded::<ActiveControllerRequest>();
+
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
         let registry = Arc::new(Mutex::new(Self {
-            active_listeners: vec![],
-            handler_factory: handler_factory,
-            messenger_client: messenger_client,
+            active_listeners: Vec::new(),
+            handler_factory,
+            messenger_client,
             active_controllers: HashMap::new(),
-            controller_messenger_client: controller_messenger_client,
-            controller_messenger_factory: controller_messenger_factory,
+            controller_messenger_client,
+            controller_messenger_factory,
+            active_controller_sender,
         }));
 
+        // TODO(fxb/52859): combine the following loops into one with a select macro.
         // Async task for handling top level message from controllers
         {
             let registry = registry.clone();
@@ -94,6 +149,26 @@ impl RegistryImpl {
             });
         }
 
+        // Async task for handling messages for dealing with the active_controllers.
+        {
+            let registry_clone = registry.clone();
+            fasync::spawn(async move {
+                while let Some(request) = active_controller_receiver.next().await {
+                    let mut registry = registry_clone.lock().await;
+                    match request {
+                        ActiveControllerRequest::AddActive(setting_type, id) => {
+                            registry.add_active_request(id, setting_type).await;
+                        }
+                        ActiveControllerRequest::RemoveActive(setting_type, id) => {
+                            registry.remove_active_request(id, setting_type).await;
+                        }
+                        ActiveControllerRequest::Teardown(setting_type, signature) => {
+                            registry.teardown_if_ready(setting_type, signature).await;
+                        }
+                    }
+                }
+            });
+        }
         Ok(registry)
     }
 
@@ -122,16 +197,20 @@ impl RegistryImpl {
                 .handler_factory
                 .lock()
                 .await
-                .generate(setting_type, self.controller_messenger_factory.clone())
+                .generate(
+                    setting_type,
+                    self.controller_messenger_factory.clone(),
+                    self.controller_messenger_client.clone(),
+                )
                 .await
             {
-                self.active_controllers.insert(setting_type, signature);
+                self.active_controllers.insert(setting_type, ControllerState::create(signature));
             }
         }
 
         // HashMap returns a reference, we need a value here.
-        if let Some(signature) = self.active_controllers.get(&setting_type) {
-            return Some(signature.clone());
+        if let Some(controller_state) = self.active_controllers.get(&setting_type) {
+            return Some(controller_state.signature.clone());
         } else {
             return None;
         }
@@ -147,18 +226,30 @@ impl RegistryImpl {
         }
 
         let handler_signature = optional_handler_signature.unwrap();
-
         let listening = self.active_listeners.contains(&setting_type);
 
         let mut new_state = None;
         if size == 0 && listening {
             // FIXME: use `Vec::remove_item` upon stabilization
+            // TODO (fxb/52696): Explore adding active listeners into ControllerState instead of
+            // having it in a vector.
             let listener_to_remove =
                 self.active_listeners.iter().enumerate().find(|(_i, elem)| **elem == setting_type);
             if let Some((i, _elem)) = listener_to_remove {
                 self.active_listeners.remove(i);
             }
             new_state = Some(State::EndListen);
+
+            let controller_state = self.active_controllers.get(&setting_type);
+            if controller_state.is_some() && controller_state.unwrap().pending_requests_empty() {
+                self.active_controllers.remove(&setting_type);
+            }
+            self.active_controller_sender
+                .unbounded_send(ActiveControllerRequest::Teardown(
+                    setting_type,
+                    handler_signature.clone(),
+                ))
+                .ok();
         } else if size > 0 && !listening {
             self.active_listeners.push(setting_type);
             new_state = Some(State::Listen);
@@ -168,7 +259,7 @@ impl RegistryImpl {
             self.controller_messenger_client
                 .message(
                     handler::Payload::Command(Command::ChangeState(state)),
-                    Audience::Messenger(handler_signature),
+                    Audience::Messenger(handler_signature.clone()),
                 )
                 .send()
                 .ack();
@@ -209,18 +300,41 @@ impl RegistryImpl {
                     .send();
             }
             Some(signature) => {
+                // Mark the request as being handled.
+                self.active_controller_sender
+                    .unbounded_send(ActiveControllerRequest::AddActive(setting_type, id))
+                    .ok();
+                self.add_active_request(id, setting_type).await;
+
                 let mut receptor = self
                     .controller_messenger_client
                     .message(
                         handler::Payload::Command(Command::HandleRequest(request.clone())),
-                        Audience::Messenger(signature),
+                        Audience::Messenger(signature.clone()),
                     )
                     .send();
 
+                let active_controller_sender_clone = self.active_controller_sender.clone();
                 fasync::spawn(async move {
                     while let Ok(message_event) = receptor.watch().await {
                         match message_event {
                             MessageEvent::Message(handler::Payload::Result(result), _) => {
+                                // Mark the request as having been handled.
+                                active_controller_sender_clone
+                                    .unbounded_send(ActiveControllerRequest::RemoveActive(
+                                        setting_type,
+                                        id,
+                                    ))
+                                    .ok();
+
+                                // If the controller is ready to be torn down, tear it down.
+                                active_controller_sender_clone
+                                    .unbounded_send(ActiveControllerRequest::Teardown(
+                                        setting_type,
+                                        signature,
+                                    ))
+                                    .ok();
+
                                 client
                                     .reply(core::Payload::Event(SettingEvent::Response(id, result)))
                                     .send();
@@ -243,6 +357,84 @@ impl RegistryImpl {
                     }
                 });
             }
+        }
+    }
+
+    /// Adds a request's [id] to the active requests for a given [setting_type].
+    async fn add_active_request(&mut self, id: u64, setting_type: SettingType) {
+        if !self.active_controllers.contains_key(&setting_type) {
+            fx_log_err!("[registry_impl] Controller mapping not created before adding request");
+        }
+        let mut controller_state = self.active_controllers.get(&setting_type).unwrap().clone();
+        controller_state.add_active_request(id);
+        self.active_controllers.insert(setting_type, controller_state.clone());
+    }
+
+    /// Removes a request's [id] from the active requests for a given [setting_type].
+    async fn remove_active_request(&mut self, id: u64, setting_type: SettingType) {
+        if !self.active_controllers.contains_key(&setting_type)
+            || self.active_controllers.get(&setting_type).is_none()
+        {
+            fx_log_err!(
+                "[registry_impl] Tried to remove active request from nonexistent {:?} type mapping",
+                setting_type
+            );
+            return;
+        }
+        let mut controller_state = self.active_controllers.get(&setting_type).unwrap().clone();
+        controller_state.remove_active_request(id);
+        if controller_state.pending_requests_empty()
+            && !self.active_listeners.contains(&setting_type)
+        {
+            self.active_controllers.remove(&setting_type);
+        } else {
+            self.active_controllers.insert(setting_type, controller_state.clone());
+        }
+    }
+
+    /// Transitions the controller for the [setting_type] to the Teardown phase
+    /// and removes it from the active_controllers.
+    async fn teardown_if_ready(
+        &mut self,
+        setting_type: SettingType,
+        signature: handler::message::Signature,
+    ) {
+        // We don't need to look through for entries in active_controllers with empty
+        // active_requests. In remove_active_request, if active_listeners was already
+        // empty and active_requests were empty, its entry will be removed from
+        // active_controllers. In process_listen, if the listener count hits 0 and
+        // there are no pending requests, the entry will be removed from
+        // active_controllers.
+        if self.active_controllers.contains_key(&setting_type)
+            || self.active_listeners.contains(&setting_type)
+        {
+            // Controller state not ready to tear down.
+            return;
+        }
+
+        let mut controller_receptor = self
+            .controller_messenger_client
+            .message(
+                handler::Payload::Command(Command::ChangeState(State::Teardown)),
+                Audience::Messenger(signature.clone()),
+            )
+            .send();
+
+        // Wait for the teardown phase to be over before continuing.
+        if let Ok(MessageEvent::Status(DeliveryStatus::Received)) =
+            controller_receptor.watch().await
+        {
+            if !self.active_controllers.contains_key(&setting_type) {
+                fx_log_err!(
+                    "Failed to remove {:?} from active controllers, not found",
+                    setting_type
+                );
+                return;
+            }
+            self.active_controllers.remove(&setting_type);
+        } else {
+            // Invalid response from Teardown phase.
+            fx_log_err!("Failed to tear down {:?} controller", setting_type);
         }
     }
 }

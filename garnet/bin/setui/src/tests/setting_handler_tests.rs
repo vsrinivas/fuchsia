@@ -14,17 +14,19 @@ use {
         BoxedController, ClientImpl, ClientProxy, ControllerError, GenerateController, Handler,
     },
     crate::switchboard::base::{
-        get_all_setting_types, DoNotDisturbInfo, SettingRequest, SettingResponseResult,
-        SettingType, SwitchboardError,
+        get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest,
+        SettingResponseResult, SettingType, SwitchboardError,
     },
     crate::EnvironmentBuilder,
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::StreamExt,
+    std::collections::HashMap,
     std::marker::PhantomData,
 };
 
 const ENV_NAME: &str = "settings_service_setting_handler_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 /// The Control trait provides static functions that control the behavior of
 /// test controllers. Since controllers are created from a trait themselves,
@@ -76,6 +78,10 @@ impl<C: Control + Sync + Send + 'static> controller::Handle for Controller<C> {
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
         return None;
     }
+
+    async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
+        return None;
+    }
 }
 
 /// The DataController is a controller implementation with storage that
@@ -101,6 +107,10 @@ impl<C: Control + Sync + Send + 'static, S: Storage> data_controller::Create<S>
 #[async_trait]
 impl<C: Control + Sync + Send + 'static, S: Storage> controller::Handle for DataController<C, S> {
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+        return None;
+    }
+
+    async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
         return None;
     }
 }
@@ -152,15 +162,29 @@ async fn verify_data_handler<C: Control + Sync + Send + 'static>(should_succeed:
 /// listener.
 struct StateController {
     state_reporter: UnboundedSender<State>,
+    invocation_counts: HashMap<State, u8>,
+    invocation_counts_reporter: UnboundedSender<HashMap<State, u8>>,
 }
 
 impl StateController {
-    pub fn create_generator(reporter: UnboundedSender<State>) -> GenerateController {
+    pub fn create_generator(
+        reporter: UnboundedSender<State>,
+        invocation_counts_reporter: UnboundedSender<HashMap<State, u8>>,
+    ) -> GenerateController {
         Box::new(move |_| {
             let reporter = reporter.clone();
+            let invocation_counts_reporter = invocation_counts_reporter.clone();
             Box::pin(async move {
-                Ok(Box::new(StateController { state_reporter: reporter.clone() })
-                    as BoxedController)
+                let mut invocation_counts = HashMap::new();
+                invocation_counts.insert(State::Startup, 0);
+                invocation_counts.insert(State::Listen, 0);
+                invocation_counts.insert(State::EndListen, 0);
+                invocation_counts.insert(State::Teardown, 0);
+                Ok(Box::new(StateController {
+                    state_reporter: reporter.clone(),
+                    invocation_counts,
+                    invocation_counts_reporter: invocation_counts_reporter.clone(),
+                }) as BoxedController)
             })
         })
     }
@@ -172,8 +196,11 @@ impl controller::Handle for StateController {
         return None;
     }
 
-    async fn change_state(&mut self, state: State) {
+    async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
+        self.invocation_counts.entry(state).and_modify(|e| *e += 1);
+        self.invocation_counts_reporter.unbounded_send(self.invocation_counts.clone()).ok();
         self.state_reporter.unbounded_send(state).ok();
+        return None;
     }
 }
 
@@ -185,6 +212,7 @@ async fn test_event_propagation() {
     let (messenger, _) =
         factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
+    let (invocations_tx, _invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
     let signature = handler_messenger.get_signature();
@@ -193,10 +221,26 @@ async fn test_event_propagation() {
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
+        CONTEXT_ID,
     )
     .build();
 
-    assert!(ClientImpl::create(context, StateController::create_generator(event_tx)).await.is_ok());
+    assert!(ClientImpl::create(
+        context,
+        StateController::create_generator(event_tx, invocations_tx)
+    )
+    .await
+    .is_ok());
+
+    messenger
+        .message(
+            Payload::Command(Command::ChangeState(State::Startup)),
+            Audience::Messenger(signature.clone()),
+        )
+        .send()
+        .ack();
+
+    assert_eq!(Some(State::Startup), event_rx.next().await);
 
     messenger
         .message(
@@ -217,6 +261,70 @@ async fn test_event_propagation() {
         .ack();
 
     assert_eq!(Some(State::EndListen), event_rx.next().await);
+
+    messenger
+        .message(
+            Payload::Command(Command::ChangeState(State::Teardown)),
+            Audience::Messenger(signature.clone()),
+        )
+        .send()
+        .ack();
+
+    assert_eq!(Some(State::Teardown), event_rx.next().await);
+}
+
+// Test that the controller state is entered [n] times.
+async fn verify_controller_state(state: State, n: u8) {
+    let factory = message::create_hub();
+    let setting_type = SettingType::Audio;
+
+    let (messenger, _) =
+        factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+    let (event_tx, mut event_rx) = unbounded::<State>();
+    let (invocations_tx, mut invocations_rx) = unbounded::<HashMap<State, u8>>();
+    let (handler_messenger, handler_receptor) =
+        factory.create(MessengerType::Unbound).await.unwrap();
+    let signature = handler_messenger.get_signature();
+    let context = ContextBuilder::new(
+        setting_type,
+        InMemoryStorageFactory::create(),
+        handler_messenger,
+        handler_receptor,
+        CONTEXT_ID,
+    )
+    .build();
+
+    ClientImpl::create(context, StateController::create_generator(event_tx, invocations_tx))
+        .await
+        .expect("Unable to create ClientImpl");
+
+    messenger
+        .message(
+            Payload::Command(Command::ChangeState(state)),
+            Audience::Messenger(signature.clone()),
+        )
+        .send()
+        .ack();
+
+    assert_eq!(Some(state), event_rx.next().await);
+
+    if let Some(invocation_counts) = invocations_rx.next().await {
+        assert_eq!(*invocation_counts.get(&state).unwrap(), n);
+    } else {
+        panic!("Should have receiced message from receptor");
+    }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+// Test that the setting handler calls ChangeState(State::Startup) on controller.
+async fn test_startup_state() {
+    verify_controller_state(State::Startup, 1).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+// Test that the setting handler calls ChangeState(State::Teardown) on controller.
+async fn test_teardown_state() {
+    verify_controller_state(State::Teardown, 1).await;
 }
 
 /// Empty controller that handles no commands or events.
@@ -235,6 +343,10 @@ impl StubController {
 impl controller::Handle for StubController {
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
         return None;
+    }
+
+    async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
+        None
     }
 }
 
@@ -255,6 +367,7 @@ async fn test_unimplemented_error() {
             InMemoryStorageFactory::create(),
             handler_messenger,
             handler_receptor,
+            CONTEXT_ID,
         )
         .build();
 

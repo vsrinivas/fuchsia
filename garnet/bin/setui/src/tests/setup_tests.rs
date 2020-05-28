@@ -17,6 +17,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_setup_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -42,8 +43,10 @@ async fn test_setup_default() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup_with_reboot() {
     let storage_factory = InMemoryStorageFactory::create();
-    let store =
-        storage_factory.lock().await.get_device_storage::<SetupInfo>(StorageAccessContext::Test);
+    let store = storage_factory
+        .lock()
+        .await
+        .get_device_storage::<SetupInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
     // Prepopulate initial value
     {

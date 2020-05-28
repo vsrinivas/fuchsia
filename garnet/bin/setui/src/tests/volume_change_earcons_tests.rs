@@ -29,6 +29,7 @@ use {
 };
 
 const ENV_NAME: &str = "volume_change_earcons_test_environment";
+const CONTEXT_ID: u64 = 0;
 const INITIAL_VOLUME_LEVEL: f32 = 0.5;
 const CHANGED_VOLUME_LEVEL_2: f32 = 0.8;
 const MAX_VOLUME_LEVEL: f32 = 1.0;
@@ -119,7 +120,10 @@ async fn create_environment(
 async fn create_storage(
     factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> Arc<Mutex<DeviceStorage<AudioInfo>>> {
-    let store = factory.lock().await.get_device_storage::<AudioInfo>(StorageAccessContext::Test);
+    let store = factory
+        .lock()
+        .await
+        .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
     {
         let mut store_lock = store.lock().await;
         let audio_info = default_audio_info();

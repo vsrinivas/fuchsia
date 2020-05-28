@@ -4,7 +4,9 @@
 use crate::display::light_sensor::{open_sensor, read_sensor};
 use crate::registry::base::State;
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
-use crate::switchboard::base::{LightData, SettingRequest, SettingResponse, SettingResponseResult};
+use crate::switchboard::base::{
+    ControllerStateResult, LightData, SettingRequest, SettingResponse, SettingResponseResult,
+};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_input::{DeviceMarker as SensorMarker, DeviceProxy as SensorProxy};
 use fuchsia_async::{self as fasync, DurationExt};
@@ -67,7 +69,7 @@ impl controller::Handle for LightSensorController {
         }
     }
 
-    async fn change_state(&mut self, state: State) {
+    async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         match state {
             State::Listen => {
                 let change_receiver =
@@ -87,7 +89,9 @@ impl controller::Handle for LightSensorController {
                 }
                 self.notifier_abort = None;
             }
-        }
+            _ => {}
+        };
+        None
     }
 }
 

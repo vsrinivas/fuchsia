@@ -9,6 +9,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_night_mode() {
@@ -17,8 +18,10 @@ async fn test_night_mode() {
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
-    let store =
-        factory.lock().await.get_device_storage::<NightModeInfo>(StorageAccessContext::Test);
+    let store = factory
+        .lock()
+        .await
+        .get_device_storage::<NightModeInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
     let env = EnvironmentBuilder::new(factory)
         .settings(&[SettingType::NightMode])

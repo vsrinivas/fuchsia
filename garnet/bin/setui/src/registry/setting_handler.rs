@@ -7,10 +7,11 @@ use crate::registry::base::{Command, Context, SettingHandlerResult, State};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
-    SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
+    ControllerStateResult, SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
 };
 use async_trait::async_trait;
 use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::marker::PhantomData;
@@ -28,6 +29,8 @@ pub enum ControllerError {
     WriteFailure { setting_type: SettingType },
     #[error("Initialization failure: cause {description:?}")]
     InitFailure { description: String },
+    #[error("Restoration of setting on controller startup failed: cause {description:?}")]
+    RestoreFailure { description: String },
 }
 
 pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;
@@ -47,7 +50,9 @@ pub mod controller {
     #[async_trait]
     pub trait Handle: Send {
         async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult>;
-        async fn change_state(&mut self, _state: State) {}
+        async fn change_state(&mut self, _state: State) -> Option<ControllerStateResult> {
+            None
+        }
     }
 }
 
@@ -129,16 +134,42 @@ impl ClientImpl {
                             client,
                             Self::process_request(setting_type, &controller, request.clone()).await,
                         ),
-                        MessageEvent::Message(Payload::Command(Command::ChangeState(state)), _) => {
+                        MessageEvent::Message(
+                            Payload::Command(Command::ChangeState(state)),
+                            receptor_client,
+                        ) => {
                             match state {
+                                State::Startup => {
+                                    match controller.change_state(state).await {
+                                        Some(Err(e)) => fx_log_err!(
+                                            "Failed startup phase for SettingType {:?} {}",
+                                            setting_type,
+                                            e
+                                        ),
+                                        _ => {}
+                                    };
+                                    reply(receptor_client, Ok(None));
+                                    continue;
+                                }
                                 State::Listen => {
                                     client.lock().await.notify = true;
                                 }
                                 State::EndListen => {
                                     client.lock().await.notify = false;
                                 }
+                                State::Teardown => {
+                                    match controller.change_state(state).await {
+                                        Some(Err(e)) => fx_log_err!(
+                                            "Failed teardown phase for SettingType {:?} {}",
+                                            setting_type,
+                                            e
+                                        ),
+                                        _ => {}
+                                    };
+                                    reply(receptor_client, Ok(None));
+                                    continue;
+                                }
                             }
-
                             controller.change_state(state).await;
                         }
                         _ => {}
@@ -221,7 +252,8 @@ pub mod persist {
             base_proxy: BaseProxy,
             context: Context<F>,
         ) -> Self {
-            let storage = context.environment.storage_factory_handle.lock().await.get_store::<S>();
+            let storage =
+                context.environment.storage_factory_handle.lock().await.get_store::<S>(context.id);
             Self { base: base_proxy, storage: storage, setting_type: context.setting_type }
         }
 

@@ -18,6 +18,8 @@ use bitflags::bitflags;
 
 pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 
+/// Return type from a controller after handling a state change.
+pub type ControllerStateResult = Result<(), SwitchboardError>;
 pub type SettingResponseResult = Result<Option<SettingResponse>, SwitchboardError>;
 pub type SettingRequestResponder = Sender<SettingResponseResult>;
 

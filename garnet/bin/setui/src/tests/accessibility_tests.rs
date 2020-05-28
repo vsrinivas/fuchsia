@@ -19,6 +19,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_accessibility_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 async fn create_test_accessibility_env(
     storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
@@ -81,8 +82,10 @@ async fn test_accessibility_set_all() {
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
-    let store =
-        factory.lock().await.get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test);
+    let store = factory
+        .lock()
+        .await
+        .get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test, CONTEXT_ID);
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Fetch the initial value.
@@ -136,8 +139,10 @@ async fn test_accessibility_set_captions() {
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
-    let store =
-        factory.lock().await.get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test);
+    let store = factory
+        .lock()
+        .await
+        .get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test, CONTEXT_ID);
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Set for_media and window_color in the top-level CaptionsSettings.

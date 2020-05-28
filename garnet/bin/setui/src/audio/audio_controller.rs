@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::registry::base::State;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy,
 };
@@ -118,25 +119,26 @@ impl VolumeController {
             changed_streams: None,
         }));
 
-        handle.lock().await.check_and_bind_volume_controls().await.ok();
-
         handle
     }
 
+    /// Restores the necessary dependencies' state on boot.
     async fn restore(&mut self) {
+        self.restore_volume_state(true).await;
+    }
+
+    /// Extracts the audio state from persistent storage and restores it on
+    /// the local state. Also pushes the changes to the audio core if
+    /// [push_to_audio_core] is true.
+    async fn restore_volume_state(&mut self, push_to_audio_core: bool) {
         let audio_info = self.client.read().await;
         let stored_streams = audio_info.streams.iter().cloned().collect();
-        self.update_volume_stream(&stored_streams).await;
+        self.update_volume_streams(&stored_streams, push_to_audio_core).await;
     }
 
     async fn get_info(&mut self) -> Result<AudioInfo, SwitchboardError> {
         let mut audio_info = self.client.read().await;
         self.input_monitor.lock().await.ensure_monitor().await;
-        if self.check_and_bind_volume_controls().await.is_err() {
-            // TODO(fxb/49663): This should return an error instead of returning
-            // default data.
-            return Ok(default_audio_info());
-        };
 
         audio_info.input =
             AudioInputInfo { mic_mute: self.input_monitor.lock().await.get_mute_state() };
@@ -151,18 +153,34 @@ impl VolumeController {
             return Err(e);
         }
 
-        self.update_volume_stream(&volume).await;
+        self.update_volume_streams(&volume, true).await;
         self.changed_streams = Some(volume);
         self.client.notify().await;
 
         Ok(None)
     }
 
-    async fn update_volume_stream(&mut self, new_streams: &Vec<AudioStream>) {
-        for stream in new_streams {
-            if let Some(volume_control) = self.stream_volume_controls.get_mut(&stream.stream_type) {
-                volume_control.set_volume(stream.clone()).await;
+    /// Updates the state with the given streams' volume levels.
+    ///
+    /// If [push_to_audio_core] is true, pushes the changes to the audio core.
+    /// If not, just sets it on the local stored state. Should be called with
+    /// true on first restore and on volume changes, and false otherwise.
+    async fn update_volume_streams(
+        &mut self,
+        new_streams: &Vec<AudioStream>,
+        push_to_audio_core: bool,
+    ) {
+        if push_to_audio_core {
+            self.check_and_bind_volume_controls(&default_audio_info().streams.to_vec()).await.ok();
+            for stream in new_streams {
+                if let Some(volume_control) =
+                    self.stream_volume_controls.get_mut(&stream.stream_type)
+                {
+                    volume_control.set_volume(stream.clone()).await;
+                }
             }
+        } else {
+            self.check_and_bind_volume_controls(new_streams).await.ok();
         }
 
         let mut stored_value = self.client.read().await;
@@ -170,7 +188,11 @@ impl VolumeController {
         write(&self.client, stored_value, false).await.ok();
     }
 
-    async fn check_and_bind_volume_controls(&mut self) -> Result<(), Error> {
+    /// Populates the local state with the given [streams] and binds it to the audio core service.
+    async fn check_and_bind_volume_controls(
+        &mut self,
+        streams: &Vec<AudioStream>,
+    ) -> Result<(), Error> {
         if self.audio_service_connected {
             return Ok(());
         }
@@ -195,7 +217,7 @@ impl VolumeController {
             }
         };
 
-        for stream in default_audio_info().streams.iter() {
+        for stream in streams.iter() {
             self.stream_volume_controls.insert(
                 stream.stream_type.clone(),
                 StreamVolumeControl::create(&audio_service, stream.clone()),
@@ -235,6 +257,17 @@ impl controller::Handle for AudioController {
                 Ok(info) => Ok(Some(SettingResponse::Audio(info))),
                 Err(e) => Err(e),
             }),
+            _ => None,
+        }
+    }
+
+    async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
+        match state {
+            State::Startup => {
+                // Restore the volume state locally but do not push to the audio core.
+                self.volume.lock().await.restore_volume_state(false).await;
+                Some(Ok(()))
+            }
             _ => None,
         }
     }

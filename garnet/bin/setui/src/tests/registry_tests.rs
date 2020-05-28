@@ -30,8 +30,9 @@ struct SettingHandler {
 }
 
 impl SettingHandler {
-    fn process_state(&mut self, state: State) {
+    fn process_state(&mut self, state: State) -> SettingResponseResult {
         self.state_tx.unbounded_send(state).ok();
+        Ok(None)
     }
 
     pub fn set_next_response(&mut self, request: SettingRequest, response: SettingResponseResult) {
@@ -86,9 +87,9 @@ impl SettingHandler {
                     }
                     MessageEvent::Message(
                         handler::Payload::Command(Command::ChangeState(state)),
-                        _,
+                        client,
                     ) => {
-                        handler_clone.lock().await.process_state(state);
+                        handler::reply(client, handler_clone.lock().await.process_state(state));
                     }
                     _ => {}
                 }
@@ -140,6 +141,7 @@ impl SettingHandlerFactory for FakeFactory {
         &mut self,
         setting_type: SettingType,
         _: handler::message::Factory,
+        _: handler::message::Messenger,
     ) -> Option<handler::message::Signature> {
         let existing_count = self.get_request_count(setting_type);
 
@@ -158,6 +160,7 @@ async fn test_notify() {
     let handler_messenger_factory = handler::message::create_hub();
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
+
     let _registry = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
@@ -188,12 +191,6 @@ async fn test_notify() {
             .send()
             .ack();
 
-        if let Some(state) = state_rx.next().await {
-            assert_eq!(state, State::Listen);
-        } else {
-            panic!("should have received state update");
-        }
-
         handler.lock().await.notify();
 
         while let Ok(event) = receptor.watch().await {
@@ -204,6 +201,12 @@ async fn test_notify() {
                 break;
             }
         }
+    }
+
+    if let Some(state) = state_rx.next().await {
+        assert_eq!(state, State::Listen);
+    } else {
+        panic!("should have received state update");
     }
 
     // Send an end listen state and make sure sink is notified.
@@ -224,7 +227,13 @@ async fn test_notify() {
     if let Some(state) = state_rx.next().await {
         assert_eq!(state, State::EndListen);
     } else {
-        panic!("should have received state update");
+        panic!("should have received EndListen state update");
+    }
+
+    if let Some(state) = state_rx.next().await {
+        assert_eq!(state, State::Teardown);
+    } else {
+        panic!("should have received Teardown state update");
     }
 }
 
@@ -279,9 +288,70 @@ async fn test_request() {
     }
 }
 
-/// Ensures setting handler is only generated once.
+/// Ensures setting handler is only generated once if never torn down.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_generation() {
+    let messenger_factory = create_hub();
+    let handler_messenger_factory = handler::message::create_hub();
+    let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
+
+    let (messenger_client, _) =
+        messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
+    let _registry = RegistryImpl::create(
+        handler_factory.clone(),
+        messenger_factory.clone(),
+        handler_messenger_factory,
+    )
+    .await;
+    let setting_type = SettingType::Unknown;
+    let request_id = 42;
+
+    let (handler_messenger, handler_receptor) =
+        handler_factory.lock().await.create(setting_type).await;
+    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
+    let _handler =
+        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx);
+
+    // Send initial request.
+    let _ = get_response(
+        messenger_client
+            .message(
+                Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type: setting_type,
+                    data: SettingActionData::Listen(1),
+                }),
+                Audience::Address(Address::Registry),
+            )
+            .send(),
+    )
+    .await;
+
+    // Ensure the handler was only created once.
+    assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
+
+    // Send followup request.
+    let _ = get_response(
+        messenger_client
+            .message(
+                Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type: setting_type,
+                    data: SettingActionData::Request(SettingRequest::Get),
+                }),
+                Audience::Address(Address::Registry),
+            )
+            .send(),
+    )
+    .await;
+
+    // Make sure no followup generation was invoked.
+    assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
+}
+
+/// Ensures setting handler is generated multiple times successfully if torn down.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_regeneration() {
     let messenger_factory = create_hub();
     let handler_messenger_factory = handler::message::create_hub();
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
@@ -321,6 +391,8 @@ async fn test_generation() {
     // Ensure the handler was only created once.
     assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
 
+    // The subsequent teardown should happen here.
+
     // Send followup request.
     let _ = get_response(
         messenger_client
@@ -336,8 +408,8 @@ async fn test_generation() {
     )
     .await;
 
-    // Make sure no followup generation was invoked.
-    assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
+    // Check that the handler was re-generated.
+    assert_eq!(2, handler_factory.lock().await.get_request_count(setting_type));
 }
 
 async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingResponseResult)> {

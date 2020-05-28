@@ -21,6 +21,7 @@ use crate::fidl_clone::FIDLClone;
 use crate::switchboard::intl_types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>>) -> IntlProxy {
     let service_gen = Box::new(
@@ -78,7 +79,8 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
-    let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
+    let store =
+        factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test, CONTEXT_ID);
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
@@ -117,7 +119,8 @@ async fn test_intl_e2e() {
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
-    let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
+    let store =
+        factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test, CONTEXT_ID);
     let intl_service = create_test_intl_env(factory).await;
 
     // Initial value is not None.
@@ -158,7 +161,8 @@ async fn test_intl_e2e_set_twice() {
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create();
-    let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
+    let store =
+        factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test, CONTEXT_ID);
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.

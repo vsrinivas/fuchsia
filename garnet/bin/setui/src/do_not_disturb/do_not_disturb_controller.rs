@@ -1,14 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::switchboard::base::SettingResponseResult;
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse};
+use crate::switchboard::base::{
+    DoNotDisturbInfo, SettingRequest, SettingResponse, SettingResponseResult,
+};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {

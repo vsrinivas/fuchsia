@@ -11,6 +11,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_do_not_disturb() {
@@ -18,7 +19,7 @@ async fn test_do_not_disturb() {
     let store = storage_factory
         .lock()
         .await
-        .get_device_storage::<DoNotDisturbInfo>(StorageAccessContext::Test);
+        .get_device_storage::<DoNotDisturbInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
     // Prepopulate initial value.
     {

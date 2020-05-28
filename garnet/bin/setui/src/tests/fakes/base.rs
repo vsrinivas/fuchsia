@@ -4,7 +4,7 @@
 use crate::internal::handler::{reply, Payload};
 use crate::message::base::MessageEvent;
 use crate::registry::base::Command;
-use crate::registry::base::GenerateHandler;
+use crate::registry::base::{GenerateHandler, State};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::switchboard::base::{SettingRequest, SettingResponseResult};
 use anyhow::Error;
@@ -44,6 +44,14 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
                     ) => {
                         let response = (handler.lock().await)(request).await;
                         reply(client, response);
+                    }
+                    MessageEvent::Message(
+                        Payload::Command(Command::ChangeState(state)),
+                        client,
+                    ) => {
+                        if state == State::Startup || state == State::Teardown {
+                            reply(client, Ok(None));
+                        }
                     }
                     _ => {}
                 }

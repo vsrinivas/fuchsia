@@ -18,6 +18,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_system_test_environment";
+const CONTEXT_ID: u64 = 0;
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -28,8 +29,10 @@ async fn test_system() {
         fidl_fuchsia_settings::LoginOverride::AuthProvider;
 
     let storage_factory = InMemoryStorageFactory::create();
-    let store =
-        storage_factory.lock().await.get_device_storage::<SystemInfo>(StorageAccessContext::Test);
+    let store = storage_factory
+        .lock()
+        .await
+        .get_device_storage::<SystemInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
     // Write out initial value to storage.
     {
@@ -103,8 +106,10 @@ async fn test_failed_reboot() {
         fidl_fuchsia_settings::LoginOverride::AuthProvider;
 
     let storage_factory = InMemoryStorageFactory::create();
-    let store =
-        storage_factory.lock().await.get_device_storage::<SystemInfo>(StorageAccessContext::Test);
+    let store = storage_factory
+        .lock()
+        .await
+        .get_device_storage::<SystemInfo>(StorageAccessContext::Test, CONTEXT_ID);
 
     // Write out initial value to storage.
     {

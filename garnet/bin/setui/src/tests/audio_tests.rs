@@ -30,6 +30,7 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_audio_test_environment";
+const CONTEXT_ID: u64 = 0;
 
 const CHANGED_VOLUME_LEVEL: f32 = 0.7;
 const CHANGED_VOLUME_MUTED: bool = true;
@@ -96,7 +97,10 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
 async fn create_storage(
     factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> Arc<Mutex<DeviceStorage<AudioInfo>>> {
-    let store = factory.lock().await.get_device_storage::<AudioInfo>(StorageAccessContext::Test);
+    let store = factory
+        .lock()
+        .await
+        .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
     {
         let mut store_lock = store.lock().await;
         let audio_info = default_audio_info();
@@ -254,7 +258,7 @@ async fn test_volume_restore() {
         let store = storage_factory
             .lock()
             .await
-            .get_device_storage::<AudioInfo>(StorageAccessContext::Test);
+            .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
         let mut stored_info = default_audio_info();
         for stream in stored_info.streams.iter_mut() {
             if stream.stream_type == AudioStreamType::Media {

@@ -97,7 +97,10 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
 }
 
 pub trait DeviceStorageFactory {
-    fn get_store<T: DeviceStorageCompatible + 'static>(&mut self) -> Arc<Mutex<DeviceStorage<T>>>;
+    fn get_store<T: DeviceStorageCompatible + 'static>(
+        &mut self,
+        context_id: u64,
+    ) -> Arc<Mutex<DeviceStorage<T>>>;
 }
 
 /// Factory that vends out storage for individual structs.
@@ -121,7 +124,10 @@ impl StashDeviceStorageFactory {
 
 impl DeviceStorageFactory for StashDeviceStorageFactory {
     /// Currently, this doesn't support more than one instance of the same struct.
-    fn get_store<T: DeviceStorageCompatible + 'static>(&mut self) -> Arc<Mutex<DeviceStorage<T>>> {
+    fn get_store<T: DeviceStorageCompatible + 'static>(
+        &mut self,
+        _context_id: u64,
+    ) -> Arc<Mutex<DeviceStorage<T>>> {
         let (accessor_proxy, server_end) = create_proxy().unwrap();
         self.store.create_accessor(false, server_end).unwrap();
 
@@ -173,7 +179,7 @@ pub mod testing {
     /// Only supports a single key/value pair
     pub struct InMemoryStorageFactory {
         proxies: HashMap<TypeId, (StoreAccessorProxy, Arc<Mutex<StashStats>>)>,
-        prod_accessed_types: HashSet<TypeId>,
+        prod_accessed_types: HashSet<u64>,
     }
 
     #[derive(PartialEq)]
@@ -193,6 +199,7 @@ pub mod testing {
         pub fn get_device_storage<T: DeviceStorageCompatible + 'static>(
             &mut self,
             access_context: StorageAccessContext,
+            context_id: u64,
         ) -> Arc<Mutex<DeviceStorage<T>>> {
             let id = TypeId::of::<T>();
             if !self.proxies.contains_key(&id) {
@@ -200,11 +207,11 @@ pub mod testing {
             }
 
             if access_context == StorageAccessContext::Production {
-                if self.prod_accessed_types.contains(&id) {
+                if self.prod_accessed_types.contains(&context_id) {
                     panic!("Should only access DeviceStorage once per type");
                 }
 
-                self.prod_accessed_types.insert(id);
+                self.prod_accessed_types.insert(context_id);
             }
 
             if let Some((proxy, _)) = self.proxies.get(&id) {
@@ -221,8 +228,9 @@ pub mod testing {
     impl DeviceStorageFactory for InMemoryStorageFactory {
         fn get_store<T: DeviceStorageCompatible + 'static>(
             &mut self,
+            context_id: u64,
         ) -> Arc<Mutex<DeviceStorage<T>>> {
-            self.get_device_storage(StorageAccessContext::Production)
+            self.get_device_storage(StorageAccessContext::Production, context_id)
         }
     }
 
@@ -280,6 +288,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use testing::*;
 
+    const CONTEXT_ID: u64 = 0;
     const VALUE0: i32 = 3;
     const VALUE1: i32 = 33;
     const VALUE2: i32 = 128;
@@ -439,10 +448,14 @@ mod tests {
     async fn test_in_memory_storage() {
         let factory = InMemoryStorageFactory::create();
 
-        let store_1 =
-            factory.lock().await.get_device_storage::<TestStruct>(StorageAccessContext::Test);
-        let store_2 =
-            factory.lock().await.get_device_storage::<TestStruct>(StorageAccessContext::Test);
+        let store_1 = factory
+            .lock()
+            .await
+            .get_device_storage::<TestStruct>(StorageAccessContext::Test, CONTEXT_ID);
+        let store_2 = factory
+            .lock()
+            .await
+            .get_device_storage::<TestStruct>(StorageAccessContext::Test, CONTEXT_ID);
 
         // Write initial data through first store.
         let test_struct = TestStruct { value: VALUE0 };

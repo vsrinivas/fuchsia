@@ -26,10 +26,24 @@ pub enum Command {
     ChangeState(State),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum State {
+    /// State of a controller immediately after it is created. Intended
+    /// to initialize state on the controller.
+    Startup,
+
+    /// State of a controller when at least one client is listening on
+    /// changes to the setting state.
     Listen,
+
+    /// State of a controller when there are no more clients listening
+    /// on changes to the setting state.
     EndListen,
+
+    /// State of a controller when there are no requests or listeners on
+    /// the setting type. Intended to tear down state before taking down
+    /// the controller.
+    Teardown,
 }
 
 /// A factory capable of creating a handler for a given setting on-demand. If no
@@ -40,6 +54,7 @@ pub trait SettingHandlerFactory {
         &mut self,
         setting_type: SettingType,
         messenger_factory: message::Factory,
+        messenger_client: message::Messenger,
     ) -> Option<message::Signature>;
 }
 
@@ -80,6 +95,7 @@ pub struct Context<T: DeviceStorageFactory> {
     pub messenger: message::Messenger,
     pub receptor: message::Receptor,
     pub environment: Environment<T>,
+    pub id: u64,
 }
 
 impl<T: DeviceStorageFactory> Context<T> {
@@ -88,12 +104,14 @@ impl<T: DeviceStorageFactory> Context<T> {
         messenger: message::Messenger,
         receptor: message::Receptor,
         environment: Environment<T>,
+        id: u64,
     ) -> Context<T> {
         return Context {
             setting_type: setting_type,
             messenger: messenger,
             receptor: receptor,
             environment: environment.clone(),
+            id,
         };
     }
 
@@ -103,6 +121,7 @@ impl<T: DeviceStorageFactory> Context<T> {
             self.messenger.clone(),
             self.receptor.clone(),
             self.environment.clone(),
+            self.id.clone(),
         )
     }
 }
@@ -116,6 +135,7 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
     service_context: Option<ServiceContextHandle>,
     messenger: message::Messenger,
     receptor: message::Receptor,
+    id: u64,
 }
 
 impl<T: DeviceStorageFactory> ContextBuilder<T> {
@@ -124,6 +144,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
         storage_factory: Arc<Mutex<T>>,
         messenger: message::Messenger,
         receptor: message::Receptor,
+        id: u64,
     ) -> Self {
         Self {
             setting_type: setting_type,
@@ -132,6 +153,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
             service_context: None,
             messenger: messenger,
             receptor: receptor,
+            id,
         }
     }
 
@@ -160,6 +182,10 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
         };
         let environment = Environment::new(self.settings, service_context, self.storage_factory);
 
-        Context::new(self.setting_type, self.messenger, self.receptor, environment)
+        // Note: ContextBuilder should use the same context id system as the SettingHandlerFactoryImpl.
+        // If it is used in conjunction with Context::new, then a new way of tracking unique Contexts
+        // may need to be devised. If it replaces all usages of Context::new, the id creation can
+        // be moved to the ContextBuilder struct.
+        Context::new(self.setting_type, self.messenger, self.receptor, environment, self.id)
     }
 }
