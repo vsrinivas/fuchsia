@@ -12,15 +12,22 @@ use thiserror::Error;
 // FIDL request/response definitions.
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct DetectCameraResult {
+pub struct DetectResult {
     pub camera_id: i32,
 
     #[serde(with = "DeviceInfoDef")]
     pub camera_info: DeviceInfo,
 }
 
+#[cfg(test)]
+impl PartialEq for DetectResult {
+    fn eq(&self, other: &Self) -> bool {
+        self.camera_id == other.camera_id && self.camera_info == other.camera_info
+    }
+}
+
 #[derive(Deserialize, Debug)]
-pub struct SetConfigRequest {
+pub struct SetCfgRequest {
     pub mode: u32,
     pub integration_time: i32,
     pub analog_gain: i32,
@@ -28,13 +35,14 @@ pub struct SetConfigRequest {
 }
 
 #[derive(Serialize, Debug)]
-pub struct CaptureImageResult {
+pub struct CaptureResult {
     #[serde(with = "buffer_wrapper")]
     pub image_data: Buffer,
     #[serde(with = "ImageInfoDef")]
     pub image_info: ImageInfo,
 }
 
+// TODO(52737): Revise this once data transfer method is decided on.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct WriteCalibrationDataRequest {
     #[serde(with = "buffer_wrapper")]
@@ -237,7 +245,7 @@ mod tests {
                     vendor_name: Some(TEST_STR.to_string()),
                     product_id: Some(TEST_UINT16),
                     product_name: Some(TEST_STR.to_string()),
-                    type_: Some(DeviceType::Builtin),
+                    type_: Some(DeviceType::Virtual),
                 },
 
                 image_info: ImageInfo {
@@ -255,13 +263,11 @@ mod tests {
     }
 
     #[test]
-    fn serialize_detect_camera_result() {
+    fn serialize_detect_result() {
         let setup = Setup::new();
-        let serialized_val = to_value(DetectCameraResult {
-            camera_id: setup.test_int,
-            camera_info: setup.device_info,
-        })
-        .unwrap();
+        let serialized_val =
+            to_value(DetectResult { camera_id: setup.test_int, camera_info: setup.device_info })
+                .unwrap();
         let expected_val = json!({
             "camera_id": 256,
             "camera_info": {
@@ -269,7 +275,7 @@ mod tests {
                 "vendor_name": "test_string",
                 "product_id": 256,
                 "product_name": "test_string",
-                "type_": "Builtin",
+                "type_": "Virtual",
             }
         });
         assert_eq!(serialized_val, expected_val);
@@ -279,11 +285,9 @@ mod tests {
     fn serialize_capture_image_result() {
         let setup = Setup::new();
 
-        let serialized_val = to_value(CaptureImageResult {
-            image_data: setup.full_buf,
-            image_info: setup.image_info,
-        })
-        .unwrap();
+        let serialized_val =
+            to_value(CaptureResult { image_data: setup.full_buf, image_info: setup.image_info })
+                .unwrap();
         let expected_val = json!({
             "image_data": base64::encode(&vec![1; 5]),
             "image_info": {
@@ -304,11 +308,9 @@ mod tests {
     fn serialize_capture_image_result_empty_buf() {
         let setup = Setup::new();
 
-        let serialized_val = to_value(CaptureImageResult {
-            image_data: setup.empty_buf,
-            image_info: setup.image_info,
-        })
-        .unwrap();
+        let serialized_val =
+            to_value(CaptureResult { image_data: setup.empty_buf, image_info: setup.image_info })
+                .unwrap();
         let expected_val = json!({
             "image_data": "",
             "image_info": {

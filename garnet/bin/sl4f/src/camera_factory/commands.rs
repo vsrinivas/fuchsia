@@ -4,31 +4,46 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use serde_json::{from_value, Value};
+use serde_json::{from_value, to_value, Value};
 
 use crate::camera_factory::facade::CameraFactoryFacade;
-use crate::camera_factory::types::{SetConfigRequest, WriteCalibrationDataRequest};
+use crate::camera_factory::types::SetCfgRequest;
 use crate::server::Facade;
 
 #[async_trait(?Send)]
 impl Facade for CameraFactoryFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
-        match method.as_ref() {
-            "DetectCamera" => self.detect_camera().await,
-            "Init" => self.init().await,
-            "Start" => self.start().await,
-            "Stop" => self.stop().await,
-            "SetConfig" => {
-                let req: SetConfigRequest = from_value(args)?;
-                self.set_config(req.mode, req.integration_time, req.analog_gain, req.digital_gain)
-                    .await
+        let result = match method.as_ref() {
+            "DetectCamera" => self.detect().await?,
+            "GetSn" => self.get_sn().await?,
+            "GetCfg" => self.get_cfg().await?,
+            "SetCfg" => {
+                let req: SetCfgRequest = from_value(args)?;
+                self.set_cfg(req.mode, req.integration_time, req.analog_gain, req.digital_gain)
+                    .await?
             }
-            "CaptureImage" => self.capture_image().await,
-            "WriteCalibrationData" => {
-                let mut req: WriteCalibrationDataRequest = from_value(args)?;
-                self.write_calibration_data(&mut req.calibration_data, req.file_path).await
+            "Capture" => {
+                let req: String = from_value(args)?;
+                self.capture(req).await?
             }
-            _ => return Err(format_err!("invalid FIDL method: {}", method)),
-        }
+            "GetOtp" => {
+                let req: String = from_value(args)?;
+                self.get_otp(req).await?
+            }
+            "ColorBars" => {
+                let req: bool = from_value(args)?;
+                self.color_bars(req).await?
+            }
+            "Enable" => {
+                let req: bool = from_value(args)?;
+                self.enable(req).await?
+            }
+            "Reset" => {
+                let req: bool = from_value(args)?;
+                self.reset(req).await?
+            }
+            _ => return Err(format_err!("invalid method: {}", method)),
+        };
+        Ok(to_value(result)?)
     }
 }

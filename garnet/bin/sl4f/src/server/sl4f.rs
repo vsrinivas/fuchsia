@@ -41,6 +41,10 @@ use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
+// Camera-related includes
+use crate::camera_factory::facade::CameraFactoryFacade;
+
+// Common
 use crate::common_utils::error::Sl4fError;
 
 // Device related includes
@@ -170,6 +174,7 @@ impl Sl4f {
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),
+                "camera_factory_facade" => CameraFactoryFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),
                 "device_facade" => DeviceFacade::new(),
                 "factory_store_facade" => FactoryStoreFacade::new(),
