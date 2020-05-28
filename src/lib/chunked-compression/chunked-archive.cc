@@ -265,7 +265,7 @@ uint32_t HeaderReader::ComputeChecksum(const uint8_t* header, size_t header_leng
 // HeaderWriter
 
 Status HeaderWriter::Create(void* dst, size_t dst_len, size_t num_frames, HeaderWriter* out) {
-  if (num_frames >= kChunkArchiveMaxFrames) {
+  if (num_frames > kChunkArchiveMaxFrames) {
     return kStatusErrInvalidArgs;
   } else if (dst_len < MetadataSizeForNumFrames(num_frames)) {
     return kStatusErrBufferTooSmall;
@@ -276,7 +276,7 @@ Status HeaderWriter::Create(void* dst, size_t dst_len, size_t num_frames, Header
 
 HeaderWriter::HeaderWriter(void* dst, size_t dst_len, size_t num_frames)
     : dst_(static_cast<uint8_t*>(dst)) {
-  ZX_DEBUG_ASSERT(num_frames < kChunkArchiveMaxFrames);
+  ZX_DEBUG_ASSERT(num_frames <= kChunkArchiveMaxFrames);
 
   num_frames_ = static_cast<ChunkCountType>(num_frames);
   entries_ = reinterpret_cast<SeekTableEntry*>(dst_ + kChunkArchiveSeekTableOffset);

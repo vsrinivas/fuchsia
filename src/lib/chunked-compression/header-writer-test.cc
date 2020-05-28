@@ -106,6 +106,14 @@ TEST(HeaderWriter, TwoEntries) {
   ASSERT_EQ(entry2.compressed_size, 40ul);
 }
 
+TEST(HeaderWriter, MaxEntries) {
+  size_t sz = HeaderWriter::MetadataSizeForNumFrames(kChunkArchiveMaxFrames);
+  fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
+  HeaderWriter writer;
+  ASSERT_EQ(HeaderWriter::Create(buf.get(), buf.size(), kChunkArchiveMaxFrames, &writer),
+            kStatusOk);
+}
+
 TEST(HeaderWriter, FinalizeCalledEarly) {
   size_t sz = kChunkArchiveMinHeaderSize + sizeof(SeekTableEntry);
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
