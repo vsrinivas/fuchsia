@@ -501,7 +501,7 @@ fx run-e2e-test fidl_microbenchmarks_test -- -n "rust_fidl_microbenchmarks"
 | dart fidlgen goldens  | fx exec $FUCHSIA_DIR/topaz/bin/fidlgen_dart/regen.sh                        | zircon/tools/fidl/goldens                                         | topaz/bin/fidlgen_dart/goldens                                                             |
 | dangerous identifiers | garnet/tests/fidl-dangerous-identifiers/generate.py                         | garnet/tests/fidl-dangerous-identifiers/dangerous_identifiers.txt | garnet/tests/fidl-dangerous-identifiers/cpp/ garnet/tests/fidl-dangerous-identifiers/fidl/ |
 | regen third party go  | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                              |                                                                   |                                                                                            |
-| fidldoc goldens       | REGENERATE_GOLDENS_FOLDER=$FUCHSIA_DIR/tools/fidl/fidldoc/src/templates/markdown/testdata fx test host_x64/fidldoc_bin_test -- golden_test | zircon/tools/fidl/goldens | tools/fidl/fidldoc/src/templates/markdown/testdata |
+| fidldoc goldens       | REGENERATE_GOLDENS_FOLDER=$FOLDER fx test fidldoc_bin_test --golden_test    |                                                                   | $FOLDER                                                                                    |
 
 ### Compiling with `ninja`
 

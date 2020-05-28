@@ -43,23 +43,15 @@ pub trait {{ $protocol.Name }}ProxyInterface: Send + Sync {
 	{{- end -}}
 
 	{{- if $method.HasRequest }}
-	{{- if $method.IsTransitional -}}
-	#[allow(unused_variables)]
-	{{- end }}
 	fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		{{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
 	)
 	{{- if $method.HasResponse -}}
-	-> Self::{{ $method.CamelName }}ResponseFut
+	-> Self::{{ $method.CamelName }}ResponseFut;
 	{{- else -}}
-	-> Result<(), fidl::Error>
-	{{- end -}}
-	{{- if $method.IsTransitional -}}
-	{ unimplemented!("transitional method {{ .Name }} is unimplemented"); }
-	{{- else -}}
-	; {{- /* Semicolon for no default implementation */ -}}
+	-> Result<(), fidl::Error>;
 	{{- end -}}
 	{{- end -}}
 	{{- end }}
