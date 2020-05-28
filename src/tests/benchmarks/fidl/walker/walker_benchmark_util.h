@@ -18,20 +18,19 @@ namespace internal {
 void Walk(const fidl_type_t* fidl_type, uint8_t* data);
 }  // namespace internal
 
-template <typename BuilderFunc>
+template <typename FidlType, typename BuilderFunc>
 bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  using FidlType = std::invoke_result_t<BuilderFunc>;
-  static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
+  builder([state](FidlType value) {
+    fidl::aligned<FidlType> aligned_value = std::move(value);
+    auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
+    auto& linearize_result = linearized.result();
+    ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
+    fidl::BytePart bytes = linearize_result.message.Release();
 
-  fidl::aligned<FidlType> aligned_value = builder();
-  auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
-  auto& linearize_result = linearized.result();
-  ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
-  fidl::BytePart bytes = linearize_result.message.Release();
-
-  while (state->KeepRunning()) {
-    internal::Walk(FidlType::Type, bytes.data());
-  }
+    while (state->KeepRunning()) {
+      internal::Walk(FidlType::Type, bytes.data());
+    }
+  });
 
   return true;
 }

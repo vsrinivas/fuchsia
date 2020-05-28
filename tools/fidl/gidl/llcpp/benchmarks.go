@@ -33,26 +33,8 @@ namespace {
 	auto obj = {{ .ValueVarHeap }};
 	return obj;
 }
-{{ .Type }} Build{{ .Name }}Allocator(fidl::Allocator* allocator) {
-	{{ .ValueBuildAllocator }}
-	auto obj = {{ .ValueVarAllocator }};
-	return obj;
-}
-{{ .Type }} Build{{ .Name }}Unowned() {
-	{{ .ValueBuildUnowned }}
-	auto obj = std::move({{ .ValueVarUnowned }});
-	return obj;
-}
 bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
 	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Heap);
-}
-bool BenchmarkBuilder{{ .Name }}Allocator(perftest::RepeatState* state) {
-	using AllocatorType = fidl::UnsafeBufferAllocator<
-		fidl::internal::ClampedMessageSize<{{ .Type }}, fidl::MessageDirection::kSending>()>;
-	return llcpp_benchmarks::BuilderBenchmark<AllocatorType>(state, Build{{ .Name }}Allocator);
-}
-bool BenchmarkBuilder{{ .Name }}Unowned(perftest::RepeatState* state) {
-	return llcpp_benchmarks::BuilderBenchmark(state, Build{{ .Name }}Unowned);
 }
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }}Heap);
@@ -70,12 +52,7 @@ bool BenchmarkMemcpy{{ .Name }}(perftest::RepeatState* state) {
 }
 
 void RegisterTests() {
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Heap/WallTime",
-						   BenchmarkBuilder{{ .Name }}Heap);
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Allocator/WallTime",
-						   BenchmarkBuilder{{ .Name }}Allocator);
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Unowned/WallTime",
-						   BenchmarkBuilder{{ .Name }}Unowned);
+	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/WallTime", BenchmarkBuilder{{ .Name }}Heap);
 	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
 	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
 	{{ if .EnableSendEventBenchmark }}
@@ -89,11 +66,9 @@ PERFTEST_CTOR(RegisterTests)
 `))
 
 type benchmarkTmplInput struct {
-	Path, Name, Type, EventProtocolType    string
-	ValueBuildHeap, ValueVarHeap           string
-	ValueBuildAllocator, ValueVarAllocator string
-	ValueBuildUnowned, ValueVarUnowned     string
-	EnableSendEventBenchmark               bool
+	Path, Name, Type, EventProtocolType string
+	ValueBuildHeap, ValueVarHeap        string
+	EnableSendEventBenchmark            bool
 }
 
 // Generate generates Low-Level C++ benchmarks.
@@ -108,21 +83,15 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuildUnowned, valVarUnowned := libllcpp.BuildValueUnowned(gidlBenchmark.Value, decl)
 		valBuildHeap, valVarHeap := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
-		valBuildAllocator, valVarAllocator := libllcpp.BuildValueAllocator("allocator", gidlBenchmark.Value, decl)
 		var buf bytes.Buffer
 		if err := benchmarkTmpl.Execute(&buf, benchmarkTmplInput{
 			Path:                     gidlBenchmark.Name,
 			Name:                     benchmarkName(gidlBenchmark.Name),
 			Type:                     benchmarkTypeFromValue(gidlBenchmark.Value),
 			EventProtocolType:        benchmarkTypeFromValue(gidlBenchmark.Value) + "EventProtocol",
-			ValueBuildUnowned:        valBuildUnowned,
-			ValueVarUnowned:          valVarUnowned,
 			ValueBuildHeap:           valBuildHeap,
 			ValueVarHeap:             valVarHeap,
-			ValueBuildAllocator:      valBuildAllocator,
-			ValueVarAllocator:        valVarAllocator,
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
 		}); err != nil {
 			return nil, err

@@ -29,6 +29,8 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 
 {{ range .EncodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Encode) {
+	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
 	{{ .ValueBuild }}
 	const auto expected = {{ .Bytes }};
 	auto obj = {{ .ValueVar }};
@@ -38,6 +40,8 @@ TEST(Conformance, {{ .Name }}_Encode) {
 
 {{ range .DecodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Decode) {
+	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto obj = {{ .ValueVar }};
@@ -47,6 +51,8 @@ TEST(Conformance, {{ .Name }}_Decode) {
 
 {{ range .EncodeFailureCases }}
 TEST(Conformance, {{ .Name }}_Encode_Failure) {
+	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&obj, {{ .ErrorCode }}));
@@ -123,7 +129,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		valueBuild, valueVar := libllcpp.BuildValueHeap(encodeSuccess.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -149,7 +155,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		valueBuild, valueVar := libllcpp.BuildValueHeap(decodeSuccess.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -172,7 +178,7 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
-		valueBuild, valueVar := libllcpp.BuildValueHeap(encodeFailure.Value, decl)
+		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator_ptr", encodeFailure.Value, decl)
 		errorCode := llcppErrorCode(encodeFailure.Err)
 		for _, wireFormat := range encodeFailure.WireFormats {
 			if !wireFormatSupported(wireFormat) {

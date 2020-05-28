@@ -24,14 +24,13 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
-{{ .Type }} Build{{ .Name }}() {
+void Build{{ .Name }}(std::function<void({{.Type}})> f) {
 	{{ .ValueBuild }}
-	auto obj = {{ .ValueVar }};
-	return obj;
+	f(std::move({{ .ValueVar }}));
 }
 
 bool BenchmarkWalker{{ .Name }}(perftest::RepeatState* state) {
-	return walker_benchmarks::WalkerBenchmark(state, Build{{ .Name }});
+	return walker_benchmarks::WalkerBenchmark<{{ .Type }}>(state, Build{{ .Name }});
 }
 
 void RegisterTests() {
@@ -58,7 +57,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) (map[string][]byte, e
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuild, valVar := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
+		valBuild, valVar := libllcpp.BuildValueUnowned(gidlBenchmark.Value, decl)
 		var buf bytes.Buffer
 		if err := benchmarkTmpl.Execute(&buf, benchmarkTmplInput{
 			Path:       gidlBenchmark.Name,
