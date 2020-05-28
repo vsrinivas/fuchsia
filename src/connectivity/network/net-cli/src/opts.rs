@@ -93,27 +93,27 @@ pub struct FilterDisable {}
 pub struct FilterEnable {}
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "get_nat_rules")]
+#[argh(subcommand, name = "get-nat-rules")]
 /// gets nat rules
 pub struct FilterGetNatRules {}
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "get_rdr_rules")]
+#[argh(subcommand, name = "get-rdr-rules")]
 /// gets rdr rules
 pub struct FilterGetRdrRules {}
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "get_rules")]
+#[argh(subcommand, name = "get-rules")]
 /// gets filter rules
 pub struct FilterGetRules {}
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "is_enabled")]
+#[argh(subcommand, name = "is-enabled")]
 /// is the packet filter enabled?
 pub struct FilterIsEnabled {}
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "set_nat_rules")]
+#[argh(subcommand, name = "set-nat-rules")]
 /// sets nat rules (see the netfilter::parser library for the NAT rules format)
 pub struct FilterSetNatRules {
     #[argh(positional)]
@@ -122,7 +122,7 @@ pub struct FilterSetNatRules {
 }
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "set_rdr_rules")]
+#[argh(subcommand, name = "set-rdr-rules")]
 /// sets rdr rules (see the netfilter::parser library for the RDR rules format)
 pub struct FilterSetRdrRules {
     #[argh(positional)]
@@ -131,7 +131,7 @@ pub struct FilterSetRdrRules {
 }
 
 #[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "set_rules")]
+#[argh(subcommand, name = "set-rules")]
 /// sets filter rules (see the netfilter::parser library for the rules format)
 pub struct FilterSetRules {
     #[argh(positional)]
