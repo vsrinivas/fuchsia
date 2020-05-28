@@ -254,7 +254,7 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
   // compile-time conditionally acquire/release the thread lock
   // NOTE: using the manual spinlock grab/release instead of THREAD_LOCK because
   // the state variable needs to exit in either path.
-  __UNUSED spin_lock_saved_state_t irq_state;
+  __UNUSED interrupt_saved_state_t irq_state;
   if constexpr (TLS == ThreadLockState::NotHeld) {
     thread_lock.AcquireIrqSave(irq_state);
   }

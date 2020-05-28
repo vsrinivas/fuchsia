@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 
+#include <arch/interrupt.h>
 #include <arch/spinlock.h>
 
 /*
@@ -32,7 +33,7 @@
 #define ACPI_USE_LOCAL_CACHE
 
 // Specify the types Zircon uses for various common objects
-#define ACPI_CPU_FLAGS spin_lock_saved_state_t
+#define ACPI_CPU_FLAGS interrupt_saved_state_t
 #define ACPI_SPINLOCK arch_spin_lock_t *
 
 // Borrowed from aclinuxex.h

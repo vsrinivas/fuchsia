@@ -105,12 +105,11 @@ static bool sync_ipi_tests() {
     LTRACEF("Counter test (%u CPUs)\n", num_cpus);
     int counter = 0;
 
-    spin_lock_saved_state_t irqstate;
-    arch_interrupt_save(&irqstate);
+    {
+      InterruptDisableGuard irqd;
 
-    mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
-
-    arch_interrupt_restore(irqstate);
+      mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
+    }
 
     LTRACEF("  Finished signaling all but local (%d)\n", counter);
     ASSERT((uint)counter == num_cpus - 1);

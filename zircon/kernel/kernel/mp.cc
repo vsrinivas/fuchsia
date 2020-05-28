@@ -125,8 +125,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
   }
 
   // disable interrupts so our current CPU doesn't change
-  spin_lock_saved_state_t irqstate;
-  arch_interrupt_save(&irqstate);
+  interrupt_saved_state_t irqstate = arch_interrupt_save();
   arch::ThreadMemoryBarrier();
 
   const uint local_cpu = arch_curr_cpu_num();

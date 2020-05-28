@@ -36,14 +36,16 @@ __NO_INLINE static void bench_set_overhead() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    __asm__ volatile("");
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      __asm__ volatile("");
+    }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   printf("took %" PRIu64 " cycles overhead to loop %zu times\n", count, ITER);
 
@@ -57,14 +59,16 @@ __NO_INLINE static void bench_memset() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    memset(buf, 0, BUFSIZE);
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      memset(buf, 0, BUFSIZE);
+    }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
   printf("took %" PRIu64
@@ -82,16 +86,18 @@ __NO_INLINE static void bench_memset_per_page() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
-      memset(buf + j, 0, PAGE_SIZE);
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
+        memset(buf + j, 0, PAGE_SIZE);
+      }
     }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
   printf("took %" PRIu64
@@ -109,16 +115,18 @@ __NO_INLINE static void bench_zero_page() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
-      arch_zero_page(buf + j);
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
+        arch_zero_page(buf + j);
+      }
     }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
   printf("took %" PRIu64
@@ -137,16 +145,18 @@ __NO_INLINE static void bench_cset() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    for (size_t j = 0; j < BUFSIZE / sizeof(T); j++) {
-      buf[j] = 0;
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      for (size_t j = 0; j < BUFSIZE / sizeof(T); j++) {
+        buf[j] = 0;
+      }
     }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
   printf("took %" PRIu64
@@ -165,23 +175,25 @@ __NO_INLINE static void bench_cset_wide() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    for (size_t j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
-      buf[j * 8] = 0;
-      buf[j * 8 + 1] = 0;
-      buf[j * 8 + 2] = 0;
-      buf[j * 8 + 3] = 0;
-      buf[j * 8 + 4] = 0;
-      buf[j * 8 + 5] = 0;
-      buf[j * 8 + 6] = 0;
-      buf[j * 8 + 7] = 0;
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      for (size_t j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
+        buf[j * 8] = 0;
+        buf[j * 8 + 1] = 0;
+        buf[j * 8 + 2] = 0;
+        buf[j * 8 + 3] = 0;
+        buf[j * 8 + 4] = 0;
+        buf[j * 8 + 5] = 0;
+        buf[j * 8 + 6] = 0;
+        buf[j * 8 + 7] = 0;
+      }
     }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
   printf("took %" PRIu64
@@ -199,14 +211,16 @@ __NO_INLINE static void bench_memcpy() {
     return;
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-  uint64_t count = arch::Cycles();
-  for (size_t i = 0; i < ITER; i++) {
-    memcpy(buf, buf + BUFSIZE / 2, BUFSIZE / 2);
+  uint64_t count;
+  {
+    InterruptDisableGuard irqd;
+
+    count = arch::Cycles();
+    for (size_t i = 0; i < ITER; i++) {
+      memcpy(buf, buf + BUFSIZE / 2, BUFSIZE / 2);
+    }
+    count = arch::Cycles() - count;
   }
-  count = arch::Cycles() - count;
-  arch_interrupt_restore(state);
 
   uint64_t bytes_cycle = (BUFSIZE / 2 * ITER * 1000ULL) / count;
   printf("took %" PRIu64
@@ -218,37 +232,37 @@ __NO_INLINE static void bench_memcpy() {
 }
 
 __NO_INLINE static void bench_spinlock() {
-  spin_lock_saved_state_t state;
-  spin_lock_saved_state_t state2;
+  interrupt_saved_state_t state;
   SpinLock lock;
+  uint64_t c;
 
 #define COUNT (128 * 1024 * 1024)
   // test 1: acquire/release a spinlock with interrupts already disabled
-  arch_interrupt_save(&state);
+  {
+    InterruptDisableGuard irqd;
 
-  uint64_t c = arch::Cycles();
-  for (size_t i = 0; i < COUNT; i++) {
-    lock.Acquire();
-    lock.Release();
+    c = arch::Cycles();
+    for (size_t i = 0; i < COUNT; i++) {
+      lock.Acquire();
+      lock.Release();
+    }
+    c = arch::Cycles() - c;
   }
-  c = arch::Cycles() - c;
-
-  arch_interrupt_restore(state);
 
   printf("%" PRIu64 " cycles to acquire/release spinlock %d times (%" PRIu64 " cycles per)\n", c,
          COUNT, c / COUNT);
 
   // test 2: acquire/release a spinlock with irq save and irqs already disabled
-  arch_interrupt_save(&state);
+  {
+    InterruptDisableGuard irqd;
 
-  c = arch::Cycles();
-  for (size_t i = 0; i < COUNT; i++) {
-    lock.AcquireIrqSave(state2);
-    lock.ReleaseIrqRestore(state2);
+    c = arch::Cycles();
+    for (size_t i = 0; i < COUNT; i++) {
+      lock.AcquireIrqSave(state);
+      lock.ReleaseIrqRestore(state);
+    }
+    c = arch::Cycles() - c;
   }
-  c = arch::Cycles() - c;
-
-  arch_interrupt_restore(state);
 
   printf("%" PRIu64
          " cycles to acquire/release spinlock w/irqsave (already disabled) %d times (%" PRIu64
@@ -258,8 +272,8 @@ __NO_INLINE static void bench_spinlock() {
   // test 2: acquire/release a spinlock with irq save and irqs enabled
   c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
-    lock.AcquireIrqSave(state2);
-    lock.ReleaseIrqRestore(state2);
+    lock.AcquireIrqSave(state);
+    lock.ReleaseIrqRestore(state);
   }
   c = arch::Cycles() - c;
 

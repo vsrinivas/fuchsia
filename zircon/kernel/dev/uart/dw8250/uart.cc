@@ -160,7 +160,7 @@ static int dw8250_uart_getc(bool wait) {
 }
 
 static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {

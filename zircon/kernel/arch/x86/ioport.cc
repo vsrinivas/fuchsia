@@ -135,42 +135,43 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     }
   }
 
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
-
   zx_status_t status = ZX_OK;
-  do {
-    AutoSpinLockNoIrqSave guard(&lock_);
 
-    if (!bitmap_) {
-      bitmap_ = ktl::move(optimistic_bitmap);
-    }
-    DEBUG_ASSERT(bitmap_);
+  {
+    InterruptDisableGuard intd;
 
-    status = enable ? bitmap_->SetNoAlloc(port, port + len, &bitmap_freelist)
-                    : bitmap_->ClearNoAlloc(port, port + len, &bitmap_freelist);
-    if (status != ZX_OK) {
-      break;
-    }
+    do {
+      AutoSpinLockNoIrqSave guard(&lock_);
 
-    IoBitmap* current = GetCurrent();
-    if (this == current) {
-      // Set the io bitmap in the tss (the tss IO bitmap has reversed polarity)
-      tss_t* tss = &x86_get_percpu()->default_tss;
-      if (enable) {
-        bitmap_clear(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
-      } else {
-        bitmap_set(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+      if (!bitmap_) {
+        bitmap_ = ktl::move(optimistic_bitmap);
       }
-    }
-  } while (0);
+      DEBUG_ASSERT(bitmap_);
 
-  // Let all other CPUs know about the update
-  if (status == ZX_OK) {
-    struct ioport_update_context task_context = {.io_bitmap = this};
-    mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, IoBitmap::UpdateTask, &task_context);
+      status = enable ? bitmap_->SetNoAlloc(port, port + len, &bitmap_freelist)
+                      : bitmap_->ClearNoAlloc(port, port + len, &bitmap_freelist);
+      if (status != ZX_OK) {
+        break;
+      }
+
+      IoBitmap* current = GetCurrent();
+      if (this == current) {
+        // Set the io bitmap in the tss (the tss IO bitmap has reversed polarity)
+        tss_t* tss = &x86_get_percpu()->default_tss;
+        if (enable) {
+          bitmap_clear(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+        } else {
+          bitmap_set(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+        }
+      }
+    } while (0);
+
+    // Let all other CPUs know about the update
+    if (status == ZX_OK) {
+      struct ioport_update_context task_context = {.io_bitmap = this};
+      mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, IoBitmap::UpdateTask, &task_context);
+    }
   }
 
-  arch_interrupt_restore(state);
   return status;
 }

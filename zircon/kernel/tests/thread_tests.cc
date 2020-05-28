@@ -500,7 +500,7 @@ struct lock_pair_t {
 static int hold_and_release(void* arg) {
   lock_pair_t* pair = reinterpret_cast<lock_pair_t*>(arg);
   ASSERT(pair != nullptr);
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
   pair->second.AcquireIrqSave(state);
   while (pair->first.HolderCpu() != UINT_MAX) {
     arch::Yield();
@@ -510,7 +510,7 @@ static int hold_and_release(void* arg) {
 }
 
 static void spinlock_test() {
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
   SpinLock lock;
 
   // Verify basic functionality (single core).

@@ -227,7 +227,7 @@ static int s905_uart_getc(bool wait) {
  * each time a byte is read from the Tx FIFO).
  */
 static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {

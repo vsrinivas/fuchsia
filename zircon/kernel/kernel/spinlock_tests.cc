@@ -14,7 +14,7 @@ bool spinlock_lock_unlock() {
   BEGIN_TEST;
 
   SpinLock spinlock;
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
 
   spinlock.AcquireIrqSave(state);
   spinlock.ReleaseIrqRestore(state);
@@ -29,7 +29,7 @@ bool spinlock_is_held() {
   BEGIN_TEST;
 
   SpinLock spinlock;
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
 
   EXPECT_FALSE(spinlock.IsHeld(), "Lock not held");
   spinlock.AcquireIrqSave(state);
@@ -44,7 +44,7 @@ bool spinlock_assert_held() {
   BEGIN_TEST;
 
   SpinLock spinlock;
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
 
   spinlock.AcquireIrqSave(state);
   spinlock.AssertHeld();  // Lock is held: this should be a no-op.
@@ -57,7 +57,7 @@ bool spinlock_assert_held() {
 struct ObjectWithLock {
   SpinLock lock;
   int val TA_GUARDED(lock);
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
 
   void TakeLock() TA_NO_THREAD_SAFETY_ANALYSIS { lock.AcquireIrqSave(state); }
 };

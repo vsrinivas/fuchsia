@@ -621,7 +621,7 @@ static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* co
 // block : Blocking vs Non-Blocking
 // map_NL : If true, map a '\n' to '\r'+'\n'
 static void platform_dputs(const char* str, size_t len, bool block, bool map_NL) {
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
   bool copied_CR = false;
   size_t wrote;
 

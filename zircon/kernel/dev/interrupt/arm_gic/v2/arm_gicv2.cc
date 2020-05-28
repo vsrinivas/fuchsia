@@ -116,7 +116,7 @@ static void gic_init_percpu_early() {
 
 // TODO(38135): This function is potentially unused and may be removable.
 [[maybe_unused]] static void arm_gic_resume_cpu(uint level) {
-  spin_lock_saved_state_t state;
+  interrupt_saved_state_t state;
   bool resume_gicd = false;
 
   gicd_lock.AcquireIrqSave(state);

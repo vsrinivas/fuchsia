@@ -127,20 +127,20 @@ void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
 }
 
 int DpcSystem::WorkerThread(void* arg) {
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
+  InterruptDisableGuard irqd;
 
   struct percpu* cpu = get_local_percpu();
   Event* event = &cpu->dpc_event;
   fbl::DoublyLinkedList<Dpc*>& list = cpu->dpc_list;
 
-  arch_interrupt_restore(state);
+  irqd.Reenable();
 
   for (;;) {
     // wait for a dpc to fire
     __UNUSED zx_status_t err = event->Wait();
     DEBUG_ASSERT(err == ZX_OK);
 
+    interrupt_saved_state_t state;
     dpc_lock.AcquireIrqSave(state);
 
     if (cpu->dpc_stop) {

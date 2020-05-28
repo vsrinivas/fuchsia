@@ -1208,26 +1208,26 @@ void arch_zero_page(void* _ptr) {
 
 zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) {
   // disable interrupts around this operation to make the at/par instruction combination atomic
-  spin_lock_saved_state_t state;
-  arch_interrupt_save(&state);
+  uint64_t par;
+  {
+    InterruptDisableGuard irqd;
 
-  if (user) {
-    if (write) {
-      __asm__ volatile("at s1e0w, %0" ::"r"(va) : "memory");
+    if (user) {
+      if (write) {
+        __asm__ volatile("at s1e0w, %0" ::"r"(va) : "memory");
+      } else {
+        __asm__ volatile("at s1e0r, %0" ::"r"(va) : "memory");
+      }
     } else {
-      __asm__ volatile("at s1e0r, %0" ::"r"(va) : "memory");
+      if (write) {
+        __asm__ volatile("at s1e1w, %0" ::"r"(va) : "memory");
+      } else {
+        __asm__ volatile("at s1e1r, %0" ::"r"(va) : "memory");
+      }
     }
-  } else {
-    if (write) {
-      __asm__ volatile("at s1e1w, %0" ::"r"(va) : "memory");
-    } else {
-      __asm__ volatile("at s1e1r, %0" ::"r"(va) : "memory");
-    }
+
+    par = __arm_rsr64("par_el1");
   }
-
-  uint64_t par = __arm_rsr64("par_el1");
-
-  arch_interrupt_restore(state);
 
   // if bit 0 is clear, the translation succeeded
   if (BIT(par, 0)) {

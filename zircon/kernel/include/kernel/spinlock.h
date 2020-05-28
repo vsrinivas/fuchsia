@@ -12,6 +12,7 @@
 #include <zircon/compiler.h>
 
 #include <arch/arch_ops.h>
+#include <arch/interrupt.h>
 #include <arch/spinlock.h>
 #include <lockdep/lock_policy.h>
 #include <lockdep/lock_traits.h>
@@ -40,13 +41,13 @@ class TA_CAP("mutex") SpinLock {
   bool IsHeld() { return arch_spin_lock_held(&spinlock_); }
 
   // Acquire spin lock, but save disable and save interrupt state first.
-  void AcquireIrqSave(spin_lock_saved_state_t& state) TA_ACQ() {
-    arch_interrupt_save(&state);
+  void AcquireIrqSave(interrupt_saved_state_t& state) TA_ACQ() {
+    state = arch_interrupt_save();
     Acquire();
   }
 
   // Restore interrupt state before unlocking.
-  void ReleaseIrqRestore(spin_lock_saved_state_t state) TA_REL() {
+  void ReleaseIrqRestore(interrupt_saved_state_t state) TA_REL() {
     Release();
     arch_interrupt_restore(state);
   }
@@ -125,7 +126,7 @@ LOCK_DEP_POLICY_OPTION(SpinLock, NoIrqSave, NoIrqSavePolicy);
 struct IrqSavePolicy {
   // State and flags required to save irq state.
   struct State {
-    spin_lock_saved_state_t state;
+    interrupt_saved_state_t state;
   };
 
   static bool Acquire(SpinLock* lock, State* state) TA_ACQ(lock) {

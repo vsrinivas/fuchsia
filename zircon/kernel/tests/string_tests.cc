@@ -153,13 +153,14 @@ static void bench_memcpy(void) {
 
   for (srcalign = 0; srcalign < 64;) {
     for (dstalign = 0; dstalign < 64;) {
-      spin_lock_saved_state_t state;
-      arch_interrupt_save(&state);
-      null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / ZX_MSEC(1);
-      c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / ZX_MSEC(1);
-      libc = bench_memcpy_routine(&memcpy, srcalign, dstalign) / ZX_MSEC(1);
-      mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign) / ZX_MSEC(1);
-      arch_interrupt_restore(state);
+      {
+        InterruptDisableGuard irqd;
+
+        null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / ZX_MSEC(1);
+        c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / ZX_MSEC(1);
+        libc = bench_memcpy_routine(&memcpy, srcalign, dstalign) / ZX_MSEC(1);
+        mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign) / ZX_MSEC(1);
+      }
 
       printf("srcalign %zu, dstalign %zu: ", srcalign, dstalign);
       printf("   null memcpy %" PRIi64 " msecs\n", null);
@@ -247,12 +248,13 @@ static void bench_memset(void) {
   Thread::Current::SleepRelative(ZX_MSEC(200));  // let the debug string clear the serial port
 
   for (dstalign = 0; dstalign < 64; dstalign++) {
-    spin_lock_saved_state_t state;
-    arch_interrupt_save(&state);
-    c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
-    libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
-    mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
-    arch_interrupt_restore(state);
+    {
+      InterruptDisableGuard irqd;
+
+      c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
+      libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
+      mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE) / ZX_MSEC(1);
+    }
 
     printf("dstalign %zu: ", dstalign);
     printf("c %" PRIi64 " msecs, %llu bytes/sec; ", c,

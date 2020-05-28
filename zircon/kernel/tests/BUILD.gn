@@ -53,6 +53,7 @@ if (toolchain.environment == "kernel") {
       "dpc_tests.cc",
       "event_tests.cc",
       "fibo.cc",
+      "interrupt_disable_tests.cc",
       "job_tests.cc",
       "lock_dep_tests.cc",
       "mem_tests.cc",

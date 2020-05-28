@@ -58,7 +58,7 @@ class TA_SCOPED_CAP AutoSpinLock {
 
  private:
   SpinLock* spinlock_;
-  spin_lock_saved_state_t state_;
+  interrupt_saved_state_t state_;
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_LOCK_H_
