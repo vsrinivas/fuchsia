@@ -12,7 +12,7 @@ template("fuchsia_unittest_internal") {
     generated_target = "${target_name}_generated_manifest"
     generated_file(generated_target) {
       contents = invoker.manifest_contents
-      outputs = [ "$target_out_dir/${generated_target}.cml" ]
+      outputs = [ "$target_out_dir/${generated_target}.cmx" ]
       output_conversion = "json"
       testonly = true
       visibility = [ ":*" ]

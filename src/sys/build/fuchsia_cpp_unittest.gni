@@ -73,26 +73,13 @@ template("fuchsia_cpp_unittest") {
   }
 
   if (!defined(invoker.manifest)) {
-    binary = "test/$output_name"
     manifest_contents = {
       program = {
-        binary = binary
+        binary = "test/$output_name"
       }
-      use = [
-        {
-          runner = "gtest_runner"
-        },
-        {
-          protocol = [ "/svc/fuchsia.logger.LogSink" ]
-          from = "realm"
-        },
-      ]
-      expose = [
-        {
-          protocol = [ "/svc/fuchsia.test.Suite" ]
-          from = "self"
-        },
-      ]
+      sandbox = {
+        services = [ "fuchsia.logger.LogSink" ]
+      }
     }
   }
 
