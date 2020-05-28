@@ -2,23 +2,29 @@
 
 Carnelian is a prototype framework for writing Fuchsia modules in Rust.
 
-To build the included samples, add `--with //src/lib/ui/carnelian:examples` to
-your fx set line. `terminal.x86` is sufficient to support Carnelian samples. See
-[these fx set](/docs/getting_started.md#build_fuchsia)
+To build the included samples, use the fx set line below to build the
+core version of Fuchsia with the necessary additional packages to run either
+directly on the frame buffer or with scenic using the tiles tool. See
+[these configuration](https://fuchsia.dev/fuchsia-src/getting_started#configure-and-build-fuchsia)
 instructions for more details.
+
+        fx set core.x64 \
+        --with //src/lib/ui/carnelian:examples \
+        --with //garnet/bin/terminal:tiles_config \
+        --with //src/ui \
+        --with //src/ui/bin/root_presenter \
+        --with //src/ui/bin/root_presenter:configs \
+        --with //src/ui/scenic \
+        --with //src/ui/tools/tiles \
+        --release \
+        --auto-dir \
+        --args=rust_cap_lints='"warn"' \
+        --cargo-toml-gen
+
 
 # Tentative Roadmap
 
-1. Software Framebuffer and Scenic modes
 1. Flutter-style flex-box layout
-
-## Software Framebuffer and Scenic modes
-
-In order to support the UI for software recovery, Carnelian is going to
-be able to run some subset of its features in the software-only mode
-exposed by the `fuchsia-framebuffer` library. The `drawing` example
-runs in this mode, and this task is to modify Carnelian to provide an
-abstraction across this and Scenic.
 
 ## Flutter-style flex-box layout
 
@@ -39,11 +45,3 @@ items if Fuchsia ever has such a menu.
 Design and implement a simple animation facility.
 
 # Frequently Asked Questions
-
-## Nested Calls to App::with()
-
-`App::with` is implemented with a thread-local `RefCell`. After calling the function provided
-to `App::with`, any messages queued with `App::queue_message` are sent. If the sending of these
-messages results in a call to `App::with` the Carnelian app will be aborted.
-
-This restriction will be removed soon.
