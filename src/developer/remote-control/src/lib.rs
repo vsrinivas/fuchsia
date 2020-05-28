@@ -22,7 +22,7 @@ mod service_discovery;
 const HUB_ROOT: &str = "/discovery_root";
 // Workaround for fxbug.dev/52248.
 // TODO: remove this once that is resolved.
-const SELECT_TRUNCATION_HACK: usize = 25;
+const SELECT_TRUNCATION_HACK: usize = 20;
 
 pub struct RemoteControlService {
     admin_proxy: fdevmgr::AdministratorProxy,
@@ -146,8 +146,8 @@ impl RemoteControlService {
         } else if paths.len() > 1 {
             // TODO(jwing): we should be able to communicate this to the FE somehow.
             log::warn!(
-                "Selector must match exactly one service. Provided selector matched all of the following: {}",
-                paths.iter().map(|p| p.topological_str()).collect::<Vec<String>>().join(", "));
+                "Selector must match exactly one service. Provided selector matched all of the following: {:?}",
+                paths);
             return Err(rcs::ConnectError::MultipleMatchingServices);
         }
         let path = paths.get(0).unwrap().hub_path.to_str().unwrap();
@@ -175,7 +175,7 @@ impl RemoteControlService {
         self: &Rc<Self>,
         selector: &Selector,
         matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
-    ) -> Result<Vec<String>, rcs::SelectError> {
+    ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
         let mut paths = matcher_fut.await.map_err(|e| {
             log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
             rcs::SelectError::ServiceDiscoveryFailed
@@ -185,13 +185,13 @@ impl RemoteControlService {
         // TODO: remove this once that is resolved.
         paths.truncate(SELECT_TRUNCATION_HACK);
 
-        Ok(paths.iter().map(|pb| pb.topological_path.to_string_lossy().into_owned()).collect())
+        Ok(paths.iter().map(|p| p.into()).collect::<Vec<rcs::ServiceMatch>>())
     }
 
     pub async fn select(
         self: &Rc<Self>,
         selector: Selector,
-    ) -> Result<Vec<String>, rcs::SelectError> {
+    ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
         self.select_with_matcher(
             &selector,
             service_discovery::get_matching_paths(HUB_ROOT, &selector),
@@ -637,15 +637,27 @@ mod tests {
 
     async fn two_paths_matcher() -> Result<Vec<PathEntry>, Error> {
         Ok(vec![
-            PathEntry { hub_path: PathBuf::from("/"), topological_path: PathBuf::from("/a/b/c") },
-            PathEntry { hub_path: PathBuf::from("/"), topological_path: PathBuf::from("/d/e/f") },
+            PathEntry {
+                hub_path: PathBuf::from("/"),
+                moniker: PathBuf::from("/a/b/c"),
+                component_subdir: "out".to_string(),
+                service: "myservice".to_string(),
+            },
+            PathEntry {
+                hub_path: PathBuf::from("/"),
+                moniker: PathBuf::from("/a/b/c"),
+                component_subdir: "out".to_string(),
+                service: "myservice2".to_string(),
+            },
         ])
     }
 
     async fn single_path_matcher() -> Result<Vec<PathEntry>, Error> {
         Ok(vec![PathEntry {
             hub_path: PathBuf::from("/tmp"),
-            topological_path: PathBuf::from("/tmp"),
+            moniker: PathBuf::from("/tmp"),
+            component_subdir: "out".to_string(),
+            service: "myservice".to_string(),
         }])
     }
 
@@ -704,8 +716,18 @@ mod tests {
             service.select_with_matcher(&wildcard_selector(), two_paths_matcher()).await.unwrap();
 
         assert_eq!(result.len(), 2);
-        assert!(result.iter().any(|p| p == "/a/b/c"));
-        assert!(result.iter().any(|p| p == "/d/e/f"));
+        assert!(result.iter().any(|p| *p
+            == rcs::ServiceMatch {
+                moniker: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                subdir: "out".to_string(),
+                service: "myservice".to_string()
+            }));
+        assert!(result.iter().any(|p| *p
+            == rcs::ServiceMatch {
+                moniker: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                subdir: "out".to_string(),
+                service: "myservice2".to_string()
+            }));
         Ok(())
     }
 }

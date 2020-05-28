@@ -4,12 +4,13 @@
 
 use {
     anyhow::Error,
+    fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     fidl_fuchsia_io as io,
     selectors::{
         convert_string_selector_to_regex, sanitize_string_for_selectors, WILDCARD_REGEX_EQUIVALENT,
     },
-    std::path::PathBuf,
+    std::path::{Component, PathBuf},
 };
 
 lazy_static::lazy_static! {
@@ -33,20 +34,21 @@ fn clone_selector(selector: &StringSelector) -> StringSelector {
 }
 
 #[derive(Copy, Clone, PartialEq)]
-enum SelectorType {
-    Topology,
-    ComponentNamespace,
+enum EntryType {
+    Moniker,
+    ComponentSubdir,
+    ServiceName,
     HubPath,
 }
 
 #[derive(Clone)]
 struct SelectorEntry<'a> {
     selector: &'a StringSelector,
-    selector_type: SelectorType,
+    selector_type: EntryType,
 }
 
 impl SelectorEntry<'_> {
-    pub fn new(selector: &StringSelector, selector_type: SelectorType) -> SelectorEntry<'_> {
+    pub fn new(selector: &StringSelector, selector_type: EntryType) -> SelectorEntry<'_> {
         return SelectorEntry { selector, selector_type };
     }
 }
@@ -54,24 +56,49 @@ impl SelectorEntry<'_> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PathEntry {
     pub hub_path: PathBuf,
-    pub topological_path: PathBuf,
+    pub moniker: PathBuf,
+    pub component_subdir: String,
+    pub service: String,
 }
 
 impl PathEntry {
-    fn new(hub_path: PathBuf, topological_path: PathBuf) -> PathEntry {
-        return PathEntry { hub_path, topological_path };
+    fn new(hub_path: PathBuf, moniker: PathBuf) -> PathEntry {
+        return PathEntry {
+            hub_path,
+            moniker,
+            component_subdir: String::default(),
+            service: String::default(),
+        };
     }
 
-    fn clone_push(&mut self, name: &str, path_type: SelectorType) -> Self {
+    #[cfg(test)]
+    fn new_with_service(
+        hub_path: PathBuf,
+        moniker: PathBuf,
+        subdir: &str,
+        service: &str,
+    ) -> PathEntry {
+        return PathEntry {
+            hub_path,
+            moniker,
+            component_subdir: subdir.to_string(),
+            service: service.to_string(),
+        };
+    }
+
+    fn clone_push(&mut self, name: &str, path_type: EntryType) -> Self {
         let mut new_entry = self.clone();
         match path_type {
-            SelectorType::Topology => {
-                new_entry.push_topological_dir(name);
+            EntryType::Moniker => {
+                new_entry.push_moniker(name);
             }
-            SelectorType::ComponentNamespace => {
-                new_entry.push_topological_dir(name);
+            EntryType::ComponentSubdir => {
+                new_entry.push_subdir(name);
             }
-            SelectorType::HubPath => {
+            EntryType::ServiceName => {
+                new_entry.push_service(name);
+            }
+            EntryType::HubPath => {
                 new_entry.push_hub_dir(name);
             }
         }
@@ -83,13 +110,44 @@ impl PathEntry {
         self.hub_path.push(name);
     }
 
-    fn push_topological_dir(&mut self, name: &str) {
+    fn push_moniker(&mut self, name: &str) {
         self.push_hub_dir(name);
-        self.topological_path.push(name);
+        self.moniker.push(name);
     }
 
-    pub fn topological_str(&self) -> String {
-        self.topological_path.to_string_lossy().into_owned()
+    fn push_subdir(&mut self, name: &str) {
+        self.push_hub_dir(name);
+        self.component_subdir = name.to_owned();
+    }
+
+    fn push_service(&mut self, name: &str) {
+        self.push_hub_dir(name);
+        self.service = name.to_owned();
+    }
+}
+
+impl Into<ServiceMatch> for &PathEntry {
+    fn into(self) -> ServiceMatch {
+        ServiceMatch {
+            moniker: self
+                .moniker
+                .components()
+                .filter(|c| match c {
+                    Component::Normal(_) => true,
+                    _ => false,
+                })
+                .map(|c| {
+                    match c {
+                        Component::Normal(p) => p.to_string_lossy().into_owned(),
+                        // The compiler forces an additional case here, even though the others have
+                        // been filtered out above.
+                        _ => String::default(),
+                    }
+                })
+                .collect(),
+            subdir: self.component_subdir.clone(),
+            service: self.service.clone(),
+        }
     }
 }
 
@@ -97,10 +155,10 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
     let segments = selector.component_selector.as_ref().unwrap().moniker_segments.as_ref().unwrap();
     let mut selectors = segments
         .iter()
-        .map(|s| SelectorEntry::new(&s, SelectorType::Topology))
+        .map(|s| SelectorEntry::new(&s, EntryType::Moniker))
         .collect::<Vec<SelectorEntry<'_>>>();
 
-    selectors.push(SelectorEntry::new(&EXEC_SELECTOR, SelectorType::HubPath));
+    selectors.push(SelectorEntry::new(&EXEC_SELECTOR, EntryType::HubPath));
 
     let node_path: StringSelector;
     let prop_path: StringSelector;
@@ -109,18 +167,18 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             if s.node_path.is_empty() {}
             node_path = clone_selector(s.node_path.get(0).unwrap());
             selectors.extend(vec![
-                SelectorEntry::new(&node_path, SelectorType::ComponentNamespace),
-                SelectorEntry::new(&SVC_SELECTOR, SelectorType::HubPath),
-                SelectorEntry::new(&WILDCARD_SELECTOR, SelectorType::ComponentNamespace),
+                SelectorEntry::new(&node_path, EntryType::ComponentSubdir),
+                SelectorEntry::new(&SVC_SELECTOR, EntryType::HubPath),
+                SelectorEntry::new(&WILDCARD_SELECTOR, EntryType::ServiceName),
             ]);
         }
         TreeSelector::PropertySelector(s) => {
             node_path = clone_selector(s.node_path.get(0).unwrap());
             prop_path = clone_selector(&s.target_properties);
             selectors.extend(vec![
-                SelectorEntry::new(&node_path, SelectorType::ComponentNamespace),
-                SelectorEntry::new(&SVC_SELECTOR, SelectorType::HubPath),
-                SelectorEntry::new(&prop_path, SelectorType::ComponentNamespace),
+                SelectorEntry::new(&node_path, EntryType::ComponentSubdir),
+                SelectorEntry::new(&SVC_SELECTOR, EntryType::HubPath),
+                SelectorEntry::new(&prop_path, EntryType::ServiceName),
             ]);
         }
         _ => {
@@ -132,7 +190,7 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
     for selector in selectors.iter() {
         let mut new_paths = vec![];
         for path in paths.clone().iter_mut() {
-            if selector.selector_type == SelectorType::Topology {
+            if selector.selector_type == EntryType::Moniker {
                 path.push_hub_dir("children");
             }
 
@@ -223,7 +281,10 @@ mod test {
 
         let matches = exec_selector(temp, "a/b:out:myservice").await;
 
-        assert_same_paths(matches, vec![PathEntry::new(path, PathBuf::from("/a/b/out/myservice"))]);
+        assert_same_paths(
+            matches,
+            vec![PathEntry::new_with_service(path, PathBuf::from("/a/b"), "out", "myservice")],
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -240,8 +301,13 @@ mod test {
         assert_same_paths(
             matches,
             vec![
-                PathEntry::new(first_match, PathBuf::from("/a/b/out/myservice")),
-                PathEntry::new(second_match, PathBuf::from("/a/b/out/myservice2")),
+                PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
+                PathEntry::new_with_service(
+                    second_match,
+                    PathBuf::from("/a/b"),
+                    "out",
+                    "myservice2",
+                ),
             ],
         );
     }
@@ -264,8 +330,13 @@ mod test {
         assert_same_paths(
             matches,
             vec![
-                PathEntry::new(first_match, PathBuf::from("/a/b/out/myservice")),
-                PathEntry::new(second_match, PathBuf::from("/a/b/out/myservice2")),
+                PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
+                PathEntry::new_with_service(
+                    second_match,
+                    PathBuf::from("/a/b"),
+                    "out",
+                    "myservice2",
+                ),
             ],
         );
     }
@@ -287,8 +358,13 @@ mod test {
         assert_same_paths(
             matches,
             vec![
-                PathEntry::new(first_match, PathBuf::from("/a/b/out/myservice")),
-                PathEntry::new(second_match, PathBuf::from("/c/d/out/myservice2")),
+                PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
+                PathEntry::new_with_service(
+                    second_match,
+                    PathBuf::from("/c/d"),
+                    "out",
+                    "myservice2",
+                ),
             ],
         );
     }
@@ -312,9 +388,14 @@ mod test {
         assert_same_paths(
             matches,
             vec![
-                PathEntry::new(first_match, PathBuf::from("/a/b/out/myservice")),
-                PathEntry::new(second_match, PathBuf::from("/a/b/exposed/myservice")),
-                PathEntry::new(third_match, PathBuf::from("/a/b/in/myservice")),
+                PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
+                PathEntry::new_with_service(
+                    second_match,
+                    PathBuf::from("/a/b"),
+                    "exposed",
+                    "myservice",
+                ),
+                PathEntry::new_with_service(third_match, PathBuf::from("/a/b"), "in", "myservice"),
             ],
         );
     }
@@ -336,8 +417,13 @@ mod test {
         assert_same_paths(
             matches,
             vec![
-                PathEntry::new(first_match, PathBuf::from("/a/b/out/myservice")),
-                PathEntry::new(second_match, PathBuf::from("/a/b/out/myservice2")),
+                PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
+                PathEntry::new_with_service(
+                    second_match,
+                    PathBuf::from("/a/b"),
+                    "out",
+                    "myservice2",
+                ),
             ],
         );
     }
@@ -359,8 +445,13 @@ mod test {
         assert_same_paths(
             matches,
             vec![
-                PathEntry::new(first_match, PathBuf::from("/a/b/out/myservice")),
-                PathEntry::new(second_match, PathBuf::from("/a/b/in/myservice2")),
+                PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
+                PathEntry::new_with_service(
+                    second_match,
+                    PathBuf::from("/a/b"),
+                    "in",
+                    "myservice2",
+                ),
             ],
         );
     }

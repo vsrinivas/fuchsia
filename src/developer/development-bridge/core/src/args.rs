@@ -24,19 +24,6 @@ pub struct ListCommand {
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(
-    subcommand,
-    name = "select",
-    description = "lists components matching a selector. 
-Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
-Example: 'remote-control:out:*' would return all services in 'out' for the component remote-control."
-)]
-pub struct SelectCommand {
-    #[argh(positional)]
-    pub selector: String,
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "quit", description = "kills a running daemon")]
 pub struct QuitCommand {}
 
