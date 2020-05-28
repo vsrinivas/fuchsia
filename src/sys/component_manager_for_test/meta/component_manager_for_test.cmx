@@ -16,6 +16,7 @@
             "packages/config-data/0/data"
         ],
         "services": [
+            "fuchsia.boot.WriteOnlyLog",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",

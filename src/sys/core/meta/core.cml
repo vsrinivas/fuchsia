@@ -44,7 +44,6 @@
                 "/svc/fuchsia.boot.RootJob",
                 "/svc/fuchsia.boot.RootJobForInspect",
                 "/svc/fuchsia.boot.RootResource",
-                "/svc/fuchsia.boot.WriteOnlyLog",
                 "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.manager.DebugDumper",
                 "/svc/fuchsia.device.NameProvider",
@@ -62,6 +61,14 @@
             ],
             from: "realm",
             to: [ "#appmgr" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            from: "realm",
+            to: [
+                "#appmgr",
+                "#test_manager",
+            ],
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
