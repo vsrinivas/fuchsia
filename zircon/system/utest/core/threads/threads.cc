@@ -450,16 +450,10 @@ TEST(Threads, GetInfoRuntime) {
   ASSERT_EQ(should_stop.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(thread_h.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
 
-  // Ensure the runtime can still be read after the task exits, and it does not change.
+  // Ensure the runtime can still be read after the task exits.
   ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
   ASSERT_GT(info.cpu_time, 0);
   ASSERT_GT(info.queue_time, 0);
-
-  zx_info_task_runtime_t info2;
-  ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info2, sizeof(info2), nullptr, nullptr),
-            ZX_OK);
-  ASSERT_EQ(info.cpu_time, info2.cpu_time);
-  ASSERT_EQ(info.queue_time, info2.queue_time);
 
   // Test that removing ZX_RIGHT_INSPECT causes runtime calls to fail.
   zx_info_handle_basic_t basic;
