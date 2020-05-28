@@ -54,6 +54,10 @@ template("fidl_rust") {
     ]
 
     deps = [ ":$main_target_name($fidl_toolchain)" ]
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 
   group(main_target_name) {

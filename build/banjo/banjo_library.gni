@@ -62,9 +62,7 @@ template("_banjo_library_sdk") {
 
     inputs = sdk_metas
 
-    outputs = [
-      meta_file,
-    ]
+    outputs = [ meta_file ]
 
     args = [
              "--out",
@@ -249,6 +247,10 @@ template("banjo_library") {
         args +=
             [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
       }
+
+      metadata = {
+        generated_sources = [ rebase_path(output, root_build_dir) ]
+      }
     }
   }
 
@@ -267,21 +269,15 @@ template("banjo_library") {
 
         tool = "//src/devices/tools/banjo:banjo_bin"
 
-        inputs = [
-          response_file,
-        ]
+        inputs = [ response_file ]
 
-        outputs = [
-          output,
-        ]
+        outputs = [ output ]
 
         rebased_response_file = rebase_path(response_file, root_build_dir)
 
         args = [ "@$rebased_response_file" ]
 
-        deps = [
-          ":$response_target_name",
-        ]
+        deps = [ ":$response_target_name" ]
       }
     }
   }
@@ -386,6 +382,10 @@ template("banjo_dummy_library") {
                library_name,
                "--sources",
              ] + rebase_path(sources, root_build_dir)
+
+      metadata = {
+        generated_sources = [ rebase_path(output, root_build_dir) ]
+      }
     }
   }
 

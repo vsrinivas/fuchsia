@@ -58,6 +58,10 @@ template("fidl_go") {
     deps = [ ":$main_target_name($fidl_toolchain)" ]
 
     forward_variables_from(invoker, [ "testonly" ])
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 
   go_library(main_target_name) {

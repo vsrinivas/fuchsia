@@ -85,6 +85,10 @@ template("fidl_cpp_codegen") {
     ]
 
     deps = [ ":$fidl_target_name($fidl_toolchain)" ]
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 }
 
@@ -146,6 +150,10 @@ template("fidl_llcpp_codegen") {
     ]
 
     deps = [ ":$fidl_target_name($fidl_toolchain)" ]
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 }
 
