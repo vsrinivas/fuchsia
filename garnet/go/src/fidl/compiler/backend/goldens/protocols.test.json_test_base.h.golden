@@ -7,6 +7,16 @@ namespace test {
 namespace name {
 namespace testing {
 
+class Transitional_TestBase : public Transitional {
+ public:
+  virtual ~Transitional_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Request(int64_t x, RequestCallback callback) override {
+    NotImplemented_("Request");
+  }
+  void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
+};
+
 class ChannelProtocol_TestBase : public ChannelProtocol {
  public:
   virtual ~ChannelProtocol_TestBase() {}

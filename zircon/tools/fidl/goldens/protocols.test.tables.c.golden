@@ -15,6 +15,30 @@ extern const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_Result
 extern const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable;
 
 
+extern const struct FidlCodedStruct test_name_TransitionalRequestRequestTable;
+static const struct FidlStructField Fields36test_name_TransitionalRequestRequest[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
+};
+const struct FidlCodedStruct test_name_TransitionalRequestRequestTable = {.tag=kFidlTypeStruct, .fields=Fields36test_name_TransitionalRequestRequest, .field_count=1u, .size=24u, .name="test.name/TransitionalRequestRequest"};
+
+extern const struct FidlCodedStruct test_name_TransitionalRequestResponseTable;
+static const struct FidlStructField Fields37test_name_TransitionalRequestResponse[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
+};
+const struct FidlCodedStruct test_name_TransitionalRequestResponseTable = {.tag=kFidlTypeStruct, .fields=Fields37test_name_TransitionalRequestResponse, .field_count=1u, .size=24u, .name="test.name/TransitionalRequestResponse"};
+
+extern const struct FidlCodedStruct test_name_TransitionalOneWayRequestTable;
+static const struct FidlStructField Fields35test_name_TransitionalOneWayRequest[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
+};
+const struct FidlCodedStruct test_name_TransitionalOneWayRequestTable = {.tag=kFidlTypeStruct, .fields=Fields35test_name_TransitionalOneWayRequest, .field_count=1u, .size=24u, .name="test.name/TransitionalOneWayRequest"};
+
+extern const struct FidlCodedStruct test_name_TransitionalEventEventTable;
+static const struct FidlStructField Fields32test_name_TransitionalEventEvent[] = {
+    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
+};
+const struct FidlCodedStruct test_name_TransitionalEventEventTable = {.tag=kFidlTypeStruct, .fields=Fields32test_name_TransitionalEventEvent, .field_count=1u, .size=24u, .name="test.name/TransitionalEventEvent"};
+
 extern const struct FidlCodedStruct test_name_ChannelProtocolMethodARequestTable;
 static const struct FidlStructField Fields39test_name_ChannelProtocolMethodARequest[] = {
     /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u},

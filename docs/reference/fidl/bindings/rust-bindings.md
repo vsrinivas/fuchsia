@@ -112,7 +112,7 @@ uses the following rules:
 
 ## Types {#types}
 
-### Bits {types-bits}
+### Bits {#types-bits}
 
 Given the [bits][lang-bits] definition:
 
@@ -187,7 +187,7 @@ pub struct Color {
 }
 ```
 
-Note: The default values for struct members are not yet supported in the rust
+Note: The default values for struct members are not yet supported in the Rust
 bindings, and therefore do not affect the generated Rust `struct`.
 
 The generated `Color` `struct` follows the [`[#derive]` rules](#derives).
@@ -336,14 +336,14 @@ attributes](#protocol-method-attributes) applied to the protocol or its methods.
 #### Asynchronous {#protocols-client-asynchronous}
 
 For asynchronous clients, the FIDL toolchain generates a `TicTacToeProxy` struct
-with the following associated types:
+with the following:
 
 Associated types:
 
 * `TicTacToeProxy::MakeMoveResponseFut`: The `Future` type for the response of a
   two way method. This type implements `std::future::Future<Output =
   Result<(bool, Option<Box<GameState>>), fidl::Error>> + Send`.
-* `FooProxy::OnOpponentMoveResponseFut`: The `Future` type for an incoming
+* `TicTacToeProxy::OnOpponentMoveResponseFut`: The `Future` type for an incoming
   event. This type implements `std::future::Future<Output = Result<GameState,
   fidl::Error>> + Send`
 
@@ -355,6 +355,9 @@ Methods:
   proxy back into a channel.
 * `take_event_stream(&self) -> TicTacToeEventStream`: Get a `Stream` of events
   from the server end (see [Events](#protocols-events-client)).
+
+Methods from implementing `TicTacToeProxyInterface`:
+
 * `start_game(&self, mut start_first: bool) -> Result<(), fidl::Error>`: Proxy
   method for a fire and forget protocol method. It takes as arguments the
   request parameters and returns an empty result.
@@ -362,8 +365,29 @@ Methods:
   Proxy method for a two way method. It takes as arguments the request
   parameters and returns a `Future` of the response.
 
-An example of setting up an asynchronous proxy is available in the Rust
-tutorial.
+An example of setting up an asynchronous proxy is available in the
+[Rust tutorial][tutorial].
+
+The `TicTacToeProxyInterface` trait can be useful for testing client code. For
+example, if you write a function that takes `&T` as a parameter where `T:
+TicTacToeProxyInterface`, you can unit test it with a fake proxy type:
+
+```rust
+use futures::future::{ready, Ready};
+
+struct FakeTicTacToeProxy {
+    move_response: (bool, Option<Box<GameState>>),
+}
+
+impl TicTacToeProxyInterface for FakeTicTacToeProxy {
+    fn start_game(&self, mut start_first: bool) -> Result<(), fidl::Error> {}
+
+    type MakeMoveResponseFut = Ready<fidl::Result<(bool, Option<Box<GameState>>)>>;
+    fn make_move(&self, mut row: u8, mut col: u8) -> Self::MakeMoveResponseFut {
+        ready(self.move_response.clone())
+    }
+}
+```
 
 #### Synchronous {#protocols-client-synchronous}
 
@@ -384,7 +408,8 @@ generates a `TicTacToeSynchronousProxy` struct with the following methods:
   response (or `zx::Time::INFINITE` to block indefinitely). It returns a
   `Result` of the [response parameters](#request-response-event-parameters).
 
-An example of setting up a synchronous proxy is available in the Rust tutorial.
+An example of setting up a synchronous proxy is available in the
+[Rust tutorial][tutorial].
 
 ### Server {#protocols-server}
 
@@ -398,8 +423,8 @@ stream type.
 
 #### Request enum {#request-enum}
 
-`TicTacToeRequest` is an enum representing the possible requests of the `Foo`
-protocol. It has the following variants:
+`TicTacToeRequest` is an enum representing the possible requests of the
+`TicTacToe` protocol. It has the following variants:
 
 * `StartGame { start_first: bool, control_handle: TicTacToeControlHandle }`: A
   fire and forget request, which contains the request parameters and a control
@@ -429,8 +454,8 @@ provides the following methods:
 #### Protocol control handle {#protocol-control-handle}
 
 The FIDL toolchain generates `TicTacToeControlHandle` to encapsulate the client
-endpoint of the `Foo` protocol on the server side. It contains the following
-methods:
+endpoint of the `TicTacToe` protocol on the server side. It contains the
+following methods:
 
 * `shutdown(&self)`: Shut down the channel.
 * `shutdown_with_epitaph(&self, status: zx_status::Status)`: Send an epitaph and
@@ -446,15 +471,15 @@ methods:
 
 For receiving events on the client, the FIDL toolchain generates a
 `TicTacToeEventStream`, which can be obtained using the `take_event_stream()`
-method on the [`FooProxy`](#protocols-client-asynchronous).
+method on the [`TicTacToeProxy`](#protocols-client-asynchronous).
 `TicTacToeEventStream` implements `futures::Stream<Item = Result<TicTacToeEvent,
 fidl::Error>>`.
 
 `TicTacToeEvent` is an enum representing the possible events. It has the
 following variants:
 
-* `OnOpponentMove { new_state: GameState }`: Discriminant for the `FooEvent`
-  event.
+* `OnOpponentMove { new_state: GameState }`: Discriminant for the
+  `TicTacToeEvent` event.
 
 And provides the following methods:
 
@@ -523,9 +548,18 @@ protocol B {
 
 #### Transitional
 
-The `"Transitional"` attribute does not affect the generated rust code.
-Protocols that need to be transitioned can have implementation servers
-temporarily use a catch-all match arm in the `Request` handler.
+The `"Transitional"` attribute only affects the `ProxyInterface` trait, which is
+sometimes used in test code. For non-test code, protocols can be transitioned on
+the server side by having request handlers temporarily use a catch-all match arm
+in the `Request` handler. Client code does not need to be soft transitioned
+since the generated proxy will always implement all methods.
+
+For methods annotated with the `"Transitional"` attribute,  the `ProxyInterface`
+trait for [asynchronous clients](#protocols-client-asynchronous}) provides
+default implementations that call `unimplemented!()`. As noted earlier, this has
+no effect on the `Proxy` type, which always implements all the trait's methods.
+However, it can help for soft transitions when the `ProxyInterface` trait is
+used for fake proxies in client-side unit tests.
 
 #### Discoverable
 
@@ -541,3 +575,4 @@ additionally implements the `fidl::endpoints::DiscoverableService` trait.
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[tutorial]: /docs/development/languages/fidl/tutorials/tutorial-rust.md

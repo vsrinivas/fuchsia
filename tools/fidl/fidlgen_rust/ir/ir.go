@@ -137,13 +137,14 @@ type Protocol struct {
 
 type Method struct {
 	types.Attributes
-	Ordinals    types.Ordinals
-	Name        string
-	CamelName   string
-	HasRequest  bool
-	Request     []Parameter
-	HasResponse bool
-	Response    []Parameter
+	Ordinals       types.Ordinals
+	Name           string
+	CamelName      string
+	HasRequest     bool
+	Request        []Parameter
+	HasResponse    bool
+	Response       []Parameter
+	IsTransitional bool
 }
 
 type Parameter struct {
@@ -724,12 +725,13 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 		name := compileSnakeIdentifier(v.Name)
 		camelName := compileCamelIdentifier(v.Name)
 		m := Method{
-			Attributes:  v.Attributes,
-			Ordinals:    types.NewOrdinalsStep7(v, "UNUSED", "UNUSED"),
-			Name:        name,
-			CamelName:   camelName,
-			HasRequest:  v.HasRequest,
-			HasResponse: v.HasResponse,
+			Attributes:     v.Attributes,
+			Ordinals:       types.NewOrdinalsStep7(v, "UNUSED", "UNUSED"),
+			Name:           name,
+			CamelName:      camelName,
+			HasRequest:     v.HasRequest,
+			HasResponse:    v.HasResponse,
+			IsTransitional: v.IsTransitional(),
 		}
 		if v.RequestPayload != "" {
 			m.Request = c.compileParameterArray(v.RequestPayload)
