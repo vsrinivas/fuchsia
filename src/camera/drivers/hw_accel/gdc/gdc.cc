@@ -16,6 +16,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
@@ -124,6 +125,8 @@ void GdcDevice::Stop() const {
 }
 
 void GdcDevice::ProcessFrame(TaskInfo& info) {
+  TRACE_DURATION("camera", "GdcDevice::ProcessFrame", "task_index", info.task_index,
+                 "input_buffer_index", info.index);
   auto task = info.task;
   // The way we have our SW instrumented, GDC should never be busy
   // proccessing at this point. Doing a sanity check here to ensure
@@ -247,11 +250,13 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
       .WriteTo(gdc_mmio());
   // clang-format on
 
-  // Start GDC processing.
-  Start();
-
   zx_port_packet_t packet;
-  ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
+  {
+    TRACE_DURATION("camera", "GdcDevice::WaitingForProcessingOnHwToFinish");
+    // Start GDC processing.
+    Start();
+    ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
+  }
 
   // Only Assert on ACK failure if its an actual HW interrupt.
   // Currently we are injecting packets on the same ports for tests to
@@ -275,6 +280,8 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
 }
 
 void GdcDevice::ChangeOutputResoultion(TaskInfo& info) {
+  TRACE_DURATION("camera", "GdcDevice::ChangeOutputResoultion");
+
   auto task = info.task;
   task->set_output_format_index(info.index);
   // Invoke the callback function and tell about the output buffer index
@@ -287,6 +294,7 @@ void GdcDevice::ChangeOutputResoultion(TaskInfo& info) {
 }
 
 void GdcDevice::RemoveTask(TaskInfo& info) {
+  TRACE_DURATION("camera", "GdcDevice::RemoveTask");
   fbl::AutoLock al(&interface_lock_);
 
   auto task = info.task;
@@ -370,6 +378,7 @@ zx_status_t GdcDevice::GdcSetOutputResolution(uint32_t task_index,
 }
 
 zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+  TRACE_DURATION("camera", "GdcDevice::GdcProcessFrame");
   fbl::AutoLock al(&interface_lock_);
 
   // Find the entry in hashmap.
@@ -419,6 +428,8 @@ zx_status_t GdcDevice::WaitForInterrupt(zx_port_packet_t* packet) {
 }
 
 void GdcDevice::GdcRemoveTask(uint32_t task_index) {
+  TRACE_DURATION("camera", "GdcDevice::GdcRemoveTask");
+
   fbl::AutoLock al(&interface_lock_);
 
   // Find the entry in hashmap.
@@ -438,10 +449,11 @@ void GdcDevice::GdcRemoveTask(uint32_t task_index) {
   fbl::AutoLock lock(&processing_queue_lock_);
   processing_queue_.push_front(info);
   frame_processing_signal_.Signal();
-  return;
 }
 
 void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
+  TRACE_DURATION("camera", "GdcDevice::GdcReleaseFrame");
+
   fbl::AutoLock al(&interface_lock_);
 
   // Find the entry in hashmap.
