@@ -274,7 +274,7 @@ TEST(SherlockAudioStreamOutTest, MuteChannels) {
   EXPECT_EQ(aml->last_enable_mask_[1], 3);
   EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
   server->DdkRelease();
@@ -296,10 +296,10 @@ TEST(SherlockAudioStreamOutTest, CodecInitGood) {
       fake_ddk::kFakeParent, std::move(codecs), audio_enable_gpio.GetProto());
 
   ASSERT_NOT_NULL(server);
-  server->DdkUnbindDeprecated();
-  server->DdkRelease();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
+  server->DdkRelease();
 }
 
 TEST(SherlockAudioStreamOutTest, CodecInitBad) {
@@ -386,7 +386,7 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitNormal) {
   // We test that we shutdown as part of unbind calling the ShutdownHook.
   ASSERT_EQ(server->LibraryShutdown(), 1);
   ASSERT_EQ(server->LibraryInitialized(), 1);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
   server->DdkRelease();
@@ -440,7 +440,7 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitWithError) {
   ASSERT_EQ(server->LibraryShutdown(), 1);
   // We test that we dont't call initialize due to the bad codec init.
   ASSERT_EQ(server->LibraryInitialized(), 0);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
   server->DdkRelease();
@@ -500,7 +500,7 @@ TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
   ASSERT_EQ(raw_codecs[1]->last_rate_requested_, kTestFrameRate2);
   ASSERT_EQ(raw_codecs[2]->last_rate_requested_, kTestFrameRate2);
 
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
