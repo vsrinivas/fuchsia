@@ -11,10 +11,13 @@
 #include <thread>
 #include <vector>
 
+#include "temperature_sensor.h"
+
 namespace hwstress {
 
 // Start a stress test.
-void StressCpu(zx::duration duration_seconds);
+void StressCpu(zx::duration duration_seconds,
+               TemperatureSensor* sensor = GetNullTemperatureSensor());
 
 //
 // The following are exposed for testing.

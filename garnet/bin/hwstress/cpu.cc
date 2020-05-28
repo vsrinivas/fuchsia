@@ -20,6 +20,7 @@
 #include <fbl/string_printf.h>
 
 #include "status.h"
+#include "temperature_sensor.h"
 #include "util.h"
 
 namespace hwstress {
@@ -52,7 +53,7 @@ void CpuStressor::Stop() {
   workers_.clear();
 }
 
-void StressCpu(zx::duration duration) {
+void StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   StatusLine status;
 
   // Calculate finish time.
@@ -81,9 +82,11 @@ void StressCpu(zx::duration duration) {
     zx::nanosleep(std::min(finish_time, next_update));
 
     // Update the status line.
+    std::optional<double> temp = temperature_sensor->ReadCelcius();
     zx::duration time_running = zx::clock::get_monotonic() - start_time;
-    status.Set("%02ld:%02ld:%02ld", time_running.to_hours(), time_running.to_mins() % 60,
-               time_running.to_secs() % 60);
+    status.Set("  %02ld:%02ld:%02ld || System temperature: %s", time_running.to_hours(),
+               time_running.to_mins() % 60, time_running.to_secs() % 60,
+               TemperatureToString(temp).c_str());
   }
 
   status.Set("");

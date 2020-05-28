@@ -17,8 +17,10 @@
 
 namespace hwstress {
 
+constexpr std::string_view kDefaultTemperatureSensorPath = "/dev/class/thermal/000";
+
 int Run(int argc, const char** argv) {
-  // Parse arguments.
+  // Parse arguments
   fitx::result<std::string, CommandLineArgs> result =
       ParseArgs(fbl::Span<const char* const>(argv, argc));
   if (result.is_error()) {
@@ -39,8 +41,15 @@ int Run(int argc, const char** argv) {
                               ? zx::duration::infinite()
                               : SecsToDuration(args.test_duration_seconds);
 
+  // Attempt to create a hardware sensor.
+  std::unique_ptr<TemperatureSensor> sensor =
+      CreateSystemTemperatureSensor(kDefaultTemperatureSensorPath);
+  if (sensor == nullptr) {
+    sensor = CreateNullTemperatureSensor();
+  }
+
   // Run the CPU tests.
-  StressCpu(duration);
+  StressCpu(duration, sensor.get());
 
   return 0;
 }

@@ -11,15 +11,19 @@ source_set("lib") {
     "cpu.cc",
     "hwstress.cc",
     "status.cc",
+    "temperature_sensor.cc",
     "util.cc",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.thermal",
     "//src/lib/fxl",
     "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -50,6 +54,7 @@ executable("hwstress_test") {
     "cpu_test.cc",
     "hwstress_test.cc",
     "status_test.cc",
+    "temperature_sensor_test.cc",
     "util_test.cc",
   ]
 
