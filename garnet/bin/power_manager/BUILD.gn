@@ -32,6 +32,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
+    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
@@ -57,6 +58,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   test_deps = [
@@ -83,7 +85,10 @@ package("power_manager") {
 }
 
 test_package("power_manager_tests") {
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "node_config:test_config_data",
+  ]
 
   tests = [
     {

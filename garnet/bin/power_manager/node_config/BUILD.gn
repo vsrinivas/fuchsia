@@ -53,3 +53,15 @@ node_config_bootfs_manifest("astro.manifest") {
 node_config_bootfs_manifest("base.manifest") {
   source = "base_node_config.json"
 }
+
+# Make the node config files available for the power_manager_tests test package
+# to allow for some more advanced validation beyond what we can accomplish with
+# JSON schema validation alone.
+# TODO(fxb/52818): Explore build-time JSON validation
+config_data("test_config_data") {
+  for_pkg = "power_manager_tests"
+  sources = [
+    "astro_node_config.json",
+    "base_node_config.json",
+  ]
+}

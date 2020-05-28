@@ -374,7 +374,7 @@ fn system_power_state_to_driver_manager_state(
 /// Forcibly shuts down the system. The function works by exiting the power_manager process. Since
 /// the power_manager is marked as a critical process to the root job, once the power_manager exits
 /// the root job will also exit, and the system will reboot.
-fn force_shutdown() {
+pub fn force_shutdown() {
     info!("Force shutdown requested");
     std::process::exit(1);
 }

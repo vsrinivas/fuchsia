@@ -65,9 +65,11 @@ impl CrashReportHandlerBuilder {
 
     pub fn build(self) -> Result<Rc<CrashReportHandler>, Error> {
         // Connect to the CrashReporter service if a proxy wasn't specified
-        let proxy = self.proxy.unwrap_or(connect_proxy::<fidl_feedback::CrashReporterMarker>(
-            &CRASH_REPORTER_SVC.to_string(),
-        )?);
+        let proxy = if self.proxy.is_some() {
+            self.proxy.unwrap()
+        } else {
+            connect_proxy::<fidl_feedback::CrashReporterMarker>(&CRASH_REPORTER_SVC.to_string())?
+        };
 
         // Set up the crash report sender that runs asynchronously
         let (channel, receiver) = mpsc::channel(self.max_pending_crash_reports);

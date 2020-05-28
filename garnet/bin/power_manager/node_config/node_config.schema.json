@@ -116,6 +116,31 @@
       {
         "properties": {
           "type": {
+            "pattern": "DriverManagerHandler"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "registration_timeout": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "SystemPowerHandler"
           },
           "name": {

@@ -8,7 +8,7 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::thermal_limiter;
 use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
-use crate::utils::{CobaltIntHistogram, CobaltIntHistogramConfig};
+use crate::utils::{get_current_timestamp, CobaltIntHistogram, CobaltIntHistogramConfig};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_cobalt::HistogramBucket;
@@ -304,7 +304,7 @@ impl ThermalPolicy {
         fuchsia_trace::duration!("power_manager", "ThermalPolicy::iterate_thermal_control");
 
         let raw_temperature = self.get_temperature().await?;
-        let timestamp = Nanoseconds(fasync::Time::now().into_nanos());
+        let timestamp = get_current_timestamp();
 
         // We should have run the iteration at least once before proceeding
         if !self.state.state_initialized.get() {

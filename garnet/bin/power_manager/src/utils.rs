@@ -24,6 +24,11 @@ pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
     Ok(proxy)
 }
 
+/// Returns the current timestamp in Nanoseconds.
+pub fn get_current_timestamp() -> crate::types::Nanoseconds {
+    crate::types::Nanoseconds(fuchsia_async::Time::now().into_nanos())
+}
+
 use fidl_fuchsia_cobalt::HistogramBucket;
 
 /// Convenient wrapper for creating and storing an integer histogram to use with Cobalt.
@@ -163,5 +168,19 @@ mod tests {
                 HistogramBucket { index: 3, count: 1 } // overflow
             ]
         );
+    }
+
+    /// Tests that the `get_current_timestamp` function returns the expected current timestamp.
+    #[test]
+    fn test_get_current_timestamp() {
+        use crate::types::Nanoseconds;
+
+        let exec = fuchsia_async::Executor::new_with_fake_time().unwrap();
+
+        exec.set_fake_time(fuchsia_async::Time::from_nanos(0));
+        assert_eq!(get_current_timestamp(), Nanoseconds(0));
+
+        exec.set_fake_time(fuchsia_async::Time::from_nanos(1000));
+        assert_eq!(get_current_timestamp(), Nanoseconds(1000));
     }
 }

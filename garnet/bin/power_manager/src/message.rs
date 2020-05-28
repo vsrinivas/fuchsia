@@ -49,6 +49,10 @@ pub enum Message {
     /// Specify the termination system state, intended to be used in the DriverManagerHandler node.
     /// Arg: the SystemPowerState value indicating the termination state
     SetTerminationSystemState(fidl_fuchsia_device_manager::SystemPowerState),
+
+    /// Connects a channel to the service at the specified path.
+    /// Arg: the service path to connect
+    ConnectChannelAtPath(String),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -88,4 +92,7 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     SetTerminationSystemState,
+
+    /// Arg: the client end of the connected channel.
+    ConnectChannelAtPath(fuchsia_zircon::Channel),
 }
