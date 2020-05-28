@@ -12,7 +12,6 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.NameProvider",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.net.stack.Stack",

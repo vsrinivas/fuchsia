@@ -6,7 +6,6 @@ use {
     crate::component_control::ComponentController,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
-    fidl_fuchsia_device_manager as fdevmgr,
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
     fidl_fuchsia_test_manager as ftest_manager,
@@ -25,7 +24,6 @@ const HUB_ROOT: &str = "/discovery_root";
 const SELECT_TRUNCATION_HACK: usize = 20;
 
 pub struct RemoteControlService {
-    admin_proxy: fdevmgr::AdministratorProxy,
     netstack_proxy: fnetstack::StackProxy,
     harness_proxy: ftest_manager::HarnessProxy,
     name_provider_proxy: fdevice::NameProviderProxy,
@@ -33,23 +31,16 @@ pub struct RemoteControlService {
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
-        let (admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy) =
-            Self::construct_proxies()?;
-        return Ok(Self::new_with_proxies(
-            admin_proxy,
-            netstack_proxy,
-            harness_proxy,
-            name_provider_proxy,
-        ));
+        let (netstack_proxy, harness_proxy, name_provider_proxy) = Self::construct_proxies()?;
+        return Ok(Self::new_with_proxies(netstack_proxy, harness_proxy, name_provider_proxy));
     }
 
     pub fn new_with_proxies(
-        admin_proxy: fdevmgr::AdministratorProxy,
         netstack_proxy: fnetstack::StackProxy,
         harness_proxy: ftest_manager::HarnessProxy,
         name_provider_proxy: fdevice::NameProviderProxy,
     ) -> Self {
-        return Self { admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy };
+        return Self { netstack_proxy, harness_proxy, name_provider_proxy };
     }
 
     pub async fn serve_stream(
@@ -74,9 +65,6 @@ impl RemoteControlService {
                         controller,
                     );
                     responder.send(&mut response).context("sending StartComponent response")?;
-                }
-                rcs::RemoteControlRequest::RebootDevice { reboot_type, responder } => {
-                    self.clone().reboot_device(reboot_type, responder).await?;
                 }
                 rcs::RemoteControlRequest::IdentifyHost { responder } => {
                     self.clone().identify_host(responder).await?;
@@ -108,17 +96,9 @@ impl RemoteControlService {
     }
 
     fn construct_proxies() -> Result<
-        (
-            fdevmgr::AdministratorProxy,
-            fnetstack::StackProxy,
-            ftest_manager::HarnessProxy,
-            fdevice::NameProviderProxy,
-        ),
+        (fnetstack::StackProxy, ftest_manager::HarnessProxy, fdevice::NameProviderProxy),
         Error,
     > {
-        let admin_proxy =
-            fuchsia_component::client::connect_to_service::<fdevmgr::AdministratorMarker>()
-                .map_err(|s| format_err!("Failed to connect to DevMgr service: {}", s))?;
         let netstack_proxy =
             fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
                 .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
@@ -128,7 +108,7 @@ impl RemoteControlService {
         let name_provider_proxy =
             fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
                 .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
-        return Ok((admin_proxy, netstack_proxy, harness_proxy, name_provider_proxy));
+        return Ok((netstack_proxy, harness_proxy, name_provider_proxy));
     }
 
     async fn connect_with_matcher(
@@ -240,23 +220,6 @@ impl RemoteControlService {
         return Ok(());
     }
 
-    pub async fn reboot_device(
-        self: &Rc<Self>,
-        reboot_type: rcs::RebootType,
-        responder: rcs::RemoteControlRebootDeviceResponder,
-    ) -> Result<(), Error> {
-        responder.send().context("failed to send successful reboot response.")?;
-
-        log::info!("got remote control request to reboot: {:?}", reboot_type);
-        let suspend_flag = match reboot_type {
-            rcs::RebootType::Reboot => fdevmgr::SUSPEND_FLAG_REBOOT,
-            rcs::RebootType::Recovery => fdevmgr::SUSPEND_FLAG_REBOOT_RECOVERY,
-            rcs::RebootType::Bootloader => fdevmgr::SUSPEND_FLAG_REBOOT_BOOTLOADER,
-        };
-        self.admin_proxy.suspend(suspend_flag).await?;
-        Ok(())
-    }
-
     pub async fn identify_host(
         self: &Rc<Self>,
         responder: rcs::RemoteControlIdentifyHostResponder,
@@ -341,39 +304,6 @@ mod tests {
     const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
     const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
 
-    fn setup_fake_admin_service() -> fdevmgr::AdministratorProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<fdevmgr::AdministratorMarker>().unwrap();
-
-        fasync::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
-                match req {
-                    Some(fdevmgr::AdministratorRequest::Suspend {
-                        flags: fdevmgr::SUSPEND_FLAG_REBOOT,
-                        responder,
-                    }) => {
-                        let _ = responder.send(zx::Status::OK.into_raw());
-                    }
-                    Some(fdevmgr::AdministratorRequest::Suspend {
-                        flags: fdevmgr::SUSPEND_FLAG_REBOOT_RECOVERY,
-                        responder,
-                    }) => {
-                        let _ = responder.send(zx::Status::OK.into_raw());
-                    }
-                    Some(fdevmgr::AdministratorRequest::Suspend {
-                        flags: fdevmgr::SUSPEND_FLAG_REBOOT_BOOTLOADER,
-                        responder,
-                    }) => {
-                        let _ = responder.send(zx::Status::OK.into_raw());
-                    }
-                    _ => assert!(false),
-                }
-            }
-        });
-
-        proxy
-    }
-
     fn setup_fake_name_provider_service() -> fdevice::NameProviderProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdevice::NameProviderMarker>().unwrap();
@@ -452,13 +382,6 @@ mod tests {
         proxy
     }
 
-    async fn run_reboot_test(reboot_type: rcs::RebootType) {
-        let rcs_proxy = setup_rcs_proxy();
-
-        let response = rcs_proxy.reboot_device(reboot_type).await.unwrap();
-        assert_eq!(response, ());
-    }
-
     async fn verify_exit_code(proxy: rcs::ComponentControllerProxy, expected_exit_code: i64) {
         let events: Vec<_> = proxy.take_event_stream().collect::<Vec<_>>().await;
 
@@ -487,7 +410,6 @@ mod tests {
 
     fn make_rcs() -> Rc<RemoteControlService> {
         Rc::new(RemoteControlService::new_with_proxies(
-            setup_fake_admin_service(),
             setup_fake_netstack_service(),
             setup_fake_harness_service(),
             setup_fake_name_provider_service(),
@@ -584,24 +506,6 @@ mod tests {
         verify_exit_code(proxy, EXIT_CODE_START_FAILED).await;
         verify_socket_content(cout, "");
         verify_socket_content(cerr, "");
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_reboot() -> Result<(), Error> {
-        run_reboot_test(rcs::RebootType::Reboot).await;
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_reboot_recovery() -> Result<(), Error> {
-        run_reboot_test(rcs::RebootType::Recovery).await;
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_reboot_bootloader() -> Result<(), Error> {
-        run_reboot_test(rcs::RebootType::Bootloader).await;
         Ok(())
     }
 

@@ -43,12 +43,6 @@ protocol RemoteControl {
 
     IdentifyHost() -> (IdentifyHostResponse response) error IdentifyHostError;
 
-    // This should be a fire-and-forget, but that seems to do
-    // nothing in Overnet.
-    // TODO(fxb/43011) look into this.
-    // TODO(fxb/43046) Add parameters for other reboot types.
-    RebootDevice(RebootType reboot_type) -> ();
-
     // Enumerate the test cases available in a test suite.
     LaunchSuite(
         fuchsia.url.Url test_url,
