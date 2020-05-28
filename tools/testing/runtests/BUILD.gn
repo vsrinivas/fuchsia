@@ -11,6 +11,7 @@ go_library("runtests") {
     "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/botanist:botanist_lib",
+    "//tools/lib/iomisc",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",
