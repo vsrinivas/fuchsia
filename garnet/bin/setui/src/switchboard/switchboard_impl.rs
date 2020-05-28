@@ -11,13 +11,14 @@ use crate::switchboard::clock;
 
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component};
+use fuchsia_inspect::{self as inspect, component, Property};
+use fuchsia_inspect_derive::{Inspect, WithInspect};
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
 
@@ -64,30 +65,54 @@ impl ListenSessionImpl {
 }
 
 /// Information about a switchboard setting to be written to inspect.
+#[derive(Inspect)]
 struct SettingTypeInfo {
     /// Last requests for inspect to save. Number of requests is defined by INSPECT_REQUESTS_COUNT.
+    #[inspect(skip)]
     last_requests: VecDeque<RequestInfo>,
 
     /// Node of this info.
-    node: inspect::Node,
+    inspect_node: inspect::Node,
+}
+
+impl SettingTypeInfo {
+    fn new() -> Self {
+        Self {
+            last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
+            inspect_node: inspect::Node::default(),
+        }
+    }
 }
 
 /// Information about a switchboard request to be written to inspect.
 ///
 /// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
 /// once they go out of scope.
+#[derive(Inspect)]
 struct RequestInfo {
     /// Incrementing count for each request.
+    #[inspect(skip)]
     count: u64,
 
-    /// Node of this info.
-    _node: inspect::Node,
-
     /// Debug string representation of this SettingRequest.
-    _request: inspect::StringProperty,
+    request: inspect::StringProperty,
 
     /// Milliseconds since switchboard creation that this request arrived.
-    _timestamp: inspect::StringProperty,
+    timestamp: inspect::StringProperty,
+
+    /// Node of this info.
+    inspect_node: inspect::Node,
+}
+
+impl RequestInfo {
+    fn new(count: u64) -> Self {
+        Self {
+            count,
+            request: inspect::StringProperty::default(),
+            timestamp: inspect::StringProperty::default(),
+            inspect_node: inspect::Node::default(),
+        }
+    }
 }
 
 impl ListenSession for ListenSessionImpl {
@@ -268,35 +293,33 @@ impl SwitchboardImpl {
     /// Write a request to inspect.
     fn record_request(&mut self, setting_type: SettingType, request: SettingRequest) {
         let inspect_node = &self.inspect_node;
-        let setting_type_info =
-            self.last_requests.entry(setting_type).or_insert_with(|| SettingTypeInfo {
-                last_requests: VecDeque::with_capacity(INSPECT_REQUESTS_COUNT),
-                node: inspect_node.create_child(format!("{:?}", setting_type)),
-            });
+        let setting_type_info = self.last_requests.entry(setting_type).or_insert_with(|| {
+            SettingTypeInfo::new()
+                .with_inspect(&inspect_node, format!("{:?}", setting_type))
+                // `with_inspect` will only return an error on types with interior mutability.
+                // Since none are used here, this should be fine.
+                .unwrap()
+        });
 
         let last_requests = &mut setting_type_info.last_requests;
         if last_requests.len() >= INSPECT_REQUESTS_COUNT {
             last_requests.pop_back();
         }
 
-        let count = match last_requests.front() {
-            Some(req) => req.count + 1,
-            None => 0,
-        };
-        let timestamp = match clock::now().duration_since(SystemTime::UNIX_EPOCH) {
-            Ok(elapsed) => elapsed.as_millis(),
-            Err(_) => 0,
-        };
+        let count = last_requests.front().map(|req| req.count + 1).unwrap_or(0);
+        let timestamp = clock::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .as_ref()
+            .map(Duration::as_millis)
+            .unwrap_or(0);
         // std::u64::MAX maxes out at 20 digits.
-        let node = setting_type_info.node.create_child(format!("{:020}", count));
-        let request_property = node.create_string("request", format!("{:?}", request));
-        let timestamp = node.create_string("timestamp", timestamp.to_string());
-        last_requests.push_front(RequestInfo {
-            count,
-            _node: node,
-            _request: request_property,
-            _timestamp: timestamp,
-        });
+        if let Ok(request_info) = RequestInfo::new(count)
+            .with_inspect(&setting_type_info.inspect_node, format!("{:020}", count))
+        {
+            request_info.request.set(&format!("{:?}", request));
+            request_info.timestamp.set(&timestamp.to_string());
+            last_requests.push_front(request_info);
+        }
     }
 }
 
