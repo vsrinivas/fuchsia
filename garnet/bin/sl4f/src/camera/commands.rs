@@ -6,12 +6,12 @@ use anyhow::Error;
 use async_trait::async_trait;
 use serde_json::{from_value, to_value, Value};
 
-use crate::camera_factory::facade::CameraFactoryFacade;
-use crate::camera_factory::types::SetCfgRequest;
+use crate::camera::facade::CameraFacade;
+use crate::camera::types::SetCfgRequest;
 use crate::server::Facade;
 
 #[async_trait(?Send)]
-impl Facade for CameraFactoryFacade {
+impl Facade for CameraFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         let result = match method.as_ref() {
             "DetectCamera" => self.detect().await?,

@@ -6,14 +6,14 @@ use anyhow::Error;
 use fuchsia_syslog::fx_log_err;
 use serde_json::{to_value, Value};
 
-/// Facade providing access to Camera Factory interfaces.
+/// Facade that exposes various Camera interfaces.
 #[derive(Debug)]
-pub struct CameraFactoryFacade {}
+pub struct CameraFacade {}
 
-impl CameraFactoryFacade {
+impl CameraFacade {
     /// Instantiate a Facade.
     pub fn new() -> Self {
-        CameraFactoryFacade {}
+        CameraFacade {}
     }
 
     /// Checks whether the device under test has a camera and provides information about
@@ -21,7 +21,7 @@ impl CameraFactoryFacade {
     ///
     /// Takes no arguments. Outputs the serialized DeviceInfo in a DetectResult struct.
     pub async fn detect(&self) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::detect";
+        const TAG: &str = "CameraFacade::detect";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -30,7 +30,7 @@ impl CameraFactoryFacade {
     ///
     /// Takes no arguments. Outputs an empty response.
     pub async fn get_sn(&self) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::get_sn";
+        const TAG: &str = "CameraFacade::get_sn";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -39,7 +39,7 @@ impl CameraFactoryFacade {
     ///
     /// Takes no arguments. Outputs an empty response.
     pub async fn get_cfg(&self) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::get_cfg";
+        const TAG: &str = "CameraFacade::get_cfg";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -61,7 +61,7 @@ impl CameraFactoryFacade {
         _analog_gain: i32,
         _digital_gain: i32,
     ) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::set_cfg";
+        const TAG: &str = "CameraFacade::set_cfg";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -73,7 +73,7 @@ impl CameraFactoryFacade {
     ///
     /// Outputs an empty response.
     pub async fn capture(&self, _file_path: String) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::capture";
+        const TAG: &str = "CameraFacade::capture";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -85,7 +85,7 @@ impl CameraFactoryFacade {
     ///
     /// Outputs an empty response.
     pub async fn get_otp(&self, _file_path: String) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::get_otp";
+        const TAG: &str = "CameraFacade::get_otp";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -97,7 +97,7 @@ impl CameraFactoryFacade {
     ///
     /// Outputs an empty response.
     pub async fn color_bars(&self, _toggle: bool) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::color_bars";
+        const TAG: &str = "CameraFacade::color_bars";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -110,7 +110,7 @@ impl CameraFactoryFacade {
     ///
     /// Outputs an empty response.
     pub async fn enable(&self, _toggle: bool) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::enable";
+        const TAG: &str = "CameraFacade::enable";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -123,7 +123,7 @@ impl CameraFactoryFacade {
     ///
     /// Outputs an empty response.
     pub async fn reset(&self, _value: bool) -> Result<Value, Error> {
-        const TAG: &str = "CameraFactoryFacade::reset";
+        const TAG: &str = "CameraFacade::reset";
         fx_log_err!("{} {}", TAG, "NOT IMEPLEMENTED");
         Ok(to_value(())?)
     }
@@ -137,7 +137,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn sanity() -> Result<(), Error> {
-        let _camera_factory_facade = CameraFactoryFacade::new();
+        let _facade = CameraFacade::new();
         Ok(())
     }
 }
