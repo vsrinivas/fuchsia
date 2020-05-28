@@ -306,17 +306,21 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		return err
 	}
 
+	// TODO(fxbug.dev/43188): We temporarily capture the tail of all stdout and
+	// stderr to search for a particular error signature.
+	outputSink := ring.NewBuffer(1024)
+
 	cmd := &exec.Cmd{
 		Path:   invocation[0],
 		Args:   invocation,
 		Dir:    workdir,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Stdout: io.MultiWriter(os.Stdout, outputSink),
+		Stderr: io.MultiWriter(os.Stderr, outputSink),
 	}
 	if t.pts != nil {
 		cmd.Stdin = t.pts
-		cmd.Stdout = t.pts
-		cmd.Stderr = t.pts
+		cmd.Stdout = io.MultiWriter(t.pts, outputSink)
+		cmd.Stderr = io.MultiWriter(t.pts, outputSink)
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setctty: true,
 			Setsid:  true,
@@ -333,7 +337,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
-			checkForEBUSY(ctx, err)
+			checkForEBUSY(ctx, outputSink)
 			err = fmt.Errorf("QEMU invocation error: %w", err)
 		}
 		t.c <- err
@@ -343,15 +347,15 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 }
 
 // checkForEBUSY runs an lsof on /dev/net/tun if QEMU startup failed due to an EBUSY.
-func checkForEBUSY(ctx context.Context, err error) {
-	// Only perform the check if the error is an EBUSY.
-	if err == nil || !strings.Contains(err.Error(), syscall.EBUSY.Error()) {
-		if err != nil {
-			logger.Debugf(ctx, "error was not an EBUSY")
-		}
+func checkForEBUSY(ctx context.Context, output io.Reader) {
+	content, err := ioutil.ReadAll(output)
+	if err != nil {
+		logger.Errorf(ctx, "failed to read stdout + stderr: %v", err)
+		return
+	} else if !strings.Contains(string(content), syscall.EBUSY.Error()) {
 		return
 	}
-	logger.Debugf(ctx, "fxbug.dev/43188: QEMU startup failed with an EBUSY: %#v\n contact rudymathu@ or joshuaseaton@ for triage", err)
+	logger.Debugf(ctx, "fxbug.dev/43188: QEMU startup failed with an EBUSY: %#v\n contact rudymathu@ for triage", err)
 
 	// This command prints out all processes using /dev/net/tun.
 	cmd := exec.Command("lsof", "+c", "0", "/dev/net/tun")
