@@ -1038,10 +1038,10 @@ impl<'a> fmt::Display for DependencyNode<'a> {
 mod tests {
     use super::*;
     use lazy_static::lazy_static;
+    use matches::assert_matches;
     use serde_json::json;
     use std::io::Write;
     use tempfile::TempDir;
-    use test_util::assert_matches;
 
     macro_rules! test_validate_cml {
         (

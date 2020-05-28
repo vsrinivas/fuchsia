@@ -157,7 +157,7 @@ mod test {
     use fidl::{encoding::Decodable, endpoints::create_proxy};
     use fuchsia_async as fasync;
     use futures::{channel::mpsc, future, sink::SinkExt, task::noop_waker, FutureExt};
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     #[fasync::run_singlethreaded]
     #[test]

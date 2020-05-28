@@ -20,9 +20,8 @@ use futures::{
     stream::{StreamExt, TryStreamExt},
 };
 use lazy_static::lazy_static;
-use matches::matches;
+use matches::assert_matches;
 use std::collections::HashMap;
-use test_util::assert_matches;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
 

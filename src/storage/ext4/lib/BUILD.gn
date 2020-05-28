@@ -17,10 +17,7 @@ rustc_library("parser") {
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 
-  test_deps = [
-    "//src/lib/test_util",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
+  test_deps = [ "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc" ]
 }
 
 test_package("tests") {

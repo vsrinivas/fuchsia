@@ -469,7 +469,7 @@ mod test {
     };
     use futures_test::task::noop_waker;
     use inspect::{assert_inspect_tree, Inspector};
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     static TEST_DOMAIN: &str = "test_domain";
 

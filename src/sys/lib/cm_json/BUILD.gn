@@ -29,7 +29,7 @@ rustc_library("cm_json") {
 
   non_rust_deps = [ ":cm_schema_json" ]
 
-  test_deps = [ "//src/lib/test_util" ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 test_package("cm_json_tests") {

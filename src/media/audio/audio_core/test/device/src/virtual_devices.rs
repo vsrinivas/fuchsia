@@ -6,6 +6,7 @@ use hermetic_audio_environment::prelude::*;
 use hermetic_audio_environment::virtual_audio::{
     with_connected_device, DeviceTestAssets, VirtualAudioDevice,
 };
+use matches::assert_matches;
 
 #[fasync::run_singlethreaded]
 #[test]

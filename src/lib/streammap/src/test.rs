@@ -14,8 +14,8 @@ use futures::{
 };
 use futures_test::task::new_count_waker;
 use maplit::hashset;
+use matches::assert_matches;
 use std::collections::HashSet;
-use test_util::assert_matches;
 
 #[fasync::run_until_stalled]
 #[test]

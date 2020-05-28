@@ -621,7 +621,7 @@ impl FromClause for ResolverRegistration {
 mod tests {
     use super::*;
     use cm_json::{self, Error};
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     #[test]
     fn test_parse_named_reference() {

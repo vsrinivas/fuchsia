@@ -574,8 +574,8 @@ fn convert_value(v: Value) -> Result<Option<Box<fsys::Value>>, Error> {
 mod tests {
     use super::*;
     use fidl_fuchsia_io2 as fio2;
+    use matches::assert_matches;
     use serde_json::json;
-    use test_util::assert_matches;
 
     fn translate_test(input: serde_json::value::Value, expected_output: fsys::ComponentDecl) {
         let component_decl = translate(&format!("{}", input)).expect("translation failed");

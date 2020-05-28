@@ -35,7 +35,6 @@ rustc_library("fidl") {
     ]
   }
   test_deps = [
-    "//src/lib/test_util",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:matches",
   ]

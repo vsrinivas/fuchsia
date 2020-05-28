@@ -85,7 +85,7 @@ mod test {
     use fuchsia_zircon as zx;
     use futures::channel::oneshot;
     use futures::future::join;
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     const TEST_KEY_SINGLETON_NAME: &str = "test-key-singleton";
     const TEST_KEY_SET_NAME: &str = "test-key-set";

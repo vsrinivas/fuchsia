@@ -233,8 +233,8 @@ impl<T> ExactSizeIterator for IntoIter<T> {}
 mod tests {
     use {
         super::*,
+        matches::assert_matches,
         serde_json::{self, json},
-        test_util::assert_matches,
     };
 
     #[test]

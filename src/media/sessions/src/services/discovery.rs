@@ -393,7 +393,7 @@ mod test {
     use fidl_fuchsia_media::UsageReporterMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     #[fasync::run_singlethreaded]
     #[test]

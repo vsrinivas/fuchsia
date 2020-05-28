@@ -114,8 +114,7 @@ mod test {
         future,
         stream::{StreamExt, TryStreamExt},
     };
-    use matches::matches;
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     fn test_interrupter() -> (Interrupter, UsageReporterRequestStream) {
         let (usage_reporter, usage_reporter_requests) =
@@ -134,7 +133,7 @@ mod test {
         let (mut interrupter, _usage_reporter_requests) = test_interrupter();
 
         let next = interrupter.next();
-        assert!(matches!(futures::poll!(next), Poll::Pending));
+        assert_matches!(futures::poll!(next), Poll::Pending);
     }
 
     #[fasync::run_singlethreaded]

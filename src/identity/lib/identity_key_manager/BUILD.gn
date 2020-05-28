@@ -20,7 +20,5 @@ rustc_library("identity_key_manager") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [
-    "//src/lib/test_util",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }

@@ -24,8 +24,8 @@ use {
     },
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
+    matches::assert_matches,
     std::{future::Future, path::Path, sync::atomic},
-    test_util::assert_matches,
 };
 
 #[run_until_stalled(test)]

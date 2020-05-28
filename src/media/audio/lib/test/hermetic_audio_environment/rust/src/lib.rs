@@ -13,7 +13,6 @@ pub mod prelude {
     pub use fuchsia_component::client;
     pub use fuchsia_zircon as zx;
     pub use futures::{self, future, FutureExt, SinkExt, StreamExt, TryStreamExt};
-    pub use test_util::assert_matches;
     pub use zx::AsHandleRef;
 }
 

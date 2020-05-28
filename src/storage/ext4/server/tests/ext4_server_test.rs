@@ -12,10 +12,10 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
     fuchsia_zircon as zx, io_util,
+    matches::assert_matches,
     std::fs,
     std::io::{self, Read, Seek},
     std::path::PathBuf,
-    test_util::assert_matches,
 };
 
 #[fasync::run_singlethreaded(test)]

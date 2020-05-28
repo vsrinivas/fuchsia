@@ -12,8 +12,8 @@ use fuchsia_component::client::{launch, App};
 use fuchsia_component::server::*;
 use fuchsia_zircon::{self as zx, prelude::AsHandleRef};
 use futures::{channel::oneshot, future, join, select, StreamExt};
+use matches::assert_matches;
 use std::{fs::File, vec::Vec};
-use test_util::assert_matches;
 
 const SOUNDPLAYER_URL: &str = "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cmx";
 const PAYLOAD_SIZE: usize = 1024;

@@ -18,6 +18,7 @@ rustc_test("audio_device_tests_bin") {
     "//src/media/audio/lib/test/hermetic_audio_environment/rust",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:matches",
   ]
 
   # TODO(48455): Fix the leaks and remove this.

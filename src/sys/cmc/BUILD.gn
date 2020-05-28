@@ -33,7 +33,7 @@ rustc_binary_sdk("cmc") {
 
   non_rust_deps = [ ":cmc_test_schemas" ]
 
-  test_deps = [ "//src/lib/test_util" ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 source_set("cmc_test_schemas") {

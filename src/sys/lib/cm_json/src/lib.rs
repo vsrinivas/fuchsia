@@ -167,7 +167,7 @@ pub fn from_json5_str(json5: &str) -> Result<Value, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     #[test]
     fn test_syntax_error_message() {

@@ -219,7 +219,7 @@ mod test {
     use super::*;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
-    use test_util::assert_matches;
+    use matches::assert_matches;
 
     #[fasync::run_singlethreaded]
     #[test]

@@ -113,8 +113,8 @@ mod test {
     use fuchsia_async as fasync;
     use futures::{stream, Future, SinkExt, StreamExt};
     use futures_test::task::*;
+    use matches::assert_matches;
     use std::sync::Arc;
-    use test_util::assert_matches;
 
     #[fasync::run_singlethreaded]
     #[test]

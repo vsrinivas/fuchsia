@@ -730,8 +730,8 @@ mod tests {
         fuchsia_zircon::DurationNum,
         futures::{join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
+        matches::assert_matches,
         std::thread,
-        test_util::assert_matches,
     };
 
     const SEND_ORDINAL_HIGH_BYTE: u8 = 42;
