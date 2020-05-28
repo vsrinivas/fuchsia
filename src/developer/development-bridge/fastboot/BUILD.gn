@@ -15,6 +15,7 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/fastboot:lib",
       "//src/lib/usb_bulk/rust:lib",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:log",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
   }

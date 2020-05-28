@@ -21,6 +21,7 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/development-bridge:command_lib",
       "//src/developer/development-bridge/config:lib",
       "//src/developer/development-bridge/core:lib",
+      "//src/developer/development-bridge/fastboot:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/mdns/rust:mdns",
       "//src/lib/network/packet",

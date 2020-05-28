@@ -55,6 +55,7 @@ impl Daemon {
         let discovered_target_hooks = Arc::new(Mutex::new(Vec::<Rc<dyn DiscoveryHook>>::new()));
         Daemon::spawn_receiver_loop(rx, target_collection.clone(), discovered_target_hooks.clone());
         Daemon::spawn_onet_discovery(target_collection.clone());
+        Daemon::spawn_fastboot_discovery(target_collection.clone());
         let mut d = Daemon {
             target_collection: target_collection.clone(),
             discovered_target_hooks: discovered_target_hooks.clone(),
@@ -111,6 +112,23 @@ impl Daemon {
             self.handle_request(req).await?;
         }
         Ok(())
+    }
+
+    pub fn spawn_fastboot_discovery(tc: Arc<TargetCollection>) {
+        spawn(async move {
+            loop {
+                let fastboot_devices = ffx_fastboot::find_devices();
+                for dev in fastboot_devices {
+                    // Add to target collection
+                    let nodename = format!("{:?}", dev);
+                    let target = Target::new(&nodename);
+                    log::info!("Found new target via fastboot: {}", target.nodename);
+                    tc.merge_insert(target).await;
+                }
+                // Sleep
+                task::sleep(std::time::Duration::from_secs(3)).await;
+            }
+        });
     }
 
     pub fn spawn_onet_discovery(tc: Arc<TargetCollection>) {
