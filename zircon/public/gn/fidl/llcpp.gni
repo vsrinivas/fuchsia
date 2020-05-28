@@ -61,6 +61,10 @@ template("fidl_llcpp_library") {
         "-header",
         rebase_path(generator_header_file, root_build_dir),
       ]
+
+      metadata = {
+        generated_sources = rebase_path(outputs, root_build_dir)
+      }
     }
   } else {
     library_target = "$fidl_target.llcpp"
