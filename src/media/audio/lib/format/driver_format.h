@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_UTILS_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_UTILS_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_FORMAT_DRIVER_FORMAT_H_
+#define SRC_MEDIA_AUDIO_LIB_FORMAT_DRIVER_FORMAT_H_
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -33,4 +33,4 @@ bool DriverSampleFormatToAudioSampleFormat(audio_sample_format_t driver_sample_f
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_DRIVER_UTILS_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_FORMAT_DRIVER_FORMAT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_LIB_TEST_VIRTUAL_OUTPUT_H_
-#define SRC_MEDIA_AUDIO_LIB_TEST_VIRTUAL_OUTPUT_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_TEST_VIRTUAL_DEVICE_H_
+#define SRC_MEDIA_AUDIO_LIB_TEST_VIRTUAL_DEVICE_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
@@ -99,4 +99,4 @@ class VirtualInput : public VirtualDevice<fuchsia::virtualaudio::Input> {
 
 }  // namespace media::audio::test
 
-#endif  // SRC_MEDIA_AUDIO_LIB_TEST_VIRTUAL_OUTPUT_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_TEST_VIRTUAL_DEVICE_H_
