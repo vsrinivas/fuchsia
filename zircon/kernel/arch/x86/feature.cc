@@ -70,6 +70,20 @@ static ktl::atomic<bool> g_cpuid_initialized;
 
 static enum x86_hypervisor_list get_hypervisor();
 
+namespace {
+
+void x86_cpu_ibrs(MsrAccess* msr) {
+  uint64_t value = msr->read_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL);
+  msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_IBRS);
+}
+
+void x86_cpu_stibp(MsrAccess* msr) {
+  uint64_t value = msr->read_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL);
+  msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_STIBP);
+}
+
+}  // anonymous namespace
+
 void x86_feature_early_init_percpu(void) {
   if (g_cpuid_initialized.exchange(true)) {
     return;
@@ -243,6 +257,21 @@ void x86_cpu_feature_init() {
 void x86_cpu_feature_late_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;
+
+  // Spectre V2: If Enhanced IBRS is available and speculative mitigations are enabled, enable IBRS.
+  // x86_retpoline_select will take care of converting the retpoline thunks to appropriate versions
+  // for Enhanced IBRS CPUs.
+  // If Enhanced IBRS is not available but always-on STIBP is, enable it for added cross-hyperthread
+  // security.
+  if (x86_get_disable_spec_mitigations() == false) {
+    if (g_has_enhanced_ibrs) {
+      x86_cpu_ibrs(&msr);
+    } else if ((x86_vendor == X86_VENDOR_AMD) &&
+               cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP) &&
+               cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP_ALWAYS_ON)) {
+      x86_cpu_stibp(&msr);
+    }
+  }
 
   // Mitigate Spectre V4 (Speculative Store Bypass) if requested.
   if (x86_cpu_should_mitigate_ssb()) {
@@ -505,6 +534,7 @@ void x86_feature_debug(void) {
     printf("ibpb ");
   if (g_l1d_flush_on_vmentry)
     printf("l1d_flush_on_vmentry ");
+  printf("\n");
   if (g_should_ibpb_on_ctxt_switch)
     printf("ibpb_ctxt_switch ");
   if (g_ras_fill_on_ctxt_switch)
@@ -1072,10 +1102,6 @@ extern "C" {
 
 void x86_cpu_ibpb(MsrAccess* msr) {
   msr->write_msr(/*msr_index=*/X86_MSR_IA32_PRED_CMD, /*value=*/1);
-}
-
-void x86_cpu_ibrs(MsrAccess* msr) {
-  msr->write_msr(/*msr_index=*/X86_MSR_IA32_SPEC_CTRL, /*value=*/X86_SPEC_CTRL_IBRS);
 }
 
 void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {

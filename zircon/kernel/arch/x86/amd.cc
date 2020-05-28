@@ -91,11 +91,6 @@ bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid) {
   return false;
 }
 
-static void x86_amd_cpu_set_stibp(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  uint64_t value = msr->read_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL);
-  msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_STIBP);
-}
-
 void x86_amd_init_percpu_17h_zen1_quirks(cpu_id::CpuId* cpuid, MsrAccess* msr) {
   // See: Revision Guide for AMD Family 17h Models 00h-0Fh Processors, #55449
   auto processor_id = cpuid->ReadProcessorId();
@@ -164,13 +159,6 @@ void x86_amd_init_percpu(void) {
   MsrAccess msr;
 
   x86_amd_set_lfence_serializing(&cpuid, &msr);
-
-  if (x86_cpu_has_enhanced_ibrs()) {
-    x86_cpu_ibrs(&msr);
-  } else if (x86_get_disable_spec_mitigations() == false &&
-             cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP_ALWAYS_ON)) {
-    x86_amd_cpu_set_stibp(&cpuid, &msr);
-  }
 
   // Quirks
   if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {

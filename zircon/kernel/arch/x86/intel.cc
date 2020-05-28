@@ -258,7 +258,6 @@ void x86_intel_cpu_try_disable_tsx(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
 
 void x86_intel_init_percpu(void) {
   cpu_id::CpuId cpuid;
-  MsrAccess msr;
 
   // Some intel cpus support auto-entering C1E state when all cores are at C1. In
   // C1E state the voltage is reduced on all cores as well as clock gated. There is
@@ -268,10 +267,6 @@ void x86_intel_init_percpu(void) {
   if (!x86_feature_test(X86_FEATURE_HYPERVISOR) && x86_get_microarch_config()->disable_c1e) {
     uint64_t power_ctl_msr = read_msr(X86_MSR_POWER_CTL);
     write_msr(0x1fc, power_ctl_msr & ~0x2);
-  }
-
-  if (x86_cpu_has_enhanced_ibrs()) {
-    x86_cpu_ibrs(&msr);
   }
 }
 
