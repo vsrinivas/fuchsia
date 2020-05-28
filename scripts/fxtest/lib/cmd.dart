@@ -148,6 +148,7 @@ class FuchsiaTestCommand {
       buildDir: fuchsiaLocator.buildDir,
       fxLocation: fuchsiaLocator.fx,
       manifestFileName: 'tests.json',
+      usePackageHash: testsConfig.flags.shouldUsePackageHash,
     );
     return manifestReader.aggregateTests(
       eventEmitter: emitEvent,

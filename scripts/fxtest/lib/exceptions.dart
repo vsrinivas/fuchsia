@@ -24,6 +24,27 @@ class MalformedFuchsiaUrlException implements Exception {
       'Url `$packageUrl` could not be parsed';
 }
 
+class HashFileNotFoundException implements Exception {
+  final String message;
+  HashFileNotFoundException(this.message);
+
+  @override
+  String toString() => message;
+}
+
+class PackageRepositoryException implements Exception {
+  String file;
+  final String message;
+  PackageRepositoryException(this.message, [this.file = '']);
+
+  @override
+  String toString() => '$file: $message';
+}
+
+class PackageRepositoryParseException extends PackageRepositoryException {
+  PackageRepositoryParseException(String message) : super(message);
+}
+
 class UnparsedTestException implements Exception {
   final String message;
   UnparsedTestException(this.message);

@@ -58,6 +58,11 @@ class TestBundle {
   /// and condense full fx paths in output.
   final String fxSuffix;
 
+  static bool hasDeviceTests(List<TestBundle> testBundles) {
+    return testBundles.any((e) =>
+        !hostTestTypes.contains(e.testDefinition.executionHandle.testType));
+  }
+
   TestBundle(
     this.testDefinition, {
     @required this.testRunner,

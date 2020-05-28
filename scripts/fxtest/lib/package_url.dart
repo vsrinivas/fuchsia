@@ -85,6 +85,8 @@ class PackageUrl {
   /// ```
   final String componentName;
 
+  String _stringifed;
+
   PackageUrl({
     @required this.host,
     @required this.packageName,
@@ -94,13 +96,14 @@ class PackageUrl {
     @required this.componentName,
   });
 
-  PackageUrl.none()
-      : host = null,
-        hash = null,
-        packageName = null,
-        packageVariant = null,
-        fullComponentName = null,
-        componentName = null;
+  PackageUrl.copyWithHash({
+    @required PackageUrl other,
+    @required this.hash,
+  })  : host = other.host,
+        packageName = other.packageName,
+        packageVariant = other.packageVariant,
+        fullComponentName = other.fullComponentName,
+        componentName = other.componentName;
 
   /// Breaks out a canonical Fuchsia URL into its constituent parts.
   ///
@@ -136,6 +139,24 @@ class PackageUrl {
         PackageUrl._removeExtension(parsedUri.fragment),
       ),
     );
+  }
+
+  /// Returns something like
+  /// `fuchsia-pkg://host/package_name/variant?hash=1234#PATH.cmx`
+  @override
+  String toString() {
+    if (_stringifed == null) {
+      var path = [packageName];
+      if (packageVariant != null) path.add(packageVariant);
+      _stringifed = Uri(
+        scheme: 'fuchsia-pkg',
+        host: host,
+        pathSegments: path,
+        fragment: fullComponentName == null ? null : 'meta/$fullComponentName',
+        queryParameters: hash == null ? null : {'hash': hash},
+      ).toString();
+    }
+    return _stringifed;
   }
 
   static String _removeMetaPrefix(String fullComponentName) {

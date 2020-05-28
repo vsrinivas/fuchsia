@@ -88,7 +88,8 @@ void main() {
         fx: fuchsiaLocator.fx,
         name: 'device test',
         os: 'fuchsia',
-        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#test.cmx',
+        packageUrl:
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/fancy#test.cmx'),
       ),
       TestDefinition(
         buildDir: fuchsiaLocator.buildDir,

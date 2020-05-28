@@ -155,9 +155,7 @@ void main() {
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
       );
-      var checklist =
-          PreChecker.fromConfig(testsConfig, eventSink: (event) => null);
-      expect(checklist.hasDeviceTests(<TestBundle>[]), false);
+      expect(TestBundle.hasDeviceTests(<TestBundle>[]), false);
 
       var bundles = <TestBundle>[
         cmd.testBundleBuilder(
@@ -181,7 +179,7 @@ void main() {
       ];
 
       // Command tests are "device" tests for this context
-      expect(checklist.hasDeviceTests(bundles), false);
+      expect(TestBundle.hasDeviceTests(bundles), false);
     });
 
     test('skip update-if-in-base for host tests', () async {
@@ -190,9 +188,7 @@ void main() {
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
       );
-      var checklist =
-          PreChecker.fromConfig(testsConfig, eventSink: (event) => null);
-      expect(checklist.hasDeviceTests(<TestBundle>[]), false);
+      expect(TestBundle.hasDeviceTests(<TestBundle>[]), false);
 
       var bundles = <TestBundle>[
         cmd.testBundleBuilder(
@@ -215,7 +211,7 @@ void main() {
       ];
 
       // Outright device test
-      expect(checklist.hasDeviceTests(bundles), false);
+      expect(TestBundle.hasDeviceTests(bundles), false);
     });
 
     test('run update-if-in-base for component tests', () async {
@@ -224,9 +220,7 @@ void main() {
         testsConfig,
         testRunnerBuilder: (testsConfig) => TestRunner(),
       );
-      var checklist =
-          PreChecker.fromConfig(testsConfig, eventSink: (event) => null);
-      expect(checklist.hasDeviceTests(<TestBundle>[]), false);
+      expect(TestBundle.hasDeviceTests(<TestBundle>[]), false);
 
       var bundles = <TestBundle>[
         cmd.testBundleBuilder(
@@ -250,7 +244,7 @@ void main() {
       ];
 
       // Component tests are definitely device tests
-      expect(checklist.hasDeviceTests(bundles), true);
+      expect(TestBundle.hasDeviceTests(bundles), true);
     });
   });
 

@@ -257,13 +257,11 @@ class StandardOutputFormatter extends OutputFormatter {
   void _handleTestInfo(TestInfo event) {
     _buffer.addLines([
       // Padding for info events that appear in the middle of the result stream
-      if (hasStartedTests && event.requiresPadding)
-        ' ',
+      if (hasStartedTests && event.requiresPadding) ' ',
       // The message itself
       event.message,
       // Padding for info events that appear in the middle of the result stream
-      if (hasStartedTests && event.requiresPadding)
-        ' ',
+      if (hasStartedTests && event.requiresPadding) ' ',
     ]);
   }
 
@@ -388,7 +386,7 @@ List<String> infoPrint(TestDefinition testDefinition) {
         : null,
     _isTruthy(testDefinition.name) ? 'name: ${testDefinition.name}' : null,
     _isTruthy(testDefinition.os) ? 'os: ${testDefinition.os}' : null,
-    _isTruthy(testDefinition.packageUrl)
+    testDefinition.packageUrl != null
         ? 'package_url: ${testDefinition.packageUrl}'
         : null,
     _isTruthy(testDefinition.label) ? 'label: ${testDefinition.label}' : null,

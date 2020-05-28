@@ -37,6 +37,7 @@ class Flags {
   final bool shouldRandomizeTestOrder;
   final bool shouldSilenceUnsupported;
   final bool shouldUpdateIfInBase;
+  final bool shouldUsePackageHash;
   final int slowThreshold;
   Flags({
     this.dryRun = false,
@@ -57,6 +58,7 @@ class Flags {
     this.shouldRebuild = true,
     this.shouldSilenceUnsupported = false,
     this.shouldUpdateIfInBase = true,
+    this.shouldUsePackageHash = true,
     this.slowThreshold = 0,
   });
 
@@ -83,6 +85,7 @@ class Flags {
       shouldRandomizeTestOrder: argResults['random'],
       shouldSilenceUnsupported: argResults['silenceunsupported'],
       shouldUpdateIfInBase: argResults['updateifinbase'],
+      shouldUsePackageHash: argResults['use-package-hash'],
       slowThreshold: int.parse(argResults['slow'] ?? '0'),
     );
   }
@@ -105,6 +108,7 @@ class Flags {
   shouldRandomizeTestOrder: $shouldRandomizeTestOrder
   shouldSilenceUnsupported: $shouldSilenceUnsupported
   shouldUpdateIfInBase: $shouldUpdateIfInBase
+  shouldUsePackageHash: $shouldUsePackageHash
   slowThreshold: $slowThreshold
 >''';
 }

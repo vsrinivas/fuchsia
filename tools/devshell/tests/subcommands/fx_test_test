@@ -13,6 +13,7 @@ BT_LINKED_DEPS=(
 
 BT_FILE_DEPS=(
   "scripts/fx"
+  "tools/devshell/tests/subcommands/data/fx_test_test/tests_hashfile"
   "tools/devshell/tests/subcommands/data/fx_test_test/tests_multiple_in_package.json"
   "tools/devshell/tests/subcommands/data/fx_test_test/tests_package_server_integration.json"
   "tools/devshell/lib/fx-cmd-locator.sh"
@@ -80,5 +81,51 @@ TEST_fxtest_nobuild() {
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
 
-BT_RUN_TESTS "$@"
+# Test that "fx test" runs a component test pinning it to the hash (merkleroot) of
+# the component package, so that the user has confidence that if a test runs, it is
+# running the exact same version that has been built
+TEST_fxtest_hashpinnning() {
+  cp -R "${DATA_DIR}/tests_hashfile/out" "${BT_TEMP_DIR}"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local testname1="overflow_fuzzer_test"
+  local hash1="913cdd63ab4aa794694448450505efaa2a8fe27fb33888e5156da9db60ac0a29"
+  local testname2="hello_world_cpp_unittests"
+  local hash2="7a604498e05fa012391b6b51da9cc74ff6a6a9d25b1376de98125c194232bfa1"
 
+  # expect that "fx shell run-test-component URL-WITH-HASH" was executed
+  BT_EXPECT ${fx} test --no-build ${testname1} >> "${out}"
+  local packageUrl1="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash1}#meta/overflow_fuzzer_test.cmx"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl1}"
+
+  # expect that "fx shell run-test-component URL-WITH-HASH" was executed
+  BT_EXPECT ${fx} test --no-build ${testname2} >> "${out}"
+  local packageUrl2="fuchsia-pkg://fuchsia.com/hello_world_cpp_tests?hash=${hash2}#meta/hello_world_cpp_unittests.cmx"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "${packageUrl2}"
+}
+
+# Test that "fx test" doesn't fail if a component test doesn't have a hashfile
+# property
+TEST_fxtest_no_hashfile() {
+  mkdir -p "${BT_TEMP_DIR}/out/default"
+  cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
+  [{"environments": [],
+    "test": {
+      "cpu": "arm64",
+      "label": "//examples/fuzzer:fuzzing-examples_pkg(//build/toolchain/fuchsia:arm64)",
+      "name": "overflow_fuzzer_test",
+      "os": "fuchsia",
+      "package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx",
+      "path": ""
+    }
+  }]
+EOF
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+
+  # expect that "fx shell run-test-component URL-WITHOUT-HASH" is executed
+  BT_EXPECT ${fx} test --no-build overflow_fuzzer_test >> "${out}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
+    "run-test-component" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
+}
+
+
+BT_RUN_TESTS "$@"

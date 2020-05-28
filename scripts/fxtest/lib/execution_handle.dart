@@ -68,7 +68,7 @@ class ExecutionHandle {
     if (testType == TestType.command) {
       return _getCommandTokens();
     } else if (testType == TestType.component) {
-      return _getComponenTokens(runnerFlags);
+      return _getComponentTokens(runnerFlags);
     } else if (testType == TestType.host) {
       return _getHostTokens();
     } else if (testType == TestType.suite) {
@@ -102,18 +102,15 @@ class ExecutionHandle {
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cmx".
-  CommandTokens _getComponenTokens(List<String> runnerFlags) {
-    List<String> subCommand = os == 'fuchsia'
-        ? ['shell', 'run-test-component'] + runnerFlags
-        : ['run-host-test'];
+  CommandTokens _getComponentTokens(List<String> runnerFlags) {
+    List<String> subCommand = ['shell', 'run-test-component'] + runnerFlags;
     return CommandTokens([fx, ...subCommand, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cm".
   CommandTokens _getSuiteTokens() {
-    List<String> subCommand =
-        os == 'fuchsia' ? ['shell', 'run-test-suite'] : ['run-host-test'];
+    List<String> subCommand = ['shell', 'run-test-suite'];
     return CommandTokens([fx, ...subCommand, handle]);
   }
 

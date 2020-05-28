@@ -102,19 +102,28 @@ btf::add_binary_to_path() {
 # If a value of an argument is un-important it can be marked with the string
 # _ANY_. This allows for matching arguments that may have unique values, such as temp
 # filenames.
-# Args: toolname arg [arg] [arg] ...
+# Args: toolname|mock_state_file arg [arg] [arg] ...
 # Returns: 0 if found; 1 if not found.
 btf::expect-mock-args() {
   local tool="$1"
-  BT_ASSERT_FILE_EXISTS "${tool}.mock_state"
+  if [[ ! "${tool}" =~ \.mock_state(\.[0-9]+)?$ ]]; then
+    tool="${tool}.mock_state"
+  fi
+  BT_ASSERT_FILE_EXISTS "${tool}"
   shift
-  source "${tool}.mock_state"
+  source "${tool}"
   local expected=("$@")
   local actual=("${BT_MOCK_ARGS[@]:1}")  # ignore the first arg, the mocked command
-  BT_EXPECT_EQ "${#actual[@]}" "${#expected[@]}"
+  if [[ ${#actual[@]} -ne ${#expected[@]} ]]; then
+    btf::_fail 1 "Unexpected arguments to ${tool}. Expected: '${expected[*]}'  Actual: '${actual[*]}'"
+    return
+  fi
   for (( i=0; i<"${#expected[@]}"; i++ )); do
     if [[ "${expected[$i]}" != "_ANY_" ]];  then
-      BT_EXPECT_EQ "${actual[$i]}" "${expected[$i]}"
+      if [[ "${actual[$i]}" != "${expected[$i]}" ]]; then
+        btf::_fail 1 "Unexpected arguments to ${tool}. Expected: '${expected[*]}'  Actual: '${actual[*]}'"
+        return
+      fi
     fi
   done
   return 0

@@ -12,6 +12,7 @@ export 'fuchsia_locator.dart';
 export 'matching/matching.dart';
 export 'output_buffer.dart';
 export 'output_formatter.dart';
+export 'package_repository.dart';
 export 'package_url.dart';
 export 'rebuilder.dart';
 export 'test_arguments.dart';

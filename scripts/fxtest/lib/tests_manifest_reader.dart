@@ -39,11 +39,12 @@ class TestsManifestReader {
 
   TestsManifestReader() : matcher = SingleTestMatcher();
 
-  /// Reads and parses the tests manifest file at `manifestLocation`.
+  /// Reads and parses the tests manifest file at [manifestFileName]
   Future<List<TestDefinition>> loadTestsJson({
     @required String buildDir,
     @required String fxLocation,
     @required String manifestFileName,
+    bool usePackageHash = true,
   }) async {
     List<dynamic> testJson = await readManifest(
       p.join(buildDir, manifestFileName),
@@ -52,6 +53,9 @@ class TestsManifestReader {
       testJson: testJson,
       buildDir: buildDir,
       fxLocation: fxLocation,
+      packageRepository: usePackageHash
+          ? await PackageRepository.fromManifest(buildDir: buildDir)
+          : null,
     );
   }
 
@@ -60,15 +64,19 @@ class TestsManifestReader {
     @required List<dynamic> testJson,
     @required String buildDir,
     @required String fxLocation,
+    PackageRepository packageRepository,
   }) {
-    return [
-      for (var data in testJson)
-        TestDefinition.fromJson(
-          Map<String, dynamic>.from(data),
-          buildDir: buildDir,
-          fx: fxLocation,
-        )
-    ];
+    List<TestDefinition> testDefinitions = [];
+    for (var data in testJson) {
+      TestDefinition testDefinition = TestDefinition.fromJson(
+        Map<String, dynamic>.from(data),
+        buildDir: buildDir,
+        fx: fxLocation,
+        packageRepository: packageRepository,
+      );
+      testDefinitions.add(testDefinition);
+    }
+    return testDefinitions;
   }
 
   /// Reads the manifest file off disk and parses its content as JSON

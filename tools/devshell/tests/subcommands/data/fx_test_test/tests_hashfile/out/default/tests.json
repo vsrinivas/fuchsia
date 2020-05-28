@@ -1,0 +1,28 @@
+[
+  {
+    "environments": [
+
+    ],
+    "test": {
+      "cpu": "arm64",
+      "label": "//examples/fuzzer:fuzzing-examples_pkg(//build/toolchain/fuchsia:arm64)",
+      "name": "overflow_fuzzer_test",
+      "os": "fuchsia",
+      "package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx",
+      "path": ""
+    }
+  },
+  {
+    "environments": [
+
+    ],
+    "test": {
+      "cpu": "arm64",
+      "label": "//examples/hello_world/cpp:hello_world_cpp_tests(//build/toolchain/fuchsia:arm64)",
+      "name": "hello_world_cpp_unittests",
+      "os": "fuchsia",
+      "package_url": "fuchsia-pkg://fuchsia.com/hello_world_cpp_tests#meta/hello_world_cpp_unittests.cmx",
+      "path": ""
+    }
+  }
+]

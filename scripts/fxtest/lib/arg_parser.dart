@@ -58,6 +58,12 @@ and component.''',
       negatable: true,
       help:
           'If true, invokes `fx update-if-in-base` before running device tests')
+  ..addFlag('use-package-hash',
+      defaultsTo: true,
+      negatable: true,
+      help:
+          'If true, uses the package Merkle root hash from the build artifacts '
+          'when executing device tests')
   ..addFlag('info',
       defaultsTo: false,
       negatable: false,

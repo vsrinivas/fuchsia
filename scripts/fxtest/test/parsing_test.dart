@@ -48,7 +48,7 @@ void main() {
         fxLocation: fuchsiaLocator.fx,
       );
       expect(tds, hasLength(1));
-      expect(tds[0].packageUrl, '');
+      expect(tds[0].packageUrl, null);
       expect(tds[0].depsFile, testJson[0]['test']['deps_file']);
       expect(tds[0].path, testJson[0]['test']['path']);
       expect(tds[0].name, testJson[0]['test']['name']);
@@ -79,7 +79,7 @@ void main() {
         fxLocation: fuchsiaLocator.fx,
       );
       expect(tds, hasLength(1));
-      expect(tds[0].packageUrl, testJson[0]['test']['package_url']);
+      expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
       expect(tds[0].depsFile, '');
       expect(tds[0].path, testJson[0]['test']['path']);
       expect(tds[0].name, testJson[0]['test']['name']);
@@ -150,7 +150,8 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
         fx: fuchsiaLocator.fx,
-        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx',
+        packageUrl: PackageUrl.fromString(
+            'fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx'),
         name: 'device test',
       ),
       TestDefinition(
@@ -253,7 +254,8 @@ void main() {
           buildDir: fuchsiaLocator.buildDir,
           fx: fuchsiaLocator.fx,
           os: 'fuchsia',
-          packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/not-component',
+          packageUrl: PackageUrl.fromString(
+              'fuchsia-pkg://fuchsia.com/fancy#meta/not-component'),
           name: 'asdf-one',
         ),
         throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
@@ -263,7 +265,8 @@ void main() {
           buildDir: fuchsiaLocator.buildDir,
           fx: fuchsiaLocator.fx,
           os: 'fuchsia',
-          packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#bin/def-not-comp.so',
+          packageUrl: PackageUrl.fromString(
+              'fuchsia-pkg://fuchsia.com/fancy#bin/def-not-comp.so'),
           name: 'asdf-two',
         ),
         throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
@@ -385,21 +388,24 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
         fx: fuchsiaLocator.fx,
-        packageUrl: 'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cmx',
+        packageUrl: PackageUrl.fromString(
+            'fuchsia-pkg://fuchsia.com/pkg1#meta/test1.cmx'),
         name: 'pkg 1 test 1',
       ),
       TestDefinition(
         buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
         fx: fuchsiaLocator.fx,
-        packageUrl: 'fuchsia-pkg://fuchsia.com/pkg1#test2.cmx',
+        packageUrl:
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg1#test2.cmx'),
         name: 'pkg 1 test 2',
       ),
       TestDefinition(
         buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
         fx: fuchsiaLocator.fx,
-        packageUrl: 'fuchsia-pkg://fuchsia.com/pkg2#test1.cmx',
+        packageUrl:
+            PackageUrl.fromString('fuchsia-pkg://fuchsia.com/pkg2#test1.cmx'),
         name: 'pkg 2 test 1',
         path: '//gnsubtree',
       ),

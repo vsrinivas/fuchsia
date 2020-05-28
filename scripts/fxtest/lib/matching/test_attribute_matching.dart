@@ -142,8 +142,8 @@ class PackageUrlMatcher extends TestAttributeMatcher {
       {MatchLength matchLength, Comparer comparer}) {
     if (testDefinition.packageUrl == null) return ComparisonResult.failure;
     return matchLength == MatchLength.full
-        ? comparer.equals(testDefinition.packageUrl, testName)
-        : comparer.startsWith(testDefinition.packageUrl, testName);
+        ? comparer.equals(testDefinition.packageUrl.toString(), testName)
+        : comparer.startsWith(testDefinition.packageUrl.toString(), testName);
   }
 }
 
@@ -159,9 +159,9 @@ class ComponentNameMatcher extends TestAttributeMatcher {
       String testName, TestDefinition testDefinition,
       {MatchLength matchLength, Comparer comparer}) {
     var fullCompResult =
-        comparer.equals(testName, testDefinition.parsedUrl?.fullComponentName);
+        comparer.equals(testName, testDefinition.packageUrl?.fullComponentName);
     var partialCompResult =
-        comparer.equals(testName, testDefinition.parsedUrl?.componentName);
+        comparer.equals(testName, testDefinition.packageUrl?.componentName);
     return ComparisonResult.bestResult(fullCompResult, partialCompResult);
   }
 }
@@ -176,7 +176,7 @@ class PackageNameMatcher extends TestAttributeMatcher {
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
       {MatchLength matchLength, Comparer comparer}) {
-    return comparer.equals(testName, testDefinition.parsedUrl?.packageName);
+    return comparer.equals(testName, testDefinition.packageUrl?.packageName);
   }
 }
 

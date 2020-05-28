@@ -1,0 +1,42 @@
+{
+	"signatures": [
+		{
+			"keyid":
+					"ffffffffff69aa5eb30d6c4be6b9170737813be937206345c4b2e19ffffffffff",
+			"method": "ed25519",
+			"sig":
+					"ffffffffffbbbec5c8840dd15f0fba8fdda835e98bbcb91db7a6ffff95ea3f03f5697b654c8133ec86045bb21f8f907c959de494ea11319bec5f90ffffffffff"
+		}
+	],
+	"signed": {
+		"_type": "targets",
+		"expires": "2020-08-13T00:19:56Z",
+		"spec_version": "1.0",
+		"targets": {
+			"example-fuzzers/0": {
+				"custom": {
+					"merkle":
+							"913cdd63ab4aa794694448450505efaa2a8fe27fb33888e5156da9db60ac0a29",
+					"size": 16384
+				},
+				"hashes": {
+					"sha512":
+							"2a5294cc86c41df4651e9168ea8d526edd732fa4e7e329abfe5070228b61319c66f56902517d4a1edf5293e21523f669ff0211f51f3e696c4deb3d678edb7f00"
+				},
+				"length": 16384
+			},
+			"hello_world_cpp_tests/0": {
+				"custom": {
+					"merkle":
+							"7a604498e05fa012391b6b51da9cc74ff6a6a9d25b1376de98125c194232bfa1",
+					"size": 61440
+				},
+				"hashes": {
+					"sha512":
+							"93430eb8b66cc507d3c36f4a15fc5d7ba3e25d0a1569dddad46355762386a606e90798ec429d35b3defc2df7a67408fa8e4e253d04042624c18e7ce22659a314"
+				},
+				"length": 61440
+			}
+		}
+	}
+}

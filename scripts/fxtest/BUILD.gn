@@ -58,6 +58,7 @@ dart_library("fxtest_lib") {
     "matching/test_attribute_matching.dart",
     "output_buffer.dart",
     "output_formatter.dart",
+    "package_repository.dart",
     "package_url.dart",
     "rebuilder.dart",
     "start_process.dart",
@@ -100,6 +101,7 @@ dart_test("fxtest_tests") {
   sources = [
     "args_test.dart",
     "output_test.dart",
+    "package_repository_test.dart",
     "parsing_test.dart",
     "setup_test.dart",
     "utils_test.dart",
