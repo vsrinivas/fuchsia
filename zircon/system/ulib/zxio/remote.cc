@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+#include "lib/zxio/types.h"
 #include "private.h"
 
 namespace fio = llcpp::fuchsia::io;
@@ -196,7 +197,7 @@ class Remote {
 };
 
 zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
-  switch (mode & S_IFMT) {
+  switch (mode & (S_IFMT | llcpp::fuchsia::io::MODE_TYPE_SERVICE)) {
     case S_IFDIR:
       return ZXIO_NODE_PROTOCOL_DIRECTORY;
     case S_IFCHR:
@@ -207,6 +208,10 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       return ZXIO_NODE_PROTOCOL_FILE;
     case S_IFIFO:
       return ZXIO_NODE_PROTOCOL_PIPE;
+      // fuchsia::io has mode type service which breaks stat.
+      // TODO(52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
+    case llcpp::fuchsia::io::MODE_TYPE_SERVICE:
+      return ZXIO_NODE_PROTOCOL_FILE;
     case S_IFLNK:
       // Symbolic links are not supported on Fuchsia.
       // A reasonable fallback is to keep the protocols unchanged,
