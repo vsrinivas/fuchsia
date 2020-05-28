@@ -238,11 +238,13 @@ func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *
 
 func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
+	// The test case parser specifically uses stdout, so we need to have a
+	// dedicated stdout buffer.
 	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
+	stdio := new(bytes.Buffer)
 
-	multistdout := io.MultiWriter(stdout, os.Stdout)
-	multistderr := io.MultiWriter(stderr, os.Stderr)
+	multistdout := io.MultiWriter(os.Stdout, stdio, stdout)
+	multistderr := io.MultiWriter(os.Stderr, stdio)
 
 	startTime := time.Now()
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
@@ -262,8 +264,7 @@ func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester)
 	return &testrunner.TestResult{
 		Name:      name,
 		GNLabel:   test.Label,
-		Stdout:    stdout.Bytes(),
-		Stderr:    stderr.Bytes(),
+		Stdio:     stdio.Bytes(),
 		Result:    result,
 		Cases:     testparser.Parse(stdout.Bytes()),
 		StartTime: startTime,

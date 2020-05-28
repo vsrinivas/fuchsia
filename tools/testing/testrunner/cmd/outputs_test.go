@@ -41,7 +41,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 					},
 				},
 			},
-			Stdout: []byte("STDOUT_A"),
+			Stdio: []byte("STDOUT_A"),
 		},
 		{
 			Name:      "test_b",
@@ -57,7 +57,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 					},
 				},
 			},
-			Stderr: []byte("STDERR_B"),
+			Stdio: []byte("STDERR_B"),
 		},
 	}
 
