@@ -26,7 +26,6 @@ executable("intl_services_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.settings",
-    "//sdk/fidl/fuchsia.setui",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl:fxl",
