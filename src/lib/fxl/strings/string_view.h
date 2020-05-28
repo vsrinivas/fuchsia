@@ -9,6 +9,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "src/lib/fxl/fxl_export.h"
@@ -36,6 +37,8 @@ class StringView {
 
   // Constructors.
   constexpr StringView() : data_(""), size_(0u) {}
+
+  constexpr StringView(std::string_view str) : data_(str.data()), size_(str.size()) {}
 
   constexpr StringView(const char* str, size_t len) : data_(str), size_(len) {}
 

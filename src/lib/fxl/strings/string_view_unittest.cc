@@ -7,6 +7,7 @@
 #include <lib/fit/function.h>
 
 #include <functional>
+#include <string_view>
 #include <type_traits>
 
 #include <gtest/gtest.h>
@@ -407,6 +408,14 @@ TEST(StringView, find_last_not_of) {
   // Use another string for negative examples.
   StringView other_sw("Fuchsia World");
   LoopOverCharCombinations(sw, other_sw, test_callback);
+}
+
+TEST(StringView, std_string_view_test) {
+  std::string_view sv("Hello World");
+  StringView sw(sv);
+
+  EXPECT_EQ(sv.data(), sw.data());
+  EXPECT_EQ(sv.size(), sw.size());
 }
 
 }  // namespace
