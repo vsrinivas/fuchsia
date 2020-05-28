@@ -3,7 +3,7 @@
 
 use {
     crate::{ArgType, Header, StreamError, StringRef},
-    fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
+    fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value},
     nom::{
         bytes::complete::take,
         multi::many0,
@@ -31,11 +31,13 @@ pub fn parse_record(buf: &[u8]) -> ParseResult<'_, Record> {
     } else {
         return Err(nom::Err::Failure(StreamError::ValueOutOfValidRange));
     };
+    let severity = Severity::from_primitive(header.severity())
+        .ok_or(nom::Err::Failure(StreamError::Unsupported))?;
 
     let (after_record, args_buf) = take(remaining_record_len)(var_len)?;
     let (_, arguments) = many0(parse_argument)(args_buf)?;
 
-    Ok((after_record, Record { timestamp, arguments }))
+    Ok((after_record, Record { timestamp, severity, arguments }))
 }
 
 fn parse_header(buf: &[u8]) -> ParseResult<'_, Header> {

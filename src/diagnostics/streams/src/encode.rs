@@ -38,6 +38,7 @@ where
 
         let mut header = Header(0);
         header.set_type(crate::TRACING_FORMAT_LOG_RECORD_TYPE);
+        header.set_severity(record.severity.into_primitive());
 
         let length = self.buf.cursor() - starting_idx;
         header.set_len(length);

@@ -22,6 +22,8 @@ const uint32 MAX_TEXT_ARG_LENGTH = 32768;
 struct Record {
     /// The monotonic time at which the record was generated.
     zx.time timestamp;
+    /// Severity of the record.
+    Severity severity;
     /// The key-value pairs which make up this record.
     vector<Argument>:MAX_ARGS arguments;
 };

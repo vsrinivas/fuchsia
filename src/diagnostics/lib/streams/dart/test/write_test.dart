@@ -29,7 +29,10 @@ void assertRecord(Record record, ByteData buffer) {
     offset = parseResult.nextOffset;
   }
 
-  var foundRecord = Record(timestamp: timestamp, arguments: arguments);
+  var foundRecord = Record(
+      timestamp: timestamp,
+      severity: Severity(header.severity),
+      arguments: arguments);
   expect(foundRecord, equals(record));
 }
 
@@ -104,13 +107,17 @@ void main() {
   const int _testTimestamp = 23;
   group('write record tests', () {
     test('no arguments', () {
-      testWriteRecord(Record(timestamp: _testTimestamp, arguments: []));
+      testWriteRecord(Record(
+          timestamp: _testTimestamp, severity: Severity.warn, arguments: []));
     });
 
     test('single argument', () {
-      testWriteRecord(Record(timestamp: _testTimestamp, arguments: [
-        Argument(name: 'int-arg', value: Value.withSignedInt(2902))
-      ]));
+      testWriteRecord(Record(
+          timestamp: _testTimestamp,
+          severity: Severity.info,
+          arguments: [
+            Argument(name: 'int-arg', value: Value.withSignedInt(2902))
+          ]));
     });
 
     test('multiple arguments', () {
@@ -121,7 +128,10 @@ void main() {
         Argument(name: 'arg-3', value: Value.withFloating(0.1)),
         Argument(name: 'arg-4', value: Value.withText('text'))
       ];
-      testWriteRecord(Record(timestamp: _testTimestamp, arguments: arguments));
+      testWriteRecord(Record(
+          timestamp: _testTimestamp,
+          severity: Severity.error,
+          arguments: arguments));
     });
   });
 

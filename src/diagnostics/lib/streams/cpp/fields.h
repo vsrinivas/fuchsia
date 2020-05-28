@@ -35,7 +35,8 @@ struct Field final {
 struct HeaderFields {
   using Type = Field<0, 3>;
   using SizeWords = Field<4, 15>;
-  using Reserved = Field<16, 63>;
+  using Reserved = Field<16, 55>;
+  using Severity = Field<56, 63>;
 };
 
 // TODO(rminocha): Check ordering of MSB for little-endian

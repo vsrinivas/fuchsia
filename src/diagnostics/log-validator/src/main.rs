@@ -5,13 +5,10 @@
 use {
     anyhow::Error,
     argh::FromArgs,
-    fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
-    fidl_fuchsia_validate_logs,
-    fuchsia_async as fasync,
+    fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value},
+    fidl_fuchsia_validate_logs, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
-    //fuchsia_zircon as zx,
     pretty_assertions::assert_eq,
-
     std::convert::TryInto,
 };
 
@@ -29,10 +26,11 @@ type TestCase = (String, Record, Vec<u8>);
 fn test_string() -> TestCase {
     let timestamp = 12;
     let arg = Argument { name: String::from("hello"), value: Value::Text("world".to_string()) };
-    let record = Record { timestamp, arguments: vec![arg] };
+    let record = Record { timestamp, severity: Severity::Info, arguments: vec![arg] };
     // 5: represents the size of the record
     // 9: represents the type of Record (Log record)
-    let mut expected_record_header = vec![0x59, 0, 0, 0, 0, 0, 0, 0];
+    // 30: represents the INFO severity
+    let mut expected_record_header = vec![0x59, 0, 0, 0, 0, 0, 0, 0x30];
     let mut expected_time_stamp = vec![0xC, 0, 0, 0, 0, 0, 0, 0];
     // 3: represents the size of argument
     // 6: represents the value type
@@ -56,15 +54,15 @@ fn test_string() -> TestCase {
 fn test_float() -> TestCase {
     let timestamp = 6;
     let arg = Argument { name: String::from("name"), value: Value::Floating(3.1415) };
-    let record = Record { timestamp, arguments: vec![arg] };
-    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0
+    let record = Record { timestamp, severity: Severity::Warn, arguments: vec![arg] };
+    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0x40
     // Timestamp = 0x6, 0, 0, 0, 0, 0, 0, 0
     // Arg Header = 0x35, 0, 0x4, 0x80, 0, 0, 0, 0
     // Arg name = 0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0
     // Arg value = 0x6F, 0x12, 0x83, 0xC0, 0xCA, 0x21, 0x09, 0x40
     let expected_result = vec![
-        0x59, 0, 0, 0, 0, 0, 0, 0, 0x6, 0, 0, 0, 0, 0, 0, 0, 0x35, 0, 0x4, 0x80, 0, 0, 0, 0, 0x6E,
-        0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x6F, 0x12, 0x83, 0xC0, 0xCA, 0x21, 0x09, 0x40,
+        0x59, 0, 0, 0, 0, 0, 0, 0x40, 0x6, 0, 0, 0, 0, 0, 0, 0, 0x35, 0, 0x4, 0x80, 0, 0, 0, 0,
+        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x6F, 0x12, 0x83, 0xC0, 0xCA, 0x21, 0x09, 0x40,
     ];
     ("test_float".to_string(), record, expected_result)
 }
@@ -72,15 +70,15 @@ fn test_float() -> TestCase {
 fn test_unsigned_int() -> TestCase {
     let timestamp = 6;
     let arg = Argument { name: String::from("name"), value: Value::UnsignedInt(3) };
-    let record = Record { timestamp, arguments: vec![arg] };
-    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0
+    let record = Record { timestamp, severity: Severity::Debug, arguments: vec![arg] };
+    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0x20
     // Timestamp = 0x6, 0, 0, 0, 0, 0, 0, 0
     // Arg Header = 0x34, 0, 0x4, 0x80, 0, 0, 0, 0
     // Arg name = 0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0
     // Arg value = 0x3, 0, 0, 0, 0, 0, 0, 0
     let expected_result = vec![
-        0x59, 0, 0, 0, 0, 0, 0, 0, 0x6, 0, 0, 0, 0, 0, 0, 0, 0x34, 0, 0x4, 0x80, 0, 0, 0, 0, 0x6E,
-        0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x3, 0, 0, 0, 0, 0, 0, 0,
+        0x59, 0, 0, 0, 0, 0, 0, 0x20, 0x6, 0, 0, 0, 0, 0, 0, 0, 0x34, 0, 0x4, 0x80, 0, 0, 0, 0,
+        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x3, 0, 0, 0, 0, 0, 0, 0,
     ];
     ("test_unsigned_int".to_string(), record, expected_result)
 }
@@ -88,15 +86,15 @@ fn test_unsigned_int() -> TestCase {
 fn test_signed_int_negative() -> TestCase {
     let timestamp = 9;
     let arg = Argument { name: String::from("name"), value: Value::SignedInt(-7) };
-    let record = Record { timestamp, arguments: vec![arg] };
-    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0
+    let record = Record { timestamp, severity: Severity::Error, arguments: vec![arg] };
+    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0x50
     // Timestamp = 0x9, 0, 0, 0, 0, 0, 0, 0
     // Arg Header = 0x33, 0, 0x4, 0x80, 0, 0, 0, 0
     // Arg name = 0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0
     // Arg value = 0xF9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
     let expected_result = vec![
-        0x59, 0, 0, 0, 0, 0, 0, 0, 0x9, 0, 0, 0, 0, 0, 0, 0, 0x33, 0, 0x4, 0x80, 0, 0, 0, 0, 0x6E,
-        0x61, 0x6D, 0x65, 0, 0, 0, 0, 0xF9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0x59, 0, 0, 0, 0, 0, 0, 0x50, 0x9, 0, 0, 0, 0, 0, 0, 0, 0x33, 0, 0x4, 0x80, 0, 0, 0, 0,
+        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0, 0xF9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     ];
     ("test_signed_int_negative".to_string(), record, expected_result)
 }
@@ -104,15 +102,15 @@ fn test_signed_int_negative() -> TestCase {
 fn test_signed_int_positive() -> TestCase {
     let timestamp = 9;
     let arg = Argument { name: String::from("name"), value: Value::SignedInt(4) };
-    let record = Record { timestamp, arguments: vec![arg] };
-    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0
+    let record = Record { timestamp, severity: Severity::Warn, arguments: vec![arg] };
+    // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0x40
     // Timestamp = 0x9, 0, 0, 0, 0, 0, 0, 0
     // Arg Header = 0x33, 0, 0x4, 0x80, 0, 0, 0, 0
     // Arg name = 0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0
     // Arg value = 0x4, 0, 0, 0, 0, 0, 0, 0
     let expected_result = vec![
-        0x59, 0, 0, 0, 0, 0, 0, 0, 0x9, 0, 0, 0, 0, 0, 0, 0, 0x33, 0, 0x4, 0x80, 0, 0, 0, 0, 0x6E,
-        0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x4, 0, 0, 0, 0, 0, 0, 0,
+        0x59, 0, 0, 0, 0, 0, 0, 0x40, 0x9, 0, 0, 0, 0, 0, 0, 0, 0x33, 0, 0x4, 0x80, 0, 0, 0, 0,
+        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x4, 0, 0, 0, 0, 0, 0, 0,
     ];
     ("test_signed_int_positive".to_string(), record, expected_result)
 }

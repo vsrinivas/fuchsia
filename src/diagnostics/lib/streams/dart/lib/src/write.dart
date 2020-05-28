@@ -35,7 +35,9 @@ const int _inlineStrRef = 0x8000;
 ///
 /// [log record]: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#log-record
 int writeRecord(ByteData buffer, Record record) {
-  final header = Header()..setType(tracingFormatLogRecordType);
+  final header = Header()
+    ..setType(tracingFormatLogRecordType)
+    ..setSeverity(record.severity.$value);
 
   var curOffset = 16;
   for (Argument argument in record.arguments) {

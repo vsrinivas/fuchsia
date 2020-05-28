@@ -19,6 +19,7 @@ class Header {
   static final _sizeRange = BitRange(4, 15);
   static final _nameRange = BitRange(16, 31);
   static final _valueRange = BitRange(32, 47);
+  static final _severityRange = BitRange(56, 63);
 
   /// Create a new header, optionally initialized with a known header value.
   Header([int value = 0]) : _bits = Bitfield64(value);
@@ -52,6 +53,12 @@ class Header {
 
   /// Record specific value data.
   int get value => _bits.read(_valueRange);
+
+  /// Set the severitu of the record.
+  void setSeverity(int value) => _bits.write(_severityRange, value);
+
+  /// Severity of the record.
+  int get severity => _bits.read(_severityRange);
 
   /// Raw bits of the header.
   int get rawBits => _bits.value;

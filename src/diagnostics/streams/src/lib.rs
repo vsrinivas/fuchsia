@@ -42,6 +42,9 @@ bitfield! {
 
     /// Reserved for record-type-specific data.
     u16, value_ref, set_value_ref: 47, 32;
+
+    /// Severity of the record, if any.
+    i8, severity, set_severity: 63, 56;
 }
 
 impl Header {
@@ -164,7 +167,7 @@ mod tests {
             encode::{BufMutShared, Encoder},
             parse::{parse_argument, parse_record, ParseResult},
         },
-        fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
+        fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value},
         fuchsia_zircon as zx,
         std::{fmt::Debug, io::Cursor},
     };
@@ -197,18 +200,20 @@ mod tests {
         }
     }
 
-    /// Bit pattern for the log record type and a record of two words: one header, one timestamp.
-    const MINIMAL_LOG_HEADER: u64 = 0x29;
+    /// Bit pattern for the log record type, severity info, and a record of two words: one header,
+    /// one timestamp.
+    const MINIMAL_LOG_HEADER: u64 = 0x3000000000000029;
 
     #[test]
     fn minimal_header() {
         let mut poked = Header(0);
         poked.set_type(TRACING_FORMAT_LOG_RECORD_TYPE);
         poked.set_size_words(2);
+        poked.set_severity(Severity::Info.into_primitive());
 
         assert_eq!(
             poked.0, MINIMAL_LOG_HEADER,
-            "minimal log header should only describe type and size"
+            "minimal log header should only describe type, size, and severity"
         );
     }
 
@@ -219,7 +224,7 @@ mod tests {
         expected_record.extend(&timestamp.to_le_bytes());
 
         assert_roundtrips(
-            Record { timestamp, arguments: vec![] },
+            Record { timestamp, severity: Severity::Info, arguments: vec![] },
             Encoder::write_record,
             parse_record,
             Some(&expected_record),
@@ -271,6 +276,7 @@ mod tests {
         assert_roundtrips(
             Record {
                 timestamp: zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                severity: Severity::Warn,
                 arguments: vec![
                     Argument { name: String::from("signed"), value: Value::SignedInt(-10) },
                     Argument { name: String::from("unsigned"), value: Value::SignedInt(7) },
@@ -292,6 +298,7 @@ mod tests {
         assert_roundtrips(
             Record {
                 timestamp: zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                severity: Severity::Trace,
                 arguments: vec![
                     Argument {
                         name: String::from("msg"),

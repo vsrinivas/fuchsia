@@ -21,7 +21,10 @@ TEST(StreamsRecordEncoder, Writable) {
   fuchsia::diagnostics::stream::Argument arg{.name = "arg_name", .value = std::move(value)};
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
-  fuchsia::diagnostics::stream::Record record{.timestamp = 12, .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{
+      .timestamp = 12,
+      .severity = fuchsia::diagnostics::stream::Severity::INFO,
+      .arguments = std::move(args)};
   // Write Record
   streams::log_record(record, &vec);
   int length = vec.size();
@@ -37,13 +40,17 @@ TEST(StreamsRecordEncoder, WriteRecordString) {
   fuchsia::diagnostics::stream::Argument arg{.name = "world", .value = std::move(value)};
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
-  fuchsia::diagnostics::stream::Record record{.timestamp = 5, .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{
+      .timestamp = 5,
+      .severity = fuchsia::diagnostics::stream::Severity::INFO,
+      .arguments = std::move(args)};
   streams::log_record(record, &vec);
 
   // Expected Results
   // 5: represents the size of the record
   // 9: represents the type of Record (Log record)
-  std::vector<uint8_t> expected_record_header({0x59, 0, 0, 0, 0, 0, 0, 0});
+  // 0x30: represents the severity
+  std::vector<uint8_t> expected_record_header({0x59, 0, 0, 0, 0, 0, 0, 0x30});
   // 5: represents the timestamp
   std::vector<uint8_t> expected_time_stamp({0x5, 0, 0, 0, 0, 0, 0, 0});
   // 3: represents the size of argument
@@ -79,9 +86,12 @@ TEST(StreamsRecordEncoder, WriteRecordSignedIntNegative) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{.timestamp = 9, .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{
+      .timestamp = 9,
+      .severity = fuchsia::diagnostics::stream::Severity::INFO,
+      .arguments = std::move(args)};
   streams::log_record(record, &vec);
-  std::vector<uint8_t> expected({0x59, 0, 0,    0,    0,    0,    0,    0,    0x9,  0,
+  std::vector<uint8_t> expected({0x59, 0, 0,    0,    0,    0,    0,    0x30, 0x9,  0,
                                  0,    0, 0,    0,    0,    0,    0x33, 0,    0x4,  0x80,
                                  0,    0, 0,    0,    'n',  'a',  'm',  'e',  0,    0,
                                  0,    0, 0xF9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF});
@@ -98,11 +108,14 @@ TEST(StreamsRecordEncoder, WriteRecordSignedIntPositive) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{.timestamp = 9, .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{
+      .timestamp = 9,
+      .severity = fuchsia::diagnostics::stream::Severity::INFO,
+      .arguments = std::move(args)};
   streams::log_record(record, &vec);
-  std::vector<uint8_t> expected({0x59, 0, 0,    0, 0,   0,    0, 0, 0x9, 0, 0,   0,   0,   0,
-                                 0,    0, 0x33, 0, 0x4, 0x80, 0, 0, 0,   0, 'n', 'a', 'm', 'e',
-                                 0,    0, 0,    0, 0x4, 0,    0, 0, 0,   0, 0,   0});
+  std::vector<uint8_t> expected({0x59, 0, 0,    0, 0,   0,    0, 0x30, 0x9, 0, 0,   0,   0,   0,
+                                 0,    0, 0x33, 0, 0x4, 0x80, 0, 0,    0,   0, 'n', 'a', 'm', 'e',
+                                 0,    0, 0,    0, 0x4, 0,    0, 0,    0,   0, 0,   0});
   EXPECT_EQ(vec, expected);
 }
 
@@ -116,11 +129,14 @@ TEST(StreamsRecordEncoder, WriteRecordUnsignedInt) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{.timestamp = 6, .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{
+      .timestamp = 6,
+      .severity = fuchsia::diagnostics::stream::Severity::INFO,
+      .arguments = std::move(args)};
   streams::log_record(record, &vec);
-  std::vector<uint8_t> expected({0x59, 0, 0,    0, 0,   0,    0, 0, 0x6, 0, 0,   0,   0,   0,
-                                 0,    0, 0x34, 0, 0x4, 0x80, 0, 0, 0,   0, 'n', 'a', 'm', 'e',
-                                 0,    0, 0,    0, 0x3, 0,    0, 0, 0,   0, 0,   0});
+  std::vector<uint8_t> expected({0x59, 0, 0,    0, 0,   0,    0, 0x30, 0x6, 0, 0,   0,   0,   0,
+                                 0,    0, 0x34, 0, 0x4, 0x80, 0, 0,    0,   0, 'n', 'a', 'm', 'e',
+                                 0,    0, 0,    0, 0x3, 0,    0, 0,    0,   0, 0,   0});
   EXPECT_EQ(vec, expected);
 }
 
@@ -134,9 +150,12 @@ TEST(StreamsRecordEncoder, WriteRecordFloat) {
   std::vector<fuchsia::diagnostics::stream::Argument> args;
   args.push_back(std::move(arg));
 
-  fuchsia::diagnostics::stream::Record record{.timestamp = 6, .arguments = std::move(args)};
+  fuchsia::diagnostics::stream::Record record{
+      .timestamp = 6,
+      .severity = fuchsia::diagnostics::stream::Severity::INFO,
+      .arguments = std::move(args)};
   streams::log_record(record, &vec);
-  std::vector<uint8_t> expected({0x59, 0, 0,    0,    0,    0,    0,    0,    0x6,  0,
+  std::vector<uint8_t> expected({0x59, 0, 0,    0,    0,    0,    0,    0x30, 0x6,  0,
                                  0,    0, 0,    0,    0,    0,    0x35, 0,    0x4,  0x80,
                                  0,    0, 0,    0,    'n',  'a',  'm',  'e',  0,    0,
                                  0,    0, 0x6F, 0x12, 0x83, 0xC0, 0xCA, 0x21, 0x09, 0x40});

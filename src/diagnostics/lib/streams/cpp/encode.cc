@@ -122,7 +122,7 @@ zx_status_t log_record(const fuchsia::diagnostics::stream::Record& record,
     record_size += log_argument(record.arguments[i].name, record.arguments[i].value, out);
   }
   uint64_t header = HeaderFields::Type::Make(9) | HeaderFields::SizeWords::Make(record_size) |
-                    HeaderFields::Reserved::Make(0);
+                    HeaderFields::Reserved::Make(0) | HeaderFields::Severity::Make(record.severity);
   // Set size and write header
   std::memcpy(out->data() + idx, &header, WORD_SIZE);
   return ZX_OK;
