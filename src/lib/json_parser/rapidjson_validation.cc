@@ -21,15 +21,6 @@ std::string InitSchemaError::ToString() const {
   return s.str();
 }
 
-std::unique_ptr<rapidjson::SchemaDocument> InitSchemaDeprecated(fxl::StringView json) {
-  auto result = InitSchema(json);
-  if (result.is_error()) {
-    FX_LOGS(ERROR) << result.error_value().ToString();
-    return nullptr;
-  }
-  return std::make_unique<rapidjson::SchemaDocument>(std::move(result.value()));
-}
-
 fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(json.data(), json.size()).HasParseError()) {
@@ -58,17 +49,6 @@ fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
     return fitx::error(s.str());
   }
   return fitx::ok();
-}
-
-bool ValidateSchemaDeprecated(const rapidjson::Value& value,
-                              const rapidjson::SchemaDocument& schema, fxl::StringView value_name) {
-  auto result = ValidateSchema(value, schema, value_name);
-  rapidjson::SchemaValidator validator(schema);
-  if (result.is_error()) {
-    FX_LOGS(ERROR) << result.error_value();
-    return false;
-  }
-  return true;
 }
 
 }  // namespace json_parser
