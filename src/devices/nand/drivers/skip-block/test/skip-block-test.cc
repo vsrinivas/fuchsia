@@ -274,6 +274,15 @@ class SkipBlockTest : public zxtest::Test {
     *bad_block_grown = result.value().bad_block_grown;
   }
 
+  void WriteBytesWithoutErase(nand::WriteBytesOperation op, zx_status_t expected = ZX_OK) {
+    if (!client_) {
+      client_.emplace(std::move(ddk().FidlClient()));
+    }
+    auto result = client_->WriteBytesWithoutErase(std::move(op));
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result.value().status, expected);
+  }
+
   void GetPartitionInfo(nand::PartitionInfo* out, zx_status_t expected = ZX_OK) {
     if (!client_) {
       client_.emplace(std::move(ddk().FidlClient()));
@@ -606,6 +615,108 @@ TEST_F(SkipBlockTest, WriteBytesAligned) {
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
   ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
+}
+
+TEST_F(SkipBlockTest, WriteBytesWithoutErase) {
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+  // Write block 5 directly without erase
+  nand().set_result(ZX_OK);
+
+  // Write the second page of block 5
+  constexpr size_t kSize = kPageSize;
+  constexpr size_t kNandOffset = 5 * kBlockSize + kPageSize;
+
+  zx::vmo vmo;
+  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+  nand::WriteBytesOperation op = {};
+  op.vmo = std::move(vmo);
+  op.offset = kNandOffset;
+  op.size = kSize;
+
+  ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op)));
+  ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+  ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+  ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
+}
+
+TEST_F(SkipBlockTest, GrownMultipleBadBlocksWriteBytesWithoutEraseFollowedByWriteBytes) {
+  ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+  // Bad block 5 and 6
+
+  // Writing starting from page 1 in block 5
+  constexpr size_t kBlockOffset = 5;
+  constexpr size_t kSize = kPageSize;
+  constexpr size_t kNandOffset = kBlockOffset * kBlockSize + kPageSize;
+
+  // Backed up read.
+  nand().set_result(ZX_OK);
+  // Write block 5 directly without erase and fails
+  nand().set_result(ZX_ERR_IO);
+  // Fall back writes.
+  // Erase Block 5
+  nand().set_result(ZX_OK);
+  // Write Block 5. But find that it becomes bad.
+  nand().set_result(ZX_ERR_IO);
+  // Erase Block 6. Find it bad as well.
+  nand().set_result(ZX_ERR_IO);
+  // Erase Block 7
+  nand().set_result(ZX_OK);
+  // Write Block 7
+  nand().set_result(ZX_OK);
+
+  // Test the safe way of using WriteBytesWithoutErase.
+
+  // Backed up the minimal block range that covers the write range.
+  // In this case it is block 5.
+  zx::vmo vmo_backed_up;
+  ASSERT_OK(zx::vmo::create(kBlockSize, 0, &vmo_backed_up));
+  {
+    zx::vmo dup;
+    vmo_backed_up.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+    nand::ReadWriteOperation op = {};
+    op.vmo = std::move(dup);
+    op.block = 5;
+    op.block_count = 1;
+    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_OK));
+  }
+
+  zx::vmo data;
+  ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &data));
+  fzl::VmoMapper mapper;
+  ASSERT_OK(mapper.Map(data, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  // Update the backed up data with the new data.
+  vmo_backed_up.write(mapper.start(), kPageSize, kSize);
+
+  // Attempt to write without erase.
+  {
+    nand::WriteBytesOperation op;
+    op.vmo = std::move(data);
+    op.offset = kNandOffset;
+    op.size = kSize;
+    ASSERT_NO_FATAL_FAILURES(WriteBytesWithoutErase(std::move(op), ZX_ERR_IO));
+  }
+
+  // Fall back writes on the minimal block range.
+  {
+    nand::WriteBytesOperation op = {};
+    op.vmo = std::move(vmo_backed_up);
+    op.offset = kBlockOffset * kBlockSize;
+    op.size = kBlockSize;
+    bool bad_block_grown;
+    ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+    ASSERT_TRUE(bad_block_grown);
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
+    ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
+    ASSERT_EQ(bad_block().grown_bad_blocks()[1], 6);
+    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+  }
+
+  // Validate content, expected to be at block 7.
+  ASSERT_NO_FATAL_FAILURES(ValidateWritten(7 * kBlockSize + kPageSize, kSize));
+  ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(7 * kBlockSize, kPageSize));
+  ASSERT_NO_FATAL_FAILURES(
+      ValidateUnwritten(7 * kBlockSize + 2 * kPageSize, kBlockSize - 2 * kPageSize));
 }
 
 TEST_F(SkipBlockTest, GetPartitionInfo) {

@@ -79,4 +79,22 @@ protocol SkipBlock {
     /// addresses after the section being written should be considered corrupted,
     /// and rewritten if applicable.
     WriteBytes(WriteBytesOperation op) -> (zx.status status, bool bad_block_grown);
+
+    /// Similar to WriteBytes except that it does not erase before writing
+    /// to a block, and it will simply abort when any error, including bad block
+    /// grown, occurs. The service is intended to be used for fine-tune optimization to reduce
+    /// NAND PE cycles.
+    ///
+    /// It should be noted that the caller must follow the requirements of the NAND chip.
+    /// Not all chips support write-without-erase, and those that do usually require writing
+    /// only to empty pages and in order (i.e. from the LSB page to MSB page within a block)
+    /// Failure to follow these requirements is undefined behavior, and may result in unexpected
+    /// changes to the NAND even outside the given write range and crc errors that leave the
+    /// storage in an unreadable state.
+    ///
+    /// The safe way of using this method is to first back up the data in the minimal
+    /// block range that covers the write range. If the method returns failure, fall back and
+    /// re-write the backed-up data (can be updated with the new data) to the minimal block
+    /// range using either WriteBytes or Write method.
+    WriteBytesWithoutErase(WriteBytesOperation op) -> (zx.status status);
 };

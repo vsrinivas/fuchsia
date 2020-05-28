@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
-#define SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
+#define SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
 
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <inttypes.h>
@@ -54,6 +54,8 @@ class SkipBlockDevice : public DeviceType,
   void Read(ReadWriteOperation op, ReadCompleter::Sync completer);
   void Write(ReadWriteOperation op, WriteCompleter::Sync completer);
   void WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync completer);
+  void WriteBytesWithoutErase(WriteBytesOperation op,
+                              WriteBytesWithoutEraseCompleter::Sync completer);
 
  private:
   explicit SkipBlockDevice(zx_device_t* parent, ddk::NandProtocolClient nand,
@@ -75,6 +77,8 @@ class SkipBlockDevice : public DeviceType,
 
   zx_status_t ReadLocked(ReadWriteOperation op) TA_REQ(lock_);
   zx_status_t WriteLocked(ReadWriteOperation op, bool* bad_block_grown) TA_REQ(lock_);
+  zx_status_t WriteBytesWithoutEraseLocked(size_t page_offset, size_t page_count,
+                                           ReadWriteOperation op) TA_REQ(lock_);
 
   zx_status_t ReadPartialBlocksLocked(WriteBytesOperation op, uint64_t block_size,
                                       uint64_t first_block, uint64_t last_block, uint64_t op_size,
@@ -94,4 +98,4 @@ class SkipBlockDevice : public DeviceType,
 
 }  // namespace nand
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
