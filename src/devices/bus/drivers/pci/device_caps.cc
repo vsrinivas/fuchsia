@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <fbl/string_buffer.h>
 #include <hwreg/bitfields.h>
 
 #include "capabilities/msi.h"
@@ -8,7 +9,6 @@
 #include "capabilities/pci_express.h"
 #include "common.h"
 #include "device.h"
-
 namespace pci {
 
 struct CapabilityHdr {
@@ -78,17 +78,19 @@ bool CapabilityCycleExists(const Config& cfg,
                            typename CapabilityBaseType::RegType offset) {
   auto found = list->find_if([&offset](const auto& c) { return c.base() == offset; });
   if (found != list->end()) {
-    zxlogf(ERROR, "%s found cycle in capabilities, disabling device: ", cfg.addr());
+    fbl::StringBuffer<256> log;
+    log.AppendPrintf("%s found cycle in capabilities, disabling device: ", cfg.addr());
     bool first = true;
     for (auto& cap = found; cap != list->end(); cap++) {
       if (!first) {
-        zxlogf(ERROR, " -> ");
+        log.AppendPrintf(" -> ");
       } else {
         first = false;
       }
-      zxlogf(ERROR, "%#x", cap->base());
+      log.AppendPrintf("%#x", cap->base());
     }
-    zxlogf(ERROR, " -> %#x", offset);
+    log.AppendPrintf(" -> %#x", offset);
+    zxlogf(ERROR, "%s", log.c_str());
     return true;
   }
 
@@ -166,8 +168,7 @@ zx_status_t Device::ParseCapabilities() {
       case Capability::Id::kMsi:
         st = AllocateCapability<MsiCapability>(cap_offset, *cfg_, &caps_.msi, &caps_.list);
         if (st != ZX_OK) {
-          zxlogf(ERROR, "%s Error allocating MSI capability: %d, %p", cfg_->addr(), st,
-                 caps_.msi);
+          zxlogf(ERROR, "%s Error allocating MSI capability: %d, %p", cfg_->addr(), st, caps_.msi);
           return st;
         }
         break;
@@ -288,8 +289,8 @@ zx_status_t Device::ParseExtendedCapabilities() {
     cap_offset = hdr.ptr;
     if (cap_offset &&
         (cap_offset < PCIE_EXT_CAP_PTR_MIN_VALID || cap_offset > PCIE_EXT_CAP_PTR_MAX_VALID)) {
-      zxlogf(ERROR, "%s ext_capability pointer out of range: %#02x, disabling device",
-             cfg_->addr(), cap_offset);
+      zxlogf(ERROR, "%s ext_capability pointer out of range: %#02x, disabling device", cfg_->addr(),
+             cap_offset);
       return ZX_ERR_OUT_OF_RANGE;
     }
   }

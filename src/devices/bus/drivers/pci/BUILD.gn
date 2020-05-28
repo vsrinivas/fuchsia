@@ -44,6 +44,7 @@ source_set("user_pci") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
 
     # TODO(ZX-4062): This shouldn't be here if the mmio code is actually
     # used in the test too.  Anything using that needs to be separately

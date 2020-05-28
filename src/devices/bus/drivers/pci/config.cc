@@ -63,7 +63,7 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf, ddk::MmioBuffer* ecam, uint8_t sta
     return ZX_ERR_INVALID_ARGS;
   }
 
-  ddk::MmioView view = ecam->View(bdf_to_ecam_offset(bdf, start_bus), ZX_PAGE_SIZE);
+  ddk::MmioView view = ecam->View(bdf_to_ecam_offset(bdf, start_bus), PCIE_EXTENDED_CONFIG_SIZE);
   *config = std::unique_ptr<MmioConfig>(new MmioConfig(bdf, std::move(view)));
   return ZX_OK;
 }

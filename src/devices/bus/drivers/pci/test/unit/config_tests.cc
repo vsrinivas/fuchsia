@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/status.h>
 #include <zircon/limits.h>
 
 #include <ddktl/protocol/pciroot.h>
@@ -215,6 +216,21 @@ TEST_F(PciConfigTests, ProxyConfigReadWrite) {
   std::unique_ptr<Config> cfg;
   ASSERT_OK(ProxyConfig::Create(default_bdf1(), &pciroot_client(), &cfg));
   ConfigReadWriteImpl(cfg.get());
+}
+
+TEST_F(PciConfigTests, ConfigGetView) {
+  std::unique_ptr<Config> cfg;
+  ASSERT_OK(ProxyConfig::Create(default_bdf1(), &pciroot_client(), &cfg));
+  ASSERT_EQ(cfg->get_view().status_value(), ZX_ERR_NOT_SUPPORTED);
+  cfg.reset();
+  auto& ecam_mmio = pciroot_proto().ecam().mmio();
+  ASSERT_OK(MmioConfig::Create(default_bdf2(), &ecam_mmio, /*start_bus=*/1, /*end_bus=*/2, &cfg));
+  zx::status result = cfg->get_view();
+  ASSERT_TRUE(result.is_ok());
+  auto view = std::move(result.value());
+  ASSERT_EQ(view.get_size(), PCIE_EXTENDED_CONFIG_SIZE);
+  ASSERT_EQ(view.get_offset(), bdf_to_ecam_offset(default_bdf2(), /*start_bus=*/1));
+  ASSERT_EQ(view.get_vmo()->get(), ecam_mmio.get_vmo()->get());
 }
 
 }  // namespace pci

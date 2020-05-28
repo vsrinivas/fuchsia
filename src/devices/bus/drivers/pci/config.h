@@ -6,7 +6,9 @@
 
 #include <endian.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/status.h>
 #include <stdio.h>
+#include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>
 
@@ -165,17 +167,11 @@ class Config {
   // interrupt pin for a bridge matches the standard 0x3D offset
   static constexpr PciReg16 kBridgeControl = PciReg16(0x3E);
 
-  // Create a Pci Configuration object of the appropriate type.
-  //
-  // @param base The base address for the PCI configuration space.  @param
-  // @param addr_type An enum value of PciAddrSpace to identify the time of address
-  // space the configuration object will use.
-  //
-  // @return a pointer to a new Config instance on success, nullptr on failure.
-  //
   inline const pci_bdf_t& bdf() const { return bdf_; }
   inline const char* addr(void) const { return addr_; }
   virtual const char* type(void) const = 0;
+  // Return a copy of the MmioView backing the Config's MMIO space, if supported.
+  virtual zx::status<ddk::MmioView> get_view() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   // Virtuals
   void DumpConfig(uint16_t len) const;
@@ -209,6 +205,7 @@ class MmioConfig : public Config {
   void Write(const PciReg16 addr, uint16_t val) const final;
   void Write(const PciReg32 addr, uint32_t val) const override;
   const char* type(void) const override;
+  virtual zx::status<ddk::MmioView> get_view() const final { return zx::ok(ddk::MmioView(view_)); }
 
  private:
   friend class FakeMmioConfig;
