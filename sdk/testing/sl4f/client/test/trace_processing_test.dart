@@ -422,6 +422,36 @@ void main(List<String> args) {
 
     expect(computeMean(results[0].values), _closeTo(4.405753983333));
     expect(computeMean(results[1].values), _closeTo(6.072069499999));
+    expect(computeMean(results[2].values), _closeTo(4.072828216666666));
+  });
+
+  test('Scenic frame stats metric (no connected frames edge case)', () async {
+    final model = createModelFromJsonString('''
+{
+  "displayTimeUnit": "ns",
+  "traceEvents": [
+    {
+      "cat": "gfx",
+      "name": "ApplyScheduledSessionUpdates",
+      "ts": 12345,
+      "pid": 35204,
+      "tid": 323993,
+      "ph": "X",
+      "dur": 200
+    }
+  ],
+  "systemTraceEvents": {
+    "events": [],
+    "type": "fuchsia"
+  }
+}
+''');
+
+    final results = scenicFrameStatsMetricsProcessor(model, {});
+
+    expect(results[0].values, equals([0.0]));
+    expect(results[1].values, equals([0.0]));
+    expect(results[2].values, equals([0.0]));
   });
 
   test('DRM FPS metric', () async {
