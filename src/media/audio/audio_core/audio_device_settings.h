@@ -57,8 +57,7 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
 
   // GetGainInfo
   // Fetch a copy of current gain state packed into a FIDL structure suitable for notifications.
-  void GetGainInfo(fuchsia::media::AudioGainInfo* out_info) const
-      FXL_LOCKS_EXCLUDED(settings_lock_);
+  fuchsia::media::AudioGainInfo GetGainInfo() const FXL_LOCKS_EXCLUDED(settings_lock_);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -73,7 +72,8 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   //////////////////////////////////////////////////////////////////////////////
 
   // Snapshot current gain state. Return flags indicating which settings changed since last time.
-  audio_set_gain_flags_t SnapshotGainState(GainState* out_state) FXL_LOCKS_EXCLUDED(settings_lock_);
+  std::pair<audio_set_gain_flags_t, AudioDeviceSettings::GainState> SnapshotGainState()
+      FXL_LOCKS_EXCLUDED(settings_lock_);
 
   //////////////////////////////////////////////////////////////////////////////
   //

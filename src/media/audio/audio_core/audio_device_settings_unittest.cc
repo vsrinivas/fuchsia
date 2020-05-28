@@ -35,8 +35,7 @@ TEST_F(AudioDeviceSettingsTest, AgcFalseWhenNotSupported) {
   hw_gain_state.can_agc = false;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
-  fuchsia::media::AudioGainInfo gain_info;
-  settings.GetGainInfo(&gain_info);
+  auto gain_info = settings.GetGainInfo();
 
   EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -51,8 +50,7 @@ TEST_F(AudioDeviceSettingsTest, MuteTrueWhenNotSupported) {
   hw_gain_state.can_mute = false;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
-  fuchsia::media::AudioGainInfo gain_info;
-  settings.GetGainInfo(&gain_info);
+  auto gain_info = settings.GetGainInfo();
 
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
 }
@@ -68,8 +66,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
   // Verify initial state.
-  fuchsia::media::AudioGainInfo gain_info;
-  settings.GetGainInfo(&gain_info);
+  auto gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -82,7 +79,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
   EXPECT_FALSE(settings.SetGainInfo(new_gain_info, 0 /* flags */));
 
   // State should match initial state.
-  settings.GetGainInfo(&gain_info);
+  gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -100,8 +97,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyGainDb) {
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
   // Verify initial state.
-  fuchsia::media::AudioGainInfo gain_info;
-  settings.GetGainInfo(&gain_info);
+  auto gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -114,7 +110,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyGainDb) {
   EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::SetAudioGainFlag_GainValid));
 
   // Only gain updated.
-  settings.GetGainInfo(&gain_info);
+  gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -132,8 +128,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyMute) {
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
   // Verify initial state.
-  fuchsia::media::AudioGainInfo gain_info;
-  settings.GetGainInfo(&gain_info);
+  auto gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -146,7 +141,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyMute) {
   EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::SetAudioGainFlag_MuteValid));
 
   // Only gain updated.
-  settings.GetGainInfo(&gain_info);
+  gain_info = settings.GetGainInfo();
   EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -164,8 +159,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
   // Verify initial state.
-  fuchsia::media::AudioGainInfo gain_info;
-  settings.GetGainInfo(&gain_info);
+  auto gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
@@ -178,7 +172,7 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
   EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::SetAudioGainFlag_AgcValid));
 
   // Only gain updated.
-  settings.GetGainInfo(&gain_info);
+  gain_info = settings.GetGainInfo();
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   // Note that we expect AgcSupported to remain unchanged.

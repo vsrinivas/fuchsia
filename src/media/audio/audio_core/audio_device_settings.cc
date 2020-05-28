@@ -7,6 +7,8 @@
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
+#include <cstdint>
+
 #include "src/media/audio/audio_core/audio_driver.h"
 
 namespace media::audio {
@@ -58,9 +60,8 @@ bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
   return needs_wake;
 }
 
-void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) const {
+fuchsia::media::AudioGainInfo AudioDeviceSettings::GetGainInfo() const {
   TRACE_DURATION("audio", "AudioDeviceSettings::GetGainInfo");
-  FX_DCHECK(out_info != nullptr);
 
   // TODO(35439): consider eliminating the acquisition of this lock.  In theory, the only mutation
   // of gain state happens during SetGainInfo, which is supposed to only be called from the
@@ -72,34 +73,34 @@ void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) c
   // for read which should always succeed without contention.
   std::lock_guard<std::mutex> lock(settings_lock_);
 
-  out_info->gain_db = gain_state_.gain_db;
-  out_info->flags = 0;
+  uint32_t flags = 0;
 
   if (gain_state_.muted) {
-    out_info->flags |= fuchsia::media::AudioGainInfoFlag_Mute;
+    flags |= fuchsia::media::AudioGainInfoFlag_Mute;
   }
 
   if (can_agc_) {
-    out_info->flags |= fuchsia::media::AudioGainInfoFlag_AgcSupported;
+    flags |= fuchsia::media::AudioGainInfoFlag_AgcSupported;
     if (gain_state_.agc_enabled) {
-      out_info->flags |= fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+      flags |= fuchsia::media::AudioGainInfoFlag_AgcEnabled;
     }
   }
+
+  return {
+      .gain_db = gain_state_.gain_db,
+      .flags = flags,
+  };
 }
 
-audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_state) {
+std::pair<audio_set_gain_flags_t, AudioDeviceSettings::GainState>
+AudioDeviceSettings::SnapshotGainState() {
   TRACE_DURATION("audio", "AudioDeviceSettings::SnapshotGainState");
-  FX_DCHECK(out_state != nullptr);
-  audio_set_gain_flags_t ret;
 
-  {
-    std::lock_guard<std::mutex> lock(settings_lock_);
-    *out_state = gain_state_;
-    ret = gain_state_dirty_flags_;
-    gain_state_dirty_flags_ = static_cast<audio_set_gain_flags_t>(0);
-  }
+  std::lock_guard<std::mutex> lock(settings_lock_);
+  audio_set_gain_flags_t flags = gain_state_dirty_flags_;
+  gain_state_dirty_flags_ = static_cast<audio_set_gain_flags_t>(0);
 
-  return ret;
+  return {flags, gain_state_};
 }
 
 }  // namespace media::audio

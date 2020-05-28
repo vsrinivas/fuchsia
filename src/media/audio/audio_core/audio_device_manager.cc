@@ -122,8 +122,7 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
   device->SetActivated();
 
   // Notify interested users of the new device.
-  fuchsia::media::AudioDeviceInfo info;
-  device->GetDeviceInfo(&info);
+  auto info = device->GetDeviceInfo();
 
   // We always report is_default as false in the OnDeviceAdded event. There will be a following
   // DefaultDeviceChange event that will signal if this device is now the default.
@@ -188,8 +187,7 @@ std::vector<fuchsia::media::AudioDeviceInfo> AudioDeviceManager::GetDeviceInfos(
 
   for (const auto& [_, dev] : devices_) {
     if (dev->token() != ZX_KOID_INVALID) {
-      fuchsia::media::AudioDeviceInfo info;
-      dev->GetDeviceInfo(&info);
+      auto info = dev->GetDeviceInfo();
       info.is_default =
           (dev->token() == (dev->is_input() ? default_input_token_ : default_output_token_));
       ret.push_back(std::move(info));
@@ -203,19 +201,18 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) { cbk(GetDeviceInfos
 
 void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) {
   TRACE_DURATION("audio", "AudioDeviceManager::GetDeviceGain");
-  fuchsia::media::AudioGainInfo info = {0};
 
   auto it = devices_.find(device_token);
   if (it == devices_.end()) {
-    cbk(ZX_KOID_INVALID, info);
+    cbk(ZX_KOID_INVALID, {});
     return;
   }
 
   auto [_, dev] = *it;
   FX_DCHECK(dev->device_settings() != nullptr);
-  dev->device_settings()->GetGainInfo(&info);
+  auto info = dev->device_settings()->GetGainInfo();
   cbk(device_token, info);
-}
+}  // namespace media::audio
 
 void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
                                        fuchsia::media::AudioGainInfo gain_info,
@@ -302,9 +299,8 @@ void AudioDeviceManager::AddDeviceToRouteGraph(const std::shared_ptr<AudioDevice
 
 void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::NotifyDeviceGainChanged");
-  fuchsia::media::AudioGainInfo info;
   FX_DCHECK(device.device_settings() != nullptr);
-  device.device_settings()->GetGainInfo(&info);
+  auto info = device.device_settings()->GetGainInfo();
 
   for (auto& client : bindings_.bindings()) {
     client->events().OnDeviceGainChanged(device.token(), info);

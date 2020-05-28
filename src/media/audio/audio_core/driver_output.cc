@@ -127,8 +127,7 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
   bool output_muted = true;
   const auto& settings = device_settings();
   if (settings != nullptr) {
-    AudioDeviceSettings::GainState cur_gain_state;
-    settings->SnapshotGainState(&cur_gain_state);
+    auto [flags, cur_gain_state] = settings->SnapshotGainState();
     output_muted = cur_gain_state.muted;
   }
 

@@ -271,17 +271,19 @@ const TimelineFunction& AudioDevice::driver_safe_read_or_write_ref_clock_to_fram
   return driver()->safe_read_or_write_ref_clock_to_frames();
 }
 
-void AudioDevice::GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const {
+fuchsia::media::AudioDeviceInfo AudioDevice::GetDeviceInfo() const {
   TRACE_DURATION("audio", "AudioDevice::GetDeviceInfo");
-  const auto& drv = *driver();
-  out_info->name = drv.manufacturer_name() + ' ' + drv.product_name();
-  out_info->unique_id = UniqueIdToString(drv.persistent_unique_id());
-  out_info->token_id = token();
-  out_info->is_input = is_input();
-  out_info->is_default = false;
 
   FX_DCHECK(device_settings_);
-  device_settings_->GetGainInfo(&out_info->gain_info);
+
+  return {
+      .name = driver()->manufacturer_name() + ' ' + driver()->product_name(),
+      .unique_id = UniqueIdToString(driver()->persistent_unique_id()),
+      .token_id = token(),
+      .is_input = is_input(),
+      .gain_info = device_settings_->GetGainInfo(),
+      .is_default = false,
+  };
 }
 
 }  // namespace media::audio

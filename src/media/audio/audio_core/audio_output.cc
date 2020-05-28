@@ -96,8 +96,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
     auto mixer = pipeline_->AddInput(std::move(stream), *usage);
     const auto& settings = device_settings();
     if (settings != nullptr) {
-      AudioDeviceSettings::GainState cur_gain_state;
-      settings->SnapshotGainState(&cur_gain_state);
+      auto [flags, cur_gain_state] = settings->SnapshotGainState();
 
       mixer->bookkeeping().gain.SetDestGain(
           cur_gain_state.muted

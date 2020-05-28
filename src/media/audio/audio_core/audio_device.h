@@ -80,7 +80,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   void SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_t set_flags);
 
   // Device info used during device enumeration and add-notifications.
-  void GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const;
+  fuchsia::media::AudioDeviceInfo GetDeviceInfo() const;
 
   // Gives derived classes a chance to set up hardware, then sets up the machinery needed for
   // scheduling processing tasks and schedules the first processing callback immediately in order

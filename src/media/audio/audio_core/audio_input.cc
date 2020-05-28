@@ -212,13 +212,12 @@ void AudioInput::UpdateDriverGainState() {
     return;
   }
 
-  AudioDeviceSettings::GainState state;
-  audio_set_gain_flags_t dirty_flags = settings->SnapshotGainState(&state);
+  auto [dirty_flags, gain_state] = settings->SnapshotGainState();
   if (!dirty_flags) {
     return;
   }
 
-  driver()->SetGain(state, dirty_flags);
+  driver()->SetGain(gain_state, dirty_flags);
 }
 
 }  // namespace media::audio
