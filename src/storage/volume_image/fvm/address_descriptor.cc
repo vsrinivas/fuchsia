@@ -72,7 +72,7 @@ fit::result<AddressDescriptor, std::string> AddressDescriptor::Deserialize(
     return fit::error("AddressDescriptor must contain a non empty array field 'mapping'.\n");
   }
 
-  AddressDescriptor descriptor;
+  AddressDescriptor descriptor = {};
   const auto& mapping_array = document["mappings"].GetArray();
   for (auto& mapping : mapping_array) {
     descriptor.mappings.push_back(FromValue(mapping));
