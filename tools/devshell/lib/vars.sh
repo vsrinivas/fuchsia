@@ -284,7 +284,7 @@ function get-fuchsia-device-addr {
         fi
         echo "${output}" ;;
      # Note: the arguments below enable netboot, mdns is always enabled as well.
-     *) fx-device-finder resolve -device-limit 1 -netboot -ipv4="${FX_ENABLE_IPV4}" "$@" "$device" ;;
+     *) fx-device-finder resolve -netboot -ipv4="${FX_ENABLE_IPV4}" "$@" "$device" ;;
   esac
 }
 
