@@ -5,8 +5,8 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_H_
 
-#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
@@ -54,7 +54,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
                        fuchsia::ui::policy::PresenterPtr presenter,
                        fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
                        fuchsia::wlan::service::WlanPtr wlan,
-                       fuchsia::device::manager::AdministratorPtr device_administrator,
+                       fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                        fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
@@ -132,7 +132,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Used to reset Wi-Fi during factory reset.
   fuchsia::wlan::service::WlanPtr wlan_;
   // Used to trigger device reboot.
-  fuchsia::device::manager::AdministratorPtr device_administrator_;
+  fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
   fit::function<void()> on_shutdown_;
 
   // Holds the presentation service.

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
@@ -38,16 +38,29 @@ class IntlPropertyProviderImpl : public fuchsia::intl::PropertyProvider {
   int call_count_ = 0;
 };
 
-class MockAdmin : public fuchsia::device::manager::Administrator {
+class MockAdmin : public fuchsia::hardware::power::statecontrol::Admin {
  public:
   bool suspend_called() { return suspend_called_; }
 
  private:
-  void Suspend(uint32_t flags, SuspendCallback callback) override {
+  void Suspend(fuchsia::hardware::power::statecontrol::SystemPowerState state,
+               SuspendCallback callback) override {
     ASSERT_FALSE(suspend_called_);
     suspend_called_ = true;
-    ASSERT_EQ(fuchsia::device::manager::SUSPEND_FLAG_REBOOT, flags);
-    callback(ZX_OK);
+    ASSERT_EQ(fuchsia::hardware::power::statecontrol::SystemPowerState::REBOOT, state);
+    callback(fuchsia::hardware::power::statecontrol::Admin_Suspend_Result::WithResponse(
+        fuchsia::hardware::power::statecontrol::Admin_Suspend_Response(ZX_OK)));
+  }
+
+  void Suspend2(fuchsia::hardware::power::statecontrol::SuspendRequest req,
+                Suspend2Callback callback) override {
+    ASSERT_FALSE(suspend_called_);
+    suspend_called_ = true;
+    ASSERT_TRUE(req.has_state());
+    ASSERT_EQ(fuchsia::hardware::power::statecontrol::SystemPowerState::REBOOT, req.state());
+    ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST, req.reason());
+    callback(fuchsia::hardware::power::statecontrol::Admin_Suspend2_Result::WithResponse(
+        fuchsia::hardware::power::statecontrol::Admin_Suspend2_Response(ZX_OK)));
   }
 
   bool suspend_called_ = false;
@@ -157,7 +170,7 @@ TEST_F(SessionmgrIntegrationTest, SessionShellReceivesComponentArgsFromConfig) {
 
 TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
   MockAdmin mock_admin;
-  fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
+  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> admin_bindings;
 
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   modular_testing::TestHarnessBuilder builder;
@@ -187,7 +200,7 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
   // suspend, then sessionmgr has reached its retry limit and we've failed to succesfully restart
   // the session.
   MockAdmin mock_admin;
-  fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
+  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> admin_bindings;
 
   // Use a session shell to determine if a session has been started.
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();

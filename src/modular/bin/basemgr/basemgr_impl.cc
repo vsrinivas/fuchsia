@@ -61,7 +61,7 @@ BasemgrImpl::BasemgrImpl(fuchsia::modular::session::ModularConfig config,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
                          fuchsia::wlan::service::WlanPtr wlan,
-                         fuchsia::device::manager::AdministratorPtr device_administrator,
+                         fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fit::function<void()> on_shutdown)
     : config_(std::move(config)),
       component_context_services_(std::move(incoming_services)),

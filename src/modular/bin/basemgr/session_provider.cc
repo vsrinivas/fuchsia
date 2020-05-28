@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/basemgr/session_provider.h"
 
-#include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -26,7 +26,7 @@ const int kMaxCrashRecoveryLimit = 3;
 const zx::duration kMaxCrashRecoveryDuration = zx::msec(3600 * 1000);  // 1 hour in milliseconds
 
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
-                                 fuchsia::device::manager::AdministratorPtr administrator,
+                                 fuchsia::hardware::power::statecontrol::AdminPtr administrator,
                                  fuchsia::modular::AppConfig sessionmgr,
                                  fuchsia::modular::AppConfig session_shell,
                                  fuchsia::modular::AppConfig story_shell,
@@ -143,10 +143,13 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
     if (session_crash_recovery_counter_ == kMaxCrashRecoveryLimit) {
       FX_LOGS(ERROR) << "Sessionmgr restart limit reached. Considering "
                         "this an unrecoverable failure.";
-      administrator_->Suspend(
-          fuchsia::device::manager::SUSPEND_FLAG_REBOOT, [](zx_status_t status) {
-            if (status != ZX_OK) {
-              FX_LOGS(ERROR) << "Failed to reboot: " << zx_status_get_string(status);
+      fuchsia::hardware::power::statecontrol::SuspendRequest req;
+      req.set_state(fuchsia::hardware::power::statecontrol::SystemPowerState::REBOOT);
+      req.set_reason(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+      administrator_->Suspend2(
+          std::move(req), [](fuchsia::hardware::power::statecontrol::Admin_Suspend2_Result status) {
+            if (status.is_err()) {
+              FX_LOGS(ERROR) << "Failed to reboot: " << zx_status_get_string(status.err());
             }
           });
       return;

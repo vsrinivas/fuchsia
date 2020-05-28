@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -54,7 +54,7 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
   component_context->svc()->Connect(device_settings_manager.NewRequest());
   fuchsia::wlan::service::WlanPtr wlan;
   component_context->svc()->Connect(wlan.NewRequest());
-  fuchsia::device::manager::AdministratorPtr administrator;
+  fuchsia::hardware::power::statecontrol::AdminPtr administrator;
   component_context->svc()->Connect(administrator.NewRequest());
 
   return std::make_unique<modular::BasemgrImpl>(

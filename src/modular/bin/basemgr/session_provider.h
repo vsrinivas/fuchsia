@@ -6,7 +6,7 @@
 #define SRC_MODULAR_BIN_BASEMGR_SESSION_PROVIDER_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -38,7 +38,7 @@ class SessionProvider {
   // meant to be a callback for BasemgrImpl to either display a base shell or
   // start a new session.
   SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
-                  fuchsia::device::manager::AdministratorPtr administrator,
+                  fuchsia::hardware::power::statecontrol::AdminPtr administrator,
                   fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
                   fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
@@ -71,7 +71,7 @@ class SessionProvider {
  private:
   Delegate* const delegate_;                // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;  // Not owned.
-  fuchsia::device::manager::AdministratorPtr administrator_;
+  fuchsia::hardware::power::statecontrol::AdminPtr administrator_;
   const fuchsia::modular::AppConfig sessionmgr_;
   const fuchsia::modular::AppConfig session_shell_;
   const fuchsia::modular::AppConfig story_shell_;

@@ -10,8 +10,8 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.Timezone",
-            "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.logger.LogSink",
             "fuchsia.settings.Intl",
             "fuchsia.setui.SetUiService",
