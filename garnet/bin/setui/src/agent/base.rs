@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::internal::agent::message::Receptor;
+use crate::internal::event;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingType, SwitchboardClient};
 use anyhow::Error;
@@ -29,7 +30,7 @@ pub enum AgentError {
 }
 
 /// Identification for the agent used for logging purposes.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Descriptor {
     Component(&'static str),
 }
@@ -38,11 +39,24 @@ pub enum Descriptor {
 #[derive(Clone)]
 pub struct Context {
     pub receptor: Receptor,
+    publisher: event::Publisher,
 }
 
 impl Context {
-    pub fn new(receptor: Receptor) -> Self {
-        Self { receptor: receptor }
+    pub async fn new(
+        receptor: Receptor,
+        descriptor: Descriptor,
+        event_factory: event::message::Factory,
+    ) -> Self {
+        Self {
+            receptor: receptor,
+            publisher: event::Publisher::create(&event_factory, event::Address::Agent(descriptor))
+                .await,
+        }
+    }
+
+    pub fn get_publisher(&self) -> event::Publisher {
+        self.publisher.clone()
     }
 }
 

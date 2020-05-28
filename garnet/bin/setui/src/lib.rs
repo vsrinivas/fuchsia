@@ -22,6 +22,7 @@ use {
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::internal::agent as internal_agent,
     crate::internal::core as internal_core,
+    crate::internal::event as internal_event,
     crate::internal::handler as internal_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
@@ -128,6 +129,7 @@ impl Environment {
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
+    event_subscriber_blueprints: Vec<internal_event::subscriber::BlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
@@ -144,6 +146,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             configuration: None,
             agent_blueprints: vec![],
+            event_subscriber_blueprints: vec![],
             storage_factory: storage_factory,
             generate_service: None,
             handlers: HashMap::new(),
@@ -183,6 +186,15 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    /// Event subscribers to participate
+    pub fn event_subscribers(
+        mut self,
+        subscribers: &[internal_event::subscriber::BlueprintHandle],
+    ) -> EnvironmentBuilder<T> {
+        self.event_subscriber_blueprints.append(&mut subscribers.to_vec());
+        self
+    }
+
     async fn prepare_env(
         self,
         runtime: Runtime,
@@ -218,6 +230,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_dir,
             settings,
             self.agent_blueprints,
+            self.event_subscriber_blueprints,
             service_context,
             Arc::new(Mutex::new(handler_factory)),
         )
@@ -354,11 +367,17 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
+    event_subscriber_blueprints: Vec<internal_event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
     let registry_messenger_factory = internal_core::message::create_hub();
     let setting_handler_messenger_factory = internal_handler::message::create_hub();
+    let event_messenger_factory = internal_event::message::create_hub();
+
+    for blueprint in event_subscriber_blueprints {
+        blueprint.create(event_messenger_factory.clone()).await;
+    }
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
@@ -368,7 +387,11 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create switchboard");
 
-    let mut agent_authority = AuthorityImpl::create(internal_agent::message::create_hub()).await?;
+    let mut agent_authority = AuthorityImpl::create(
+        internal_agent::message::create_hub(),
+        event_messenger_factory.clone(),
+    )
+    .await?;
 
     // Creates registry, used to register handlers for setting types.
     let _ = RegistryImpl::create(

@@ -5,20 +5,21 @@
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::{
-    AgentError, Authority, Blueprint, BlueprintHandle, Context, Descriptor, InitializationContext,
-    Invocation, InvocationResult, Lifespan,
+    AgentError, Authority, BlueprintHandle, Context, InitializationContext, Invocation,
+    InvocationResult, Lifespan,
 };
 use crate::internal::agent;
+use crate::internal::event;
 use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::switchboard_impl::SwitchboardBuilder;
+use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
 use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
-use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use rand::Rng;
@@ -34,24 +35,6 @@ type AckSender = futures::channel::oneshot::Sender<InvocationResult>;
 enum LifespanTarget {
     Initialization,
     Service,
-}
-
-struct TestAgentBlueprint {
-    generate: Arc<dyn Fn(Context) + Send + Sync>,
-    descriptor: Descriptor,
-}
-
-impl Blueprint for TestAgentBlueprint {
-    fn get_descriptor(&self) -> Descriptor {
-        self.descriptor.clone()
-    }
-
-    fn create(&self, context: Context) -> BoxFuture<'static, ()> {
-        let generate_fn = self.generate.clone();
-        Box::pin(async move {
-            (generate_fn)(context);
-        })
-    }
 }
 
 /// Agent provides a test agent to interact with the authority impl. It is
@@ -110,9 +93,8 @@ impl TestAgent {
         }));
 
         let agent_clone = agent.clone();
-        let blueprint = Arc::new(TestAgentBlueprint {
-            descriptor: Descriptor::Component("test"),
-            generate: Arc::new(move |mut context: Context| {
+        let blueprint = Arc::new(scaffold::agent::Blueprint::new(
+            scaffold::agent::Generate::Sync(Arc::new(move |mut context: Context| {
                 let agent = agent_clone.clone();
                 fasync::spawn(async move {
                     while let Ok((payload, client)) = context.receptor.next_payload().await {
@@ -126,8 +108,9 @@ impl TestAgent {
                         }
                     }
                 });
-            }),
-        });
+            })),
+            Box::leak(id.to_string().into_boxed_str()),
+        ));
 
         (agent.clone(), blueprint)
     }
@@ -221,7 +204,7 @@ async fn test_environment_startup() {
 }
 
 async fn create_authority() -> AuthorityImpl {
-    AuthorityImpl::create(agent::message::create_hub()).await.unwrap()
+    AuthorityImpl::create(agent::message::create_hub(), event::message::create_hub()).await.unwrap()
 }
 
 /// Ensures that agents are executed in sequential order and the

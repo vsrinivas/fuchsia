@@ -5,7 +5,7 @@
 use crate::agent::base::{AgentError, Authority, BlueprintHandle, Context, Invocation, Lifespan};
 
 use crate::internal::agent;
-use crate::internal::agent::message;
+use crate::internal::event;
 use crate::message::base::{Audience, MessengerType};
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
@@ -21,10 +21,15 @@ pub struct AuthorityImpl {
     messenger_factory: agent::message::Factory,
     // Messenger
     messenger: agent::message::Messenger,
+    // Factory to generate event messengers
+    event_factory: event::message::Factory,
 }
 
 impl AuthorityImpl {
-    pub async fn create(messenger_factory: message::Factory) -> Result<AuthorityImpl, Error> {
+    pub async fn create(
+        messenger_factory: agent::message::Factory,
+        event_factory: event::message::Factory,
+    ) -> Result<AuthorityImpl, Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
 
         if messenger_result.is_err() {
@@ -36,6 +41,7 @@ impl AuthorityImpl {
             agent_signatures: Vec::new(),
             messenger_factory: messenger_factory,
             messenger: client,
+            event_factory: event_factory,
         });
     }
 
@@ -110,7 +116,12 @@ impl Authority for AuthorityImpl {
         let (messenger, receptor) = create_result?;
         let signature = messenger.get_signature();
 
-        blueprint.create(Context { receptor: receptor }).await;
+        blueprint
+            .create(
+                Context::new(receptor, blueprint.get_descriptor(), self.event_factory.clone())
+                    .await,
+            )
+            .await;
 
         self.agent_signatures.push(signature);
 

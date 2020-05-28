@@ -30,6 +30,8 @@ macro_rules! message_hub_definition {
 
             pub type Factory = BaseFactory<$payload, $address>;
             pub type Messenger = BaseMessengerClient<$payload, $address>;
+
+            #[allow(dead_code)]
             pub type Client = BaseMessageClient<$payload, $address>;
 
             #[allow(dead_code)]
