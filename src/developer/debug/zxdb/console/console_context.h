@@ -220,6 +220,9 @@ class ConsoleContext : public ProcessObserver,
   // Generates a string describing the breakpoints that were hit.
   std::string DescribeHitBreakpoints(const std::vector<fxl::WeakPtr<Breakpoint>>& hits) const;
 
+  // When a thread stops on a breakpoint, sets that breakpoint to be the default.
+  void SetActiveBreakpointForStop(const StopInfo& info);
+
   Session* const session_;
 
   // The ID from a user perspective maps to a Target/Process pair.

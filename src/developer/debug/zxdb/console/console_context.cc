@@ -779,6 +779,7 @@ void ConsoleContext::OnThreadStopped(Thread* thread, const StopInfo& info) {
   SetActiveTarget(target);
   SetActiveThreadForTarget(thread);
   SetActiveFrameIdForThread(thread, 0);
+  SetActiveBreakpointForStop(info);
 
   // Show the location information.
   OutputThreadContext(thread, info);
@@ -1106,6 +1107,27 @@ std::string ConsoleContext::DescribeHitBreakpoints(
   }
   result.push_back(' ');
   return result;
+}
+
+void ConsoleContext::SetActiveBreakpointForStop(const StopInfo& info) {
+  // There can be multiple breakpoints at the same address. Use the one with the largest ID since
+  // it will be the one set most recently.
+  int max_id = 0;
+  const Breakpoint* bp = nullptr;
+
+  for (const auto& weak_bp : info.hit_breakpoints) {
+    if (!weak_bp || weak_bp->IsInternal())
+      continue;
+
+    int bp_id = IdForBreakpoint(weak_bp.get());
+    if (bp_id > max_id) {
+      max_id = bp_id;
+      bp = weak_bp.get();
+    }
+  }
+
+  if (bp)
+    SetActiveBreakpoint(bp);
 }
 
 }  // namespace zxdb
