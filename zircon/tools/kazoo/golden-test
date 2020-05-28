@@ -63,11 +63,11 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
 
 
 def build_golden(input_files, output_combined):
-    with open(output_combined, 'w') as outf:
+    with open(output_combined, 'wb') as outf:
         for filename in input_files:
-            outf.write('----- %s START -----\n' % os.path.basename(filename))
-            outf.write(open(filename, 'r').read())
-            outf.write('----- %s END -----\n\n\n' % os.path.basename(filename))
+            outf.write(('----- %s START -----\n' % os.path.basename(filename)).encode('utf-8'))
+            outf.write(open(filename, 'rb').read())
+            outf.write(('----- %s END -----\n\n\n' % os.path.basename(filename)).encode('utf-8'))
 
 
 def generate_kazoo_outputs(kazoo_binary, fidlc_json_path, all_output_styles,
