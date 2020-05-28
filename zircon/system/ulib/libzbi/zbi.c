@@ -18,8 +18,16 @@ static bool is_zbi_container(const zbi_header_t* hdr) {
 }
 
 zbi_result_t zbi_init(void* buffer, const size_t length) {
+  if (!buffer) {
+    return ZBI_RESULT_ERROR;
+  }
+
   if (length < sizeof(zbi_header_t)) {
     return ZBI_RESULT_TOO_BIG;
+  }
+
+  if ((uintptr_t)buffer % ZBI_ALIGNMENT != 0) {
+    return ZBI_RESULT_BAD_ALIGNMENT;
   }
 
   zbi_header_t* hdr = (zbi_header_t*)buffer;
@@ -67,7 +75,7 @@ static zbi_result_t zbi_check_internal(const void* base, uint32_t check_complete
 
   if (header->type != ZBI_TYPE_CONTAINER) {
     res = ZBI_RESULT_BAD_TYPE;
-  } else if (header->extra != ZBI_CONTAINER_MAGIC) {
+  } else if (header->extra != ZBI_CONTAINER_MAGIC || header->magic != ZBI_ITEM_MAGIC) {
     res = ZBI_RESULT_BAD_MAGIC;
   } else if ((header->flags & ZBI_FLAG_VERSION) == 0) {
     res = ZBI_RESULT_BAD_VERSION;

@@ -1,24 +1,25 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <libzbi/zbi-cpp.h>
-
 #include <assert.h>
-#include <memory>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <fbl/auto_call.h>
-#include <pretty/hexdump.h>
-#include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
+#include <memory>
+
+#include <fbl/auto_call.h>
+#include <libzbi/zbi-cpp.h>
+#include <pretty/hexdump.h>
+#include <unittest/unittest.h>
+
 #ifdef __Fuchsia__
-#include <libzbi/zbi-zx.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+
+#include <libzbi/zbi-zx.h>
 #endif
 
 const char kTestCmdline[] = "0123";
@@ -46,7 +47,8 @@ typedef struct test_zbi {
   char bootfs_payload[kBootfsPayloadLen];
 } test_zbi_t;
 static_assert(offsetof(test_zbi, cmdline_hdr) == sizeof(test_zbi::header));
-static_assert(offsetof(test_zbi, ramdisk_hdr) == offsetof(test_zbi, cmdline_payload[kCmdlinePayloadLen]));
+static_assert(offsetof(test_zbi, ramdisk_hdr) ==
+              offsetof(test_zbi, cmdline_payload[kCmdlinePayloadLen]));
 static_assert(offsetof(test_zbi, bootfs_hdr) == offsetof(test_zbi, ramdisk_payload[kRdPayloadLen]));
 
 static_assert(sizeof(test_zbi_t) % ZBI_ALIGNMENT == 0, "");
@@ -129,6 +131,253 @@ static zbi_result_t check_contents(zbi_header_t* hdr, void* payload, void* cooki
   } else {
     return ZBI_RESULT_ERROR;
   }
+}
+
+static bool ZbiTestInit() {
+  BEGIN_TEST;
+
+  alignas(ZBI_ALIGNMENT) uint8_t buffer[sizeof(zbi_header_t)];
+
+  ASSERT_EQ(zbi_init(buffer, sizeof(buffer)), ZBI_RESULT_OK);
+
+  auto* zbi = reinterpret_cast<zbi_header_t*>(buffer);
+  ASSERT_EQ(zbi->type, ZBI_TYPE_CONTAINER);
+
+  END_TEST;
+}
+
+static bool ZbiTestInitTooSmall() {
+  BEGIN_TEST;
+
+  alignas(ZBI_ALIGNMENT) uint8_t buffer[sizeof(zbi_header_t) - 1];
+
+  ASSERT_EQ(zbi_init(buffer, sizeof(buffer)), ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestInitNotAligned() {
+  BEGIN_TEST;
+
+  alignas(ZBI_ALIGNMENT) uint8_t buffer[sizeof(zbi_header_t) + 1];
+  void* misaligned_buffer = &buffer[1];
+
+  ASSERT_EQ(zbi_init(misaligned_buffer, sizeof(zbi_header_t)), ZBI_RESULT_BAD_ALIGNMENT);
+
+  END_TEST;
+}
+
+static bool ZbiTestInitNullBuffer() {
+  BEGIN_TEST;
+
+  ASSERT_EQ(zbi_init(nullptr, sizeof(zbi_header_t)), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+// TODO(fxb/52665): Consider pulling out the check logic into a common helper.
+static bool ZbiTestCheckEmptyContainer() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_OK);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckEmptyContainerWithErr() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check(&container, &err), ZBI_RESULT_OK);
+  ASSERT_EQ(err, nullptr);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckContainerBadType() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.type = 0;
+
+  ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_TYPE);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckContainerBadTypeWithErr() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.type = 0;
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check(&container, &err), ZBI_RESULT_BAD_TYPE);
+  ASSERT_EQ(err, &container);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckContainerBadExtra() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.extra = 0;
+
+  ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_MAGIC);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckContainerBadMagic() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.magic = 0;
+
+  ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_MAGIC);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckContainerBadVersion() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.flags &= ~ZBI_FLAG_VERSION;
+
+  ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_VERSION);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckContainerBadCrc32() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  // Entries with no checksum must have the crc32 field set to ZBI_ITEM_NO_CRC32.
+  container.flags &= ~ZBI_FLAG_CRC32;
+  container.crc32 = 0;
+
+  ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_CRC);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbi() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+
+  ASSERT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_OK);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbiWithErr() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check(zbi, &err), ZBI_RESULT_OK);
+  ASSERT_EQ(err, nullptr);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckFirstBadEntryIsMarked() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->cmdline_hdr.magic = 0;
+  zbi->ramdisk_hdr.magic = 0;
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check(zbi, &err), ZBI_RESULT_BAD_MAGIC);
+
+  ASSERT_EQ(err, &zbi->cmdline_hdr);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbiBadMagic() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->cmdline_hdr.magic = 0;
+
+  EXPECT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_BAD_MAGIC);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbiBadMagicWithErr() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->cmdline_hdr.magic = 0;
+  zbi_header_t* err = nullptr;
+
+  EXPECT_EQ(zbi_check(zbi, &err), ZBI_RESULT_BAD_MAGIC);
+
+  ASSERT_EQ(err, &zbi->cmdline_hdr);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbiBadVersion() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->cmdline_hdr.flags &= ~ZBI_FLAG_VERSION;
+
+  EXPECT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_BAD_VERSION);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbiBadCrc32() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->cmdline_hdr.flags &= ~ZBI_FLAG_CRC32;
+  zbi->cmdline_hdr.crc32 = 0;
+
+  ASSERT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_BAD_CRC);
+
+  free(zbi);
+
+  END_TEST;
+}
+
+static bool ZbiTestCheckTestZbiTruncated() {
+  BEGIN_TEST;
+
+  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
+  zbi->header.length = 1;
+
+  ASSERT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_ERR_TRUNCATED);
+
+  free(zbi);
+
+  END_TEST;
 }
 
 static bool ZbiTestBasic(void) {
@@ -343,7 +592,7 @@ static bool ZbiTestAppendMulti(void) {
 
 constexpr size_t kTestBufferSize = 1024;
 // Test that we can initialize empty buffers as ZBI containers.
-static bool ZbiTestInit(void) {
+static bool ZbiTestCppInit(void) {
   BEGIN_TEST;
 
   std::unique_ptr<uint8_t[]> buffer;
@@ -363,7 +612,7 @@ static bool ZbiTestInit(void) {
 }
 
 // Test that we don't try to create a ZBI in a container that's not big enough.
-static bool ZbiTestInitTooSmall(void) {
+static bool ZbiTestCppInitTooSmall(void) {
   BEGIN_TEST;
 
   constexpr uint8_t kSentinel = 0xab;
@@ -546,19 +795,41 @@ static bool ZbiZxTestOverflowAtPageBoundary() {
 #endif
 
 BEGIN_TEST_CASE(zbi_tests)
+RUN_TEST(ZbiTestInit)
+RUN_TEST(ZbiTestInitTooSmall)
+RUN_TEST(ZbiTestInitNotAligned)
+RUN_TEST(ZbiTestInitNullBuffer)
+
+RUN_TEST(ZbiTestCheckEmptyContainer)
+RUN_TEST(ZbiTestCheckEmptyContainerWithErr)
+RUN_TEST(ZbiTestCheckContainerBadType)
+RUN_TEST(ZbiTestCheckContainerBadTypeWithErr)
+RUN_TEST(ZbiTestCheckContainerBadExtra)
+RUN_TEST(ZbiTestCheckContainerBadMagic)
+RUN_TEST(ZbiTestCheckContainerBadVersion)
+RUN_TEST(ZbiTestCheckContainerBadCrc32)
+
+RUN_TEST(ZbiTestCheckTestZbi)
+RUN_TEST(ZbiTestCheckTestZbiWithErr)
+RUN_TEST(ZbiTestCheckFirstBadEntryIsMarked)
+RUN_TEST(ZbiTestCheckTestZbiBadMagic)
+RUN_TEST(ZbiTestCheckTestZbiBadMagicWithErr)
+RUN_TEST(ZbiTestCheckTestZbiBadVersion)
+RUN_TEST(ZbiTestCheckTestZbiBadCrc32)
+RUN_TEST(ZbiTestCheckTestZbiTruncated)
+
 // Basic tests.
 RUN_TEST(ZbiTestBasic)
 RUN_TEST(ZbiTestBadContainer)
 RUN_TEST(ZbiTestTruncated)
 
+RUN_TEST(ZbiTestCppInit)
+RUN_TEST(ZbiTestCppInitTooSmall)
+
 // Append tests.
 RUN_TEST(ZbiTestAppend)
 RUN_TEST(ZbiTestAppendFull)
 RUN_TEST(ZbiTestAppendMulti)
-
-// Init tests.
-RUN_TEST(ZbiTestInit)
-RUN_TEST(ZbiTestInitTooSmall)
 
 // Extend tests.
 RUN_TEST(ZbiTestExtendOkay)
