@@ -6,8 +6,9 @@
 package runtests
 
 import (
-	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 	"time"
+
+	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 )
 
 // TestResult is the exit result of a test.
@@ -77,4 +78,7 @@ type TestDetails struct {
 
 	// Duration is how long the test execution took.
 	DurationMillis int64 `json:"duration_milliseconds"`
+
+	// IsTestingFailureMode is true iff this test was produced by tefmocheck.
+	IsTestingFailureMode bool `json:"is_testing_failure_mode"`
 }

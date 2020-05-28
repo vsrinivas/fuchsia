@@ -52,16 +52,19 @@ func TestRunChecks(t *testing.T) {
 	}
 	want := []runtests.TestDetails{
 		{
-			Name:   path.Join(checkTestNamePrefix, falseCheck.Name()),
-			Result: runtests.TestSuccess,
+			Name:                 path.Join(checkTestNamePrefix, falseCheck.Name()),
+			Result:               runtests.TestSuccess,
+			IsTestingFailureMode: true,
 		},
 		{
-			Name:   path.Join(checkTestNamePrefix, trueCheck.Name()),
-			Result: runtests.TestFailure,
+			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
+			Result:               runtests.TestFailure,
+			IsTestingFailureMode: true,
 		},
 		{
-			Name:   path.Join(checkTestNamePrefix, panicCheck.Name()),
-			Result: runtests.TestSuccess,
+			Name:                 path.Join(checkTestNamePrefix, panicCheck.Name()),
+			Result:               runtests.TestSuccess,
+			IsTestingFailureMode: true,
 		},
 	}
 

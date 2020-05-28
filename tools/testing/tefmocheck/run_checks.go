@@ -24,22 +24,18 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs) []runtests.TestDet
 	for _, check := range checks {
 		// We run more specific checks first, so it's not useful to run any checks
 		// once we have our first failure.
-		if anyFailed {
-			checkTests = append(checkTests, runtests.TestDetails{
-				Name:   path.Join(checkTestNamePrefix, check.Name()),
-				Result: runtests.TestSuccess,
-			})
-		} else if anyFailed = check.Check(to); anyFailed {
-			checkTests = append(checkTests, runtests.TestDetails{
-				Name:   path.Join(checkTestNamePrefix, check.Name()),
-				Result: runtests.TestFailure,
-			})
-		} else {
-			checkTests = append(checkTests, runtests.TestDetails{
-				Name:   path.Join(checkTestNamePrefix, check.Name()),
-				Result: runtests.TestSuccess,
-			})
+		testDetails := runtests.TestDetails{
+			Name:                 path.Join(checkTestNamePrefix, check.Name()),
+			IsTestingFailureMode: true,
 		}
+		if anyFailed {
+			testDetails.Result = runtests.TestSuccess
+		} else if anyFailed = check.Check(to); anyFailed {
+			testDetails.Result = runtests.TestFailure
+		} else {
+			testDetails.Result = runtests.TestSuccess
+		}
+		checkTests = append(checkTests, testDetails)
 	}
 	return checkTests
 }
