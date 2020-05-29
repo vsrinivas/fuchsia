@@ -27,20 +27,22 @@ zx_status_t HandleTable::Get(zx_handle_t handle, fbl::RefPtr<Object>* out) {
 __EXPORT
 zx_status_t HandleTable::Add(fbl::RefPtr<Object>&& obj, zx_handle_t* out) {
   fbl::AutoLock guard(&lock_);
+  bool found_slot = false;
 
   for (size_t i = 0; i < handles_.size(); ++i) {
     if (!handles_[i]) {
       handles_[i] = std::move(obj);
       *out = IndexToHandle(i);
-      ftracef("fake_handle_%s: handle = %#x, type = %u, obj = %p, index = %zu\n", __func__, *out,
-              static_cast<uint32_t>(handles_[i]->type()), handles_[i].get(), i);
-      return ZX_OK;
+      found_slot = true;
+      break;
     }
   }
 
-  handles_.push_back(std::move(obj));
-  *out = IndexToHandle(handles_.size() - 1);
-  ftracef("fake_handle_%s: handle = %#x, type = %u, obj = %p, index = %zu\n", __func__, *out,
+  if (!found_slot) {
+    handles_.push_back(std::move(obj));
+    *out = IndexToHandle(handles_.size() - 1);
+  }
+  ftracef("handle = %#x, type = %u, obj = %p, index = %zu\n", *out,
           static_cast<uint32_t>(handles_[handles_.size() - 1]->type()),
           handles_[handles_.size() - 1].get(), handles_.size() - 1);
   return ZX_OK;

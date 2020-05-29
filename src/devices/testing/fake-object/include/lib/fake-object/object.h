@@ -18,8 +18,8 @@
 
 #define FAKE_OBJECT_TRACE 0
 #if FAKE_OBJECT_TRACE
-#define ftracef(...)                \
-  printf("        %s: ", __func__); \
+#define ftracef(...)                    \
+  printf("fake-object %s: ", __func__); \
   printf(__VA_ARGS__);
 #else
 #define ftracef(...) ;
