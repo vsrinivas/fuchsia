@@ -209,7 +209,9 @@ void InterceptedComponent::KillImpl() {
   if (on_kill_) {
     on_kill_();
   }
-  binding_.events().OnTerminated(exit_code_, termination_reason_);
+  if (binding_.is_bound()) {
+    binding_.events().OnTerminated(exit_code_, termination_reason_);
+  }
   binding_.Unbind();
 }
 
