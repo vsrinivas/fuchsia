@@ -56,19 +56,10 @@ mod tests {
         fx_log_packet_t, LogHierarchy, LogProperty, Message, MessageLabel, Severity, METADATA_SIZE,
     };
     use super::*;
-
-    use fuchsia_async::DurationExt;
-    use fuchsia_zircon::prelude::*;
-    use futures::future::TryFutureExt;
     use futures::stream::TryStreamExt;
-    use std::sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    };
 
-    #[test]
-    fn logger_stream_test() {
-        let mut executor = fasync::Executor::new().unwrap();
+    #[fasync::run_until_stalled(test)]
+    async fn logger_stream_test() {
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let mut packet: fx_log_packet_t = Default::default();
         packet.metadata.pid = 1;
@@ -77,7 +68,7 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let ls = LogMessageSocket::new(sout, Arc::new(SourceIdentity::empty())).unwrap();
+        let mut ls = LogMessageSocket::new(sout, Arc::new(SourceIdentity::empty())).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let mut expected_p = Message {
             size: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
@@ -96,40 +87,16 @@ mod tests {
             ),
         };
         expected_p.contents.sort();
-        let calltimes = Arc::new(AtomicUsize::new(0));
-        let c = calltimes.clone();
-        let f = ls
-            .map_ok(move |mut msg| {
-                msg.contents.sort();
-                assert_eq!(msg, expected_p);
-                c.fetch_add(1, Ordering::Relaxed);
-            })
-            .try_collect::<()>();
 
-        fasync::spawn(f.unwrap_or_else(|e| {
-            panic!("test fail {:?}", e);
-        }));
-
-        let tries = 10;
-        for _ in 0..tries {
-            if calltimes.load(Ordering::Relaxed) == 1 {
-                break;
-            }
-            let timeout = fasync::Timer::new(100.millis().after_now());
-            executor.run(timeout, 2);
-        }
-        assert_eq!(1, calltimes.load(Ordering::Relaxed));
+        let mut result_message = ls.try_next().await.unwrap().unwrap();
+        result_message.contents.sort();
+        assert_eq!(result_message, expected_p);
 
         // write one more time
         sin.write(packet.as_bytes()).unwrap();
 
-        for _ in 0..tries {
-            if calltimes.load(Ordering::Relaxed) == 2 {
-                break;
-            }
-            let timeout = fasync::Timer::new(100.millis().after_now());
-            executor.run(timeout, 2);
-        }
-        assert_eq!(2, calltimes.load(Ordering::Relaxed));
+        let mut result_message = ls.try_next().await.unwrap().unwrap();
+        result_message.contents.sort();
+        assert_eq!(result_message, expected_p);
     }
 }
