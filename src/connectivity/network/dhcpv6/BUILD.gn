@@ -34,5 +34,8 @@ test_package("dhcpv6-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":dhcpv6-tests" ]
+  deps = [
+    ":dhcpv6-tests",
+    "client:tests",
+  ]
 }
