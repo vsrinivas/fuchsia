@@ -31,7 +31,7 @@ class OperationContainer {
   virtual ~OperationContainer();
 
   // Adds |o| to this container and takes ownership.
-  virtual void Add(std::unique_ptr<OperationBase> o) final;
+  void Add(std::unique_ptr<OperationBase> o);
 
   // Adds |task| to be scheduled on |this|. This mirrors
   // the interface in fit::executor, and is here only during
