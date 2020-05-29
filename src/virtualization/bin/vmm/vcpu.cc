@@ -109,11 +109,12 @@ static zx_status_t HandleMemX86(const zx_packet_guest_mem_t& mem, uint64_t trap_
 Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr)
     : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr) {}
 
-void Vcpu::Start() {
-  std::promise<void> barrier;
-  std::future<void> barrier_future = barrier.get_future();
+zx_status_t Vcpu::Start() {
+  std::promise<zx_status_t> barrier;
+  std::future<zx_status_t> barrier_future = barrier.get_future();
   future_ = std::async(std::launch::async, fit::bind_member(this, &Vcpu::Loop), std::move(barrier));
   barrier_future.wait();
+  return barrier_future.get();
 }
 
 zx_status_t Vcpu::Join() { return future_.get(); }
@@ -123,7 +124,7 @@ Vcpu* Vcpu::GetCurrent() {
   return thread_vcpu;
 }
 
-zx_status_t Vcpu::Loop(std::promise<void> barrier) {
+zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
   FX_DCHECK(thread_vcpu == nullptr) << "Thread has multiple VCPUs";
 
   // Set the thread state.
@@ -142,6 +143,7 @@ zx_status_t Vcpu::Loop(std::promise<void> barrier) {
     zx_status_t status = zx::vcpu::create(guest_->object(), 0, entry_, &vcpu_);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to create VCPU " << id_ << " " << status;
+      barrier.set_value(status);
       return status;
     }
   }
@@ -159,12 +161,13 @@ zx_status_t Vcpu::Loop(std::promise<void> barrier) {
     zx_status_t status = vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to set VCPU " << id_ << " state " << status;
+      barrier.set_value(status);
       return status;
     }
   }
 
   // Unblock VCPU startup barrier.
-  barrier.set_value();
+  barrier.set_value(ZX_OK);
 
   while (true) {
     zx_port_packet_t packet;

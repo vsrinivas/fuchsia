@@ -174,8 +174,7 @@ zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_pt
     return ZX_OK;
   }
   vcpus_[id] = std::make_unique<Vcpu>(id, this, entry, boot_ptr);
-  vcpus_[id]->Start();
-  return ZX_OK;
+  return vcpus_[id]->Start();
 }
 
 zx_status_t Guest::Interrupt(uint64_t mask, uint8_t vector) {

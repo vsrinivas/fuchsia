@@ -20,7 +20,7 @@ class Vcpu {
   Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr);
 
   // Begins VCPU execution.
-  void Start();
+  zx_status_t Start();
 
   // Waits for the VCPU to transition to a terminal state.
   zx_status_t Join();
@@ -35,7 +35,7 @@ class Vcpu {
 
  private:
   // Resume the VCPU and handle packets in a loop.
-  zx_status_t Loop(std::promise<void> barrier);
+  zx_status_t Loop(std::promise<zx_status_t> barrier);
 
   // Guest packet handlers
   zx_status_t HandlePacketLocked(const zx_port_packet_t& packet);
