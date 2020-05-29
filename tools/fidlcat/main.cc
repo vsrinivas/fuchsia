@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/common/inet_util.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/message_decoder.h"

@@ -120,7 +120,7 @@ TEST_F(ProcessImplTest, GetTLSHelpers) {
   module.build_id = kBuildId;
   modules.push_back(module);
 
-  TargetImpl* target = session().system_impl().GetTargetImpls()[0];
+  TargetImpl* target = session().system().GetTargetImpls()[0];
   target->process()->OnModules(modules, std::vector<uint64_t>());
 
   constexpr uint64_t kThrdTAddr = 0x1000;

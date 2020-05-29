@@ -12,7 +12,7 @@
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-#include "src/developer/debug/zxdb/client/system_impl.h"
+#include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
@@ -41,7 +41,7 @@ void RemoteAPITest::InjectModule(Process* process, fxl::RefPtr<ModuleSymbols> mo
   modules.push_back(load);
 
   // Need to convert to an actual ProcessImpl.
-  ProcessImpl* process_impl = session().system_impl().ProcessImplFromKoid(process->GetKoid());
+  ProcessImpl* process_impl = session().system().ProcessImplFromKoid(process->GetKoid());
   FX_CHECK(process_impl);
   process_impl->OnModules(modules, std::vector<uint64_t>());
 }
@@ -71,7 +71,7 @@ fxl::RefPtr<MockModuleSymbols> RemoteAPITest::InjectMockModule(Process* process,
 }
 
 Process* RemoteAPITest::InjectProcess(uint64_t process_koid) {
-  auto targets = session().system_impl().GetTargetImpls();
+  auto targets = session().system().GetTargetImpls();
   if (targets.size() != 1u) {
     ADD_FAILURE();
     return nullptr;

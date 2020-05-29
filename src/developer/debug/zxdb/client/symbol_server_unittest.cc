@@ -30,7 +30,7 @@ class SymbolServerTest : public TestWithLoop {
 
     auto server = std::make_unique<MockCloudStorageSymbolServer>(&session_, "gs://fake-bucket");
     server_ = server.get();
-    session_.system_impl().InjectSymbolServerForTesting(std::move(server));
+    session_.system().InjectSymbolServerForTesting(std::move(server));
   }
 
   virtual ~SymbolServerTest() = default;
@@ -46,7 +46,7 @@ class SymbolServerTest : public TestWithLoop {
   }
 
   Process* CreateTestProcess() {
-    TargetImpl* target = session()->system_impl().GetTargetImpls()[0];
+    TargetImpl* target = session()->system().GetTargetImpls()[0];
     target->CreateProcessForTesting(1234, "foo");
     return target->GetProcess();
   }

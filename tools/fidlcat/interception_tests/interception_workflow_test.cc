@@ -424,7 +424,7 @@ ProcessController::~ProcessController() {}
 void ProcessController::InjectProcesses(zxdb::Session& session) {
   for (auto process_koid : process_koids_) {
     std::string test_name = "test_" + std::to_string(process_koid);
-    zxdb::TargetImpl* target = session.system_impl().CreateNewTargetImpl(nullptr);
+    zxdb::TargetImpl* target = session.system().CreateNewTargetImpl(nullptr);
     target->CreateProcessForTesting(process_koid, test_name);
     processes_.push_back(target->GetProcess());
   }

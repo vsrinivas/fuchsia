@@ -15,7 +15,6 @@
 namespace zxdb {
 
 class Err;
-class SystemImpl;
 
 // A Job represents the abstract idea of a job that can be debugged.
 // The job is attached if there's a corresponding job running and we have the koid and name for it.

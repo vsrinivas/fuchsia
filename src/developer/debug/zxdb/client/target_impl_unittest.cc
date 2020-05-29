@@ -114,7 +114,7 @@ class TargetImplTest : public TestWithLoop {
 // Tests that the process state is updated when trying to launch with no
 // connection to the remote system.
 TEST_F(TargetImplTest, LaunchNoConnection) {
-  auto target_impls = session().system_impl().GetTargetImpls();
+  auto target_impls = session().system().GetTargetImpls();
   ASSERT_EQ(1u, target_impls.size());
   TargetImpl* target = target_impls[0];
 
@@ -140,7 +140,7 @@ TEST_F(TargetImplTest, LaunchNoConnection) {
 
 // Tests a successful launch and kill.
 TEST_F(TargetImplTest, LaunchKill) {
-  auto target_impls = session().system_impl().GetTargetImpls();
+  auto target_impls = session().system().GetTargetImpls();
   ASSERT_EQ(1u, target_impls.size());
   TargetImpl* target = target_impls[0];
 
@@ -216,7 +216,7 @@ TEST_F(TargetImplTest, LaunchKill) {
 
 // Tests a successful attach and detach.
 TEST_F(TargetImplTest, AttachDetach) {
-  auto target_impls = session().system_impl().GetTargetImpls();
+  auto target_impls = session().system().GetTargetImpls();
   ASSERT_EQ(1u, target_impls.size());
   TargetImpl* target = target_impls[0];
 
@@ -266,7 +266,7 @@ TEST_F(TargetImplTest, AttachDetach) {
 }
 
 TEST_F(TargetImplTest, AttachToAlreadyAttached) {
-  auto target_impls = session().system_impl().GetTargetImpls();
+  auto target_impls = session().system().GetTargetImpls();
 
   constexpr uint64_t kProcessKoid = 0x1;
   const std::string kProcessName = "process-1";

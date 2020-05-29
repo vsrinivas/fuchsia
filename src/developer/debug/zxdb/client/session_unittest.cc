@@ -155,7 +155,7 @@ class SessionTest : public RemoteAPITest {
 void SessionSink::JobFilter(const debug_ipc::JobFilterRequest& request,
                             fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) {
   debug_ipc::JobFilterReply reply;
-  std::vector<zxdb::Target*> targets = session_test_->session().system_impl().GetTargets();
+  std::vector<zxdb::Target*> targets = session_test_->session().system().GetTargets();
   for (const auto& filter : request.filters) {
     for (const auto& process : session_test_->existing_processes()) {
       // Basic simulation of filtering. We only expect to find the filter string within the

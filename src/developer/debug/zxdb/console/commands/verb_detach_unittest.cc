@@ -55,7 +55,7 @@ class VerbsProcessTest : public RemoteAPITest {
 TEST_F(VerbsProcessTest, Detach) {
   MockConsole console(&session());
 
-  auto targets = session().system_impl().GetTargetImpls();
+  auto targets = session().system().GetTargetImpls();
   ASSERT_EQ(targets.size(), 1u);
 
   constexpr uint64_t kProcessKoid = 1;

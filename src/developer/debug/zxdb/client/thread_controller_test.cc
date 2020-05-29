@@ -46,7 +46,7 @@ void ThreadControllerTest::SetUp() {
   sym_load.build_id = build_id;
   modules.push_back(sym_load);
 
-  TargetImpl* target = session().system_impl().GetTargetImpls()[0];
+  TargetImpl* target = session().system().GetTargetImpls()[0];
   target->process()->OnModules(modules, std::vector<uint64_t>());
 }
 

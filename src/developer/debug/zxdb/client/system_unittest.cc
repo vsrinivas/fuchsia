@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/system_impl.h"
+#include "src/developer/debug/zxdb/client/system.h"
 
 #include <gtest/gtest.h>
 
@@ -57,10 +57,10 @@ class APISink : public MockRemoteAPI {
   std::vector<debug_ipc::AttachRequest> attach_requests_;
 };
 
-class SystemImplTest : public RemoteAPITest {
+class SystemTest : public RemoteAPITest {
  public:
-  SystemImplTest() = default;
-  ~SystemImplTest() override = default;
+  SystemTest() = default;
+  ~SystemTest() override = default;
 
   APISink* sink() { return sink_; }
 
@@ -106,7 +106,7 @@ class MockSystemObserver : public TargetObserver, public ProcessObserver {
 }  // namespace
 
 // Tests that thread state is updated when doing a system-wide continue.
-TEST_F(SystemImplTest, GlobalContinue) {
+TEST_F(SystemTest, GlobalContinue) {
   // Make a process and thread for notifying about.
   constexpr uint64_t kProcessKoid = 1234;
   InjectProcess(kProcessKoid);
@@ -146,8 +146,8 @@ TEST_F(SystemImplTest, GlobalContinue) {
   ASSERT_EQ(0u, thread2->GetStack().size());
 }
 
-TEST_F(SystemImplTest, FilterMatchesAndRematching) {
-  SystemImpl& system = session().system_impl();
+TEST_F(SystemTest, FilterMatchesAndRematching) {
+  System& system = session().system();
   MockSystemObserver system_observer(&session());
 
   constexpr uint64_t kJobKoid = 0x1234;
@@ -166,7 +166,7 @@ TEST_F(SystemImplTest, FilterMatchesAndRematching) {
   ProcessInfo info = {kProcessKoid, kProcessName};
   sink()->SetNextInfos({info});
 
-  session().system_impl().OnFilterMatches(&job, {kProcessKoid});
+  session().system().OnFilterMatches(&job, {kProcessKoid});
 
   // There should be an attach request.
   auto& requests = sink()->attach_requests();
@@ -189,7 +189,7 @@ TEST_F(SystemImplTest, FilterMatchesAndRematching) {
   // Rematching should not create a new target.
   sink()->SetNextInfos({info});
 
-  session().system_impl().OnFilterMatches(&job, {kProcessKoid});
+  session().system().OnFilterMatches(&job, {kProcessKoid});
 
   // The system should've reused the empty target.
   ASSERT_EQ(system_observer.target_create_count(), 0);
@@ -204,8 +204,8 @@ TEST_F(SystemImplTest, FilterMatchesAndRematching) {
   EXPECT_EQ(process->GetName(), kProcessName);
 }
 
-TEST_F(SystemImplTest, ExistenProcessShouldCreateTarget) {
-  SystemImpl& system = session().system_impl();
+TEST_F(SystemTest, ExistenProcessShouldCreateTarget) {
+  System& system = session().system();
   MockSystemObserver system_observer(&session());
 
   constexpr uint64_t kJobKoid = 0x1234;
@@ -232,7 +232,7 @@ TEST_F(SystemImplTest, ExistenProcessShouldCreateTarget) {
   ProcessInfo info = {kProcessKoid2, kProcessName};
   sink()->SetNextInfos({info});
 
-  session().system_impl().OnFilterMatches(&job, {kProcessKoid2});
+  session().system().OnFilterMatches(&job, {kProcessKoid2});
 
   // There should be an attach request.
   auto& requests = sink()->attach_requests();

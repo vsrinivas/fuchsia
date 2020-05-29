@@ -15,12 +15,12 @@
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-#include "src/developer/debug/zxdb/client/system_impl.h"
+#include "src/developer/debug/zxdb/client/system.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
-TargetImpl::TargetImpl(SystemImpl* system)
+TargetImpl::TargetImpl(System* system)
     : Target(system->session()),
       system_(system),
       symbols_(system->GetSymbols()),
@@ -34,7 +34,7 @@ TargetImpl::~TargetImpl() {
   ImplicitlyDetach();
 }
 
-std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
+std::unique_ptr<TargetImpl> TargetImpl::Clone(System* system) {
   auto result = std::make_unique<TargetImpl>(system);
   result->args_ = args_;
   result->symbols_ = symbols_;

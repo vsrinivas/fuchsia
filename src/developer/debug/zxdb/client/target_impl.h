@@ -15,21 +15,21 @@
 namespace zxdb {
 
 class ProcessImpl;
-class SystemImpl;
+class System;
 
 class TargetImpl : public Target {
  public:
   // The system owns this object and will outlive it.
-  explicit TargetImpl(SystemImpl* system);
+  explicit TargetImpl(System* system);
   ~TargetImpl() override;
 
-  SystemImpl* system() { return system_; }
+  System* system() { return system_; }
   ProcessImpl* process() { return process_.get(); }
   TargetSymbols* symbols() { return &symbols_; }
 
   // Allocates a new target with the same settings as this one. This isn't a real copy, because any
   // process information is not cloned.
-  std::unique_ptr<TargetImpl> Clone(SystemImpl* system);
+  std::unique_ptr<TargetImpl> Clone(System* system);
 
   // Notification that a new process was created from a job filter. The process will not have
   // started running yet.
@@ -83,7 +83,7 @@ class TargetImpl : public Target {
   std::unique_ptr<ProcessImpl> CreateProcessImpl(uint64_t koid, const std::string& name,
                                                  Process::StartType);
 
-  SystemImpl* system_;  // Owns |this|.
+  System* system_;  // Owns |this|.
 
   State state_ = kNone;
 

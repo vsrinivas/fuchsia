@@ -137,7 +137,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   EXPECT_EQ(0, observer_sink.notification_count);
   ASSERT_TRUE(sink().adds.empty());
 
-  TargetImpl* target = session().system_impl().GetTargetImpls()[0];
+  TargetImpl* target = session().system().GetTargetImpls()[0];
 
   // Create a process for it. Since the process doesn't resolve the symbol yet, no messages should
   // be sent.
@@ -224,8 +224,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
 
 // Tests that address breakpoints are enabled immediately even when no symbols are available.
 TEST_F(BreakpointImplTest, Address) {
-  // TargetImpl target(&session().system_impl());
-  auto target_impls = session().system_impl().GetTargetImpls();
+  // TargetImpl target(&session().system());
+  auto target_impls = session().system().GetTargetImpls();
   ASSERT_EQ(1u, target_impls.size());
   TargetImpl* target = target_impls[0];
   const uint64_t kProcessKoid = 6789;
@@ -250,7 +250,7 @@ TEST_F(BreakpointImplTest, Address) {
 }
 
 TEST_F(BreakpointImplTest, Watchpoint) {
-  auto target_impls = session().system_impl().GetTargetImpls();
+  auto target_impls = session().system().GetTargetImpls();
   ASSERT_EQ(1u, target_impls.size());
   TargetImpl* target = target_impls[0];
   const uint64_t kProcessKoid = 6789;

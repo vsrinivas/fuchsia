@@ -15,7 +15,7 @@
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-#include "src/developer/debug/zxdb/client/system_impl.h"
+#include "src/developer/debug/zxdb/client/system.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

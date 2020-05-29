@@ -14,7 +14,7 @@
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
-#include "src/developer/debug/zxdb/client/system_impl.h"
+#include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -108,13 +108,6 @@ class Session : public SettingStoreObserver {
 
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
-
-  // Provide access to the underlying system implementation. This is needed for some client tests,
-  // but should not be used outside of the client directory.
-  //
-  // TODO(brettw) probably this class needs to be separated into Session and SessionImpl and which
-  // one of those you have controls which System object you can get.
-  SystemImpl& system_impl() { return system_; }
 
   // Architecture of the attached system. Will be "kUnknown" when not connected.
   debug_ipc::Arch arch() const { return arch_; }
@@ -251,7 +244,7 @@ class Session : public SettingStoreObserver {
   // information on these ids.
   std::set<uint32_t> expected_components_;
 
-  SystemImpl system_;
+  System system_;
 
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
   std::unique_ptr<ArchInfo> arch_info_;
