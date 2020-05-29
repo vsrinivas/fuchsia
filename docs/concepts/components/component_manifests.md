@@ -593,7 +593,7 @@ This section may be omitted.
 [doc-static-children]: realms.md#static-children
 [examples-routing]: /examples/components/routing
 [fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
-[fidl-io2-rights]: /zircon/system/fidl/fuchsia-io2/rights-abilities.fidl
+[fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
 [src-cmc]: /src/sys/cmc
 [src-cml-schema]: /src/sys/lib/cm_json/cml_schema.json

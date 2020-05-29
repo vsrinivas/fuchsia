@@ -10,12 +10,12 @@ rustc_library("cm_fidl_validator") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/directed_graph",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
   test_deps = [
     "//third_party/rust_crates:lazy_static",

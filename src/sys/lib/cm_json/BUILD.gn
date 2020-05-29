@@ -17,6 +17,7 @@ rustc_library("cm_json") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:json5",
@@ -24,7 +25,6 @@ rustc_library("cm_json") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
-    "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
 
   non_rust_deps = [ ":cm_schema_json" ]

@@ -45,9 +45,9 @@ zx_library("zxio") {
     "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:llcpp",
-    "//zircon/system/fidl/fuchsia-io2:llcpp",
   ]
 }
