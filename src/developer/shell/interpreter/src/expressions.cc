@@ -39,7 +39,7 @@ void ObjectDeclarationField::Dump(std::ostream& os) const {
 // - ObjectDeclaration -----------------------------------------------------------------------------
 
 ObjectDeclaration::ObjectDeclaration(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
-                                     const ObjectSchema* object_schema,
+                                     std::shared_ptr<ObjectSchema> object_schema,
                                      std::vector<std::unique_ptr<ObjectDeclarationField>>&& fields)
     : Expression(interpreter, file_id, node_id),
       object_schema_(object_schema),

@@ -28,7 +28,7 @@ TEST_F(InterpreterTest, LoadStringVariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* groucho = GetGlobal("groucho");
+  const llcpp::fuchsia::shell::Node* groucho = GetGlobal("groucho");
   ASSERT_TRUE(groucho->is_string_literal());
   ASSERT_EQ("A Marx brother",
             std::string(groucho->string_literal().data(), groucho->string_literal().size()));
@@ -69,7 +69,7 @@ TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context_2->GetResult());
 
-  llcpp::fuchsia::shell::Node* groucho = GetGlobal("groucho");
+  const llcpp::fuchsia::shell::Node* groucho = GetGlobal("groucho");
   ASSERT_TRUE(groucho->is_string_literal());
   ASSERT_EQ("A Marx brother",
             std::string(groucho->string_literal().data(), groucho->string_literal().size()));
@@ -93,7 +93,7 @@ TEST_F(InterpreterTest, LoadInt8VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_TRUE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -118,7 +118,7 @@ TEST_F(InterpreterTest, LoadUint8VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_FALSE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -143,7 +143,7 @@ TEST_F(InterpreterTest, LoadInt16VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_TRUE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -168,7 +168,7 @@ TEST_F(InterpreterTest, LoadUint16VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_FALSE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -193,7 +193,7 @@ TEST_F(InterpreterTest, LoadInt32VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_TRUE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -218,7 +218,7 @@ TEST_F(InterpreterTest, LoadUint32VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_FALSE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -243,7 +243,7 @@ TEST_F(InterpreterTest, LoadInt64VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_TRUE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
@@ -268,7 +268,7 @@ TEST_F(InterpreterTest, LoadUint64VariableOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* y = GetGlobal("y");
+  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
   ASSERT_TRUE(y->is_integer_literal());
   ASSERT_FALSE(y->integer_literal().negative);
   ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));

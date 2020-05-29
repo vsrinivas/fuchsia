@@ -14,6 +14,11 @@
 namespace shell {
 namespace interpreter {
 
+void ExecutionContext::AddObjectSchema(std::shared_ptr<ObjectSchema> object_schema) {
+  object_schemas_[std::make_pair<uint64_t, uint64_t>(object_schema->node_id(),
+                                                     object_schema->file_id())] = object_schema;
+}
+
 void ExecutionContext::EmitError(std::string error_message) {
   interpreter_->EmitError(this, std::move(error_message));
 }
@@ -74,7 +79,14 @@ void Interpreter::Shutdown(std::vector<std::string>* errors) {
     if (object_count_ == 1) {
       (*errors).emplace_back("1 object not freed.");
     } else {
-      (*errors).emplace_back(std::to_string(string_count_) + " objects not freed.");
+      (*errors).emplace_back(std::to_string(object_count_) + " objects not freed.");
+    }
+  }
+  if (object_schema_count_ != 0) {
+    if (object_schema_count_ == 1) {
+      (*errors).emplace_back("1 object schema not freed.");
+    } else {
+      (*errors).emplace_back(std::to_string(object_schema_count_) + " object schemas not freed.");
     }
   }
 }
@@ -97,11 +109,6 @@ void Interpreter::AddNode(uint64_t file_id, uint64_t node_id, Node* node) {
 
 void Interpreter::RemoveNode(uint64_t file_id, uint64_t node_id) {
   nodes_.erase(std::make_pair(file_id, node_id));
-}
-
-void Interpreter::AddObjectSchema(std::shared_ptr<ObjectSchema> object_schema) {
-  object_schemas_[std::make_pair<uint64_t, uint64_t>(object_schema->node_id(),
-                                                     object_schema->file_id())] = object_schema;
 }
 
 }  // namespace interpreter

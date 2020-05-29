@@ -114,6 +114,8 @@ class TypeString : public TypeReferenceCounted {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 
   void ClearVariable(ExecutionScope* scope, size_t index) const override;
+
+  void SetData(uint8_t* data, uint64_t value, bool free_old_value) const override;
 };
 
 class TypeInt : public TypeRaw {
@@ -409,6 +411,8 @@ class TypeObject : public Type {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 
   void ClearVariable(ExecutionScope* scope, size_t index) const override;
+
+  void SetData(uint8_t* data, uint64_t value, bool free_old_value) const override;
 
  private:
   const std::shared_ptr<ObjectSchema> schema_;

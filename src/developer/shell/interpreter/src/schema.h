@@ -19,8 +19,6 @@ class ObjectFieldSchema : public Node {
                     const std::string_view& name, std::unique_ptr<Type> type)
       : Node(interpreter, file_id, node_id), name_(name), type_(std::move(type)) {}
 
-  virtual ObjectFieldSchema* AsObjectFieldSchema() override { return this; }
-
   // Prints the expression.
   virtual void Dump(std::ostream& os) const {};
 
@@ -44,8 +42,7 @@ class ObjectSchema : public Node {
  public:
   ObjectSchema(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
                std::vector<std::shared_ptr<ObjectFieldSchema>>&& fields);
-
-  virtual ObjectSchema* AsObjectSchema() override { return this; }
+  virtual ~ObjectSchema();
 
   const std::vector<std::shared_ptr<ObjectFieldSchema>>& fields() const { return fields_; }
 
@@ -57,9 +54,6 @@ class ObjectSchema : public Node {
   // Allocates enough space for an object with the given |schema|.  Objects have enough space after
   // them to contain an instance of the object with the given |schema|.
   static Object* AllocateObject(std::shared_ptr<ObjectSchema> schema);
-
-  // Frees the space associated with the given object.
-  void FreeObject(Object*) const;
 
  private:
   std::vector<std::shared_ptr<ObjectFieldSchema>> fields_;

@@ -17,6 +17,7 @@
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/developer/shell/common/result.h"
 #include "src/developer/shell/console/ast_builder.h"
 
 struct InterpreterTestContext {
@@ -44,13 +45,24 @@ class InterpreterTest : public ::testing::Test {
   void LoadGlobal(const std::string& name) { globals_to_load_.emplace_back(name); }
 
   // Gets the value for a global variable we loaded using LoadGlobal.
-  llcpp::fuchsia::shell::Node* GetGlobal(const std::string& name) {
+  const llcpp::fuchsia::shell::Node* GetGlobal(const std::string& name) const {
     auto result = globals_.find(name);
     if (result == globals_.end()) {
       return nullptr;
     }
     return &(result->second->nodes[0]);
   }
+
+  std::unique_ptr<shell::common::ResultNode> DeserializeGlobal(const std::string& name) const {
+    auto result = globals_.find(name);
+    if (result == globals_.end()) {
+      return nullptr;
+    }
+    shell::common::DeserializeResult deserialize;
+    return deserialize.Deserialize(result->second->nodes);
+  }
+
+  std::string GlobalString(const std::string& name) const;
 
   void SetUp() override;
 
@@ -64,12 +76,6 @@ class InterpreterTest : public ::testing::Test {
 
   InterpreterTestContext* CreateContext();
   InterpreterTestContext* GetContext(uint64_t context_id);
-
-  // Check that there is a variable with the given name, and it is a wire representation of the
-  // names, with the values and the types given as parallel arrays.  Asserts if false.
-  void GlobalIsObject(const std::string& var_name, std::vector<std::string>& names,
-                      std::vector<llcpp::fuchsia::shell::Node*>& values,
-                      std::vector<llcpp::fuchsia::shell::ShellType>& types);
 
  private:
   async::Loop loop_;

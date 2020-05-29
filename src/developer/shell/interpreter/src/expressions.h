@@ -47,22 +47,23 @@ class IntegerLiteral : public Expression {
 class ObjectDeclarationField : public Node {
  public:
   ObjectDeclarationField(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
-                         ObjectFieldSchema* field_schema, std::unique_ptr<Expression> value)
+                         std::shared_ptr<ObjectFieldSchema> field_schema,
+                         std::unique_ptr<Expression> value)
       : Node(interpreter, file_id, node_id),
-        field_schema_(field_schema),
+        field_schema_(std::move(field_schema)),
         expression_(std::move(value)) {}
 
   // Prints the field.
   void Dump(std::ostream& os) const;
 
-  const ObjectFieldSchema* schema() const { return field_schema_; }
+  const ObjectFieldSchema* schema() const { return field_schema_.get(); }
 
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) {
     return expression_->Compile(context, code, for_type);
   }
 
  private:
-  ObjectFieldSchema* field_schema_;
+  std::shared_ptr<ObjectFieldSchema> field_schema_;
   std::unique_ptr<Expression> expression_;
 };
 
@@ -75,10 +76,8 @@ inline std::ostream& operator<<(std::ostream& os, const ObjectDeclarationField& 
 class ObjectDeclaration : public Expression {
  public:
   ObjectDeclaration(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
-                    const ObjectSchema* object_schema,
+                    std::shared_ptr<ObjectSchema> object_schema,
                     std::vector<std::unique_ptr<ObjectDeclarationField>>&& fields);
-
-  const ObjectSchema* object_schema() const { return object_schema_; }
 
   const std::vector<std::unique_ptr<ObjectDeclarationField>>& fields() const { return fields_; }
 
@@ -90,7 +89,7 @@ class ObjectDeclaration : public Expression {
                        const Type* for_type) const override;
 
  private:
-  const ObjectSchema* object_schema_;
+  std::shared_ptr<ObjectSchema> object_schema_;
 
   // fields_ are stored in the same order the ObjectSchemaFields are found in the object_schema_.
   std::vector<std::unique_ptr<ObjectDeclarationField>> fields_;

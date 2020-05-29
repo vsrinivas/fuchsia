@@ -101,6 +101,8 @@ template <typename Type>
 class ReferenceCounted : public ReferenceCountedBase {
   template <typename ObjectType, typename ContainerType>
   friend class Container;
+  friend class TypeObject;
+  friend class TypeString;
   friend class StringContainer;
 
   friend class Value;
@@ -165,17 +167,16 @@ class String : public ReferenceCounted<String> {
 class Object : public ReferenceCounted<Object> {
  public:
   Object(Interpreter* interpreter, const std::shared_ptr<ObjectSchema> schema);
+  virtual ~Object();
 
   const std::shared_ptr<ObjectSchema> schema();
 
-  std::unique_ptr<Value> GetField(ObjectFieldSchema*) const;
+  std::unique_ptr<Value> GetField(const ObjectFieldSchema*) const;
 
-  void SetField(ObjectFieldSchema*, uint64_t value);
-
- protected:
-  virtual void Free() override;
+  void SetField(const ObjectFieldSchema*, uint64_t value);
 
  private:
+  virtual void Free() override;
   const std::shared_ptr<ObjectSchema> schema_;
 };
 

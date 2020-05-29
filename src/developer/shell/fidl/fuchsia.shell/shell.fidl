@@ -232,6 +232,11 @@ protocol Shell {
     /// vector + 1 (node id 0 is reserved for null).
     ///
     /// - `name` the name of the variable to load.
+    ///
+    /// - `nodes` all the node needed to reconstruct the value. The last node in the vector is the
+    ///   root node. All nodes are implicitly numbered starting at one for the first node in the
+    ///   vector.
+    ///   if the vector is empty, the value is undefined.
     LoadGlobal(string:MAX name) -> (vector<Node>:MAX nodes);
 
     /// Delete the current interpreter. The server will close the other side of the channel.

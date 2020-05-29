@@ -150,7 +150,8 @@ AstBuilder::NodePair AstBuilder::CloseObject() {
       fidl::unowned_ptr(schema_mem), fields.size());
   auto schema_node =
       llcpp::fuchsia::shell::Node::WithObjectSchema(fidl::unowned_ptr(object_schema));
-  NodeId schema_node_id = AddNode(std::move(schema_node), true);
+  // We construct an unnamed schema => local schema (only used by one object).
+  NodeId schema_node_id = AddNode(std::move(schema_node), /*root_node=*/false);
 
   object->fields = ::fidl::VectorView<llcpp::fuchsia::shell::NodeId>(fidl::unowned_ptr(value_mem),
                                                                      fields.size());

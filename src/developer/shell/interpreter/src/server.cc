@@ -72,7 +72,7 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
   if (shell_type.is_object_schema()) {
     NodeId node_id(shell_type.object_schema().file_id, shell_type.object_schema().node_id);
     std::shared_ptr<ObjectSchema> schema_node =
-        context->execution_context()->interpreter()->GetObjectSchema(node_id);
+        context->execution_context()->GetObjectSchema(node_id);
     if (schema_node == nullptr) {
       context->execution_context()->EmitError(NodeId(node_file_id, node_node_id),
                                               "Type not found for object");
@@ -97,17 +97,6 @@ std::unique_ptr<Expression> ServerInterpreterContext::GetExpression(const NodeId
   return returned_value;
 }
 
-// Return the schema declared by the given node id.
-std::shared_ptr<ObjectSchema> ServerInterpreterContext::GetObjectSchema(const NodeId& node_id) {
-  auto result = object_schemas_.find(node_id);
-  if (result == object_schemas_.end()) {
-    return nullptr;
-  }
-  auto returned_value = std::move(result->second);
-  FX_DCHECK(returned_value != nullptr);
-  return returned_value;
-}
-
 // Retrieves the field corresponding to the given node id.
 std::unique_ptr<ObjectDeclarationField> ServerInterpreterContext::GetObjectField(
     const NodeId& node_id) {
@@ -127,9 +116,8 @@ std::shared_ptr<ObjectFieldSchema> ServerInterpreterContext::GetObjectFieldSchem
   if (result == object_field_schemas_.end()) {
     return nullptr;
   }
-  auto returned_value = std::move(result->second);
-  FX_DCHECK(returned_value != nullptr);
-  return returned_value;
+  FX_DCHECK(result->second != nullptr);
+  return result->second;
 }
 
 // - ServerInterpreter -----------------------------------------------------------------------------
@@ -213,9 +201,10 @@ void ServerInterpreter::AddInstruction(ServerInterpreterContext* context,
 void ServerInterpreter::AddObjectSchema(ServerInterpreterContext* context,
                                         std::shared_ptr<ObjectSchema> definition, bool root_node) {
   if (root_node) {
-    context->execution_context()->interpreter()->AddObjectSchema(definition);
+    EmitError(context->execution_context(),
+              "Node " + definition->StringId() + ": classes not implemented.");
   } else {
-    context->AddObjectSchema(definition);
+    context->execution_context()->AddObjectSchema(definition);
   }
 }
 
@@ -266,19 +255,6 @@ std::unique_ptr<Expression> ServerInterpreter::GetExpression(ServerInterpreterCo
   if (result == nullptr) {
     EmitError(context->execution_context(), container_id,
               "Can't find node " + node_id.StringId() + " for " + member + ".");
-    return nullptr;
-  }
-  return result;
-}
-
-std::shared_ptr<ObjectSchema> ServerInterpreter::GetObjectSchema(ServerInterpreterContext* context,
-                                                                 const NodeId& node_id) {
-  if (node_id.node_id == 0) {
-    return nullptr;
-  }
-  auto result = context->GetObjectSchema(node_id);
-  if (result == nullptr) {
-    EmitError(context->execution_context(), "Can't find schema node " + node_id.StringId());
     return nullptr;
   }
   return result;
@@ -450,8 +426,7 @@ class LoadGlobalHelper {
         builder_.OpenObject();
         Object* object = value.GetObject();
         const std::shared_ptr<ObjectSchema> schema = object->schema();
-        ObjectSchema* schema_ptr = schema->AsObjectSchema();
-        for (auto& field : schema_ptr->fields()) {
+        for (auto& field : schema->fields()) {
           auto value = object->GetField(field.get());
           auto expression_id = Set(*value);
           builder_.AddField(field->name(), expression_id.value_id, std::move(expression_id.type));
@@ -549,14 +524,10 @@ void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id
                         bool root_node) {
   NodeId schema_node_id(node.object_schema.file_id, node.object_schema.node_id);
 
-  Node* schema_node = interpreter_->GetNode(schema_node_id);
-  if (schema_node == nullptr) {
+  std::shared_ptr<ObjectSchema> object_schema =
+      context->execution_context()->GetObjectSchema(schema_node_id);
+  if (object_schema == nullptr) {
     interpreter_->EmitError(context->execution_context(), "Schema of object variable not defined");
-    return;
-  }
-  auto schema_object = schema_node->AsObjectSchema();
-  if (schema_object == nullptr) {
-    interpreter_->EmitError(context->execution_context(), "IR mismatch: Node type is not schema");
     return;
   }
 
@@ -570,7 +541,7 @@ void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id
   }
 
   auto definition = std::make_unique<ObjectDeclaration>(interpreter(), node_file_id, node_node_id,
-                                                        schema_object, std::move(fields));
+                                                        object_schema, std::move(fields));
   interpreter_->AddExpression(context, std::move(definition), root_node);
 }
 
@@ -579,22 +550,13 @@ void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_fi
                              const llcpp::fuchsia::shell::ObjectFieldDefinition& node,
                              bool root_node) {
   NodeId schema_id(node.object_field_schema.file_id, node.object_field_schema.node_id);
-  Node* schema_node_raw = interpreter_->GetNode(schema_id);
-  if (schema_node_raw == nullptr) {
-    interpreter_->EmitError(context->execution_context(), "Type of object field not defined");
-    return;
-  }
-  if (schema_node_raw->AsObjectFieldSchema() == nullptr) {
-    interpreter_->EmitError(context->execution_context(),
-                            "Node id provided for object field schema is not object field schema.");
-    return;
-  }
-  auto schema_node = schema_node_raw->AsObjectFieldSchema();
+  std::shared_ptr<ObjectFieldSchema> field_schema =
+      interpreter_->GetObjectFieldSchema(context, schema_id);
   NodeId value_id(node.value.file_id, node.value.node_id);
   std::unique_ptr<Expression> value = interpreter_->GetExpression(
       context, NodeId(node_file_id, node_node_id), "expression", value_id);
   auto definition = std::make_unique<ObjectDeclarationField>(
-      interpreter(), node_file_id, node_node_id, schema_node, std::move(value));
+      interpreter(), node_file_id, node_node_id, field_schema, std::move(value));
   interpreter_->AddObjectField(context, std::move(definition), root_node);
 }
 

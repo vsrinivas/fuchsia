@@ -70,6 +70,12 @@ void Type::ClearVariable(ExecutionScope* scope, size_t index) const {
   memset(scope->Data(index, size), 0, size);
 }
 
+void Type::SetData(uint8_t* data, uint64_t value, bool free_old_value) const {
+  size_t size = Size();
+  FX_DCHECK(size <= sizeof(uint64_t)) << "Can't assign data of type " << *this;
+  memcpy(data, &value, size);
+}
+
 // - Node ------------------------------------------------------------------------------------------
 
 Node::Node(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)

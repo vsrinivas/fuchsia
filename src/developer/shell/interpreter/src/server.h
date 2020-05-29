@@ -46,11 +46,6 @@ class ServerInterpreterContext {
     instructions_.emplace(instruction->id(), std::move(instruction));
   }
 
-  // Adds a schema to the context. This definition must be used later by another node.
-  void AddObjectSchema(std::shared_ptr<ObjectSchema> definition) {
-    object_schemas_.emplace(definition->id(), definition);
-  }
-
   // Adds a field schema definition to the context. This definition must be used later by another
   // node.
   void AddObjectFieldSchema(std::shared_ptr<ObjectFieldSchema> field) {
@@ -66,9 +61,6 @@ class ServerInterpreterContext {
   // removes from the waiting instruction map.
   std::unique_ptr<Expression> GetExpression(const NodeId& node_id);
 
-  // Retrieves the type definition for the given node id.
-  std::shared_ptr<ObjectSchema> GetObjectSchema(const NodeId& node_id);
-
   // Retrieves the field definition for the given node id.
   std::unique_ptr<ObjectDeclarationField> GetObjectField(const NodeId& node_id);
 
@@ -82,8 +74,6 @@ class ServerInterpreterContext {
   std::map<NodeId, std::unique_ptr<Expression>> expressions_;
   // All the instructions waiting to be used.
   std::map<NodeId, std::unique_ptr<Instruction>> instructions_;
-  // All the schema definitions waiting to be used.
-  std::map<NodeId, std::shared_ptr<ObjectSchema>> object_schemas_;
   // All of the fields waiting to be used.
   std::map<NodeId, std::unique_ptr<ObjectDeclarationField>> fields_;
   // All of the fields waiting to be used.
@@ -152,11 +142,6 @@ class ServerInterpreter : public Interpreter {
   std::unique_ptr<Expression> GetExpression(ServerInterpreterContext* context,
                                             const NodeId& container_id, const std::string& member,
                                             const NodeId& node_id);
-
-  // Retrieves the schema definition for the given context/node id. If the definition is not found,
-  // it emits an error.
-  std::shared_ptr<ObjectSchema> GetObjectSchema(ServerInterpreterContext* context,
-                                                const NodeId& node_id);
 
   std::shared_ptr<ObjectFieldSchema> GetObjectFieldSchema(ServerInterpreterContext* context,
                                                           const NodeId& node_id);

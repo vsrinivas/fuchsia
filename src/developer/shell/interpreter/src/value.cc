@@ -30,9 +30,18 @@ Object::Object(Interpreter* interpreter, const std::shared_ptr<ObjectSchema> sch
   interpreter_->increment_object_count();
 }
 
+Object::~Object() {
+  interpreter_->decrement_object_count();
+  // Free all the applicative fields by assigning zero.
+  for (const auto& field : schema_->fields()) {
+    field->type()->SetData(reinterpret_cast<uint8_t*>(this) + field->offset(), 0,
+                           /*free_old_value=*/true);
+  }
+}
+
 const std::shared_ptr<ObjectSchema> Object::schema() { return schema_; }
 
-std::unique_ptr<Value> Object::GetField(ObjectFieldSchema* field) const {
+std::unique_ptr<Value> Object::GetField(const ObjectFieldSchema* field) const {
   FX_DCHECK(field != nullptr) << "Invalid field pointer passed to getfield";
   uint64_t offset = field->offset();
   std::unique_ptr<Value> v = std::make_unique<Value>();
@@ -65,10 +74,10 @@ std::unique_ptr<Value> Object::GetField(ObjectFieldSchema* field) const {
       v->SetUint64(*reinterpret_cast<const uint64_t*>(ptr));
       break;
     case Type::TypeKind::kString:
-      v->SetString(const_cast<String*>(reinterpret_cast<const String*>(ptr)));
+      v->SetString(*reinterpret_cast<String* const*>(ptr));
       break;
     case Type::TypeKind::kObject:
-      v->SetObject(const_cast<Object*>(reinterpret_cast<const Object*>(ptr)));
+      v->SetObject(*reinterpret_cast<Object* const*>(ptr));
       break;
     default:
       FX_NOTREACHED() << "Unknown type in getfield";
@@ -78,18 +87,16 @@ std::unique_ptr<Value> Object::GetField(ObjectFieldSchema* field) const {
   return v;
 }
 
-void Object::SetField(ObjectFieldSchema* field, uint64_t value) {
-  const Type* field_type = field->type();
-  const void* dest = reinterpret_cast<const uint8_t*>(this) + field->offset();
-  FX_DCHECK(field_type->Size() <= sizeof(uint64_t))
-      << "Big value in stack.  "
-         "Can't assign that to object field yet.  File a bug.";
-  memcpy(const_cast<void*>(dest), &value, field_type->Size());
+void Object::SetField(const ObjectFieldSchema* field, uint64_t value) {
+  field->type()->SetData(reinterpret_cast<uint8_t*>(this) + field->offset(), value,
+                         /*free_old_value=*/false);
 }
 
 void Object::Free() {
-  interpreter_->decrement_object_count();
-  schema()->AsObjectSchema()->FreeObject(this);
+  // Call the destructor.
+  this->~Object();
+  // Deallocate the object using the same mechanism used to allocate it.
+  delete [] reinterpret_cast<uint8_t*>(this);
 }
 
 void Value::Set(const Value& value) {

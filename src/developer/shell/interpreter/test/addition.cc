@@ -46,12 +46,12 @@ TEST_F(InterpreterTest, StringAdditionOk) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("groucho1");
+  const llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("groucho1");
   ASSERT_TRUE(groucho1->is_string_literal());
   ASSERT_EQ("A Marx brother",
             std::string(groucho1->string_literal().data(), groucho1->string_literal().size()));
 
-  llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("groucho2");
+  const llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("groucho2");
   ASSERT_TRUE(groucho2->is_string_literal());
   ASSERT_EQ("A Marx brother",
             std::string(groucho2->string_literal().data(), groucho2->string_literal().size()));
@@ -84,12 +84,12 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("foo1");
+  const llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("foo1");
   ASSERT_TRUE(groucho1->is_string_literal());
   ASSERT_EQ("foo",
             std::string(groucho1->string_literal().data(), groucho1->string_literal().size()));
 
-  llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("foo2");
+  const llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("foo2");
   ASSERT_TRUE(groucho2->is_string_literal());
   ASSERT_EQ("foo",
             std::string(groucho2->string_literal().data(), groucho2->string_literal().size()));
@@ -125,7 +125,7 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
                                                                                        \
     ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());         \
                                                                                        \
-    llcpp::fuchsia::shell::Node* y = GetGlobal("y");                                   \
+    const llcpp::fuchsia::shell::Node* y = GetGlobal("y");                             \
     ASSERT_TRUE(y->is_integer_literal());                                              \
     ASSERT_EQ(y->integer_literal().negative, result < 0);                              \
     ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));    \

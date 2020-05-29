@@ -102,6 +102,7 @@ executable("shell_server_test_bin") {
   deps = [
     ":shell_server",
     "//sdk/lib/sys/cpp",
+    "//src/developer/shell/common:lib",
     "//src/developer/shell/console:common",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

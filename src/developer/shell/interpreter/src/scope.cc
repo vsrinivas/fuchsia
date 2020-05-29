@@ -161,11 +161,9 @@ void ExecutionScope::Execute(ExecutionContext* context, Thread* thread,
       }
       case code::Opcode::kObjectInit: {
         Object* object = reinterpret_cast<Object*>(thread->Pop());
-        const ObjectSchema* schema = object->schema()->AsObjectSchema();
+        const ObjectSchema* schema = object->schema().get();
         for (auto it = schema->fields().rbegin(); it != schema->fields().rend(); ++it) {
-          uint64_t value = thread->Pop();
-          // TODO(jeremymanson): Future work: encode the offsets in the opcode stream?
-          object->SetField((*it).get(), value);
+          object->SetField((*it).get(), thread->Pop());
         }
         thread->Push(reinterpret_cast<uint64_t>(object));
         break;

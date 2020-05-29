@@ -114,6 +114,17 @@ void TypeString::ClearVariable(ExecutionScope* scope, size_t index) const {
   }
 }
 
+void TypeString::SetData(uint8_t* data, uint64_t value, bool free_old_value) const {
+  // We don't need to take a link on the new value because the value comes from the stack and has
+  // already a link.
+  String* new_value = reinterpret_cast<String*>(value);
+  String** string = reinterpret_cast<String**>(data);
+  if (free_old_value && (*string != nullptr)) {
+    (*string)->Release();
+  }
+  *string = new_value;
+}
+
 // - type int --------------------------------------------------------------------------------------
 
 bool TypeInt::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
@@ -269,15 +280,12 @@ void TypeFloat64::Dump(std::ostream& os) const { os << "float64"; }
 // ----------------------------------------------------------------------------------
 
 void TypeObject::Dump(std::ostream& os) const {
-  // TODO: improve indentation.
+  const char* separator = "";
   os << "{" << std::endl;
-  for (auto& field : schema_->AsObjectSchema()->fields()) {
-    ObjectFieldSchema* field_schema = field->AsObjectFieldSchema();
-
-    FX_DCHECK(field_schema != nullptr) << "Bad node found as field schema";
-    os << field_schema->name() << ": ";
-    field_schema->type()->Dump(os);
-    os << "," << std::endl;
+  for (auto& field : schema_->fields()) {
+    os << separator << field->name() << ": ";
+    field->type()->Dump(os);
+    separator = ", ";
   }
   os << "}";
 }
@@ -316,6 +324,17 @@ void TypeObject::ClearVariable(ExecutionScope* scope, size_t index) const {
     (*data)->Release();
     *data = nullptr;
   }
+}
+
+void TypeObject::SetData(uint8_t* data, uint64_t value, bool free_old_value) const {
+  // We don't need to take a link on the new value because the value comes from the stack and has
+  // already a link.
+  Object* new_value = reinterpret_cast<Object*>(value);
+  Object** object = reinterpret_cast<Object**>(data);
+  if (free_old_value && (*object != nullptr)) {
+    (*object)->Release();
+  }
+  *object = new_value;
 }
 
 }  // namespace interpreter

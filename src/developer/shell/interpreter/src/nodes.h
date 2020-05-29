@@ -131,9 +131,14 @@ class Type {
   // Loads the current value of the variable stored at |index| in |scope| into |value|.
   virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;
 
-  // Clear the current value of the variable stored at |index| in |scope|. This also deallocate the
+  // Clears the current value of the variable stored at |index| in |scope|. This also deallocate the
   // data for reference counted values.
   virtual void ClearVariable(ExecutionScope* scope, size_t index) const;
+
+  // Sets a new value for an object field or a global variable. If free_old_value is false, this is
+  // an initialization. If free_old_value is true, this is an assignment (this case can also be used
+  // to deallocate a field by assigning 0).
+  virtual void SetData(uint8_t* data, uint64_t value, bool free_old_value) const;
 
   // Returns a reference to this if the object is of type ObjectType.
   virtual TypeObject* AsTypeObject() { return nullptr; }
@@ -160,9 +165,6 @@ class Node {
 
   // Downcast to a VariableDefinition.
   virtual const VariableDefinition* AsVariableDefinition() const { return nullptr; }
-
-  virtual ObjectSchema* AsObjectSchema() { return nullptr; }
-  virtual ObjectFieldSchema* AsObjectFieldSchema() { return nullptr; }
 
  private:
   // The interpreter which owns the node.
