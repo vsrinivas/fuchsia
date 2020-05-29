@@ -105,8 +105,9 @@ args=(
 # If the user requested serving, then we'll check to see if there's a
 # server already running and kill it, this prevents most cases where
 # signal propagation seems to sometimes not make it to "pm".
+# TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
 if "${serve}" && ssh "${args[@]}" 'ss -ln | grep :8083' > /dev/null; then
-  ssh "${args[@]}" 'pkill -u $USER pm'
+  ssh "${args[@]}" 'pkill -x -u $USER pm'
 fi
 
 if "${serve}"; then
