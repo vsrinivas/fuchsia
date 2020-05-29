@@ -22,6 +22,11 @@ enum ColorCorrectionMode {
 /// The current configuration for accessibility color transforms, which includes color inversion and
 /// color correction. This always includes the matrix required to apply the appropriate transforms.
 /// Color correction and color inversion may be active simultaneously.
+///
+/// For original RGB value (r, g, b) (each component ranged between 0 and 1), the RGB value of
+/// corrected color (r', g', b') is
+///   (r', g', b') = color_adjustment_post_offset
+///                + color_adjustment_matrix . ((r, g, b) + color_adjustment_pre_offset).
 table ColorTransformConfiguration {
     /// When color_inversion_enabled is true, certain colors are inverted across the entire screen.
     /// If this field is omitted behavior should remain unchanged.
@@ -35,6 +40,14 @@ table ColorTransformConfiguration {
     /// 3x3 Matrix in row-major form which will be used by root presenter to apply color correction
     /// and color inversion, or a combination fo the two. This field should always be set.
     3: array<float32>:9 color_adjustment_matrix;
+
+    /// 3x1 vector which is used by root presenter as an offset added to the original RGB color,
+    /// before it multiplies with the |color_adjustment_matrix|. This field should always be set.
+    4: array<float32>:3 color_adjustment_pre_offset;
+
+    /// 3x1 vector which is used by root presenter as an offset added to the multiplied result
+    /// of |color_adjustment_matrix| and original RGB color. This field should always be set.
+    5: array<float32>:3 color_adjustment_post_offset;
 };
 
 /// Handler implemented by the owner of the presentation. Accessibility manager uses this protocol

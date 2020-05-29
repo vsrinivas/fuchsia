@@ -21,21 +21,24 @@ const std::array<float, 9> kIdentityMatrix = {
     1, 0, 0,
     0, 1, 0,
     0, 0, 1};
+const std::array<float, 3> kZero3x1Vector = {0, 0, 0};
 
 const std::array<float, 9> kColorInversionMatrix = {
-    0.402, -0.598, -0.599,
-    -1.174, -0.174, -1.175,
-    -0.228, -0.228, 0.772};
+    0.402f,  -1.174f,  -0.228f,
+   -0.598f,  -0.174f,  -0.228f,
+   -0.599f,  -1.177f,   0.771f};
+const std::array<float, 3> kColorInversionPostOffset = {.999f, .999f, .999f};
 
 const std::array<float, 9> kCorrectProtanomaly = {
     0.622774, 0.264275,  0.216821,
     0.377226, 0.735725,  -0.216821,
     0.000000, -0.000000, 1.000000};
 
-const std::array<float, 9> kProtanomalyAndInversion = {
-    0.024774,  -0.333725, -0.382179,
-    -0.796774, -0.438275, -1.39182,
-    -0.228,    -0.228,    0.772};
+const std::array<float, 9> kProtanomalyAndInversionMatrix = {
+    -0.192508, -0.757502,  0.113709,
+    -0.438056, -0.286052, -0.319932,
+    -0.817036, -1.024249,  0.896322};
+const std::array<float, 3> kProtanomalyAndInversionPostOffset = {.999f, .999f, .999f};
 
 // clang-format on
 
@@ -55,6 +58,12 @@ class FakeColorTransformHandler : public fuchsia::accessibility::ColorTransformH
     transform_ = configuration.has_color_adjustment_matrix()
                      ? configuration.color_adjustment_matrix()
                      : kIdentityMatrix;
+    pre_offset_ = configuration.has_color_adjustment_pre_offset()
+                      ? configuration.color_adjustment_pre_offset()
+                      : kZero3x1Vector;
+    post_offset_ = configuration.has_color_adjustment_post_offset()
+                       ? configuration.color_adjustment_post_offset()
+                       : kZero3x1Vector;
 
     color_inversion_enabled_ = configuration.has_color_inversion_enabled()
                                    ? configuration.color_inversion_enabled()
@@ -67,19 +76,32 @@ class FakeColorTransformHandler : public fuchsia::accessibility::ColorTransformH
   }
 
   bool hasTransform(std::array<float, 9> transform_to_compare) const {
+    return FloatArraysAreEqual(transform_, transform_to_compare);
+  }
+
+  bool hasPostOffset(std::array<float, 3> offset_to_compare) const {
+    return FloatArraysAreEqual(post_offset_, offset_to_compare);
+  }
+
+  fidl::BindingSet<fuchsia::accessibility::ColorTransformHandler> bindings_;
+  std::array<float, 9> transform_;
+  std::array<float, 3> pre_offset_;
+  std::array<float, 3> post_offset_;
+
+  bool color_inversion_enabled_;
+  fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
+
+ private:
+  template <size_t N>
+  static bool FloatArraysAreEqual(const std::array<float, N>& a, const std::array<float, N>& b) {
     const float float_comparison_epsilon = 0.00001;
-    for (int i = 0; i < 9; i++) {
-      if ((std::fabs(transform_to_compare[i] - transform_[i]) > float_comparison_epsilon)) {
+    for (size_t i = 0; i < N; i++) {
+      if ((std::fabs(a[i] - b[i]) > float_comparison_epsilon)) {
         return false;
       }
     }
     return true;
   }
-
-  fidl::BindingSet<fuchsia::accessibility::ColorTransformHandler> bindings_;
-  std::array<float, 9> transform_;
-  bool color_inversion_enabled_;
-  fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
 };
 
 class ColorTransformManagerTest : public gtest::TestLoopFixture {
@@ -142,6 +164,7 @@ TEST_F(ColorTransformManagerTest, SetColorInversionEnabled) {
   EXPECT_EQ(color_transform_handler_.color_correction_mode_,
             fuchsia::accessibility::ColorCorrectionMode::DISABLED);
   EXPECT_TRUE(color_transform_handler_.hasTransform(kColorInversionMatrix));
+  EXPECT_TRUE(color_transform_handler_.hasPostOffset(kColorInversionPostOffset));
 }
 
 TEST_F(ColorTransformManagerTest, SetColorCorrection) {
@@ -173,7 +196,8 @@ TEST_F(ColorTransformManagerTest, SetColorCorrectionAndInversion) {
   EXPECT_TRUE(color_transform_handler_.color_inversion_enabled_);
   EXPECT_EQ(color_transform_handler_.color_correction_mode_,
             fuchsia::accessibility::ColorCorrectionMode::CORRECT_PROTANOMALY);
-  EXPECT_TRUE(color_transform_handler_.hasTransform(kProtanomalyAndInversion));
+  EXPECT_TRUE(color_transform_handler_.hasTransform(kProtanomalyAndInversionMatrix));
+  EXPECT_TRUE(color_transform_handler_.hasPostOffset(kProtanomalyAndInversionPostOffset));
 }
 
 };  // namespace accessibility_test

@@ -11,10 +11,36 @@ const std::array<float, 9> kIdentityMatrix = {
     1, 0, 0,
     0, 1, 0,
     0, 0, 1};
+const std::array<float, 3> kZero3x1Vector = {0, 0, 0};
+
+// To invert a color vector in RGB space, we first convert it to
+// YIQ color space, then rotate it along Y axis for 180 degrees,
+// convert it back to RGB space, and subtract it by 1.
+//
+// Formula of inverted color:
+//   [R' G' B']' = [1, 1, 1] - inv(T) . diag(1, -1, -1) . T . [R G B]'
+//               = [1, 1, 1] + kColorInversionMatrix . [R G B]'
+//
+// where R, G, B \in [0, 1], and T is the RGB to YIQ conversion
+// matrix:
+//   T = [[0.299   0.587   0.114]
+//        [0.596  -0.274  -0.321]
+//        [0.211  -0.523   0.311]]
+//
+// Thus the color inveresion matrix is
+//   kColorInversionMatrix
+//    = [[ 0.402  -1.174  -0.228]
+//       [-0.598  -0.174  -0.228]
+//       [-0.599  -1.177   0.771]]
+//
 const std::array<float, 9> kColorInversionMatrix = {
-    0.402,  -0.598, -0.599,
-    -1.174, -0.174, -1.175,
-    -0.228, -0.228, 0.772};
+    0.402f,  -1.174f,  -0.228f,
+   -0.598f,  -0.174f,  -0.228f,
+   -0.599f,  -1.177f,   0.771f};
+
+// Post offsets should be strictly less than 1.
+const std::array<float, 3> kColorInversionPostOffset = {.999f, .999f, .999f};
+
 const std::array<float, 9> kCorrectProtanomaly = {
     0.622774, 0.264275,  0.216821,
     0.377226, 0.735725,  -0.216821,
@@ -29,14 +55,25 @@ const std::array<float, 9> kCorrectTritanomaly = {
     0.805712f,  0.621162f, 0.895177f};
 // clang-format on
 
-std::array<float, 9> GetColorAdjustmentMatrix(
+namespace {
+
+struct ColorAdjustmentArgs {
+  std::array<float, 9> color_adjustment_matrix;
+  std::array<float, 3> color_adjustment_pre_offset;
+  std::array<float, 3> color_adjustment_post_offset;
+};
+
+ColorAdjustmentArgs GetColorAdjustmentArgs(
     bool color_inversion_enabled,
     fuchsia::accessibility::ColorCorrectionMode color_correction_mode) {
   std::array<float, 9> color_inversion_matrix = kIdentityMatrix;
   std::array<float, 9> color_correction_matrix = kIdentityMatrix;
+  std::array<float, 3> color_adjustment_pre_offset = kZero3x1Vector;
+  std::array<float, 3> color_adjustment_post_offset = kZero3x1Vector;
 
   if (color_inversion_enabled) {
     color_inversion_matrix = kColorInversionMatrix;
+    color_adjustment_post_offset = kColorInversionPostOffset;
   }
 
   switch (color_correction_mode) {
@@ -56,8 +93,13 @@ std::array<float, 9> GetColorAdjustmentMatrix(
       break;
   }
 
-  return Multiply3x3MatrixRowMajor(color_inversion_matrix, color_correction_matrix);
+  return ColorAdjustmentArgs{.color_adjustment_matrix = Multiply3x3MatrixRowMajor(
+                                 color_inversion_matrix, color_correction_matrix),
+                             .color_adjustment_pre_offset = color_adjustment_pre_offset,
+                             .color_adjustment_post_offset = color_adjustment_post_offset};
 }
+
+}  // namespace
 
 ColorTransformManager::ColorTransformManager(sys::ComponentContext* startup_context) {
   FX_CHECK(startup_context);
@@ -77,10 +119,17 @@ void ColorTransformManager::ChangeColorTransform(
     bool color_inversion_enabled,
     fuchsia::accessibility::ColorCorrectionMode color_correction_mode) {
   fuchsia::accessibility::ColorTransformConfiguration color_transform_configuration;
+  ColorAdjustmentArgs color_adjustment_args =
+      GetColorAdjustmentArgs(color_inversion_enabled, color_correction_mode);
   color_transform_configuration.set_color_inversion_enabled(color_inversion_enabled);
   color_transform_configuration.set_color_correction(color_correction_mode);
   color_transform_configuration.set_color_adjustment_matrix(
-      GetColorAdjustmentMatrix(color_inversion_enabled, color_correction_mode));
+      color_adjustment_args.color_adjustment_matrix);
+  color_transform_configuration.set_color_adjustment_post_offset(
+      color_adjustment_args.color_adjustment_post_offset);
+  color_transform_configuration.set_color_adjustment_pre_offset(
+      color_adjustment_args.color_adjustment_pre_offset);
+
   if (!color_transform_handler_ptr_)
     return;
 

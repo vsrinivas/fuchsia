@@ -10,8 +10,7 @@
 
 namespace root_presenter {
 
-const std::array<float, 3> kColorAdjustmentPostoffsets = {0, 0, 0};
-const std::array<float, 3> kColorAdjustmentPreoffsets = {0, 0, 0};
+const std::array<float, 3> kZero = {0, 0, 0};
 
 ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_context,
                                              scenic::ResourceId compositor_id,
@@ -50,7 +49,17 @@ void ColorTransformHandler::SetColorTransformConfiguration(
     FX_LOGS(ERROR) << "ColorTransformConfiguration missing color adjustment matrix.";
     return;
   }
-  SetScenicColorConversion(configuration.color_adjustment_matrix());
+  if (!configuration.has_color_adjustment_pre_offset()) {
+    FX_LOGS(ERROR) << "ColorTransformConfiguration missing color adjustment pre offset vector.";
+    return;
+  }
+  if (!configuration.has_color_adjustment_post_offset()) {
+    FX_LOGS(ERROR) << "ColorTransformConfiguration missing color adjustment post offset vector.";
+    return;
+  }
+  SetScenicColorConversion(configuration.color_adjustment_matrix(),
+                           configuration.color_adjustment_pre_offset(),
+                           configuration.color_adjustment_post_offset());
   color_transform_state_.Update(std::move(configuration));
 }
 
@@ -66,13 +75,19 @@ void ColorTransformHandler::SetColorAdjustment(
     return;
   }
 
-  SetScenicColorConversion(color_adjustment_table.matrix());
+  SetScenicColorConversion(color_adjustment_table.matrix(), /* preoffsets */ kZero,
+                           /* postoffsets */ kZero);
 }
-void ColorTransformHandler::SetScenicColorConversion(std::array<float, 9> color_transform_matrix) {
+
+void ColorTransformHandler::SetScenicColorConversion(
+    const std::array<float, 9> color_transform_matrix,
+    const std::array<float, 3> color_transform_pre_offsets,
+    const std::array<float, 3> color_transform_post_offsets) {
   // Create scenic color adjustment cmd.
   fuchsia::ui::gfx::Command color_adjustment_cmd;
   fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK display_color_conversion_cmd;
-  InitColorConversionCmd(&display_color_conversion_cmd, color_transform_matrix);
+  InitColorConversionCmd(&display_color_conversion_cmd, color_transform_matrix,
+                         color_transform_pre_offsets, color_transform_post_offsets);
   // Call scenic to apply color adjustment.
   color_adjustment_cmd.set_set_display_color_conversion(std::move(display_color_conversion_cmd));
   session_->Enqueue(std::move(color_adjustment_cmd));
@@ -81,11 +96,13 @@ void ColorTransformHandler::SetScenicColorConversion(std::array<float, 9> color_
 
 void ColorTransformHandler::InitColorConversionCmd(
     fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK* display_color_conversion_cmd,
-    std::array<float, 9> color_transform_matrix) {
+    const std::array<float, 9> color_transform_matrix,
+    const std::array<float, 3> color_transform_pre_offsets,
+    const std::array<float, 3> color_transform_post_offsets) {
   display_color_conversion_cmd->compositor_id = compositor_id_;
-  display_color_conversion_cmd->preoffsets = kColorAdjustmentPreoffsets;
+  display_color_conversion_cmd->preoffsets = color_transform_pre_offsets;
   display_color_conversion_cmd->matrix = color_transform_matrix;
-  display_color_conversion_cmd->postoffsets = kColorAdjustmentPostoffsets;
+  display_color_conversion_cmd->postoffsets = color_transform_post_offsets;
 }
 
 }  // namespace root_presenter

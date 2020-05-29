@@ -33,6 +33,8 @@ class MockColorTransformHandler : public fuchsia::accessibility::ColorTransformH
   bool color_inversion_enabled_;
   fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
   std::array<float, 9> transform_;
+  std::array<float, 3> pre_offset_;
+  std::array<float, 3> post_offset_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MockColorTransformHandler);
 };
 }  // namespace accessibility_test

@@ -31,6 +31,8 @@ const std::array<float, 9> kTint = {
     0.2f, 0.0f, -0.0f,
     0.2f, 0.0f, -0.0f,
     0.000000f, -0.000000f, 1.000000f};
+
+const std::array<float, 3> kZero = {0.f, 0.f, 0.f};
 // clang-format on
 
 const scenic::ResourceId id = 1;
@@ -81,6 +83,8 @@ TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
       fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY);
   configuration.set_color_inversion_enabled(false);
   configuration.set_color_adjustment_matrix(kCorrectDeuteranomaly);
+  configuration.set_color_adjustment_pre_offset(kZero);
+  configuration.set_color_adjustment_post_offset(kZero);
 
   ASSERT_TRUE(configuration.has_color_adjustment_matrix());
   color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
@@ -106,7 +110,55 @@ TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
   configuration.set_color_correction(
       fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY);
   configuration.set_color_inversion_enabled(false);
+  configuration.set_color_adjustment_pre_offset(kZero);
+  configuration.set_color_adjustment_post_offset(kZero);
   EXPECT_FALSE(configuration.has_color_adjustment_matrix());
+
+  color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic was not called.
+  ASSERT_FALSE(fake_session_->PresentWasCalled());
+}
+
+// Verify that we don't call scenic when the accessibility pre-offset is missing.
+TEST_F(ColorTransformHandlerTest, A11yMissingPreOffset) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  // Change settings.
+  fuchsia::accessibility::ColorTransformConfiguration configuration;
+  configuration.set_color_correction(
+      fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY);
+  configuration.set_color_inversion_enabled(false);
+  configuration.set_color_adjustment_matrix(kCorrectDeuteranomaly);
+  configuration.set_color_adjustment_post_offset(kZero);
+  EXPECT_FALSE(configuration.has_color_adjustment_pre_offset());
+
+  color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic was not called.
+  ASSERT_FALSE(fake_session_->PresentWasCalled());
+}
+
+// Verify that we don't call scenic when the accessibility post-offset is missing.
+TEST_F(ColorTransformHandlerTest, A11yMissingPostOffset) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  // Change settings.
+  fuchsia::accessibility::ColorTransformConfiguration configuration;
+  configuration.set_color_correction(
+      fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY);
+  configuration.set_color_inversion_enabled(false);
+  configuration.set_color_adjustment_matrix(kCorrectDeuteranomaly);
+  configuration.set_color_adjustment_pre_offset(kZero);
+  EXPECT_FALSE(configuration.has_color_adjustment_post_offset());
 
   color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
   RunLoopUntilIdle();

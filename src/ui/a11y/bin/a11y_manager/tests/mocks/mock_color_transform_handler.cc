@@ -8,6 +8,7 @@
 namespace accessibility_test {
 
 const std::array<float, 9> kIdentityMatrix = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+const std::array<float, 3> kZero = {0, 0, 0};
 
 MockColorTransformHandler::MockColorTransformHandler(
     sys::testing::ComponentContextProvider* context)
@@ -30,6 +31,12 @@ void MockColorTransformHandler::SetColorTransformConfiguration(
     SetColorTransformConfigurationCallback callback) {
   transform_ = configuration.has_color_adjustment_matrix() ? configuration.color_adjustment_matrix()
                                                            : kIdentityMatrix;
+  pre_offset_ = configuration.has_color_adjustment_pre_offset()
+                    ? configuration.color_adjustment_pre_offset()
+                    : kZero;
+  post_offset_ = configuration.has_color_adjustment_post_offset()
+                     ? configuration.color_adjustment_post_offset()
+                     : kZero;
 
   color_inversion_enabled_ =
       configuration.has_color_inversion_enabled() ? configuration.color_inversion_enabled() : false;

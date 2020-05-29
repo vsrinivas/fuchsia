@@ -75,12 +75,16 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
       fuchsia::ui::brightness::ColorAdjustmentTable color_adjustment_table) override;
 
  private:
-  void SetScenicColorConversion(const std::array<float, 9> color_transform_matrix);
+  void SetScenicColorConversion(const std::array<float, 9> color_transform_matrix,
+                                const std::array<float, 3> color_transform_pre_offsets,
+                                const std::array<float, 3> color_transform_post_offsets);
 
   // Creates the scenic command to apply the requested change.
   void InitColorConversionCmd(
       fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK* display_color_conversion_cmd,
-      const std::array<float, 9> color_transform_matrix);
+      const std::array<float, 9> color_transform_matrix,
+      const std::array<float, 3> color_transform_pre_offsets,
+      const std::array<float, 3> color_transform_post_offsets);
 
   sys::ComponentContext* const component_context_ = nullptr;
   scenic::Session* session_ = nullptr;  // No ownership.
