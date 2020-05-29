@@ -27,7 +27,7 @@ fuchsia_cpp_component("return_zero_component") {
 
 fuchsia_test_package("return_zero_package") {
   package_name = "return-zero-package"
-  tests = [ ":return_zero_component" ]
+  test_components = [ ":return_zero_component" ]
 }
 
 fuchsia_cpp_unittest("twoplustwo-cpp-unittest") {
@@ -76,6 +76,6 @@ fuchsia_rust_component("echo-client-test") {
 }
 
 fuchsia_test_package("echo-integration-test") {
-  tests = [ ":echo-client-test" ]
+  test_components = [ ":echo-client-test" ]
   components = [ ":echo-server" ]
 }

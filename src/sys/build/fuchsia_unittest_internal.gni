@@ -50,7 +50,7 @@ template("fuchsia_unittest_internal") {
                              "test_specs",
                              "visibility",
                            ])
-    tests = [ ":$component_target" ]
+    test_components = [ ":$component_target" ]
     package_name = invoker.target_name
   }
 }

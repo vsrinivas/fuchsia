@@ -39,7 +39,7 @@ import("//src/sys/build/fuchsia_test.gni")
 #
 # Parameters
 #
-#   tests (required)
+#   test_components (required)
 #     `fuchsia_component()` targets to include in the package and also register
 #     as entry points for tests.
 #     Type: list(labels)
@@ -66,8 +66,8 @@ import("//src/sys/build/fuchsia_test.gni")
 #   visibility
 template("fuchsia_test_package") {
   assert(
-      defined(invoker.tests) && invoker.tests != [],
-      "`tests` must be specified when calling fuchsia_test_package($target_name)")
+      defined(invoker.test_components) && invoker.test_components != [],
+      "`test_components` must be specified when calling fuchsia_test_package($target_name)")
 
   package_target = "${target_name}_package"
   package_name = target_name
@@ -75,7 +75,7 @@ template("fuchsia_test_package") {
     package_name = invoker.package_name
   }
   test_deps = []
-  foreach(test, invoker.tests) {
+  foreach(test, invoker.test_components) {
     test_target = "${target_name}_test_" + get_label_info(test, "name")
     fuchsia_test(test_target) {
       package = ":$package_target"
@@ -95,7 +95,7 @@ template("fuchsia_test_package") {
                              "visibility",
                            ])
     package_name = package_name
-    components = invoker.tests
+    components = invoker.test_components
     if (defined(invoker.components)) {
       components += invoker.components
     }
