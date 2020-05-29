@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.process.init") {
   sources = [ "bootstrap.fidl" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.ldsvc",
     "//sdk/fidl/fuchsia.process",
-    "//zircon/system/fidl/fuchsia-ldsvc",
   ]
 }
