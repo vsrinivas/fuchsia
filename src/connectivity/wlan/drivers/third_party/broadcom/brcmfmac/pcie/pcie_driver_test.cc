@@ -298,14 +298,6 @@ zx_status_t RunPcieDriverTest(zx_device_t* parent) {
       return status;
     }
 
-    // One overall integration test for the entire driver.
-    PcieDevice* device = nullptr;
-    if ((status = PcieDevice::Create(parent, &device)) != ZX_OK) {
-      BRCMF_ERR("PCIE device integration test failed: %s", zx_status_get_string(status));
-      return status;
-    }
-    device->DdkAsyncRemove();
-
     BRCMF_INFO("PCIE tests passed");
   }
 

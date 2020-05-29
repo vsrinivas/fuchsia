@@ -73,16 +73,14 @@ TEST(DmaPoolTest, AllocateAcquire) {
   DmaPool::Buffer buffer;
   EXPECT_NE(ZX_OK, dma_pool->Allocate(&buffer));
 
-  // If we return one buffer, we should be able to get it back.
+  // If we return one buffer, we cannot re-acquire it, but we can re-allocate.
   const int last_index = buffers.back().index();
   buffers.pop_back();
-  EXPECT_EQ(ZX_OK, dma_pool->Allocate(&buffer));
-  EXPECT_EQ(last_index, buffer.index());
-
-  // We cannot acquire a buffer that has been allocated.
   DmaPool::Buffer acquired_buffer;
   EXPECT_NE(ZX_OK, dma_pool->Acquire(last_index, &acquired_buffer));
   EXPECT_FALSE(acquired_buffer.is_valid());
+  EXPECT_EQ(ZX_OK, dma_pool->Allocate(&buffer));
+  EXPECT_EQ(last_index, buffer.index());
 
   // Write some data to the buffer.
   std::vector<char> write_data(dma_pool->buffer_size(), '\x80');
@@ -90,7 +88,7 @@ TEST(DmaPoolTest, AllocateAcquire) {
   EXPECT_EQ(ZX_OK, buffer.MapWrite(write_data.size() * sizeof(write_data[0]), &write_pointer));
   std::memcpy(write_pointer, write_data.data(), write_data.size() * sizeof(write_data[0]));
 
-  // But if we release it, we can.
+  // If we release a buffer, we can re-acquire it.
   buffer.Release();
   EXPECT_FALSE(buffer.is_valid());
   EXPECT_EQ(ZX_OK, dma_pool->Acquire(last_index, &acquired_buffer));

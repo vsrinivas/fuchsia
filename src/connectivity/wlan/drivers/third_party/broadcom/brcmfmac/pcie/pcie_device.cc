@@ -4,7 +4,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
 
 #include <zircon/errors.h>
+#include <zircon/status.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_proto.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 
@@ -13,7 +17,10 @@ namespace brcmfmac {
 
 PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) {}
 
-PcieDevice::~PcieDevice() { DisableDispatcher(); }
+PcieDevice::~PcieDevice() {
+  brcmf_detach(drvr());
+  DisableDispatcher();
+}
 
 // static
 zx_status_t PcieDevice::Create(zx_device_t* parent_device, PcieDevice** out_device) {
@@ -45,6 +52,16 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device, PcieDevice** out_devi
 
   device->pcie_bus_ = std::move(pcie_bus);
   device->msgbuf_proto_ = std::move(msgbuf_proto);
+
+  if ((status = brcmf_attach(device->drvr())) != ZX_OK) {
+    BRCMF_ERR("Failed to attach: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if ((status = brcmf_bus_started(device->drvr())) != ZX_OK) {
+    BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
+    return status;
+  }
 
   // TODO(sheu): make the device visible once higher-level functionality is present.
   // device->DdkMakeVisible();

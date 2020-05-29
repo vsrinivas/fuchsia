@@ -373,6 +373,7 @@ if (internal_access) {
 # The test package, including tests in subdirs.
 group("brcmfmac_tests") {
   deps = [
+    "msgbuf/test:brcmfmac_msgbuf_test",
     "sdio/test:brcmfmac_sdio_test",
     "sim/test:brcmfmac_sim_test",
     "test:brcmfmac_test",

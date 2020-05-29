@@ -17,6 +17,8 @@
 namespace wlan {
 namespace brcmfmac {
 
+class MsgbufRingHandler;
+
 // This class implements the brcmfmc MSGBUF protocol for communicating with the firmware running
 // on a Broadcom PHY.  It implements the C-style interface as defined by brcmf_proto and used by the
 // higher-level cfg80211 logic.
@@ -45,7 +47,9 @@ class MsgbufProto {
   brcmf_proto* GetProto();
 
  private:
+  Device* device_ = nullptr;
   std::unique_ptr<brcmf_proto> proto_;
+  std::unique_ptr<MsgbufRingHandler> ring_handler_;
 };
 
 }  // namespace brcmfmac

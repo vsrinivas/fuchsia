@@ -63,6 +63,7 @@ class DmaPool {
     // State accessors.
     bool is_valid() const;
     int index() const;
+    size_t size() const;
 
     // Map this Buffer for CPU access.
     zx_status_t MapRead(size_t read_size, const void** out_data);
@@ -133,11 +134,10 @@ class DmaPool {
       kInvalid = 0,
       kFree,
       kAllocated,
-      kReleased,
     };
 
     Record* next_free = nullptr;
-    State state = State::kInvalid;
+    std::atomic<State> state = State::kInvalid;
   };
 
   // Tagged pointer for the list head.
@@ -151,10 +151,6 @@ class DmaPool {
   // Get the appropriate address for the buffer, by index.
   void* GetAddress(int index) const;
   zx_paddr_t GetDmaAddress(int index) const;
-
-  // Release a buffer by index.  The buffer is now still allocated, but unbound to a Buffer
-  // instance.
-  void Release(int index);
 
   // Return a buffer by index to the pool, that was returned from Allocate() or Acquire().
   void Return(int index);

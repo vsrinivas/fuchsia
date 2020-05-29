@@ -38,6 +38,8 @@ bool DmaPool::Buffer::is_valid() const { return parent_ != nullptr; }
 
 int DmaPool::Buffer::index() const { return index_; }
 
+size_t DmaPool::Buffer::size() const { return parent_->buffer_size(); }
+
 zx_status_t DmaPool::Buffer::MapRead(size_t read_size, const void** out_data) {
   zx_status_t status = ZX_OK;
 
@@ -112,9 +114,6 @@ zx_status_t DmaPool::Buffer::Pin(zx_paddr_t* out_dma_address) {
 }
 
 void DmaPool::Buffer::Release() {
-  if (parent_ != nullptr) {
-    parent_->Release(index_);
-  }
   parent_ = nullptr;
   index_ = kInvalidIndex;
   read_size_ = 0;
@@ -180,10 +179,11 @@ zx_status_t DmaPool::Create(size_t buffer_size, int buffer_count,
   std::vector<DmaPool::Record> records(buffer_count);
   for (size_t i = 0; i < records.size() - 1; ++i) {
     records[i].next_free = &records[i + 1];
-    records[i].state = Record::State::kFree;
+    records[i].state.store(Record::State::kFree, std::memory_order::memory_order_relaxed);
   }
   records[records.size() - 1].next_free = nullptr;
-  records[records.size() - 1].state = Record::State::kFree;
+  records[records.size() - 1].state.store(Record::State::kFree,
+                                          std::memory_order::memory_order_relaxed);
 
   std::unique_ptr<DmaPool> dma_pool(new DmaPool());
   dma_pool->buffer_size_ = buffer_size;
@@ -222,7 +222,7 @@ zx_status_t DmaPool::Allocate(Buffer* out_buffer) {
 
   Record* const record = head.record;
   record->next_free = nullptr;
-  record->state = Record::State::kAllocated;
+  record->state.store(Record::State::kAllocated, std::memory_order::memory_order_release);
   const int index = record - &records_[0];
   // This is a new allocation, so we disregard its existing contents.  Setting `read_size` to
   // `buffer_size_` will skip the cache invalidations for CPU access.
@@ -237,17 +237,14 @@ zx_status_t DmaPool::Acquire(int index, Buffer* out_buffer) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   Record* const record = &records_[index];
-  if (record->state != Record::State::kReleased) {
+  if (record->state.load(std::memory_order::memory_order_acquire) != Record::State::kAllocated) {
     switch (record->state) {
       case Record::State::kFree:
         return ZX_ERR_NOT_FOUND;
-      case Record::State::kAllocated:
-        return ZX_ERR_ALREADY_BOUND;
       default:
         return ZX_ERR_BAD_STATE;
     };
   }
-  record->state = Record::State::kAllocated;
 
   // This is an acquired allocation, so its existing device-written contents may be important.
   // Setting `read_size` to 0 ensures that we will cache-invalidate before attempting CPU access.
@@ -265,14 +262,9 @@ zx_paddr_t DmaPool::GetDmaAddress(int index) const {
   return static_cast<zx_paddr_t>(dma_allocation_->dma_address() + buffer_size_ * index);
 }
 
-void DmaPool::Release(int index) {
-  Record* const record = &records_[index];
-  record->state = Record::State::kReleased;
-}
-
 void DmaPool::Return(int index) {
   Record* const record = &records_[index];
-  record->state = Record::State::kFree;
+  record->state.store(Record::State::kFree, std::memory_order::memory_order_release);
   ListHead head = next_free_record_.load(std::memory_order::memory_order_relaxed);
   while (true) {
     ListHead next = {};
