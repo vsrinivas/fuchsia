@@ -107,11 +107,7 @@ impl LogManager {
             let mut source = SourceIdentity::empty();
             source.component_name = Some(name);
             let source = Arc::new(source);
-            let component_log_stats = {
-                let inner = manager.inner.lock().await;
-                inner.stats.get_component_log_stats(&source).await
-            };
-            let log_stream = LogMessageSocket::new(socket, component_log_stats, source)
+            let log_stream = LogMessageSocket::new(socket, source)
                 .expect("Unable to create internal LogMessageSocket");
             manager.drain_messages(log_stream).await;
             unreachable!();
@@ -168,25 +164,19 @@ impl LogManager {
             self.inner.lock().await.stats.record_unattributed();
         }
         let (mut log_stream_sender, recv) = mpsc::channel(0);
-        let this = self.clone();
         let log_sink_fut = async move {
             while let Some(LogSinkRequest::Connect { socket, control_handle }) =
                 stream.try_next().await?
             {
-                let component_log_stats = {
-                    let inner = this.inner.lock().await;
-                    inner.stats.get_component_log_stats(&source).await
+                let log_stream = match LogMessageSocket::new(socket, source.clone())
+                    .context("creating log stream from socket")
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        control_handle.shutdown();
+                        return Err(e);
+                    }
                 };
-                let log_stream =
-                    match LogMessageSocket::new(socket, component_log_stats, source.clone())
-                        .context("creating log stream from socket")
-                    {
-                        Ok(s) => s,
-                        Err(e) => {
-                            control_handle.shutdown();
-                            return Err(e);
-                        }
-                    };
                 log_stream_sender.send(log_stream).await?;
             }
             Ok(())
@@ -213,10 +203,15 @@ impl LogManager {
 
     /// Drain a `LoggerStream` which wraps a socket from a component generating logs.
     async fn drain_messages(self, mut log_stream: LogMessageSocket) {
+        let component_log_stats = {
+            let inner = self.inner.lock().await;
+            inner.stats.get_component_log_stats(log_stream.source()).await
+        };
         while let Some(next) = log_stream.next().await {
             match next {
-                Ok(log_msg) => {
-                    self.ingest_message(log_msg, stats::LogSource::LogSink).await;
+                Ok(message) => {
+                    component_log_stats.lock().await.record_log(&message);
+                    self.ingest_message(message, stats::LogSource::LogSink).await;
                 }
                 Err(e) => {
                     self.inner.lock().await.stats.record_closed_stream();

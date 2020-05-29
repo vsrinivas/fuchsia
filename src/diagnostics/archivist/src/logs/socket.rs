@@ -3,16 +3,13 @@
 
 use super::error::StreamError;
 use super::message::Message;
-use crate::logs::stats::ComponentLogStats;
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
-    io,
-    lock::Mutex,
-    ready,
+    io, ready,
     task::{Context, Poll},
-    Future, Stream,
+    Stream,
 };
 use std::pin::Pin;
 use std::sync::Arc;
@@ -20,21 +17,14 @@ use std::sync::Arc;
 #[must_use = "don't drop logs on the floor please!"]
 pub struct LogMessageSocket {
     source: Arc<SourceIdentity>,
-    /// stats represents the stats for a particular component URL. Once all sockets
-    /// that hold these stats are dropped, so is the inspect node.
-    stats: Arc<Mutex<ComponentLogStats>>,
     socket: fasync::Socket,
     buffer: Vec<u8>,
 }
 
 impl LogMessageSocket {
     /// Creates a new `LogMessageSocket` from the given `socket`.
-    pub fn new(
-        socket: zx::Socket,
-        stats: Arc<Mutex<ComponentLogStats>>,
-        source: Arc<SourceIdentity>,
-    ) -> Result<Self, io::Error> {
-        Ok(Self { socket: fasync::Socket::from_socket(socket)?, buffer: Vec::new(), stats, source })
+    pub fn new(socket: zx::Socket, source: Arc<SourceIdentity>) -> Result<Self, io::Error> {
+        Ok(Self { socket: fasync::Socket::from_socket(socket)?, buffer: Vec::new(), source })
     }
 
     /// What we know of the identity of the writer of these logs.
@@ -48,15 +38,10 @@ impl Stream for LogMessageSocket {
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let &mut Self { ref mut socket, ref mut buffer, .. } = &mut *self;
-        Poll::Ready(match ready!(Pin::new(socket).poll_datagram(cx, buffer)) {
+        Poll::Ready(match ready!(socket.poll_datagram(cx, buffer)) {
             Ok(_) => {
                 let res = Message::from_logger(buffer.as_slice());
                 buffer.clear();
-                if let Ok(message) = &res {
-                    let mut stats = self.stats.lock();
-                    let component_log_stats = ready!(Pin::new(&mut stats).poll(cx));
-                    component_log_stats.record_log(&message);
-                }
                 Some(res)
             }
             Err(zx::Status::PEER_CLOSED) => None,
@@ -92,12 +77,7 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let ls = LogMessageSocket::new(
-            sout,
-            Arc::new(Mutex::new(ComponentLogStats::default())),
-            Arc::new(SourceIdentity::empty()),
-        )
-        .unwrap();
+        let ls = LogMessageSocket::new(sout, Arc::new(SourceIdentity::empty())).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let mut expected_p = Message {
             size: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
