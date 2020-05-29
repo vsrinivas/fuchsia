@@ -1649,7 +1649,7 @@ pub mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn started_event_timestamp_matches_realm() {
+    async fn started_and_running_vent_timestamp_matches_realm() {
         let test =
             RoutingTest::new("root", vec![("root", ComponentDeclBuilder::new().build())]).await;
 
@@ -1688,6 +1688,17 @@ pub mod tests {
         let realm = bind_handle.await;
         let realm_timestamp = realm.lock_execution().await.runtime.as_ref().unwrap().timestamp;
         assert_eq!(realm_timestamp, started_timestamp);
+
+        let mut event_stream = event_source
+            .subscribe(vec![EventType::Running.into()])
+            .await
+            .expect("subscribe to event stream");
+        let event = event_stream.wait_until(EventType::Running, vec![].into()).await.unwrap().event;
+        assert_matches!(
+            event.result,
+            Ok(EventPayload::Running { started_timestamp: timestamp })
+            if timestamp == started_timestamp);
+        assert!(event.timestamp > started_timestamp);
     }
 
     #[fasync::run_singlethreaded(test)]

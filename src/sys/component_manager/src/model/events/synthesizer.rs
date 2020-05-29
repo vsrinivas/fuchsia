@@ -244,7 +244,7 @@ mod tests {
             }
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
-                Ok(EventPayload::Running) => {
+                Ok(EventPayload::Running { .. }) => {
                     result_monikers.insert(event.event.target_moniker.to_string());
                 }
                 Ok(EventPayload::Started { .. }) => {
@@ -400,7 +400,7 @@ mod tests {
         while result_running_monikers.len() < 5 || result_capability_ready_monikers.len() < 4 {
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
-                Ok(EventPayload::Running) => {
+                Ok(EventPayload::Running { .. }) => {
                     result_running_monikers.insert(event.event.target_moniker.to_string());
                 }
                 // We get an error cuz the component is not really serving the directory, but is
@@ -510,7 +510,7 @@ mod tests {
         for _ in 0..total {
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
-                Ok(EventPayload::Running) => {
+                Ok(EventPayload::Running { .. }) => {
                     result_monikers.push(event.event.target_moniker.to_string());
                 }
                 payload => panic!("Expected running. Got: {:?}", payload),

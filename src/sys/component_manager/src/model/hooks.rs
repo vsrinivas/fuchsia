@@ -195,7 +195,7 @@ pub enum EventErrorPayload {
     Resolved,
     Started { component_url: String },
     Stopped,
-    Running,
+    Running { started_timestamp: zx::Time },
 }
 
 impl HasEventType for EventError {
@@ -222,7 +222,7 @@ impl fmt::Debug for EventErrorPayload {
             | EventErrorPayload::MarkedForDestruction
             | EventErrorPayload::Resolved
             | EventErrorPayload::Stopped
-            | EventErrorPayload::Running => formatter.finish(),
+            | EventErrorPayload::Running { .. } => formatter.finish(),
         }
     }
 }
@@ -286,7 +286,9 @@ pub enum EventPayload {
         bind_reason: BindReason,
     },
     Stopped,
-    Running,
+    Running {
+        started_timestamp: zx::Time,
+    },
 }
 
 /// Information about a component's runtime provided to `Started`.
@@ -334,7 +336,7 @@ impl fmt::Debug for EventPayload {
             EventPayload::Destroyed
             | EventPayload::MarkedForDestruction
             | EventPayload::Stopped
-            | EventPayload::Running => formatter.finish(),
+            | EventPayload::Running { .. } => formatter.finish(),
         }
     }
 }
@@ -405,7 +407,7 @@ impl fmt::Display for Event {
                     | EventPayload::MarkedForDestruction
                     | EventPayload::Resolved { .. }
                     | EventPayload::Stopped
-                    | EventPayload::Running => "".to_string(),
+                    | EventPayload::Running { .. } => "".to_string(),
                 };
                 format!("[{}] '{}' {}", self.event_type().to_string(), self.target_moniker, payload)
             }

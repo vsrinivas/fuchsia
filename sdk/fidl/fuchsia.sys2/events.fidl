@@ -121,6 +121,9 @@ flexible union EventErrorPayload {
 
     /// Payload for Started events
     3: StartedError started;
+
+    /// Payload for Running events
+    4: RunningError running;
 };
 
 /// Error payload for CapabilityReady events
@@ -146,6 +149,12 @@ table StartedError {
     1: fuchsia.url.Url component_url;
 };
 
+/// Error payload for Running events.
+table RunningError {
+    /// Time when the component started.
+    1: zx.time started_timestamp;
+};
+
 /// Encapsulates additional data/protocols for some event types.
 flexible union EventPayload {
     /// Payload for CapabilityReady events
@@ -156,6 +165,9 @@ flexible union EventPayload {
 
     /// Payload for Started events
     3: StartedPayload started;
+
+    /// Payload for Running events
+    4: RunningPayload running;
 };
 
 /// Payload for CapabilityReady events
@@ -190,6 +202,12 @@ table CapabilityRoutedPayload {
 table StartedPayload {
     /// The url of the component that started
     1: fuchsia.url.Url component_url;
+};
+
+/// Payload for Running events.
+table RunningPayload {
+    /// Time when the component started.
+    1: zx.time started_timestamp;
 };
 
 /// Contains all information about a single event

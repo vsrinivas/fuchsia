@@ -999,7 +999,25 @@ create_event!(
     }
 );
 create_event!(Stopped, stopped);
-create_event!(Running, running);
+create_event!(
+    event_type: Running,
+    event_name: running,
+    payload: {
+        data: {
+            {
+                name: started_timestamp,
+                ty: i64,
+            }
+        },
+        protocols: {},
+    },
+    error_payload: {
+        {
+            name: started_timestamp,
+            ty: i64,
+        }
+    }
+);
 create_event!(
     event_type: CapabilityReady,
     event_name: capability_ready,

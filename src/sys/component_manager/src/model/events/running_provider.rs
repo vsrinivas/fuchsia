@@ -26,10 +26,9 @@ impl EventSynthesisProvider for RunningProvider {
         match &realm.lock_execution().await.runtime {
             // No runtime means the component is not running. Don't synthesize anything.
             None => vec![],
-            Some(runtime) => vec![Event::new_with_timestamp(
+            Some(runtime) => vec![Event::new(
                 realm.abs_moniker.clone(),
-                Ok(EventPayload::Running),
-                runtime.timestamp,
+                Ok(EventPayload::Running { started_timestamp: runtime.timestamp }),
             )],
         }
     }

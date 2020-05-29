@@ -111,6 +111,11 @@ fn maybe_create_event_result(
                 fsys::StartedPayload { component_url: Some(component_url.to_string()) },
             ))))
         }
+        Ok(EventPayload::Running { started_timestamp }) => {
+            Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
+                fsys::RunningPayload { started_timestamp: Some(started_timestamp.into_nanos()) },
+            ))))
+        }
         Err(EventError {
             source,
             event_error_payload: EventErrorPayload::CapabilityReady { component_url, path },
@@ -130,6 +135,16 @@ fn maybe_create_event_result(
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::Started(fsys::StartedError {
                 component_url: Some(component_url.to_string()),
+            })),
+            description: Some(format!("{}", source)),
+            ..fsys::EventError::empty()
+        }))),
+        Err(EventError {
+            source,
+            event_error_payload: EventErrorPayload::Running { started_timestamp },
+        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
+            error_payload: Some(fsys::EventErrorPayload::Running(fsys::RunningError {
+                started_timestamp: Some(started_timestamp.into_nanos()),
             })),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
