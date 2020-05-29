@@ -70,19 +70,19 @@ test_package("shell_tests") {
   tests = [
     {
       name = "console_unittests_bin"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
     {
       name = "sh_mirror_tests_bin"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
     {
       name = "josh_tests_bin"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
     {
       name = "parser_tests_bin"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
   extra = get_target_outputs(":generate_fidl_json") +

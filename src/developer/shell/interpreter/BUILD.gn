@@ -125,11 +125,11 @@ test_package("shell_interpreter_tests") {
   tests = [
     {
       name = "shell_interpreter_test_bin"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
     {
       name = "shell_server_test_bin"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
