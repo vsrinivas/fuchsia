@@ -50,9 +50,7 @@ void VnodeMinfs::SetIno(ino_t ino) {
 }
 
 void VnodeMinfs::AddLink() {
-  uint64_t result;
-  ZX_ASSERT_MSG(!add_overflow(inode_.link_count, 1, &result), "Exceeded max link count");
-  inode_.link_count++;
+  ZX_ASSERT_MSG(!add_overflow(inode_.link_count, 1, &inode_.link_count), "Exceeded max link count");
 }
 
 void VnodeMinfs::InodeSync(PendingWork* transaction, uint32_t flags) {
