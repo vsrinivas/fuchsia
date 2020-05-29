@@ -22,7 +22,7 @@ use crate::ipv6::write_ndp_message;
 use crate::*;
 
 const NETWORK_MANAGER_PKG_URL: &str =
-    fuchsia_component::fuchsia_single_component_package_url!("network_manager");
+    fuchsia_component::fuchsia_single_component_package_url!("network-manager");
 
 /// Tests that dns-resolver does not support `fuchsia.net.name/LookupAdmin.SetDefaultDnsServers`.
 #[fuchsia_async::run_singlethreaded(test)]

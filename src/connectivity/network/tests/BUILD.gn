@@ -146,7 +146,7 @@ group("netstack_integration_tests") {
     "//src/connectivity/network/dns:dns-resolver",
 
     # network_manager integration with netstack is tested.
-    "//src/connectivity/management/network_manager",
+    "//src/connectivity/management/network-manager",
   ]
 }
 

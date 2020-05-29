@@ -56,7 +56,7 @@
                                     "nat",
                                     "enable"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/network_manager_cli#meta/network_manager_cli.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/network-manager-cli#meta/network-manager-cli.cmx"
                             }
                         ],
                         "test": [
@@ -73,7 +73,7 @@
                     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.router.config.RouterAdmin": "fuchsia-pkg://fuchsia.com/network_manager#meta/network_manager.cmx"
+                    "fuchsia.router.config.RouterAdmin": "fuchsia-pkg://fuchsia.com/network-manager#meta/network-manager.cmx"
                 },
                 "setup": [
                     {

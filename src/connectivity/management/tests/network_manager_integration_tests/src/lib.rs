@@ -65,12 +65,12 @@ fn generate_launch_services() -> Vec<LaunchService> {
         ("fuchsia.net.filter.Filter", component_url!("netstack"), None),
         (
             "fuchsia.router.config.RouterAdmin",
-            component_url!("network_manager"),
+            component_url!("network-manager"),
             Some(vec!["--devicepath".to_string(), "vdev".to_string()]),
         ),
         (
             "fuchsia.router.config.RouterState",
-            component_url!("network_manager"),
+            component_url!("network-manager"),
             Some(vec!["--devicepath".to_string(), "vdev".to_string()]),
         ),
     ];

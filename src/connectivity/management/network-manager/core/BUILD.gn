@@ -20,7 +20,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
     "//src/connectivity/lib/net-types",
-    "//src/connectivity/management/network_manager/core/interface:lib",
+    "//src/connectivity/management/network-manager/core/interface:lib",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -70,7 +70,7 @@ rustc_library("lib") {
   ]
 }
 
-package("network_manager_cli") {
+package("network-manager-cli") {
   deps = [
     ":bin",
     ":lib",
@@ -83,13 +83,13 @@ package("network_manager_cli") {
   ]
   meta = [
     {
-      path = rebase_path("meta/network_manager_cli.cmx")
-      dest = "network_manager_cli.cmx"
+      path = rebase_path("meta/network-manager-cli.cmx")
+      dest = "network-manager-cli.cmx"
     },
   ]
 }
 
-test_package("network_manager_cli_tests") {
+test_package("network-manager-cli-tests") {
   deps = [
     ":bin_test",
     ":lib_test",
@@ -98,11 +98,16 @@ test_package("network_manager_cli_tests") {
   tests = [
     {
       name = "network_manager_cli_bin_test"
-      environments = basic_envs
+      environments = [ emu_env ]
     },
     {
       name = "network_manager_cli_lib_lib_test"
-      environments = basic_envs
+      environments = [ emu_env ]
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":network-manager-cli-tests" ]
 }
