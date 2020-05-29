@@ -274,8 +274,15 @@ void App::InitializeServices() {
     compositor_->SetLayerStack(*layer_stack_.get());
     session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 
-    scenic_->GetDisplayOwnershipEvent(
-        [this](zx::event event) { input_reader_.SetOwnershipEvent(std::move(event)); });
+    scenic_->GetDisplayOwnershipEvent([this](zx::event event) {
+      input_reader_.SetOwnershipEvent(std::move(event));
+      is_scenic_initialized_ = true;
+      if (deferred_a11y_pointer_event_registry_) {
+        // Process pending pointer event register requests.
+        deferred_a11y_pointer_event_registry_();
+        deferred_a11y_pointer_event_registry_ = nullptr;
+      }
+    });
 
     component_context_->svc()->Connect(magnifier_.NewRequest());
     // No need to set an error handler here unless we want to attempt a reconnect or something;
@@ -344,12 +351,32 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
 
 void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
                        pointer_event_listener) {
+  if (!is_scenic_initialized_) {
+    if (deferred_a11y_pointer_event_registry_) {
+      FX_LOGS(ERROR)
+          << "Unable to defer a new request. A11y pointer event registration is already deferred.";
+      return;
+    }
+    deferred_a11y_pointer_event_registry_ =
+        [this, pointer_event_listener = std::move(pointer_event_listener)]() mutable {
+          Register(std::move(pointer_event_listener));
+        };
+
+    return;
+  }
+
   if (!pointer_event_registry_) {
     component_context_->svc()->Connect(pointer_event_registry_.NewRequest());
+    pointer_event_registry_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(ERROR) << "Pointer event registry died with error:" << zx_status_get_string(status);
+    });
   }
   FX_LOGS(INFO) << "Connecting to pointer event registry.";
   // Forward the listener to the registry we're connected to.
-  auto callback = [](bool) {};
+  auto callback = [](bool status) {
+    FX_LOGS(INFO) << "Registration completed for pointer event registry with status: " << status;
+  };
+
   pointer_event_registry_->Register(std::move(pointer_event_listener), std::move(callback));
 }
 

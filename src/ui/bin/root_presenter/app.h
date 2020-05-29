@@ -136,6 +136,11 @@ class App : public fuchsia::ui::policy::Presenter,
   // If accessibility requests to register a Focuser and Scenic hasn't started yet, the binding of
   // |focuser_binding_| is deferred until |view_focuser_| is initialized.
   fit::function<void()> deferred_a11y_focuser_binding_;
+
+  // If accessibility requests to register a PointerEventRegistry and Scenic hasn't started yet, the
+  // registration is deferred until GetDisplayOwnershipEventCallback is called.
+  fit::function<void()> deferred_a11y_pointer_event_registry_ = nullptr;
+
   // This is a privileged interface between Root Presenter and Accessibility. It allows Root
   // Presenter to register presentations with Accessibility for magnification.
   fuchsia::accessibility::MagnifierPtr magnifier_;
@@ -167,6 +172,8 @@ class App : public fuchsia::ui::policy::Presenter,
   // support.
   MediaButtonsHandler media_buttons_handler_;
 
+  // Tracks if scenic initialization is complete.
+  bool is_scenic_initialized_ = false;
   std::unique_ptr<ColorTransformHandler> color_transform_handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

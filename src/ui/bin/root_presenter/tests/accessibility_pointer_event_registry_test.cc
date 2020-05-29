@@ -6,8 +6,10 @@
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/ui/bin/root_presenter/app.h"
+#include "src/ui/bin/root_presenter/tests/fakes/fake_scenic.h"
 
 namespace root_presenter {
 namespace testing {
@@ -85,10 +87,17 @@ class AccessibilityPointerEventRegistryTest : public sys::testing::TestWithEnvir
         std::move(launch_info), fuchsia::ui::input::accessibility::PointerEventRegistry::Name_);
     EXPECT_EQ(ZX_OK, status);
 
+    status = services->AddServiceWithLaunchInfo(
+        {.url = "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
+        fuchsia::ui::policy::Presenter::Name_);
+    ASSERT_EQ(ZX_OK, status);
+
     // Root Presenter calls another PointerEventRegistry, this time, in
     // fuchsia::ui::policy::accessibility.
     services->AddService(fake_pointer_event_registry_.GetRequestHandler(),
                          fuchsia::ui::policy::accessibility::PointerEventRegistry::Name_);
+
+    services->AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
 
     // Create the synthetic environment.
     environment_ =
@@ -97,19 +106,46 @@ class AccessibilityPointerEventRegistryTest : public sys::testing::TestWithEnvir
 
     // Instantiate the registry. This is the interface being tested.
     environment_->ConnectToService(registry_.NewRequest());
+    // Instantiate the presenter_. This is a helper interface to initialize Scenic services inside
+    // Root Presenter.
+    environment_->ConnectToService(presenter_.NewRequest());
+
     ASSERT_TRUE(registry_.is_bound());
+    ASSERT_TRUE(presenter_.is_bound());
   }
 
   fuchsia::ui::input::accessibility::PointerEventRegistryPtr registry_;
 
   FakePointerEventRegistry fake_pointer_event_registry_;
+  fuchsia::ui::policy::PresenterPtr presenter_;
+
+  FakeScenic fake_scenic_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
-TEST_F(AccessibilityPointerEventRegistryTest, Registers) {
+TEST_F(AccessibilityPointerEventRegistryTest, RegistersBeforeScenicIsReady) {
   FakePointerEventListener fake_listener;
   auto listener_handle = fake_listener.GetHandle();
   registry_->Register(std::move(listener_handle));
+
+  // A dummy call to PresentView() so that Scenic services are initialized.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  presenter_->PresentView(std::move(view_holder_token), nullptr);
+
+  RunLoopUntil([&fake_listener] { return fake_listener.ReceivedEvent(); });
+  EXPECT_TRUE(fake_pointer_event_registry_.IsListenerRegistered());
+}
+
+TEST_F(AccessibilityPointerEventRegistryTest, RegistersAfterScenicIsReady) {
+  // A dummy call to PresentView() so that Scenic services are initialized.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  presenter_->PresentView(std::move(view_holder_token), nullptr);
+  RunLoopUntilIdle();
+
+  FakePointerEventListener fake_listener;
+  auto listener_handle = fake_listener.GetHandle();
+  registry_->Register(std::move(listener_handle));
+
   RunLoopUntil([&fake_listener] { return fake_listener.ReceivedEvent(); });
   EXPECT_TRUE(fake_pointer_event_registry_.IsListenerRegistered());
 }

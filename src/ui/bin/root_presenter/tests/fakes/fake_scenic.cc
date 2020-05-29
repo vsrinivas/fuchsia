@@ -25,5 +25,12 @@ void FakeScenic::CreateSession2(
   fake_focuser_.Bind(std::move(view_focuser));
 }
 
+void FakeScenic::GetDisplayOwnershipEvent(
+    fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
+  zx::event event;
+  zx::event::create(0, &event);
+  callback(std::move(event));
+}
+
 }  // namespace testing
 }  // namespace root_presenter

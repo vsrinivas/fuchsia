@@ -38,6 +38,8 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   void CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
                       fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
                       fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
+  void GetDisplayOwnershipEvent(
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
