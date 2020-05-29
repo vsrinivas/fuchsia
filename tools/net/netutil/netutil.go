@@ -12,6 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
+	constants "go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
 )
 
 // GetNodeAddress returns the UDP address corresponding to a given node, specifically
@@ -26,7 +27,7 @@ func GetNodeAddress(ctx context.Context, nodename string, fuchsia bool) (*net.UD
 		return err
 	}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cannot find node %q: %v", nodename, err)
+		return nil, fmt.Errorf("%s %q: %v", constants.CannotFindNodeErrMsg, nodename, err)
 	}
 	return addr, nil
 }

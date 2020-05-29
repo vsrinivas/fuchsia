@@ -7,7 +7,13 @@ import("//build/go/go_library.gni")
 go_library("netutil") {
   name = "go.fuchsia.dev/fuchsia/tools/net/netutil"
   deps = [
+    ":netutilconstants",
     "//tools/lib/retry",
     "//tools/net/netboot",
   ]
+}
+
+go_library("netutilconstants") {
+  name = "go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
+  source_dir = "constants"
 }

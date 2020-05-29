@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	constants "go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
@@ -27,46 +28,27 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	// Special image names recognized by fuchsia's netsvc.
-	authorizedKeysNetsvcName = "<<image>>authorized_keys"
-	boardInfoNetsvcName      = "<<image>>board_info"
-	bootloaderNetsvcName     = "<<image>>bootloader.img"
-	cmdlineNetsvcName        = "<<netboot>>cmdline"
-	efiNetsvcName            = "<<image>>efi.img"
-	firmwareNetsvcPrefix     = "<<image>>firmware_"
-	fvmNetsvcName            = "<<image>>sparse.fvm"
-	kerncNetsvcName          = "<<image>>kernc.img"
-	kernelNetsvcName         = "<<netboot>>kernel.bin"
-	vbmetaANetsvcName        = "<<image>>vbmetaa.img"
-	vbmetaBNetsvcName        = "<<image>>vbmetab.img"
-	vbmetaRNetsvcName        = "<<image>>vbmetar.img"
-	zirconANetsvcName        = "<<image>>zircona.img"
-	zirconBNetsvcName        = "<<image>>zirconb.img"
-	zirconRNetsvcName        = "<<image>>zirconr.img"
-)
-
 // Maps bootserver argument to a corresponding netsvc name.
 var bootserverArgToNameMap = map[string]string{
-	"--boot":       kernelNetsvcName,
-	"--bootloader": bootloaderNetsvcName,
-	"--efi":        efiNetsvcName,
-	"--firmware":   firmwareNetsvcPrefix,
-	"--fvm":        fvmNetsvcName,
-	"--kernc":      kerncNetsvcName,
-	"--vbmetaa":    vbmetaANetsvcName,
-	"--vbmetab":    vbmetaBNetsvcName,
-	"--vbmetar":    vbmetaRNetsvcName,
-	"--zircona":    zirconANetsvcName,
-	"--zirconb":    zirconBNetsvcName,
-	"--zirconr":    zirconRNetsvcName,
+	"--boot":       constants.KernelNetsvcName,
+	"--bootloader": constants.BootloaderNetsvcName,
+	"--efi":        constants.EfiNetsvcName,
+	"--firmware":   constants.FirmwareNetsvcPrefix,
+	"--fvm":        constants.FvmNetsvcName,
+	"--kernc":      constants.KerncNetsvcName,
+	"--vbmetaa":    constants.VbmetaANetsvcName,
+	"--vbmetab":    constants.VbmetaBNetsvcName,
+	"--vbmetar":    constants.VbmetaRNetsvcName,
+	"--zircona":    constants.ZirconANetsvcName,
+	"--zirconb":    constants.ZirconBNetsvcName,
+	"--zirconr":    constants.ZirconRNetsvcName,
 }
 
 func bootserverArgToName(arg string) (string, bool) {
 	// Check for a typed firmware arg "--firmare-<type>".
 	if strings.HasPrefix(arg, "--firmware-") {
 		fwType := strings.TrimPrefix(arg, "--firmware-")
-		return firmwareNetsvcPrefix + fwType, true
+		return constants.FirmwareNetsvcPrefix + fwType, true
 	}
 
 	name, exists := bootserverArgToNameMap[arg]
@@ -77,27 +59,27 @@ func bootserverArgToName(arg string) (string, bool) {
 // present. The indices correspond to the ordering given in
 // https://go.fuchsia.dev/zircon/+/master/system/host/bootserver/bootserver.c
 var transferOrderMap = map[string]int{
-	cmdlineNetsvcName:        1,
-	fvmNetsvcName:            2,
-	bootloaderNetsvcName:     3,
-	firmwareNetsvcPrefix:     4,
-	efiNetsvcName:            5,
-	kerncNetsvcName:          6,
-	zirconANetsvcName:        7,
-	zirconBNetsvcName:        8,
-	zirconRNetsvcName:        9,
-	vbmetaANetsvcName:        10,
-	vbmetaBNetsvcName:        11,
-	vbmetaRNetsvcName:        12,
-	authorizedKeysNetsvcName: 13,
-	kernelNetsvcName:         14,
+	constants.CmdlineNetsvcName:        1,
+	constants.FvmNetsvcName:            2,
+	constants.BootloaderNetsvcName:     3,
+	constants.FirmwareNetsvcPrefix:     4,
+	constants.EfiNetsvcName:            5,
+	constants.KerncNetsvcName:          6,
+	constants.ZirconANetsvcName:        7,
+	constants.ZirconBNetsvcName:        8,
+	constants.ZirconRNetsvcName:        9,
+	constants.VbmetaANetsvcName:        10,
+	constants.VbmetaBNetsvcName:        11,
+	constants.VbmetaRNetsvcName:        12,
+	constants.AuthorizedKeysNetsvcName: 13,
+	constants.KernelNetsvcName:         14,
 }
 
 func transferOrder(name string) (int, bool) {
 	// Ordering doesn't matter among different types of firmware, they can
 	// all use the same index.
-	if strings.HasPrefix(name, firmwareNetsvcPrefix) {
-		name = firmwareNetsvcPrefix
+	if strings.HasPrefix(name, constants.FirmwareNetsvcPrefix) {
+		name = constants.FirmwareNetsvcPrefix
 	}
 
 	index, exists := transferOrderMap[name]
@@ -108,7 +90,7 @@ func transferOrder(name string) (int, bool) {
 // Sometimes this is necessary in order to be able to write to an older netsvc
 // which may not know about newer image types.
 func skipOnTransferError(name string) bool {
-	return strings.HasPrefix(name, firmwareNetsvcPrefix)
+	return strings.HasPrefix(name, constants.FirmwareNetsvcPrefix)
 }
 
 func downloadImagesToDir(ctx context.Context, dir string, imgs []Image) ([]Image, func() error, error) {
@@ -196,7 +178,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 			fmt.Fprintf(&buf, "%s\n", arg)
 		}
 		reader := bytes.NewReader(buf.Bytes())
-		cmdlineFile, err := newNetsvcFile(cmdlineNetsvcName, reader, reader.Size())
+		cmdlineFile, err := newNetsvcFile(constants.CmdlineNetsvcName, reader, reader.Size())
 		if err != nil {
 			return false, err
 		}
@@ -238,7 +220,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 			authorizedKeys = append(authorizedKeys, authorizedKey...)
 		}
 		reader := bytes.NewReader(authorizedKeys)
-		authorizedKeysFile, err := newNetsvcFile(authorizedKeysNetsvcName, reader, reader.Size())
+		authorizedKeysFile, err := newNetsvcFile(constants.AuthorizedKeysNetsvcName, reader, reader.Size())
 		if err != nil {
 			return false, err
 		}
@@ -265,7 +247,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 	// If we do not load a kernel into RAM, then we reboot back into the first kernel
 	// partition; else we boot directly from RAM.
 	// TODO(ZX-2069): Eventually, no such kernel should be present.
-	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
+	hasRAMKernel := files[len(files)-1].name == constants.KernelNetsvcName
 	return hasRAMKernel, err
 }
 
@@ -276,12 +258,12 @@ func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
 	// Attempt to read a file. If the server tells us we need to wait, then try
 	// again as long as it keeps telling us this. ErrShouldWait implies the server
 	// is still responding and will eventually be able to handle our request.
-	logger.Infof(ctx, "attempting to read %s...\n", boardInfoNetsvcName)
+	logger.Infof(ctx, "attempting to read %s...\n", constants.BoardInfoNetsvcName)
 	for {
 		if ctx.Err() != nil {
 			return nil
 		}
-		r, err = t.Read(ctx, boardInfoNetsvcName)
+		r, err = t.Read(ctx, constants.BoardInfoNetsvcName)
 		switch err {
 		case nil:
 		case tftp.ErrShouldWait:
@@ -296,11 +278,11 @@ func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
 		break
 	}
 	if err != nil {
-		return fmt.Errorf("Unable to read the board info from [%s]: %w", boardInfoNetsvcName, err)
+		return fmt.Errorf("Unable to read the board info from [%s]: %w", constants.BoardInfoNetsvcName, err)
 	}
 	buf := make([]byte, r.Size())
 	if _, err = r.Read(buf); err != nil {
-		return fmt.Errorf("Unable to read the board info from [%s]: %w", boardInfoNetsvcName, err)
+		return fmt.Errorf("Unable to read the board info from [%s]: %w", constants.BoardInfoNetsvcName, err)
 	}
 	// Get the bytes before the first null byte.
 	if index := bytes.IndexAny(buf, "\x00"); index >= 0 {
@@ -378,9 +360,9 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 					continue
 				default:
 					if skipOnTransferError(f.name) {
-						logger.Infof(ctx, "failed to send %s; skipping and continuing: %v\n", f.name, err)
+						logger.Infof(ctx, "%s; skipping and continuing: %v\n", constants.FailedToSendErrMsg(f.name), err)
 					} else {
-						logger.Infof(ctx, "failed to send %s; starting from the top: %v\n", f.name, err)
+						logger.Infof(ctx, "%s; starting from the top: %v\n", constants.FailedToSendErrMsg(f.name), err)
 						return err
 					}
 				}

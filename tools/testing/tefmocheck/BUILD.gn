@@ -8,6 +8,10 @@ import("//build/go/go_test.gni")
 
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/lib"
+  deps = [
+    "//tools/bootserver:bootserverconstants",
+    "//tools/net/netutil:netutilconstants",
+  ]
 }
 
 go_library("main") {

@@ -9,6 +9,7 @@ import("//build/go/go_test.gni")
 go_library("bootserver_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/bootserver/lib"
   deps = [
+    ":bootserverconstants",
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:golang.org/x/crypto",
     "//third_party/golibs:golang.org/x/sync",
@@ -19,6 +20,11 @@ go_library("bootserver_lib") {
     "//tools/net/netboot",
     "//tools/net/tftp",
   ]
+}
+
+go_library("bootserverconstants") {
+  name = "go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
+  source_dir = "constants"
 }
 
 go_library("main") {

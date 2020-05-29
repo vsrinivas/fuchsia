@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"path"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
+	"go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
 )
 
 // stringInLogCheck checks if String is found in the log named LogName.
@@ -41,5 +44,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Log: SyslogType})
 	// For fxbug.dev/47649.
 	ret = append(ret, stringInLogCheck{String: "kvm run failed Bad address", Log: SwarmingOutputType})
+	// For fxbug.dev/44779.
+	ret = append(ret, stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Log: SwarmingOutputType})
+	// For fxbug.dev/51015.
+	ret = append(ret, stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Log: SwarmingOutputType})
 	return ret
 }
