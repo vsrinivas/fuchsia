@@ -3,16 +3,66 @@
 // found in the LICENSE file.
 
 use anyhow::Context as _;
-use net_declare::fidl_ip;
+use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fuchsia_async::TimeoutExt as _;
+use futures::{TryFutureExt as _, TryStreamExt as _};
+use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
 use netstack_testing_macros::endpoint_variants_test;
+use packet::Serializer;
+use packet_formats;
+use packet_formats::ipv4::Ipv4Header;
 
 use crate::environments::*;
 use crate::Result;
+
+async fn run_udp_socket_test(
+    server: &TestEnvironment<'_>,
+    server_addr: fidl_fuchsia_net::IpAddress,
+    client: &TestEnvironment<'_>,
+    client_addr: fidl_fuchsia_net::IpAddress,
+) -> Result {
+    let fidl_fuchsia_net_ext::IpAddress(client_addr) =
+        fidl_fuchsia_net_ext::IpAddress::from(client_addr);
+    let client_addr = std::net::SocketAddr::new(client_addr, 1234);
+
+    let fidl_fuchsia_net_ext::IpAddress(server_addr) =
+        fidl_fuchsia_net_ext::IpAddress::from(server_addr);
+    let server_addr = std::net::SocketAddr::new(server_addr, 8080);
+
+    let client_sock = fuchsia_async::net::UdpSocket::bind_in_env(client, client_addr)
+        .await
+        .context("failed to create client socket")?;
+
+    let server_sock = fuchsia_async::net::UdpSocket::bind_in_env(server, server_addr)
+        .await
+        .context("failed to create server socket")?;
+
+    const PAYLOAD: &'static str = "Hello World";
+
+    let client_fut = async move {
+        let r =
+            client_sock.send_to(PAYLOAD.as_bytes(), server_addr).await.context("sendto failed")?;
+        assert_eq!(r, PAYLOAD.as_bytes().len());
+        Result::Ok(())
+    };
+    let server_fut = async move {
+        let mut buf = [0u8; 1024];
+        let (r, from) = server_sock.recv_from(&mut buf[..]).await.context("recvfrom failed")?;
+        assert_eq!(r, PAYLOAD.as_bytes().len());
+        assert_eq!(&buf[..r], PAYLOAD.as_bytes());
+        assert_eq!(from, client_addr);
+        Result::Ok(())
+    };
+
+    let ((), ()) = futures::future::try_join(client_fut, server_fut).await?;
+    Ok(())
+}
 
 #[endpoint_variants_test]
 async fn test_udp_socket<E: Endpoint>() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
+
     let client = sandbox
         .create_netstack_environment::<Netstack2, _>("test_udp_socket_client")
         .context("failed to create client environment")?;
@@ -45,37 +95,455 @@ async fn test_udp_socket<E: Endpoint>() -> Result {
         .await
         .context("server failed to join network")?;
 
-    let fidl_fuchsia_net_ext::IpAddress(client_addr) = CLIENT_IP.into();
-    let client_addr = std::net::SocketAddr::new(client_addr, 1234);
-    let fidl_fuchsia_net_ext::IpAddress(server_addr) = SERVER_IP.into();
-    let server_addr = std::net::SocketAddr::new(server_addr, 8080);
+    run_udp_socket_test(&server, SERVER_IP, &client, CLIENT_IP).await
+}
 
-    let client_sock = fuchsia_async::net::UdpSocket::bind_in_env(&client, client_addr)
+// Helper function to add ip device to stack.
+async fn install_ip_device(
+    env: &TestEnvironment<'_>,
+    device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
+    addrs: &mut [fidl_fuchsia_net_stack::InterfaceAddress],
+) -> Result<u64> {
+    let stack = env.connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()?;
+    let netstack = env.connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()?;
+    let id = stack
+        .add_interface(
+            fidl_fuchsia_net_stack::InterfaceConfig { name: None, topopath: None, metric: None },
+            &mut fidl_fuchsia_net_stack::DeviceDefinition::Ip(device),
+        )
         .await
-        .context("failed to create client socket")?;
-
-    let server_sock = fuchsia_async::net::UdpSocket::bind_in_env(&server, server_addr)
+        .squash_result()
+        .context("failed to add to stack")?;
+    let () =
+        stack.enable_interface(id).await.squash_result().context("failed to enable interface")?;
+    for addr in addrs.iter_mut() {
+        let () = stack
+            .add_interface_address(id, addr)
+            .await
+            .squash_result()
+            .with_context(|| format!("failed to add interface address {:?}", addr))?;
+    }
+    // Wait for addresses to be assigned. Necessary for IPv6 addresses
+    // since DAD must be performed.
+    let _ifaces = netstack
+        .take_event_stream()
+        .try_filter(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            futures::future::ready(
+                interfaces
+                    .iter()
+                    .find(|iface| iface.id as u64 == id)
+                    .map(|iface| {
+                        println!(
+                            "interfaces changed {:?}, waiting for addresses {:?}",
+                            iface, addrs
+                        );
+                        let iface_addrs = iface
+                            .ipv6addrs
+                            .iter()
+                            .map(|a| &a.addr)
+                            .chain(std::iter::once(&iface.addr));
+                        addrs.iter().all(|want| iface_addrs.clone().any(|a| *a == want.ip_address))
+                    })
+                    .unwrap_or(false),
+            )
+        })
+        .try_next()
         .await
-        .context("failed to create server socket")?;
+        .context("failed to observe IP Address")?
+        .ok_or_else(|| anyhow::anyhow!("netstack event stream ended unexpectedly"))?;
 
-    const PAYLOAD: &'static str = "Hello World";
+    Ok(id)
+}
 
-    let client_fut = async move {
-        let r =
-            client_sock.send_to(PAYLOAD.as_bytes(), server_addr).await.context("sendto failed")?;
-        assert_eq!(r, PAYLOAD.as_bytes().len());
-        Result::Ok(())
+/// Creates default base config for an IP tun device.
+fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
+    fidl_fuchsia_net_tun::BaseConfig {
+        mtu: Some(1500),
+        rx_types: Some(vec![
+            fidl_fuchsia_hardware_network::FrameType::Ipv4,
+            fidl_fuchsia_hardware_network::FrameType::Ipv6,
+        ]),
+        tx_types: Some(vec![
+            fidl_fuchsia_hardware_network::FrameTypeSupport {
+                type_: fidl_fuchsia_hardware_network::FrameType::Ipv4,
+                features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
+                supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+            },
+            fidl_fuchsia_hardware_network::FrameTypeSupport {
+                type_: fidl_fuchsia_hardware_network::FrameType::Ipv6,
+                features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
+                supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+            },
+        ]),
+        report_metadata: None,
+    }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_ip_endpoints_socket() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let client = sandbox
+        .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_client")
+        .context("failed to create client environment")?;
+    let server = sandbox
+        .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_server")
+        .context("failed to create server environment")?;
+
+    let tun = client
+        .connect_to_service::<fidl_fuchsia_net_tun::ControlMarker>()
+        .context("failed to connect to tun service")?;
+
+    let (tun_pair, req) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DevicePairMarker>()?;
+    let () = tun
+        .create_pair(
+            fidl_fuchsia_net_tun::DevicePairConfig {
+                base: Some(base_ip_device_config()),
+                fallible_transmit_left: None,
+                fallible_transmit_right: None,
+                mac_left: None,
+                mac_right: None,
+            },
+            req,
+        )
+        .context("failed to create tun pair")?;
+
+    let (client_device, client_req) =
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()?;
+    let (server_device, server_req) =
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()?;
+    let () = tun_pair
+        .connect_protocols(fidl_fuchsia_net_tun::DevicePairEnds {
+            left: Some(fidl_fuchsia_net_tun::Protocols {
+                network_device: Some(client_req),
+                mac_addressing: None,
+            }),
+            right: Some(fidl_fuchsia_net_tun::Protocols {
+                network_device: Some(server_req),
+                mac_addressing: None,
+            }),
+        })
+        .context("connect protocols failed")?;
+
+    const V4_PREFIX_LEN: u8 = 24;
+    const V6_PREFIX_LEN: u8 = 120;
+    // Addresses must be in the same subnet.
+    const SERVER_ADDR_V4: fidl_fuchsia_net_stack::InterfaceAddress =
+        fidl_fuchsia_net_stack::InterfaceAddress {
+            ip_address: fidl_ip!(192.168.0.1),
+            prefix_len: V4_PREFIX_LEN,
+        };
+    const SERVER_ADDR_V6: fidl_fuchsia_net_stack::InterfaceAddress =
+        fidl_fuchsia_net_stack::InterfaceAddress {
+            ip_address: fidl_ip!(2001::1),
+            prefix_len: V6_PREFIX_LEN,
+        };
+    const CLIENT_ADDR_V4: fidl_fuchsia_net_stack::InterfaceAddress =
+        fidl_fuchsia_net_stack::InterfaceAddress {
+            ip_address: fidl_ip!(192.168.0.2),
+            prefix_len: V4_PREFIX_LEN,
+        };
+    const CLIENT_ADDR_V6: fidl_fuchsia_net_stack::InterfaceAddress =
+        fidl_fuchsia_net_stack::InterfaceAddress {
+            ip_address: fidl_ip!(2001::2),
+            prefix_len: V6_PREFIX_LEN,
+        };;
+
+    // We install both devices in parallel because a DevicePair will only have
+    // its link signal set to up once both sides have sessions attached. This
+    // way both devices will be configured "at the same time" and DAD will be
+    // able to complete for IPv6 addresses.
+    let (_client_id, _server_id) = futures::future::try_join(
+        install_ip_device(&client, client_device, &mut [CLIENT_ADDR_V4, CLIENT_ADDR_V6])
+            .map_err(|e| e.context("client setup failed")),
+        install_ip_device(&server, server_device, &mut [SERVER_ADDR_V4, SERVER_ADDR_V6])
+            .map_err(|e| e.context("server setup failed")),
+    )
+    .await
+    .context("setup failed")?;
+
+    // Run socket test for both IPv4 and IPv6.
+    let () =
+        run_udp_socket_test(&server, SERVER_ADDR_V4.ip_address, &client, CLIENT_ADDR_V4.ip_address)
+            .await
+            .context("v4 socket test failed")?;
+    let () =
+        run_udp_socket_test(&server, SERVER_ADDR_V6.ip_address, &client, CLIENT_ADDR_V6.ip_address)
+            .await
+            .context("v6 socket test failed")?;
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_ip_endpoint_packets() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("test_ip_endpoint_packets")
+        .context("failed to create client environment")?;
+
+    let tun = env
+        .connect_to_service::<fidl_fuchsia_net_tun::ControlMarker>()
+        .context("failed to connect to tun service")?;
+
+    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()?;
+    let () = tun
+        .create_device(
+            fidl_fuchsia_net_tun::DeviceConfig {
+                base: Some(base_ip_device_config()),
+                online: Some(true),
+                blocking: Some(true),
+                mac: None,
+            },
+            req,
+        )
+        .context("failed to create tun pair")?;
+
+    let (device, device_req) =
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()?;
+    let () = tun_dev
+        .connect_protocols(fidl_fuchsia_net_tun::Protocols {
+            network_device: Some(device_req),
+            mac_addressing: None,
+        })
+        .context("connect protocols failed")?;
+
+    // Declare addresses in the same subnet. Alice is Netstack, and Bob is our
+    // end of the tun device that we'll use to inject frames.
+    const PREFIX_V4: u8 = 24;
+    const PREFIX_V6: u8 = 120;
+    const ALICE_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(192.168.0.1);
+    const ALICE_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(2001::1);
+    const BOB_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(192.168.0.2);
+    const BOB_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(2001::2);
+
+    let _device_id = install_ip_device(
+        &env,
+        device,
+        &mut [
+            fidl_fuchsia_net_stack::InterfaceAddress {
+                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(ALICE_ADDR_V4),
+                prefix_len: PREFIX_V4,
+            },
+            fidl_fuchsia_net_stack::InterfaceAddress {
+                ip_address: fidl_fuchsia_net::IpAddress::Ipv6(ALICE_ADDR_V6),
+                prefix_len: PREFIX_V6,
+            },
+        ],
+    )
+    .await
+    .context("setup failed")?;
+
+    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use packet::ParsablePacket;
+    use packet_formats::{
+        icmp::{
+            IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode, Icmpv4Packet, Icmpv6Packet,
+            MessageBody,
+        },
+        ipv4::{Ipv4Packet, Ipv4PacketBuilder},
+        ipv6::{Ipv6Packet, Ipv6PacketBuilder},
     };
-    let server_fut = async move {
-        let mut buf = [0u8; 1024];
-        let (r, from) = server_sock.recv_from(&mut buf[..]).await.context("recvfrom failed")?;
-        assert_eq!(r, PAYLOAD.as_bytes().len());
-        assert_eq!(&buf[..r], PAYLOAD.as_bytes());
-        assert_eq!(from, client_addr);
-        Result::Ok(())
-    };
 
-    let ((), ()) = futures::future::try_join(client_fut, server_fut).await?;
+    let read_frame = futures::stream::try_unfold(tun_dev.clone(), |tun_dev| async move {
+        let frame = tun_dev
+            .read_frame()
+            .await
+            .context("read_frame_failed")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("read_frame returned error")?;
+        Ok(Some((frame, tun_dev)))
+    })
+    .try_filter_map(|frame| async move {
+        let frame_type = frame.frame_type.context("missing frame type in frame")?;
+        let frame_data = frame.data.context("missing data in frame")?;
+        if frame_type == fidl_fuchsia_hardware_network::FrameType::Ipv6 {
+            // Ignore all NDP IPv6 frames.
+            let mut bv = &frame_data[..];
+            let ipv6 = Ipv6Packet::parse(&mut bv, ())
+                .with_context(|| format!("failed to parse IPv6 packet {:?}", frame_data))?;
+            if ipv6.proto() == packet_formats::ip::IpProto::Icmpv6 {
+                let parse_args =
+                    packet_formats::icmp::IcmpParseArgs::new(ipv6.src_ip(), ipv6.dst_ip());
+                if let Icmpv6Packet::Ndp(p) = Icmpv6Packet::parse(&mut bv, parse_args)
+                    .context("failed to parse ICMP packet")?
+                {
+                    println!("ignoring NDP packet {:?}", p);
+                    return Ok(None);
+                }
+            }
+        }
+        Ok(Some((frame_type, frame_data)))
+    });
+    pin_utils::pin_mut!(read_frame);
 
+    async fn write_frame_and_read_with_timeout<S>(
+        tun_dev: &fidl_fuchsia_net_tun::DeviceProxy,
+        frame: fidl_fuchsia_net_tun::Frame,
+        read_frame: &mut S,
+    ) -> Result<Option<S::Ok>>
+    where
+        S: futures::stream::TryStream<Error = anyhow::Error> + std::marker::Unpin,
+    {
+        let () = tun_dev
+            .write_frame(frame)
+            .await
+            .context("write_frame failed")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("write_frame returned error")?;
+        Ok(read_frame
+            .try_next()
+            .and_then(|f| {
+                futures::future::ready(f.context("frame stream ended unexpectedly").map(Some))
+            })
+            .on_timeout(
+                fuchsia_async::Time::after(fuchsia_zircon::Duration::from_millis(50)),
+                || Ok(None),
+            )
+            .await
+            .context("failed to read frame")?)
+    }
+
+    const ICMP_ID: u16 = 10;
+    const SEQ_NUM: u16 = 1;
+    let mut payload = [1u8, 2, 3, 4];
+
+    // Manually build a ping frame and see it come back out of the stack.
+    let src_ip = Ipv4Addr::new(BOB_ADDR_V4.addr);
+    let dst_ip = Ipv4Addr::new(ALICE_ADDR_V4.addr);
+    let packet = packet::Buf::new(&mut payload[..], ..)
+        .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+            src_ip,
+            dst_ip,
+            IcmpUnusedCode,
+            IcmpEchoRequest::new(ICMP_ID, SEQ_NUM),
+        ))
+        .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 1, packet_formats::ip::IpProto::Icmp))
+        .serialize_vec_outer()
+        .expect("serialization failed")
+        .as_ref()
+        .to_vec();
+
+    // Send v4 ping request.
+    let () = tun_dev
+        .write_frame(fidl_fuchsia_net_tun::Frame {
+            frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
+            data: Some(packet.clone()),
+            meta: None,
+        })
+        .await
+        .context("write_frame failed")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("write_frame returned error")?;
+
+    // Read ping response.
+    let (frame_type, data) = read_frame
+        .try_next()
+        .await
+        .context("failed to read ping response")?
+        .context("frame stream ended unexpectedly")?;
+    assert_eq!(frame_type, fidl_fuchsia_hardware_network::FrameType::Ipv4);
+    let mut bv = &data[..];
+    let ipv4_packet = Ipv4Packet::parse(&mut bv, ()).context("failed to parse IPv4 packet")?;
+    assert_eq!(ipv4_packet.src_ip(), dst_ip);
+    assert_eq!(ipv4_packet.dst_ip(), src_ip);
+    assert_eq!(ipv4_packet.proto(), packet_formats::ip::IpProto::Icmp);
+
+    let parse_args =
+        packet_formats::icmp::IcmpParseArgs::new(ipv4_packet.src_ip(), ipv4_packet.dst_ip());
+    let icmp_packet =
+        match Icmpv4Packet::parse(&mut bv, parse_args).context("failed to parse ICMP packet")? {
+            Icmpv4Packet::EchoReply(reply) => reply,
+            p => return Err(anyhow::anyhow!("got ICMP packet {:?}, want EchoReply", p)),
+        };
+    assert_eq!(icmp_packet.message().id(), ICMP_ID);
+    assert_eq!(icmp_packet.message().seq(), SEQ_NUM);
+    assert_eq!(icmp_packet.body().bytes(), &payload[..]);
+
+    // Send the same data again, but with an IPv6 frame type, expect that it'll
+    // fail parsing and no response will be generated.
+    assert_eq!(
+        write_frame_and_read_with_timeout(
+            &tun_dev,
+            fidl_fuchsia_net_tun::Frame {
+                frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
+                data: Some(packet),
+                meta: None,
+            },
+            &mut read_frame,
+        )
+        .await
+        .context("IPv4 frame with IPv6 frame type failure")?,
+        None
+    );
+
+    // Manually build a V6 ping frame and see it come back out of the stack.
+    let src_ip = Ipv6Addr::new(BOB_ADDR_V6.addr);
+    let dst_ip = Ipv6Addr::new(ALICE_ADDR_V6.addr);
+    let packet = packet::Buf::new(&mut payload[..], ..)
+        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+            src_ip,
+            dst_ip,
+            IcmpUnusedCode,
+            IcmpEchoRequest::new(ICMP_ID, SEQ_NUM),
+        ))
+        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 1, packet_formats::ip::IpProto::Icmpv6))
+        .serialize_vec_outer()
+        .expect("serialization failed")
+        .as_ref()
+        .to_vec();
+
+    // Send v6 ping request.
+    let () = tun_dev
+        .write_frame(fidl_fuchsia_net_tun::Frame {
+            frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
+            data: Some(packet.clone()),
+            meta: None,
+        })
+        .await
+        .context("write_frame failed")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("write_frame returned error")?;
+
+    // Read ping response.
+    let (frame_type, data) = read_frame
+        .try_next()
+        .await
+        .context("failed to read ping response")?
+        .context("frame stream ended unexpectedly")?;
+    assert_eq!(frame_type, fidl_fuchsia_hardware_network::FrameType::Ipv6);
+    let mut bv = &data[..];
+    let ipv6_packet = Ipv6Packet::parse(&mut bv, ()).context("failed to parse IPv6 packet")?;
+    assert_eq!(ipv6_packet.src_ip(), dst_ip);
+    assert_eq!(ipv6_packet.dst_ip(), src_ip);
+    assert_eq!(ipv6_packet.proto(), packet_formats::ip::IpProto::Icmpv6);
+
+    let parse_args =
+        packet_formats::icmp::IcmpParseArgs::new(ipv6_packet.src_ip(), ipv6_packet.dst_ip());
+    let icmp_packet =
+        match Icmpv6Packet::parse(&mut bv, parse_args).context("failed to parse ICMPv6 packet")? {
+            Icmpv6Packet::EchoReply(reply) => reply,
+            p => return Err(anyhow::anyhow!("got ICMPv6 packet {:?}, want EchoReply", p)),
+        };
+    assert_eq!(icmp_packet.message().id(), ICMP_ID);
+    assert_eq!(icmp_packet.message().seq(), SEQ_NUM);
+    assert_eq!(icmp_packet.body().bytes(), &payload[..]);
+
+    // Send the same data again, but with an IPv4 frame type, expect that it'll
+    // fail parsing and no response will be generated.
+    assert_eq!(
+        write_frame_and_read_with_timeout(
+            &tun_dev,
+            fidl_fuchsia_net_tun::Frame {
+                frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
+                data: Some(packet),
+                meta: None,
+            },
+            &mut read_frame,
+        )
+        .await
+        .context("IPv6 frame with IPv4 frame type failure")?,
+        None
+    );
     Ok(())
 }

@@ -45,6 +45,7 @@ rustc_test("netstack_integration_test") {
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
+    "//src/connectivity/network/tun/fidl:fidl-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -59,6 +60,7 @@ rustc_test("netstack_integration_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:thiserror",
   ]

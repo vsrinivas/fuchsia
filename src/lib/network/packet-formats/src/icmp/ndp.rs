@@ -16,6 +16,7 @@ use crate::{U16, U32};
 
 /// An ICMPv6 packet with an NDP message.
 #[allow(missing_docs)]
+#[derive(Debug)]
 pub enum NdpPacket<B: ByteSlice> {
     RouterSolicitation(IcmpPacket<Ipv6, B, RouterSolicitation>),
     RouterAdvertisement(IcmpPacket<Ipv6, B, RouterAdvertisement>),
