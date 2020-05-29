@@ -17,6 +17,8 @@
 
 #include <gtest/gtest.h>
 
+#include "testing_util.h"
+
 namespace hwstress {
 namespace {
 
@@ -55,27 +57,22 @@ TEST(TemperatureSensor, NullSensor) {
 }
 
 TEST(TemperatureSensor, SystemTemperatureSensor) {
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  loop.StartThread();
+  auto factory = std::make_unique<testing::LoopbackConnectionFactory>();
 
   // Create a server that always reports a single, static value.
   FakeThermalServer server{42.0};
 
-  // Bind it to a channel.
-  zx::channel client_channel, server_channel;
-  zx::channel::create(0, &client_channel, &server_channel);
-  fidl::Binding<fuchsia::hardware::thermal::Device> binding{&server, std::move(server_channel),
-                                                            loop.dispatcher()};
+  // Create a channel.
+  zx::channel client = factory->CreateChannelTo<fuchsia::hardware::thermal::Device>(&server);
 
   // Ensure we can read from the server.
-  auto sensor = CreateSystemTemperatureSensor(std::move(client_channel));
+  auto sensor = CreateSystemTemperatureSensor(std::move(client));
   ASSERT_EQ(42.0, sensor->ReadCelcius());
   ASSERT_EQ(42.0, sensor->ReadCelcius());
   ASSERT_EQ(42.0, sensor->ReadCelcius());
 
   // Close the connection. Ensure that we get nullopt results.
-  binding.Close(ZX_ERR_INTERNAL);
-
+  factory.reset();
   ASSERT_EQ(std::nullopt, sensor->ReadCelcius());
 }
 

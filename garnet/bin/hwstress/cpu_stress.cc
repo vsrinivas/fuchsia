@@ -29,10 +29,10 @@ namespace hwstress {
 
 namespace {
 
-void RunWorkload(StatusLine* status, TemperatureSensor* sensor, const Workload& workload,
-                 uint32_t num_cpus, zx::duration duration) {
+void RunWorkload(StatusLine* status, ProfileManager* profile_manager, TemperatureSensor* sensor,
+                 const Workload& workload, uint32_t num_cpus, zx::duration duration) {
   // Start a workload.
-  CpuStressor stressor{num_cpus, workload.work};
+  CpuStressor stressor{num_cpus, workload.work, profile_manager};
   stressor.Start();
 
   // Update the status line until the test is finished.
@@ -61,7 +61,7 @@ void RunWorkload(StatusLine* status, TemperatureSensor* sensor, const Workload& 
 
 }  // namespace
 
-void StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
+bool StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   StatusLine status;
 
   // Calculate finish time.
@@ -71,6 +71,13 @@ void StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   // Get number of CPUs.
   uint32_t num_cpus = zx_system_get_num_cpus();
   status.Log("Detected %d CPU(s) in the system.\n", num_cpus);
+
+  // Create a profile manager.
+  std::unique_ptr<ProfileManager> profile_manager = ProfileManager::CreateFromEnvironment();
+  if (profile_manager == nullptr) {
+    status.Log("Error: could not create profile manager.");
+    return false;
+  }
 
   // Print start banner.
   if (finish_time == zx::time::infinite()) {
@@ -97,11 +104,13 @@ void StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   // Run the workloads.
   for (uint64_t iteration = 0; iteration < iterations; iteration++) {
     for (const auto& workload : workloads) {
-      RunWorkload(&status, temperature_sensor, workload, num_cpus, time_per_test);
+      RunWorkload(&status, profile_manager.get(), temperature_sensor, workload, num_cpus,
+                  time_per_test);
     }
   }
 
   status.Log("Complete.\n");
+  return true;
 }
 
 }  // namespace hwstress

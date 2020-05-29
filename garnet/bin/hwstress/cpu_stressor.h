@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 
+#include "profile_manager.h"
+
 namespace hwstress {
 
 // A StopIndicator is a light-weight class allowing one thread to indicate to
@@ -55,7 +57,8 @@ class CpuStressor {
   //
   // |workload| should loop until the given StopIndicator has its
   // |ShouldStop| method return true.
-  CpuStressor(uint32_t threads, std::function<void(const StopIndicator&)> workload);
+  CpuStressor(uint32_t threads, std::function<void(const StopIndicator&)> workload,
+              ProfileManager* manager = nullptr);
 
   // Create a CPU stressor that calls the given workload function in
   // a tight loop.
@@ -63,7 +66,8 @@ class CpuStressor {
   // The given workload should perform a small chunk of work (roughly in
   // the range of 100 microseconds to 10 milliseconds) that exercises the
   // CPU.
-  CpuStressor(uint32_t threads, std::function<void()> looping_workload);
+  CpuStressor(uint32_t threads, std::function<void()> looping_workload,
+              ProfileManager* manager = nullptr);
 
   // Start the workload. Must not already be started.
   void Start();
@@ -80,6 +84,7 @@ class CpuStressor {
   std::function<void(const StopIndicator&)> workload_;
   std::vector<std::unique_ptr<std::thread>> workers_;
   StopIndicator indicator_;
+  ProfileManager* profile_manager_;  // Optional, owned elsewhere.
 };
 
 }  // namespace hwstress

@@ -12,6 +12,7 @@ source_set("lib") {
     "cpu_stressor.cc",
     "cpu_workloads.cc",
     "hwstress.cc",
+    "profile_manager.cc",
     "status.cc",
     "temperature_sensor.cc",
     "util.cc",
@@ -19,6 +20,8 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.thermal",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fdio",
@@ -62,6 +65,7 @@ executable("hwstress_test") {
     "cpu_stressor_test.cc",
     "cpu_workloads_test.cc",
     "hwstress_test.cc",
+    "profile_manager_test.cc",
     "status_test.cc",
     "temperature_sensor_test.cc",
     "util_test.cc",
@@ -71,8 +75,11 @@ executable("hwstress_test") {
     ":lib",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing",
     "//third_party/googletest:gmock",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
   ]
 }
 

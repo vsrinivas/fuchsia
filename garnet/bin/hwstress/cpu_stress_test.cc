@@ -13,7 +13,7 @@ namespace {
 
 TEST(Cpu, StressCpu) {
   // Exercise the main StressCpu for a tiny amount of time.
-  StressCpu(zx::msec(1));
+  EXPECT_TRUE(StressCpu(zx::msec(1)));
 }
 
 }  // namespace

@@ -49,9 +49,9 @@ int Run(int argc, const char** argv) {
   }
 
   // Run the CPU tests.
-  StressCpu(duration, sensor.get());
+  bool success = StressCpu(duration, sensor.get());
 
-  return 0;
+  return success ? 0 : 1;
 }
 
 }  // namespace hwstress

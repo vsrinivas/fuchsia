@@ -1,10 +1,18 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/hwstress_test"
     },
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment"
         ]
     }

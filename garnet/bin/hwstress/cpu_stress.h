@@ -16,7 +16,9 @@
 namespace hwstress {
 
 // Start a stress test.
-void StressCpu(zx::duration duration_seconds,
+//
+// Return true on success.
+bool StressCpu(zx::duration duration_seconds,
                TemperatureSensor* sensor = GetNullTemperatureSensor());
 
 }  // namespace hwstress
