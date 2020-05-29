@@ -9,7 +9,7 @@
 
 // single byte, min: 0
 success("StringsValidCase1") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x00",
     },
@@ -28,7 +28,7 @@ success("StringsValidCase1") {
 
 // single byte, max: 127
 success("StringsValidCase2") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x7f",
     },
@@ -47,7 +47,7 @@ success("StringsValidCase2") {
 
 // two bytes,   min: 128
 success("StringsValidCase3") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xc2\x80",
     },
@@ -67,7 +67,7 @@ success("StringsValidCase3") {
 
 // two bytes,   max: 2047
 success("StringsValidCase4") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xdf\xbf",
     },
@@ -87,7 +87,7 @@ success("StringsValidCase4") {
 
 // three bytes, min: 2048
 success("StringsValidCase5") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe1\x80\x80",
     },
@@ -108,7 +108,7 @@ success("StringsValidCase5") {
 
 // three bytes, max: 65535
 success("StringsValidCase6") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xef\xbf\xbf",
     },
@@ -129,7 +129,7 @@ success("StringsValidCase6") {
 
 // four bytes,  min: 65536
 success("StringsValidCase7") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x90\x80\x80",
     },
@@ -151,7 +151,7 @@ success("StringsValidCase7") {
 
 // four bytes,  max: 1114111
 success("StringsValidCase8") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf4\x8f\xbf\xbf",
     },
@@ -374,7 +374,7 @@ decode_failure("StringsInvalidCase7") {
 
 
 success("StringsValidCase9") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xc2\x80",
     },
@@ -480,7 +480,7 @@ decode_failure("StringsInvalidCase10") {
 
 
 success("StringsValidCase10") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x90\x80\x80",
     },
@@ -592,7 +592,7 @@ decode_failure("StringsInvalidCase13") {
 
 // ascii slash
 success("StringsValidCase11") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x2f",
     },
@@ -698,7 +698,7 @@ decode_failure("StringsInvalidCase16") {
 
 // U+061D
 success("StringsValidCase12") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xd8\x9d",
     },
@@ -718,7 +718,7 @@ success("StringsValidCase12") {
 
 // U+05F6
 success("StringsValidCase13") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xd7\xb6",
     },
@@ -738,7 +738,7 @@ success("StringsValidCase13") {
 
 // U+0AF4
 success("StringsValidCase14") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe0\xab\xb4",
     },
@@ -759,7 +759,7 @@ success("StringsValidCase14") {
 
 // U+0C52
 success("StringsValidCase15") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe0\xb1\x92",
     },
@@ -780,7 +780,7 @@ success("StringsValidCase15") {
 
 // U+1E454
 success("StringsValidCase16") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x9e\x91\x94",
     },
@@ -802,7 +802,7 @@ success("StringsValidCase16") {
 
 // U+1F978
 success("StringsValidCase17") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x9f\xa5\xb8",
     },
@@ -824,7 +824,7 @@ success("StringsValidCase17") {
 
 // empty string
 success("StringsValidCase18") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "",
     },
@@ -841,7 +841,7 @@ success("StringsValidCase18") {
 
 // simply the letter a
 success("StringsValidCase19") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x61",
     },
@@ -860,7 +860,7 @@ success("StringsValidCase19") {
 
 // euro sign, i.e \xe2\x82\xac
 success("StringsValidCase20") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe2\x82\xac",
     },
@@ -881,7 +881,7 @@ success("StringsValidCase20") {
 
 // mix and match from earlier cases
 success("StringsValidCase21") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80",
     },
@@ -911,7 +911,7 @@ success("StringsValidCase21") {
 
 // mix and match from earlier cases
 success("StringsValidCase22") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xdf\xbf\xef\xbf\xbf\xe1\x80\x80",
     },
@@ -936,7 +936,7 @@ success("StringsValidCase22") {
 
 // UTF-8 BOM
 success("StringsValidCase23") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,],
     value = StringWrapper {
         str: "\xef\xbb\xbf",
     },
@@ -1070,7 +1070,7 @@ decode_failure("StringsInvalidCase20") {
 
 
 success("StringsValidCase24") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe1\x80\x80",
     },
@@ -1119,7 +1119,7 @@ decode_failure("StringsInvalidCase21") {
 
 
 success("StringsValidCase25") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x0d",
     },
@@ -1138,7 +1138,7 @@ success("StringsValidCase25") {
 
 
 success("StringsValidCase26") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x0a",
     },
@@ -1157,7 +1157,7 @@ success("StringsValidCase26") {
 
 
 success("StringsValidCase27") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x61",
     },
@@ -1176,7 +1176,7 @@ success("StringsValidCase27") {
 
 
 success("StringsValidCase28") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xc2\x81",
     },
@@ -1196,7 +1196,7 @@ success("StringsValidCase28") {
 
 
 success("StringsValidCase29") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe1\x80\xbf",
     },
@@ -1217,7 +1217,7 @@ success("StringsValidCase29") {
 
 
 success("StringsValidCase30") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf1\x80\xa0\xbf",
     },
@@ -1239,7 +1239,7 @@ success("StringsValidCase30") {
 
 // UTF-8 BOM
 success("StringsValidCase31") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,],
     value = StringWrapper {
         str: "\xef\xbb\xbf",
     },

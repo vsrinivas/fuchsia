@@ -284,6 +284,20 @@ func bytesBuilder(bytes []byte) string {
 	return builder.String()
 }
 
+func toDartStr(value string) string {
+	var buf bytes.Buffer
+	buf.WriteRune('\'')
+	for _, r := range value {
+		if 0x20 <= r && r <= 0x7e { // printable ASCII rune
+			buf.WriteRune(r)
+		} else {
+			buf.WriteString(fmt.Sprintf(`\u{%x}`, r))
+		}
+	}
+	buf.WriteRune('\'')
+	return buf.String()
+}
+
 func visit(value interface{}, decl gidlmixer.Declaration) string {
 	switch value := value.(type) {
 	case bool:
@@ -296,7 +310,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("%s.ctor(%#v)", typeName(decl), value)
 		}
 	case string:
-		return fidlcommon.SingleQuote(value)
+		return toDartStr(value)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
