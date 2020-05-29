@@ -11,10 +11,16 @@ go_library("lib") {
   deps = [ "//tools/testing/runtests" ]
 }
 
+go_library("constants") {
+  name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
+  source_dir = "constants"
+}
+
 go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib"
   source_dir = "cmd"
   deps = [
+    ":constants",
     ":lib",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/integration/testsharder:testsharder_lib",

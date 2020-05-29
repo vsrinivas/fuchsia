@@ -20,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -194,7 +195,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		if errors.Is(testErr, sshutil.ConnectionError) {
 			logger.Errorf(ctx, "attempting to reconnect over SSH after error: %v", testErr)
 			if err := t.reconnectIfNecessary(ctx); err != nil {
-				logger.Errorf(ctx, "failed to reconnect over SSH: %v", err)
+				logger.Errorf(ctx, "%s: %v", constants.FailedToReconnectMsg, err)
 				// If we fail to reconnect, continuing is likely hopeless.
 				return nil
 			}

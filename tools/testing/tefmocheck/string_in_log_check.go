@@ -2,11 +2,13 @@ package tefmocheck
 
 import (
 	"bytes"
+	"fmt"
 	"path"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	"go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
+	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
 // stringInLogCheck checks if String is found in the log named LogName.
@@ -48,5 +50,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Log: SwarmingOutputType})
 	// For fxbug.dev/51015.
 	ret = append(ret, stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Log: SwarmingOutputType})
+	// For fxbug.dev/52719.
+	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Log: SwarmingOutputType})
 	return ret
 }

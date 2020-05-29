@@ -11,6 +11,7 @@ go_library("lib") {
   deps = [
     "//tools/bootserver:bootserverconstants",
     "//tools/net/netutil:netutilconstants",
+    "//tools/testing/testrunner:constants",
   ]
 }
 
