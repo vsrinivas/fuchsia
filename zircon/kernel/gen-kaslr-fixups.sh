@@ -143,19 +143,19 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
     r_offset = hex2num(raw_offset);
     type = $3;
     if (!(type in fixup_types)) {
-        bad = "reloc type " + type
+        bad = "reloc type " type
     } else if (secname == ".text.bootstrap16") {
         # This section is a special case with some movabs instructions
         # that can be fixed up safely but their immediates are not aligned.
-        bad = 0;
+        bad = "";
     } else if (r_offset % 8 != 0) {
         bad = "misaligned r_offset";
     } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|code_patch_table|__llvm_prf_data|asan_globals/) {
         bad = "fixup in unexpected section"
     } else {
-        bad = 0;
+        bad = "";
     }
-    if (!bad) {
+    if (bad == "") {
         relocs[++nrelocs] = r_offset;
         reloc_secname[r_offset] = secname;
     } else {
