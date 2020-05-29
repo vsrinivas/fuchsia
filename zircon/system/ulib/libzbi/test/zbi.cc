@@ -53,6 +53,13 @@ typedef struct test_zbi {
   zbi_header_t bootfs_hdr;
   char bootfs_payload[kBootfsPayloadLen];
 } test_zbi_t;
+
+typedef struct single_entry_test_zbi {
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  zbi_header_t entry_header;
+  int8_t entry_payload[8];
+} single_entry_test_zbi_t;
+
 static_assert(offsetof(test_zbi, kernel_hdr) == sizeof(test_zbi::header));
 static_assert(offsetof(test_zbi, cmdline_hdr) ==
               offsetof(test_zbi, kernel_payload[kKernelPayloadLen]));
@@ -633,6 +640,199 @@ static bool ZbiTestForEachTestZbiItemsCallbackError() {
   END_TEST;
 }
 
+static bool ZbiTestCreateEntryTestZbi() {
+  BEGIN_TEST;
+
+  // The ZBI has space for the container and an entry with an 8-byte payload.
+  single_entry_test_zbi_t zbi;
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), ZBI_TYPE_CONTAINER, 0, 0, ZBI_ALIGNMENT, &payload),
+            ZBI_RESULT_OK);
+
+  // Verify the header and confirm the flag version was added.
+  EXPECT_EQ(zbi.entry_header.type, ZBI_TYPE_CONTAINER);
+  EXPECT_EQ(zbi.entry_header.flags & ZBI_FLAG_VERSION, ZBI_FLAG_VERSION);
+
+  // Verify the pointer points to the newly created entry payload.
+  EXPECT_EQ(payload, zbi.entry_payload);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryTestZbiNull() {
+  BEGIN_TEST;
+
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry(nullptr, 0, 0, 0, 0, 0, &payload), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryTestZbiNullPayload() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_create_entry(&container, 0, 0, 0, 0, 0, nullptr), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryTestZbiCrc32NotSupported() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry(&container, 0, 0, 0, ZBI_FLAG_CRC32, 0, &payload), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryTestZbiNotContainer() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.type = 0;
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry(&container, 0, 0, 0, 0, 0, &payload), ZBI_RESULT_BAD_TYPE);
+
+  END_TEST;
+}
+
+// create entry tests
+static bool ZbiTestCreateEntryTestZbiCapacitySmallerThanCurrentSize() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.length = 2;
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry(&container, /*capacity=*/1, 0, 0, 0, 0, &payload), ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryTestZbiFull() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry(&container, /*capacity=*/sizeof(container), 0, 0, 0,
+                             /*payload_length=*/1, &payload),
+            ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryTestZbiPayloadTooLarge() {
+  BEGIN_TEST;
+
+  single_entry_test_zbi_t zbi;
+  uint32_t capacity = sizeof(zbi);
+  void* payload = nullptr;
+
+  // Enough space for the entry header but not the payload.
+  ASSERT_EQ(zbi_create_entry(&zbi, capacity, 0, 0, 0,
+                             /*payload_length=*/capacity, &payload),
+            ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbi() {
+  BEGIN_TEST;
+
+  // The ZBI will have space for the container and an entry with a small payload.
+  single_entry_test_zbi_t zbi;
+  uint32_t payload = 0xABCDABCD;
+
+  ASSERT_EQ(zbi_create_entry_with_payload(&zbi, sizeof(zbi), ZBI_TYPE_CONTAINER, 0, 0, &payload,
+                                          sizeof(payload)),
+            ZBI_RESULT_OK);
+
+  // Verify the contents of the payload.
+  ASSERT_BYTES_EQ(reinterpret_cast<uint8_t*>(zbi.entry_payload),
+                  reinterpret_cast<uint8_t*>(&payload), sizeof(payload), "Mismatched payloads.");
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbiNull() {
+  BEGIN_TEST;
+
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry_with_payload(nullptr, 0, 0, 0, 0, &payload, 0), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbiNullPayload() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, 0, nullptr, 0), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbiCrc32NotSupported() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, ZBI_FLAG_CRC32, &payload, 0),
+            ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbiNotContainer() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.type = 0;
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, 0, &payload, 0),
+            ZBI_RESULT_BAD_TYPE);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbiCapacitySmallerThanCurrentSize() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  container.length = 2;
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, /*capacity=*/1, 0, 0, 0, &payload, 0),
+            ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestCreateEntryWithPayloadTestZbiSectionTooLarge() {
+  BEGIN_TEST;
+
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  void* payload = nullptr;
+
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, /*capacity=*/1, 0, 0, 0, &payload,
+                                          /*payload_length=*/2),
+            ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
 static bool ZbiTestBasic(void) {
   BEGIN_TEST;
   uint8_t* test_zbi = get_test_zbi();
@@ -1094,6 +1294,23 @@ RUN_TEST(ZbiTestForEachTestZbiTruncated)
 RUN_TEST(ZbiTestForEachTestZbiItems)
 RUN_TEST(ZbiTestForEachTestZbiItemsNoCookie)
 RUN_TEST(ZbiTestForEachTestZbiItemsCallbackError)
+
+RUN_TEST(ZbiTestCreateEntryTestZbi)
+RUN_TEST(ZbiTestCreateEntryTestZbiNull)
+RUN_TEST(ZbiTestCreateEntryTestZbiNullPayload)
+RUN_TEST(ZbiTestCreateEntryTestZbiCrc32NotSupported)
+RUN_TEST(ZbiTestCreateEntryTestZbiNotContainer)
+RUN_TEST(ZbiTestCreateEntryTestZbiCapacitySmallerThanCurrentSize)
+RUN_TEST(ZbiTestCreateEntryTestZbiFull)
+RUN_TEST(ZbiTestCreateEntryTestZbiPayloadTooLarge)
+
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbi)
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiNull)
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiNullPayload)
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiCrc32NotSupported)
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiNotContainer)
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiCapacitySmallerThanCurrentSize)
+RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiSectionTooLarge)
 
 // Basic tests.
 RUN_TEST(ZbiTestBasic)

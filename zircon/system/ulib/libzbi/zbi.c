@@ -183,6 +183,10 @@ zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, ui
 zbi_result_t zbi_append_section(void* base, const size_t capacity, uint32_t section_length,
                                 uint32_t type, uint32_t extra, uint32_t flags,
                                 const void* payload) {
+  if (!base || !payload) {
+    return ZBI_RESULT_ERROR;
+  }
+
   uint8_t* new_section;
   zbi_result_t result =
       zbi_create_section(base, capacity, section_length, type, extra, flags, (void**)&new_section);
@@ -198,6 +202,10 @@ zbi_result_t zbi_append_section(void* base, const size_t capacity, uint32_t sect
 
 zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
                                 uint32_t extra, uint32_t flags, void** payload) {
+  if (!base || !payload) {
+    return ZBI_RESULT_ERROR;
+  }
+
   // We don't support CRC computation (yet?)
   if (flags & ZBI_FLAG_CRC32) {
     return ZBI_RESULT_ERROR;
@@ -211,7 +219,7 @@ zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_le
   }
 
   // Make sure we have enough space in the buffer to append the new section.
-  if (capacity - sizeof(*hdr) < hdr->length) {
+  if (capacity < sizeof(*hdr) || capacity - sizeof(*hdr) < hdr->length) {
     return ZBI_RESULT_TOO_BIG;
   }
   const size_t available = capacity - sizeof(*hdr) - hdr->length;
@@ -236,10 +244,8 @@ zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_le
   // Update the container header, always keeping the length aligned.
   hdr->length += sizeof(*new_header) + new_header->length;
   if (hdr->length % ZBI_ALIGNMENT != 0) {
+    // It was already verified that the capacity can fit the aligned length.
     uint32_t aligned_length = ZBI_ALIGN(hdr->length);
-    if (capacity - sizeof(*hdr) < aligned_length) {
-      return ZBI_RESULT_TOO_BIG;
-    }
     memset((uint8_t*)(hdr + 1) + hdr->length, 0, aligned_length - hdr->length);
     hdr->length = aligned_length;
   }

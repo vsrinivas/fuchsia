@@ -135,10 +135,9 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
 //
 // Returns:
 //     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If base is NULL.
+//     ZBI_RESULT_ERROR - If base or payload is NULL or if the CRC32 flag is used.
 //     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
 //     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
-//     ZBI_RESULT_ERROR - If the CRC32 flag is used.
 zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
                               uint32_t flags, uint32_t payload_length, void** payload);
 
@@ -163,10 +162,9 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
 //
 // Returns:
 //     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If base or payload is NULL.
+//     ZBI_RESULT_ERROR - If base or payload is NULL or if the CRC32 flag is used.
 //     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
 //     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
-//     ZBI_RESULT_ERROR - If the CRC32 flag is used.
 zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t type,
                                            uint32_t extra, uint32_t flags, const void* payload,
                                            uint32_t payload_length);
