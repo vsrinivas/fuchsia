@@ -22,10 +22,10 @@ executable("display-detect") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
 }
@@ -42,10 +42,10 @@ executable("display-color") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fzl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
 }

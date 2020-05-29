@@ -3,25 +3,5 @@
     "label": "//zircon/system/ulib/fdio:fdio",
     "name": "fdio",
     "sdk": true
-  },
-  {
-    "label": "//zircon/system/ulib/fzl:fzl",
-    "name": "fzl",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/trace:trace",
-    "name": "trace",
-    "sdk": true
-  },
-  {
-    "label": "//zircon/system/ulib/trace-engine:trace-engine",
-    "name": "trace-engine",
-    "sdk": false
-  },
-  {
-    "label": "//zircon/system/ulib/zxio:zxio",
-    "name": "zxio",
-    "sdk": false
   }
 ]
