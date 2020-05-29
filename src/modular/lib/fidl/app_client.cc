@@ -71,7 +71,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
     }
   }
 
-  launcher->CreateComponent(std::move(launch_info), app_.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), component_controller_.NewRequest());
 }
 
 AppClientBase::~AppClientBase() = default;
@@ -79,12 +79,12 @@ AppClientBase::~AppClientBase() = default;
 void AppClientBase::ImplTeardown(fit::function<void()> done) { ServiceTerminate(std::move(done)); }
 
 void AppClientBase::ImplReset() {
-  app_.Unbind();
+  component_controller_.Unbind();
   ServiceUnbind();
 }
 
 void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
-  app_.set_error_handler(
+  component_controller_.set_error_handler(
       [error_handler = std::move(error_handler)](zx_status_t status) { error_handler(); });
 }
 

@@ -67,7 +67,7 @@ class AppClientBase : public AsyncHolderBase {
   virtual void ServiceTerminate(fit::function<void()> done);
   virtual void ServiceUnbind();
 
-  fuchsia::sys::ComponentControllerPtr app_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
   component::Services services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
