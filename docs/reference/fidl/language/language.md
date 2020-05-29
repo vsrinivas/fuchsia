@@ -900,7 +900,7 @@ for you that contains commonly used Zircon definitions.
 
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
-[ftp-023]: /docs/concepts/fidl/ftp/ftp-023.md
+[ftp-023]: /docs/contribute/governance/fidl/ftp/ftp-023.md
 [fidl-overview]: /docs/concepts/fidl/overview.md
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [doc-attribute]: /docs/reference/fidl/language/attributes.md#Doc

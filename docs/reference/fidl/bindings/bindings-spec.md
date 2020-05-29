@@ -96,6 +96,6 @@ Examples of this for the
 
 <!-- xrefs -->
 [jsonir]: /docs/reference/fidl/language/json-ir.md
-[ftp024]: /docs/concepts/fidl/ftp/ftp-024.md
+[ftp024]: /docs/contribute/governance/fidl/ftp/ftp-024.md
 [RFC2119]: https://tools.ietf.org/html/rfc2119
 [go-generated-code-comment]: https://github.com/golang/go/issues/13560#issuecomment-288457920

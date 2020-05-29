@@ -846,8 +846,8 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
-[FTP-030]: /docs/concepts/fidl/ftp/ftp-030.md
-[FTP-059]: /docs/concepts/fidl/ftp/ftp-059.md
+[FTP-030]: /docs/contribute/governance/fidl/ftp/ftp-030.md
+[FTP-059]: /docs/contribute/governance/fidl/ftp/ftp-059.md
 [abi-compat]: /docs/development/languages/fidl/guides/abi-compat.md
 [lostart]: http://www.catb.org/esr/structure-packing/
 [concepts]: /docs/concepts/fidl/overview.md

@@ -196,6 +196,6 @@ specifying `[Transport="Foo"]` disables `Channel` and uses only
 
 <!-- xrefs -->
 [channel]: /docs/reference/kernel_objects/channel.md
-[FTP-013]: /docs/concepts/fidl/ftp/ftp-013.md
-[FTP-020]: /docs/concepts/fidl/ftp/ftp-020.md
-[FTP-021]: /docs/concepts/fidl/ftp/ftp-021.md
+[FTP-013]: /docs/contribute/governance/fidl/ftp/ftp-013.md
+[FTP-020]: /docs/contribute/governance/fidl/ftp/ftp-020.md
+[FTP-021]: /docs/contribute/governance/fidl/ftp/ftp-021.md

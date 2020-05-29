@@ -1421,5 +1421,5 @@ interact with a potentially large set of logical objects through a single
 protocol.
 
 <!-- xrefs -->
-[ftp-025]: /docs/concepts/fidl/ftp/ftp-025.md
+[ftp-025]: /docs/contribute/governance/fidl/ftp/ftp-025.md
 [locale-passing-example]: /garnet/examples/intl/wisdom/

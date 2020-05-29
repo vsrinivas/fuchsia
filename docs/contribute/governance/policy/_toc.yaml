@@ -1,0 +1,8 @@
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "External dependencies"
+  path: /docs/contribute/governance/policy/external_dependencies.md
+- title: "Programming languages"
+  path: /docs/contribute/governance/policy/programming_languages.md

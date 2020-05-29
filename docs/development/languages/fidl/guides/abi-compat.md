@@ -511,7 +511,7 @@ protocol P {       protocol P {
 Follow the same rules as [structs](#structs).
 
 <!-- xrefs -->
-[ftp021]: /docs/concepts/fidl/ftp/ftp-021.md
+[ftp021]: /docs/contribute/governance/fidl/ftp/ftp-021.md
 [gc]: images/gc.png
 [rx]: images/rx.png
 [yw]: images/yw.png

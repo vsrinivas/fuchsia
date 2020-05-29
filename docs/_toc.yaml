@@ -19,9 +19,9 @@ toc:
 - name: "Reference"
   contents:
   - include: /docs/reference/_toc.yaml
-- name: "Community"
+- name: "Contribute"
   contents:
-  - include: /docs/community/_toc.yaml
-- name: "Project"
+  - include: /docs/contribute/_toc.yaml
+- name: "Governance"
   contents:
-  - include: /docs/project/_toc.yaml
+  - include: /docs/contribute/governance/_toc.yaml

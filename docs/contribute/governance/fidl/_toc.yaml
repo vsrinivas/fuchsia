@@ -3,4 +3,7 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/concepts/fidl/overview.md
+  path: /docs/contribute/governance/fidl/README.md
+- title: "Language tuning proposals"
+  section:
+  - include: /docs/contribute/governance/fidl/ftp/_toc.yaml

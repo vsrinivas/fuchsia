@@ -2,5 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Overview"
-  path: /docs/concepts/fidl/overview.md
+- title: "Respectful code"
+  path: /docs/contribute/best-practices/respectful_code.md
+- title: "Update channel usage policy"
+  path: /docs/contribute/best-practices/update_channel_usage_policy.md
