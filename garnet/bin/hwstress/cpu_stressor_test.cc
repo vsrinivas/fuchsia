@@ -2,32 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cpu.h"
+#include "cpu_stressor.h"
 
-#include <lib/zx/thread.h>
 #include <lib/zx/time.h>
-#include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include <atomic>
-#include <mutex>
-#include <string>
-#include <unordered_set>
 
 #include <gtest/gtest.h>
 
 namespace hwstress {
 namespace {
 
-TEST(Cpu, TrivialStartStop) {
+TEST(CpuStressor, TrivialStartStop) {
   CpuStressor stressor{1, []() { /* do nothing */ }};
   stressor.Start();
   stressor.Stop();
 }
 
-TEST(Cpu, EnsureFunctionRunsAndStops) {
+TEST(CpuStressor, EnsureFunctionRunsAndStops) {
   std::atomic<uint32_t> val;
   CpuStressor stressor{1, [&]() { val.fetch_add(1); }};
   stressor.Start();
@@ -54,7 +48,7 @@ TEST(Cpu, EnsureFunctionRunsAndStops) {
   EXPECT_EQ(final_val, val.load());
 }
 
-TEST(Cpu, MultipleThreads) {
+TEST(CpuStressor, MultipleThreads) {
   const int kNumThreads = 10;
   std::atomic<uint32_t> seen_threads;
 
@@ -75,11 +69,6 @@ TEST(Cpu, MultipleThreads) {
   }
 
   stressor.Stop();
-}
-
-TEST(Cpu, StressCpu) {
-  // Exercise the main StressCpu for a tiny amount of time.
-  StressCpu(zx::msec(1));
 }
 
 }  // namespace

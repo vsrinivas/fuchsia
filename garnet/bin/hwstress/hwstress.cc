@@ -12,7 +12,7 @@
 #include <utility>
 
 #include "args.h"
-#include "cpu.h"
+#include "cpu_stress.h"
 #include "util.h"
 
 namespace hwstress {

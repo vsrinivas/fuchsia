@@ -2,26 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HWSTRESS_CPU_H_
-#define GARNET_BIN_HWSTRESS_CPU_H_
-
-#include <lib/zx/time.h>
+#ifndef GARNET_BIN_HWSTRESS_CPU_STRESSOR_H_
+#define GARNET_BIN_HWSTRESS_CPU_STRESSOR_H_
 
 #include <atomic>
 #include <thread>
 #include <vector>
 
-#include "temperature_sensor.h"
-
 namespace hwstress {
-
-// Start a stress test.
-void StressCpu(zx::duration duration_seconds,
-               TemperatureSensor* sensor = GetNullTemperatureSensor());
-
-//
-// The following are exposed for testing.
-//
 
 // A CpuStressor performs the given workload on multiple CPUs in the system.
 //
@@ -53,4 +41,4 @@ class CpuStressor {
 
 }  // namespace hwstress
 
-#endif  // GARNET_BIN_HWSTRESS_CPU_H_
+#endif  // GARNET_BIN_HWSTRESS_CPU_STRESSOR_H_
