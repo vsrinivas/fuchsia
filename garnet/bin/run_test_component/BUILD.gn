@@ -36,6 +36,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
@@ -55,7 +56,6 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-posix-socket",
   ]
 }
 

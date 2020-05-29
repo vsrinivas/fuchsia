@@ -20,7 +20,7 @@ fidl("fuchsia.netstack") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.net.dhcp",
+    "//sdk/fidl/fuchsia.posix.socket",
     "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-posix-socket",
   ]
 }

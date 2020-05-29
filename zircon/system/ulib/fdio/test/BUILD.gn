@@ -60,6 +60,7 @@ test("fdio") {
     "fdio_watcher.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
     "//sdk/fidl/fuchsia.process:fuchsia.process_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -67,7 +68,6 @@ test("fdio") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
-    "//zircon/system/fidl/fuchsia-posix-socket:llcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",

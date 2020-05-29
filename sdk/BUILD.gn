@@ -151,6 +151,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.process:fuchsia.process_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_sdk($fidl_toolchain)",
@@ -183,7 +184,6 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
-    "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket_sdk($fidl_toolchain)",
   ]
 }
 
