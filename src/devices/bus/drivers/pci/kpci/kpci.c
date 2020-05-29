@@ -21,8 +21,8 @@
 
 #include "kpci-private.h"
 
-#define KPCIDBG(f, x...) zxlogf(TRACE, "%s: " f, __func__, x)
-#define KPCIERR(f, x...) zxlogf(ERROR, "%s: " f, __func__, x)
+#define KPCIDBG(f, ...) zxlogf(TRACE, "%s: " f, __func__, ##__VA_ARGS__)
+#define KPCIERR(f, ...) zxlogf(ERROR, "%s: " f, __func__, ##__VA_ARGS__)
 
 // Convenience reply methods.
 static zx_status_t pci_rpc_reply(zx_handle_t ch, zx_status_t status, zx_handle_t* handle,
@@ -240,20 +240,20 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
   zx_status_t st =
       zx_channel_read(ch, 0, &req, &handle, sizeof(req), 1, &actual_bytes, &actual_handles);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "pci[%s]: error reading from channel %d", name, st);
+    KPCIERR("pci[%s]: error reading from channel %d", name, st);
     return st;
   }
 
   if (actual_bytes != sizeof(req)) {
     zx_handle_close(handle);
-    zxlogf(ERROR, "pci[%s]: channel read size invalid!", name);
+    KPCIERR("pci[%s]: channel read size invalid!", name);
     return ZX_ERR_INTERNAL;
   }
 
   uint32_t op = req.hdr.ordinal;
   uint32_t id = req.hdr.txid;
   if (op >= PCI_OP_MAX || rxrpc_cbk_tbl[op] == NULL) {
-    zxlogf(ERROR, "pci[%s]: unsupported rpc op %u", name, op);
+    KPCIERR("pci[%s]: unsupported rpc op %u", name, op);
     st = ZX_ERR_NOT_SUPPORTED;
     goto err;
   }
@@ -267,14 +267,14 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     }
   }
 
-  zxlogf(TRACE, "pci[%s]: rpc id %u op %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
+  KPCIDBG("pci[%s]: rpc id %u op %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
          rpc_op_lbl(op), op, req.data[0], req.data[1], req.data[2], req.data[3]);
   st = rxrpc_cbk_tbl[req.hdr.ordinal](&req, device, ch);
   if (st != ZX_OK) {
     goto err;
   }
 
-  zxlogf(TRACE, "pci[%s]: rpc id %u op %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
+  KPCIDBG("pci[%s]: rpc id %u op %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
   return st;
 
 err:;
@@ -284,7 +284,7 @@ err:;
   fidl_init_txn_header(&resp.hdr, req.hdr.txid, st);
   zx_handle_close(handle);
 
-  zxlogf(TRACE, "pci[%s]: rpc id %u op %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
+  KPCIDBG("pci[%s]: rpc id %u op %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
   return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 
