@@ -38,6 +38,7 @@ constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::boot::FactoryItems::Name_,
+    fuchsia::boot::Items::Name_,
     fuchsia::boot::ReadOnlyLog::Name_,
     fuchsia::boot::RootJob::Name_,
     fuchsia::boot::RootJobForInspect::Name_,
