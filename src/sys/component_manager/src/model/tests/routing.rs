@@ -2348,6 +2348,12 @@ async fn use_event_from_framework() {
                     target_name: "started".into(),
                     filter: None,
                 }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                }))
                 .build(),
         ),
     ];
@@ -2401,6 +2407,12 @@ async fn use_event_from_parent() {
                     source: UseSource::Realm,
                     source_name: "started_on_a".into(),
                     target_name: "started".into(),
+                    filter: None,
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
                     filter: None,
                 }))
                 .build(),
@@ -2512,6 +2524,12 @@ async fn use_event_from_grandparent() {
                     target_name: "stopped".into(),
                     filter: None,
                 }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                }))
                 .build(),
         ),
     ];
@@ -2586,6 +2604,12 @@ async fn event_filter_routing() {
                         "path".to_string() => DictionaryValue::Str("/foo".into()),
                     }),
                 }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
@@ -2645,6 +2669,12 @@ async fn event_filter_routing() {
                         ])
                     }),
                 }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                }))
                 .build(),
         ),
         (
@@ -2662,6 +2692,12 @@ async fn event_filter_routing() {
                     filter: Some(hashmap! {
                         "path".to_string() => DictionaryValue::Str("/baz".into()),
                     }),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
                 }))
                 .build(),
         ),

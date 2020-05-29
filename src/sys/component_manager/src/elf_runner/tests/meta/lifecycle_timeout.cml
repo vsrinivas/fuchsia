@@ -24,6 +24,7 @@
         {
             event: [
                 "destroyed",
+                "resolved",
                 "stopped",
             ],
             from: "framework",

@@ -436,7 +436,10 @@ mod tests {
             .into_iter()
             .map(|event| RoutedEvent { source_name: event.into(), scopes: scopes.clone() })
             .collect();
-        registry.subscribe(&SyncMode::Async, events).await.expect("subscribe to event stream")
+        registry
+            .subscribe_with_routed_events(&SyncMode::Async, events)
+            .await
+            .expect("subscribe to event stream")
     }
 
     // Sets up the following topology (all children are lazy)

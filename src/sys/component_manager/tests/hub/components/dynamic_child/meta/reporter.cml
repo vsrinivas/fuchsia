@@ -27,6 +27,7 @@
             event: [
                 "destroyed",
                 "marked_for_destruction",
+                "resolved",
                 "stopped",
             ],
             from: "framework",

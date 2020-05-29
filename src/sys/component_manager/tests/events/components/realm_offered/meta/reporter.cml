@@ -19,6 +19,10 @@
             event: "started_nested",
             from: "realm",
         },
+        {
+            event: "resolved",
+            from: "framework",
+        },
         { runner: "elf" },
     ],
 }

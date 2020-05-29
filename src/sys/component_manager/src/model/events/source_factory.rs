@@ -8,7 +8,9 @@ use {
         model::{
             error::ModelError,
             events::{
-                event::SyncMode, registry::EventRegistry, source::EventSource,
+                event::SyncMode,
+                registry::{EventRegistry, SubscriptionOptions, SubscriptionType},
+                source::EventSource,
                 synthesizer::EventSynthesisProvider,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -112,13 +114,7 @@ impl EventSourceFactory {
 
     /// Creates a debug event source.
     pub async fn create_for_debug(&self, sync_mode: SyncMode) -> Result<EventSource, ModelError> {
-        EventSource::new_for_debug(
-            self.model.clone(),
-            AbsoluteMoniker::root(),
-            &self.event_registry,
-            sync_mode,
-        )
-        .await
+        EventSource::new_for_debug(self.model.clone(), &self.event_registry, sync_mode).await
     }
 
     /// Creates a `EventSource` for the given `target_moniker`.
@@ -127,7 +123,12 @@ impl EventSourceFactory {
         target_moniker: AbsoluteMoniker,
         sync_mode: SyncMode,
     ) -> Result<EventSource, ModelError> {
-        EventSource::new(self.model.clone(), target_moniker, &self.event_registry, sync_mode).await
+        EventSource::new(
+            self.model.clone(),
+            SubscriptionOptions::new(SubscriptionType::Normal(target_moniker), sync_mode),
+            &self.event_registry,
+        )
+        .await
     }
 
     /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
@@ -235,10 +236,12 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            hooks::Hooks, model::ModelParams, resolver::ResolverRegistry,
-            testing::test_helpers::ComponentDeclBuilder,
+            hooks::Hooks,
+            model::ModelParams,
+            resolver::ResolverRegistry,
+            testing::{mocks::MockResolver, test_helpers::ComponentDeclBuilder},
         },
-        cm_rust::{UseDecl, UseProtocolDecl, UseSource},
+        cm_rust::{UseDecl, UseEventDecl, UseProtocolDecl, UseSource},
         matches::assert_matches,
     };
 
@@ -251,6 +254,12 @@ mod tests {
                 source: UseSource::Framework,
                 source_path: (*EVENT_SOURCE_SYNC_SERVICE_PATH).clone(),
                 target_path: (*EVENT_SOURCE_SYNC_SERVICE_PATH).clone(),
+            }))
+            .use_(UseDecl::Event(UseEventDecl {
+                source: UseSource::Framework,
+                source_name: "resolved".into(),
+                target_name: "resolved".into(),
+                filter: None,
             }))
             .build();
         let event =
@@ -269,7 +278,23 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn drop_event_source_when_component_destroyed() {
         let model = {
-            let registry = ResolverRegistry::new();
+            let mut resolver = MockResolver::new();
+            resolver.add_component(
+                "root",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Event(UseEventDecl {
+                        source: UseSource::Framework,
+                        source_name: "resolved".into(),
+                        target_name: "resolved".into(),
+                        filter: None,
+                    }))
+                    .build(),
+            );
+            let registry = {
+                let mut registry = ResolverRegistry::new();
+                registry.register("test".to_string(), Box::new(resolver));
+                registry
+            };
             Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: registry,

@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
-    log::{error, info, warn, debug},
+    log::{debug, error, info, warn},
     std::{path::PathBuf, sync::Arc},
 };
 

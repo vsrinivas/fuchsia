@@ -27,6 +27,12 @@
                 ],
             },
         },
+        {
+            // We need the resolved event for start_component_tree.
+            // See fxb/52929.
+            event: "resolved",
+            from: "framework",
+        },
     ],
     offer: [
         {

@@ -3,19 +3,27 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        error::ModelError,
-        events::{
-            dispatcher::{EventDispatcher, ScopeMetadata},
-            event::SyncMode,
-            stream::EventStream,
-            synthesizer::{EventSynthesisProvider, EventSynthesizer},
+    crate::{
+        capability::{CapabilitySource, InternalCapability},
+        model::{
+            error::ModelError,
+            events::{
+                dispatcher::{EventDispatcher, ScopeMetadata},
+                error::EventsError,
+                event::SyncMode,
+                filter::EventFilter,
+                stream::EventStream,
+                synthesizer::{EventSynthesisProvider, EventSynthesizer},
+            },
+            hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
+            model::Model,
+            moniker::AbsoluteMoniker,
+            realm::Realm,
+            routing,
         },
-        hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
-        model::Model,
     },
     async_trait::async_trait,
-    cm_rust::CapabilityName,
+    cm_rust::{CapabilityName, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
     std::{
@@ -24,21 +32,90 @@ use {
     },
 };
 
+#[derive(Debug)]
 pub struct RoutedEvent {
     pub source_name: CapabilityName,
     pub scopes: Vec<ScopeMetadata>,
 }
 
+#[derive(Debug)]
+pub struct RouteEventsResult {
+    /// Maps from source name to a set of scope monikers
+    mapping: HashMap<CapabilityName, Vec<ScopeMetadata>>,
+}
+
+impl RouteEventsResult {
+    fn new() -> Self {
+        Self { mapping: HashMap::new() }
+    }
+
+    fn insert(&mut self, source_name: CapabilityName, scope: ScopeMetadata) {
+        let values = self.mapping.entry(source_name).or_insert(Vec::new());
+        if !values.contains(&scope) {
+            values.push(scope);
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.mapping.len()
+    }
+
+    pub fn contains_event(&self, event_name: &CapabilityName) -> bool {
+        self.mapping.contains_key(event_name)
+    }
+
+    pub fn to_vec(self) -> Vec<RoutedEvent> {
+        self.mapping
+            .into_iter()
+            .map(|(source_name, scopes)| RoutedEvent { source_name, scopes })
+            .collect()
+    }
+}
+
+#[derive(Clone)]
+pub struct SubscriptionOptions {
+    /// Determines how event routing is done.
+    pub subscription_type: SubscriptionType,
+    /// Determines whether component manager waits for a response from the
+    /// event receiver.
+    pub sync_mode: SyncMode,
+}
+
+impl SubscriptionOptions {
+    pub fn new(subscription_type: SubscriptionType, sync_mode: SyncMode) -> Self {
+        Self { subscription_type, sync_mode }
+    }
+}
+
+impl Default for SubscriptionOptions {
+    fn default() -> SubscriptionOptions {
+        SubscriptionOptions {
+            subscription_type: SubscriptionType::Normal(AbsoluteMoniker::root()),
+            sync_mode: SyncMode::Async,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum SubscriptionType {
+    /// Indicates that event routing will be bypassed and all events can be subscribed.
+    Debug,
+    /// Indicates that this is a production-worthy event subscription and the target is
+    /// the provided AbsoluteMoniker.
+    Normal(AbsoluteMoniker),
+}
+
 /// Subscribes to events from multiple tasks and sends events to all of them.
 pub struct EventRegistry {
+    model: Weak<Model>,
     dispatcher_map: Arc<Mutex<HashMap<CapabilityName, Vec<Weak<EventDispatcher>>>>>,
     event_synthesizer: EventSynthesizer,
 }
 
 impl EventRegistry {
     pub fn new(model: Weak<Model>) -> Self {
-        let event_synthesizer = EventSynthesizer::new(model);
-        Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())), event_synthesizer }
+        let event_synthesizer = EventSynthesizer::new(model.clone());
+        Self { model, dispatcher_map: Arc::new(Mutex::new(HashMap::new())), event_synthesizer }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -64,6 +141,38 @@ impl EventRegistry {
     /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe(
         &self,
+        options: &SubscriptionOptions,
+        events: Vec<CapabilityName>,
+    ) -> Result<EventStream, ModelError> {
+        // Register event capabilities if any. It identifies the sources of these events (might be the
+        // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
+        // realms.
+        let events = match &options.subscription_type {
+            SubscriptionType::Debug => events
+                .into_iter()
+                .map(|event| RoutedEvent {
+                    source_name: event.clone(),
+                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root()).for_debug()],
+                })
+                .collect(),
+            SubscriptionType::Normal(target_moniker) => {
+                let route_result = self.route_events(&target_moniker, &events).await?;
+                if route_result.len() != events.len() {
+                    let names = events
+                        .into_iter()
+                        .filter(|event| !route_result.contains_event(&event))
+                        .collect();
+                    return Err(EventsError::not_available(names).into());
+                }
+                route_result.to_vec()
+            }
+        };
+
+        self.subscribe_with_routed_events(&options.sync_mode, events).await
+    }
+
+    pub async fn subscribe_with_routed_events(
+        &self,
         sync_mode: &SyncMode,
         events: Vec<RoutedEvent>,
     ) -> Result<EventStream, ModelError> {
@@ -88,7 +197,7 @@ impl EventRegistry {
 
         Ok(event_stream)
     }
-
+    // TODO(fxb/48510): get rid of this
     /// Sends the event to all dispatchers and waits to be unblocked by all
     async fn dispatch(&self, event: &ComponentEvent) -> Result<(), ModelError> {
         // Copy the senders so we don't hold onto the sender map lock
@@ -157,6 +266,54 @@ impl EventRegistry {
         Ok(())
     }
 
+    pub async fn route_events(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+        events: &Vec<CapabilityName>,
+    ) -> Result<RouteEventsResult, ModelError> {
+        let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+        let realm = model.look_up_realm(&target_moniker).await?;
+        let decl = {
+            let state = realm.lock_state().await;
+            state.as_ref().expect("route_events: not registered").decl().clone()
+        };
+
+        let mut result = RouteEventsResult::new();
+        for use_decl in decl.uses {
+            match &use_decl {
+                UseDecl::Event(event_decl) => {
+                    if !events.contains(&event_decl.target_name) {
+                        continue;
+                    }
+                    let (source_name, scope_moniker) =
+                        Self::route_event(event_decl, &realm).await?;
+                    let scope = ScopeMetadata::new(scope_moniker)
+                        .with_filter(EventFilter::new(event_decl.filter.clone()));
+                    result.insert(source_name, scope);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Routes an event and returns its source name and scope on success.
+    async fn route_event(
+        event_decl: &UseEventDecl,
+        realm: &Arc<Realm>,
+    ) -> Result<(CapabilityName, AbsoluteMoniker), ModelError> {
+        routing::route_use_event_capability(&UseDecl::Event(event_decl.clone()), &realm).await.map(
+            |source| match source {
+                CapabilitySource::Framework {
+                    capability: InternalCapability::Event(source_name),
+                    scope_moniker,
+                } => (source_name, scope_moniker),
+                _ => unreachable!(),
+            },
+        )
+    }
+
     #[cfg(test)]
     async fn dispatchers_per_event_type(&self, event_type: EventType) -> usize {
         let dispatcher_map = self.dispatcher_map.lock().await;
@@ -217,11 +374,8 @@ mod tests {
 
         let mut event_stream_a = event_registry
             .subscribe(
-                &SyncMode::Async,
-                vec![RoutedEvent {
-                    source_name: EventType::Discovered.into(),
-                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
-                }],
+                &SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async),
+                vec![EventType::Discovered.into()],
             )
             .await
             .expect("subscribe succeeds");
@@ -230,11 +384,8 @@ mod tests {
 
         let mut event_stream_b = event_registry
             .subscribe(
-                &SyncMode::Async,
-                vec![RoutedEvent {
-                    source_name: EventType::Discovered.into(),
-                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
-                }],
+                &SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async),
+                vec![EventType::Discovered.into()],
             )
             .await
             .expect("subscribe succeeds");
@@ -273,11 +424,8 @@ mod tests {
 
         let mut event_stream = event_registry
             .subscribe(
-                &SyncMode::Async,
-                vec![RoutedEvent {
-                    source_name: EventType::Resolved.into(),
-                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root())],
-                }],
+                &SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async),
+                vec![EventType::Resolved.into()],
             )
             .await
             .expect("subscribed to event stream");

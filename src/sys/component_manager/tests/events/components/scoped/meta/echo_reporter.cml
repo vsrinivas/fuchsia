@@ -21,6 +21,7 @@
         {
             event: [
                 "capability_routed",
+                "resolved",
                 "started",
             ],
             from: "framework",

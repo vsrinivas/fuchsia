@@ -27,7 +27,10 @@
             from: "framework",
         },
         {
-            event: "started",
+            event: [
+                "resolved",
+                "started",
+            ],
             from: "framework",
         },
     ],

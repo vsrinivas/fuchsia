@@ -22,7 +22,10 @@
             ],
         },
         {
-            event: "stopped",
+            event: [
+                "resolved",
+                "stopped",
+            ],
             from: "framework",
         },
     ],

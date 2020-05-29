@@ -23,6 +23,10 @@
                 "/svc/fuchsia.logger.LogSink",
             ],
         },
+        {
+            event: "resolved",
+            from: "framework",
+        },
     ],
     offer: [
         {
