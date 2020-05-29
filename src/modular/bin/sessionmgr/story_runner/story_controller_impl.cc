@@ -325,13 +325,13 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request_;
 };
 
-// KillModuleCall tears down the module by the given module_data. It is enqueued
-// when ledger confirms that the module was stopped, see OnModuleDataUpdated().
-class StoryControllerImpl::KillModuleCall : public Operation<> {
+// TeardownModuleCall tears down the module by the given module_data. It is enqueued
+// by OnModuleDataUpdated().
+class StoryControllerImpl::TeardownModuleCall : public Operation<> {
  public:
-  KillModuleCall(StoryControllerImpl* const story_controller_impl,
-                 fuchsia::modular::ModuleData module_data, fit::function<void()> done)
-      : Operation("StoryControllerImpl::KillModuleCall", [] {}),
+  TeardownModuleCall(StoryControllerImpl* const story_controller_impl,
+                     fuchsia::modular::ModuleData module_data, fit::function<void()> done)
+      : Operation("StoryControllerImpl::TeardownModuleCall", [] {}),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
         done_(std::move(done)) {}
@@ -343,7 +343,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     // away. An internal module is stopped by its parent module, and it's up to
     // the parent module to defocus it first. TODO(mesch): Why not always
     // defocus?
-    auto future = Future<>::Create("StoryControllerImpl.KillModuleCall.Run.future");
+    auto future = Future<>::Create("StoryControllerImpl.TeardownModuleCall.Run.future");
     if (story_controller_impl_->story_shell_ &&
         module_data_.module_source() == fuchsia::modular::ModuleSource::EXTERNAL) {
       story_controller_impl_->story_shell_->DefocusSurface(
@@ -354,7 +354,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
 
     future->Then([this, flow] {
       // Teardown the module, which discards the module controller. Since
-      // multiple KillModuleCall operations can be queued by module data
+      // multiple TeardownModuleCall operations can be queued by module data
       // updates, we must check whether the module has already been killed.
       auto* const running_mod_info =
           story_controller_impl_->FindRunningModInfo(module_data_.module_path());
@@ -389,12 +389,12 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     // different from calling operations without flow tokens, which call their
     // own Done() directly.
     //
-    // Notice the StopCall doesn't use a flow token, but just calls Done()
+    // Notice the TeardownStoryCall doesn't use a flow token, but just calls Done()
     // directly from within done_, but the OnModuleDataUpadatedCall has a flow
     // token.
 
     // We must guard against the possibility that done_() causes this to be
-    // deleted (happens when called from StopCall).
+    // deleted (happens when called from TeardownStoryCall).
     auto done = std::move(done_);
     done();
   }
@@ -502,11 +502,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   OperationQueue operation_queue_;
 };
 
-class StoryControllerImpl::StopCall : public Operation<> {
+class StoryControllerImpl::TeardownStoryCall : public Operation<> {
  public:
-  StopCall(StoryControllerImpl* const story_controller_impl, const bool bulk,
-           fit::function<void()> done)
-      : Operation("StoryControllerImpl::StopCall", std::move(done)),
+  TeardownStoryCall(StoryControllerImpl* const story_controller_impl, const bool bulk,
+                    fit::function<void()> done)
+      : Operation("StoryControllerImpl::TeardownStoryCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
         bulk_(bulk) {}
 
@@ -519,7 +519,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
     story_controller_impl_->SetRuntimeState(fuchsia::modular::StoryState::STOPPING);
 
-    // If this StopCall is part of a bulk operation of story provider that stops
+    // If this TeardownStoryCall is part of a bulk operation of story provider that stops
     // all stories at once, no DetachView() notification is given to the session
     // shell.
     if (bulk_) {
@@ -577,15 +577,17 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
     // Tear down all connections with a fuchsia::modular::ModuleController
     for (auto& running_mod_info : story_controller_impl_->running_mod_infos_) {
-      auto did_teardown = Future<>::Create("StoryControllerImpl.StopCall.Run.did_teardown");
+      auto did_teardown =
+          Future<>::Create("StoryControllerImpl.TeardownStoryCall.Run.did_teardown");
       running_mod_info.module_controller_impl->Teardown(did_teardown->Completer());
       did_teardowns.emplace_back(did_teardown);
     }
 
-    Wait("StoryControllerImpl.StopCall.Run.Wait", did_teardowns)
+    Wait("StoryControllerImpl.TeardownStoryCall.Run.Wait", did_teardowns)
         ->AsyncMap([this] {
-          auto did_teardown = Future<>::Create("StoryControllerImpl.StopCall.Run.did_teardown2");
-          // If StopCall runs on a story that's not running, there is no story
+          auto did_teardown =
+              Future<>::Create("StoryControllerImpl.TeardownStoryCall.Run.did_teardown2");
+          // If TeardownStoryCall runs on a story that's not running, there is no story
           // shell.
           if (story_controller_impl_->story_shell_holder_) {
             story_controller_impl_->story_shell_holder_->Teardown(kBasicTimeout,
@@ -611,11 +613,11 @@ class StoryControllerImpl::StopCall : public Operation<> {
   const bool bulk_;
 };
 
-class StoryControllerImpl::StopModuleCall : public Operation<> {
+class StoryControllerImpl::DeleteModuleCall : public Operation<> {
  public:
-  StopModuleCall(StoryStorage* const story_storage, std::vector<std::string> module_path,
-                 fit::function<void()> done)
-      : Operation("StoryControllerImpl::StopModuleCall", std::move(done)),
+  DeleteModuleCall(StoryStorage* const story_storage, std::vector<std::string> module_path,
+                   fit::function<void()> done)
+      : Operation("StoryControllerImpl::DeleteModuleCall", std::move(done)),
         story_storage_(story_storage),
         module_path_(std::move(module_path)) {}
 
@@ -632,27 +634,28 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
   const std::vector<std::string> module_path_;
 };
 
-class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
+class StoryControllerImpl::DeleteModuleAndTeardownStoryIfEmptyCall : public Operation<> {
  public:
-  StopModuleAndStoryIfEmptyCall(StoryControllerImpl* const story_controller_impl,
-                                std::vector<std::string> module_path, fit::function<void()> done)
-      : Operation("StoryControllerImpl::StopModuleAndStoryIfEmptyCall", std::move(done)),
+  DeleteModuleAndTeardownStoryIfEmptyCall(StoryControllerImpl* const story_controller_impl,
+                                          std::vector<std::string> module_path,
+                                          fit::function<void()> done)
+      : Operation("StoryControllerImpl::DeleteModuleAndTeardownStoryIfEmptyCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {}
 
  private:
   void Run() override {
     FlowToken flow{this};
-    // If this is the last module in the story, stop the whole story instead
-    // (which will cause this mod to be stopped also).
+    // If this is the last module in the story, tear down the whole story instead
+    // (which will cause this mod to be torn down).
     auto* const running_mod_info = story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info && story_controller_impl_->running_mod_infos_.size() == 1) {
       operation_queue_.Add(
-          std::make_unique<StopCall>(story_controller_impl_, false /* bulk */, [flow] {}));
+          std::make_unique<TeardownStoryCall>(story_controller_impl_, false /* bulk */, [flow] {}));
     } else {
-      // Otherwise, stop this one module.
-      operation_queue_.Add(std::make_unique<StopModuleCall>(story_controller_impl_->story_storage_,
-                                                            module_path_, [flow] {}));
+      // Otherwise, delete this one module.
+      operation_queue_.Add(std::make_unique<DeleteModuleCall>(
+          story_controller_impl_->story_storage_, module_path_, [flow] {}));
     }
   }
 
@@ -684,8 +687,8 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
       // If the module is running, kill it.
       if (running_mod_info) {
         running_mod_info->is_deleted_property.Set("True");
-        operation_queue_.Add(std::make_unique<KillModuleCall>(story_controller_impl_,
-                                                              std::move(module_data_), [flow] {}));
+        operation_queue_.Add(std::make_unique<TeardownModuleCall>(
+            story_controller_impl_, std::move(module_data_), [flow] {}));
       }
       return;
     }
@@ -949,10 +952,10 @@ void StoryControllerImpl::DefocusModule(const std::vector<std::string>& module_p
   operation_queue_.Add(std::make_unique<DefocusCall>(this, module_path));
 }
 
-void StoryControllerImpl::StopModule(const std::vector<std::string>& module_path,
-                                     fit::function<void()> done) {
+void StoryControllerImpl::DeleteModule(const std::vector<std::string>& module_path,
+                                       fit::function<void()> done) {
   operation_queue_.Add(
-      std::make_unique<StopModuleCall>(story_storage_, module_path, std::move(done)));
+      std::make_unique<DeleteModuleCall>(story_storage_, module_path, std::move(done)));
 }
 
 void StoryControllerImpl::ReleaseModule(ModuleControllerImpl* const module_controller_impl) {
@@ -1078,11 +1081,12 @@ void StoryControllerImpl::RequestStart() {
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(std::make_unique<StopCall>(this, false /* bulk */, std::move(done)));
+  operation_queue_.Add(
+      std::make_unique<TeardownStoryCall>(this, false /* bulk */, std::move(done)));
 }
 
 void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
-  operation_queue_.Add(std::make_unique<StopCall>(this, bulk, std::move(done)));
+  operation_queue_.Add(std::make_unique<TeardownStoryCall>(this, bulk, std::move(done)));
 }
 
 void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {
@@ -1163,7 +1167,8 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
 }
 
 void StoryControllerImpl::RemoveModuleFromStory(const std::vector<std::string>& module_path) {
-  operation_queue_.Add(std::make_unique<StopModuleAndStoryIfEmptyCall>(this, module_path, [] {}));
+  operation_queue_.Add(
+      std::make_unique<DeleteModuleAndTeardownStoryIfEmptyCall>(this, module_path, [] {}));
 }
 
 void StoryControllerImpl::OnSurfaceFocused(fidl::StringPtr surface_id) {

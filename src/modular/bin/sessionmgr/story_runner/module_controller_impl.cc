@@ -114,7 +114,7 @@ void ModuleControllerImpl::Defocus() {
 }
 
 void ModuleControllerImpl::Stop(StopCallback done) {
-  story_controller_impl_->StopModule(module_data_->module_path(), std::move(done));
+  story_controller_impl_->DeleteModule(module_data_->module_path(), std::move(done));
 }
 
 void ModuleControllerImpl::NotifyStateChange() {

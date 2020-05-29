@@ -75,7 +75,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void DefocusModule(const std::vector<std::string>& module_path);
 
   // Called by ModuleControllerImpl.
-  void StopModule(const std::vector<std::string>& module_path, fit::function<void()> done);
+  void DeleteModule(const std::vector<std::string>& module_path, fit::function<void()> done);
 
   // Called by ModuleControllerImpl.
   //
@@ -115,15 +115,15 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   class AddIntentCall;
   class DefocusCall;
   class FocusCall;
-  class KillModuleCall;
+  class TeardownModuleCall;
   class LaunchModuleCall;
   class LaunchModuleInShellCall;
   class OnModuleDataUpdatedCall;
   class ResolveParameterCall;
   class StartCall;
-  class StopCall;
-  class StopModuleCall;
-  class StopModuleAndStoryIfEmptyCall;
+  class TeardownStoryCall;
+  class DeleteModuleCall;
+  class DeleteModuleAndTeardownStoryIfEmptyCall;
 
   // For each *running* Module in the Story, there is one RunningModInfo.
   struct RunningModInfo {
