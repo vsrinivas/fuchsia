@@ -165,9 +165,23 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 
 func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []string {
 	args = append(args, "-kernel", d.kernelPath(params.Arch))
-	args = append(args, "-nographic", "-smp", "4,threads=2",
-		"-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
-		"-cpu", "Haswell,+smap,-check,-fsgsbase")
+	args = append(args, "-nographic", "-smp", "4,threads=2")
+
+	// Ask QEMU to emit a message on stderr once the VM is running
+	// so we'll know whether QEMU has started or not.
+	args = append(args, "-trace", "enable=vm_state_notify")
+
+	// Append architecture specific QEMU options.  These options
+	// are meant to mirror those used by `fx qemu`.
+	if params.Arch == Arm64 {
+		args = append(args, "-machine", "virtualization=true",
+			"-cpu", "cortex-a53", "-machine", "virt,gic_version=3")
+	} else if params.Arch == X64 {
+		args = append(args, "-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
+			"-cpu", "Haswell,+smap,-check,-fsgsbase")
+	} else {
+		panic("unsupported architecture")
+	}
 
 	if params.Memory == 0 {
 		args = append(args, "-m", "2048")
@@ -376,7 +390,9 @@ func (i *Instance) Start() error {
 
 	fmt.Println("Checking for QEMU boot...")
 	for j := 0; j < 100; j++ {
-		if i.CheckForLogMessage("SeaBIOS") == nil {
+		// The flag `-trace enable=vm_state_notify` will cause qemu to
+		// print this message early in boot.
+		if i.checkForLogMessage(i.stderr, "vm_state_notify running") == nil {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -406,7 +422,7 @@ func (i *Instance) RunCommand(cmd string) {
 // message that contains the given string. panic()s on error (and in particular
 // if the string is not seen until EOF).
 func (i *Instance) WaitForLogMessage(msg string) {
-	err := i.CheckForLogMessage(msg)
+	err := i.checkForLogMessage(i.stdout, msg)
 	if err != nil {
 		panic(err)
 	}
@@ -468,12 +484,10 @@ func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout 
 // All text attributes off: ESC [ 0 m
 const qemuClearPrefix = "\x1b\x63\x1b\x5b\x3f\x37\x6c\x1b\x5b\x32\x4a\x1b\x5b\x30\x6d"
 
-// Reads all messages from stdout of QEMU, and tests if msg appears. Returns
-// error if any. Prefer WaitForLogMessage() unless you're certain this is the
-// one you want.
-func (i *Instance) CheckForLogMessage(msg string) error {
+// Reads all messages from |r| and tests if |msg| appears. Returns error if any.
+func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 	for {
-		line, err := i.stdout.ReadString('\n')
+		line, err := b.ReadString('\n')
 		if err != nil {
 			for {
 				stderr, err2 := i.stderr.ReadString('\n')
