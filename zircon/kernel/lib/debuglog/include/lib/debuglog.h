@@ -19,16 +19,37 @@ struct dlog;
 typedef struct dlog dlog_t;
 typedef struct dlog_header dlog_header_t;
 typedef struct dlog_record dlog_record_t;
-typedef struct dlog_reader dlog_reader_t;
 
-struct dlog_reader {
-  struct list_node node;
+// DlogReaders drain debuglogs. Owners of DlogReaders are called back as
+// messages are pushed through the debuglog, via the Notify callback.
+class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
+ public:
+  using NotifyCallback = void(void* cookie);
 
-  dlog_t* log;
-  size_t tail;
+  constexpr DlogReader() {}
+  ~DlogReader();
 
-  void (*notify)(void* cookie);
-  void* cookie;
+  // Since DlogReaders typically capture containing objects via |cookie_|, they
+  // use 2-phase initialization to avoid races in the contruction of the
+  // DlogReader and the containing object.
+  void Initialize(NotifyCallback* notify, void* cookie);
+
+  zx_status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
+
+  void Notify();
+
+  // Similar to Initialize, DlogReaders are be manually stopped via |Disconnect|
+  // to avoid reentrency issues in the DlogReader and its containing object.
+  //
+  // Disconnect must be called before the destructor runs, if Initialize was called.
+  void Disconnect();
+
+ private:
+  dlog_t* log_ = nullptr;
+  size_t tail_ = 0;
+
+  NotifyCallback* notify_ = nullptr;
+  void* cookie_ = nullptr;
 };
 
 #define DLOG_HDR_SET(fifosize, readsize) ((((readsize)&0xFFF) << 12) | ((fifosize)&0xFFF))
@@ -57,10 +78,7 @@ struct dlog_record {
 static_assert(sizeof(dlog_header_t) == DLOG_MIN_RECORD, "");
 static_assert(sizeof(dlog_record_t) == DLOG_MAX_RECORD, "");
 
-void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie);
-void dlog_reader_destroy(dlog_reader_t* rdr);
 zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len);
-zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* actual);
 
 // used by sys_debug_write()
 void dlog_serial_write(const char* data, size_t len);

@@ -33,7 +33,7 @@ class LogDispatcher final : public SoloDispatcher<LogDispatcher, ZX_DEFAULT_LOG_
   static void Notify(void* cookie);
   void Signal();
 
-  dlog_reader reader_ TA_GUARDED(get_lock());
+  DlogReader reader_ TA_GUARDED(get_lock());
   const uint32_t flags_;
 };
 

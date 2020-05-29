@@ -25,8 +25,14 @@ zx_status_t LogDispatcher::Create(uint32_t flags, KernelHandle<LogDispatcher>* h
     return ZX_ERR_NO_MEMORY;
 
   if (flags & ZX_LOG_FLAG_READABLE) {
-    dlog_reader_init(&new_handle.dispatcher()->reader_, &LogDispatcher::Notify,
-                     new_handle.dispatcher().get());
+    // Thread safety analysis is disabled here. Calling Initialize could
+    // immediately call Notify, calling back into the dispatcher. Thus the lock
+    // cannot be held. So far, the log dispatcher holding |reader_| has not
+    // escaped beyond this thread, so it is safe to call Initialize.
+    [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+      new_handle.dispatcher()->reader_.Initialize(&LogDispatcher::Notify,
+                                                  new_handle.dispatcher().get());
+    }();
   }
 
   // Note: ZX_RIGHT_READ is added by sys_debuglog_create when ZX_LOG_FLAG_READABLE.
@@ -41,8 +47,9 @@ LogDispatcher::LogDispatcher(uint32_t flags) : SoloDispatcher(ZX_LOG_WRITABLE), 
 
 LogDispatcher::~LogDispatcher() {
   kcounter_add(dispatcher_log_destroy_count, 1);
+
   if (flags_ & ZX_LOG_FLAG_READABLE) {
-    dlog_reader_destroy(&reader_);
+    reader_.Disconnect();
   }
 }
 
@@ -72,7 +79,7 @@ zx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* a
 
   Guard<Mutex> guard{get_lock()};
 
-  zx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
+  zx_status_t status = reader_.Read(0, ptr, len, actual);
   if (status == ZX_ERR_SHOULD_WAIT) {
     UpdateStateLocked(ZX_CHANNEL_READABLE, 0);
   }

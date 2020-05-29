@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <dev/udisplay.h>
+#include <fbl/auto_call.h>
 #include <kernel/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
@@ -52,7 +53,7 @@ struct dlog {
   AutounsignalEvent event;
 
   DECLARE_LOCK(dlog, Mutex) readers_lock;
-  struct list_node readers = LIST_INITIAL_VALUE(this->readers);
+  fbl::DoublyLinkedList<DlogReader*> readers;
 };
 
 static dlog_t DLOG(DLOG_DATA);
@@ -208,21 +209,20 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* data_ptr, size_t len,
-                      size_t* _actual) {
+zx_status_t DlogReader::Read(uint32_t flags, void* data_ptr, size_t len, size_t* _actual) {
   uint8_t* ptr = static_cast<uint8_t*>(data_ptr);
   // must be room for worst-case read
   if (len < DLOG_MAX_RECORD) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  dlog_t* log = rdr->log;
+  dlog_t* log = log_;
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
   {
     AutoSpinLock lock{&log->lock};
 
-    size_t rtail = rdr->tail;
+    size_t rtail = tail_;
 
     // If the read-tail is not within the range of log-tail..log-head
     // this reader has been lapped by a writer and we reset our read-tail
@@ -252,27 +252,35 @@ zx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* data_ptr, size_t
       rtail += DLOG_HDR_GET_FIFOLEN(header);
     }
 
-    rdr->tail = rtail;
+    tail_ = rtail;
   }
 
   return status;
 }
 
-void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
+DlogReader::~DlogReader() {
+  // DlogReaders must be disconnected when destroyed.
+  DEBUG_ASSERT(!InContainer());
+}
+
+void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
+  // A DlogReader can only be initialized once.
+  DEBUG_ASSERT(log_ == nullptr);
+
   dlog_t* log = &DLOG;
 
-  rdr->log = log;
-  rdr->notify = notify;
-  rdr->cookie = cookie;
+  log_ = log;
+  notify_ = notify;
+  cookie_ = cookie;
 
   Guard<Mutex> guard(&log->readers_lock);
-  list_add_tail(&log->readers, &rdr->node);
+  log->readers.push_back(this);
 
   bool do_notify = false;
 
   {
     AutoSpinLock lock{&log->lock};
-    rdr->tail = log->tail;
+    tail_ = log->tail;
     do_notify = (log->tail != log->head);
   }
 
@@ -283,11 +291,16 @@ void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
   }
 }
 
-void dlog_reader_destroy(dlog_reader_t* rdr) {
-  dlog_t* log = rdr->log;
-  {
-    Guard<Mutex> guard(&log->readers_lock);
-    list_delete(&rdr->node);
+void DlogReader::Disconnect() {
+  if (log_) {
+    Guard<Mutex> guard(&log_->readers_lock);
+    log_->readers.erase(*this);
+  }
+}
+
+void DlogReader::Notify() {
+  if (notify_) {
+    notify_(cookie_);
   }
 }
 
@@ -306,11 +319,8 @@ static int debuglog_notifier(void* arg) {
     // notify readers that new log items were posted
     {
       Guard<Mutex> guard(&log->readers_lock);
-      dlog_reader_t* rdr;
-      list_for_every_entry (&log->readers, rdr, dlog_reader_t, node) {
-        if (rdr->notify) {
-          rdr->notify(rdr->cookie);
-        }
+      for (DlogReader& reader : log->readers) {
+        reader.Notify();
       }
     }
   }
@@ -357,8 +367,9 @@ static int debuglog_dumper(void* arg) {
     char data[DLOG_MAX_DATA + 1];
   } rec;
 
-  dlog_reader_t reader;
-  dlog_reader_init(&reader, debuglog_dumper_notify, &dumper_event);
+  DlogReader reader;
+  reader.Initialize(&debuglog_dumper_notify, &dumper_event);
+  fbl::AutoCall disconnect{[&reader]() { reader.Disconnect(); }};
 
   bool done = false;
   while (!done) {
@@ -372,7 +383,7 @@ static int debuglog_dumper(void* arg) {
 
     // Read out all the records and dump them to the kernel console.
     size_t actual;
-    while (dlog_read(&reader, 0, &rec, DLOG_MAX_RECORD, &actual) == ZX_OK) {
+    while (reader.Read(0, &rec, DLOG_MAX_RECORD, &actual) == ZX_OK) {
       if (rec.hdr.datalen && (rec.data[rec.hdr.datalen - 1] == '\n')) {
         rec.data[rec.hdr.datalen - 1] = 0;
       } else {
