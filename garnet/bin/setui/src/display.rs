@@ -9,3 +9,6 @@ pub mod display_controller;
 mod display_fidl_handler;
 mod light_sensor;
 pub mod light_sensor_controller;
+
+#[cfg(test)]
+pub use light_sensor::testing as light_sensor_testing;

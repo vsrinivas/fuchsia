@@ -4,18 +4,19 @@
 
 #[cfg(test)]
 use {
-    crate::display::LIGHT_SENSOR_SERVICE_NAME, crate::registry::device_storage::testing::*,
-    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, anyhow::format_err,
-    fidl::endpoints::ServerEnd, fidl_fuchsia_settings::*, fuchsia_async as fasync,
-    fuchsia_zircon as zx, futures::future::BoxFuture, futures::prelude::*,
+    crate::display::{light_sensor_testing::*, LIGHT_SENSOR_SERVICE_NAME},
+    crate::registry::device_storage::testing::*,
+    crate::switchboard::base::SettingType,
+    crate::EnvironmentBuilder,
+    anyhow::format_err,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_settings::*,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::BoxFuture,
+    futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
-
-const TEST_LUX_VAL: u8 = 25;
-const TEST_RED_VAL: u8 = 10;
-const TEST_GREEN_VAL: u8 = 9;
-const TEST_BLUE_VAL: u8 = 6;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_light_sensor() {
@@ -36,6 +37,7 @@ async fn test_light_sensor() {
 
         let mut stream = stream_result.unwrap();
 
+        let data = get_mock_sensor_response();
         fasync::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let fidl_fuchsia_hardware_input::DeviceRequest::GetReport {
@@ -44,20 +46,6 @@ async fn test_light_sensor() {
                     responder,
                 } = request
                 {
-                    // Taken from actual sensor report
-                    let data: [u8; 11] = [
-                        1,
-                        1,
-                        0,
-                        TEST_LUX_VAL,
-                        0,
-                        TEST_RED_VAL,
-                        0,
-                        TEST_GREEN_VAL,
-                        0,
-                        TEST_BLUE_VAL,
-                        0,
-                    ];
                     responder.send(0, &data).unwrap();
                 }
             }

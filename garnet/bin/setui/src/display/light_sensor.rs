@@ -62,20 +62,47 @@ fn open_input_device(path: &str) -> Result<SensorProxy, Error> {
 
 /// Reads the sensor's HID record and decodes it.
 pub async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error> {
-    let report = sensor.get_report(ReportType::Input, 1).await?;
+    const LIGHT_SENSOR_HID_ID: u8 = 1;
+    let report = sensor.get_report(ReportType::Input, LIGHT_SENSOR_HID_ID).await?;
     let report = report.1;
     if report.len() < 11 {
         return Err(format_err!("Sensor HID report too short"));
     }
+
+    // This follows the layout defined by //zircon/system/ulib/hid/include/hid/ambient-light.h
     Ok(AmbientLightInputRpt {
         rpt_id: report[0],
         state: report[1],
         event: report[2],
         illuminance: LittleEndian::read_u16(&report[3..5]),
         red: LittleEndian::read_u16(&report[5..7]),
-        green: LittleEndian::read_u16(&report[7..9]),
-        blue: LittleEndian::read_u16(&report[9..11]),
+        blue: LittleEndian::read_u16(&report[7..9]),
+        green: LittleEndian::read_u16(&report[9..11]),
     })
+}
+
+#[cfg(test)]
+pub mod testing {
+    use byteorder::{ByteOrder, LittleEndian};
+
+    pub const TEST_LUX_VAL: u16 = 605;
+    pub const TEST_RED_VAL: u16 = 345;
+    pub const TEST_BLUE_VAL: u16 = 133;
+    pub const TEST_GREEN_VAL: u16 = 164;
+
+    pub fn get_mock_sensor_response() -> [u8; 11] {
+        // Taken from actual sensor report
+        // [1, 1, 0, 93, 2, 89, 1, 133, 0, 164, 0]
+        let mut data: [u8; 11] = [0; 11];
+        data[0] = 1;
+        data[1] = 1;
+        LittleEndian::write_u16(&mut data[3..5], TEST_LUX_VAL);
+        LittleEndian::write_u16(&mut data[5..7], TEST_RED_VAL);
+        LittleEndian::write_u16(&mut data[7..9], TEST_BLUE_VAL);
+        LittleEndian::write_u16(&mut data[9..11], TEST_GREEN_VAL);
+        assert_eq!(data, [1, 1, 0, 93, 2, 89, 1, 133, 0, 164, 0]);
+        data
+    }
 }
 
 #[cfg(test)]
@@ -84,34 +111,16 @@ mod tests {
     use fidl_fuchsia_hardware_input::DeviceRequest as SensorRequest;
     use fuchsia_async as fasync;
     use futures::prelude::*;
-
-    const TEST_LUX_VAL: u8 = 25;
-    const TEST_RED_VAL: u8 = 10;
-    const TEST_GREEN_VAL: u8 = 9;
-    const TEST_BLUE_VAL: u8 = 6;
+    use testing::*;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_sensor() {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<SensorMarker>().unwrap();
-
         fasync::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let SensorRequest::GetReport { type_: _, id: _, responder } = request {
-                    // Taken from actual sensor report
-                    let data: [u8; 11] = [
-                        1,
-                        1,
-                        0,
-                        TEST_LUX_VAL,
-                        0,
-                        TEST_RED_VAL,
-                        0,
-                        TEST_GREEN_VAL,
-                        0,
-                        TEST_BLUE_VAL,
-                        0,
-                    ];
+                    let data = get_mock_sensor_response();
                     responder.send(0, &data).unwrap();
                 }
             }
@@ -120,10 +129,10 @@ mod tests {
         let result = read_sensor(&proxy).await;
         match result {
             Ok(input_rpt) => {
-                assert_eq!(input_rpt.illuminance, TEST_LUX_VAL as u16);
-                assert_eq!(input_rpt.red, TEST_RED_VAL as u16);
-                assert_eq!(input_rpt.green, TEST_GREEN_VAL as u16);
-                assert_eq!(input_rpt.blue, TEST_BLUE_VAL as u16);
+                assert_eq!(input_rpt.illuminance, TEST_LUX_VAL);
+                assert_eq!(input_rpt.red, TEST_RED_VAL);
+                assert_eq!(input_rpt.green, TEST_GREEN_VAL);
+                assert_eq!(input_rpt.blue, TEST_BLUE_VAL);
             }
             Err(e) => {
                 panic!("Sensor read failed: {:?}", e);
