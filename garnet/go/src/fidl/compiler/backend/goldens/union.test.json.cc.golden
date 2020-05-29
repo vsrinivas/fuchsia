@@ -2163,20 +2163,18 @@ zx_status_t TestProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler
-    final : public ::fidl::internal::MessageHandler {
- public:
-  TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
-      TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedCallback
-          callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for "
-        "TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
+    TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedCallback
+        callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for "
+      "TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
@@ -2191,19 +2189,8 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler
     ::fidl::Decoder decoder(std::move(message));
     callback_(::fidl::DecodeAs<StrictBoundedXUnion>(&decoder, 16));
     return ZX_OK;
-  }
-
- private:
-  TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedCallback callback_;
-
-  TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
-      const TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler&) =
-      delete;
-  TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler&
-  operator=(
-      const TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler&) =
-      delete;
-};
+  });
+}
 
 }  // namespace
 void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(
@@ -2215,27 +2202,23 @@ void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(
       &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
       TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(
           &_encoder),
-      std::make_unique<
-          TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler>(
+      TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
           std::move(callback)));
 }
 namespace {
 
-class
-    TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler
-        final : public ::fidl::internal::MessageHandler {
- public:
-  TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
-      TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback
-          callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for "
-        "TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
+    TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback
+        callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for "
+      "TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
@@ -2250,20 +2233,8 @@ class
     ::fidl::Decoder decoder(std::move(message));
     callback_(::fidl::DecodeAs<OlderSimpleUnion>(&decoder, 16));
     return ZX_OK;
-  }
-
- private:
-  TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback
-      callback_;
-
-  TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
-      const TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler&) =
-      delete;
-  TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler&
-  operator=(
-      const TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler&) =
-      delete;
-};
+  });
+}
 
 }  // namespace
 void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
@@ -2275,8 +2246,7 @@ void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
       &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
       TestProtocol_RequestEncoder::
           FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder),
-      std::make_unique<
-          TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler>(
+      TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
           std::move(callback)));
 }
 

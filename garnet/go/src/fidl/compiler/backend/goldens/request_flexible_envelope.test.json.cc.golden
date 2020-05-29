@@ -434,18 +434,16 @@ zx_status_t Protocol_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class Protocol_RequestStrictResponseFlexible_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  Protocol_RequestStrictResponseFlexible_ResponseHandler(
-      Protocol::RequestStrictResponseFlexibleCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(callback_,
-                        "Callback must not be empty for "
-                        "Protocol::RequestStrictResponseFlexible\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+Protocol_RequestStrictResponseFlexible_ResponseHandler(
+    Protocol::RequestStrictResponseFlexibleCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for "
+                      "Protocol::RequestStrictResponseFlexible\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
@@ -460,16 +458,8 @@ class Protocol_RequestStrictResponseFlexible_ResponseHandler final
     ::fidl::Decoder decoder(std::move(message));
     callback_(::fidl::DecodeAs<FlexibleFoo>(&decoder, 16));
     return ZX_OK;
-  }
-
- private:
-  Protocol::RequestStrictResponseFlexibleCallback callback_;
-
-  Protocol_RequestStrictResponseFlexible_ResponseHandler(
-      const Protocol_RequestStrictResponseFlexible_ResponseHandler&) = delete;
-  Protocol_RequestStrictResponseFlexible_ResponseHandler& operator=(
-      const Protocol_RequestStrictResponseFlexible_ResponseHandler&) = delete;
-};
+  });
+}
 
 }  // namespace
 void Protocol_Proxy::RequestStrictResponseFlexible(
@@ -479,23 +469,21 @@ void Protocol_Proxy::RequestStrictResponseFlexible(
   controller_->Send(
       &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
       Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s),
-      std::make_unique<Protocol_RequestStrictResponseFlexible_ResponseHandler>(
+      Protocol_RequestStrictResponseFlexible_ResponseHandler(
           std::move(callback)));
 }
 namespace {
 
-class Protocol_RequestFlexibleResponseStrict_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  Protocol_RequestFlexibleResponseStrict_ResponseHandler(
-      Protocol::RequestFlexibleResponseStrictCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(callback_,
-                        "Callback must not be empty for "
-                        "Protocol::RequestFlexibleResponseStrict\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+Protocol_RequestFlexibleResponseStrict_ResponseHandler(
+    Protocol::RequestFlexibleResponseStrictCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for "
+                      "Protocol::RequestFlexibleResponseStrict\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
@@ -510,16 +498,8 @@ class Protocol_RequestFlexibleResponseStrict_ResponseHandler final
     ::fidl::Decoder decoder(std::move(message));
     callback_(::fidl::DecodeAs<StrictFoo>(&decoder, 16));
     return ZX_OK;
-  }
-
- private:
-  Protocol::RequestFlexibleResponseStrictCallback callback_;
-
-  Protocol_RequestFlexibleResponseStrict_ResponseHandler(
-      const Protocol_RequestFlexibleResponseStrict_ResponseHandler&) = delete;
-  Protocol_RequestFlexibleResponseStrict_ResponseHandler& operator=(
-      const Protocol_RequestFlexibleResponseStrict_ResponseHandler&) = delete;
-};
+  });
+}
 
 }  // namespace
 void Protocol_Proxy::RequestFlexibleResponseStrict(
@@ -529,7 +509,7 @@ void Protocol_Proxy::RequestFlexibleResponseStrict(
   controller_->Send(
       &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
       Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s),
-      std::make_unique<Protocol_RequestFlexibleResponseStrict_ResponseHandler>(
+      Protocol_RequestFlexibleResponseStrict_ResponseHandler(
           std::move(callback)));
 }
 

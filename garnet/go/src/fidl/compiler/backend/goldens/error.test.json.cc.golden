@@ -256,44 +256,32 @@ zx_status_t Example_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class Example_foo_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  Example_foo_ResponseHandler(Example::fooCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(callback_,
-                        "Callback must not be empty for Example::foo\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status =
-        message.Decode(&fidl_test_json_ExamplefooResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &fidl_test_json_ExamplefooResponseTable, error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<Example_foo_Result>(&decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  Example::fooCallback callback_;
-
-  Example_foo_ResponseHandler(const Example_foo_ResponseHandler&) = delete;
-  Example_foo_ResponseHandler& operator=(const Example_foo_ResponseHandler&) =
-      delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+Example_foo_ResponseHandler(Example::fooCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for Example::foo\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status =
+            message.Decode(&fidl_test_json_ExamplefooResponseTable, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &fidl_test_json_ExamplefooResponseTable, error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<Example_foo_Result>(&decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::Encoder _encoder(internal::kExample_foo_GenOrdinal);
-  controller_->Send(
-      &fidl_test_json_ExamplefooRequestTable,
-      Example_RequestEncoder::foo(&_encoder, &s),
-      std::make_unique<Example_foo_ResponseHandler>(std::move(callback)));
+  controller_->Send(&fidl_test_json_ExamplefooRequestTable,
+                    Example_RequestEncoder::foo(&_encoder, &s),
+                    Example_foo_ResponseHandler(std::move(callback)));
 }
 
 Example_Stub::Example_Stub(Example_clazz* impl) : impl_(impl) { (void)impl_; }

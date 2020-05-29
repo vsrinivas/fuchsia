@@ -37,7 +37,7 @@ ProxyController& ProxyController::operator=(ProxyController&& other) {
 }
 
 zx_status_t ProxyController::Send(const fidl_type_t* type, Message message,
-                                  std::unique_ptr<MessageHandler> response_handler) {
+                                  std::unique_ptr<SingleUseMessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
     txid = next_txid_++ & kUserspaceTxidMask;
@@ -80,9 +80,9 @@ zx_status_t ProxyController::OnMessage(Message message) {
   auto it = handlers_.find(txid);
   if (it == handlers_.end())
     return ZX_ERR_NOT_FOUND;
-  std::unique_ptr<MessageHandler> handler = std::move(it->second);
+  std::unique_ptr<SingleUseMessageHandler> handler = std::move(it->second);
   handlers_.erase(it);
-  return handler->OnMessage(std::move(message));
+  return (*handler)(std::move(message));
 }
 
 void ProxyController::OnChannelGone() { ClearPendingHandlers(); }

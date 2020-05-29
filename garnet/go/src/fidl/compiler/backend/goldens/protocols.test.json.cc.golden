@@ -553,45 +553,32 @@ zx_status_t Transitional_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class Transitional_Request_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  Transitional_Request_ResponseHandler(Transitional::RequestCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_, "Callback must not be empty for Transitional::Request\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status =
-        message.Decode(&test_name_TransitionalRequestResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &test_name_TransitionalRequestResponseTable, error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  Transitional::RequestCallback callback_;
-
-  Transitional_Request_ResponseHandler(
-      const Transitional_Request_ResponseHandler&) = delete;
-  Transitional_Request_ResponseHandler& operator=(
-      const Transitional_Request_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+Transitional_Request_ResponseHandler(Transitional::RequestCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for Transitional::Request\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &test_name_TransitionalRequestResponseTable, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &test_name_TransitionalRequestResponseTable, error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void Transitional_Proxy::Request(int64_t x, RequestCallback callback) {
   ::fidl::Encoder _encoder(internal::kTransitional_Request_GenOrdinal);
   controller_->Send(&test_name_TransitionalRequestRequestTable,
                     Transitional_RequestEncoder::Request(&_encoder, &x),
-                    std::make_unique<Transitional_Request_ResponseHandler>(
-                        std::move(callback)));
+                    Transitional_Request_ResponseHandler(std::move(callback)));
 }
 void Transitional_Proxy::OneWay(int64_t x) {
   ::fidl::Encoder _encoder(internal::kTransitional_OneWay_GenOrdinal);
@@ -808,84 +795,61 @@ void ChannelProtocol_Proxy::MethodA(int64_t a, int64_t b) {
 }
 namespace {
 
-class ChannelProtocol_MethodB_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  ChannelProtocol_MethodB_ResponseHandler(
-      ChannelProtocol::MethodBCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_, "Callback must not be empty for ChannelProtocol::MethodB\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &test_name_ChannelProtocolMethodBResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &test_name_ChannelProtocolMethodBResponseTable, error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  ChannelProtocol::MethodBCallback callback_;
-
-  ChannelProtocol_MethodB_ResponseHandler(
-      const ChannelProtocol_MethodB_ResponseHandler&) = delete;
-  ChannelProtocol_MethodB_ResponseHandler& operator=(
-      const ChannelProtocol_MethodB_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+ChannelProtocol_MethodB_ResponseHandler(
+    ChannelProtocol::MethodBCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback, "Callback must not be empty for ChannelProtocol::MethodB\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &test_name_ChannelProtocolMethodBResponseTable, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &test_name_ChannelProtocolMethodBResponseTable,
+              error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b,
                                     MethodBCallback callback) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodB_GenOrdinal);
-  controller_->Send(&test_name_ChannelProtocolMethodBRequestTable,
-                    ChannelProtocol_RequestEncoder::MethodB(&_encoder, &a, &b),
-                    std::make_unique<ChannelProtocol_MethodB_ResponseHandler>(
-                        std::move(callback)));
+  controller_->Send(
+      &test_name_ChannelProtocolMethodBRequestTable,
+      ChannelProtocol_RequestEncoder::MethodB(&_encoder, &a, &b),
+      ChannelProtocol_MethodB_ResponseHandler(std::move(callback)));
 }
 namespace {
 
-class ChannelProtocol_MutateSocket_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  ChannelProtocol_MutateSocket_ResponseHandler(
-      ChannelProtocol::MutateSocketCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for ChannelProtocol::MutateSocket\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &test_name_ChannelProtocolMutateSocketResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &test_name_ChannelProtocolMutateSocketResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  ChannelProtocol::MutateSocketCallback callback_;
-
-  ChannelProtocol_MutateSocket_ResponseHandler(
-      const ChannelProtocol_MutateSocket_ResponseHandler&) = delete;
-  ChannelProtocol_MutateSocket_ResponseHandler& operator=(
-      const ChannelProtocol_MutateSocket_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+ChannelProtocol_MutateSocket_ResponseHandler(
+    ChannelProtocol::MutateSocketCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for ChannelProtocol::MutateSocket\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &test_name_ChannelProtocolMutateSocketResponseTable, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &test_name_ChannelProtocolMutateSocketResponseTable,
+              error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
@@ -894,8 +858,7 @@ void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
   controller_->Send(
       &test_name_ChannelProtocolMutateSocketRequestTable,
       ChannelProtocol_RequestEncoder::MutateSocket(&_encoder, &a),
-      std::make_unique<ChannelProtocol_MutateSocket_ResponseHandler>(
-          std::move(callback)));
+      ChannelProtocol_MutateSocket_ResponseHandler(std::move(callback)));
 }
 
 ChannelProtocol_Stub::ChannelProtocol_Stub(ChannelProtocol_clazz* impl)
@@ -1242,19 +1205,17 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestNoResponse() {
 }
 namespace {
 
-class WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
-      WithAndWithoutRequestResponse::NoRequestEmptyResponseCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for "
-        "WithAndWithoutRequestResponse::NoRequestEmptyResponse\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
+    WithAndWithoutRequestResponse::NoRequestEmptyResponseCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for "
+      "WithAndWithoutRequestResponse::NoRequestEmptyResponse\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
@@ -1268,19 +1229,8 @@ class WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler final
     }
     callback_();
     return ZX_OK;
-  }
-
- private:
-  WithAndWithoutRequestResponse::NoRequestEmptyResponseCallback callback_;
-
-  WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
-      const WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler&) =
-      delete;
-  WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler&
-  operator=(
-      const WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler&) =
-      delete;
-};
+  });
+}
 
 }  // namespace
 void WithAndWithoutRequestResponse_Proxy::NoRequestEmptyResponse(
@@ -1292,25 +1242,21 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestEmptyResponse(
       &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestEmptyResponse(
           &_encoder),
-      std::make_unique<
-          WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler>(
+      WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
           std::move(callback)));
 }
 namespace {
 
-class WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
-      WithAndWithoutRequestResponse::NoRequestWithResponseCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for "
-        "WithAndWithoutRequestResponse::NoRequestWithResponse\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
+    WithAndWithoutRequestResponse::NoRequestWithResponseCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for "
+                      "WithAndWithoutRequestResponse::NoRequestWithResponse\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
@@ -1325,19 +1271,8 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler final
     ::fidl::Decoder decoder(std::move(message));
     callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
     return ZX_OK;
-  }
-
- private:
-  WithAndWithoutRequestResponse::NoRequestWithResponseCallback callback_;
-
-  WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
-      const WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler&) =
-      delete;
-  WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler&
-  operator=(
-      const WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler&) =
-      delete;
-};
+  });
+}
 
 }  // namespace
 void WithAndWithoutRequestResponse_Proxy::NoRequestWithResponse(
@@ -1349,8 +1284,7 @@ void WithAndWithoutRequestResponse_Proxy::NoRequestWithResponse(
       &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::NoRequestWithResponse(
           &_encoder),
-      std::make_unique<
-          WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler>(
+      WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
           std::move(callback)));
 }
 void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(
@@ -1366,19 +1300,17 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(
 }
 namespace {
 
-class WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler
-    final : public ::fidl::internal::MessageHandler {
- public:
-  WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
-      WithAndWithoutRequestResponse::WithRequestEmptyResponseCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for "
-        "WithAndWithoutRequestResponse::WithRequestEmptyResponse\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
+    WithAndWithoutRequestResponse::WithRequestEmptyResponseCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for "
+      "WithAndWithoutRequestResponse::WithRequestEmptyResponse\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
@@ -1392,19 +1324,8 @@ class WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler
     }
     callback_();
     return ZX_OK;
-  }
-
- private:
-  WithAndWithoutRequestResponse::WithRequestEmptyResponseCallback callback_;
-
-  WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
-      const WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler&) =
-      delete;
-  WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler&
-  operator=(
-      const WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler&) =
-      delete;
-};
+  });
+}
 
 }  // namespace
 void WithAndWithoutRequestResponse_Proxy::WithRequestEmptyResponse(
@@ -1416,25 +1337,22 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestEmptyResponse(
       &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestEmptyResponse(
           &_encoder, &arg),
-      std::make_unique<
-          WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler>(
+      WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
           std::move(callback)));
 }
 namespace {
 
-class WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler
-    final : public ::fidl::internal::MessageHandler {
- public:
-  WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
-      WithAndWithoutRequestResponse::WithRequestWithResponseCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for "
-        "WithAndWithoutRequestResponse::WithRequestWithResponse\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
+    WithAndWithoutRequestResponse::WithRequestWithResponseCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for "
+      "WithAndWithoutRequestResponse::WithRequestWithResponse\n");
+  return ::std::make_unique<
+      ::fidl::internal::SingleUseMessageHandler>([callback_ =
+                                                      std::move(callback)](
+                                                     ::fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(
         &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
@@ -1449,19 +1367,8 @@ class WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler
     ::fidl::Decoder decoder(std::move(message));
     callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
     return ZX_OK;
-  }
-
- private:
-  WithAndWithoutRequestResponse::WithRequestWithResponseCallback callback_;
-
-  WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
-      const WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler&) =
-      delete;
-  WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler&
-  operator=(
-      const WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler&) =
-      delete;
-};
+  });
+}
 
 }  // namespace
 void WithAndWithoutRequestResponse_Proxy::WithRequestWithResponse(
@@ -1473,8 +1380,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestWithResponse(
       &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
       WithAndWithoutRequestResponse_RequestEncoder::WithRequestWithResponse(
           &_encoder, &arg),
-      std::make_unique<
-          WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler>(
+      WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
           std::move(callback)));
 }
 
@@ -2049,41 +1955,30 @@ zx_status_t WithErrorSyntax_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class WithErrorSyntax_ResponseAsStruct_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  WithErrorSyntax_ResponseAsStruct_ResponseHandler(
-      WithErrorSyntax::ResponseAsStructCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for WithErrorSyntax::ResponseAsStruct\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &test_name_WithErrorSyntaxResponseAsStructResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &test_name_WithErrorSyntaxResponseAsStructResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
-        &decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  WithErrorSyntax::ResponseAsStructCallback callback_;
-
-  WithErrorSyntax_ResponseAsStruct_ResponseHandler(
-      const WithErrorSyntax_ResponseAsStruct_ResponseHandler&) = delete;
-  WithErrorSyntax_ResponseAsStruct_ResponseHandler& operator=(
-      const WithErrorSyntax_ResponseAsStruct_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithErrorSyntax_ResponseAsStruct_ResponseHandler(
+    WithErrorSyntax::ResponseAsStructCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for WithErrorSyntax::ResponseAsStruct\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &test_name_WithErrorSyntaxResponseAsStructResponseTable,
+            &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &test_name_WithErrorSyntaxResponseAsStructResponseTable,
+              error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
+            &decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void WithErrorSyntax_Proxy::ResponseAsStruct(
@@ -2093,46 +1988,34 @@ void WithErrorSyntax_Proxy::ResponseAsStruct(
   controller_->Send(
       &test_name_WithErrorSyntaxResponseAsStructRequestTable,
       WithErrorSyntax_RequestEncoder::ResponseAsStruct(&_encoder),
-      std::make_unique<WithErrorSyntax_ResponseAsStruct_ResponseHandler>(
-          std::move(callback)));
+      WithErrorSyntax_ResponseAsStruct_ResponseHandler(std::move(callback)));
 }
 namespace {
 
-class WithErrorSyntax_ErrorAsPrimitive_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
-      WithErrorSyntax::ErrorAsPrimitiveCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for WithErrorSyntax::ErrorAsPrimitive\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
-        &decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  WithErrorSyntax::ErrorAsPrimitiveCallback callback_;
-
-  WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
-      const WithErrorSyntax_ErrorAsPrimitive_ResponseHandler&) = delete;
-  WithErrorSyntax_ErrorAsPrimitive_ResponseHandler& operator=(
-      const WithErrorSyntax_ErrorAsPrimitive_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
+    WithErrorSyntax::ErrorAsPrimitiveCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for WithErrorSyntax::ErrorAsPrimitive\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable,
+            &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable,
+              error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
+            &decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void WithErrorSyntax_Proxy::ErrorAsPrimitive(
@@ -2142,46 +2025,33 @@ void WithErrorSyntax_Proxy::ErrorAsPrimitive(
   controller_->Send(
       &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable,
       WithErrorSyntax_RequestEncoder::ErrorAsPrimitive(&_encoder),
-      std::make_unique<WithErrorSyntax_ErrorAsPrimitive_ResponseHandler>(
-          std::move(callback)));
+      WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(std::move(callback)));
 }
 namespace {
 
-class WithErrorSyntax_ErrorAsEnum_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  WithErrorSyntax_ErrorAsEnum_ResponseHandler(
-      WithErrorSyntax::ErrorAsEnumCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(
-        callback_,
-        "Callback must not be empty for WithErrorSyntax::ErrorAsEnum\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &test_name_WithErrorSyntaxErrorAsEnumResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &test_name_WithErrorSyntaxErrorAsEnumResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(
-        ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(&decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  WithErrorSyntax::ErrorAsEnumCallback callback_;
-
-  WithErrorSyntax_ErrorAsEnum_ResponseHandler(
-      const WithErrorSyntax_ErrorAsEnum_ResponseHandler&) = delete;
-  WithErrorSyntax_ErrorAsEnum_ResponseHandler& operator=(
-      const WithErrorSyntax_ErrorAsEnum_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+WithErrorSyntax_ErrorAsEnum_ResponseHandler(
+    WithErrorSyntax::ErrorAsEnumCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for WithErrorSyntax::ErrorAsEnum\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &test_name_WithErrorSyntaxErrorAsEnumResponseTable, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &test_name_WithErrorSyntaxErrorAsEnumResponseTable,
+              error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(
+            ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(&decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void WithErrorSyntax_Proxy::ErrorAsEnum(ErrorAsEnumCallback callback) {
@@ -2189,8 +2059,7 @@ void WithErrorSyntax_Proxy::ErrorAsEnum(ErrorAsEnumCallback callback) {
   controller_->Send(
       &test_name_WithErrorSyntaxErrorAsEnumRequestTable,
       WithErrorSyntax_RequestEncoder::ErrorAsEnum(&_encoder),
-      std::make_unique<WithErrorSyntax_ErrorAsEnum_ResponseHandler>(
-          std::move(callback)));
+      WithErrorSyntax_ErrorAsEnum_ResponseHandler(std::move(callback)));
 }
 
 WithErrorSyntax_Stub::WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl)

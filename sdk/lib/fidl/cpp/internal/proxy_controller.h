@@ -61,7 +61,7 @@ class ProxyController : public MessageHandler {
   // Returns an error if the message fails to encode properly or if the message
   // cannot be written to the channel.
   zx_status_t Send(const fidl_type_t* type, Message message,
-                   std::unique_ptr<MessageHandler> response_handler);
+                   std::unique_ptr<SingleUseMessageHandler> response_handler);
 
   // Clears all the state associated with this |ProxyController|.
   //
@@ -86,7 +86,7 @@ class ProxyController : public MessageHandler {
 
   MessageReader reader_;
   Proxy* proxy_ = nullptr;
-  std::map<zx_txid_t, std::unique_ptr<MessageHandler>> handlers_;
+  std::map<zx_txid_t, std::unique_ptr<SingleUseMessageHandler>> handlers_;
   zx_txid_t next_txid_;
 };
 

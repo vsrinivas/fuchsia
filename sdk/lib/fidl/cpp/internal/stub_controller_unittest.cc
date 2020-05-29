@@ -29,13 +29,6 @@ class CallbackStub : public Stub {
   }
 };
 
-class CallbackMessageHandler : public MessageHandler {
- public:
-  fit::function<zx_status_t(Message)> callback;
-
-  zx_status_t OnMessage(Message message) override { return callback(std::move(message)); }
-};
-
 TEST(StubController, Trivial) { StubController controller; }
 
 TEST(StubController, NoResponse) {
@@ -109,12 +102,11 @@ TEST(StubController, Response) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&response_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&response_count](Message message) {
     ++response_count;
     EXPECT_EQ(42u, message.ordinal());
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));
@@ -162,11 +154,10 @@ TEST(StubController, ResponseAfterUnbind) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&response_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&response_count](Message message) {
     ++response_count;
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));
@@ -214,11 +205,10 @@ TEST(StubController, ResponseAfterDestroy) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&response_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&response_count](Message message) {
     ++response_count;
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));
@@ -268,11 +258,10 @@ TEST(StubController, BadResponse) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&response_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&response_count](Message message) {
     ++response_count;
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));

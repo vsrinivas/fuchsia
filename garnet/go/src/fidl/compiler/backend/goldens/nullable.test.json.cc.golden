@@ -212,46 +212,33 @@ zx_status_t SimpleProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 namespace {
 
-class SimpleProtocol_Add_ResponseHandler final
-    : public ::fidl::internal::MessageHandler {
- public:
-  SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(callback_,
-                        "Callback must not be empty for SimpleProtocol::Add\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &fidl_test_nullable_SimpleProtocolAddResponseTable, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message, &fidl_test_nullable_SimpleProtocolAddResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<int32_t>(&decoder, 16));
-    return ZX_OK;
-  }
-
- private:
-  SimpleProtocol::AddCallback callback_;
-
-  SimpleProtocol_Add_ResponseHandler(
-      const SimpleProtocol_Add_ResponseHandler&) = delete;
-  SimpleProtocol_Add_ResponseHandler& operator=(
-      const SimpleProtocol_Add_ResponseHandler&) = delete;
-};
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for SimpleProtocol::Add\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(
+            &fidl_test_nullable_SimpleProtocolAddResponseTable, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(
+              message, &fidl_test_nullable_SimpleProtocolAddResponseTable,
+              error_msg);
+          return status;
+        }
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<int32_t>(&decoder, 16));
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
   ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_GenOrdinal);
   controller_->Send(&fidl_test_nullable_SimpleProtocolAddRequestTable,
                     SimpleProtocol_RequestEncoder::Add(&_encoder, &a, &b),
-                    std::make_unique<SimpleProtocol_Add_ResponseHandler>(
-                        std::move(callback)));
+                    SimpleProtocol_Add_ResponseHandler(std::move(callback)));
 }
 
 SimpleProtocol_Stub::SimpleProtocol_Stub(SimpleProtocol_clazz* impl)

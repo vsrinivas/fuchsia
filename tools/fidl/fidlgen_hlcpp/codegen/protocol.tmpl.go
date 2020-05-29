@@ -435,38 +435,31 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
     {{- if .HasResponse }}
 namespace {
 
-class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler {
- public:
-  {{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }} callback)
-      : callback_(std::move(callback)) {
-    ZX_DEBUG_ASSERT_MSG(callback_,
-                        "Callback must not be empty for {{ $.Name }}::{{ .Name }}\n");
-  }
-
-  zx_status_t OnMessage(::fidl::Message message) override {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
-      return status;
-    }
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+{{- /* Note: fidl::internal::SingleUseMessageHandler assumes that the lambda captures a single */}}
+{{- /* fit::function. When changing CallbackType, make sure to update SingleUseMessageHandler. */}}
+{{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }} callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for {{ $.Name }}::{{ .Name }}\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message message) {
+        const char* error_msg = nullptr;
+        zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
+        if (status != ZX_OK) {
+          FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
+          return status;
+        }
       {{- if .Response }}
-    ::fidl::Decoder decoder(std::move(message));
+        ::fidl::Decoder decoder(std::move(message));
       {{- end }}
-    callback_(
+        callback_(
       {{- range $index, $param := .Response -}}
         {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }})
       {{- end -}}
-    );
-    return ZX_OK;
-  }
-
- private:
-  {{ $.Name }}::{{ .CallbackType }} callback_;
-
-  {{ .ResponseHandlerType }}(const {{ .ResponseHandlerType }}&) = delete;
-  {{ .ResponseHandlerType }}& operator=(const {{ .ResponseHandlerType }}&) = delete;
-};
+        );
+        return ZX_OK;
+      });
+}
 
 }  // namespace
 {{- end }}
@@ -478,7 +471,7 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   {{- end -}}
   )
   {{- if .HasResponse -}}
-    , std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback))
+    , {{ .ResponseHandlerType }}(std::move(callback))
   {{- else -}}
     , nullptr
   {{- end -}}

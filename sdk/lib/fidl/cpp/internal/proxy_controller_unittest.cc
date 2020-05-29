@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/cpp/message_builder.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 
 #include <gtest/gtest.h>
@@ -18,22 +19,6 @@
 namespace fidl {
 namespace internal {
 namespace {
-
-class CallbackMessageHandler : public MessageHandler {
- public:
-  fit::function<zx_status_t(Message)> callback;
-
-  zx_status_t OnMessage(Message message) override { return callback(std::move(message)); }
-};
-
-class DestructorMessageHandler : public MessageHandler {
- public:
-  fit::function<void()> destructor;
-
-  ~DestructorMessageHandler() { destructor(); }
-
-  zx_status_t OnMessage(Message message) override { return ZX_OK; }
-};
 
 TEST(ProxyController, Trivial) { ProxyController controller; }
 
@@ -77,12 +62,11 @@ TEST(ProxyController, Callback) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&callback_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&callback_count](Message message) {
     ++callback_count;
     EXPECT_EQ(42u, message.ordinal());
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));
@@ -236,12 +220,11 @@ TEST(ProxyController, Move) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&callback_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&callback_count](Message message) {
     ++callback_count;
     EXPECT_EQ(42u, message.ordinal());
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, controller1.Send(&unbounded_nonnullable_string_message_type,
                                     encoder.GetMessage(), std::move(handler)));
@@ -285,12 +268,11 @@ TEST(ProxyController, Reset) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
-  auto handler = std::make_unique<CallbackMessageHandler>();
-  handler->callback = [&callback_count](Message message) {
+  auto handler = std::make_unique<SingleUseMessageHandler>([&callback_count](Message message) {
     ++callback_count;
     EXPECT_EQ(42u, message.ordinal());
     return ZX_OK;
-  };
+  });
 
   EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));
@@ -333,22 +315,23 @@ TEST(ProxyController, ReentrantDestructor) {
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
   int destructor_count = 0;
-  auto handler = std::make_unique<DestructorMessageHandler>();
-  handler->destructor = [&destructor_count, &controller]() {
+  auto defer = fit::defer([&destructor_count, &controller]() {
     ++destructor_count;
     EXPECT_EQ(destructor_count, 1);
 
     Encoder encoder(3u);
     StringPtr string("world!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
-    auto callback_handler = std::make_unique<CallbackMessageHandler>();
-    callback_handler->callback = [](Message message) { return ZX_OK; };
+    auto callback_handler =
+        std::make_unique<SingleUseMessageHandler>([](Message message) { return ZX_OK; });
     zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type,
                                          encoder.GetMessage(), std::move(callback_handler));
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
 
     controller.Reset();
-  };
+  });
+  auto handler = std::make_unique<SingleUseMessageHandler>(
+      [defer = std::move(defer)](Message message) { return ZX_OK; });
 
   EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));
