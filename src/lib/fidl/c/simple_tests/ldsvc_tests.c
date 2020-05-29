@@ -233,9 +233,9 @@ static bool ldmsg_functions_are_consistent(void) {
     // encode.
   }
 
-  check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectOrdinal,
+  check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectGenOrdinal,
                           &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
-  check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
+  check_string_round_trip(fuchsia_ldsvc_LoaderConfigGenOrdinal,
                           &fuchsia_ldsvc_LoaderConfigRequestTable);
   END_TEST;
 }

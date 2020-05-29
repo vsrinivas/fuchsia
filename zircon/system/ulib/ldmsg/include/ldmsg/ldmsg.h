@@ -21,13 +21,6 @@ __BEGIN_CDECLS
 #define LDMSG_OP_CONFIG ((uint64_t)0x6A8A1A1464632841)
 #define LDMSG_OP_CLONE ((uint64_t)0x57E643A9AB6E4C29)
 
-// TODO(7848): Remove post-transition.
-#define LDMSG_OP_DONE_OLD ((uint64_t)0x501635DA << 32)
-#define LDMSG_OP_LOAD_OBJECT_OLD ((uint64_t)0x18D35E60 << 32)
-#define LDMSG_OP_CONFIG_OLD ((uint64_t)0x1ADEB78D << 32)
-#define LDMSG_OP_CLONE_OLD ((uint64_t)0x3862FCB9 << 32)
-
-
 // The payload format used for all the requests other than LDMSG_OP_CLONE.
 typedef struct ldmsg_common ldmsg_common_t;
 struct ldmsg_common {
