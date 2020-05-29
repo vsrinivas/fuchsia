@@ -45,7 +45,7 @@ function cleanup() {
   # want to make sure we kill a long-running qemu if this shell dies.
   local child_pids=$(jobs -p)
   if [[ -n "${child_pids}" ]]; then
-    log "killing child processes: ${child_pids}"
+    echo >&2 "killing child processes: ${child_pids}"
     # Note: child_pids must be expanded to args here.
     kill ${child_pids} 2> /dev/null
     wait 2> /dev/null
