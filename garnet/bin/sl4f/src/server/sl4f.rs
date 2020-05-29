@@ -47,6 +47,9 @@ use crate::camera::facade::CameraFacade;
 // Common
 use crate::common_utils::error::Sl4fError;
 
+// CS related includes
+use crate::component_search::facade::ComponentSearchFacade;
+
 // Device related includes
 use crate::device::facade::DeviceFacade;
 
@@ -175,6 +178,7 @@ impl Sl4f {
                 "bluetooth" => BluetoothFacade::new(),
                 "bt_control_facade" => BluetoothControlFacade::new(),
                 "camera_facade" => CameraFacade::new(),
+                "component_search_facade" => ComponentSearchFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),
                 "device_facade" => DeviceFacade::new(),
                 "factory_store_facade" => FactoryStoreFacade::new(),
