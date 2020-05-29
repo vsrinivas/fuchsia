@@ -330,11 +330,10 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 class StoryControllerImpl::TeardownModuleCall : public Operation<> {
  public:
   TeardownModuleCall(StoryControllerImpl* const story_controller_impl,
-                     fuchsia::modular::ModuleData module_data, fit::function<void()> done)
-      : Operation("StoryControllerImpl::TeardownModuleCall", [] {}),
+                     fuchsia::modular::ModuleData module_data, ResultCall done)
+      : Operation("StoryControllerImpl::TeardownModuleCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
-        module_data_(std::move(module_data)),
-        done_(std::move(done)) {}
+        module_data_(std::move(module_data)) {}
 
  private:
   void Run() override {
@@ -362,7 +361,6 @@ class StoryControllerImpl::TeardownModuleCall : public Operation<> {
         FX_LOGS(INFO) << "No ModuleController for Module '"
                       << ModulePathToSurfaceID(module_data_.module_path())
                       << "'. Was ModuleController.Stop() called twice?";
-        InvokeDone();
         return;
       }
 
@@ -377,31 +375,12 @@ class StoryControllerImpl::TeardownModuleCall : public Operation<> {
       // closed.
       //
       // Be aware that done_ is NOT the Done() callback of the Operation.
-      running_mod_info->module_controller_impl->Teardown([this, flow] { InvokeDone(); });
+      running_mod_info->module_controller_impl->Teardown([flow] {});
     });
-  }
-
-  void InvokeDone() {
-    // Whatever the done_ callback captures (specifically, a flow token) must be
-    // released after the done_ callback has returned. Otherwise, the calling
-    // operation will not call Done() and does not get deleted until this
-    // Operation instance gets deleted. This is probably fine, but it's
-    // different from calling operations without flow tokens, which call their
-    // own Done() directly.
-    //
-    // Notice the TeardownStoryCall doesn't use a flow token, but just calls Done()
-    // directly from within done_, but the OnModuleDataUpadatedCall has a flow
-    // token.
-
-    // We must guard against the possibility that done_() causes this to be
-    // deleted (happens when called from TeardownStoryCall).
-    auto done = std::move(done_);
-    done();
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
-  fit::function<void()> done_;
 };
 
 // Calls LaunchModuleCall to get a running instance, and delegates visual
