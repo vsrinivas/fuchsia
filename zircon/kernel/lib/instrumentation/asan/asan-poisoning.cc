@@ -99,6 +99,17 @@ inline bool RangesOverlap(uintptr_t offset1, size_t len1, uintptr_t offset2, siz
 
 }  // namespace
 
+namespace asan {
+
+void* Quarantine::push(void* allocation) {
+  auto& slot = queue_[pos_++ % kQuarantineElements];
+  void* const result = slot;
+  slot = allocation;
+  return result;
+}
+
+}  // namespace asan
+
 // Checks whether a memory |address| is poisoned.
 //
 // ASAN tracks address poison status at byte granularity in a shadow map.

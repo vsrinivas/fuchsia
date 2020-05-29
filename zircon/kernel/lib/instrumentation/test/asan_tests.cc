@@ -195,6 +195,27 @@ bool kasan_test_poison_small() {
   END_TEST;
 }
 
+bool kasan_test_quarantine() {
+  BEGIN_TEST;
+  static constexpr uintptr_t kFirstPtr = 0xA1FA1FA;
+  fbl::AllocChecker ac;
+  auto test_quarantine = ktl::make_unique<asan::Quarantine>(&ac);
+  ASSERT(ac.check());
+
+  for (size_t i = 0; i < asan::Quarantine::kQuarantineElements; i++) {
+    void* const fake_pointer = reinterpret_cast<void*>(kFirstPtr + i);
+    void* const retrieved = test_quarantine->push(fake_pointer);
+    EXPECT_EQ(retrieved, nullptr);
+  }
+  for (size_t i = 0; i < asan::Quarantine::kQuarantineElements; i++) {
+    void* const retrieved = test_quarantine->push(nullptr);
+    EXPECT_EQ(retrieved, reinterpret_cast<void*>(kFirstPtr + i));
+  }
+  EXPECT_EQ(nullptr, test_quarantine->push(nullptr));
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(kasan_tests)
@@ -206,6 +227,7 @@ UNITTEST("malloc_unpoisons", kasan_test_malloc_poisons)
 UNITTEST("detects_buffer_overflows", kasan_test_detects_buffer_overflows)
 UNITTEST("test_poisoning_heap", kasan_test_poison_heap)
 UNITTEST("test_poisoning_heap_partial", kasan_test_poison_heap_partial)
+UNITTEST("test_quarantine", kasan_test_quarantine)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
 
 #endif  // _has_feature(address_sanitizer)

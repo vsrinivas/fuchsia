@@ -236,6 +236,10 @@ struct heap {
   // See set_free_list_bit(), clear_free_list_bit().
 #define BUCKET_WORDS (((NUMBER_OF_BUCKETS) + 31) >> 5)
   uint32_t free_list_bits[BUCKET_WORDS];
+
+#if __has_feature(address_sanitizer) && _KERNEL
+  asan::Quarantine asan_quarantine;
+#endif
 };
 
 // Heap static vars.
@@ -941,13 +945,18 @@ NO_ASAN void cmpct_free(void* payload) {
 
   header_t* header = (header_t*)payload - 1;
   ZX_DEBUG_ASSERT(!is_tagged_as_free(header));  // Double free!
-  size_t size = header->size;
 
-  header_t* left = header->left;
 #if KERNEL_ASAN
   asan_poison_shadow(reinterpret_cast<uintptr_t>(payload), header->size - sizeof(header_t),
                      kAsanHeapFreeMagic);
+  header = static_cast<header_t*>(theheap.asan_quarantine.push(header));
+  if (!header) {
+    return;
+  }
 #endif  // KERNEL_ASAN
+
+  size_t size = header->size;
+  header_t* left = header->left;
   if (left != NULL && is_tagged_as_free(left)) {
     // Coalesce with left free object.
     unlink_free_unknown_bucket((free_t*)left);

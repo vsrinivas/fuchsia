@@ -111,4 +111,19 @@ The kernel heap adds a 'right-side redzone' after every allocation and poisons
 it, to detect accesses past the end of a buffer. Heap metadata (before each
 allocation) is also poisoned and serves as a 'left-side redzone'.
 
+After an allocation is freed, it is kept in a 'quarantine' to delay its reuse.
+This improves detection of use-after-free errors.
+
+The quarantine is implemented as a free-running circular queue, which stores
+up to kQuarantineElements pointers and frees them in FIFO order.
+
+In `free`, the memory to be deallocated is added to the quarantine, and
+once the queue is full, the oldest element is actually freed.
+
+TODO(fxb/30033): kQuarantineElements is 65,536; this means that in the worst
+case it increases kernel heap memory usage by 256 MB (4K * 65536), which is the
+same as compiler-rt's default quarantine size. We could consider dynamically
+tuning this or having the quarantine not release memory until there is memory
+pressure.
+
 [address-sanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html

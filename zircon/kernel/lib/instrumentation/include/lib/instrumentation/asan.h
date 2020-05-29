@@ -29,6 +29,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <ktl/array.h>
+
 // ASAN dynamic poison interface - allows caller to "poison" or "unpoison" a region of kernel
 // virtual addresses. Accesses to poisoned memory are invalid and may cause a fault or asan
 // instrumentation check.
@@ -88,6 +90,24 @@ inline constexpr uint8_t kAsanPmmFreeMagic = 0xfb;
 inline constexpr uint8_t kAsanQuarantineMagic = 0xfc;
 inline constexpr uint8_t kAsanHeapFreeMagic = 0xfd;
 inline constexpr uint8_t kAsanAllocHeader = 0xff;
+
+namespace asan {
+
+class Quarantine {
+ public:
+  static constexpr size_t kQuarantineElements = 65536;
+
+  // Push |allocation| that was going to be freed into a 'quarantine', increasing reuse distance.
+  // Returns nullptr if the quarantine is not full or the oldest pushed allocation if it is full.
+  // If this returns an allocation, it is the responsibility of the caller to free it.
+  void* push(void* allocation);
+
+ private:
+  ktl::array<void*, kQuarantineElements> queue_ = {};
+  size_t pos_ = 0;
+};
+
+}  // namespace asan
 
 #endif  // __ASSEMBLER__
 
