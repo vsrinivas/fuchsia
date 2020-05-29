@@ -433,7 +433,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:93
+From //products/core.gni:91
 
 **Overridden from the default:** `[]`
 
@@ -441,7 +441,7 @@ From //BUILD.gn:33
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:93
+From //products/core.gni:91
 
 **Overridden from the default:** `[]`
 
@@ -642,7 +642,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/bd5a219ede8bee6379be26f638d5e633c2d891b8/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/583760eaa26b0f2da71d144267feb5a6d4e465e9/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -657,7 +657,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/bd5a219ede8bee6379be26f638d5e633c2d891b8/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/583760eaa26b0f2da71d144267feb5a6d4e465e9/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -701,7 +701,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/bd5a219ede8bee6379be26f638d5e633c2d891b8/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/583760eaa26b0f2da71d144267feb5a6d4e465e9/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -1029,7 +1029,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/bd5a219ede8bee6379be26f638d5e633c2d891b8/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/583760eaa26b0f2da71d144267feb5a6d4e465e9/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1044,14 +1044,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/bd5a219ede8bee6379be26f638d5e633c2d891b8/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/583760eaa26b0f2da71d144267feb5a6d4e465e9/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/bd5a219ede8bee6379be26f638d5e633c2d891b8/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/583760eaa26b0f2da71d144267feb5a6d4e465e9/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1351,17 +1351,17 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:19
+From //products/core.gni:17
 
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:23
 
-**Current value for `target_cpu = "x64"`:** `["console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:19
+From //products/core.gni:17
 
 **Overridden from the default:** `[]`
 
@@ -1708,7 +1708,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:21
+From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -1716,7 +1716,7 @@ From //build/images/args.gni:80
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:21
+From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
@@ -2387,7 +2387,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:95
+From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
@@ -2395,7 +2395,7 @@ From //BUILD.gn:47
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:95
+From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
@@ -2928,7 +2928,7 @@ From //BUILD.gn:97
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:218
+From //build/config/fuchsia/BUILD.gn:205
 
 ### zircon_b_partition
 
