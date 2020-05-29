@@ -12,7 +12,6 @@ use {
     parking_lot::RwLock,
     setui_client_lib::accessibility,
     setui_client_lib::audio,
-    setui_client_lib::client,
     setui_client_lib::device,
     setui_client_lib::display,
     setui_client_lib::do_not_disturb,
@@ -26,7 +25,6 @@ use {
 };
 
 enum Services {
-    SetUi(fidl_fuchsia_setui::SetUiServiceRequestStream),
     Accessibility(AccessibilityRequestStream),
     Audio(AudioRequestStream),
     Device(DeviceRequestStream),
@@ -52,16 +50,6 @@ const TEST_BUILD_TAG: &str = "0.20190909.1.0";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    println!("account mutation tests");
-    validate_account_mutate(
-        "autologinguest".to_string(),
-        fidl_fuchsia_setui::LoginOverride::AutologinGuest,
-    )
-    .await?;
-    validate_account_mutate("auth".to_string(), fidl_fuchsia_setui::LoginOverride::AuthProvider)
-        .await?;
-    validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None).await?;
-
     println!("accessibility service tests");
     println!("  client calls set");
     validate_accessibility_set().await?;
@@ -885,73 +873,4 @@ async fn validate_setup() -> Result<(), Error> {
     );
 
     Ok(())
-}
-
-async fn validate_account_mutate(
-    specified_type: String,
-    expected_override: fidl_fuchsia_setui::LoginOverride,
-) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.add_fidl_service(Services::SetUi);
-    let env = fs.create_nested_environment(ENV_NAME)?;
-
-    fasync::spawn(fs.for_each_concurrent(None, move |req| async move {
-        match req {
-            Services::SetUi(stream) => {
-                serve_check_login_override_mutate(stream, expected_override).await
-            }
-            _ => {}
-        }
-    }));
-
-    let setui = env
-        .connect_to_service::<fidl_fuchsia_setui::SetUiServiceMarker>()
-        .context("Failed to connect to setui service")?;
-
-    client::mutate(setui, "login".to_string(), specified_type).await?;
-    Ok(())
-}
-
-fn serve_check_login_override_mutate(
-    stream: fidl_fuchsia_setui::SetUiServiceRequestStream,
-    expected_override: fidl_fuchsia_setui::LoginOverride,
-) -> impl Future<Output = ()> {
-    stream
-        .err_into::<anyhow::Error>()
-        .try_for_each(move |req| async move {
-            match req {
-                fidl_fuchsia_setui::SetUiServiceRequest::Mutate {
-                    setting_type,
-                    mutation,
-                    responder,
-                } => {
-                    assert_eq!(setting_type, fidl_fuchsia_setui::SettingType::Account);
-
-                    match mutation {
-                        fidl_fuchsia_setui::Mutation::AccountMutationValue(account_mutation) => {
-                            if let (Some(login_override), Some(operation)) =
-                                (account_mutation.login_override, account_mutation.operation)
-                            {
-                                assert_eq!(login_override, expected_override);
-                                assert_eq!(
-                                    operation,
-                                    fidl_fuchsia_setui::AccountOperation::SetLoginOverride
-                                );
-                            }
-                        }
-                        _ => {
-                            panic!("unexpected data for account mutation");
-                        }
-                    }
-                    responder
-                        .send(&mut fidl_fuchsia_setui::MutationResponse {
-                            return_code: fidl_fuchsia_setui::ReturnCode::Ok,
-                        })
-                        .context("sending response")?;
-                }
-                _ => {}
-            };
-            Ok(())
-        })
-        .unwrap_or_else(|e: anyhow::Error| panic!("error running setui server: {:?}", e))
 }
