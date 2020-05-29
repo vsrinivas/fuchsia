@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::earcons_agent::{connect_to_sound_player, CommonEarconsParams};
-use crate::agent::earcons_sound_ids::{
+use crate::agent::earcons::agent::{connect_to_sound_player, CommonEarconsParams};
+use crate::agent::earcons::sound_ids::{
     BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
 };
-use crate::agent::earcons_utils::play_sound;
+use crate::agent::earcons::utils::play_sound;
 use anyhow::Context;
 use fidl_fuchsia_bluetooth_sys::{AccessMarker, Peer, TechnologyType};
 use fuchsia_async as fasync;
@@ -23,10 +23,10 @@ const BLUETOOTH_CONNECTED_FILE_PATH: &str = "bluetooth-connected.wav";
 /// The file path for the earcon to be played for bluetooth disconnecting.
 const BLUETOOTH_DISCONNECTED_FILE_PATH: &str = "bluetooth-disconnected.wav";
 
-/// The BluetoothEarconsHandler takes care of the earcons functionality on bluetooth connection
+/// The `BluetoothHandler` takes care of the earcons functionality on bluetooth connection
 /// and disconnection.
 #[derive(Debug)]
-struct BluetoothEarconsHandler {
+struct BluetoothHandler {
     // Parameters common to all earcons handlers.
     common_earcons_params: CommonEarconsParams,
     connected_peers: Vec<Peer>,
@@ -83,7 +83,7 @@ pub fn watch_bluetooth_connections(
     common_earcons_params: CommonEarconsParams,
     connection_active: Arc<AtomicBool>,
 ) {
-    let handler = Arc::new(Mutex::new(BluetoothEarconsHandler {
+    let handler = Arc::new(Mutex::new(BluetoothHandler {
         common_earcons_params: common_earcons_params.clone(),
         connected_peers: Vec::new(),
     }));
@@ -105,7 +105,7 @@ pub fn watch_bluetooth_connections(
         while connection_active.load(Ordering::SeqCst) {
             match access_proxy.watch_peers().await {
                 Ok((updated, removed)) => {
-                    let mut bluetooth_earcons_handler = handler.lock().await;
+                    let mut bluetooth_handler = handler.lock().await;
                     if updated.len() > 0 {
                         // TODO(fxb/50246): Add logging for updating bluetooth connections.
                         // Figure out which peers are connected.
@@ -127,7 +127,7 @@ pub fn watch_bluetooth_connections(
                                 .map(|x| x.id.unwrap().value),
                         );
                         let old_connected_peer_ids: HashSet<u64> = HashSet::from_iter(
-                            bluetooth_earcons_handler
+                            bluetooth_handler
                                 .connected_peers
                                 .iter()
                                 .filter(bt_type_filter)
@@ -143,13 +143,13 @@ pub fn watch_bluetooth_connections(
                             .collect::<Vec<&u64>>();
 
                         // Update the set of connected peers.
-                        bluetooth_earcons_handler.connected_peers = new_connected_peers;
+                        bluetooth_handler.connected_peers = new_connected_peers;
 
                         // Play the earcon sound.
                         if added_peer_ids.len() > 0 {
                             // TODO(fxb/50246): Add logging for connecting bluetooth peer.
                             let common_earcons_params_clone =
-                                bluetooth_earcons_handler.common_earcons_params.clone();
+                                bluetooth_handler.common_earcons_params.clone();
                             fasync::spawn(async move {
                                 play_bluetooth_sound(
                                     common_earcons_params_clone,
@@ -161,7 +161,7 @@ pub fn watch_bluetooth_connections(
                         if removed_peer_ids.len() > 0 || removed.len() > 0 {
                             // TODO(fxb/50246): Add logging for disconnecting bluetooth peer.
                             let common_earcons_params_clone =
-                                bluetooth_earcons_handler.common_earcons_params.clone();
+                                bluetooth_handler.common_earcons_params.clone();
                             fasync::spawn(async move {
                                 play_bluetooth_sound(
                                     common_earcons_params_clone,

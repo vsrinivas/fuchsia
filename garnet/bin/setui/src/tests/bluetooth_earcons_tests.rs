@@ -1,7 +1,7 @@
 #[cfg(test)]
 use {
-    crate::agent::earcons_agent,
-    crate::agent::earcons_sound_ids::{
+    crate::agent::earcons,
+    crate::agent::earcons::sound_ids::{
         BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
     },
     crate::agent::restore_agent,
@@ -39,7 +39,7 @@ async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> Ne
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[])
-        .agents(&[restore_agent::blueprint::create(), earcons_agent::blueprint::create()])
+        .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

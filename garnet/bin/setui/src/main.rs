@@ -8,7 +8,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::lock::Mutex,
-    settings::agent::earcons_agent,
+    settings::agent::earcons,
     settings::agent::restore_agent,
     settings::config::default_settings::DefaultSetting,
     settings::registry::device_storage::StashDeviceStorageFactory,
@@ -44,6 +44,6 @@ fn main() -> Result<(), Error> {
     // block here and therefore continue without waiting for the result.
     EnvironmentBuilder::new(Arc::new(Mutex::new(storage_factory)))
         .configuration(configuration)
-        .agents(&[restore_agent::blueprint::create(), earcons_agent::blueprint::create()])
+        .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])
         .spawn(executor)
 }

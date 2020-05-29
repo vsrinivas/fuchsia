@@ -5,9 +5,9 @@
 use crate::agent::base::{
     AgentError, Context as AgentContext, Descriptor, Invocation, InvocationResult, Lifespan,
 };
-use crate::agent::bluetooth_earcons_handler::watch_bluetooth_connections;
-use crate::agent::volume_change_earcons_handler::{
-    listen_to_audio_events, watch_background_usage, VolumeChangeEarconsHandler,
+use crate::agent::earcons::bluetooth_handler::watch_bluetooth_connections;
+use crate::agent::earcons::volume_change_handler::{
+    listen_to_audio_events, watch_background_usage, VolumeChangeHandler,
 };
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
@@ -22,12 +22,12 @@ use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::{atomic::AtomicBool, Arc};
 
-blueprint_definition!(Descriptor::Component("earcons_agent"), EarconsAgent::create);
+blueprint_definition!(Descriptor::Component("earcons_agent"), Agent::create);
 
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.
 #[derive(Debug)]
-pub struct EarconsAgent {
+pub struct Agent {
     priority_stream_playing: Arc<AtomicBool>,
     sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
 }
@@ -63,9 +63,9 @@ impl SwitchboardListenSessionHolder {
     }
 }
 
-impl EarconsAgent {
+impl Agent {
     async fn create(mut context: AgentContext) {
-        let mut agent = EarconsAgent {
+        let mut agent = Agent {
             priority_stream_playing: Arc::new(AtomicBool::new(false)),
             sound_player_connection: Arc::new(Mutex::new(None)),
         };
@@ -97,8 +97,7 @@ impl EarconsAgent {
                 sound_player_connection: sound_player_connection.clone(),
             };
 
-            let volume_change_handler =
-                VolumeChangeEarconsHandler::new(common_earcons_params.clone());
+            let volume_change_handler = VolumeChangeHandler::new(common_earcons_params.clone());
             let volume_change_handler_clone = volume_change_handler.clone();
 
             let common_earcons_params_clone = common_earcons_params.clone();

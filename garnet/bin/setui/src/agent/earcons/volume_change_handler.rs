@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::earcons_agent::{connect_to_sound_player, CommonEarconsParams};
-use crate::agent::earcons_sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
-use crate::agent::earcons_utils::play_sound;
+use crate::agent::earcons::agent::{connect_to_sound_player, CommonEarconsParams};
+use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
+use crate::agent::earcons::utils::play_sound;
 use crate::input::monitor_media_buttons;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
@@ -31,9 +31,9 @@ use std::sync::{
     Arc,
 };
 
-/// The VolumeChangeEarconsHandler takes care of the earcons functionality on volume change.
+/// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
 #[derive(Debug, Clone)]
-pub struct VolumeChangeEarconsHandler {
+pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_media_user_volume: Arc<Mutex<Option<f32>>>,
     volume_button_event: Arc<Mutex<i8>>,
@@ -48,8 +48,8 @@ const VOLUME_MAX_FILE_PATH: &str = "volume-max.wav";
 /// The file path for the earcon to be played for volume changes below max volume level.
 const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 
-impl VolumeChangeEarconsHandler {
-    pub fn new(common_earcons_params: CommonEarconsParams) -> VolumeChangeEarconsHandler {
+impl VolumeChangeHandler {
+    pub fn new(common_earcons_params: CommonEarconsParams) -> VolumeChangeHandler {
         Self {
             common_earcons_params,
             last_media_user_volume: Arc::new(Mutex::new(Some(1.0))),
@@ -138,7 +138,7 @@ fn get_volume_info(
 /// type, and make corresponding requests on the corresponding handlers to get the necessary state.
 pub async fn listen_to_audio_events(
     client: SwitchboardClient,
-    volume_change_handler: VolumeChangeEarconsHandler,
+    volume_change_handler: VolumeChangeHandler,
     common_earcons_params: CommonEarconsParams,
 ) {
     let common_earcons_params_clone = common_earcons_params.clone();
