@@ -474,7 +474,7 @@ void MultipleDeviceTestCase::SendInitReply(const zx::channel& remote, zx_txid_t 
   // Write the Resume response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerInitResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerInitOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerInitGenOrdinal);
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerInitResponseTable, bytes, sizeof(*resp),
