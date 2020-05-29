@@ -27,7 +27,7 @@ AnnotationOr GetBoardName() {
                                                       sysinfo.NewRequest().TakeChannel().release());
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error connecting to sysinfo";
-    return AnnotationOr(Error::kConnectionError);
+    return Error::kConnectionError;
   }
 
   ::fidl::StringPtr out_board_name;
@@ -35,18 +35,18 @@ AnnotationOr GetBoardName() {
   if (const zx_status_t status = sysinfo->GetBoardName(&out_status, &out_board_name);
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get device board name";
-    return AnnotationOr(Error::kConnectionError);
+    return Error::kConnectionError;
   }
   if (out_status != ZX_OK) {
     FX_PLOGS(ERROR, out_status) << "Failed to get device board name";
-    return AnnotationOr(Error::kBadValue);
+    return Error::kBadValue;
   }
   if (!out_board_name) {
     FX_PLOGS(ERROR, out_status) << "Failed to get device board name";
-    return AnnotationOr(Error::kMissingValue);
+    return Error::kMissingValue;
   }
 
-  return AnnotationOr(out_board_name.value());
+  return out_board_name.value();
 }
 
 }  // namespace feedback

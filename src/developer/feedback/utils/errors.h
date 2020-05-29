@@ -31,14 +31,14 @@ enum class Error {
 template <typename T>
 class ErrorOr {
  public:
-  ErrorOr(const std::string& value) : data_(value) {}
+  ErrorOr(T value) : data_(std::move(value)) {}
   ErrorOr(enum Error error) : data_(error) {}
 
   bool HasValue() const { return data_.index() == 0; }
 
-  const std::string& Value() const {
+  const T& Value() const {
     FX_CHECK(HasValue());
-    return std::get<std::string>(data_);
+    return std::get<T>(data_);
   }
 
   enum Error Error() const {
@@ -49,7 +49,7 @@ class ErrorOr {
   bool operator==(const ErrorOr& other) const { return data_ == other.data_; }
 
  private:
-  std::variant<std::string, enum Error> data_;
+  std::variant<T, enum Error> data_;
 };
 
 // Provide a string representation of  |error|.
