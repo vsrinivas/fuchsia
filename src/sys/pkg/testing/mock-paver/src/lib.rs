@@ -28,7 +28,7 @@ fn read_mem_buffer(buffer: &fidl_fuchsia_mem::Buffer) -> Vec<u8> {
     res
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PaverEvent {
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
     WriteFirmware { firmware_type: String, payload: Vec<u8> },
@@ -42,6 +42,7 @@ pub enum PaverEvent {
 pub struct MockPaverServiceBuilder {
     call_hook: Option<Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>>,
     firmware_hook: Option<Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>>,
+    event_hook: Option<Box<dyn Fn(&PaverEvent) + Send + Sync>>,
     active_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
 }
@@ -51,6 +52,7 @@ impl MockPaverServiceBuilder {
         Self {
             call_hook: None,
             firmware_hook: None,
+            event_hook: None,
             active_config: paver::Configuration::A,
             boot_manager_close_with_epitaph: None,
         }
@@ -72,6 +74,16 @@ impl MockPaverServiceBuilder {
         self
     }
 
+    // Provide a callback which will be called for every paver event.
+    // Useful for logging or interaction assertions.
+    pub fn event_hook<F>(mut self, event_hook: F) -> Self
+    where
+        F: Fn(&PaverEvent) + Send + Sync + 'static,
+    {
+        self.event_hook = Some(Box::new(event_hook));
+        self
+    }
+
     pub fn active_config(mut self, active_config: paver::Configuration) -> Self {
         self.active_config = active_config;
         self
@@ -87,11 +99,13 @@ impl MockPaverServiceBuilder {
         let firmware_hook = self.firmware_hook.unwrap_or_else(|| {
             Box::new(|_| paver::WriteFirmwareResult::Status(Status::OK.into_raw()))
         });
+        let event_hook = self.event_hook.unwrap_or_else(|| Box::new(|_| ()));
 
         MockPaverService {
             events: Mutex::new(vec![]),
             call_hook: Box::new(call_hook),
             firmware_hook: Box::new(firmware_hook),
+            event_hook: Box::new(event_hook),
             active_config: self.active_config,
             boot_manager_close_with_epitaph: self.boot_manager_close_with_epitaph,
         }
@@ -102,6 +116,7 @@ pub struct MockPaverService {
     events: Mutex<Vec<PaverEvent>>,
     call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
     firmware_hook: Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>,
+    event_hook: Box<dyn Fn(&PaverEvent) + Send + Sync>,
     active_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
 }
@@ -139,6 +154,11 @@ impl MockPaverService {
         proxy
     }
 
+    fn push_event(self: &Arc<Self>, event: PaverEvent) {
+        (*self.event_hook)(&event);
+        self.events.lock().push(event);
+    }
+
     async fn run_data_sink_service(
         self: Arc<Self>,
         mut stream: paver::DataSinkRequestStream,
@@ -154,7 +174,7 @@ impl MockPaverService {
                     let payload = verify_and_read_buffer(&mut payload);
                     let event = PaverEvent::WriteAsset { configuration, asset, payload };
                     let status = (*self.call_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::DataSinkRequest::WriteFirmware {
@@ -165,13 +185,13 @@ impl MockPaverService {
                     let payload = verify_and_read_buffer(&mut payload);
                     let event = PaverEvent::WriteFirmware { firmware_type, payload };
                     let mut result = (*self.firmware_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     responder.send(&mut result).expect("paver response to send");
                 }
                 paver::DataSinkRequest::Flush { responder } => {
                     let event = PaverEvent::DataSinkFlush {};
                     let status = (*self.call_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
@@ -197,7 +217,7 @@ impl MockPaverService {
                 paver::BootManagerRequest::QueryActiveConfiguration { responder } => {
                     let event = PaverEvent::QueryActiveConfiguration;
                     let status = (*self.call_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     let mut result = if status == Status::OK {
                         Ok(self.active_config)
                     } else {
@@ -208,7 +228,7 @@ impl MockPaverService {
                 paver::BootManagerRequest::SetConfigurationActive { configuration, responder } => {
                     let event = PaverEvent::SetConfigurationActive { configuration };
                     let status = (*self.call_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::BootManagerRequest::SetConfigurationUnbootable {
@@ -217,13 +237,13 @@ impl MockPaverService {
                 } => {
                     let event = PaverEvent::SetConfigurationUnbootable { configuration };
                     let status = (*self.call_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::BootManagerRequest::Flush { responder } => {
                     let event = PaverEvent::BootManagerFlush;
                     let status = (*self.call_hook)(&event);
-                    self.events.lock().push(event);
+                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),

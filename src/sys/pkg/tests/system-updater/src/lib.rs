@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 use {
+    self::SystemUpdaterInteraction::{BlobfsSync, Gc, PackageResolve, Paver, Reboot},
     anyhow::Error,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
@@ -32,6 +33,20 @@ use {
     tempfile::TempDir,
 };
 
+// A set of tags for interactions the system updater has with external services.
+// We aren't tracking Cobalt interactions, since those may arrive out of order,
+// and they are tested in individual tests which care about them specifically.
+#[derive(Debug, PartialEq, Clone)]
+enum SystemUpdaterInteraction {
+    BlobfsSync,
+    Gc,
+    PackageResolve(String),
+    Paver(PaverEvent),
+    Reboot,
+}
+
+type SystemUpdaterInteractions = Arc<Mutex<Vec<SystemUpdaterInteraction>>>;
+
 struct TestEnvBuilder {
     paver_service_builder: MockPaverServiceBuilder,
 }
@@ -50,12 +65,24 @@ impl TestEnvBuilder {
     }
 
     fn build(self) -> TestEnv {
-        let paver_service = Arc::new(self.paver_service_builder.build());
+        // A buffer to store all the interactions the system-updater has with external services.
+        let interactions = Arc::new(Mutex::new(vec![]));
+
+        // Set up the paver service to push events to our interactions buffer by overriding
+        // call_hook and firmware_hook.
+        let interactions_paver_clone = Arc::clone(&interactions);
+        let paver_service = Arc::new(
+            self.paver_service_builder
+                .event_hook(move |event| {
+                    interactions_paver_clone.lock().push(Paver(event.clone()));
+                })
+                .build(),
+        );
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
 
-        let resolver = Arc::new(MockResolverService::new());
+        let resolver = Arc::new(MockResolverService::new(Arc::clone(&interactions)));
         let resolver_clone = resolver.clone();
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
             let resolver_clone = resolver_clone.clone();
@@ -74,7 +101,8 @@ impl TestEnvBuilder {
                     .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
             )
         });
-        let reboot_service = Arc::new(MockRebootService::new());
+
+        let reboot_service = Arc::new(MockRebootService::new(Arc::clone(&interactions)));
         let reboot_service_clone = reboot_service.clone();
         fs.add_fidl_service(move |stream| {
             let reboot_service_clone = reboot_service_clone.clone();
@@ -84,7 +112,7 @@ impl TestEnvBuilder {
                     .unwrap_or_else(|e| panic!("error running reboot service: {:?}", e)),
             )
         });
-        let cache_service = Arc::new(MockCacheService::new());
+        let cache_service = Arc::new(MockCacheService::new(Arc::clone(&interactions)));
         let cache_service_clone = Arc::clone(&cache_service);
         fs.add_fidl_service(move |stream| {
             let cache_service_clone = Arc::clone(&cache_service_clone);
@@ -104,7 +132,7 @@ impl TestEnvBuilder {
                     .unwrap_or_else(|e| panic!("error running logger factory: {:?}", e)),
             )
         });
-        let space_service = Arc::new(MockSpaceService::new());
+        let space_service = Arc::new(MockSpaceService::new(Arc::clone(&interactions)));
         let space_service_clone = space_service.clone();
         fs.add_fidl_service(move |stream| {
             let space_service_clone = space_service_clone.clone();
@@ -139,35 +167,36 @@ impl TestEnvBuilder {
         TestEnv {
             env,
             resolver,
-            paver_service,
-            reboot_service,
+            _paver_service: paver_service,
+            _reboot_service: reboot_service,
             cache_service,
             logger_factory,
-            space_service,
+            _space_service: space_service,
             _test_dir: test_dir,
             packages_path,
             blobfs_path,
             fake_path,
             config_path,
             misc_path,
+            interactions,
         }
     }
 }
-
 struct TestEnv {
     env: NestedEnvironment,
     resolver: Arc<MockResolverService>,
-    paver_service: Arc<MockPaverService>,
-    reboot_service: Arc<MockRebootService>,
+    _paver_service: Arc<MockPaverService>,
+    _reboot_service: Arc<MockRebootService>,
     cache_service: Arc<MockCacheService>,
     logger_factory: Arc<MockLoggerFactory>,
-    space_service: Arc<MockSpaceService>,
+    _space_service: Arc<MockSpaceService>,
     _test_dir: TempDir,
     packages_path: PathBuf,
     blobfs_path: PathBuf,
     fake_path: PathBuf,
     config_path: PathBuf,
     misc_path: PathBuf,
+    interactions: SystemUpdaterInteractions,
 }
 
 impl TestEnv {
@@ -181,6 +210,10 @@ impl TestEnv {
 
     fn launcher(&self) -> &LauncherProxy {
         self.env.launcher()
+    }
+
+    fn take_interactions(&self) -> Vec<SystemUpdaterInteraction> {
+        std::mem::replace(&mut *self.interactions.lock(), vec![])
     }
 
     /// Set the name of the board that system_updater is running on.
@@ -308,13 +341,13 @@ struct SystemUpdaterArgs<'a> {
 }
 
 struct MockResolverService {
-    resolved_urls: Mutex<Vec<String>>,
     expectations: Mutex<HashMap<String, Result<PathBuf, Status>>>,
+    interactions: SystemUpdaterInteractions,
 }
 
 impl MockResolverService {
-    fn new() -> Self {
-        Self { resolved_urls: Mutex::new(vec![]), expectations: Mutex::new(HashMap::new()) }
+    fn new(interactions: SystemUpdaterInteractions) -> Self {
+        Self { expectations: Mutex::new(HashMap::new()), interactions }
     }
     async fn run_resolver_service(
         self: Arc<Self>,
@@ -353,7 +386,8 @@ impl MockResolverService {
             // Successfully resolve unexpected packages without serving a package dir. Log the
             // transaction so tests can decide if it was expected.
             .unwrap_or(Err(Status::OK));
-        self.resolved_urls.lock().push(package_url);
+
+        self.interactions.lock().push(PackageResolve(package_url));
 
         let response_status = match response {
             Ok(package_dir) => {
@@ -378,12 +412,12 @@ impl MockResolverService {
 }
 
 struct MockCacheService {
-    called: Mutex<u32>,
     sync_response: Mutex<Option<i32>>,
+    interactions: SystemUpdaterInteractions,
 }
 impl MockCacheService {
-    fn new() -> Self {
-        Self { called: Mutex::new(0), sync_response: Mutex::new(None) }
+    fn new(interactions: SystemUpdaterInteractions) -> Self {
+        Self { sync_response: Mutex::new(None), interactions }
     }
 
     fn set_sync_response(&self, response: i32) {
@@ -397,7 +431,7 @@ impl MockCacheService {
         while let Some(event) = stream.try_next().await? {
             match event {
                 fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
-                    *self.called.lock() += 1;
+                    self.interactions.lock().push(BlobfsSync);
                     responder.send(self.sync_response.lock().unwrap_or(Status::OK.into_raw()))?;
                 }
                 other => panic!("unsupported PackageCache request: {:?}", other),
@@ -409,11 +443,11 @@ impl MockCacheService {
 }
 
 struct MockRebootService {
-    called: Mutex<u32>,
+    interactions: SystemUpdaterInteractions,
 }
 impl MockRebootService {
-    fn new() -> Self {
-        Self { called: Mutex::new(0) }
+    fn new(interactions: SystemUpdaterInteractions) -> Self {
+        Self { interactions }
     }
 
     async fn run_reboot_service(
@@ -438,7 +472,7 @@ impl MockRebootService {
                         "TEST: Got reboot request with state {:?} and reason {:?}",
                         request.state, request.reason
                     );
-                    *self.called.lock() += 1;
+                    self.interactions.lock().push(Reboot);
                     responder.send(&mut Ok(()))?;
                 }
                 _ => {
@@ -446,6 +480,28 @@ impl MockRebootService {
                 }
             }
         }
+        Ok(())
+    }
+}
+
+struct MockSpaceService {
+    interactions: SystemUpdaterInteractions,
+}
+impl MockSpaceService {
+    fn new(interactions: SystemUpdaterInteractions) -> Self {
+        Self { interactions }
+    }
+
+    async fn run_space_service(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_space::ManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(event) = stream.try_next().await? {
+            let fidl_fuchsia_space::ManagerRequest::Gc { responder } = event;
+            self.interactions.lock().push(Gc);
+            responder.send(&mut Ok(()))?;
+        }
+
         Ok(())
     }
 }
@@ -525,28 +581,6 @@ impl MockLoggerFactory {
                     panic!("unhandled LoggerFactory method: {:?}", event);
                 }
             }
-        }
-
-        Ok(())
-    }
-}
-
-struct MockSpaceService {
-    called: Mutex<u32>,
-}
-impl MockSpaceService {
-    fn new() -> Self {
-        Self { called: Mutex::new(0) }
-    }
-
-    async fn run_space_service(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_space::ManagerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
-            let fidl_fuchsia_space::ManagerRequest::Gc { responder } = event;
-            *self.called.lock() += 1;
-            responder.send(&mut Ok(()))?;
         }
 
         Ok(())
@@ -647,6 +681,19 @@ fn force_recovery_json() -> String {
     .to_string()
 }
 
+const SYSTEM_IMAGE_URL: &str = "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
+const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
+
+fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
+    (*interactions.lock())
+        .iter()
+        .filter_map(|interaction| match interaction {
+            PackageResolve(package_url) => Some(package_url.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update() {
     let mut env = TestEnv::new();
@@ -668,11 +715,6 @@ async fn test_system_update() {
     .await
     .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
-        "fuchsia-pkg://fuchsia.com/update",
-        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
-    ]);
-
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
@@ -687,17 +729,34 @@ async fn test_system_update() {
         }
     );
 
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update_force_recovery() {
     let mut env = TestEnv::new();
 
+    let package_url = SYSTEM_IMAGE_URL;
     env.register_package("update", "upd4t3")
-        .add_file("packages","fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296")
+        .add_file("packages", package_url)
         .add_file("update-mode", &force_recovery_json());
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -710,8 +769,6 @@ async fn test_system_update_force_recovery() {
     .await
     .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update",]);
-
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
@@ -727,18 +784,23 @@ async fn test_system_update_force_recovery() {
     );
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::A },
-            PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush,
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::A
+            }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -775,9 +837,9 @@ async fn test_packages_json_takes_precedence() {
     .expect("run system_updater");
 
     assert_eq!(
-        *env.resolver.resolved_urls.lock(),
+        resolved_urls(Arc::clone(&env.interactions)),
         vec![
-            "fuchsia-pkg://fuchsia.com/update",
+            UPDATE_PKG_URL,
             "fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
             "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789"
         ]
@@ -856,11 +918,6 @@ async fn test_system_update_no_reboot() {
     .await
     .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
-        "fuchsia-pkg://fuchsia.com/update",
-        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
-    ]);
-
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
@@ -875,9 +932,24 @@ async fn test_system_update_no_reboot() {
         }
     );
 
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -898,7 +970,24 @@ async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
     .await
     .expect("run system_updater");
 
-    assert_eq!(*env.reboot_service.called.lock(), 1);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::A
+            }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -924,17 +1013,28 @@ async fn test_broken_logger() {
     .await
     .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
-        "fuchsia-pkg://fuchsia.com/update",
-        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
-    ]);
-
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 0);
 
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -946,7 +1046,8 @@ async fn test_failing_package_fetch() {
         "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
     );
 
-    env.resolver.mock_package_result("fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296", Err(Status::NOT_FOUND));
+    let system_image_url = SYSTEM_IMAGE_URL;
+    env.resolver.mock_package_result(system_image_url, Err(Status::NOT_FOUND));
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
@@ -958,11 +1059,6 @@ async fn test_failing_package_fetch() {
         })
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
-
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
-        "fuchsia-pkg://fuchsia.com/update",
-        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
-    ]);
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -978,9 +1074,14 @@ async fn test_failing_package_fetch() {
         }
     );
 
-    assert_eq!(*env.cache_service.called.lock(), 0);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(system_image_url.to_string()),
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1003,9 +1104,16 @@ async fn test_system_update_fails_when_sync_fails() {
         .await;
 
     assert!(result.is_err(), "system_updater succeeded when it should fail");
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1030,8 +1138,15 @@ async fn test_normal_requires_zbi() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1058,8 +1173,10 @@ async fn test_force_recovery_rejects_zbi() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(
+        env.take_interactions(),
+        vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), BlobfsSync,]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1087,10 +1204,10 @@ async fn test_validate_board() {
     .await
     .expect("success");
 
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
-        "fuchsia-pkg://fuchsia.com/update",
-        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
-    ]);
+    assert_eq!(
+        resolved_urls(Arc::clone(&env.interactions)),
+        vec![UPDATE_PKG_URL, SYSTEM_IMAGE_URL,]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1120,7 +1237,7 @@ async fn test_invalid_board() {
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     // Expect to have failed prior to downloading images.
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update"]);
+    assert_eq!(resolved_urls(Arc::clone(&env.interactions)), vec![UPDATE_PKG_URL]);
 
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
@@ -1160,29 +1277,28 @@ async fn test_writes_bootloader() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            // "bootloader" file should end up calling the paver WriteFirmware()
-            // but with the default "" type.
-            PaverEvent::WriteFirmware {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteFirmware {
                 firmware_type: "".to_string(),
                 payload: b"new bootloader".to_vec()
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1208,28 +1324,29 @@ async fn test_writes_recovery() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::Kernel,
                 payload: b"new recovery".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 // TODO(52356): drop this duplicate test
@@ -1256,28 +1373,29 @@ async fn test_writes_recovery_named_recovery() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::Kernel,
                 payload: b"new recovery".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1304,33 +1422,34 @@ async fn test_writes_recovery_vbmeta() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::Kernel,
                 payload: b"new recovery".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"new recovery vbmeta".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1356,28 +1475,29 @@ async fn test_writes_fuchsia_vbmeta() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"fake zbi vbmeta".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1404,23 +1524,24 @@ async fn test_skips_recovery_vbmeta() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush,
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 async fn do_test_working_image_write_with_abr(
@@ -1462,23 +1583,24 @@ async fn do_test_working_image_write_with_abr(
     );
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
                 configuration: target_config,
                 asset: paver::Asset::Kernel,
                 payload: b"fake_zbi".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: target_config },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: target_config }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1529,25 +1651,26 @@ async fn test_working_image_with_unsupported_abr() {
     );
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::WriteAsset {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel,
                 payload: b"fake_zbi".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake_zbi".to_vec(),
-            },
-            PaverEvent::DataSinkFlush
+            }),
+            Paver(PaverEvent::DataSinkFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1587,9 +1710,16 @@ async fn test_failing_image_write() {
         }
     );
 
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1613,20 +1743,32 @@ async fn test_uses_custom_update_package() {
     .await
     .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
-        "fuchsia-pkg://fuchsia.com/another-update/4",
-        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
-    ]);
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Gc,
+            PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_requires_update_package() {
     let env = TestEnv::new();
 
-    env.resolver.mock_package_result("fuchsia-pkg://fuchsia.com/update", Err(Status::NOT_FOUND));
+    env.resolver.mock_package_result(UPDATE_PKG_URL, Err(Status::NOT_FOUND));
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
@@ -1639,10 +1781,7 @@ async fn test_requires_update_package() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(*env.cache_service.called.lock(), 0);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update"]);
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()),]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1664,10 +1803,7 @@ async fn test_rejects_invalid_update_package_url() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(*env.cache_service.called.lock(), 0);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.resolver.resolved_urls.lock(), vec![bogus_url]);
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(bogus_url.to_string()),]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1692,11 +1828,7 @@ async fn test_rejects_unknown_flags() {
         ])
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
-
-    assert_eq!(*env.cache_service.called.lock(), 0);
-    assert_eq!(*env.space_service.called.lock(), 0);
-    assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(env.take_interactions(), vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1715,10 +1847,7 @@ async fn test_rejects_extra_args() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(*env.cache_service.called.lock(), 0);
-    assert_eq!(*env.space_service.called.lock(), 0);
-    assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
-    assert_eq!(*env.reboot_service.called.lock(), 0);
+    assert_eq!(env.take_interactions(), vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1744,27 +1873,28 @@ async fn test_writes_firmware() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteFirmware {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteFirmware {
                 firmware_type: "".to_string(),
                 payload: b"fake firmware".to_vec()
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush,
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1790,12 +1920,12 @@ async fn test_writes_multiple_firmware_types() {
     .await
     .expect("success");
 
+    let mut interactions = env.take_interactions();
     // The order of files listed from a directory isn't guaranteed so the
     // firmware could be written in either order. Sort by type string so
     // we can easily validate contents.
-    let mut events = env.paver_service.take_events();
-    events[1..3].sort_by_key(|event| {
-        if let PaverEvent::WriteFirmware { firmware_type, payload: _ } = event {
+    interactions[5..7].sort_by_key(|event| {
+        if let Paver(PaverEvent::WriteFirmware { firmware_type, payload: _ }) = event {
             return firmware_type.clone();
         } else {
             panic!("Not a WriteFirmware event: {:?}", event);
@@ -1803,31 +1933,32 @@ async fn test_writes_multiple_firmware_types() {
     });
 
     assert_eq!(
-        events,
+        interactions,
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteFirmware {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteFirmware {
                 firmware_type: "a".to_string(),
                 payload: b"fake firmware A".to_vec()
-            },
-            PaverEvent::WriteFirmware {
+            }),
+            Paver(PaverEvent::WriteFirmware {
                 firmware_type: "b".to_string(),
                 payload: b"fake firmware B".to_vec()
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush,
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1858,27 +1989,28 @@ async fn test_unsupported_firmware_type() {
     .expect("success");
 
     assert_eq!(
-        env.paver_service.take_events(),
+        env.take_interactions(),
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::WriteFirmware {
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteFirmware {
                 firmware_type: "".to_string(),
                 payload: b"fake firmware".to_vec(),
-            },
-            PaverEvent::WriteAsset {
+            }),
+            Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
-            },
-            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
-            PaverEvent::DataSinkFlush,
-            PaverEvent::BootManagerFlush,
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
         ]
     );
-
-    assert_eq!(*env.cache_service.called.lock(), 1);
-    assert_eq!(*env.space_service.called.lock(), 1);
-    assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
