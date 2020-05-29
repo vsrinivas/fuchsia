@@ -393,6 +393,7 @@ impl CmInto<fsys::EnvironmentDecl> for cm::Environment {
         Ok(fsys::EnvironmentDecl {
             name: Some(self.name.into()),
             extends: Some(self.extends.cm_into()?),
+            runners: self.runners.cm_into()?,
             resolvers: self.resolvers.cm_into()?,
             stop_timeout_ms: self.stop_timeout_ms,
         })
@@ -404,6 +405,16 @@ impl CmInto<fsys::EnvironmentExtends> for cm::EnvironmentExtends {
         Ok(match self {
             cm::EnvironmentExtends::None => fsys::EnvironmentExtends::None,
             cm::EnvironmentExtends::Realm => fsys::EnvironmentExtends::Realm,
+        })
+    }
+}
+
+impl CmInto<fsys::RunnerRegistration> for cm::RunnerRegistration {
+    fn cm_into(self) -> Result<fsys::RunnerRegistration, Error> {
+        Ok(fsys::RunnerRegistration {
+            source_name: Some(self.source_name.into()),
+            source: Some(self.source.cm_into()?),
+            target_name: Some(self.target_name.into()),
         })
     }
 }
@@ -1519,27 +1530,43 @@ mod tests {
                         "name": "echo_server",
                         "url": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
                         "startup": "lazy",
-                        "environment": "test_env",
+                        "environment": "test_env"
                     },
+                    {
+                        "name": "gtest",
+                        "url": "fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm",
+                        "startup": "lazy"
+                    }
                 ],
                 "environments": [
                     {
                         "name": "test_env",
                         "extends": "none",
+                        "runners": [
+                            {
+                                "source_name": "runner",
+                                "source": {
+                                    "child": {
+                                        "name": "gtest"
+                                    },
+                                },
+                                "target_name": "gtest-runner"
+                            }
+                        ],
                         "resolvers": [
                             {
                                 "resolver": "pkg_resolver",
                                 "source": {
                                     "realm": {},
                                 },
-                                "scheme": "fuchsia-pkg",
+                                "scheme": "fuchsia-pkg"
                             }
                         ],
-                        "__stop_timeout_ms": 9876,
+                        "__stop_timeout_ms": 9876
                     },
                     {
                         "name": "env",
-                        "extends": "realm",
+                        "extends": "realm"
                     }
                 ]
             }),
@@ -1551,15 +1578,31 @@ mod tests {
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: Some("test_env".to_string()),
                     },
+                    fsys::ChildDecl {
+                        name: Some("gtest".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
                 ];
                 let environments = vec![
                     fsys::EnvironmentDecl {
                         name: Some("test_env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::None),
+                        runners: Some(vec![
+                            fsys::RunnerRegistration {
+                                source_name: Some("runner".to_string()),
+                                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                    name: "gtest".to_string(),
+                                    collection: None,
+                                })),
+                                target_name: Some("gtest-runner".to_string()),
+                            }
+                        ]),
                         resolvers: Some(vec![
                             fsys::ResolverRegistration {
                                 resolver: Some("pkg_resolver".to_string()),
-                                source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                                source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                                 scheme: Some("fuchsia-pkg".to_string()),
                             }
                         ]),
@@ -1568,6 +1611,7 @@ mod tests {
                     fsys::EnvironmentDecl {
                         name: Some("env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
                     },
@@ -1946,6 +1990,7 @@ mod tests {
                     fsys::EnvironmentDecl {
                         name: Some("test_env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
                         resolvers: Some(vec![
                             fsys::ResolverRegistration {
                                 resolver: Some("pkg_resolver".to_string()),

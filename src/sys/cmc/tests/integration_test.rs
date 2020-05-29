@@ -183,12 +183,14 @@ fn main() {
                 name: Some("env_one".to_string()),
                 extends: Some(EnvironmentExtends::None),
                 stop_timeout_ms: Some(1337),
+                runners: None,
                 resolvers: None,
             },
             EnvironmentDecl {
                 name: Some("env_two".to_string()),
                 extends: Some(EnvironmentExtends::Realm),
                 stop_timeout_ms: None,
+                runners: None,
                 resolvers: None,
             },
         ];

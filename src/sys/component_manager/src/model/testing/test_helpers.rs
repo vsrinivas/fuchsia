@@ -352,6 +352,7 @@ impl EnvironmentDeclBuilder {
         EnvironmentDeclBuilder(cm_rust::EnvironmentDecl {
             name: String::new(),
             extends: fsys::EnvironmentExtends::None,
+            runners: vec![],
             resolvers: vec![],
             stop_timeout_ms: None,
         })

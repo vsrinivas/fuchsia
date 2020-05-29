@@ -628,14 +628,22 @@ fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys:
 {
     name: String,
     extends: fsys::EnvironmentExtends,
+    runners: Vec<RunnerRegistration>,
     resolvers: Vec<ResolverRegistration>,
     stop_timeout_ms: Option<u32>,
+});
+fidl_into_struct!(RunnerRegistration, RunnerRegistration, fsys::RunnerRegistration,
+fsys::RunnerRegistration,
+{
+    source_name: String,
+    source: RegistrationSource,
+    target_name: String,
 });
 fidl_into_struct!(ResolverRegistration, ResolverRegistration, fsys::ResolverRegistration,
 fsys::ResolverRegistration,
 {
     resolver: String,
-    source: ResolverSource,
+    source: RegistrationSource,
     scheme: String,
 });
 
@@ -646,6 +654,7 @@ fidl_into_vec!(StorageDecl, fsys::StorageDecl);
 fidl_into_vec!(ResolverDecl, fsys::ResolverDecl);
 fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
 fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
+fidl_into_vec!(RunnerRegistration, fsys::RunnerRegistration);
 fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
 fidl_translations_opt_type!(Vec<String>);
 fidl_translations_opt_type!(String);
@@ -1343,6 +1352,36 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ResolverSource {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum RegistrationSource {
+    Realm,
+    Self_,
+    Child(String),
+}
+
+impl FidlIntoNative<RegistrationSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> RegistrationSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => RegistrationSource::Realm,
+            fsys::Ref::Self_(_) => RegistrationSource::Self_,
+            fsys::Ref::Child(c) => RegistrationSource::Child(c.name),
+            _ => panic!("invalid RegistrationSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for RegistrationSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            RegistrationSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            RegistrationSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            RegistrationSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum OfferDirectorySource {
     Realm,
     Self_,
@@ -1917,6 +1956,12 @@ mod tests {
                         environment: None,
                     },
                     fsys::ChildDecl {
+                        name: Some("gtest".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
+                    fsys::ChildDecl {
                         name: Some("echo".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
                                   .to_string()),
@@ -1964,6 +2009,16 @@ mod tests {
                    fsys::EnvironmentDecl {
                        name: Some("test_env".to_string()),
                        extends: Some(fsys::EnvironmentExtends::Realm),
+                       runners: Some(vec![
+                           fsys::RunnerRegistration {
+                               source_name: Some("runner".to_string()),
+                               source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                   name: "gtest".to_string(),
+                                   collection: None,
+                               })),
+                               target_name: Some("gtest-runner".to_string()),
+                           }
+                       ]),
                        resolvers: Some(vec![
                            fsys::ResolverRegistration {
                                resolver: Some("pkg_resolver".to_string()),
@@ -2099,7 +2154,7 @@ mod tests {
                             source_name: "started".into(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "mystarted".into(),
-                            filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/a".to_string())}),
+                            filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/a".to_string())}),
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![
@@ -2120,6 +2175,12 @@ mod tests {
                         ChildDecl {
                             name: "netstack".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                            environment: None,
+                        },
+                        ChildDecl {
+                            name: "gtest".to_string(),
+                            url: "fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string(),
                             startup: fsys::StartupMode::Lazy,
                             environment: None,
                         },
@@ -2170,10 +2231,17 @@ mod tests {
                         EnvironmentDecl {
                             name: "test_env".to_string(),
                             extends: fsys::EnvironmentExtends::Realm,
+                            runners: vec![
+                                RunnerRegistration {
+                                    source_name: "runner".to_string(),
+                                    source: RegistrationSource::Child("gtest".to_string()),
+                                    target_name: "gtest-runner".to_string(),
+                                }
+                            ],
                             resolvers: vec![
                                 ResolverRegistration {
                                     resolver: "pkg_resolver".to_string(),
-                                    source: ResolverSource::Realm,
+                                    source: RegistrationSource::Realm,
                                     scheme: "fuchsia-pkg".to_string(),
                                 }
                             ],

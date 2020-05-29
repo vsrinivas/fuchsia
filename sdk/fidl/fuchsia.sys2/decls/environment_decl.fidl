@@ -14,14 +14,21 @@ table EnvironmentDecl {
     /// Specifies how the initial state of this environment is constructed.
     2: EnvironmentExtends extends;
 
+    /// List of runners available in this environment.
+    ///
+    /// This list determines the total set of runners that are available for any
+    /// component in the environment to use.
+    3: vector<RunnerRegistration>:MAX runners;
+
     /// List of component resolvers and the URL schemes they are registered to resolve.
     /// These registrations determine how components are resolved in the realm.
     /// If the component URL scheme does not match any of these resolvers, URL resolution
     /// is delegated to the parent environment, if this environment `extends` from `REALM`.
-    3: vector<ResolverRegistration>:MAX resolvers;
+    4: vector<ResolverRegistration>:MAX resolvers;
+
     /// The duration in milliseconds that the component will have to stop before
     /// it is killed.
-    4: uint32 stop_timeout_ms;
+    5: uint32 stop_timeout_ms;
 };
 
 /// Specifies how a declared environment's initial set of properties are assigned.
@@ -31,6 +38,20 @@ enum EnvironmentExtends {
     /// The environment's initial set of properties are inherited from its realm.
     /// Inherited properties include any fields defined in `EnvironmentDecl`.
     REALM = 1;
+};
+
+/// A repository of the runners available in an environment.
+table RunnerRegistration {
+    /// The name of the runner capability as it's exposed to, offered, or
+    /// defined by this component.
+    1: fuchsia.component.runner_name source_name;
+
+    /// The provider of the capability relative to the component itself. Must be
+    /// `realm`, `self`, or `child`.
+    2: Ref source;
+
+    /// The name by which the runner is made available in this environment.
+    3: fuchsia.component.runner_name target_name;
 };
 
 /// A mapping of URL scheme to resolver name.
