@@ -5,67 +5,65 @@
 //! Provides overnet support for network manager.
 
 use {
-    crate::event::Event,
-    crate::fidl_worker::FidlWorker,
-    anyhow::Error,
+    crate::fidl_worker::IncomingFidlRequestStream,
+    anyhow::{Context as _, Error},
     fidl::endpoints::{create_request_stream, RequestStream, ServiceMarker},
     fidl_fuchsia_overnet::{
         ServiceProviderMarker, ServiceProviderRequest, ServicePublisherMarker,
         ServicePublisherProxy,
     },
-    fidl_fuchsia_router_config::{
-        RouterAdminMarker, RouterAdminRequestStream, RouterStateMarker, RouterStateRequestStream,
-    },
+    fidl_fuchsia_router_config::{RouterAdminMarker, RouterStateMarker},
     fuchsia_async as fasync,
     fuchsia_component::client as fclient,
-    futures::channel::mpsc,
-    futures::TryStreamExt,
+    futures::stream::{self, Stream, StreamExt as _, TryStreamExt as _},
 };
 
-pub struct OvernetWorker;
+/// Returns a `Stream` of [`IncomingFidlRequestStream`]s from overnet.
+pub(super) async fn new_stream(
+) -> Result<impl Stream<Item = Result<IncomingFidlRequestStream, Error>>, Error> {
+    let overnet_svc = fclient::connect_to_service::<ServicePublisherMarker>()?;
 
-impl OvernetWorker {
-    pub fn spawn(self, event_ch: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
-        let admin_event_ch = event_ch.clone();
-        let state_event_ch = event_ch;
+    let router_admin_stream = setup_overnet_service::<RouterAdminMarker>(&overnet_svc)
+        .await?
+        .map_ok(IncomingFidlRequestStream::RouterAdmin);
 
-        let overnet_svc = fclient::connect_to_service::<ServicePublisherMarker>()?;
-        Self::setup_overnet_service(&overnet_svc, &RouterAdminMarker::NAME, move |ch| {
-            FidlWorker::spawn_router_admin(
-                RouterAdminRequestStream::from_channel(ch),
-                admin_event_ch.clone(),
-            )
-        })?;
-        Self::setup_overnet_service(&overnet_svc, &RouterStateMarker::NAME, move |ch| {
-            FidlWorker::spawn_router_state(
-                RouterStateRequestStream::from_channel(ch),
-                state_event_ch.clone(),
-            )
-        })?;
+    let router_state_stream = setup_overnet_service::<RouterStateMarker>(&overnet_svc)
+        .await?
+        .map_ok(IncomingFidlRequestStream::RouterState);
 
-        Ok(())
-    }
+    Ok(stream::select(router_admin_stream, router_state_stream))
+}
 
-    fn setup_overnet_service<F: 'static>(
-        overnet: &ServicePublisherProxy,
-        name: &str,
-        callback: F,
-    ) -> Result<(), Error>
-    where
-        F: Fn(fasync::Channel),
-    {
-        let (client, mut server) = create_request_stream::<ServiceProviderMarker>()?;
-        overnet.publish_service(name, client)?;
-        fasync::spawn_local(async move {
-            while let Some(ServiceProviderRequest::ConnectToService {
-                chan: ch_req,
-                control_handle: _control_handle,
-                ..
-            }) = server.try_next().await.unwrap()
-            {
-                callback(fasync::Channel::from_channel(ch_req).unwrap());
-            }
-        });
-        Ok(())
-    }
+/// Publishes the specified service `M` via overnet and returns a `Stream` which yields
+/// `M::RequestStream`s as clients connect to the service.
+pub(super) async fn setup_overnet_service<M: ServiceMarker>(
+    overnet: &ServicePublisherProxy,
+) -> Result<impl Stream<Item = Result<M::RequestStream, Error>>, Error> {
+    let (client, server) = create_request_stream::<ServiceProviderMarker>()
+        .context("failed to create ServiceProvider request stream")?;
+    let () = overnet
+        .publish_service(&M::NAME, client)
+        .with_context(|| format!("failed to publish {} to overnet", &M::NAME))?;
+
+    Ok(server
+        .try_filter_map(
+            |ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ }| async {
+                match fasync::Channel::from_channel(chan) {
+                    Ok(c) => Ok(Some(M::RequestStream::from_channel(c))),
+                    // The client gave us an invalid channel, log the error but do not terminate the
+                    // server stream so we handle future requests.
+                    Err(e) => {
+                        error!(
+                            "failed to create fasync::Channel to connect to overnet service {}: {}",
+                            &M::NAME,
+                            e
+                        );
+                        Ok(None)
+                    }
+                }
+            },
+        )
+        .map(|r| {
+            r.with_context(|| format!("connection request stream for {} on overnet", M::NAME))
+        }))
 }

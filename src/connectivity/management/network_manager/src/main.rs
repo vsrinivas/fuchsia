@@ -4,6 +4,12 @@
 
 //! The network manager allows clients to manage router device properties.
 
+// Used because we use `futures::select!`.
+//
+// From https://docs.rs/futures/0.3.1/futures/macro.select.html:
+//   Note that select! relies on proc-macro-hack, and may require to set the compiler's
+//   recursion limit very high, e.g. #![recursion_limit="1024"].
+#![recursion_limit = "256"]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 
@@ -13,8 +19,6 @@ extern crate log;
 use argh::FromArgs;
 
 mod dns_server_watcher;
-mod event;
-mod event_worker;
 mod eventloop;
 mod fidl_worker;
 mod oir_worker;

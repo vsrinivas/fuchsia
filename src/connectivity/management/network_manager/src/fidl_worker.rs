@@ -5,62 +5,42 @@
 //! Implementation of fuchsia.router.config
 
 use {
-    crate::event::Event,
-    anyhow::Error,
     fidl_fuchsia_router_config::{RouterAdminRequestStream, RouterStateRequestStream},
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::{channel::mpsc, StreamExt, TryFutureExt, TryStreamExt},
-    log::error,
+    fuchsia_component::server::{ServiceFs, ServiceObjLocal},
+    futures::future::Either,
+    futures::stream::{self, Stream},
 };
 
-pub struct FidlWorker;
+pub(super) enum IncomingFidlRequestStream {
+    RouterAdmin(RouterAdminRequestStream),
+    RouterState(RouterStateRequestStream),
+}
 
-impl FidlWorker {
-    pub fn spawn(self, event_chan: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
-        let router_admin_event_chan = event_chan.clone();
-        let router_state_event_chan = event_chan;
-
-        let mut fs = ServiceFs::new_local();
-        fs.dir("svc")
-            .add_fidl_service(move |rs: RouterAdminRequestStream| {
-                Self::spawn_router_admin(rs, router_admin_event_chan.clone())
-            })
-            .add_fidl_service(move |rs: RouterStateRequestStream| {
-                Self::spawn_router_state(rs, router_state_event_chan.clone())
-            });
-        fs.take_and_serve_directory_handle()?;
-        fasync::spawn_local(fs.collect());
-        Ok(())
+/// Returns a `Stream` of [`IncomingFidlRequestStream`]s.
+pub(super) fn new_stream<'a>(
+    fs: &'a mut ServiceFs<ServiceObjLocal<'static, IncomingFidlRequestStream>>,
+) -> Result<
+    Either<
+        impl Stream<Item = IncomingFidlRequestStream>,
+        impl 'a + Stream<Item = IncomingFidlRequestStream>,
+    >,
+    anyhow::Error,
+> {
+    // NetworkManager's FIDL is currently disabled. We may eventually
+    // remove the support for it from the codebase entirely, but for the
+    // time being, we would still like to exercise the functionality
+    // during testing to avoid bitrot.
+    if !cfg!(test) {
+        warn!("not serving FIDL server in non-test builds, the FIDL stream will never be ready");
+        // We return a stream that is always pending so that the caller may assume that
+        // the FIDL request stream is not expected to end (which is the case when for
+        // non-test builds).
+        return Ok(Either::Left(stream::pending()));
     }
 
-    pub fn spawn_router_admin(
-        mut stream: RouterAdminRequestStream,
-        event_chan: mpsc::UnboundedSender<Event>,
-    ) {
-        fasync::spawn_local(
-            async move {
-                while let Some(req) = stream.try_next().await? {
-                    event_chan.unbounded_send(Event::FidlRouterAdminEvent(req))?;
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: Error| error!("{:?}", e)),
-        );
-    }
+    fs.dir("svc")
+        .add_fidl_service(IncomingFidlRequestStream::RouterAdmin)
+        .add_fidl_service(IncomingFidlRequestStream::RouterState);
 
-    pub fn spawn_router_state(
-        mut stream: RouterStateRequestStream,
-        event_chan: mpsc::UnboundedSender<Event>,
-    ) {
-        fasync::spawn_local(
-            async move {
-                while let Some(req) = stream.try_next().await? {
-                    event_chan.unbounded_send(Event::FidlRouterStateEvent(req))?;
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: Error| error!("{:?}", e)),
-        );
-    }
+    Ok(Either::Right(fs.take_and_serve_directory_handle()?))
 }

@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Online Insertion and Removal worker.
+
 use {
-    crate::event::Event,
-    anyhow::{format_err, Context as _, Error},
-    fuchsia_async as fasync,
-    futures::TryStreamExt,
-    futures::{channel::mpsc, TryFutureExt},
+    anyhow::{format_err, Context as _},
+    futures::stream::{Stream, StreamExt as _, TryStreamExt as _},
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     network_manager_core::oir::OIRInfo,
     std::fs,
@@ -20,10 +19,7 @@ fn ethdir_path() -> std::path::PathBuf {
     path::Path::new(&options.dev_path).join("class/ethernet")
 }
 
-async fn device_found(
-    event_chan: &mpsc::UnboundedSender<Event>,
-    filename: &std::path::PathBuf,
-) -> Result<(), anyhow::Error> {
+async fn device_found(filename: &std::path::PathBuf) -> Result<Option<OIRInfo>, anyhow::Error> {
     let file_path = ethdir_path().join(filename);
     let device = fs::File::open(&file_path)
         .with_context(|| format!("could not open {}", file_path.display()))?;
@@ -50,97 +46,70 @@ async fn device_found(
         let device_channel = ethernet_device
             .into_channel()
             .map_err(|fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
-                anyhow::format_err!("failed to convert device proxy into channel")
+                anyhow::anyhow!("failed to convert device proxy into channel")
             })?
             .into_zx_channel();
 
         info!("Device found: topo_path {} info {:?}", topological_path, device_info);
         if device_info.features.is_physical() {
-            event_chan.unbounded_send(Event::OIR(OIRInfo {
+            return Ok(Some(OIRInfo {
                 action: network_manager_core::oir::Action::ADD,
                 file_path: file_path.to_str().unwrap().to_string(),
                 topological_path,
                 device_information: Some(device_info),
                 device_channel: Some(device_channel),
-            }))?;
+            }));
         } else {
             info!("device not physical {:?}", device_info);
         }
     }
-    Ok(())
+
+    Ok(None)
 }
 
-async fn device_removed(
-    event_chan: &mpsc::UnboundedSender<Event>,
-    topological_path: &std::path::PathBuf,
-) -> Result<(), anyhow::Error> {
+fn device_removed(topological_path: &std::path::PathBuf) -> OIRInfo {
     info!("removing device topo path {:?}", topological_path);
-    event_chan.unbounded_send(Event::OIR(OIRInfo {
+    OIRInfo {
         action: network_manager_core::oir::Action::REMOVE,
         topological_path: topological_path.to_str().unwrap().to_string(),
         file_path: "".to_string(),
         device_information: None,
         device_channel: None,
-    }))?;
-    Ok(())
+    }
 }
 
-async fn run(event_chan: mpsc::UnboundedSender<Event>) -> Result<(), anyhow::Error> {
+/// Returns a `Stream` that yields `OIRInfo`s in response to events from the
+/// device filesystem.
+pub(super) async fn new_stream(
+) -> Result<impl Stream<Item = Result<OIRInfo, anyhow::Error>>, anyhow::Error> {
     let path = ethdir_path();
     let path_as_str = path.to_str().ok_or_else(|| {
         format_err!(
-            "Path requested for watch is non-utf8 and our
- non-blocking directory apis require utf8 paths: {:?}.",
+            "path requested for watch is non-utf8 and our non-blocking directory apis require utf8 paths: {:?}.",
             path
         )
     })?;
     debug!("device path: {}", path_as_str);
     let dir_proxy = open_directory_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
+    let watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
         .await
         .with_context(|| format!("could not watch {:?}", path))?;
 
-    while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
-        watcher.try_next().await.with_context(|| format!("watching {:?}", path))?
-    {
-        match event {
-            fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {
-                info!("Event received {:?} filename: {:?}", event, filename);
-                device_found(&event_chan, &filename).await?;
+    Ok(watcher
+        .map(|r| r.context("getting next VFS event from"))
+        .try_filter_map(|fuchsia_vfs_watcher::WatchMessage { event, filename }| async move {
+            info!("received {:?} event for filename: {:?}", event, filename);
+
+            match event {
+                fuchsia_vfs_watcher::WatchEvent::ADD_FILE
+                | fuchsia_vfs_watcher::WatchEvent::EXISTING => Ok(device_found(&filename).await?),
+                fuchsia_vfs_watcher::WatchEvent::IDLE => Ok(None),
+                fuchsia_vfs_watcher::WatchEvent::REMOVE_FILE => Ok(Some(device_removed(&filename))),
+                event => {
+                    warn!("received unknown event {:?} for filename: {:?}", event, filename);
+                    Ok(None)
+                }
             }
-
-            fuchsia_vfs_watcher::WatchEvent::EXISTING => {
-                info!("Event received {:?} filename: {:?}", event, filename);
-                device_found(&event_chan, &filename).await?;
-            }
-
-            fuchsia_vfs_watcher::WatchEvent::IDLE => {
-                info!("Idle Event received {:?} filename: {:?}", event, filename);
-            }
-
-            fuchsia_vfs_watcher::WatchEvent::REMOVE_FILE => {
-                info!("Remove Event received {:?} filename: {:?}", event, filename);
-                device_removed(&event_chan, &filename).await?;
-            }
-
-            event => {
-                info!("Unknown Event received {:?} filename: {:?}", event, filename);
-            }
-        }
-    }
-    Ok(())
-}
-
-/// `OirWorker` implements the Online Insertion Removal worker.
-/// It monitors the dev file system for added or removed ethernet devices and generates events
-/// according to those changes.
-pub(crate) struct OirWorker;
-
-impl OirWorker {
-    pub fn spawn(self, event_chan: mpsc::UnboundedSender<Event>) {
-        info!("Starting oir service");
-        fasync::spawn_local(
-            run(event_chan).unwrap_or_else(|err: Error| error!("Sending event error {:?}", err)),
-        );
-    }
+        })
+        .map(move |r| r.with_context(|| format!("watching {:?}", path))))
 }

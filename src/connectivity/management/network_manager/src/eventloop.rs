@@ -36,23 +36,22 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_net_name as fname;
 use fidl_fuchsia_net_name_ext::CloneExt as _;
 use fidl_fuchsia_router_config::{
     Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
     SecurityFeatures,
 };
-
-use anyhow::{Context as _, Error};
-use futures::channel::mpsc;
-use futures::StreamExt;
+use fuchsia_component::server::ServiceFs;
+use futures::future;
+use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use network_manager_core::{
     hal::NetCfg, lifmgr::LIFType, packet_filter::PacketFilter, portmgr::PortId, DeviceState,
 };
 
-use crate::dns_server_watcher::{DnsServerWatcher, DnsServerWatcherEvent, DnsServerWatcherSource};
-use crate::event::Event;
-
+use crate::dns_server_watcher::{DnsServerWatcherEvent, DnsServerWatcherSource};
+use crate::fidl_worker::IncomingFidlRequestStream;
 pub(crate) const DEFAULT_DNS_PORT: u16 = 53;
 
 macro_rules! router_error {
@@ -168,7 +167,6 @@ impl DnsServers {
 
 /// The event loop.
 pub struct EventLoop {
-    event_recv: mpsc::UnboundedReceiver<Event>,
     device: DeviceState,
     dns_servers: DnsServers,
 }
@@ -176,35 +174,9 @@ pub struct EventLoop {
 impl EventLoop {
     pub fn new() -> Result<Self, Error> {
         let netcfg = NetCfg::new()?;
-        let packet_filter = PacketFilter::start()
-            .context("network_manager failed to start packet filter!")
-            .unwrap();
-        let mut device = DeviceState::new(netcfg, packet_filter);
-
-        let streams = device.take_event_streams();
-        let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
-        if cfg!(test) {
-            // Network Manager's FIDL is currently disabled. We may eventually
-            // remove the support for it from the codebase entirely, but for the
-            // time being, we would still like to exercise the functionality
-            // during testing to avoid bitrot.
-            let fidl_worker = crate::fidl_worker::FidlWorker;
-            let _ = fidl_worker.spawn(event_send.clone());
-        }
-        let overnet_worker = crate::overnet_worker::OvernetWorker;
-        let _r = overnet_worker.spawn(event_send.clone());
-        let event_worker = crate::event_worker::EventWorker;
-        event_worker.spawn(streams, event_send.clone());
-        let oir_worker = crate::oir_worker::OirWorker;
-        oir_worker.spawn(event_send.clone());
-
-        let netstack_dns_watcher = DnsServerWatcher::new(
-            DnsServerWatcherSource::Netstack,
-            device.get_netstack_dns_server_watcher()?,
-        );
-        netstack_dns_watcher.spawn(event_send);
-
-        Ok(EventLoop { event_recv, device, dns_servers: Default::default() })
+        let packet_filter = PacketFilter::start().context("failed to start packet filter")?;
+        let device = DeviceState::new(netcfg, packet_filter);
+        Ok(EventLoop { device, dns_servers: Default::default() })
     }
 
     pub async fn run(mut self) -> Result<(), Error> {
@@ -214,26 +186,102 @@ impl EventLoop {
             // else down, restructure packet filter rules, etc.
             error!("Failed to load a device config: {}", e);
         }
-        self.device.setup_services().await?;
-        self.device.populate_state().await?;
+        self.device.setup_services().await.context("setup_services")?;
+        self.device.populate_state().await.context("populate_state")?;
+
+        let (stack_stream, netstack_stream) = self.device.take_event_streams();
+        let stack_stream = stack_stream.map(|r| r.context("Stack event stream")).fuse();
+        let netstack_stream = netstack_stream.map(|r| r.context("Netstack event stream")).fuse();
+        let netstack_dns_stream = crate::dns_server_watcher::new_dns_server_stream(
+            DnsServerWatcherSource::Netstack,
+            self.device.get_netstack_dns_server_watcher()?,
+        )
+        .map(|r| r.context("Netstack's DNS server event stream"))
+        .fuse();
+        let oir_stream = crate::oir_worker::new_stream()
+            .await
+            .context("starting OIR")?
+            .map(|r| r.context("OIR event stream"))
+            .fuse();
+        let mut fs = ServiceFs::new_local();
+        let fidl_server_stream = crate::fidl_worker::new_stream(&mut fs)
+            .context("setting up FIDL services")?
+            .then(futures::future::ok::<_, anyhow::Error>);
+        // Make sure errors encountered when setting up overnet services do not cause
+        // NetworkManager to exit as overnet may not be available on all builds.
+        let overnet_stream = match crate::overnet_worker::new_stream().await {
+            Err(e) => {
+                error!("error setting up overnet services: {}", e);
+                // We use a stream that is always pending so that the loop below may
+                // assume that `overnet_stream` is not expected to end (which is the
+                // case when we successfully setup and publish overnet services).
+                future::Either::Left(stream::pending())
+            }
+            Ok(o) => future::Either::Right(o.map(|r| r.context("overnet service request stream"))),
+        };
+        let fidl_req_stream = stream::select(fidl_server_stream, overnet_stream).fuse();
+        let mut router_admin_streams = stream::SelectAll::new();
+        let mut router_state_streams = stream::SelectAll::new();
+
+        futures::pin_mut!(
+            stack_stream,
+            netstack_stream,
+            netstack_dns_stream,
+            oir_stream,
+            fidl_req_stream
+        );
 
         loop {
-            match self.event_recv.next().await {
-                Some(Event::FidlRouterAdminEvent(req)) => {
-                    self.handle_fidl_router_admin_request(req).await;
+            // Currently, if any of the workers encounters an error, the event loop
+            // will return with the worker's error immediately.
+            // TODO(52740): Gracefully handle worker errors.
+            let () = futures::select! {
+                stack_res = stack_stream.try_next() => {
+                    let event = stack_res?.ok_or(anyhow::anyhow!("Stack event stream unexpectedly ended"))?;
+                    self.handle_stack_event(event).await
                 }
-                Some(Event::FidlRouterStateEvent(req)) => {
-                    self.handle_fidl_router_state_request(req).await;
+                netstack_res = netstack_stream.try_next() => {
+                    let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
+                    self.handle_netstack_event(event).await
                 }
-                Some(Event::StackEvent(event)) => self.handle_stack_event(event).await,
-                Some(Event::NetstackEvent(event)) => self.handle_netstack_event(event).await,
-                Some(Event::OIR(event)) => self.handle_oir_event(event).await,
-                Some(Event::DnsServerWatcher(event)) => {
+                netstack_dns_res = netstack_dns_stream.try_next() => {
+                    let event = netstack_dns_res?.ok_or(anyhow::anyhow!("Netstack DNS Server watcher stream unexpectedly ended"))?;
                     self.handle_dns_server_watcher_event(event).await
                 }
-                None => return Err(anyhow::format_err!("Stream of events ended unexpectedly")),
-            }
+                oir_res = oir_stream.try_next() => {
+                    let event = oir_res?.ok_or(anyhow::anyhow!("OIR stream unexpectedly ended"))?;
+                    self.handle_oir_event(event).await
+                }
+                fidl_req_res = fidl_req_stream.try_next() => {
+                    let req = fidl_req_res?.ok_or(anyhow::anyhow!("FIDL service request stream unexpectedly ended"))?;
+                    match req {
+                        IncomingFidlRequestStream::RouterAdmin(r) => router_admin_streams.push(r),
+                        IncomingFidlRequestStream::RouterState(r) => router_state_streams.push(r),
+                    }
+                }
+                router_admin_req_res = router_admin_streams.try_next() => {
+                    // We may receive `None` just once if there are no longer any active streams
+                    // in the `Stream` set. This is expected for the initial state, or after the
+                    // streams are run to completion. Note, the `Stream` set will start to yield
+                    // values again (as they become available) once a new `Stream` is added.
+                    if let Some(req) = router_admin_req_res? {
+                        self.handle_fidl_router_admin_request(req).await
+                    }
+                }
+                router_state_req_res = router_state_streams.try_next() => {
+                    // We may receive `None` just once if there are no longer any active streams
+                    // in the `Stream` set. This is expected for the initial state, or after the
+                    // streams are run to completion. Note, the `Stream` set will start to yield
+                    // values again (as they become available) once a new `Stream` is added.
+                    if let Some(req) = router_state_req_res? {
+                        self.handle_fidl_router_state_request(req).await
+                    }
+                }
+                complete => break,
+            };
         }
+
+        Ok(())
     }
 
     async fn handle_dns_server_watcher_event(&mut self, event: DnsServerWatcherEvent) {
