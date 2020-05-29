@@ -57,7 +57,10 @@ func TestReboot(t *testing.T) {
 	ctx = logger.WithLogger(ctx, l)
 
 	if err := doTest(ctx); err != nil {
-		errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err)
+		logger.Errorf(ctx, "test failed: %v", err)
+		if e := errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err); e != nil {
+			logger.Errorf(ctx, "failed to dump process back traces: %v", e)
+		}
 		t.Fatal(err)
 	}
 }
