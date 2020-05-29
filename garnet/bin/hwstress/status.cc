@@ -89,8 +89,8 @@ void StatusLine::ClearLineIfNeeded() {
   if (!line_needs_clear_) {
     return;
   }
-  // ANSI escape code for clearing the current line.
-  printf("\033[2K");
+  // "\r" and ANSI escape code for clearing the current line.
+  printf("\r\033[2K");
   line_needs_clear_ = false;
 }
 
@@ -99,7 +99,7 @@ void StatusLine::PrintStatus() {
   if (current_status_.empty()) {
     return;
   }
-  printf("%s\r", current_status_.c_str());
+  printf("%s", current_status_.c_str());
   fflush(stdout);
   line_needs_clear_ = true;
 }
