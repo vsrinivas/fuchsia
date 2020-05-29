@@ -12,6 +12,8 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 executable("sysinfo") {
@@ -44,4 +46,29 @@ executable("sysinfo") {
 
 migrated_manifest("sysinfo-manifest") {
   deps = [ ":sysinfo" ]
+}
+
+test("test") {
+  output_name = "sysinfo-test"
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "sysinfo-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("sysinfo-test") {
+  package_name = "sysinfo-test"
+  deps = [ ":test" ]
+
+  tests = [
+    {
+      name = "sysinfo-test"
+      environments = basic_envs
+    },
+  ]
 }
