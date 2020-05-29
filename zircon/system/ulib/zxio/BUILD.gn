@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("zxio") {
   sdk = "static"
   sdk_headers = [
@@ -27,16 +39,15 @@ zx_library("zxio") {
     "zxio.cc",
   ]
   public_deps = [
-    "$zx/system/ulib/sync:headers",
+    "//zircon/public/lib/sync",
 
     # <lib/zxio/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
-    "$zx/system/fidl/fuchsia-io:llcpp.headers",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-io2:llcpp",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/fidl/fuchsia-io2:llcpp",
   ]
 }

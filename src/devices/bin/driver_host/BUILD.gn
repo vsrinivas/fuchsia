@@ -51,7 +51,6 @@ source_set("common") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxio",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
@@ -62,6 +61,7 @@ source_set("common") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zxio",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]

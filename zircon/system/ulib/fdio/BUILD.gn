@@ -80,11 +80,11 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
-      "//zircon/public/lib/zxio",
       "//zircon/system/fidl/fuchsia-device:llcpp",
       "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/fidl/fuchsia-io2:llcpp",
       "//zircon/system/fidl/fuchsia-net:llcpp",
+      "//zircon/system/ulib/zxio",
     ]
     public_configs = [ "//build/config:Wno-unused-function" ]
   }

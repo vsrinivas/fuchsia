@@ -45,7 +45,6 @@ test("zxio") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxio",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-io2:llcpp",
@@ -53,6 +52,7 @@ test("zxio") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zxio",
   ]
 }
 

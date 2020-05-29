@@ -18,5 +18,10 @@
     "label": "//zircon/system/ulib/trace-engine:trace-engine",
     "name": "trace-engine",
     "sdk": false
+  },
+  {
+    "label": "//zircon/system/ulib/zxio:zxio",
+    "name": "zxio",
+    "sdk": false
   }
 ]
