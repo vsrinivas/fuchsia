@@ -1,16 +1,9 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/unification/fidl_alias.gni")
 
-fidl_library("fuchsia-device-manager") {
-  sdk = true
-  sources = [
-    "administrator.fidl",
-    "coordinator.fidl",
-    "debug.fidl",
-    "system-state-transition.fidl",
-  ]
-  public_deps = [ "$zx/vdso/zx" ]
+fidl_alias("fuchsia-device-manager") {
+  sdk_category = "partner"
 }

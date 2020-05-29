@@ -19,11 +19,11 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:structopt",
-    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]
 }
 
@@ -34,6 +34,7 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:nom",
@@ -43,7 +44,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]
 }
 

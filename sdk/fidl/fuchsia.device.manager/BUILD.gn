@@ -4,12 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.device") {
+fidl("fuchsia.device.manager") {
   sdk_category = "partner"
-  api = "fuchsia.device.api"
+  api = "fuchsia.device.manager.api"
   sources = [
-    "controller.fidl",
-    "name-provider.fidl",
+    "administrator.fidl",
+    "coordinator.fidl",
+    "debug.fidl",
+    "system-state-transition.fidl",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.device.manager" ]
+  public_deps = [ "$zx/vdso/zx" ]
 }

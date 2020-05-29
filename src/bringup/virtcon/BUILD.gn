@@ -22,6 +22,7 @@ group("common") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
@@ -39,7 +40,6 @@ group("common") {
     "//zircon/public/lib/gfx-font-data",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs",

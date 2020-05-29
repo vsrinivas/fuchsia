@@ -20,7 +20,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.recovery",
 
     # <factory_reset.h> has #include <fuchsia/device/manager/cpp/fidl.h>
-    "//zircon/system/fidl/fuchsia-device-manager",
+    "//sdk/fidl/fuchsia.device.manager",
 
     # <factory_reset.h> has #include <fbl/unique_fd.h>
     "//zircon/public/lib/fbl",
@@ -127,11 +127,11 @@ test("factory_reset_unittests") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/lib/fxl/test:gtest_main",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//zircon/public/lib/fbl",
-    "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",

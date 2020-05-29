@@ -8,7 +8,7 @@ fidl("fuchsia.power.manager") {
   sdk_category = "internal"
   sources = [ "register.fidl" ]
   public_deps = [
-    "//zircon/system/fidl/fuchsia-device-manager",
+    "//sdk/fidl/fuchsia.device.manager",
     "//zircon/system/fidl/fuchsia-io",
   ]
 }

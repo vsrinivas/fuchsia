@@ -32,12 +32,12 @@ test("kernel-mexec-test") {
   }
   sources = [ "kernel-mexec_test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
