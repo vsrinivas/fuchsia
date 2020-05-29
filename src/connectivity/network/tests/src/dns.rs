@@ -11,7 +11,6 @@ use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use net_types::Witness;
-use netstack_testing_macros::*;
 use packet_formats::icmp::ndp::{
     options::{NdpOption, RecursiveDnsServer},
     RouterAdvertisement,
@@ -63,7 +62,9 @@ async fn test_set_default_dns_servers() -> Result {
 
 /// Tests that Netstack exposes DNS servers discovered dynamically and NetworkManager
 /// configures the Lookup service.
-#[endpoint_variants_test]
+// TODO(fxbug.dev/52971) re-enable this test when network manager respects
+// hermeticity.
+#[allow(dead_code)]
 async fn test_discovered_dns<E: Endpoint>() -> Result {
     const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
     /// DNS server served by DHCP.
