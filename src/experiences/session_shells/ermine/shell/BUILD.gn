@@ -86,6 +86,7 @@ flutter_app("ermine") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.control",
+    "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.memory",
@@ -113,7 +114,6 @@ flutter_app("ermine") {
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
-    "//zircon/system/fidl/fuchsia-device-manager",
   ]
 
   non_dart_deps = [ ":time_zone_list" ]
