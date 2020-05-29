@@ -8,7 +8,6 @@ use {
     async_trait::async_trait,
     derivative::Derivative,
     fuchsia_inspect_node_hierarchy::NodeHierarchy,
-    glob::glob,
     serde::Serialize,
     std::str::FromStr,
 };
@@ -19,7 +18,7 @@ use {
 #[argh(subcommand, name = "show-file")]
 pub struct ShowFileCommand {
     #[argh(positional)]
-    /// glob paths to query relative to the current directory. Minimum: 1
+    /// paths to query relative to the current directory. Minimum: 1
     pub paths: Vec<String>,
 }
 
@@ -44,36 +43,60 @@ impl Command for ShowFileCommand {
 
         // TODO(fxbug.dev/45458): refactor to use cleaner methods than IQueryResult and
         // IQueryLocation once the deprecated code is removed. For now sharing a bunch of code.
-        for query_path in &self.paths {
-            for path_result in
-                glob(&query_path).map_err(|e| Error::ParsePath(query_path.clone(), e.into()))?
-            {
-                let path =
-                    path_result.map_err(|e| Error::ParsePath(query_path.clone(), e.into()))?;
-                let location = match InspectLocation::from_str(&path.to_string_lossy().to_string())
-                {
-                    Err(_) => continue,
-                    Ok(location) => location,
-                };
-                match IqueryResult::try_from(location).await {
-                    // TODO(fxbug.dev/45458): surface errors too.
-                    Err(_) => {}
-                    Ok(IqueryResult { location, hierarchy: Some(mut hierarchy) }) => {
-                        hierarchy.sort();
-                        results.push(ShowFileResultItem {
-                            payload: hierarchy,
-                            path: location
-                                .absolute_path()
-                                .unwrap_or(location.path.to_string_lossy().to_string()),
-                        });
-                    }
-                    Ok(_) => {}
+        for path in expand_paths(&self.paths)? {
+            let location = match InspectLocation::from_str(&path) {
+                Err(_) => continue,
+                Ok(location) => location,
+            };
+            match IqueryResult::try_from(location).await {
+                // TODO(fxbug.dev/45458): surface errors too.
+                Err(_) => {}
+                Ok(IqueryResult { location, hierarchy: Some(mut hierarchy) }) => {
+                    hierarchy.sort();
+                    results.push(ShowFileResultItem {
+                        payload: hierarchy,
+                        path: location
+                            .absolute_path()
+                            .unwrap_or(location.path.to_string_lossy().to_string()),
+                    });
                 }
+                Ok(_) => {}
             }
         }
 
         Ok(results)
     }
+}
+
+fn expand_paths(query_paths: &[String]) -> Result<Vec<String>, Error> {
+    let mut result = Vec::new();
+    for query_path in query_paths {
+        if query_path.ends_with(".inspect") {
+            if query_path.contains("*") {
+                println!(concat!(
+                    "WARNING: you might no results when pointing directly to a *.inspect ",
+                    "vmo file. This is due to http://fxbug.dev/40888. As a workaround use `*` ",
+                    "instead of `root.inspect`."
+                ));
+            } else {
+                // Just push this query path. For example, if the command was called with
+                // /hub/c/kcounter_inspect.cmx/\*/out/diagnostics/\* and the shell matched a single
+                // file then at least we'll get it here. Otherwise due to http://fxbug.dev/40888,
+                // glob will return an empty list for vmo files.
+                // TODO(fxbug.dev/40888): remove this
+                result.push(query_path.clone());
+                continue;
+            }
+        }
+        let path_results = glob::glob(&query_path)
+            .map_err(|e| Error::ParsePath(query_path.clone(), e.into()))?
+            .collect::<Vec<_>>();
+        for path_result in path_results {
+            let path = path_result.map_err(|e| Error::ParsePath(query_path.clone(), e.into()))?;
+            result.push(path.to_string_lossy().to_string());
+        }
+    }
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -103,5 +126,25 @@ mod tests {
             result,
             include_str!("../../test_data/show_file_json_expected.json"),
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn inspect_vmo_file_directly() {
+        let (_env, _app) =
+            testing::start_test_component("show-file-vmo-2").await.expect("create comp 2");
+        let paths = expand_paths(&[
+            "/hub/r/show-file-vmo-2/*/c/test_component.cmx/*/out/diagnostics/*".to_string(),
+        ])
+        .expect("got paths");
+
+        // Pass only the path to the vmo file. Without the workaround in `get_paths` comments this
+        // wouldn't work and the `result` would be an emtpy list.
+        let path = paths
+            .into_iter()
+            .find(|p| p.ends_with("root.inspect"))
+            .expect("found root.inspect path");
+        let command = ShowFileCommand { paths: vec![path] };
+        let result = command.execute().await.expect("successful execution");
+        testing::assert_result(result, include_str!("../../test_data/show_file_vmo_expected.json"));
     }
 }
