@@ -94,9 +94,14 @@ void AppClientBase::ServiceUnbind() {}
 
 template <>
 void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(fit::function<void()> done) {
+  if (primary_service()) {
   SetAppErrorHandler(std::move(done));
-  if (primary_service())
     primary_service()->Terminate();
+  } else {
+    // If the lifecycle channel is already closed, the component has no way to receive
+    // a terminate signal, so don't bother waiting.
+    done();
+  }
 }
 
 }  // namespace modular
