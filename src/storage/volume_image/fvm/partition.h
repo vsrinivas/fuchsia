@@ -22,6 +22,14 @@ namespace storage::volume_image {
 // This class is thread-compatible.
 class Partition {
  public:
+  // Defines a strict and unique ordering between unique partitions.
+  //
+  // Partitions are first ordered lexicographically by name, and then instance GUID.
+  struct LessThan {
+    // Returns true if |lhs| partition should be before |rhs| partition.
+    bool operator()(const Partition& lhs, const Partition& rhs) const;
+  };
+
   Partition() = default;
   Partition(VolumeDescriptor volume_descriptor, AddressDescriptor address_descriptor,
             std::unique_ptr<Reader> reader)

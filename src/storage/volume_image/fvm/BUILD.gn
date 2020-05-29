@@ -17,6 +17,7 @@ source_set("options") {
 }
 
 source_set("partition") {
+  sources = [ "partition.cc" ]
   public = [ "partition.h" ]
   public_deps = [
     ":address-descriptor",
@@ -27,11 +28,16 @@ source_set("partition") {
 
 source_set("fvm-test") {
   testonly = true
-  sources = [ "address_descriptor_test.cc" ]
+  sources = [
+    "address_descriptor_test.cc",
+    "partition_test.cc",
+  ]
   deps = [
     ":address-descriptor",
+    ":partition",
     "//src/lib/json_parser",
     "//src/storage/volume_image/serialization:schema",
+    "//src/storage/volume_image/utils:guid",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
