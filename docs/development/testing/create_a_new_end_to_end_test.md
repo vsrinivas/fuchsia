@@ -92,7 +92,7 @@ Do the following:
     vim test/my_new_e2e_test.dart
     ```
 
-1.  Paste the following code:
+1.  Paste the following code to `my_new_e2e_test.dart`:
 
     ```
     import 'package:sl4f/sl4f.dart' as sl4f;
@@ -130,7 +130,7 @@ Do the following:
     vim ./BUILD.gn
     ```
 
-1.  Paste the following code:
+1.  Paste the following code to `BUILD.gn`:
 
     ```
     import("//build/dart/test.gni")
