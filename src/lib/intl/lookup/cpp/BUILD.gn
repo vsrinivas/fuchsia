@@ -75,7 +75,7 @@ test_package("intl-lookup-cpp-tests") {
   tests = [
     {
       name = "intl_lookup_cpp_unittests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
