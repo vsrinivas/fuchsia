@@ -5,6 +5,7 @@
 #include <lib/fidl/coding.h>
 #include <stddef.h>
 
+#include <cstdio>
 #include <limits>
 #include <memory>
 
@@ -1509,6 +1510,23 @@ bool validate_flexible_xunion_unknown_ordinal() {
   END_TEST;
 }
 
+bool validate_invalid_bool() {
+  BEGIN_TEST;
+
+  uint8_t data[] = {
+      0x88,  // bool, not 0 or 1*/
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  };
+
+  const char* error = nullptr;
+  fflush(stdout);
+  auto status = fidl_validate(&fidl_test_coding_BoolStructTable, data, sizeof(data), 0, &error);
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_STR_EQ(error, "not a valid bool value");
+
+  END_TEST;
+}
+
 bool validate_zero_16bit_bits() {
   BEGIN_TEST;
 
@@ -1697,6 +1715,7 @@ bool validate_uint64_enum() {
 bool validate_primitives_struct() {
   BEGIN_TEST;
 
+  // TODO(fxb/52585) Use generated types - primitive struct fields actually have null type.
   // The following coding table is equivalent to this FIDL struct definition:
   //
   // struct PrimitiveStruct {
@@ -1916,6 +1935,7 @@ END_TEST_CASE(enums)
 
 BEGIN_TEST_CASE(primitives)
 RUN_TEST(validate_primitives_struct)
+RUN_TEST(validate_invalid_bool)
 END_TEST_CASE(primitives)
 
 }  // namespace

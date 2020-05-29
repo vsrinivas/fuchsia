@@ -91,15 +91,6 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
   __builtin_unreachable();
 }
 
-constexpr bool IsPrimitive(const fidl_type_t* type) {
-  switch (type->type_tag()) {
-    case kFidlTypePrimitive:
-      return true;
-    default:
-      return false;
-  }
-}
-
 enum Result { kContinue, kExit };
 
 // Macro to insert the relevant goop required to support two control flows here in case of error:
@@ -182,6 +173,8 @@ class Walker final {
   Result WalkInternal(const fidl_type_t* type, Position position, OutOfLineDepth depth);
   Result WalkIterableInternal(const fidl_type_t* type, Walker<VisitorImpl>::Position position,
                               uint32_t stride, uint32_t end_offset, OutOfLineDepth depth);
+  static bool NeedWalkPrimitive(const FidlCodedPrimitiveSubtype subtype);
+  Result WalkPrimitive(const FidlCodedPrimitive* fidl_coded_primitive, Position position);
   Result WalkEnum(const FidlCodedEnum* fidl_coded_enum, Position position);
   Result WalkBits(const FidlCodedBits* coded_bits, Position position);
   Result WalkStruct(const FidlCodedStruct* coded_struct, Position position, OutOfLineDepth depth);
@@ -205,6 +198,8 @@ Result Walker<VisitorImpl>::WalkInternal(const fidl_type_t* type,
                                          Walker<VisitorImpl>::Position position,
                                          OutOfLineDepth depth) {
   switch (type->type_tag()) {
+    case kFidlTypePrimitive:
+      return WalkPrimitive(&type->coded_primitive(), position);
     case kFidlTypeEnum:
       return WalkEnum(&type->coded_enum(), position);
     case kFidlTypeBits:
@@ -225,26 +220,53 @@ Result Walker<VisitorImpl>::WalkInternal(const fidl_type_t* type,
       return WalkHandle(&type->coded_handle(), position);
     case kFidlTypeVector:
       return WalkVector(&type->coded_vector(), position, depth);
-    case kFidlTypePrimitive:
-      // nothing to do
-      return Result::kContinue;
   }
   assert(false && "unhandled type");
   return Result::kContinue;
 }
 
 template <typename VisitorImpl>
-Result Walker<VisitorImpl>::WalkIterableInternal(const fidl_type_t* type,
+Result Walker<VisitorImpl>::WalkIterableInternal(const fidl_type_t* elem_type,
                                                  Walker<VisitorImpl>::Position position,
                                                  uint32_t stride, uint32_t end_offset,
                                                  OutOfLineDepth depth) {
-  if (type->type_tag() == kFidlTypePrimitive) {
-    // nothing to do
+  if (elem_type->type_tag() == kFidlTypePrimitive &&
+      !NeedWalkPrimitive(elem_type->coded_primitive().type)) {
     return Result::kContinue;
   }
   for (uint32_t offset = 0; offset < end_offset; offset += stride) {
-    auto result = WalkInternal(&type->coded_handle(), position + offset, depth);
+    auto result = WalkInternal(elem_type, position + offset, depth);
     FIDL_RESULT_GUARD(result);
+  }
+  return Result::kContinue;
+}
+
+// Keep in sync with WalkPrimitive.
+template <typename VisitorImpl>
+bool Walker<VisitorImpl>::NeedWalkPrimitive(const FidlCodedPrimitiveSubtype subtype) {
+  switch (subtype) {
+    case kFidlCodedPrimitiveSubtype_Bool:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// Keep in sync with NeedWalkPrimitive.
+template <typename VisitorImpl>
+Result Walker<VisitorImpl>::WalkPrimitive(const FidlCodedPrimitive* fidl_coded_primitive,
+                                          Walker<VisitorImpl>::Position position) {
+  switch (fidl_coded_primitive->type) {
+    case kFidlCodedPrimitiveSubtype_Bool: {
+      uint8_t value = *PtrTo<uint8_t>(position);
+      if (value != 0 && value != 1) {
+        visitor_->OnError("not a valid bool value");
+        FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+      }
+      break;
+    }
+    default:
+      break;
   }
   return Result::kContinue;
 }
@@ -419,7 +441,7 @@ Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
                                              !VisitorImpl::kContinueAfterConstraintViolation)) {
         return Result::kExit;
       }
-      if (payload_type != nullptr && !IsPrimitive(payload_type)) {
+      if (payload_type != nullptr) {
         auto result = WalkInternal(payload_type, obj_position, obj_depth);
         FIDL_RESULT_GUARD(result);
       }
@@ -492,7 +514,7 @@ Result Walker<VisitorImpl>::WalkXUnion(const FidlCodedXUnion* coded_xunion,
                                            !VisitorImpl::kContinueAfterConstraintViolation)) {
       return Result::kExit;
     }
-    if (payload_type != nullptr && !IsPrimitive(payload_type)) {
+    if (payload_type != nullptr) {
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     }

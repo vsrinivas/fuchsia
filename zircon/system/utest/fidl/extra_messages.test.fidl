@@ -220,3 +220,7 @@ struct RecursiveOptional {
 table RecursiveTable {
     1: RecursiveOptional inner;
 };
+
+struct BoolStruct {
+    bool val;
+};
