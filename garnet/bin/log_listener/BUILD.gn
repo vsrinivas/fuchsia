@@ -34,7 +34,10 @@ rustc_binary("bin") {
 }
 
 package("log_listener_shell") {
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//build/validate:non_production_tag",
+  ]
 
   binaries = [
     {

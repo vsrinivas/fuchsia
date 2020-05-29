@@ -36,6 +36,7 @@ executable("bin") {
 package("sshd-host") {
   deps = [
     ":bin",
+    "//build/validate:non_production_tag",
     "//third_party/openssh-portable:hostkeygen",
     "//third_party/openssh-portable:scp",
     "//third_party/openssh-portable:sftp-server",

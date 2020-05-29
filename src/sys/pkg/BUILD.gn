@@ -46,6 +46,7 @@ group("tools") {
     "bin/pkgctl",
     "bin/update:update-bin",
   ]
+  deps = [ "//build/validate:non_production_tag" ]
 }
 
 group("system-update-checker") {
@@ -53,6 +54,10 @@ group("system-update-checker") {
     "bin/system-update-checker",
     "bin/system-update-checker:config",
   ]
+
+  # TODO(fxb/51214): Remove the comment after we update to omaha-client
+  # for migration build.
+  # deps = [ "//build/validate:non_production_tag" ]
 }
 
 merge_sysmgr_config("core_config") {
@@ -73,4 +78,5 @@ group("omaha-client") {
 
 group("pkgfs-disable-executability-restrictions") {
   public_deps = [ "bin/pkgfs:disable-executability-restrictions" ]
+  deps = [ "//build/validate:non_production_tag" ]
 }

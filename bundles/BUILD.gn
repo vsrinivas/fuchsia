@@ -54,6 +54,7 @@ group("tools") {
     "//tools",
     "//tools/whereiscl:host($host_toolchain)",
   ]
+  deps = [ "//build/validate:non_production_tag" ]
 }
 
 group("infratools") {

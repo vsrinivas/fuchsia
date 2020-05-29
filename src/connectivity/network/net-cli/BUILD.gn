@@ -41,7 +41,10 @@ rustc_binary("bin") {
 }
 
 package("net-cli") {
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//build/validate:non_production_tag",
+  ]
 
   binaries = [
     {

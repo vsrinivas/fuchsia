@@ -25,5 +25,6 @@ template("pkg_resolver_config") {
     for_pkg = "pkg-resolver"
     outputs = [ "config.json" ]
     sources = [ config_path ]
+    forward_variables_from(invoker, [ "deps" ])
   }
 }

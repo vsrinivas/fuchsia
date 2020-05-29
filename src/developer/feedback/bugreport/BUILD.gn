@@ -22,7 +22,10 @@ package("bugreport") {
     },
   ]
 
-  deps = [ ":main" ]
+  deps = [
+    ":main",
+    "//build/validate:non_production_tag",
+  ]
 }
 
 ###############################################################################
