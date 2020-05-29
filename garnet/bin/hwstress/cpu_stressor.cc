@@ -17,28 +17,38 @@
 
 namespace hwstress {
 
-CpuStressor::CpuStressor(uint32_t threads, std::function<void()> workload)
+void StopIndicator::Stop() { should_stop_.store(true, std::memory_order_release); }
+
+CpuStressor::CpuStressor(uint32_t threads, std::function<void(const StopIndicator &)> workload)
     : threads_(threads), workload_(std::move(workload)) {}
+
+CpuStressor::CpuStressor(uint32_t threads, std::function<void()> looping_workload)
+    : threads_(threads),
+      workload_([f = std::move(looping_workload)](const StopIndicator &indicator) {
+        do {
+          f();
+        } while (!indicator.ShouldStop());
+      }) {}
 
 CpuStressor::~CpuStressor() { Stop(); }
 
 void CpuStressor::Start() {
   ZX_ASSERT(workers_.empty());
-  should_stop_.store(false);
 
   // Start the workers.
   for (uint32_t i = 0; i < threads_; i++) {
     auto worker = std::make_unique<std::thread>([this, workload = workload_]() mutable {
-      while (!should_stop_.load(std::memory_order_relaxed)) {
-        workload();
-      }
+      // Run the workload.
+      workload(indicator_);
+      // Ensure the function didn't return while ShouldStop() was still false.
+      ZX_ASSERT(indicator_.ShouldStop());
     });
     workers_.push_back(std::move(worker));
   }
 }
 
 void CpuStressor::Stop() {
-  should_stop_.store(true);
+  indicator_.Stop();
   for (auto &thread : workers_) {
     thread->join();
   }

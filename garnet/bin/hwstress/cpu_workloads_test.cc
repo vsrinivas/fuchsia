@@ -10,15 +10,23 @@
 
 #include <gtest/gtest.h>
 
+#include "cpu_stressor.h"
+
 namespace hwstress {
 namespace {
 
 TEST(CpuWorkloads, Test) {
+  StopIndicator indicator;
+  indicator.Stop();
+
   // Test one iteration of each of the workloads.
+  //
+  // Even though the stop indicator is already set, each workload should
+  // unconditionally perform one iteration before returning.
   for (const auto& workload : GetWorkloads()) {
     printf("  Testing %s... ", workload.name.c_str());
     fflush(stdout);
-    workload.work();
+    workload.work(indicator);
     printf("done.\n");
   }
 }

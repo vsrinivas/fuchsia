@@ -9,12 +9,14 @@
 #include <utility>
 #include <vector>
 
+#include "cpu_stressor.h"
+
 namespace hwstress {
 
 // A CPU stress workload.
 struct Workload {
   std::string name;
-  std::function<void()> work;
+  std::function<void(const StopIndicator& indicator)> work;
 };
 
 // Return a list of available workloads.

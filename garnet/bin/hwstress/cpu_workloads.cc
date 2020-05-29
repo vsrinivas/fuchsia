@@ -6,22 +6,24 @@
 
 #include <vector>
 
+#include "cpu_stressor.h"
+
 namespace hwstress {
 namespace {
 
 // A placeholder workload that just reads and writes memory.
-void TrivialMemoryWorkload() {
+void TrivialMemoryWorkload(const StopIndicator& indicator) {
   volatile uint64_t a = 0;
-  for (int i = 0; i < 10'000; i++) {
+  do {
     a++;
-  }
+  } while (!indicator.ShouldStop());
 }
 
 // A placeholder workload that just spins.
-void TrivialSpinWorkload() {
-  for (int i = 0; i < 10'000; i++) {
-    __asm__ __volatile__("");
-  }
+void TrivialSpinWorkload(const StopIndicator& indicator) {
+  do {
+    /* do nothing */
+  } while (!indicator.ShouldStop());
 }
 
 }  // namespace
