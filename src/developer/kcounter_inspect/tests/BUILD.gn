@@ -9,11 +9,11 @@ test_package("kcounter_inspect_tests") {
   tests = [
     {
       name = "kcounter_inspect_unittest"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
     {
       name = "kcounter_inspect_integration_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 
