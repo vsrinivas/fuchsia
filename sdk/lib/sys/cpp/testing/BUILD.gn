@@ -66,9 +66,9 @@ source_set("enclosing_environment") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.debugdata",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:bin",
     "//third_party/rapidjson",
-    "//zircon/system/fidl/fuchsia-debugdata",
   ]
 
   public_configs = [ "//sdk/config" ]

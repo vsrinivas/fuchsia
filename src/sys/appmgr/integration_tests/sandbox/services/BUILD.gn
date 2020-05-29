@@ -18,12 +18,12 @@ sandbox_test_package("some_services") {
   sources = [ "some_services.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
-    "//zircon/system/fidl/fuchsia-debugdata",
   ]
 
   # TODO(46761): Fix the leaks and remove this.
@@ -36,10 +36,10 @@ sandbox_test_package("no_services") {
   sources = [ "no_services.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.debugdata",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
-    "//zircon/system/fidl/fuchsia-debugdata",
   ]
 
   # TODO(46761): Fix the leaks and remove this.

@@ -8,7 +8,7 @@ import("$zx/public/gn/fidl_c_header.gni")
 # still needed in the ZN build.
 
 fidl_c_header("fuchsia-debugdata") {
-  sources = [ "fuchsia-debugdata/debugdata.fidl" ]
+  sources = [ "../../../sdk/fidl/fuchsia.debugdata/debugdata.fidl" ]
 }
 
 fidl_c_header("fuchsia-io") {
@@ -43,7 +43,6 @@ group("fidl") {
 #------------------
 #------------------
 #------------------
-    "fuchsia-debugdata",
 #------------------
 #------------------
 #------------------

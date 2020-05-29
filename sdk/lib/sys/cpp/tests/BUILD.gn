@@ -52,10 +52,10 @@ test("component_cpp_testing_tests") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.debugdata",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-debugdata",
     "//zircon/system/fidl/fuchsia-io",
   ]
 }

@@ -94,6 +94,7 @@ test("debugdata") {
   sources = [ "debugdata.cc" ]
   data_deps = [ ":debugdata-test-helper" ]
   deps = [
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fdio",
@@ -101,7 +102,6 @@ test("debugdata") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-debugdata:llcpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

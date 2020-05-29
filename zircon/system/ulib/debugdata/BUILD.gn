@@ -19,18 +19,18 @@ zx_library("debugdata") {
   sdk = "source"
   sdk_headers = [ "lib/debugdata/debugdata.h" ]
   deps = [
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-debugdata:llcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
   ]
   public_deps = [
     # <debugdata/debugdata.h has #include <fuchsia/debugdata/llcpp/fidl.h>.
-    "//zircon/system/fidl/fuchsia-debugdata:llcpp",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
 
     # <debugdata/debugdata.h> has #include <fbl/unique_fd.h>.
     "//zircon/public/lib/fbl",
