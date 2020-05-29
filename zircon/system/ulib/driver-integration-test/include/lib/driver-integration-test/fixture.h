@@ -64,6 +64,8 @@ class IsolatedDevmgr {
 
   const zx::channel& svc_root_dir() const { return devmgr_.svc_root_dir(); }
 
+  const zx::channel& fshost_outgoing_dir() const { return devmgr_.fshost_outgoing_dir(); }
+
  private:
   devmgr_integration_test::IsolatedDevmgr devmgr_;
 };

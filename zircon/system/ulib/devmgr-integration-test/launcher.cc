@@ -295,6 +295,7 @@ __EXPORT
 IsolatedDevmgr::IsolatedDevmgr(IsolatedDevmgr&& other)
     : job_(std::move(other.job_)),
       svc_root_dir_(std::move(other.svc_root_dir_)),
+      fshost_outgoing_dir_(std::move(other.fshost_outgoing_dir_)),
       devfs_root_(std::move(other.devfs_root_)),
       svc_loop_state_(std::move(other.svc_loop_state_)),
       exception_loop_state_(std::move(other.exception_loop_state_)) {}
@@ -305,6 +306,7 @@ IsolatedDevmgr& IsolatedDevmgr::operator=(IsolatedDevmgr&& other) {
   job_ = std::move(other.job_);
   devfs_root_ = std::move(other.devfs_root_);
   svc_root_dir_ = std::move(other.svc_root_dir_);
+  fshost_outgoing_dir_ = std::move(other.fshost_outgoing_dir_);
   svc_loop_state_ = std::move(other.svc_loop_state_);
   exception_loop_state_ = std::move(other.exception_loop_state_);
   return *this;
@@ -367,6 +369,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
     return status;
   }
 
+  zx::channel fshost_client_dup(fdio_service_clone(fshost_outgoing_client.get()));
   status = devmgr.SetupSvcLoop(std::move(svc_server), std::move(fshost_outgoing_client),
                                std::move(get_boot_item), std::move(boot_args));
   if (status != ZX_OK) {
@@ -381,6 +384,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   devmgr.devfs_root_.reset(fd);
   devmgr.component_lifecycle_client_.reset(component_lifecycle_client.release());
   devmgr.svc_root_dir_.reset(outgoing_svc_root.release());
+  devmgr.fshost_outgoing_dir_.reset(fshost_client_dup.release());
   *out = std::move(devmgr);
   return ZX_OK;
 }

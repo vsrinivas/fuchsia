@@ -45,6 +45,7 @@ class IsolatedDevmgr {
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devfs_root_; }
   const zx::channel& svc_root_dir() const { return svc_root_dir_; }
+  const zx::channel& fshost_outgoing_dir() const { return fshost_outgoing_dir_; }
 
   zx::channel TakeSvcRootDir() { return std::move(svc_root_dir_); }
 
@@ -80,6 +81,9 @@ class IsolatedDevmgr {
 
   // Channel for the root of outgoing services
   zx::channel svc_root_dir_;
+
+  // Channel for the root of fshost
+  zx::channel fshost_outgoing_dir_;
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;
