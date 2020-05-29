@@ -176,7 +176,6 @@ source_set("audio_core_lib") {
     "//sdk/lib/syslog/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/ffl",
-    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]

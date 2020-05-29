@@ -17,8 +17,8 @@ go_library("metrics_lib") {
   name = "metrics"
   source_dir = "metrics"
   deps = [
+    "//sdk/fidl/fuchsia.cobalt($go_toolchain)",
     "//src/lib/syslog/go",
-    "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
   ]
 }
