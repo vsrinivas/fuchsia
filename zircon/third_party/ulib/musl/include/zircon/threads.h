@@ -37,4 +37,16 @@ static inline zx_status_t __PURE thrd_status_to_zx_status(int thrd_status) {
 
 __END_CDECLS
 
+#ifdef __cplusplus
+
+#include <thread>
+
+// Get the zx_handle_t corresponding to the std::thread::native_handle() value.
+// See `thrd_get_zx_handle` (above) for constraints on the returned handle.
+// Using this API avoids any assumptions about std::thread::native_handle_type
+// corresponding exactly to thrd_t or any other particular type.
+zx_handle_t native_thread_get_zx_handle(std::thread::native_handle_type);
+
+#endif  // __cplusplus
+
 #endif  // SYSROOT_ZIRCON_THREADS_H_

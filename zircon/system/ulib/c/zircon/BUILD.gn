@@ -7,7 +7,7 @@ source_set("zircon") {
     "getentropy.c",
     "internal.c",
     "take_startup_handle.c",
-    "thrd_get_zx_handle.c",
+    "thrd_get_zx_handle.cc",
     "utc.cc",
   ]
   deps = [

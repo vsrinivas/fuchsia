@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <lib/fit/defer.h>
+#include <lib/zx/thread.h>
 #include <sched.h>
 #include <threads.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
+
+#include <thread>
 
 #include <zxtest/zxtest.h>
 
@@ -78,6 +82,31 @@ TEST(C11ThreadTest, CreateAndVerifyThreadHandle) {
   int return_value;
   ASSERT_EQ(thrd_join(thread, &return_value), thrd_success);
   ASSERT_EQ(return_value, kRandomRet, "Incorrect return from thread");
+}
+
+// Not really C11 threads, but <zircon/threads.h> declares it and no better
+// place for the test really.
+TEST(CppThreadTest, CreateAndVerifyThreadHandle) {
+  std::atomic<bool> keep_running = true;
+  std::thread thread([&keep_running]() {
+    while (keep_running.load()) {
+      zx::nanosleep(zx::time::infinite_past());
+    }
+  });
+  auto cleanup = fit::defer([&keep_running, &thread]() {
+    keep_running.store(false);
+    thread.join();
+  });
+
+  zx::unowned_thread handle{native_thread_get_zx_handle(thread.native_handle())};
+  ASSERT_TRUE(handle->is_valid(), "got invalid thread handle");
+
+  // Prove this is a valid handle by duplicating it.
+  zx::thread dup_handle;
+  ASSERT_OK(handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_handle));
+  ASSERT_TRUE(dup_handle.is_valid());
+  dup_handle.reset();
+  ASSERT_FALSE(dup_handle.is_valid());
 }
 
 TEST(C11ThreadTest, DetachedThreadKeepsRunning) {
