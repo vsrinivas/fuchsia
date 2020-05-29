@@ -49,7 +49,7 @@ class ImagePipeSurface {
   virtual bool IsLost() { return false; }
   virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
                            VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
-                           fuchsia::images::ImageInfo image_info, uint32_t image_count,
+                           VkExtent2D extent, uint32_t image_count,
                            const VkAllocationCallbacks* pAllocator,
                            std::vector<ImageInfo>* image_info_out) = 0;
   virtual void RemoveImage(uint32_t image_id) = 0;

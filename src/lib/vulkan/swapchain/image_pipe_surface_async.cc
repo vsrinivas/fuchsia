@@ -27,7 +27,7 @@ bool ImagePipeSurfaceAsync::Init() {
 bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
                                         VkFormat format, VkImageUsageFlags usage,
                                         VkSwapchainCreateFlagsKHR swapchain_flags,
-                                        fuchsia::images::ImageInfo image_info, uint32_t image_count,
+                                        VkExtent2D extent, uint32_t image_count,
                                         const VkAllocationCallbacks* pAllocator,
                                         std::vector<ImageInfo>* image_info_out) {
   // Allocate token for BufferCollection.
@@ -88,7 +88,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
       .flags = image_flags,
       .imageType = VK_IMAGE_TYPE_2D,
       .format = format,
-      .extent = VkExtent3D{image_info.width, image_info.height, 1},
+      .extent = VkExtent3D{extent.width, extent.height, 1},
       .mipLevels = 1,
       .arrayLayers = 1,
       .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -136,8 +136,8 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   // Insert width and height information while adding images because it wasnt passed in
   // AddBufferCollection().
   fuchsia::sysmem::ImageFormat_2 image_format = {};
-  image_format.coded_width = image_info.width;
-  image_format.coded_height = image_info.height;
+  image_format.coded_width = extent.width;
+  image_format.coded_height = extent.height;
 
   for (uint32_t i = 0; i < image_count; ++i) {
     // Create Vk image.

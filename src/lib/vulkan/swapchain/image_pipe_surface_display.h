@@ -25,8 +25,7 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
 
   bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
                    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
-                   fuchsia::images::ImageInfo image_info, uint32_t image_count,
-                   const VkAllocationCallbacks* pAllocator,
+                   VkExtent2D extent, uint32_t image_count, const VkAllocationCallbacks* pAllocator,
                    std::vector<ImageInfo>* image_info_out) override;
 
   bool CanPresentPendingImage() override { return false; }

@@ -143,17 +143,10 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
   uint32_t num_images = pCreateInfo->minImageCount;
   VkFlags usage = pCreateInfo->imageUsage & surface_->SupportedUsage();
   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
-  fuchsia::images::ImageInfo image_info;
-  image_info.width = pCreateInfo->imageExtent.width;
-  image_info.height = pCreateInfo->imageExtent.height;
-  image_info.stride = 0;  // Meaningless for optimal tiling.
-  image_info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
-  image_info.color_space = fuchsia::images::ColorSpace::SRGB;
-  image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
   std::vector<ImagePipeSurface::ImageInfo> image_infos;
 
   if (!surface_->CreateImage(device, pDisp, pCreateInfo->imageFormat, usage, pCreateInfo->flags,
-                             image_info, num_images, pAllocator, &image_infos)) {
+                             pCreateInfo->imageExtent, num_images, pAllocator, &image_infos)) {
     return VK_ERROR_OUT_OF_DEVICE_MEMORY;
   }
   for (uint32_t i = 0; i < num_images; i++) {
