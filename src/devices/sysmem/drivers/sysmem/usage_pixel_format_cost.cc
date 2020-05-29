@@ -82,6 +82,111 @@ struct PlatformCostsEntry {
 };
 
 const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
+    // AFBC TE is best.
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        500.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        500.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        500.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        500.0L,
+    },
     // AFBC always preferred when supported.
     {
         // .pixel_format
@@ -186,6 +291,111 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
         },
         // .cost
         1000.0L,
+    },
+    // Linear TE is better than linear.
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1500.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1500.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1500.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1500.0L,
     },
 };
 

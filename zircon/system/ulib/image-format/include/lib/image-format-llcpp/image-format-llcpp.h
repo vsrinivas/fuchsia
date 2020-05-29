@@ -19,6 +19,8 @@ fuchsia_sysmem_ImageFormatConstraints GetCConstraints(
 llcpp::fuchsia::sysmem::PixelFormat GetCppPixelFormat(
     const fuchsia_sysmem_PixelFormat& pixel_format);
 
+fuchsia_sysmem_PixelFormat GetCPixelFormat(const llcpp::fuchsia::sysmem::PixelFormat& pixel_format);
+
 constexpr llcpp::fuchsia::sysmem::ImageFormatConstraints GetDefaultImageFormatConstraints() {
   llcpp::fuchsia::sysmem::ImageFormatConstraints constraints;
   // Should match values in constraints.fidl.
@@ -60,6 +62,8 @@ bool GetPlaneByteOffset(const llcpp::fuchsia::sysmem::ImageFormat_2& image_forma
 
 bool GetPlaneRowBytes(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format, uint32_t plane,
                       uint32_t* row_bytes_out);
+
+bool FormatCompatibleWithProtectedMemory(const llcpp::fuchsia::sysmem::PixelFormat& format);
 
 }  // namespace image_format
 

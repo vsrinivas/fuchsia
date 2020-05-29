@@ -1441,11 +1441,28 @@ BufferCollection::BufferCollectionInfo LogicalBufferCollection::Allocate(
   // range in min_size_bytes..max_size_bytes.
   if (constraints_->image_format_constraints_count) {
     // Pick the best ImageFormatConstraints.
-    uint32_t best_index = 0;
-    for (uint32_t i = 1; i < constraints_->image_format_constraints_count; ++i) {
-      if (CompareImageFormatConstraintsByIndex(i, best_index) < 0) {
-        best_index = i;
+    uint32_t best_index = UINT32_MAX;
+    bool found_unsupported_when_protected = false;
+    for (uint32_t i = 0; i < constraints_->image_format_constraints_count; ++i) {
+      if (buffer_settings->is_secure &&
+          !ImageFormatCompatibleWithProtectedMemory(
+              &constraints_->image_format_constraints[i].pixel_format)) {
+        found_unsupported_when_protected = true;
+        continue;
       }
+      if (best_index == UINT32_MAX) {
+        best_index = i;
+      } else {
+        if (CompareImageFormatConstraintsByIndex(i, best_index) < 0) {
+          best_index = i;
+        }
+      }
+    }
+    if (best_index == UINT32_MAX) {
+      ZX_DEBUG_ASSERT(found_unsupported_when_protected);
+      LogError("No formats were compatible with protected memory.");
+      *allocation_result = ZX_ERR_NOT_SUPPORTED;
+      return BufferCollection::BufferCollectionInfo(BufferCollection::BufferCollectionInfo::Null);
     }
     // struct copy - if right hand side's clone results in any duplicated
     // handles, those will be owned by result.

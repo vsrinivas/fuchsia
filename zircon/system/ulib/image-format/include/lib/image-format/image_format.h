@@ -85,6 +85,10 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
 bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
                                   fuchsia_sysmem_PixelFormat* pixel_format_out);
 
+// TODO(fxb/34192): Clients should be able to specify that they can't use a format with protected
+// memory, so we wouldn't need this.
+bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem_PixelFormat* pixel_format);
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif

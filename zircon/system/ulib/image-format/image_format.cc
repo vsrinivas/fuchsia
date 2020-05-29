@@ -63,6 +63,29 @@ const std::map<fuchsia_sysmem_PixelFormatType, SamplingInfo> kPixelFormatSamplin
     {fuchsia_sysmem_PixelFormatType_L8, {{8}, kColorType_RGB}},
 };
 
+constexpr uint32_t kTransactionEliminationAlignment = 64;
+// The transaction elimination buffer is always reported as plane 3.
+constexpr uint32_t kTransactionEliminationPlane = 3;
+
+static uint64_t arm_transaction_elimination_row_size(uint32_t width) {
+  uint32_t kTileSize = 32;
+  uint32_t kBytesPerTilePerRow = 16;
+  uint32_t width_in_tiles = fbl::round_up(width, kTileSize) / kTileSize;
+  return fbl::round_up(width_in_tiles * kBytesPerTilePerRow, kTransactionEliminationAlignment);
+}
+
+static uint64_t arm_transaction_elimination_buffer_size(uint64_t start, uint32_t width,
+                                                        uint32_t height) {
+  uint32_t kTileSize = 32;
+  uint32_t end = start;
+  end = fbl::round_up(end, kTransactionEliminationAlignment);
+  uint32_t kHeaderSize = kTransactionEliminationAlignment;
+  end += kHeaderSize;
+  uint32_t height_in_tiles = fbl::round_up(height, kTileSize) / kTileSize;
+  end += arm_transaction_elimination_row_size(width) * 2 * height_in_tiles;
+  return end - start;
+}
+
 class ImageFormatSet {
  public:
   virtual bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const = 0;
@@ -156,12 +179,16 @@ class AfbcFormats : public ImageFormatSet {
     switch (pixel_format->format_modifier.value) {
       case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16:
       case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
         return true;
       default:
         return false;
     }
   }
-  uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
+
+  // Calculate the size of the Raw AFBC image without a transaction elimination buffer.
+  uint64_t NonTESize(const fuchsia_sysmem_ImageFormat_2* image_format) const {
     // See
     // https://android.googlesource.com/device/linaro/hikey/+/android-o-preview-3/gralloc960/alloc_device.cpp
     constexpr uint32_t kAfbcBodyAlignment = 1024u;
@@ -171,11 +198,13 @@ class AfbcFormats : public ImageFormatSet {
     uint32_t block_height;
     switch (image_format->pixel_format.format_modifier.value) {
       case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
         block_width = 16;
         block_height = 16;
         break;
 
       case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
         block_width = 32;
         block_height = 8;
         break;
@@ -193,11 +222,26 @@ class AfbcFormats : public ImageFormatSet {
     return block_count * block_width * block_height * kBytesPerPixel +
            fbl::round_up(block_count * kBytesPerBlockHeader, kAfbcBodyAlignment);
   }
+
+  uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
+    uint64_t size = NonTESize(image_format);
+    switch (image_format->pixel_format.format_modifier.value) {
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
+        size += arm_transaction_elimination_buffer_size(size, image_format->coded_width,
+                                                        image_format->coded_height);
+    }
+
+    return size;
+  }
   bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
                                   uint64_t* offset_out) const override {
     ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
     if (plane == 0) {
       *offset_out = 0;
+      return true;
+    } else if (plane == kTransactionEliminationPlane) {
+      *offset_out = fbl::round_up(NonTESize(image_format), kTransactionEliminationAlignment);
       return true;
     }
     return false;
@@ -207,13 +251,42 @@ class AfbcFormats : public ImageFormatSet {
     if (plane == 0) {
       *row_bytes_out = 0;
       return true;
-    } else {
-      return false;
+    } else if (plane == kTransactionEliminationPlane) {
+      *row_bytes_out = arm_transaction_elimination_row_size(image_format->coded_width);
+      return true;
     }
+    return false;
   }
 };
 
+static uint64_t linear_size(uint32_t coded_height, uint32_t bytes_per_row,
+                            fuchsia_sysmem_PixelFormatType type) {
+  switch (type) {
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+    case fuchsia_sysmem_PixelFormatType_BGRA32:
+    case fuchsia_sysmem_PixelFormatType_BGR24:
+    case fuchsia_sysmem_PixelFormatType_RGB565:
+    case fuchsia_sysmem_PixelFormatType_RGB332:
+    case fuchsia_sysmem_PixelFormatType_RGB2220:
+    case fuchsia_sysmem_PixelFormatType_L8:
+      return coded_height * bytes_per_row;
+    case fuchsia_sysmem_PixelFormatType_I420:
+      return coded_height * bytes_per_row * 3 / 2;
+    case fuchsia_sysmem_PixelFormatType_M420:
+      return coded_height * bytes_per_row * 3 / 2;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return coded_height * bytes_per_row * 3 / 2;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return coded_height * bytes_per_row;
+    case fuchsia_sysmem_PixelFormatType_YV12:
+      return coded_height * bytes_per_row * 3 / 2;
+    default:
+      return 0u;
+  }
+}
+
 class LinearFormats : public ImageFormatSet {
+ public:
   bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
     if (pixel_format->has_format_modifier &&
         pixel_format->format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR) {
@@ -241,31 +314,8 @@ class LinearFormats : public ImageFormatSet {
   }
   uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
     ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
-
-    uint64_t coded_height = image_format->coded_height;
-    uint64_t bytes_per_row = image_format->bytes_per_row;
-    switch (image_format->pixel_format.type) {
-      case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-      case fuchsia_sysmem_PixelFormatType_BGRA32:
-      case fuchsia_sysmem_PixelFormatType_BGR24:
-      case fuchsia_sysmem_PixelFormatType_RGB565:
-      case fuchsia_sysmem_PixelFormatType_RGB332:
-      case fuchsia_sysmem_PixelFormatType_RGB2220:
-      case fuchsia_sysmem_PixelFormatType_L8:
-        return coded_height * bytes_per_row;
-      case fuchsia_sysmem_PixelFormatType_I420:
-        return coded_height * bytes_per_row * 3 / 2;
-      case fuchsia_sysmem_PixelFormatType_M420:
-        return coded_height * bytes_per_row * 3 / 2;
-      case fuchsia_sysmem_PixelFormatType_NV12:
-        return coded_height * bytes_per_row * 3 / 2;
-      case fuchsia_sysmem_PixelFormatType_YUY2:
-        return coded_height * bytes_per_row;
-      case fuchsia_sysmem_PixelFormatType_YV12:
-        return coded_height * bytes_per_row * 3 / 2;
-      default:
-        return 0u;
-    }
+    return linear_size(image_format->coded_height, image_format->bytes_per_row,
+                       image_format->pixel_format.type);
   }
   bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format,
 
@@ -299,6 +349,7 @@ class LinearFormats : public ImageFormatSet {
 
     return false;
   }
+
   bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
                                 uint32_t* row_bytes_out) const override {
     if (plane == 0) {
@@ -331,13 +382,80 @@ class LinearFormats : public ImageFormatSet {
 };
 
 constexpr LinearFormats kLinearFormats;
+
+class ArmTELinearFormats : public ImageFormatSet {
+  bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
+    if (!pixel_format->has_format_modifier) {
+      return false;
+    }
+    if (pixel_format->format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE)
+      return false;
+    switch (pixel_format->type) {
+      case fuchsia_sysmem_PixelFormatType_INVALID:
+      case fuchsia_sysmem_PixelFormatType_MJPEG:
+        return false;
+      case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      case fuchsia_sysmem_PixelFormatType_BGRA32:
+      case fuchsia_sysmem_PixelFormatType_BGR24:
+      case fuchsia_sysmem_PixelFormatType_I420:
+      case fuchsia_sysmem_PixelFormatType_M420:
+      case fuchsia_sysmem_PixelFormatType_NV12:
+      case fuchsia_sysmem_PixelFormatType_YUY2:
+      case fuchsia_sysmem_PixelFormatType_YV12:
+      case fuchsia_sysmem_PixelFormatType_RGB565:
+      case fuchsia_sysmem_PixelFormatType_RGB332:
+      case fuchsia_sysmem_PixelFormatType_RGB2220:
+      case fuchsia_sysmem_PixelFormatType_L8:
+        return true;
+    }
+    return false;
+  }
+
+  uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) const override {
+    ZX_DEBUG_ASSERT(IsSupported(&image_format->pixel_format));
+    uint64_t size = linear_size(image_format->coded_height, image_format->bytes_per_row,
+                                image_format->pixel_format.type);
+    uint64_t crc_size = arm_transaction_elimination_buffer_size(size, image_format->coded_width,
+                                                                image_format->coded_height);
+    return size + crc_size;
+  }
+
+  bool ImageFormatPlaneByteOffset(const fuchsia_sysmem_ImageFormat_2* image_format,
+
+                                  uint32_t plane, uint64_t* offset_out) const override {
+    if (plane < kTransactionEliminationPlane) {
+      return kLinearFormats.ImageFormatPlaneByteOffset(image_format, plane, offset_out);
+    } else if (plane == kTransactionEliminationPlane) {
+      uint64_t size = linear_size(image_format->coded_height, image_format->bytes_per_row,
+                                  image_format->pixel_format.type);
+      *offset_out = fbl::round_up(size, 64u);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool ImageFormatPlaneRowBytes(const fuchsia_sysmem_ImageFormat_2* image_format, uint32_t plane,
+                                uint32_t* row_bytes_out) const override {
+    if (plane < kTransactionEliminationPlane) {
+      return kLinearFormats.ImageFormatPlaneRowBytes(image_format, plane, row_bytes_out);
+    } else if (plane == kTransactionEliminationPlane) {
+      *row_bytes_out = arm_transaction_elimination_row_size(image_format->coded_width);
+      return true;
+    }
+    return false;
+  }
+};
+
 constexpr IntelTiledFormats kIntelFormats;
 constexpr AfbcFormats kAfbcFormats;
+constexpr ArmTELinearFormats kArmTELinearFormats;
 
 constexpr const ImageFormatSet* kImageFormats[] = {
     &kLinearFormats,
     &kIntelFormats,
     &kAfbcFormats,
+    &kArmTELinearFormats,
 };
 
 }  // namespace
@@ -590,7 +708,9 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem_PixelFormat* pixel_form
 bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
                                 uint32_t width, uint32_t* minimum_row_bytes_out) {
   if (constraints->pixel_format.has_format_modifier &&
-      constraints->pixel_format.format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR)
+      constraints->pixel_format.format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR &&
+      constraints->pixel_format.format_modifier.value !=
+          fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE)
     return false;
   if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
     return false;
@@ -728,5 +848,20 @@ bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
 
     default:
       return false;
+  }
+}
+
+bool ImageFormatCompatibleWithProtectedMemory(const fuchsia_sysmem_PixelFormat* pixel_format) {
+  if (!pixel_format->has_format_modifier)
+    return true;
+  switch (pixel_format->format_modifier.value) {
+    // TE formats occasionally need CPU writes to the TE buffer.
+    case fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE:
+    case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
+    case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
+      return false;
+
+    default:
+      return true;
   }
 }

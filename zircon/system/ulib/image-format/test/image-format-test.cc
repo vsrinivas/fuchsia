@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
 
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
 #include "fuchsia/sysmem/c/fidl.h"
+#include "fuchsia/sysmem/llcpp/fidl.h"
+
+namespace sysmem = llcpp::fuchsia::sysmem;
 
 TEST(ImageFormat, LinearComparison) {
   fuchsia_sysmem_PixelFormat plain = {};
@@ -145,4 +149,47 @@ TEST(ImageFormat, PlaneByteOffset) {
   EXPECT_TRUE(ImageFormatPlaneRowBytes(&image_format, 2, &row_bytes));
   EXPECT_EQ(kBytesPerRow / 2, row_bytes);
   EXPECT_FALSE(ImageFormatPlaneRowBytes(&image_format, 3, &row_bytes));
+}
+
+TEST(ImageFormat, TransactionEliminationFormats) {
+  sysmem::PixelFormat format;
+  format.type = sysmem::PixelFormatType::BGRA32;
+  format.has_format_modifier = true;
+  format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+
+  EXPECT_TRUE(image_format::FormatCompatibleWithProtectedMemory(format));
+  format.format_modifier.value = sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE;
+  EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
+
+  sysmem::ImageFormatConstraints constraints = {};
+  constraints.pixel_format = format;
+  constraints.min_coded_width = 12;
+  constraints.max_coded_width = 100;
+  constraints.min_coded_height = 12;
+  constraints.max_coded_height = 100;
+  constraints.bytes_per_row_divisor = 4 * 8;
+  constraints.max_bytes_per_row = 100000;
+
+  auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  EXPECT_TRUE(optional_format);
+  auto& image_format = *optional_format;
+  // The raw size would be 72 without bytes_per_row_divisor of 32.
+  EXPECT_EQ(96u, image_format.bytes_per_row);
+
+  // Check the color plane data.
+  uint32_t row_bytes;
+  uint64_t plane_offset;
+  EXPECT_TRUE(image_format::GetPlaneByteOffset(image_format, 0, &plane_offset));
+  EXPECT_EQ(0u, plane_offset);
+  EXPECT_TRUE(image_format::GetPlaneRowBytes(image_format, 0, &row_bytes));
+  EXPECT_EQ(image_format.bytes_per_row, row_bytes);
+
+  constexpr uint32_t kTePlane = 3;
+  // Check the TE plane data.
+  EXPECT_TRUE(image_format::GetPlaneByteOffset(image_format, kTePlane, &plane_offset));
+  EXPECT_LE(image_format.bytes_per_row * 17, plane_offset);
+  EXPECT_TRUE(image_format::GetPlaneRowBytes(image_format, kTePlane, &row_bytes));
+
+  // Row size should be rounded up to 64 bytes.
+  EXPECT_EQ(64, row_bytes);
 }

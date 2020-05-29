@@ -35,6 +35,17 @@ llcpp::fuchsia::sysmem::PixelFormat GetCppPixelFormat(const fuchsia_sysmem_Pixel
   return cpp;
 }
 
+fuchsia_sysmem_PixelFormat GetCPixelFormat(const llcpp::fuchsia::sysmem::PixelFormat& cpp) {
+  fuchsia_sysmem_PixelFormat c;
+  static_assert(std::is_trivially_copyable<llcpp::fuchsia::sysmem::PixelFormat>::value,
+                "Not trivially copyable");
+  static_assert(sizeof(c) == sizeof(cpp), "LLCPP and C pixel format don't match");
+  // Hacky copy that should work for now.
+  // TODO(fxb/37078): Switch away from C bindings everywhere.
+  memcpy(&c, &cpp, sizeof(c));
+  return c;
+}
+
 llcpp::fuchsia::sysmem::ImageFormat_2 GetCppImageFormat(const fuchsia_sysmem_ImageFormat_2& c) {
   sysmem::ImageFormat_2 cpp;
   static_assert(sizeof(cpp) == sizeof(c), "LLCPP and C image formats don't match");
@@ -84,6 +95,11 @@ bool GetPlaneRowBytes(const llcpp::fuchsia::sysmem::ImageFormat_2& image_format,
                       uint32_t* row_bytes_out) {
   fuchsia_sysmem_ImageFormat_2 c_constraints = GetCImageFormat(image_format);
   return ImageFormatPlaneRowBytes(&c_constraints, plane, row_bytes_out);
+}
+
+bool FormatCompatibleWithProtectedMemory(const llcpp::fuchsia::sysmem::PixelFormat& format) {
+  fuchsia_sysmem_PixelFormat c_pixel_format = GetCPixelFormat(format);
+  return ImageFormatCompatibleWithProtectedMemory(&c_pixel_format);
 }
 
 }  // namespace image_format
