@@ -15,7 +15,7 @@
   "pkg/zx/include/lib/zx/msi.h": "af0c1cbd3dd5ddc2db6ace1051a49cf3",
   "pkg/zx/include/lib/zx/object.h": "7656fbffa930cd9842cd234f78a6fcff",
   "pkg/zx/include/lib/zx/object_traits.h": "9f3d53f7fc3a52b63da403d501b96ace",
-  "pkg/zx/include/lib/zx/pager.h": "80cead693fe6a6e077cef578e7be892a",
+  "pkg/zx/include/lib/zx/pager.h": "326422aa751ed980949b460b3419d136",
   "pkg/zx/include/lib/zx/pmt.h": "de4bc48064d500288b2011c63705751f",
   "pkg/zx/include/lib/zx/port.h": "884ea70157f1a62104e4b94756bd53b5",
   "pkg/zx/include/lib/zx/process.h": "1b6fd58e047aebe47ea350d107653e95",

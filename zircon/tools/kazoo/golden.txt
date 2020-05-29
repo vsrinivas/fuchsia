@@ -548,6 +548,10 @@ TEXT ·Sys_pager_detach_vmo(SB),NOSPLIT,$0
 TEXT ·Sys_pager_supply_pages(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pager_supply_pages(SB)
 
+// func Sys_pager_op_range(pager Handle, op uint32, pager_vmo Handle, offset uint64, length uint64, data uint64) Status
+TEXT ·Sys_pager_op_range(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_pager_op_range(SB)
+
 // func Sys_pc_firmware_tables(handle Handle, acpi_rsdp *Paddr, smbios *Paddr) Status
 TEXT ·Sys_pc_firmware_tables(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pc_firmware_tables(SB)
@@ -1284,6 +1288,10 @@ func Sys_pager_supply_pages(pager Handle, pager_vmo Handle, offset uint64, lengt
 
 //go:noescape
 //go:nosplit
+func Sys_pager_op_range(pager Handle, op uint32, pager_vmo Handle, offset uint64, length uint64, data uint64) Status
+
+//go:noescape
+//go:nosplit
 func Sys_pc_firmware_tables(handle Handle, acpi_rsdp *Paddr, smbios *Paddr) Status
 
 //go:noescape
@@ -2013,6 +2021,10 @@ TEXT ·Sys_pager_detach_vmo(SB),NOSPLIT,$0
 // func Sys_pager_supply_pages(pager Handle, pager_vmo Handle, offset uint64, length uint64, aux_vmo Handle, aux_offset uint64) Status
 TEXT ·Sys_pager_supply_pages(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_pager_supply_pages(SB)
+
+// func Sys_pager_op_range(pager Handle, op uint32, pager_vmo Handle, offset uint64, length uint64, data uint64) Status
+TEXT ·Sys_pager_op_range(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_pager_op_range(SB)
 
 // func Sys_pc_firmware_tables(handle Handle, acpi_rsdp *Paddr, smbios *Paddr) Status
 TEXT ·Sys_pc_firmware_tables(SB),NOSPLIT,$0
@@ -3968,6 +3980,26 @@ TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$0-44
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_pager_op_range(pager uint32, op uint32, pager_vmo uint32, offset uint64, length uint64, data uint64) int32
+TEXT runtime·vdsoCall_zx_pager_op_range(SB),NOSPLIT,$0-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW pager+0(FP), R0
+	MOVW op+4(FP), R1
+	MOVW pager_vmo+8(FP), R2
+	MOVD offset+16(FP), R3
+	MOVD length+24(FP), R4
+	MOVD data+32(FP), R5
+	BL vdso_zx_pager_op_range(SB)
+	MOVW R0, ret+40(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_pc_firmware_tables(handle uint32, acpi_rsdp unsafe.Pointer, smbios unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_pc_firmware_tables(SB),NOSPLIT,$0-28
 	GO_ARGS
@@ -5657,6 +5689,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_pager_create_vmo", 0x564fdd48, &vdso_zx_pager_create_vmo},
 	{"_zx_pager_detach_vmo", 0x2072c15d, &vdso_zx_pager_detach_vmo},
 	{"_zx_pager_supply_pages", 0x69d1fc7f, &vdso_zx_pager_supply_pages},
+	{"_zx_pager_op_range", 0x5e8195ae, &vdso_zx_pager_op_range},
 	{"_zx_pc_firmware_tables", 0x1a05d1fe, &vdso_zx_pc_firmware_tables},
 	{"_zx_pci_get_nth_device", 0x32106f08, &vdso_zx_pci_get_nth_device},
 	{"_zx_pci_enable_bus_master", 0x76091cab, &vdso_zx_pci_enable_bus_master},
@@ -5839,6 +5872,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_pager_create_vmo zx_pager_create_vmo
 //go:cgo_import_dynamic vdso_zx_pager_detach_vmo zx_pager_detach_vmo
 //go:cgo_import_dynamic vdso_zx_pager_supply_pages zx_pager_supply_pages
+//go:cgo_import_dynamic vdso_zx_pager_op_range zx_pager_op_range
 //go:cgo_import_dynamic vdso_zx_pc_firmware_tables zx_pc_firmware_tables
 //go:cgo_import_dynamic vdso_zx_pci_get_nth_device zx_pci_get_nth_device
 //go:cgo_import_dynamic vdso_zx_pci_enable_bus_master zx_pci_enable_bus_master
@@ -6020,6 +6054,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_pager_create_vmo vdso_zx_pager_create_vmo
 //go:linkname vdso_zx_pager_detach_vmo vdso_zx_pager_detach_vmo
 //go:linkname vdso_zx_pager_supply_pages vdso_zx_pager_supply_pages
+//go:linkname vdso_zx_pager_op_range vdso_zx_pager_op_range
 //go:linkname vdso_zx_pc_firmware_tables vdso_zx_pc_firmware_tables
 //go:linkname vdso_zx_pci_get_nth_device vdso_zx_pci_get_nth_device
 //go:linkname vdso_zx_pci_enable_bus_master vdso_zx_pci_enable_bus_master
@@ -6473,6 +6508,10 @@ func vdsoCall_zx_pager_supply_pages(pager uint32, pager_vmo uint32, offset uint6
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_pager_op_range(pager uint32, op uint32, pager_vmo uint32, offset uint64, length uint64, data uint64) int32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_pc_firmware_tables(handle uint32, acpi_rsdp unsafe.Pointer, smbios unsafe.Pointer) int32
 
 //go:noescape
@@ -6922,6 +6961,7 @@ var (
 	vdso_zx_pager_create_vmo uintptr
 	vdso_zx_pager_detach_vmo uintptr
 	vdso_zx_pager_supply_pages uintptr
+	vdso_zx_pager_op_range uintptr
 	vdso_zx_pc_firmware_tables uintptr
 	vdso_zx_pci_get_nth_device uintptr
 	vdso_zx_pci_enable_bus_master uintptr
@@ -9077,6 +9117,31 @@ TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$8-44
 	MOVL aux_vmo+24(FP), R8
 	MOVQ aux_offset+32(FP), R9
 	MOVQ vdso_zx_pager_supply_pages(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_pager_op_range(pager uint32, op uint32, pager_vmo uint32, offset uint64, length uint64, data uint64) int32
+TEXT runtime·vdsoCall_zx_pager_op_range(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL pager+0(FP), DI
+	MOVL op+4(FP), SI
+	MOVL pager_vmo+8(FP), DX
+	MOVQ offset+16(FP), CX
+	MOVQ length+24(FP), R8
+	MOVQ data+32(FP), R9
+	MOVQ vdso_zx_pager_op_range(SB), AX
 	CALL AX
 	MOVL AX, ret+40(FP)
 	POPQ R14
@@ -14749,6 +14814,64 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_status_t"
     },
     {
+      "name": "pager_op_range",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Perform", "an", "operation", "on", "a", "range", "of", "a", "pager", "owned", "vmo", "."
+      ],
+      "requirements": [
+        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
+        "pager_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "."
+      ],
+      "arguments": [
+        {
+          "name": "pager",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "op",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "pager_vmo",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "offset",
+          "type": "uint64_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "length",
+          "type": "uint64_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "data",
+          "type": "uint64_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "pc_firmware_tables",
       "attributes": [
         "*"
@@ -18869,6 +18992,15 @@ KERNEL_SYSCALL(pager_supply_pages, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t aux_vmo,
     uint64_t aux_offset))
 
+KERNEL_SYSCALL(pager_op_range, zx_status_t, /* no attributes */, 6,
+    (pager, op, pager_vmo, offset, length, data), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
+    uint32_t op,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager_vmo,
+    uint64_t offset,
+    uint64_t length,
+    uint64_t data))
+
 KERNEL_SYSCALL(pc_firmware_tables, zx_status_t, /* no attributes */, 3,
     (handle, acpi_rsdp, smbios), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -20085,6 +20217,12 @@ syscall_result wrapper_pager_detach_vmo(zx_handle_t pager, zx_handle_t vmo, uint
 syscall_result wrapper_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo, uint64_t offset, uint64_t length, zx_handle_t aux_vmo, uint64_t aux_offset, uint64_t pc) {
     return do_syscall(ZX_SYS_pager_supply_pages, pc, &VDso::ValidSyscallPC::pager_supply_pages, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_pager_supply_pages(pager, pager_vmo, offset, length, aux_vmo, aux_offset);
+        return result;
+    });
+}
+syscall_result wrapper_pager_op_range(zx_handle_t pager, uint32_t op, zx_handle_t pager_vmo, uint64_t offset, uint64_t length, uint64_t data, uint64_t pc) {
+    return do_syscall(ZX_SYS_pager_op_range, pc, &VDso::ValidSyscallPC::pager_op_range, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_pager_op_range(pager, op, pager_vmo, offset, length, data);
         return result;
     });
 }
@@ -21340,6 +21478,15 @@ KERNEL_SYSCALL(pager_supply_pages, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t aux_vmo,
     uint64_t aux_offset))
 
+KERNEL_SYSCALL(pager_op_range, zx_status_t, /* no attributes */, 6,
+    (pager, op, pager_vmo, offset, length, data), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
+    uint32_t op,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager_vmo,
+    uint64_t offset,
+    uint64_t length,
+    uint64_t data))
+
 KERNEL_SYSCALL(pc_firmware_tables, zx_status_t, /* no attributes */, 3,
     (handle, acpi_rsdp, smbios), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -22490,6 +22637,15 @@ _ZX_SYSCALL_DECL(pager_supply_pages, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t aux_vmo,
     uint64_t aux_offset))
 
+_ZX_SYSCALL_DECL(pager_op_range, zx_status_t, /* no attributes */, 6,
+    (pager, op, pager_vmo, offset, length, data), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
+    uint32_t op,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager_vmo,
+    uint64_t offset,
+    uint64_t length,
+    uint64_t data))
+
 _ZX_SYSCALL_DECL(pc_firmware_tables, zx_status_t, /* no attributes */, 3,
     (handle, acpi_rsdp, smbios), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -23568,6 +23724,15 @@ extern {
         aux_offset: u64
         ) -> zx_status_t;
 
+    pub fn zx_pager_op_range(
+        pager: zx_handle_t,
+        op: u32,
+        pager_vmo: zx_handle_t,
+        offset: u64,
+        length: u64,
+        data: u64
+        ) -> zx_status_t;
+
     pub fn zx_pc_firmware_tables(
         handle: zx_handle_t,
         acpi_rsdp: *mut zx_paddr_t,
@@ -24240,92 +24405,93 @@ extern {
 #define ZX_SYS_pager_create_vmo 78
 #define ZX_SYS_pager_detach_vmo 79
 #define ZX_SYS_pager_supply_pages 80
-#define ZX_SYS_pc_firmware_tables 81
-#define ZX_SYS_pci_get_nth_device 82
-#define ZX_SYS_pci_enable_bus_master 83
-#define ZX_SYS_pci_reset_device 84
-#define ZX_SYS_pci_config_read 85
-#define ZX_SYS_pci_config_write 86
-#define ZX_SYS_pci_cfg_pio_rw 87
-#define ZX_SYS_pci_get_bar 88
-#define ZX_SYS_pci_map_interrupt 89
-#define ZX_SYS_pci_query_irq_mode 90
-#define ZX_SYS_pci_set_irq_mode 91
-#define ZX_SYS_pci_init 92
-#define ZX_SYS_pci_add_subtract_io_range 93
-#define ZX_SYS_pmt_unpin 94
-#define ZX_SYS_port_create 95
-#define ZX_SYS_port_queue 96
-#define ZX_SYS_port_wait 97
-#define ZX_SYS_port_cancel 98
-#define ZX_SYS_process_exit 99
-#define ZX_SYS_process_create 100
-#define ZX_SYS_process_start 101
-#define ZX_SYS_process_read_memory 102
-#define ZX_SYS_process_write_memory 103
-#define ZX_SYS_profile_create 104
-#define ZX_SYS_resource_create 105
-#define ZX_SYS_smc_call 106
-#define ZX_SYS_socket_create 107
-#define ZX_SYS_socket_write 108
-#define ZX_SYS_socket_read 109
-#define ZX_SYS_socket_shutdown 110
-#define ZX_SYS_stream_create 111
-#define ZX_SYS_stream_writev 112
-#define ZX_SYS_stream_writev_at 113
-#define ZX_SYS_stream_readv 114
-#define ZX_SYS_stream_readv_at 115
-#define ZX_SYS_stream_seek 116
-#define ZX_SYS_syscall_test_0 117
-#define ZX_SYS_syscall_test_1 118
-#define ZX_SYS_syscall_test_2 119
-#define ZX_SYS_syscall_test_3 120
-#define ZX_SYS_syscall_test_4 121
-#define ZX_SYS_syscall_test_5 122
-#define ZX_SYS_syscall_test_6 123
-#define ZX_SYS_syscall_test_7 124
-#define ZX_SYS_syscall_test_8 125
-#define ZX_SYS_syscall_test_wrapper 126
-#define ZX_SYS_syscall_test_handle_create 127
-#define ZX_SYS_system_get_event 128
-#define ZX_SYS_system_mexec 129
-#define ZX_SYS_system_mexec_payload_get 130
-#define ZX_SYS_system_powerctl 131
-#define ZX_SYS_task_suspend 132
-#define ZX_SYS_task_suspend_token 133
-#define ZX_SYS_task_create_exception_channel 134
-#define ZX_SYS_task_kill 135
-#define ZX_SYS_thread_exit 136
-#define ZX_SYS_thread_create 137
-#define ZX_SYS_thread_start 138
-#define ZX_SYS_thread_read_state 139
-#define ZX_SYS_thread_write_state 140
-#define ZX_SYS_timer_create 141
-#define ZX_SYS_timer_set 142
-#define ZX_SYS_timer_cancel 143
-#define ZX_SYS_vcpu_create 144
-#define ZX_SYS_vcpu_resume 145
-#define ZX_SYS_vcpu_interrupt 146
-#define ZX_SYS_vcpu_read_state 147
-#define ZX_SYS_vcpu_write_state 148
-#define ZX_SYS_vmar_allocate 149
-#define ZX_SYS_vmar_destroy 150
-#define ZX_SYS_vmar_map 151
-#define ZX_SYS_vmar_unmap 152
-#define ZX_SYS_vmar_protect 153
-#define ZX_SYS_vmar_op_range 154
-#define ZX_SYS_vmo_create 155
-#define ZX_SYS_vmo_read 156
-#define ZX_SYS_vmo_write 157
-#define ZX_SYS_vmo_get_size 158
-#define ZX_SYS_vmo_set_size 159
-#define ZX_SYS_vmo_op_range 160
-#define ZX_SYS_vmo_create_child 161
-#define ZX_SYS_vmo_set_cache_policy 162
-#define ZX_SYS_vmo_replace_as_executable 163
-#define ZX_SYS_vmo_create_contiguous 164
-#define ZX_SYS_vmo_create_physical 165
-#define ZX_SYS_COUNT 166
+#define ZX_SYS_pager_op_range 81
+#define ZX_SYS_pc_firmware_tables 82
+#define ZX_SYS_pci_get_nth_device 83
+#define ZX_SYS_pci_enable_bus_master 84
+#define ZX_SYS_pci_reset_device 85
+#define ZX_SYS_pci_config_read 86
+#define ZX_SYS_pci_config_write 87
+#define ZX_SYS_pci_cfg_pio_rw 88
+#define ZX_SYS_pci_get_bar 89
+#define ZX_SYS_pci_map_interrupt 90
+#define ZX_SYS_pci_query_irq_mode 91
+#define ZX_SYS_pci_set_irq_mode 92
+#define ZX_SYS_pci_init 93
+#define ZX_SYS_pci_add_subtract_io_range 94
+#define ZX_SYS_pmt_unpin 95
+#define ZX_SYS_port_create 96
+#define ZX_SYS_port_queue 97
+#define ZX_SYS_port_wait 98
+#define ZX_SYS_port_cancel 99
+#define ZX_SYS_process_exit 100
+#define ZX_SYS_process_create 101
+#define ZX_SYS_process_start 102
+#define ZX_SYS_process_read_memory 103
+#define ZX_SYS_process_write_memory 104
+#define ZX_SYS_profile_create 105
+#define ZX_SYS_resource_create 106
+#define ZX_SYS_smc_call 107
+#define ZX_SYS_socket_create 108
+#define ZX_SYS_socket_write 109
+#define ZX_SYS_socket_read 110
+#define ZX_SYS_socket_shutdown 111
+#define ZX_SYS_stream_create 112
+#define ZX_SYS_stream_writev 113
+#define ZX_SYS_stream_writev_at 114
+#define ZX_SYS_stream_readv 115
+#define ZX_SYS_stream_readv_at 116
+#define ZX_SYS_stream_seek 117
+#define ZX_SYS_syscall_test_0 118
+#define ZX_SYS_syscall_test_1 119
+#define ZX_SYS_syscall_test_2 120
+#define ZX_SYS_syscall_test_3 121
+#define ZX_SYS_syscall_test_4 122
+#define ZX_SYS_syscall_test_5 123
+#define ZX_SYS_syscall_test_6 124
+#define ZX_SYS_syscall_test_7 125
+#define ZX_SYS_syscall_test_8 126
+#define ZX_SYS_syscall_test_wrapper 127
+#define ZX_SYS_syscall_test_handle_create 128
+#define ZX_SYS_system_get_event 129
+#define ZX_SYS_system_mexec 130
+#define ZX_SYS_system_mexec_payload_get 131
+#define ZX_SYS_system_powerctl 132
+#define ZX_SYS_task_suspend 133
+#define ZX_SYS_task_suspend_token 134
+#define ZX_SYS_task_create_exception_channel 135
+#define ZX_SYS_task_kill 136
+#define ZX_SYS_thread_exit 137
+#define ZX_SYS_thread_create 138
+#define ZX_SYS_thread_start 139
+#define ZX_SYS_thread_read_state 140
+#define ZX_SYS_thread_write_state 141
+#define ZX_SYS_timer_create 142
+#define ZX_SYS_timer_set 143
+#define ZX_SYS_timer_cancel 144
+#define ZX_SYS_vcpu_create 145
+#define ZX_SYS_vcpu_resume 146
+#define ZX_SYS_vcpu_interrupt 147
+#define ZX_SYS_vcpu_read_state 148
+#define ZX_SYS_vcpu_write_state 149
+#define ZX_SYS_vmar_allocate 150
+#define ZX_SYS_vmar_destroy 151
+#define ZX_SYS_vmar_map 152
+#define ZX_SYS_vmar_unmap 153
+#define ZX_SYS_vmar_protect 154
+#define ZX_SYS_vmar_op_range 155
+#define ZX_SYS_vmo_create 156
+#define ZX_SYS_vmo_read 157
+#define ZX_SYS_vmo_write 158
+#define ZX_SYS_vmo_get_size 159
+#define ZX_SYS_vmo_set_size 160
+#define ZX_SYS_vmo_op_range 161
+#define ZX_SYS_vmo_create_child 162
+#define ZX_SYS_vmo_set_cache_policy 163
+#define ZX_SYS_vmo_replace_as_executable 164
+#define ZX_SYS_vmo_create_contiguous 165
+#define ZX_SYS_vmo_create_physical 166
+#define ZX_SYS_COUNT 167
 ----- syscall-numbers.h END -----
 
 

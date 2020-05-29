@@ -32,4 +32,15 @@ protocol pager {
                        handle<vmo> aux_vmo,
                        uint64 aux_offset)
         -> (status status);
+
+    /// Perform an operation on a range of a pager owned vmo.
+    /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
+    /// Rights: pager_vmo must be of type ZX_OBJ_TYPE_VMO.
+    pager_op_range(handle<pager> pager,
+                   uint32 op,
+                   handle<vmo> pager_vmo,
+                   uint64 offset,
+                   uint64 length,
+                   uint64 data)
+        -> (status status);
 };

@@ -43,6 +43,11 @@ class pager final : public object<pager> {
                            const vmo& aux_vmo, uint64_t aux_offset) const {
     return zx_pager_supply_pages(get(), pager_vmo.get(), offset, length, aux_vmo.get(), aux_offset);
   }
+
+  zx_status_t op_range(uint32_t op, const vmo& pager_vmo, uint64_t offset, uint64_t length,
+                       uint64_t data) const {
+    return zx_pager_op_range(get(), op, pager_vmo.get(), offset, length, data);
+  }
 };
 
 using unowned_pager = unowned<pager>;

@@ -70,8 +70,12 @@ or *aux_offset* is not page aligned.
 ## SEE ALSO
 
  - [`zx_pager_create_vmo()`]
+ - [`zx_pager_detach_vmo()`]
+ - [`zx_pager_op_range()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_pager_create_vmo()`]: pager_create_vmo.md
+[`zx_pager_detach_vmo()`]: pager_detach_vmo.md
+[`zx_pager_op_range()`]: pager_op_range.md
 [`zx_vmo_create()`]: vmo_create.md

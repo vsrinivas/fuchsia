@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
 #include <object/pager_dispatcher.h>
@@ -141,4 +142,10 @@ zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo, uin
   }
 
   return pager_vmo_dispatcher->vmo()->SupplyPages(offset, size, &pages);
+}
+
+// zx_status_t zx_pager_op_range
+zx_status_t sys_pager_op_range(zx_handle_t pager, uint32_t op, zx_handle_t pager_vmo,
+                               uint64_t offset, uint64_t length, uint64_t data) {
+  return ZX_ERR_NOT_SUPPORTED;
 }

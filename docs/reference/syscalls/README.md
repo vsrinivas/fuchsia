@@ -117,6 +117,7 @@
 + [pager_create_vmo](pager_create_vmo.md) - create a pager owned vmo
 + [pager_detach_vmo](pager_detach_vmo.md) - detaches a pager from a vmo
 + [pager_supply_pages](pager_supply_pages.md) - supply pages into a pager owned vmo
++ [pager_op_range](pager_op_range.md) - perform an operation on a range of a pager owned vmo
 
 ## Cryptographically Secure RNG
 + [cprng_add_entropy](cprng_add_entropy.md)
