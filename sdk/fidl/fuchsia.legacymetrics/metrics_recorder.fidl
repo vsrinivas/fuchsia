@@ -5,11 +5,22 @@
 library fuchsia.legacymetrics;
 
 /// Accepts metrics events and uploads them to UMA servers for analysis. Metrics
-/// events are batched and uploaded at a regular interval. For similar behavior,
-/// see Chromium's MetricsService:
+/// events are batched and uploaded at a regular interval. If this service is
+/// unable to upload events, it will try persisting them for later re-upload.
+/// For similar behavior, see Chromium's MetricsService:
 /// https://chromium.googlesource.com/chromium/src.git/+/refs/heads/master/components/metrics/metrics_service.cc
 [Discoverable]
 protocol MetricsRecorder {
-    /// Processes and enqueues a batch of events for upload.
+    /// Processes and enqueues a batch of events for upload. Returns after the
+    /// provided metrics are successfully processed by the service. Clients
+    /// should wait for a completion callback before sending subsequent Record()
+    /// requests.
     Record(vector<Event>:MAX events) -> ();
+
+    /// Indicates that this service will close all connections soon. Upon
+    /// receiving this event, each client should call Record() once for any
+    /// available metrics and close its connection to this sevice. Otherwise,
+    /// this service will close all incoming connections after a predefined
+    /// timeout starting from the moment it broadcasts this event.
+    -> OnCloseSoon();
 };
