@@ -15,11 +15,15 @@ protocol LastRebootInfoProvider {
 /// Information about why a device last rebooted.
 table LastReboot {
     /// Whether the last reboot was graceful, i.e. the device didn't reboot in response to an error
-    /// and rebooted in a controlled manner. This can be determined from |reason|, however
-    /// |graceful| is provided for clients that care don't need the detail |reason| provides.
+    /// and rebooted in a controlled manner.
     ///
-    /// For instance, a reboot after a software update is graceful while a reboot due to the system
-    /// running out of memory is not.
+    /// This field allows clients to know whether the last reboot was graceful without having to
+    /// parse the optional |reason| field. This is useful when |reason| is not set, i.e. because
+    /// the system doesn't know more than the fact that the reboot was graceful, or when the API
+    /// evolves to support new RebootReason values and the clients hasn't been updated yet.
+    ///
+    /// This field is always has a value if |reason| is provided. However, |reason| might not
+    /// always have a value this field is provided.
     1: bool graceful;
 
     /// Why a device last rebooted.
@@ -36,6 +40,8 @@ enum RebootReason : uint16 {
     ///
     /// In the future, additional, more granular reasons for graceful reboots may be added when the
     /// platform can distinguish between them.
+    [Deprecated = "In the event of a generic graceful reboot |graceful| will be set, but no reason
+    provided"]
     GENERIC_GRACEFUL = 1;
 
     /// The device booted from a cold state.
