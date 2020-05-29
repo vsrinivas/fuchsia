@@ -135,15 +135,14 @@ fn consume_sme_status_update(state: &mut ApStateUpdate, cbw: Cbw, update: fidl_s
     state.clients = Some(ConnectedClientInformation { count: update.num_clients as u8 })
 }
 
-#[allow(unused)]
 async fn serve(
     iface_id: u16,
     proxy: fidl_sme::ApSmeProxy,
     sme_event_stream: fidl_sme::ApSmeEventStream,
     req_stream: mpsc::Receiver<ManualRequest>,
     message_sender: ApListenerMessageSender,
+    sender: oneshot::Sender<()>,
 ) {
-    let (sender, receiver) = oneshot::channel();
     let state_machine = stopping_state(sender, proxy, req_stream.into_future(), message_sender)
         .into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
@@ -155,7 +154,6 @@ async fn serve(
             info!("Error reading from AP SME channel of iface #{}: {}",
                 iface_id, e);
         },
-        _ = receiver.fuse() => {},
     }
     info!("Removed AP for iface #{}", iface_id);
 }
@@ -1388,5 +1386,38 @@ mod tests {
 
         // Run the state machine and expect it to exit
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+    }
+
+    #[test]
+    fn test_serve_continues_after_stop() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let sme_event_stream = test_values.sme_proxy.take_event_stream();
+        let sme_fut = test_values.sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+
+        let (sender, mut receiver) = oneshot::channel();
+        let fut = serve(
+            0,
+            test_values.sme_proxy,
+            sme_event_stream,
+            test_values.ap_req_stream,
+            test_values.update_sender,
+            sender,
+        );
+        pin_mut!(fut);
+
+        // Run the state machine so that the it makes a Stop request.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ApSmeRequest::Stop{ responder }) => {
+                responder.send().expect("could not send SME stop response");
+            }
+        );
+
+        // Run the future again and ensure that it has not exited after receiving the response.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
     }
 }
