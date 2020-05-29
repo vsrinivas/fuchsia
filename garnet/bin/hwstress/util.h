@@ -7,6 +7,8 @@
 
 #include <lib/zx/time.h>
 
+#include <string>
+
 namespace hwstress {
 
 // Convert double representing a number of seconds to a zx::duration.
@@ -14,6 +16,9 @@ zx::duration SecsToDuration(double secs);
 
 // Convert zx::duration to double representing the number of seconds.
 double DurationToSecs(zx::duration d);
+
+// Represent a double as a hexadecimal constant.
+std::string DoubleAsHex(double v);
 
 }  // namespace hwstress
 

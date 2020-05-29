@@ -7,6 +7,9 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
+#include <cstdio>
+#include <string>
+
 namespace hwstress {
 
 zx::duration SecsToDuration(double secs) {
@@ -14,5 +17,18 @@ zx::duration SecsToDuration(double secs) {
 }
 
 double DurationToSecs(zx::duration d) { return d.to_nsecs() / 1'000'000'000.0; }
+
+std::string DoubleAsHex(double v) {
+  // Standards-compliant way to convert a double to a long. The compiler will
+  // just turn this into a register move.
+  uint64_t n;
+  static_assert(sizeof(uint64_t) == sizeof(double));
+  memcpy(&n, &v, sizeof(double));
+
+  // Print out the long as a string.
+  char buffer[19];  // len("0x") + 16 digits + len("\0")
+  snprintf(buffer, sizeof(buffer), "0x%016lx", n);
+  return std::string(buffer);
+}
 
 }  // namespace hwstress
