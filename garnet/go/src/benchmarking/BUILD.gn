@@ -24,7 +24,7 @@ unittest_package("go_benchmarking_tests") {
   tests = [
     {
       name = "go_benchmarking_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
