@@ -4,8 +4,8 @@
 
 source_set("sanitizers") {
   deps = [
-    "$zx/system/fidl/fuchsia-debugdata:c.headers",
-    "$zx/system/fidl/fuchsia-io:c.headers",
+    "$zx/system/fidl:fuchsia-debugdata.c_header",
+    "$zx/system/fidl:fuchsia-io.c_header",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/musl:musl_internal",
   ]

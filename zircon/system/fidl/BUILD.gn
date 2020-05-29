@@ -2,8 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(BLD-353): This is all temporary hacks for integrating with
-# the legacy Fuchsia GN build.  This file should not exist at all.
+import("$zx/public/gn/fidl_c_header.gni")
+
+# The following targets expose C headers for the few FIDL libraries that are
+# still needed in the ZN build.
+
+fidl_c_header("fuchsia-debugdata") {
+  sources = [ "fuchsia-debugdata/debugdata.fidl" ]
+}
+
+fidl_c_header("fuchsia-io") {
+  sources = [ "fuchsia-io/io.fidl" ]
+
+  deps = [
+    ":fuchsia-mem",
+    ":zx",
+  ]
+}
+
+fidl_c_header("fuchsia-mem") {
+  sources = [
+    "fuchsia-mem/buffer.fidl",
+    "fuchsia-mem/range.fidl",
+  ]
+}
+
+fidl_c_header("zx") {
+  sources = [ "$zx/vdso/zx_common.fidl" ]
+}
+
+# The following group is meant to gather data about FIDL libraries and pass it
+# to the GN build.
 
 group("fidl") {
   deps = [

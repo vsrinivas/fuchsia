@@ -1,0 +1,154 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#  List of libraries that are cleared for use with this template.
+
+allowed_libraries = [
+  "fuchsia.debugdata",
+  "fuchsia.io",
+  "fuchsia.mem",
+  "zx",
+]
+
+# This template provides the minimum build support for generating C headers out
+# of FIDL libraries.
+#
+# Parameters
+#
+#  sources
+#    Required: List of `.fidl` source files.
+#
+#  deps
+#    Optional: Other `fidl_c_header` targets this target depends on.
+
+template("fidl_c_header") {
+  assert(defined(invoker.sources), "Sources are mandatory")
+
+  # Parameters used in every toolchain.
+  fidlc_target = "$target_name.fidlc"
+  fidl_name = string_replace(target_name, "-", ".")
+  fidl_path = string_replace(fidl_name, ".", "/")
+  default_gen_dir =
+      get_label_info("//:bogus($default_toolchain)", "target_gen_dir")
+  include_dir = "$default_gen_dir/$target_name.fidl/include"
+  header_file = "$include_dir/$fidl_path/c/fidl.h"
+
+  # Check that this is one of the authorized libraries.
+  if (allowed_libraries + [ fidl_name ] - [ fidl_name ] == allowed_libraries) {
+    assert(false,
+           "fidl_c_header may only be used with the following " +
+               "libraries: $allowed_libraries.")
+  }
+
+  # Pre-process the dependencies so that they all look like:
+  #   //foo/bar:blah
+  fidl_deps = []
+  if (defined(invoker.deps)) {
+    foreach(dep, invoker.deps) {
+      assert(get_label_info(dep, "toolchain") == current_toolchain,
+             "fidl_c_header() `deps` must be in the same toolchain")
+      label = get_label_info(dep, "label_no_toolchain")
+      fidl_deps += [ label ]
+    }
+  }
+
+  if (current_toolchain == default_toolchain) {
+    # fidlc is invoked once in the default toolchain; targets in other
+    # toolchains simply defer to it.
+
+    # Names of the various targets declared by this template.
+    library_target = "$target_name.library"
+    rsp_target = "$target_name.rsp"
+    depfile_target = "$target_name.depfile"
+
+    # Intermediate files needed by fidlc.
+    rsp_file = "$target_gen_dir/$target_name.fidl.rsp"
+    dep_file = "$target_gen_dir/$target_name.fidl.d"
+
+    # Represents the FIDL library itself.
+    # This lets dependent have access to the library's sources.
+    group(library_target) {
+      deps = []
+      foreach(dep, fidl_deps) {
+        deps += [ "$dep.library" ]
+      }
+      metadata = {
+        # These inputs are needed both here and in every dependent library.
+        # Each --files switch introduces a group of source files that make
+        # up a single FIDL library (all have identical `library ...;` lines).
+        fidl_rspfile =
+            [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
+      }
+    }
+
+    # Generates a response file with every "--files" switch provided by
+    # dependencies.
+    generated_file(rsp_target) {
+      deps = [ ":$library_target" ]
+      outputs = [ rsp_file ]
+      output_conversion = "list lines"
+      data_keys = [ "fidl_rspfile" ]
+    }
+
+    # Inspects the contents of the response file and extracts file references from
+    # it to create a depfile.
+    # This depfile will be attached to the target invoking fidlc to ensure the
+    # tool gets re-run every time a source changes.
+    action(depfile_target) {
+      script = "$zx/public/gn/create_fidl_depfile.py"
+      inputs = [ rsp_file ]
+      outputs = [ dep_file ]
+      args = [
+        "--rsp-file",
+        rebase_path(rsp_file, root_build_dir),
+        "--dep-target",
+        rebase_path(header_file, root_build_dir),
+        "--dep-file",
+        rebase_path(dep_file, root_build_dir),
+      ]
+      deps = [ ":$rsp_target" ]
+    }
+
+    # Invokes fidlc to generate a C header file.
+    host_tool_action(fidlc_target) {
+      tool = "$zx/tools/fidl:fidlc"
+      outputs = [ header_file ]
+      deps = [
+        ":$depfile_target",
+        ":$library_target",
+        ":$rsp_target",
+      ]
+      sources = [ rsp_file ]
+      depfile = dep_file
+      args = [
+        "--c-header",
+        rebase_path(header_file, root_build_dir),
+        "--name",
+        fidl_name,
+        "@" + rebase_path(rsp_file, root_build_dir),
+      ]
+    }
+  } else {  # current_toolchain != default_toolchain
+    config_target = "$target_name.config"
+    header_target = "$target_name.c_header"
+
+    not_needed(invoker, [ "sources" ])
+
+    # Allows dependents to find the header in the output directory.
+    config(config_target) {
+      include_dirs = [ include_dir ]
+    }
+
+    # Presents the generated header as a classic C source.
+    source_set(header_target) {
+      sources = [ header_file ]
+      public_configs = [ ":$config_target" ]
+      deps = [ ":$fidlc_target($default_toolchain)" ]
+      public_deps = []
+      foreach(dep, fidl_deps) {
+        public_deps += [ "$dep.c_header" ]
+      }
+    }
+  }
+}
