@@ -18,11 +18,11 @@ executable("waitfor") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "waitfor.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/gpt",
   ]
 }

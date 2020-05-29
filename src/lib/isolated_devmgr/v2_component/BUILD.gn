@@ -77,11 +77,11 @@ source_set("client") {
     "ram_disk.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/sync",
-    "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/ulib/fs-management",
   ]
   public_deps = [

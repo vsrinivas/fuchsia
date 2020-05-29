@@ -42,12 +42,12 @@ source_set("common") {
   ]
   deps = [ "//zircon/public/lib/pretty" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-device:c",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/fzl",
   ]
 

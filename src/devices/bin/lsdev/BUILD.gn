@@ -8,8 +8,8 @@ executable("lsdev") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "lsdev.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
   ]
 }
 

@@ -231,9 +231,9 @@ test("name_provider_no_network_test") {
 
   deps = [
     ":device_name_provider",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 }
 
@@ -242,8 +242,8 @@ test("name_provider_service_not_present_test") {
 
   deps = [
     ":device_name_provider",
+    "//sdk/fidl/fuchsia.device",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-device",
   ]
 }
 

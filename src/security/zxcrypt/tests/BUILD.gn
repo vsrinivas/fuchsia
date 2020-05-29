@@ -33,6 +33,7 @@ test("zxcrypt") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//src/lib/ddk",
     "//src/security/zxcrypt:zxcrypt-fdio",
@@ -42,7 +43,6 @@ test("zxcrypt") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/digest",

@@ -30,6 +30,7 @@ source_set("lib") {
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.hardware.pty",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
@@ -55,7 +56,6 @@ source_set("lib") {
     "//src/sys/component_index/fidl:index",
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/rapidjson",
-    "//zircon/system/fidl/fuchsia-device",
   ]
 }
 

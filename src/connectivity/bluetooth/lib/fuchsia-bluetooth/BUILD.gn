@@ -23,6 +23,7 @@ rustc_library("fuchsia-bluetooth") {
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -44,7 +45,6 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
   ]
 }
 

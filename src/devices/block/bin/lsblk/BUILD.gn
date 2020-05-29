@@ -8,6 +8,7 @@ executable("lsblk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
@@ -16,7 +17,6 @@ executable("lsblk") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",

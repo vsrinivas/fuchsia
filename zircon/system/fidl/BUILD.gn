@@ -17,7 +17,6 @@ group("fidl") {
     "fuchsia-debugdata",
 #------------------
 #------------------
-    "fuchsia-device",
 #------------------
 #------------------
     "fuchsia-device-manager",

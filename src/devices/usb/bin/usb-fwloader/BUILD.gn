@@ -12,13 +12,13 @@ executable("usb-fwloader") {
   testonly = false
   sources = [ "usb-fwloader.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device:c",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-mem:c",
     "//zircon/system/ulib/fzl",
   ]

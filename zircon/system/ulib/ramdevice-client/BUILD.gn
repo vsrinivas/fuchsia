@@ -30,6 +30,7 @@ zx_library("ramdevice-client") {
     "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
@@ -37,7 +38,6 @@ zx_library("ramdevice-client") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
@@ -63,6 +63,7 @@ zx_library("ramdevice-client-static") {
     "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
@@ -70,7 +71,6 @@ zx_library("ramdevice-client-static") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",

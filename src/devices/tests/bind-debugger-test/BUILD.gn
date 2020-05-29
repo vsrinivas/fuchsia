@@ -17,13 +17,13 @@ executable("tests") {
   sources = [ "bind-debugger-test.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/ulib/devmgr-integration-test",
   ]

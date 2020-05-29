@@ -12,11 +12,11 @@ rustc_library("fdio") {
   version = "0.2.0"
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
   ]
 
   test_deps = [ "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc" ]

@@ -105,6 +105,8 @@ zx_library("minfs") {
       "//zircon/system/ulib/storage-metrics",
     ]
     deps += [
+      "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+      "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
       "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
@@ -112,8 +114,6 @@ zx_library("minfs") {
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-device:c",
-      "//zircon/system/fidl/fuchsia-device:llcpp",
       "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop",

@@ -34,6 +34,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2-rustc",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal-rustc",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera-rustc",
@@ -116,7 +117,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
