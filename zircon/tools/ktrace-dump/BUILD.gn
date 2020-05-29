@@ -2,10 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_host_tool("ktrace-dump") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+executable("ktrace-dump") {
   sources = [ "ktrace-dump.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
   ]
 }
