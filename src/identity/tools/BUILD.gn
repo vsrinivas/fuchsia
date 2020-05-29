@@ -24,7 +24,7 @@ test_package("identity_tools_unittests") {
   tests = [
     {
       name = "sktool_bin_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
