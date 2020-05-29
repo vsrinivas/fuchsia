@@ -180,37 +180,37 @@ test_package("mediaplayer_tests") {
   tests = [
     {
       name = "mediaplayer_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
 
     {
       name = "mediaplayer_core_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
 
     {
       name = "mediaplayer_demux_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
 
     {
       name = "mediaplayer_ffmpeg_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
 
     {
       name = "mediaplayer_fidl_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
 
     {
       name = "mediaplayer_graph_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
 
     {
       name = "mediaplayer_util_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 
