@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        diagnostics,
-        inspect::{self, InspectDataRepository},
-    },
+    crate::{data_repository::InspectDataRepository, diagnostics, inspect},
     anyhow::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{

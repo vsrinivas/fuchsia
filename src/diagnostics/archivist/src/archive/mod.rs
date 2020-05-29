@@ -4,12 +4,13 @@
 
 use {
     crate::{
-        configs, diagnostics,
+        configs,
+        data_repository::InspectDataRepository,
+        diagnostics,
         events::types::{
             ComponentEvent, ComponentEventData, ComponentEventStream, ComponentIdentifier,
             InspectData, InspectReaderData,
         },
-        inspect,
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
@@ -578,13 +579,13 @@ pub struct ArchivistState {
     writer: Option<ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
+    inspect_repository: Arc<RwLock<InspectDataRepository>>,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
-        inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
+        inspect_repository: Arc<RwLock<InspectDataRepository>>,
         writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(

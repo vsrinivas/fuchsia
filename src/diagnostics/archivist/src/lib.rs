@@ -6,6 +6,7 @@ pub mod archive;
 pub mod archive_accessor;
 pub mod archivist;
 pub mod configs;
+pub mod data_repository;
 pub mod data_stats;
 pub mod diagnostics;
 pub mod events;

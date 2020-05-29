@@ -4,9 +4,11 @@
 
 use {
     crate::{
-        archive, archive_accessor, configs, data_stats, diagnostics,
+        archive, archive_accessor, configs,
+        data_repository::InspectDataRepository,
+        data_stats, diagnostics,
         events::{stream::EventStream, types::EventSource},
-        inspect, logs,
+        logs,
     },
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
@@ -170,8 +172,7 @@ impl Archivist {
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
         // in that it has no statically configured selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
-        let all_inspect_repository =
-            Arc::new(RwLock::new(inspect::InspectDataRepository::new(None)));
+        let all_inspect_repository = Arc::new(RwLock::new(InspectDataRepository::new(None)));
 
         // TODO(4601): Refactor this code.
         // Set up loading feedback pipeline configs.
