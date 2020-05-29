@@ -61,7 +61,11 @@ class TestHarnessImpl::InterceptedComponentImpl
       std::unique_ptr<sys::testing::InterceptedComponent> impl,
       fidl::InterfaceRequest<fuchsia::modular::testing::InterceptedComponent> request)
       : impl_(std::move(impl)), binding_(this, std::move(request)) {
-    impl_->set_on_kill([this] { binding_.events().OnKill(); });
+    impl_->set_on_kill([this] {
+      if (!binding_.is_bound())
+        return;
+      binding_.events().OnKill();
+    });
   }
 
   virtual ~InterceptedComponentImpl() = default;
