@@ -4,19 +4,22 @@
 
 use {
     crate::logger::setup_logger,
-    anyhow::{format_err, Context, Error},
+    crate::target_formatter::TargetFormatter,
+    anyhow::{anyhow, format_err, Context, Error},
     ffx_command::{Ffx, Subcommand},
     ffx_config::command::exec_config,
     ffx_core::constants::DAEMON,
     ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge::{DaemonProxy, Target as FidlTarget},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    std::convert::TryFrom,
     std::env,
     std::process::Command,
 };
 
 mod logger;
+mod target_formatter;
 
 // Cli
 pub struct Cli {
@@ -62,7 +65,7 @@ impl Cli {
         }
     }
 
-    pub async fn list_targets(&self, text: Option<String>) -> Result<String, Error> {
+    pub async fn list_targets(&self, text: Option<String>) -> Result<Vec<FidlTarget>, Error> {
         match self
             .daemon_proxy
             .list_targets(match text {
@@ -131,13 +134,14 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::List(c) => {
             match Cli::new().await?.list_targets(c.nodename).await {
-                Ok(r) => {
-                    let mut r = r.as_str();
-                    if r.is_empty() {
-                        r = "No devices found.";
+                Ok(r) => match r.len() {
+                    0 => println!("No devices found."),
+                    _ => {
+                        let formatter = TargetFormatter::try_from(r)
+                            .map_err(|e| anyhow!("target malformed: {:?}", e))?;
+                        println!("{}", formatter.lines().join("\n"));
                     }
-                    println!("{}", r);
-                }
+                },
                 Err(e) => {
                     println!("ERROR: {:?}", e);
                 }

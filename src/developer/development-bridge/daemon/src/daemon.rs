@@ -6,7 +6,7 @@ use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::mdns::MdnsTargetFinder,
     crate::ok_or_continue,
-    crate::target::{RCSConnection, Target, TargetCollection},
+    crate::target::{RCSConnection, Target, TargetCollection, ToFidlTarget},
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
@@ -190,23 +190,25 @@ impl Daemon {
             }
             DaemonRequest::ListTargets { value, responder } => {
                 log::info!("Received list target request for '{:?}'", value);
-                // TODO(awdavies): Make this into a common format for easy
-                // parsing.
-                let response = match value.as_ref() {
-                    "" => futures::future::join_all(
-                        self.target_collection.targets().await.iter().map(|t| t.to_string_async()),
+                responder
+                    .send(
+                        &mut future::join_all(match value.as_ref() {
+                            "" => self
+                                .target_collection
+                                .targets()
+                                .await
+                                .drain(..)
+                                .map(|t| t.to_fidl_target())
+                                .collect(),
+                            _ => match self.target_collection.get(value.into()).await {
+                                Some(t) => vec![t.to_fidl_target()],
+                                None => vec![],
+                            },
+                        })
+                        .await
+                        .drain(..),
                     )
-                    .await
-                    .join("\n"),
-                    _ => format!(
-                        "{}",
-                        match self.target_collection.get(value.into()).await {
-                            Some(t) => t.to_string_async().await,
-                            None => String::new(),
-                        }
-                    ),
-                };
-                responder.send(response.as_ref()).context("error sending response")?;
+                    .context("error sending response")?;
             }
             DaemonRequest::GetRemoteControl { remote, responder } => {
                 let target = match self.target_from_cache().await {
@@ -270,6 +272,7 @@ mod test {
     use super::*;
     use crate::target::TargetState;
     use fidl::endpoints::create_proxy;
+    use fidl_fuchsia_developer_bridge as bridge;
     use fidl_fuchsia_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
         RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
@@ -402,16 +405,35 @@ mod test {
             ctrl.send_target(Target::new("quux")).await;
             let res = daemon_proxy.list_targets("").await.unwrap();
 
-            // TODO(awdavies): This check is in lieu of having an
-            // established format for the list_targets output.
-            assert!(res.contains("foobar"));
-            assert!(res.contains("baz"));
-            assert!(res.contains("quux"));
+            // Daemon server contains one fake target plus these two.
+            assert_eq!(res.len(), 3);
+
+            let has_nodename = |v: &Vec<bridge::Target>, s: &str| {
+                v.iter().any(|x| x.nodename.as_ref().unwrap() == s)
+            };
+            assert!(has_nodename(&res, "foobar"));
+            assert!(has_nodename(&res, "baz"));
+            assert!(has_nodename(&res, "quux"));
 
             let res = daemon_proxy.list_targets("mlorp").await.unwrap();
-            assert!(!res.contains("foobar"));
-            assert!(!res.contains("baz"));
-            assert!(!res.contains("quux"));
+            assert!(!has_nodename(&res, "foobar"));
+            assert!(!has_nodename(&res, "baz"));
+            assert!(!has_nodename(&res, "quux"));
+
+            let res = daemon_proxy.list_targets("foobar").await.unwrap();
+            assert!(has_nodename(&res, "foobar"));
+            assert!(!has_nodename(&res, "baz"));
+            assert!(!has_nodename(&res, "quux"));
+
+            let res = daemon_proxy.list_targets("baz").await.unwrap();
+            assert!(!has_nodename(&res, "foobar"));
+            assert!(has_nodename(&res, "baz"));
+            assert!(!has_nodename(&res, "quux"));
+
+            let res = daemon_proxy.list_targets("quux").await.unwrap();
+            assert!(!has_nodename(&res, "foobar"));
+            assert!(!has_nodename(&res, "baz"));
+            assert!(has_nodename(&res, "quux"));
         });
         Ok(())
     }

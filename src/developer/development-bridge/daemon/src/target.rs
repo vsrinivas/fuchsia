@@ -7,10 +7,13 @@ use {
     crate::onet,
     anyhow::{anyhow, Context, Error},
     async_std::sync::RwLock,
+    async_trait::async_trait,
     chrono::{DateTime, Utc},
     fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::{
-        IdentifyHostError, InterfaceAddress, IpAddress, RemoteControlMarker, RemoteControlProxy,
+        IdentifyHostError, InterfaceAddress, IpAddress, Ipv4Address, Ipv6Address,
+        RemoteControlMarker, RemoteControlProxy,
     },
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -23,6 +26,11 @@ use {
     std::sync::Arc,
     std::time::{Duration, Instant},
 };
+
+#[async_trait]
+pub trait ToFidlTarget {
+    async fn to_fidl_target(self) -> bridge::Target;
+}
 
 #[derive(Debug, Clone)]
 pub struct RCSConnection {
@@ -140,6 +148,16 @@ impl Target {
         }
     }
 
+    async fn rcs_state(&self) -> bridge::RemoteControlState {
+        let loop_started = self.host_pipe_loop_started.load(Ordering::Relaxed);
+        let state = self.state.lock().await;
+        match (loop_started, state.rcs.as_ref()) {
+            (true, Some(_)) => bridge::RemoteControlState::Up,
+            (true, None) => bridge::RemoteControlState::Down,
+            (_, _) => bridge::RemoteControlState::Unknown,
+        }
+    }
+
     /// Attempts to disconnect any active connections to the target.
     pub async fn disconnect(&self) -> Result<(), Error> {
         if let Some(child) = self.host_pipe.lock().await.as_mut() {
@@ -180,31 +198,6 @@ impl Target {
         if let Some(rcs) = other.rcs.take() {
             state.rcs = Some(rcs);
         }
-    }
-
-    /// Helper method for grabbing overnet info from `TargetState`.
-    async fn overnet_info(&self) -> (bool, String) {
-        let state = self.state.lock().await;
-        (
-            self.host_pipe_loop_started.load(Ordering::Relaxed),
-            match state.rcs.as_ref() {
-                Some(s) => s.overnet_id.id.to_string(),
-                None => String::from("not connected"),
-            },
-        )
-    }
-
-    pub async fn to_string_async(&self) -> String {
-        let ((host_pipe_loop_started, overnet_peer_string), addrs, last_response) =
-            futures::join!(self.overnet_info(), self.addrs(), self.last_response());
-        format!(
-            "{} [{}] [host_pipe_loop_started: {}] [overnet_peer_id: {}] {}",
-            self.nodename,
-            addrs.iter().map(|addr| addr.to_string()).collect::<Vec<_>>().join(", "),
-            host_pipe_loop_started,
-            overnet_peer_string,
-            last_response.to_rfc2822(),
-        )
     }
 
     pub async fn from_rcs_connection(r: RCSConnection) -> Result<Self, RCSConnectionError> {
@@ -293,16 +286,74 @@ impl Target {
     }
 }
 
+#[async_trait]
+impl ToFidlTarget for Arc<Target> {
+    async fn to_fidl_target(self) -> bridge::Target {
+        let (mut addrs, last_response, rcs_state) =
+            futures::join!(self.addrs(), self.last_response(), self.rcs_state());
+
+        bridge::Target {
+            nodename: Some(self.nodename.clone()),
+            addresses: Some(addrs.drain().map(|a| a.into()).collect()),
+            age_ms: Some(
+                match Utc::now().signed_duration_since(last_response).num_milliseconds() {
+                    dur if dur < 0 => {
+                        log::trace!(
+                            "negative duration encountered on target '{}': {}",
+                            self.nodename,
+                            dur
+                        );
+                        0
+                    }
+                    dur => dur,
+                } as u64,
+            ),
+            rcs_state: Some(rcs_state),
+
+            // TODO(awdavies): Gather more information here when possilbe.
+            target_type: Some(bridge::TargetType::Unknown),
+            target_state: Some(bridge::TargetState::Unknown),
+        }
+    }
+}
+
 impl Debug for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Target {{ {:?} }}", self.nodename)
     }
 }
 
+// TODO(fxb/52733): Have `TargetAddr` support serial numbers.
 #[derive(Hash, Clone, Debug, Copy, Eq, PartialEq)]
 pub struct TargetAddr {
     ip: IpAddr,
     scope_id: u32,
+}
+
+impl Into<bridge::TargetAddrInfo> for TargetAddr {
+    fn into(self) -> bridge::TargetAddrInfo {
+        bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+            ip: match self.ip {
+                IpAddr::V6(i) => IpAddress::Ipv6(Ipv6Address { addr: i.octets().into() }),
+                IpAddr::V4(i) => IpAddress::Ipv4(Ipv4Address { addr: i.octets().into() }),
+            },
+            scope_id: self.scope_id,
+        })
+    }
+}
+
+impl From<bridge::TargetAddrInfo> for TargetAddr {
+    fn from(t: bridge::TargetAddrInfo) -> Self {
+        let (addr, scope): (IpAddr, u32) = match t {
+            bridge::TargetAddrInfo::Ip(ip) => match ip.ip {
+                IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),
+                IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), ip.scope_id),
+            },
+            // TODO(fxb/52733): Add serial numbers.,
+        };
+
+        (addr, scope).into()
+    }
 }
 
 impl From<InterfaceAddress> for TargetAddr {
@@ -744,20 +795,6 @@ mod test {
     }
 
     #[test]
-    fn test_target_debug_string() {
-        hoist::run(async move {
-            let t = Target::new_with_time("foo", fake_now());
-            assert_eq!(t.to_string_async().await, "foo [] [host_pipe_loop_started: false] [overnet_peer_id: not connected] Fri, 31 Oct 2014 09:10:12 +0000");
-            t.addrs_insert((IpAddr::from([192, 168, 1, 1]), 0).into()).await;
-            t.state.lock().await.rcs = Some(RCSConnection::new_with_proxy(
-                setup_fake_remote_control_service(false, "foo".to_owned()),
-                &NodeId { id: 2u64 },
-            ));
-            assert_eq!(t.to_string_async().await, "foo [192.168.1.1] [host_pipe_loop_started: false] [overnet_peer_id: 2] Fri, 31 Oct 2014 09:10:12 +0000");
-        });
-    }
-
-    #[test]
     fn test_wait_for_rcs() {
         hoist::run(async move {
             let t = Arc::new(Target::new("foo"));
@@ -833,6 +870,78 @@ mod test {
             })
             .await;
             assert!(t.host_pipe_loop_started.load(Ordering::SeqCst));
+        });
+    }
+
+    struct RcsStateTest {
+        loop_started: bool,
+        rcs_is_some: bool,
+        expected: bridge::RemoteControlState,
+    }
+
+    #[test]
+    fn test_target_rcs_states() {
+        hoist::run(async move {
+            for test in vec![
+                RcsStateTest {
+                    loop_started: true,
+                    rcs_is_some: false,
+                    expected: bridge::RemoteControlState::Down,
+                },
+                RcsStateTest {
+                    loop_started: true,
+                    rcs_is_some: true,
+                    expected: bridge::RemoteControlState::Up,
+                },
+                RcsStateTest {
+                    loop_started: false,
+                    rcs_is_some: true,
+                    expected: bridge::RemoteControlState::Unknown,
+                },
+                RcsStateTest {
+                    loop_started: false,
+                    rcs_is_some: false,
+                    expected: bridge::RemoteControlState::Unknown,
+                },
+            ] {
+                let t = Target::new("schlabbadoo");
+                t.host_pipe_loop_started.store(test.loop_started, Ordering::Relaxed);
+                *t.state.lock().await = TargetState {
+                    rcs: if test.rcs_is_some {
+                        Some(RCSConnection::new_with_proxy(
+                            setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
+                            &NodeId { id: 123 },
+                        ))
+                    } else {
+                        None
+                    },
+                };
+                assert_eq!(t.rcs_state().await, test.expected);
+            }
+        });
+    }
+
+    #[test]
+    fn test_target_to_fidl_target() {
+        hoist::run(async move {
+            let t = Arc::new(Target::new("cragdune-the-impaler"));
+            let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+            let a2 = IpAddr::V6(Ipv6Addr::new(
+                0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
+            ));
+            t.addrs_insert((a1, 1).into()).await;
+            t.addrs_insert((a2, 1).into()).await;
+
+            let t_conv = t.clone().to_fidl_target().await;
+            assert_eq!(t.nodename, t_conv.nodename.unwrap().to_string());
+            let addrs = t.addrs().await;
+            let conv_addrs = t_conv.addresses.unwrap();
+            assert_eq!(addrs.len(), conv_addrs.len());
+
+            // Will crash if any addresses are missing.
+            for address in conv_addrs {
+                let _ = addrs.get(&TargetAddr::from(address)).unwrap();
+            }
         });
     }
 }

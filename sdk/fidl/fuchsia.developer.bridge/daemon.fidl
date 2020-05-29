@@ -16,9 +16,9 @@ protocol Daemon {
     /// Returns the input.
     EchoString(string:256 value) -> (string:256 response);
 
-    /// Lists targets by nodename. TODO(awdavies) respond with an actual
-    /// structure here.
-    ListTargets(string:256 value) -> (string:1024 response);
+    /// Lists targets by nodename.
+    /// TODO(fxb/52798): Use an iterator instead of a limited vector.
+    ListTargets(string:256 value) -> (vector<Target>:512 response);
 
     /// Make the daemon exit.
     Quit() -> (bool success);

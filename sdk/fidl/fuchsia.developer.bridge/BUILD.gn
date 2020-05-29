@@ -6,7 +6,10 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.developer.bridge") {
   sdk_category = "internal"
-  sources = [ "daemon.fidl" ]
+  sources = [
+    "daemon.fidl",
+    "target.fidl",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol",
     "//sdk/fidl/fuchsia.test",

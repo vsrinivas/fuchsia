@@ -22,8 +22,9 @@ mod mdns;
 mod net;
 mod onet;
 mod ssh;
-mod target;
 mod util;
+
+pub mod target;
 
 pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy, Error> {
     let svc = hoist::connect_as_service_consumer()?;
