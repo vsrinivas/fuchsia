@@ -5,6 +5,7 @@ Checks: >
   clang-diagnostic-*,
   -clang-diagnostic-unused-command-line-argument,
   google-*,
+  -google-runtime-references,
   misc-*,
   -misc-noexcept*,
   modernize-*,
