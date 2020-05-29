@@ -24,7 +24,6 @@ if (current_cpu != "") {
       ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/kernel/phys:tests",
       "$zx/system/ulib/c/test/noop:test",
-      "$zx/system/ulib/fdio/test/constructors",
       "abi-type-validator",
       "libc",
 

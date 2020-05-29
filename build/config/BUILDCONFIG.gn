@@ -1227,6 +1227,14 @@ template("executable") {
 
     deps += default_executable_deps
 
+    fdio_config = "//build/config/fuchsia:fdio_config"
+    if (configs + [ fdio_config ] - [ fdio_config ] != configs) {
+      # Now that fdio is built in this very build, we can't get away with
+      # simply pointing the linker at the place where we know the fdio binary
+      # will reside: we need a proper dependency.
+      deps += [ "//zircon/system/ulib/fdio" ]
+    }
+
     # This ensures that non-Zircon host executables get __zx_panic.
     #
     # TODO(ZX-4798): This will likely no longer be needed at some point.  See

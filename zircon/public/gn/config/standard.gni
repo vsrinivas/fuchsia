@@ -146,10 +146,6 @@ standard_environments = [
         ]
         add = [ "$zx/system/ulib/c:crt1" ]
       },
-      {
-        types = [ "host_tool" ]
-        add = [ "$zx/system/ulib/fdio" ]
-      },
 
       # The compiler implicitly links to runtime libraries that might turn
       # into runtime dependencies on the shared libraries.  By default,

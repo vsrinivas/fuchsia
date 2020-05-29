@@ -70,7 +70,7 @@ aggregate_manifest("legacy-image") {
 # dependencies to it.
 aggregate_manifest("legacy-aux") {
   deps = [
-    ":test.sys.fdio-constructor-test",
+    ":lib.c",
     ":test.sys.libc-test",
     ":test.sys.noop-test",
     ":test.sys.noop-test.asan",
@@ -82,30 +82,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.noop-test.ubsan-sancov-full",
   ]
 
-  deps += [
-    ":lib.c",
-    ":lib.libcpp.so.2",
-    ":lib.libcppabi.so.1",
-    ":lib.libunwind.so.1",
-  ]
-
-  lib_names = [ "fdio" ]
-  lib_variants = [
-    "asan",
-    "asan-ubsan",
-    "profile",
-    "sancov",
-    "ubsan",
-    "ubsan-sancov",
-    "ubsan-sancov-full",
-  ]
-  foreach(lib, lib_names) {
-    deps += [ ":lib.$lib" ]
-    foreach(variant, lib_variants) {
-      deps += [ ":lib.$lib.$variant" ]
-    }
-  }
-
   reference = "legacy-aux-$target_cpu"
 }
 
@@ -113,7 +89,6 @@ aggregate_manifest("legacy-aux") {
 # dependencies to it.
 aggregate_manifest("legacy-tests") {
   deps = [
-    ":test.sys.fdio-constructor-test",
     ":test.sys.libc-test",
     ":test.sys.noop-test",
     ":test.sys.noop-test.asan",
@@ -607,6 +582,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
     "//zircon/system/ulib/elf-search/test:elf-search-test-helper-manifest",
     "//zircon/system/ulib/fdio/test:fdio-manifest",
+    "//zircon/system/ulib/fdio/test/constructors:fdio-constructor-manifest",
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
     "//zircon/system/ulib/fit/test:fit-manifest",
     "//zircon/system/ulib/fs/journal/test:journal-unit-manifest",
@@ -811,6 +787,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/driver-integration-test/test:driver-integration-manifest",
     "//zircon/system/ulib/elf-search/test:elf-search-manifest",
     "//zircon/system/ulib/fdio/test:fdio-manifest",
+    "//zircon/system/ulib/fdio/test/constructors:fdio-constructor-manifest",
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
     "//zircon/system/ulib/fit/test:fit-manifest",
     "//zircon/system/ulib/fs/journal/test:journal-unit-manifest",

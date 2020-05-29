@@ -82,7 +82,7 @@ config("compiler") {
 
   lib_dirs = [
     # These libraries are required by Rust's libstd.
-    "$root_build_dir/gen/zircon/public/lib/fdio",
+    "$root_build_dir/gen/zircon/system/ulib/fdio",
     "$root_build_dir/gen/zircon/system/ulib/trace-engine",
     "$root_build_dir/gen/zircon/system/ulib/syslog",
   ]
@@ -177,24 +177,11 @@ config("shared_library_config") {
 }
 
 config("fdio_config") {
-  # TODO(pylaligand): find a better way to let executables link in fdio.
-  # Ideally their dependencies should be set up in such a way that it would get
-  # inherited from them.
-  foreach(target, zircon_legacy_targets) {
-    if (target.target_name == "fdio") {
-      libs = rebase_path(target.libs, "", zircon_root_build_dir)
-    }
-  }
-
-  # TODO(mcgrathr): //build/go/go_build.gni depends on this because it
-  # uses -L... -lfdio rather than passing the file directly.
-  assert(libs == [ libs[0] ], "fdio libs has multiple elements?")
-  link_file = libs[0]
-  if (get_path_info(link_file, "file") != "libfdio.so") {
-    link_file = rebase_path(link_file)
-    write_file("$target_gen_dir/libfdio.so", [ "INPUT($link_file)" ])
-    libs[0] = "$target_gen_dir/libfdio.so"
-  }
+  # This config is only a marker that is used to signal that a given executable
+  # should link with fdio. With fdio now getting built in this very build, there
+  # need to be a proper dependency.
+  # See the override of the `executable` template in
+  # //build/config/BUILDCONFIG.gni where that build edge is added.
 }
 
 config("executable_config") {

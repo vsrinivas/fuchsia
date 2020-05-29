@@ -31,6 +31,10 @@ group(dir) {
   public_deps = [ label ]
 }
 
+config("$dir.config") {
+  configs = [ "$label.config" ]
+}
+
 if (forward_target.sdk) {
   import("//build/sdk/sdk_atom_alias.gni")
 

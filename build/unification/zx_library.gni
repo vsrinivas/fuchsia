@@ -103,7 +103,10 @@ template("zx_library") {
       }
     }
 
-    public_configs = [ ":$config_target_name" ]
+    if (!defined(public_configs)) {
+      public_configs = []
+    }
+    public_configs += [ ":$config_target_name" ]
   }
 }
 

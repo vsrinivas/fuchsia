@@ -63,5 +63,8 @@ zx_library("memfs") {
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fs",
   ]
-  runtime_deps = [ "//zircon/system/ulib/trace-engine:trace-engine_sdk" ]
+  runtime_deps = [
+    "//zircon/system/ulib/fdio:fdio_sdk",
+    "//zircon/system/ulib/trace-engine:trace-engine_sdk",
+  ]
 }

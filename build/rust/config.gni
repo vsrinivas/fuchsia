@@ -52,14 +52,6 @@ if (is_fuchsia) {
   rust_panic = "unwind"
 }
 
-std_deps = []
-if (is_fuchsia) {
-  std_deps += [
-    # These libraries are required by libstd.
-    "//zircon/public/lib/fdio",
-  ]
-}
-
 assert(
     current_os == "mac" || current_os == "linux" || current_os == "fuchsia" ||
         (current_os == "unknown" && current_cpu == "wasm32"),

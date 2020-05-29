@@ -2,8 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/resource.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zbi/resource.gni")
+import("//build/unification/zx_library.gni")
 
 # TODO(38226): This is a kludge to make fuzzer.foosan builds actually just use
 # the plain foosan build of libfdio.  This works around the problem that
@@ -13,24 +23,15 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 # the build that has the same foosan instrumentation to catch bugs but doesn't
 # have the fuzzer (i.e. coverage tracking) instrumentation that influences
 # libfuzzer's choices.
-if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
-  foreach(target,
-          [
-            "fdio",
-            "headers",
-          ]) {
-    environment_redirect(target) {
-      environment_label =
-          "$zx/public/gn/toolchain:${toolchain.base_environment}"
-      shlib = true
-      variant = toolchain.variant
-      deps = [ ":$target" ]
-      if (target == "fdio") {
-        deps += [ ":fuzzer-redirect-manifest" ]
-      }
-    }
+fuzzer_configs = [ "//build/config/sanitizers:fuzzer" ]
+if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
+    toolchain_variant.configs) {
+  group("fdio") {
+    public_deps = [ ":fdio(${toolchain_variant.base})" ]
+
+    deps = [ ":fuzzer-redirect-manifest(${toolchain_variant.base})" ]
   }
-} else {
+} else if (is_fuchsia) {
   zx_library("fdio") {
     sdk = "shared"
     sdk_publishable = true
@@ -72,22 +73,20 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
       "zxio.cc",
     ]
     deps = [
-      "$zx/system/fidl/fuchsia-device:llcpp",
-      "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/fidl/fuchsia-io2:llcpp",
-      "$zx/system/fidl/fuchsia-net:llcpp",
-      "$zx/system/fidl/fuchsia-posix-socket:llcpp",
-      "$zx/system/fidl/fuchsia-process:c",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zircon-internal",
-      "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxio",
-      "$zx/third_party/ulib/safemath",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/safemath",
+      "//zircon/public/lib/zircon-internal",
+      "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxio",
+      "//zircon/system/fidl/fuchsia-device:llcpp",
+      "//zircon/system/fidl/fuchsia-io:llcpp",
+      "//zircon/system/fidl/fuchsia-io2:llcpp",
+      "//zircon/system/fidl/fuchsia-net:llcpp",
+      "//zircon/system/fidl/fuchsia-posix-socket:llcpp",
+      "//zircon/system/fidl/fuchsia-process:c",
     ]
-    configs += [ "$zx_build/public/gn/config:static-libc++" ]
-    public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+    public_configs = [ "//build/config:Wno-unused-function" ]
   }
 
   # TODO(38226): Binaries built in the fuzzer environment look for libraries
@@ -99,7 +98,15 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
   # location for the same library, which is superfluous but harmless.
   resource("fuzzer-redirect-manifest") {
     visibility = [ ":*" ]
-    sources = [ "$target_out_dir/libfdio.so" ]
-    outputs = [ "lib/fuzzer.${toolchain.variant}/{{source_file_part}}" ]
+    sources = [ "$root_out_dir/libfdio.so" ]
+    outputs = [ "lib/fuzzer.${toolchain_variant.name}/{{source_file_part}}" ]
+  }
+} else {
+  config("fdio_includes") {
+    include_dirs = [ "include" ]
+  }
+
+  source_set("fdio") {
+    public_configs = [ ":fdio_includes" ]
   }
 }
