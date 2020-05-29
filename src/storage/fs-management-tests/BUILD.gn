@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+# Tests for the library at //zircon/system/ulib/fs-management.
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+package("fs-management-devmgr") {
+  testonly = true
+
+  deps = [
+    ":devmgr-manifest",
+    "//src/lib/isolated_devmgr",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  binaries = [
+    {
+      name = "isolated_devmgr"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/fs-management-devmgr.cmx"
+      dest = "fs-management-devmgr.cmx"
+    },
+  ]
+}
+
+test("fs-management-test") {
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/ramdevice-client",
+  ]
+  sources = [ "format-test.cc" ]
+}
+
+test_package("fs-management-tests") {
+  deps = [ ":fs-management-test" ]
+
+  tests = [
+    {
+      name = "fs-management-test"
+      environments = [ emu_env ]
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fs-management-devmgr",
+    ":fs-management-tests",
+  ]
+}

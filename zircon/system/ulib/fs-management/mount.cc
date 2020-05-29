@@ -173,15 +173,19 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_UNKNOWN;
   }
 
+  // We need to read at least two blocks, because the GPT magic is located inside the second block
+  // of the disk.
+  size_t header_size =
+      (HEADER_SIZE > (2 * resp->info->block_size)) ? HEADER_SIZE : (2 * resp->info->block_size);
   // check if the partition is big enough to hold the header in the first place
-  if (HEADER_SIZE > resp.value().info->block_size * resp.value().info->block_count) {
+  if (header_size > resp.value().info->block_size * resp.value().info->block_count) {
     return DISK_FORMAT_UNKNOWN;
   }
 
   // We expect to read HEADER_SIZE bytes, but we may need to read
   // extra to read a multiple of the underlying block size.
-  const size_t buffer_size = fbl::round_up(static_cast<size_t>(HEADER_SIZE),
-                                           static_cast<size_t>(resp.value().info->block_size));
+  const size_t buffer_size =
+      fbl::round_up(header_size, static_cast<size_t>(resp.value().info->block_size));
 
   uint8_t data[buffer_size];
   if (read(fd, data, buffer_size) != static_cast<ssize_t>(buffer_size)) {
@@ -197,7 +201,7 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_ZXCRYPT;
   }
 
-  if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
+  if (!memcmp(data + resp->info->block_size, gpt_magic, sizeof(gpt_magic))) {
     return DISK_FORMAT_GPT;
   }
 
@@ -227,8 +231,9 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     hexdump_very_ex(data, 16, 0, hexdump_stdio_printf, stderr);
     // MBR is two bytes at offset 0x1fe, but print 16 just for consistency
     hexdump_very_ex(data + 0x1f0, 16, 0x1f0, hexdump_stdio_printf, stderr);
-    // GPT magic is stored 512 bytes in, so it can coexist with MBR.
-    hexdump_very_ex(data + 0x200, 16, 0x200, hexdump_stdio_printf, stderr);
+    // GPT magic is stored one block in, so it can coexist with MBR.
+    hexdump_very_ex(data + resp->info->block_size, 16, resp->info->block_size, hexdump_stdio_printf,
+                    stderr);
   }
 
   return DISK_FORMAT_UNKNOWN;

@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.fsmanagement.devmgr.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/fs-management-devmgr#meta/fs-management-devmgr.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/fs-management-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fsmanagement.devmgr.IsolatedDevmgr"
+        ]
+    }
+}

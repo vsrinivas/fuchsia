@@ -9,6 +9,8 @@
 # See fxb/36548.                         #
 ##########################################
 
+# Tests for this library are in //src/storage/fs-management-tests.
+
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
