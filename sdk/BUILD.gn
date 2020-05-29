@@ -147,6 +147,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.migration:fuchsia.migration_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.modular.auth:fuchsia.modular.auth_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
@@ -303,6 +304,9 @@ sdk("core") {
 # The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
 # integration tests which use modular.
 #
+# The modular framework is deprecated: new products should use the session framework
+# instead. See //docs/concepts/session/introduction.md.
+#
 # This SDK has runtime dependencies on the following fuchsia packages:
 #  * environment_delegating_runner
 #  * modular_test_harness
@@ -316,6 +320,8 @@ sdk("modular_testing") {
   category = "partner"
 
   deps = [
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.modular.auth:fuchsia.modular.auth_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.lifecycle:fuchsia.ui.lifecycle_sdk($fidl_toolchain)",
     "//sdk/lib/modular/testing/cpp:cpp_sdk",
