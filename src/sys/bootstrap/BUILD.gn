@@ -19,6 +19,9 @@ bootfs_manifest("root_manifests.manifest") {
       path = rebase_path("meta/console.cml")
     },
     {
+      path = rebase_path("meta/pwrbtn-monitor.cml")
+    },
+    {
       path = rebase_path("meta/ptysvc.cml")
     },
     {

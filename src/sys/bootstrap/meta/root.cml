@@ -3,6 +3,7 @@
         {
             name: "bootstrap",
             url: "fuchsia-boot:///#meta/bootstrap.cm",
+            startup: "eager",
         },
         {
             name: "core",

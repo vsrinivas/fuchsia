@@ -389,26 +389,15 @@ int main(int argc, char** argv) {
 
   system_instance.devmgr_vfs_init();
 
-  thrd_t t;
-
-  auto pwrbtn_starter_args = std::make_unique<SystemInstance::ServiceStarterArgs>();
-  pwrbtn_starter_args->instance = &system_instance;
-  pwrbtn_starter_args->coordinator = &coordinator;
-  int ret = thrd_create_with_name(&t, SystemInstance::pwrbtn_monitor_starter,
-                                  pwrbtn_starter_args.release(), "pwrbtn-monitor-starter");
-  if (ret != thrd_success) {
-    LOGF(ERROR, "Failed to create pwrbtn monitor starter thread: %d", ret);
-    return ret;
-  }
-  thrd_detach(t);
-
   system_instance.start_console_shell(boot_args);
+
+  thrd_t t;
 
   auto service_starter_args = std::make_unique<SystemInstance::ServiceStarterArgs>();
   service_starter_args->instance = &system_instance;
   service_starter_args->coordinator = &coordinator;
-  ret = thrd_create_with_name(&t, SystemInstance::service_starter, service_starter_args.release(),
-                              "service-starter");
+  int ret = thrd_create_with_name(&t, SystemInstance::service_starter,
+                                  service_starter_args.release(), "service-starter");
   if (ret != thrd_success) {
     LOGF(ERROR, "Failed to create service starter thread: %d", ret);
     return ret;

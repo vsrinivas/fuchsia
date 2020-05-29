@@ -31,6 +31,8 @@
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
+
 #define INPUT_PATH "/input"
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
@@ -162,6 +164,12 @@ zx_status_t send_poweroff() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+  printf("pwrbtn-monitor: started\n");
+
   fbl::unique_fd dirfd;
   {
     int fd = open(INPUT_PATH, O_DIRECTORY | O_RDONLY);
@@ -173,7 +181,7 @@ int main(int argc, char** argv) {
   }
 
   PowerButtonInfo info;
-  zx_status_t status = fdio_watch_directory(dirfd.get(), InputDeviceAdded, ZX_TIME_INFINITE, &info);
+  status = fdio_watch_directory(dirfd.get(), InputDeviceAdded, ZX_TIME_INFINITE, &info);
   if (status != ZX_ERR_STOP) {
     printf("pwrbtn-monitor: Failed to find power button device\n");
     return 1;
@@ -188,7 +196,12 @@ int main(int argc, char** argv) {
   zx::event report_event;
   {
     auto result = client.GetReportsEvent();
-    if ((result.status() != ZX_OK) || (result->status != ZX_OK)) {
+    if (result.status() != ZX_OK) {
+      printf("pwrbtn-monitor: failed to get report event: %d\n", result.status());
+      return 1;
+    }
+    if (result->status != ZX_OK) {
+      printf("pwrbtn-monitor: failed to get report event: %d\n", result->status);
       return 1;
     }
     report_event = std::move(result->event);
@@ -199,7 +212,12 @@ int main(int argc, char** argv) {
     report_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
 
     auto result = client.ReadReport();
-    if (result.status() != ZX_OK || result->status != ZX_OK) {
+    if (result.status() != ZX_OK) {
+      printf("pwrbtn-monitor: failed to read report: %d\n", result.status());
+      return 1;
+    }
+    if (result->status != ZX_OK) {
+      printf("pwrbtn-monitor: failed to read report: %d\n", result->status);
       return 1;
     }
 

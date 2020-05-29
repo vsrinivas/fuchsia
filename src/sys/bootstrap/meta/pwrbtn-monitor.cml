@@ -1,0 +1,18 @@
+{
+    program: {
+        binary: "bin/pwrbtn-monitor",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            directory: "/input",
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.boot.WriteOnlyLog",
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            ],
+        },
+    ],
+}

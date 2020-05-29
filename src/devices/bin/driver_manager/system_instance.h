@@ -41,10 +41,6 @@ class SystemInstance : public FsProvider {
 
   void devmgr_vfs_init();
 
-  // Thread entry point
-  static int pwrbtn_monitor_starter(void* arg);
-  int PwrbtnMonitorStarter(Coordinator* coordinator);
-
   void start_console_shell(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
   int ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args);
 

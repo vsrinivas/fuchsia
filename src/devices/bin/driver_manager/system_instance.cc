@@ -434,67 +434,6 @@ void SystemInstance::devmgr_vfs_init() {
                 zx_status_get_string(r));
 }
 
-// Thread entry point
-int SystemInstance::pwrbtn_monitor_starter(void* arg) {
-  auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
-  return args->instance->PwrbtnMonitorStarter(args->coordinator);
-}
-
-int SystemInstance::PwrbtnMonitorStarter(Coordinator* coordinator) {
-  const char* name = "pwrbtn-monitor";
-  const char* argv[] = {"/boot/bin/pwrbtn-monitor", nullptr};
-
-  zx::job job_copy;
-  zx_status_t status =
-      svc_job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to duplicate service job: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  zx::debuglog debuglog;
-  status = zx::debuglog::create(coordinator->root_resource(), 0, &debuglog);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create debuglog: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  zx::channel input_handle = CloneFs("dev/class/input");
-  if (!input_handle.is_valid()) {
-    LOGF(ERROR, "Failed to clone '/dev/input'");
-    return status;
-  }
-
-  zx::channel svc_handle = CloneFs("svc");
-  if (!svc_handle.is_valid()) {
-    LOGF(ERROR, "Failed to clone '/svc'");
-    return status;
-  }
-
-  fdio_spawn_action_t actions[] = {
-      {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}},
-      {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-       .ns = {.prefix = "/input", .handle = input_handle.release()}},
-      // Ideally we'd only expose /svc/fuchsia.device.manager.Administrator, but we do not
-      // support exposing single services.
-      {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-       .ns = {.prefix = "/svc", .handle = svc_handle.release()}},
-      {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-       .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0), .handle = debuglog.release()}},
-  };
-
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  uint32_t spawn_flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC;
-  status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, nullptr,
-                          fbl::count_of(actions), actions, nullptr, err_msg);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to launch %s (%s): %s", argv[0], name, err_msg);
-    return status;
-  }
-  LOGF(INFO, "Launching %s (%s)", argv[0], name);
-  return ZX_OK;
-}
-
 // Thread trampoline for start_console_shell/ConsoleStarter
 int console_starter(void* arg) {
   auto args = std::unique_ptr<ConsoleStarterArgs>(static_cast<ConsoleStarterArgs*>(arg));

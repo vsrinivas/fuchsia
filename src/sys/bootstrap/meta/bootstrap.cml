@@ -18,6 +18,14 @@
             url: "fuchsia-boot:///#meta/ptysvc.cm",
         },
         {
+            name: "pwrbtn-monitor",
+            url: "fuchsia-boot:///#meta/pwrbtn-monitor.cm",
+
+            // pwrbtn-monitor only consumes capabilities, it doesn't provide
+            // any, so there's no other way to start it.
+            startup: "eager",
+        },
+        {
             name: "sysinfo",
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
@@ -74,6 +82,7 @@
                 "#driver_manager",
                 "#fshost",
                 "#ptysvc",
+                "#pwrbtn-monitor",
                 "#sysinfo",
             ],
         },
@@ -190,6 +199,7 @@
                 "#driver_manager",
                 "#fshost",
                 "#ptysvc",
+                "#pwrbtn-monitor",
                 "#sysinfo",
             ],
         },
@@ -226,6 +236,18 @@
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "/svc/fuchsia.hardware.power.statecontrol.Admin" ],
+            from: "#driver_manager",
+            to: [ "#pwrbtn-monitor" ],
+        },
+        {
+            directory: "/dev",
+            from: "#driver_manager",
+            as: "/input",
+            to: [ "#pwrbtn-monitor" ],
+            subdir: "class/input",
         },
     ],
     expose: [
