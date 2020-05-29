@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(mcgrathr): declare_args() { qemu_boot_format = "multiboot"/"zeropage" }
+
+if (current_cpu == "x64") {
+  # Environment for building raw QEMU kernels.
+  # x86-64 QEMU loads 32-bit (i686) binaries (Multiboot or Linux zero page).
+  qemu_environment = "$zx/kernel/arch/x86/phys:kernel.phys32"
+} else {
+  # Environment for building raw QEMU kernels (64-bit physical memory).
+  qemu_environment = "$zx/kernel/phys:kernel.phys"
+}
+
+if (toolchain.environment == "kernel.phys") {
+  # What to link into a raw QEMU kernel executable (direct physical memory).
+  qemu_deps = [ "$zx/kernel/phys:qemu-header" ]
+} else {
+  assert(
+      current_cpu == "x64" && toolchain.environment_label == qemu_environment)
+
+  # What to link into a raw QEMU kernel executable (x86-32 Multiboot).
+  qemu_deps = [ "$zx/kernel/arch/x86/phys:multiboot" ]
+}

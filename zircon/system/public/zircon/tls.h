@@ -10,7 +10,7 @@
 
 // This file must be includable in assembly files.
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__i386__)
 
 #define ZX_TLS_STACK_GUARD_OFFSET 0x10
 #define ZX_TLS_UNSAFE_SP_OFFSET 0x18

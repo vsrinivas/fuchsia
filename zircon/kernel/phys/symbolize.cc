@@ -16,8 +16,13 @@
 
 namespace {
 
-// As per phys.ld.
+// On x86-32, there is a fixed link-time address.
+#ifdef __i386__
+extern "C" [[gnu::weak]] const char PHYS_LOAD_ADDRESS[];
+static constexpr auto kLinkTimeAddress = PHYS_LOAD_ADDRESS;
+#else
 static constexpr uintptr_t kLinkTimeAddress = 0;
+#endif
 
 // Arbitrary, but larger than any known format in use.
 static constexpr size_t kMaxBuildIdSize = 32;
@@ -93,7 +98,7 @@ void Symbolize::PrintModule() {
 void Symbolize::PrintMmap() {
   auto start = reinterpret_cast<uintptr_t>(__code_start);
   auto end = reinterpret_cast<uintptr_t>(_end);
-  Printf("{{{mmap:%p:%#zx:load:0:rwx:%#zx}}}\n", __code_start, end - start, kLinkTimeAddress);
+  Printf("{{{mmap:%p:%#zx:load:0:rwx:%p}}}\n", __code_start, end - start, kLinkTimeAddress);
 }
 
 void Symbolize::ContextAlways() {

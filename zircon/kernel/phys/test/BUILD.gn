@@ -5,9 +5,11 @@
 # https://opensource.org/licenses/MIT
 
 import("$zx/kernel/phys/phys_executable.gni")
+import("$zx/kernel/phys/qemu.gni")
 import("$zx/public/gn/test/zbi_test.gni")
 
-assert(toolchain.environment == "kernel.phys")
+assert(toolchain.environment == "kernel.phys" ||
+       toolchain.environment_label == qemu_environment)
 
 # This provides a PhysMain function appropriate for zbi_test() targets.
 source_set("qemu-test-main") {
@@ -29,13 +31,6 @@ source_set("test-main") {
     "$zx/kernel/lib/arch:headers",
     "..:main",
   ]
-}
-
-# This is linked into the special-case phys_executable() tests that
-# are run directly as QEMU kernels.
-source_set("qemu-header") {
-  visibility = [ ":*" ]
-  sources = [ "qemu-header.S" ]
 }
 
 # Build a test that runs directly as a QEMU kernel.  This is wired up as a
@@ -60,10 +55,7 @@ template("phys_qemu_test") {
                              "testonly",
                            ])
     linker_script = "../phys.ld"
-    deps += [
-      ":qemu-header",
-      ":qemu-test-main",
-    ]
+    deps += qemu_deps + [ ":qemu-test-main" ]
   }
 
   zbi_test(zbi_target) {
@@ -93,6 +85,7 @@ template("phys_qemu_test") {
   environment_redirect(main_target) {
     testonly = true
     forward_variables_from(invoker, [ "visibility" ])
+    environment_label = qemu_environment
     deps = [ ":$zbi_target" ]
   }
 }
@@ -134,12 +127,9 @@ phys_qemu_test("qemu-phys-unittests") {
 group("test") {
   testonly = true
 
-  # TODO(46879): Get it building for x86 too.
-  if (current_cpu == "arm64") {
-    deps = [
-      ":backtrace-test",
-      ":hello-world-test",
-      ":qemu-phys-unittests",
-    ]
-  }
+  deps = [
+    ":backtrace-test",
+    ":hello-world-test",
+    ":qemu-phys-unittests",
+  ]
 }

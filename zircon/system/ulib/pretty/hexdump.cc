@@ -51,7 +51,7 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr,
 
     for (i = 0; i < s / 4; i++) {
       u.buf[i] = ((const uint32_t*)address)[i];
-      printf_func(printf_arg, "%08x ", u.buf[i]);
+      printf_func(printf_arg, "%08x ", static_cast<unsigned int>(u.buf[i]));
     }
     for (; i < 4; i++) {
       printf_func(printf_arg, "         ");

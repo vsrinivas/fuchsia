@@ -19,7 +19,7 @@ namespace hwreg {
 // int main(int argc, char**) {
 //   return hwreg::AsmHeader()
 //       .Register<FooReg>("FOO_")
-//       .Macro<FooReg>("FOO_BAR_VAL", FooReg::kBarVal)
+//       .Macro("FOO_BAR_VAL", FooReg::kBarVal)
 //       .Main(argc, argv);
 // }
 // ```

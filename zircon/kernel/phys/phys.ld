@@ -13,9 +13,14 @@ SECTIONS {
    *
    * It's all a single contiguous segment that is both writable and
    * executable, since no MMU protections are enabled.
+   *
+   * This layout is also used for fixed-position x86-32 boot shims,
+   * which set PHYS_LOAD_ADDRESS via -defsym.
    */
 
-  . = 0;
+   PHYS_LOAD_ADDRESS = DEFINED(PHYS_LOAD_ADDRESS) ? PHYS_LOAD_ADDRESS : 0;
+
+  . = PHYS_LOAD_ADDRESS;
   PROVIDE_HIDDEN(__code_start = .);
 
   .boot.header : {
@@ -56,6 +61,16 @@ SECTIONS {
   .data : {
     *(.data*)
   }
+
+  /*
+   * This represents the end of the load image, as distinct from the end
+   * of data in memory.  That is, it's not aligned to the .bss alignment.
+   * That alignment padding isn't included in the file.  It only matters
+   * that the memory reserved for .bss at runtime includes the padding.
+   * But the load headers for boot headers need to identify the size of
+   * the load image on disk precisely, so they use this instead of _edata.
+   */
+  PROVIDE_HIDDEN(PHYS_LOAD_END = .);
 
   .bss : {
     /*

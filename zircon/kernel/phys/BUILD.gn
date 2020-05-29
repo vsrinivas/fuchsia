@@ -11,6 +11,7 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 
 if (current_toolchain == default_toolchain) {
   # Default toolchain (current_cpu == "") just defines the phys environment.
+  # Note: see $zx/kernel/arch/x86/phys:kernel.phys32 too.
   foreach(cpu, standard_fuchsia_cpus) {
     kernel_cpu = cpu
     if (kernel_cpu == "x64") {
@@ -73,7 +74,8 @@ if (current_toolchain == default_toolchain) {
       }
     }
   }
-} else if (toolchain.environment != "kernel.phys") {
+} else if (toolchain.environment != "kernel.phys" &&
+           toolchain.environment != "kernel.phys32") {
   # From another environment (e.g. user, kernel), the public targets
   # redirect into the phys environment.
   assert(current_cpu != "")
@@ -126,5 +128,11 @@ if (current_toolchain == default_toolchain) {
       # "main.h" has #include <lib/arch/ticks.h>.
       "$zx/kernel/lib/arch",
     ]
+  }
+
+  # This is linked into the special-case phys_executable() tests that
+  # are run directly as QEMU kernels.
+  source_set("qemu-header") {
+    sources = [ "qemu-header.S" ]
   }
 }

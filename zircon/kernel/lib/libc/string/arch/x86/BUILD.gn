@@ -8,12 +8,25 @@ source_set("x86") {
   sources = [
     "memcpy.S",
     "memset.S",
-    "selector.cc",
   ]
-  deps = [
-    ":tests",
-    "$zx/kernel/lib/code_patching",
-  ]
+  deps = [ "$zx/kernel/lib/code_patching:headers" ]
+  if (toolchain.environment == "kernel") {
+    sources += [ "selector.cc" ]
+    deps += [
+      ":tests",
+      "$zx/kernel/lib/code_patching",
+    ]
+  } else {
+    # TODO(mcgrathr): Make the assembly compatible with phys.
+    # For now, just use the C.
+    sources = []
+    deps = []
+    sources = [
+      "$zx/kernel/lib/libc/string/memcpy.c",
+      "$zx/kernel/lib/libc/string/memset.c",
+    ]
+    deps = [ "$zx/kernel/lib/libc:headers" ]
+  }
 }
 
 source_set("tests") {

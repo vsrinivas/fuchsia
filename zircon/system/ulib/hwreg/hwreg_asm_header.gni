@@ -19,6 +19,8 @@ import("$zx/public/gn/host_tool_action.gni")
 #     - Required: Source files for the generator program.
 #     - Type: list(file)
 #
+# Other parameters are passed on to host_tool(), e.g. `cflags`, `defines`, etc.
+#
 template("hwreg_asm_header") {
   main_target = target_name
   tool_target = "_hwreg_header.tool.$target_name"
@@ -31,15 +33,17 @@ template("hwreg_asm_header") {
   if (is_host) {
     host_tool(tool_target) {
       visibility = [ ":*" ]
+      deps = []
       forward_variables_from(invoker,
+                             "*",
                              [
-                               "sources",
-                               "testonly",
+                               "output_name",
+                               "visibility",
                              ])
-      deps = [ "$zx/system/ulib/hwreg" ]
+      deps += [ "$zx/system/ulib/hwreg" ]
     }
   } else {
-    not_needed(invoker, [ "sources" ])
+    not_needed(invoker, "*")
   }
 
   if (current_toolchain == default_toolchain) {

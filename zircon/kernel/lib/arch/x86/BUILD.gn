@@ -9,6 +9,10 @@ zx_library("x86") {
   host = true
   static = true
   sources = []
+  public_deps = [
+    # TODO
+    "$zx/system/ulib/hwreg:headers",
+  ]
 
   sdk = "source"
   sdk_headers = [ "lib/arch/intrin.h" ]

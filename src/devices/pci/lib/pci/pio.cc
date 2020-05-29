@@ -17,14 +17,14 @@ static constexpr uint16_t kPciConfigDataPort = 0xCFC;
 
 fbl::Mutex pio_port_lock;
 
-typedef struct {
+struct config_address_t {
   uint32_t value;
   DEF_SUBBIT(value, 31, enable);
   DEF_SUBFIELD(value, 23, 16, bus);
   DEF_SUBFIELD(value, 15, 11, device);
   DEF_SUBFIELD(value, 10, 8, function);
   DEF_SUBFIELD(value, 7, 0, reg_num);
-} config_address_t;
+};
 
 // This library assumes the calling process already has the io bitmap permissions
 // set to access cf8/cfc. Any processes with that permission will be synchronizing

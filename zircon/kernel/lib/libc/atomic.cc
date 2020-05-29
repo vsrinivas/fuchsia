@@ -14,12 +14,16 @@
 
 #include <cstdint>
 
+#ifndef __i386__
+
 bool atomic_compare_exchange_16(volatile void* ptr, void* expected, unsigned __int128 desired, bool,
                                 int, int) __asm__("__atomic_compare_exchange_16");
 
 unsigned __int128 atomic_load_16(volatile void* ptr, int) __asm__("__atomic_load_16");
 
 void atomic_store_16(volatile void* ptr, unsigned __int128 value, int) __asm__("__atomic_store_16");
+
+#endif  // !__i386__
 
 #ifdef __aarch64__
 

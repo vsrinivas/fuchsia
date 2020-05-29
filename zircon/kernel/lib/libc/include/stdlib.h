@@ -28,8 +28,8 @@ void abort(void) __attribute__((noreturn));
 int rand(void);
 void srand(unsigned int seed);
 
-// Note: POSIX.1 specifies unsigned int, but we use uint64_t instead.
-int rand_r(uint64_t *seed);
+// Note: POSIX.1 specifies unsigned int, but we use uintptr_t instead.
+int rand_r(uintptr_t *seed);
 
 __END_CDECLS
 

@@ -7,7 +7,8 @@
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 
-_is_phys = toolchain.environment == "kernel.phys"
+_is_phys = toolchain.environment == "kernel.phys" ||
+           toolchain.environment == "kernel.phys32"
 
 # Build an executable for the phys environment.
 #

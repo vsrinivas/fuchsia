@@ -16,7 +16,15 @@ zx_library("hwreg") {
   static = true
   host = true
   sources = [ "printers.cc" ]
-  if (!is_kernel) {
+  if (is_kernel) {
+    # TODO(mcgrathr): remove old multiboot environment
+    if (toolchain.environment != "multiboot") {
+      public_deps = [
+        "$zx/kernel/lib/ktl",
+        "$zx/kernel/lib/libc",
+      ]
+    }
+  } else {
     sources += [ "asm.cc" ]
     deps = [ "$zx/system/ulib/fit" ]
   }
