@@ -290,6 +290,12 @@ TEST(BootsvcIntegrationTest, VdsosPresent) {
   closedir(dir);
 }
 
+// Test that the boot arguments are extracted from both vbmeta and bootfs.
+TEST(BootsvcIntegrationTest, BootArguments) {
+  EXPECT_STR_EQ(environ[0], "testkey=testvalue");
+  EXPECT_STR_EQ(environ[1], "bootfskey=bootfsvalue");
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {

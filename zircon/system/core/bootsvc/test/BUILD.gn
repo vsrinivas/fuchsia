@@ -84,6 +84,9 @@ zbi_input("integration-test-deps") {
     ":integration-test-image-arg",
     ":shutdown-flag",
 
+    # Include a boot argument from bootfs.
+    ":integration-test-bootfs-arg",
+
     # Include a fake file in the ZBI in meta/, so we can test against a file that shouldn't be
     # executable.
     ":fake-cm-file",
@@ -152,6 +155,24 @@ zbi_input("integration-test-image-arg") {
   deps = [ ":bootsvc-integration-test-image-arg" ]
   type = "IMAGE_ARGS"
   sources = get_target_outputs(deps[0])
+}
+
+generated_file("bootsvc-integration-test-bootfs-arg") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  outputs = [ "$target_out_dir/$target_name.txt" ]
+
+  # Writing out a list rather than a string means it gets a trailing newline.
+  contents = [ "bootfskey=bootfsvalue" ]
+}
+
+resource("integration-test-bootfs-arg") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [ ":bootsvc-integration-test-bootfs-arg" ]
+  sources = get_target_outputs(deps[0])
+  outputs = [ "config/devmgr" ]
 }
 
 generated_file("gen-dummy-file") {

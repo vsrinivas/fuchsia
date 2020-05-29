@@ -124,11 +124,9 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
   ZX_ASSERT_MSG(((status == ZX_OK) || (status == ZX_ERR_NOT_FOUND)),
                 "Retrieving boot args failed: %s\n", zx_status_get_string(status));
 
-  if (status == ZX_ERR_NOT_FOUND) {
-    status = ExtractBootArgsFromBootfs(&boot_args, bootfs);
-    ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot config failed: %s\n",
-                  zx_status_get_string(status));
-  }
+  status = ExtractBootArgsFromBootfs(&boot_args, bootfs);
+  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot config failed: %s\n",
+                zx_status_get_string(status));
 
   // Add boot arguments from environment variables.
   for (char** e = environ; *e != nullptr; e++) {
