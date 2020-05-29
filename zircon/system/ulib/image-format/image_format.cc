@@ -154,8 +154,8 @@ class AfbcFormats : public ImageFormatSet {
       return false;
     }
     switch (pixel_format->format_modifier.value) {
-      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16:
-      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8:
         return true;
       default:
         return false;
@@ -170,12 +170,12 @@ class AfbcFormats : public ImageFormatSet {
     uint32_t block_width;
     uint32_t block_height;
     switch (image_format->pixel_format.format_modifier.value) {
-      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16:
         block_width = 16;
         block_height = 16;
         break;
 
-      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8:
+      case fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8:
         block_width = 32;
         block_height = 8;
         break;

@@ -91,7 +91,7 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
             // .has_format_modifier
             true,
             // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16},
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16},
         },
         // .required_buffer_usage_bits
         {
@@ -117,7 +117,7 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
             // .has_format_modifier
             true,
             // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16x16},
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16},
         },
         // .required_buffer_usage_bits
         {
@@ -143,7 +143,7 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
             // .has_format_modifier
             true,
             // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8},
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8},
         },
         // .required_buffer_usage_bits
         {
@@ -169,7 +169,7 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
             // .has_format_modifier
             true,
             // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32x8},
+            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8},
         },
         // .required_buffer_usage_bits
         {
