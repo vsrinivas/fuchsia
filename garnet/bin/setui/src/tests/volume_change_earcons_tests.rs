@@ -219,11 +219,12 @@ async fn test_max_volume_sound_on_press() {
 
     // Simulate initial restoration of media volume.
     set_volume(&audio_proxy, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
+    audio_proxy.watch2().await.expect("watch completed");
 
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
     audio_proxy.watch2().await.expect("watch completed");
+
     assert!(fake_services.sound_player.lock().await.id_exists(0));
     assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
 
@@ -235,15 +236,15 @@ async fn test_max_volume_sound_on_press() {
 
     // Sets volume max again.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
     audio_proxy.watch2().await.expect("watch completed");
 
     // Set volume to max again, to simulate holding button.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+    audio_proxy.watch2().await.expect("watch completed");
 
     // Check that the sound played the correct number of times.
     assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(4));
+    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(3));
 }
 
 // Test to ensure that when the volume is changed on multiple channels, the sound only plays once.

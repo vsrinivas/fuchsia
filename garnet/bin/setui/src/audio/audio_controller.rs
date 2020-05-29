@@ -8,8 +8,12 @@ use crate::registry::setting_handler::persist::{
 use crate::registry::setting_handler::{controller, ControllerError};
 use async_trait::async_trait;
 use {
-    crate::audio::{default_audio_info, StreamVolumeControl},
+    crate::audio::{
+        create_default_modified_timestamps, default_audio_info, ModifiedTimestamps,
+        StreamVolumeControl,
+    },
     crate::input::monitor_media_buttons,
+    crate::internal::common::now,
     crate::switchboard::base::*,
     anyhow::Error,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
@@ -106,7 +110,7 @@ pub struct VolumeController {
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
     input_monitor: InputMonitorHandle,
-    changed_streams: Option<Vec<AudioStream>>,
+    modified_timestamps: ModifiedTimestamps,
 }
 
 impl VolumeController {
@@ -116,7 +120,7 @@ impl VolumeController {
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
             input_monitor: InputMonitor::create(client.clone()),
-            changed_streams: None,
+            modified_timestamps: create_default_modified_timestamps(),
         }));
 
         handle
@@ -142,7 +146,7 @@ impl VolumeController {
 
         audio_info.input =
             AudioInputInfo { mic_mute: self.input_monitor.lock().await.get_mute_state() };
-        audio_info.changed_streams = self.changed_streams.clone();
+        audio_info.modified_timestamps = Some(self.modified_timestamps.clone());
         Ok(audio_info)
     }
 
@@ -153,8 +157,13 @@ impl VolumeController {
             return Err(e);
         }
 
+        // Update timestamps for changed streams.
+        for stream in volume.iter() {
+            self.modified_timestamps.insert(stream.stream_type, now().to_string());
+        }
+
         self.update_volume_streams(&volume, true).await;
-        self.changed_streams = Some(volume);
+
         self.client.notify().await;
 
         Ok(None)

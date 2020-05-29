@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use self::audio_default_settings::default_audio_info;
+pub use self::audio_default_settings::{
+    create_default_modified_timestamps, default_audio_info, ModifiedTimestamps,
+};
 pub use self::audio_fidl_handler::spawn_audio_fidl_handler;
 pub use self::stream_volume_control::StreamVolumeControl;
 

@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent,
-    crate::audio::default_audio_info,
+    crate::audio::{create_default_modified_timestamps, default_audio_info},
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorage,
@@ -362,7 +362,7 @@ async fn test_persisted_values_applied_at_start() {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
-        changed_streams: None,
+        modified_timestamps: Some(create_default_modified_timestamps()),
     };
 
     // Write values in the store.

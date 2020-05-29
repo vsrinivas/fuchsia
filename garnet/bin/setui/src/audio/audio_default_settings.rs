@@ -4,11 +4,13 @@
 
 use {
     crate::config::default_settings::DefaultSetting,
+    crate::internal::common::default_time,
     crate::registry::device_storage::DeviceStorageCompatible,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
     },
     lazy_static::lazy_static,
+    std::collections::HashMap,
     std::sync::Mutex,
 };
 
@@ -24,10 +26,16 @@ const DEFAULT_STREAMS: [AudioStream; 5] = [
     create_default_audio_stream(AudioStreamType::Communication),
 ];
 
+/// Structure for storing last modified timestamps for each audio stream.
+pub type ModifiedTimestamps = HashMap<AudioStreamType, String>;
+
 const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE };
 
-const DEFAULT_AUDIO_INFO: AudioInfo =
-    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO, changed_streams: None };
+const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
+    streams: DEFAULT_STREAMS,
+    input: DEFAULT_AUDIO_INPUT_INFO,
+    modified_timestamps: None,
+};
 
 lazy_static! {
     pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo>> =
@@ -35,6 +43,21 @@ lazy_static! {
             DEFAULT_AUDIO_INFO,
             Some("/config/data/audio_config_data.json".to_string()),
         ));
+}
+
+pub fn create_default_modified_timestamps() -> ModifiedTimestamps {
+    let mut timestamps = HashMap::new();
+    let stream_types = [
+        AudioStreamType::Background,
+        AudioStreamType::Media,
+        AudioStreamType::Interruption,
+        AudioStreamType::SystemAgent,
+        AudioStreamType::Communication,
+    ];
+    for stream_type in stream_types.iter() {
+        timestamps.insert(*stream_type, default_time().to_string());
+    }
+    timestamps
 }
 
 pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -96,7 +119,7 @@ mod tests {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
-        changed_streams: None,
+        modified_timestamps: None,
     };
 
     #[test]

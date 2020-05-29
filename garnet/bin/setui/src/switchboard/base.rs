@@ -12,6 +12,7 @@ use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::audio::ModifiedTimestamps;
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use bitflags::bitflags;
@@ -206,7 +207,7 @@ pub struct AudioInputInfo {
 pub struct AudioInfo {
     pub streams: [AudioStream; 5],
     pub input: AudioInputInfo,
-    pub changed_streams: Option<Vec<AudioStream>>,
+    pub modified_timestamps: Option<ModifiedTimestamps>,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

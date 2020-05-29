@@ -5,10 +5,11 @@
 use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
+use crate::audio::{create_default_modified_timestamps, ModifiedTimestamps};
 use crate::input::monitor_media_buttons;
 use crate::switchboard::base::{
-    AudioInfo, AudioStreamType, ListenSession, SettingRequest, SettingResponse, SettingType,
-    SwitchboardClient,
+    AudioInfo, AudioStream, AudioStreamType, ListenSession, SettingRequest, SettingResponse,
+    SettingType, SwitchboardClient,
 };
 
 use anyhow::Error;
@@ -25,6 +26,7 @@ use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use futures::StreamExt;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
@@ -34,6 +36,7 @@ pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_media_user_volume: Option<f32>,
     volume_button_event: i8,
+    modified_timestamps: ModifiedTimestamps,
     switchboard_client: SwitchboardClient,
 }
 
@@ -82,9 +85,10 @@ impl VolumeChangeHandler {
             let mut handler = Self {
                 _listen_session: session,
                 common_earcons_params: params,
-                last_media_user_volume: Some(1.0),
+                last_media_user_volume: Some(MAX_VOLUME),
                 volume_button_event: 0,
                 priority_stream_playing: false,
+                modified_timestamps: create_default_modified_timestamps(),
                 switchboard_client: client,
             };
 
@@ -156,12 +160,39 @@ impl VolumeChangeHandler {
         }
     }
 
+    /// Calculates and returns the streams that were changed based on
+    /// their timestamps, updating them in the stored timestamps if
+    /// they were changed.
+    fn calculate_changed_streams(
+        &mut self,
+        all_streams: [AudioStream; 5],
+        new_modified_timestamps: ModifiedTimestamps,
+    ) -> Vec<AudioStream> {
+        let mut changed_stream_types = HashSet::new();
+        for (stream_type, timestamp) in new_modified_timestamps {
+            if self.modified_timestamps.get(&stream_type) != Some(&timestamp) {
+                changed_stream_types.insert(stream_type);
+                self.modified_timestamps.insert(stream_type, timestamp);
+            }
+        }
+
+        all_streams
+            .iter()
+            .filter(|stream| changed_stream_types.contains(&stream.stream_type))
+            .cloned()
+            .collect()
+    }
+
     /// Invoked when a new `AudioInfo` is retrieved. Determines whether an
     /// earcon should be played and plays sound if necessary.
     async fn on_audio_info(&mut self, audio_info: AudioInfo) {
-        let changed_streams = match audio_info.changed_streams {
-            Some(streams) => streams,
-            None => Vec::new(),
+        let changed_streams = if audio_info.modified_timestamps.is_none() {
+            Vec::new()
+        } else {
+            self.calculate_changed_streams(
+                audio_info.streams,
+                audio_info.modified_timestamps.unwrap(),
+            )
         };
 
         let new_media_user_volume: Option<f32> =
@@ -174,19 +205,19 @@ impl VolumeChangeHandler {
         let stream_is_media =
             changed_streams.iter().find(|&&x| x.stream_type == AudioStreamType::Media).is_some();
 
-        // Logging for debugging volume changes.
-        if stream_is_media {
-            fx_log_debug!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
-            fx_log_debug!(
-                "[earcons_agent] New media user volume: {:?}, Last media user volume: {:?}",
-                new_media_user_volume,
-                self.last_media_user_volume
-            );
+        if !stream_is_media {
+            return;
         }
 
-        if ((self.last_media_user_volume != new_media_user_volume) || volume_up_max_pressed)
-            && stream_is_media
-        {
+        // Logging for debugging volume changes.
+        fx_log_debug!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
+        fx_log_debug!(
+            "[earcons_agent] New media user volume: {:?}, Last media user volume: {:?}",
+            new_media_user_volume,
+            self.last_media_user_volume
+        );
+
+        if (self.last_media_user_volume != new_media_user_volume) || volume_up_max_pressed {
             if self.last_media_user_volume != None {
                 // On restore, the last media user volume is set for the first time, and registers
                 // as different from the last seen volume, because it is initially None. Don't play
@@ -259,5 +290,94 @@ impl VolumeChangeHandler {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::audio::default_audio_info;
+    use crate::internal::common::default_time;
+    use crate::service_context::ServiceContext;
+    use crate::switchboard::base::{
+        ListenCallback, SettingResponseResult, Switchboard, SwitchboardHandle,
+    };
+    use futures::lock::Mutex;
+
+    struct FakeSwitchboard {}
+    struct FakeListenSession {}
+
+    impl ListenSession for FakeListenSession {
+        fn close(&mut self) {}
+    }
+
+    impl Drop for FakeListenSession {
+        fn drop(&mut self) {}
+    }
+
+    impl Switchboard for FakeSwitchboard {
+        fn request(
+            &mut self,
+            _setting_type: SettingType,
+            _request: SettingRequest,
+            _callback: futures::channel::oneshot::Sender<SettingResponseResult>,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        fn listen(
+            &mut self,
+            _setting_type: SettingType,
+            _listener: ListenCallback,
+        ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
+            Ok(Box::new(FakeListenSession {}))
+        }
+    }
+
+    fn fake_values() -> (
+        [AudioStream; 5],   // fake_streams
+        ModifiedTimestamps, // old_timestamps
+        ModifiedTimestamps, // new_timestamps
+        Vec<AudioStream>,   // expected_changed_streams
+    ) {
+        let fake_streams = default_audio_info().streams;
+        let old_timestamps = create_default_modified_timestamps();
+        let new_timestamps = [
+            (AudioStreamType::Background, default_time().to_string()),
+            (AudioStreamType::Media, "2020-05-29 02:25:00.604748666 UTC".to_string()),
+            (AudioStreamType::Interruption, default_time().to_string()),
+            (AudioStreamType::SystemAgent, "2020-05-29 02:25:00.813529234 UTC".to_string()),
+            (AudioStreamType::Communication, "2020-05-29 02:25:01.004947253 UTC".to_string()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        let expected_changed_streams = [fake_streams[1], fake_streams[3], fake_streams[4]].to_vec();
+        (fake_streams, old_timestamps, new_timestamps, expected_changed_streams)
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_changed_streams() {
+        let (fake_streams, old_timestamps, new_timestamps, expected_changed_streams) =
+            fake_values();
+        let switchboard_handle = Arc::new(Mutex::new(FakeSwitchboard {}));
+        let session = Box::new(FakeListenSession {});
+        let mut handler = VolumeChangeHandler {
+            _listen_session: session,
+            common_earcons_params: CommonEarconsParams {
+                service_context: ServiceContext::create(None),
+                sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
+                sound_player_connection: Arc::new(Mutex::new(None)),
+            },
+            last_media_user_volume: Some(1.0),
+            volume_button_event: 0,
+            priority_stream_playing: false,
+            modified_timestamps: old_timestamps,
+            switchboard_client: SwitchboardClient::new(
+                &(switchboard_handle.clone() as SwitchboardHandle),
+            ),
+        };
+        let changed_streams = handler.calculate_changed_streams(fake_streams, new_timestamps);
+        assert_eq!(changed_streams, expected_changed_streams);
     }
 }

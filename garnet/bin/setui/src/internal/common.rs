@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use chrono::{DateTime, Utc};
+use chrono::{offset::TimeZone, DateTime, Utc};
 
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
 pub enum Address {}
@@ -52,4 +52,9 @@ pub type Timestamp = DateTime<Utc>;
 
 pub fn now() -> Timestamp {
     Utc::now()
+}
+
+/// Default time, defined as the epoch timestamp.
+pub fn default_time() -> Timestamp {
+    Utc.timestamp(0, 0)
 }
