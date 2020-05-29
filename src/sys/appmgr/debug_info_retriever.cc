@@ -4,6 +4,8 @@
 
 #include "debug_info_retriever.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <list>
 
 namespace component {

@@ -122,7 +122,7 @@ void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, in
 
   // The AD fields that we'll parse out.
   uint8_t flags = 0;
-  fxl::StringView short_name, complete_name;
+  std::string_view short_name, complete_name;
   int8_t tx_power_lvl;
   bool tx_power_present = false;
 

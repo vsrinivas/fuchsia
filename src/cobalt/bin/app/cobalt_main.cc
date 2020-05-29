@@ -36,22 +36,22 @@
 // Command-line flags
 
 // Used to override kScheduleIntervalDefault;
-constexpr fxl::StringView kScheduleIntervalSecondsFlagName = "schedule_interval_seconds";
+constexpr std::string_view kScheduleIntervalSecondsFlagName = "schedule_interval_seconds";
 
-constexpr fxl::StringView kInitialIntervalSecondsFlagName = "initial_interval_seconds";
+constexpr std::string_view kInitialIntervalSecondsFlagName = "initial_interval_seconds";
 
 // Used to override kMinIntervalDefault;
-constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
+constexpr std::string_view kMinIntervalSecondsFlagName = "min_interval_seconds";
 
 // Used to override kEventAggregatorBackfillDaysDefault
-constexpr fxl::StringView kEventAggregatorBackfillDaysFlagName = "event_aggregator_backfill_days";
+constexpr std::string_view kEventAggregatorBackfillDaysFlagName = "event_aggregator_backfill_days";
 
 // Used to override kStartEventAggregatorWorkerDefault
-constexpr fxl::StringView kStartEventAggregatorWorkerFlagName = "start_event_aggregator_worker";
+constexpr std::string_view kStartEventAggregatorWorkerFlagName = "start_event_aggregator_worker";
 
-constexpr fxl::StringView kUseMemoryObservationStore = "use_memory_observation_store";
+constexpr std::string_view kUseMemoryObservationStore = "use_memory_observation_store";
 
-constexpr fxl::StringView kMaxBytesTotalFlagName = "max_bytes_per_observation_store";
+constexpr std::string_view kMaxBytesTotalFlagName = "max_bytes_per_observation_store";
 
 // We want to only upload every hour. This is the interval that will be
 // approached by the uploader.

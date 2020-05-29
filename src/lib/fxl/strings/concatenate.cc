@@ -6,14 +6,14 @@
 
 namespace fxl {
 
-std::string Concatenate(std::initializer_list<fxl::StringView> string_views) {
+std::string Concatenate(std::initializer_list<std::string_view> string_views) {
   std::string result;
   size_t result_size = 0;
-  for (const fxl::StringView& string_view : string_views) {
+  for (const std::string_view& string_view : string_views) {
     result_size += string_view.size();
   }
   result.reserve(result_size);
-  for (const fxl::StringView& string_view : string_views) {
+  for (const std::string_view& string_view : string_views) {
     result.append(string_view.data(), string_view.size());
   }
   return result;

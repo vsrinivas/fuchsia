@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_FILES_FILE_H_
-#define LIB_FXL_FILES_FILE_H_
+#ifndef SRC_LIB_FILES_FILE_H_
+#define SRC_LIB_FILES_FILE_H_
 
 #include <stdint.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
-
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace files {
 
@@ -26,7 +25,7 @@ bool WriteFileAt(int dirfd, const std::string& path, const char* data, ssize_t s
 // Note that |path| and |temp_root| must be within the same filesystem for the
 // move to work. For example, it will not work to use |path| under /data and
 // |temp_root| under /tmp.
-bool WriteFileInTwoPhases(const std::string& path, fxl::StringView data,
+bool WriteFileInTwoPhases(const std::string& path, std::string_view data,
                           const std::string& temp_root);
 
 // Reads the contents of the file at the given path or file descriptor and
@@ -53,4 +52,4 @@ bool GetFileSizeAt(int dirfd, const std::string& path, uint64_t* size);
 
 }  // namespace files
 
-#endif  // LIB_FXL_FILES_FILE_H_
+#endif  // SRC_LIB_FILES_FILE_H_

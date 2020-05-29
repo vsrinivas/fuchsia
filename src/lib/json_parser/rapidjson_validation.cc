@@ -21,7 +21,7 @@ std::string InitSchemaError::ToString() const {
   return s.str();
 }
 
-fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(fxl::StringView json) {
+fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(std::string_view json) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(json.data(), json.size()).HasParseError()) {
     auto offset = schema_document.GetErrorOffset();
@@ -33,7 +33,7 @@ fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(fxl::StringV
 
 fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
                                          const rapidjson::SchemaDocument& schema,
-                                         fxl::StringView value_name) {
+                                         std::string_view value_name) {
   rapidjson::SchemaValidator validator(schema);
   if (!value.Accept(validator)) {
     rapidjson::StringBuffer uri_buffer;
@@ -42,7 +42,7 @@ fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
     s << "Incorrect schema ";
 
     if (!value_name.empty()) {
-      s << "of \"" << value_name.ToString() << "\" ";
+      s << "of \"" << value_name << "\" ";
     }
     s << "at " << uri_buffer.GetString()
       << " , schema violation: " << validator.GetInvalidSchemaKeyword();

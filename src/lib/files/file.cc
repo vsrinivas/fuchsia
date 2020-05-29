@@ -62,7 +62,7 @@ bool WriteFileAt(int dirfd, const std::string& path, const char* data, ssize_t s
   return fxl::WriteFileDescriptor(fd.get(), data, size);
 }
 
-bool WriteFileInTwoPhases(const std::string& path, fxl::StringView data,
+bool WriteFileInTwoPhases(const std::string& path, std::string_view data,
                           const std::string& temp_root) {
   ScopedTempDir temp_dir(temp_root);
 

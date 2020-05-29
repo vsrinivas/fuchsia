@@ -4,6 +4,8 @@
 
 #include "thread_config_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "openthread-system.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"

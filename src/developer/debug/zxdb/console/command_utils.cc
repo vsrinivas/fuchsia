@@ -133,7 +133,7 @@ Err StringToInt64(const std::string& s, int64_t* out) {
   *out = 0;
 
   // StringToNumber expects pre-trimmed input.
-  std::string trimmed = fxl::TrimString(s, " ").ToString();
+  std::string trimmed(fxl::TrimString(s, " "));
 
   ErrOrValue number_value = StringToNumber(trimmed);
   if (number_value.has_error())
@@ -177,7 +177,7 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   *out = 0;
 
   // StringToNumber expects pre-trimmed input.
-  std::string trimmed = fxl::TrimString(s, " ").ToString();
+  std::string trimmed(fxl::TrimString(s, " "));
 
   ErrOrValue number_value = StringToNumber(trimmed);
   if (number_value.has_error())

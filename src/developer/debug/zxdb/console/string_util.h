@@ -8,7 +8,6 @@
 #include <optional>
 #include <string_view>
 
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
 
 namespace zxdb {

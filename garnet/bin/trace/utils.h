@@ -12,7 +12,6 @@
 #include <string>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace tracing {
 
@@ -23,7 +22,8 @@ enum class OptionStatus {
   ERROR,
 };
 
-bool BeginsWith(const fxl::StringView& str, const fxl::StringView& prefix, fxl::StringView* rest);
+bool BeginsWith(const std::string_view& str, const std::string_view& prefix,
+                std::string_view* rest);
 
 OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line, const char* name,
                                 bool* out_value);

@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_FILES_SCOPED_TEMP_DIR_H_
-#define LIB_FXL_FILES_SCOPED_TEMP_DIR_H_
+#ifndef SRC_LIB_FILES_SCOPED_TEMP_DIR_H_
+#define SRC_LIB_FILES_SCOPED_TEMP_DIR_H_
 
 #include <string>
-
-#include "src/lib/fxl/strings/string_view.h"
+#include <string_view>
 
 namespace files {
 
@@ -24,7 +23,7 @@ namespace files {
 class ScopedTempDirAt {
  public:
   explicit ScopedTempDirAt(int root_fd);
-  explicit ScopedTempDirAt(int root_fd, fxl::StringView parent_path);
+  explicit ScopedTempDirAt(int root_fd, std::string_view parent_path);
   ScopedTempDirAt(ScopedTempDirAt&&) = delete;
   ScopedTempDirAt& operator=(ScopedTempDirAt&&) = delete;
   ~ScopedTempDirAt();
@@ -47,7 +46,7 @@ class ScopedTempDirAt {
 class ScopedTempDir {
  public:
   ScopedTempDir();
-  explicit ScopedTempDir(fxl::StringView parent_path);
+  explicit ScopedTempDir(std::string_view parent_path);
   ScopedTempDir(ScopedTempDir&&) = delete;
   ScopedTempDir& operator=(ScopedTempDir&&) = delete;
   ~ScopedTempDir();
@@ -64,4 +63,4 @@ class ScopedTempDir {
 
 }  // namespace files
 
-#endif  // LIB_FXL_FILES_SCOPED_TEMP_DIR_H_
+#endif  // SRC_LIB_FILES_SCOPED_TEMP_DIR_H_

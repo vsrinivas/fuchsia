@@ -8,6 +8,7 @@
 #include <lib/zx/vmo.h>
 
 #include <string>
+#include <string_view>
 
 #include <gtest/gtest.h>
 
@@ -15,7 +16,6 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fsl {
 namespace {
@@ -28,7 +28,7 @@ TEST(VMOAndFile, VmoFromFd) {
 
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
-  constexpr fxl::StringView payload = "Payload";
+  constexpr std::string_view payload = "Payload";
   EXPECT_EQ(static_cast<ssize_t>(payload.size()), write(fd.get(), payload.data(), payload.size()));
 
   fsl::SizedVmo vmo;
@@ -48,7 +48,7 @@ TEST(VMOAndFile, VmoFromFilename) {
 
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   EXPECT_TRUE(fd.is_valid());
-  constexpr fxl::StringView payload = "Another playload";
+  constexpr std::string_view payload = "Another playload";
   EXPECT_EQ(static_cast<ssize_t>(payload.size()), write(fd.get(), payload.data(), payload.size()));
   fd.reset();
 

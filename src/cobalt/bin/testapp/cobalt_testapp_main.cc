@@ -23,20 +23,19 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 // Command-line flags
 
 // Don't use the network. Default=false (i.e. do use the network.)
-constexpr fxl::StringView kNoNetworkForTesting = "no_network_for_testing";
+constexpr std::string_view kNoNetworkForTesting = "no_network_for_testing";
 
 // Use the prober project instead of the testapp project. Default=false (i.e.,
 // use the testapp project).
-constexpr fxl::StringView kTestForProber = "test_for_prober";
+constexpr std::string_view kTestForProber = "test_for_prober";
 
 // If --test_for_prober was also passed, run the testapp in prober mode instead
 // of printing a warning and exiting.
-constexpr fxl::StringView kOverrideProberWarning = "override_prober_warning";
+constexpr std::string_view kOverrideProberWarning = "override_prober_warning";
 
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

@@ -5,6 +5,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"

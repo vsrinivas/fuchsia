@@ -7,10 +7,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <string.h>
 
+#include <string_view>
 #include <vector>
 
 #include "src/lib/fxl/strings/ascii.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/url_canon_internal.h"
 #include "src/lib/url/url_file.h"
 #include "src/lib/url/url_util_internal.h"
@@ -41,8 +41,8 @@ inline bool DoCompareSchemeComponent(const char* spec, const Component& componen
                                      const char* compare_to) {
   if (component.is_invalid_or_empty())
     return compare_to[0] == 0;  // When component is empty, match empty scheme.
-  return LowerCaseEqualsASCII(fxl::StringView(&spec[component.begin], component.len()),
-                              fxl::StringView(compare_to));
+  return LowerCaseEqualsASCII(std::string_view(&spec[component.begin], component.len()),
+                              std::string_view(compare_to));
 }
 
 }  // namespace
@@ -54,8 +54,8 @@ bool IsStandard(const char* spec, const Component& scheme) {
     return false;  // Empty or invalid schemes are non-standard.
 
   for (const auto& standard_scheme : StandardSchemes()) {
-    if (LowerCaseEqualsASCII(fxl::StringView(&spec[scheme.begin], scheme.len()),
-                             fxl::StringView(standard_scheme)))
+    if (LowerCaseEqualsASCII(std::string_view(&spec[scheme.begin], scheme.len()),
+                             std::string_view(standard_scheme)))
       return true;
   }
   return false;

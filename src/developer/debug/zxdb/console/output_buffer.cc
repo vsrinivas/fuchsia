@@ -243,7 +243,7 @@ void OutputBuffer::FormatHelp(const std::string& str) {
       syntax = Syntax::kNormal;
     }
 
-    spans_.push_back(Span(syntax, line.ToString()));
+    spans_.push_back(Span(syntax, std::string(line)));
     spans_.push_back(Span(Syntax::kNormal, "\n"));
   }
 }

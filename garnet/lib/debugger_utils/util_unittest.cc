@@ -118,7 +118,7 @@ TEST(UtilTest, EscapeNonPrintableString) {
       "\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b"
       "\\x1c\\x1d\\x1e\\x1f ",
       EscapeNonPrintableString(
-          fxl::StringView(kSomeNonPrintableChars, sizeof(kSomeNonPrintableChars))));
+          std::string_view(kSomeNonPrintableChars, sizeof(kSomeNonPrintableChars))));
 }
 
 TEST(UtilTest, JoinStrings) {
@@ -137,17 +137,17 @@ TEST(UtilTest, JoinStrings) {
   strings.push_back(kEntry1);
   size_t result_size = JoinStrings(strings, ',', buffer, kBufferSize);
   EXPECT_EQ(std::strlen(kEntry1), result_size);
-  EXPECT_EQ(kEntry1, fxl::StringView(buffer, result_size));
+  EXPECT_EQ(kEntry1, std::string_view(buffer, result_size));
 
   strings.push_back(kEntry2);
   result_size = JoinStrings(strings, ',', buffer, kBufferSize);
   EXPECT_EQ(std::strlen(kEntry1) + std::strlen(kEntry2) + 1, result_size);
-  EXPECT_EQ("an entry,another entry", fxl::StringView(buffer, result_size));
+  EXPECT_EQ("an entry,another entry", std::string_view(buffer, result_size));
 
   strings.push_back(kEntry3);
   result_size = JoinStrings(strings, ',', buffer, kBufferSize);
   EXPECT_EQ(kBufferSize, result_size);
-  EXPECT_EQ("an entry,another entry,banana", fxl::StringView(buffer, result_size));
+  EXPECT_EQ("an entry,another entry,banana", std::string_view(buffer, result_size));
 }
 
 }  // namespace

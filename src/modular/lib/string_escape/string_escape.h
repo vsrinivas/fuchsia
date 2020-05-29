@@ -5,9 +5,8 @@
 #ifndef SRC_MODULAR_LIB_STRING_ESCAPE_STRING_ESCAPE_H_
 #define SRC_MODULAR_LIB_STRING_ESCAPE_STRING_ESCAPE_H_
 
+#include <string_view>
 #include <vector>
-
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace modular {
 
@@ -15,13 +14,13 @@ constexpr char kDefaultEscapeChar = '\\';
 
 // Escape the set of chars in |chars_to_escape| in |input||. Use |escape_char|
 // to escape. All params are expected to be in ASCII.
-std::string StringEscape(fxl::StringView input, fxl::StringView chars_to_escape,
+std::string StringEscape(std::string_view input, std::string_view chars_to_escape,
                          char escape_char = kDefaultEscapeChar);
 
 // Unescape all escape sequences in |input|, where the escape sequence begins
 // with |escape_char|. All input params are expected to be in ASCII. In debug
 // mode, crashes if |input| cannot be unescaped.
-std::string StringUnescape(fxl::StringView input, char escape_char = kDefaultEscapeChar);
+std::string StringUnescape(std::string_view input, char escape_char = kDefaultEscapeChar);
 
 // Splits an escaped string |input| by |split_char|; this splitter skips over
 // any characters escaped using |escape_char|s. All params are expected to be in
@@ -29,9 +28,9 @@ std::string StringUnescape(fxl::StringView input, char escape_char = kDefaultEsc
 //
 // Example:
 //  SplitEscapedString("a_b\\_c_d", '_', '\\')
-//    => std::vector<StringView>{"a", "b\\_c", "d"}
-std::vector<fxl::StringView> SplitEscapedString(fxl::StringView input, char split_char,
-                                                char escape_char = kDefaultEscapeChar);
+//    => std::vector<std::string_view>{"a", "b\\_c", "d"}
+std::vector<std::string_view> SplitEscapedString(std::string_view input, char split_char,
+                                                 char escape_char = kDefaultEscapeChar);
 
 }  // namespace modular
 

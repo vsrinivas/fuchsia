@@ -381,9 +381,9 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
       if (endp->GetConfig(&ep_config) != ZX_OK) {
         FX_LOGS(ERROR) << "Can't get endpoint configuration " << device;
       }
-      fxl::StringView base_path(ep_config.backing == network::EndpointBacking::ETHERTAP
-                                    ? kEthertapEndpointMountPath
-                                    : kNetworkDeviceEndpointMountPath);
+      std::string_view base_path(ep_config.backing == network::EndpointBacking::ETHERTAP
+                                     ? kEthertapEndpointMountPath
+                                     : kNetworkDeviceEndpointMountPath);
       nd.path = fxl::Concatenate({base_path, device});
     }
   }

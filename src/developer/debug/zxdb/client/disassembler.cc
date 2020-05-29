@@ -146,7 +146,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
   if (!out->comment.empty()) {
     // Canonicalize the comments, they'll end in a newline (which is added manually later) and may
     // contain embedded newlines.
-    out->comment = fxl::TrimString(out->comment, "\r\n ").ToString();
+    out->comment = fxl::TrimString(out->comment, "\r\n ");
     ReplaceAllInstancesOf("\r\n", ' ', &out->comment);
 
     out->comment = arch_->asm_info()->getCommentString().str() + " " + out->comment;

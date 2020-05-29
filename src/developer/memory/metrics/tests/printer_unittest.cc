@@ -10,7 +10,6 @@
 #include "src/developer/memory/metrics/summary.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace memory {
 namespace test {
@@ -24,7 +23,7 @@ void ConfirmLines(std::ostringstream& oss, std::vector<std::string> expected_lin
   for (size_t li = 0; li < expected_lines.size(); li++) {
     SCOPED_TRACE(li);
     std::string expected_line = expected_lines.at(li);
-    fxl::StringView line = lines.at(li);
+    std::string_view line = lines.at(li);
     EXPECT_STREQ(expected_line.c_str(), line.data());
   }
 }

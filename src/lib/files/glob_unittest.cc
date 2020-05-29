@@ -5,6 +5,7 @@
 #include "src/lib/files/glob.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

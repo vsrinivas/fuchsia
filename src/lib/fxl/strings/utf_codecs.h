@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_STRINGS_UTF_CODECS_H_
-#define LIB_FXL_STRINGS_UTF_CODECS_H_
+#ifndef SRC_LIB_FXL_STRINGS_UTF_CODECS_H_
+#define SRC_LIB_FXL_STRINGS_UTF_CODECS_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 
@@ -29,7 +29,7 @@ inline bool IsValidCharacter(uint32_t code_point) {
          (code_point > 0xFDEFu && code_point <= 0x10FFFFu && (code_point & 0xFFFEu) != 0xFFFEu);
 }
 
-bool IsStringUTF8(fxl::StringView str);
+bool IsStringUTF8(std::string_view str);
 
 // ReadUnicodeCharacter --------------------------------------------------------
 
@@ -51,4 +51,4 @@ size_t WriteUnicodeCharacter(uint32_t code_point, std::string* output);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_UTF_CODECS_H_
+#endif  // SRC_LIB_FXL_STRINGS_UTF_CODECS_H_

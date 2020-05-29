@@ -22,7 +22,7 @@ namespace {
 struct PathComparator {
   const ArchiveReader* reader = nullptr;
 
-  bool operator()(const DirectoryTableEntry& lhs, const fxl::StringView& rhs) {
+  bool operator()(const DirectoryTableEntry& lhs, const std::string_view& rhs) {
     return reader->GetPathView(lhs) < rhs;
   }
 };
@@ -35,7 +35,7 @@ ArchiveReader::~ArchiveReader() = default;
 
 bool ArchiveReader::Read() { return ReadIndex() && ReadDirectory(); }
 
-bool ArchiveReader::Extract(fxl::StringView output_dir) const {
+bool ArchiveReader::Extract(std::string_view output_dir) const {
   for (const auto& entry : directory_table_) {
     std::string path = fxl::Concatenate({output_dir, "/", GetPathView(entry)});
     std::string dir = files::GetDirectoryName(path);
@@ -55,7 +55,7 @@ bool ArchiveReader::Extract(fxl::StringView output_dir) const {
   return true;
 }
 
-bool ArchiveReader::ExtractFile(fxl::StringView archive_path, const char* output_path) const {
+bool ArchiveReader::ExtractFile(std::string_view archive_path, const char* output_path) const {
   DirectoryTableEntry entry;
   if (!GetDirectoryEntryByPath(archive_path, &entry))
     return false;
@@ -70,7 +70,7 @@ bool ArchiveReader::ExtractFile(fxl::StringView archive_path, const char* output
   return true;
 }
 
-bool ArchiveReader::CopyFile(fxl::StringView archive_path, int dst_fd) const {
+bool ArchiveReader::CopyFile(std::string_view archive_path, int dst_fd) const {
   DirectoryTableEntry entry;
   if (!GetDirectoryEntryByPath(archive_path, &entry))
     return false;
@@ -92,13 +92,13 @@ bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index, DirectoryTableEntry
   return true;
 }
 
-bool ArchiveReader::GetDirectoryEntryByPath(fxl::StringView archive_path,
+bool ArchiveReader::GetDirectoryEntryByPath(std::string_view archive_path,
                                             DirectoryTableEntry* entry) const {
   uint64_t index = 0;
   return GetDirectoryIndexByPath(archive_path, &index) && GetDirectoryEntryByIndex(index, entry);
 }
 
-bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path, uint64_t* index) const {
+bool ArchiveReader::GetDirectoryIndexByPath(std::string_view archive_path, uint64_t* index) const {
   PathComparator comparator;
   comparator.reader = this;
 
@@ -112,8 +112,8 @@ bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path, uint64
 
 fbl::unique_fd ArchiveReader::TakeFileDescriptor() { return std::move(fd_); }
 
-fxl::StringView ArchiveReader::GetPathView(const DirectoryTableEntry& entry) const {
-  return fxl::StringView(path_data_.data() + entry.name_offset, entry.name_length);
+std::string_view ArchiveReader::GetPathView(const DirectoryTableEntry& entry) const {
+  return std::string_view(path_data_.data() + entry.name_offset, entry.name_length);
 }
 
 bool ArchiveReader::ReadIndex() {

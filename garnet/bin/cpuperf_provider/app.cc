@@ -24,7 +24,7 @@ namespace {
 
 // If only fxl string/number conversions supported 0x.
 
-bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* value) {
+bool ParseNumber(const char* name, const std::string_view& arg, uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
     if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value, fxl::Base::k16)) {
       FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;

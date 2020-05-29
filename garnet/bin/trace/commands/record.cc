@@ -16,6 +16,7 @@
 
 #include <fstream>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 
 #include "garnet/bin/trace/results_export.h"
@@ -25,7 +26,6 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/trim.h"
 
 namespace tracing {
@@ -254,7 +254,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --provider-buffer-size=<name:megabytes>
   if (command_line.HasOption(kProviderBufferSize)) {
-    std::vector<fxl::StringView> args = command_line.GetOptionValues(kProviderBufferSize);
+    std::vector<std::string_view> args = command_line.GetOptionValues(kProviderBufferSize);
     if (!ParseProviderBufferSize(args, &provider_specs)) {
       return false;
     }
@@ -284,7 +284,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
 
   // --trigger=<alert>:<action>
   if (command_line.HasOption(kTrigger)) {
-    std::vector<fxl::StringView> args = command_line.GetOptionValues(kTrigger);
+    std::vector<std::string_view> args = command_line.GetOptionValues(kTrigger);
     if (!ParseTriggers(args, &trigger_specs)) {
       return false;
     }

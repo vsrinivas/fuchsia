@@ -5,10 +5,9 @@
 #include "src/lib/fxl/strings/join_strings.h"
 
 #include <array>
+#include <string_view>
 
 #include <gtest/gtest.h>
-
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 namespace {
@@ -42,8 +41,8 @@ TEST(StringUtil, JoinStrings) {
   std::array<std::string, 2> a = {{"foo", "bar"}};
   EXPECT_EQ("foo:bar", JoinStrings(a, ":"));
 
-  // Check that StringViews can be used.
-  std::vector<StringView> sv;
+  // Check that std::string_view can be used.
+  std::vector<std::string_view> sv;
   sv.push_back("foo");
   sv.push_back("bar");
   EXPECT_EQ("foo:bar", JoinStrings(sv, ":"));

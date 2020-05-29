@@ -88,7 +88,7 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in
   {
     std::string raw_display_usage;
     if (files::ReadFileToString("/config/data/display_usage", &raw_display_usage)) {
-      fxl::StringView display_usage = fxl::TrimString(raw_display_usage, "\n ");
+      std::string_view display_usage = fxl::TrimString(raw_display_usage, "\n ");
       if (display_usage == "handheld") {
         return fuchsia::ui::policy::DisplayUsage::kHandheld;
       } else if (display_usage == "close") {

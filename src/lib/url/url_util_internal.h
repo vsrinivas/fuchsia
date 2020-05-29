@@ -6,9 +6,9 @@
 #define SRC_LIB_URL_URL_UTIL_INTERNAL_H_
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/strings/ascii.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/third_party/mozilla/url_parse.h"
 
 namespace url {
@@ -17,7 +17,7 @@ namespace url {
 // lower-case |compare_to| buffer.
 bool CompareSchemeComponent(const char* spec, const Component& component, const char* compare_to);
 
-static inline bool LowerCaseEqualsASCII(fxl::StringView str, fxl::StringView lowercase_ascii) {
+static inline bool LowerCaseEqualsASCII(std::string_view str, std::string_view lowercase_ascii) {
   if (str.size() != lowercase_ascii.size())
     return false;
   for (size_t i = 0; i < str.size(); i++) {

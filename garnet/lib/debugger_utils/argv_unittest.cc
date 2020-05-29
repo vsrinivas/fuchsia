@@ -12,15 +12,15 @@ namespace debugger_utils {
 namespace {
 
 TEST(Argv, BuildFromStringView) {
-  const fxl::StringView no_args{""};
+  const std::string_view no_args{""};
   const Argv expected_none{};
   EXPECT_EQ(BuildArgv(no_args), expected_none);
 
-  const fxl::StringView one_arg{"--foo"};
+  const std::string_view one_arg{"--foo"};
   const Argv expected_one{"--foo"};
   EXPECT_EQ(BuildArgv(one_arg), expected_one);
 
-  const fxl::StringView multiple_args{"a b c"};
+  const std::string_view multiple_args{"a b c"};
   const Argv expected_multiple{"a", "b", "c"};
   EXPECT_EQ(BuildArgv(multiple_args), expected_multiple);
 }

@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <cstdint>
-#include <string>
+#ifndef GARNET_BIN_INSNTRACE_CONFIG_H_
+#define GARNET_BIN_INSNTRACE_CONFIG_H_
 
 #include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
 #include <zircon/syscalls.h>
 
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include <cstdint>
+#include <string>
 
 #include "garnet/lib/debugger_utils/argv.h"
+#include "src/lib/fxl/macros.h"
 
 namespace insntrace {
 
@@ -82,3 +81,5 @@ struct IptConfig {
 };
 
 }  // namespace insntrace
+
+#endif  // GARNET_BIN_INSNTRACE_CONFIG_H_

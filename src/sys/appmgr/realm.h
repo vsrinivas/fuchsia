@@ -28,7 +28,6 @@
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/sys/appmgr/cache_control.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"

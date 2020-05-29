@@ -9,7 +9,6 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/elflib/elflib.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/trim.h"
 
 namespace zxdb {
@@ -155,18 +154,18 @@ int BuildIDIndex::ParseIDs(const std::string& input, const std::filesystem::path
     if (newline == std::string::npos)
       newline = input.size();
 
-    fxl::StringView line(&input[line_begin], newline - line_begin);
+    std::string_view line(&input[line_begin], newline - line_begin);
     if (!line.empty()) {
       // Format is <buildid> <space> <filename>
       size_t first_space = line.find(' ');
       if (first_space != std::string::npos && first_space > 0 && first_space + 1 < line.size()) {
         // There is a space and it separates two nonempty things.
-        fxl::StringView to_trim(" \t\r\n");
-        fxl::StringView build_id = fxl::TrimString(line.substr(0, first_space), to_trim);
-        fxl::StringView path_data =
+        std::string_view to_trim(" \t\r\n");
+        std::string_view build_id = fxl::TrimString(line.substr(0, first_space), to_trim);
+        std::string_view path_data =
             fxl::TrimString(line.substr(first_space + 1, line.size() - first_space - 1), to_trim);
 
-        std::filesystem::path path(path_data.ToString());
+        std::filesystem::path path(path_data);
 
         if (path.is_relative()) {
           path = containing_dir / path;

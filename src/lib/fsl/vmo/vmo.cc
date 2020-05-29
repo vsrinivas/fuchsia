@@ -60,13 +60,13 @@ bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* cont
 
 }  // namespace
 
-bool VmoFromString(const fxl::StringView& string, SizedVmo* sized_vmo) {
-  return VmoFromContainer<fxl::StringView>(string, sized_vmo);
+bool VmoFromString(std::string_view string, SizedVmo* sized_vmo) {
+  return VmoFromContainer<std::string_view>(string, sized_vmo);
 }
 
-bool VmoFromString(const fxl::StringView& string, fuchsia::mem::Buffer* buffer_ptr) {
+bool VmoFromString(std::string_view string, fuchsia::mem::Buffer* buffer_ptr) {
   fsl::SizedVmo sized_vmo;
-  if (!VmoFromContainer<fxl::StringView>(string, &sized_vmo)) {
+  if (!VmoFromContainer<std::string_view>(string, &sized_vmo)) {
     return false;
   }
   *buffer_ptr = std::move(sized_vmo).ToTransport();

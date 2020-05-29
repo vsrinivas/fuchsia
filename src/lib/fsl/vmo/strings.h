@@ -9,18 +9,18 @@
 #include <lib/zx/vmo.h>
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fsl {
 
 // Make a new shared buffer with the contents of a string.
-FXL_EXPORT bool VmoFromString(const fxl::StringView& string, SizedVmo* handle_ptr);
+FXL_EXPORT bool VmoFromString(std::string_view string, SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a string.
-FXL_EXPORT bool VmoFromString(const fxl::StringView& string, fuchsia::mem::Buffer* buffer_ptr);
+FXL_EXPORT bool VmoFromString(std::string_view string, fuchsia::mem::Buffer* buffer_ptr);
 
 // Copy the contents of a shared buffer into a string.
 FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);

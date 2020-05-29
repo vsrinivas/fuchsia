@@ -5,6 +5,7 @@
 #include "test_helper.h"
 
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>

@@ -91,8 +91,8 @@ TEST_F(TestHarnessImplTest, MakeBasemgrConfigDir) {
     ASSERT_EQ(2u, dir_split.size());
 
     auto second_dir = std::make_unique<vfs::PseudoDir>();
-    second_dir->AddEntry(dir_split[1].ToString(), MakeBasemgrConfigDir(std::move(spec)));
-    namespace_dir->AddEntry(dir_split[0].ToString(), std::move(second_dir));
+    second_dir->AddEntry(std::string(dir_split[1]), MakeBasemgrConfigDir(std::move(spec)));
+    namespace_dir->AddEntry(std::string(dir_split[0]), std::move(second_dir));
   }
 
   modular::PseudoDirServer server(std::move(namespace_dir));

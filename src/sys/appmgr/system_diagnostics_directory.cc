@@ -4,6 +4,8 @@
 
 #include "system_diagnostics_directory.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 #include <fs/pseudo_file.h>

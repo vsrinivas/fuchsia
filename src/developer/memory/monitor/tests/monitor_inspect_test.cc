@@ -72,7 +72,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   // Returns ZX_OK on success.
   fit::result<inspect::Hierarchy> GetInspectHierarchy() {
     files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/diagnostics/root.inspect", kTestProcessName,
-                                fxl::StringView(test_case_)));
+                                std::string_view(test_case_)));
     if (glob.size() == 0) {
       return fit::error();
     }

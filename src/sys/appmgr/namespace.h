@@ -18,7 +18,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/sys/appmgr/job_provider_impl.h"
 #include "src/sys/appmgr/service_provider_dir_impl.h"
 

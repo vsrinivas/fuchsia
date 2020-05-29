@@ -11,7 +11,6 @@
 #include <zircon/status.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
 #include "src/modular/lib/fidl/clone.h"
 

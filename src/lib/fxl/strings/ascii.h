@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_STRINGS_ASCII_H_
-#define LIB_FXL_STRINGS_ASCII_H_
+#ifndef SRC_LIB_FXL_STRINGS_ASCII_H_
+#define SRC_LIB_FXL_STRINGS_ASCII_H_
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 
@@ -18,8 +18,8 @@ inline char ToLowerASCII(char c) { return (c >= 'A' && c <= 'Z') ? (c + ('a' - '
 
 inline char ToUpperASCII(char c) { return (c >= 'a' && c <= 'z') ? (c + ('A' - 'a')) : c; }
 
-bool EqualsCaseInsensitiveASCII(fxl::StringView v1, fxl::StringView v2);
+bool EqualsCaseInsensitiveASCII(std::string_view v1, std::string_view v2);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_ASCII_H_
+#endif  // SRC_LIB_FXL_STRINGS_ASCII_H_

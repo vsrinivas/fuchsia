@@ -38,7 +38,7 @@ static void usage() {
 template <class T>
 static bool parse_number(const char* arg, const char* name, T* value,
                          fxl::Base base = fxl::Base::k10) {
-  fxl::StringView arg_view(arg);
+  std::string_view arg_view(arg);
   if (!fxl::StringToNumberWithError(arg_view, value, base)) {
     std::cerr << "Invalid " << name << ": " << arg_view << "\n";
     return false;
@@ -61,7 +61,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
   if (argc < 1) {
     return false;
   }
-  fxl::StringView cmd_view(argv[0]);
+  std::string_view cmd_view(argv[0]);
   if (cmd_view == "balloon" && argc == 4) {
     uint32_t env_id, cid, num_pages;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
@@ -161,7 +161,7 @@ int main(int argc, const char** argv) {
   // `guest vsh 0 3` vs `vsh 0 3`
   // Only if called using the long form, we must adjust argv for input to |parse_args|
   // so that argv[0] represents the subcommand name.
-  if (fxl::StringView(argv[0]) == "guest") {
+  if (std::string_view(argv[0]) == "guest") {
     argc--;
     argv++;
   }

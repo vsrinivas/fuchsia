@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_FAR_MANIFEST_H_
-#define GARNET_LIB_FAR_MANIFEST_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_MANIFEST_H_
+#define SRC_SYS_PKG_LIB_FAR_MANIFEST_H_
 
-#include "src/lib/fxl/strings/string_view.h"
+#include <string_view>
 
 namespace archive {
 class ArchiveWriter;
 
-bool ReadManifest(fxl::StringView path, ArchiveWriter* writer);
+bool ReadManifest(std::string_view path, ArchiveWriter* writer);
 
 }  // namespace archive
 
-#endif  // GARNET_LIB_FAR_MANIFEST_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_MANIFEST_H_

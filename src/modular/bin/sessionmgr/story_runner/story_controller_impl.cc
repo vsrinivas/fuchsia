@@ -61,8 +61,8 @@ std::string ModulePathToSurfaceID(const std::vector<std::string>& module_path) {
 std::vector<std::string> ModulePathFromSurfaceID(const std::string& surface_id) {
   std::vector<std::string> path;
   for (const auto& parts :
-       SplitEscapedString(fxl::StringView(surface_id), kSurfaceIDSeparator[0])) {
-    path.push_back(parts.ToString());
+       SplitEscapedString(std::string_view(surface_id), kSurfaceIDSeparator[0])) {
+    path.emplace_back(parts);
   }
   return path;
 }

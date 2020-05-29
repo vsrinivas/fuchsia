@@ -154,7 +154,7 @@ bool ConsoleImpl::SaveHistoryFile() {
       continue;
     }
 
-    history_data.append(trimmed.ToString()).append("\n");
+    history_data.append(trimmed).append("\n");
   }
 
   auto filepath = std::filesystem::path(home) / kHistoryFilename;

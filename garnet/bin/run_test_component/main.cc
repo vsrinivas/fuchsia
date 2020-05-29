@@ -29,6 +29,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 

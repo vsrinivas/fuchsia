@@ -9,6 +9,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <sys/types.h>
 

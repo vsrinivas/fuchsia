@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_STRINGS_SUBSTITUTE_H_
-#define LIB_FXL_STRINGS_SUBSTITUTE_H_
+#ifndef SRC_LIB_FXL_STRINGS_SUBSTITUTE_H_
+#define SRC_LIB_FXL_STRINGS_SUBSTITUTE_H_
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 
@@ -24,27 +24,32 @@ namespace fxl {
 // crashes in debug mode, and returns an empty string in non-debug mode.
 //
 // This function is inspired by Abseil's strings/substitute.h.
-std::string Substitute(StringView format, StringView arg0);
-std::string Substitute(StringView format, StringView arg0, StringView arg1);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3, StringView arg4);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3, StringView arg4, StringView arg5);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3, StringView arg4, StringView arg5, StringView arg6);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3, StringView arg4, StringView arg5, StringView arg6,
-                       StringView arg7);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3, StringView arg4, StringView arg5, StringView arg6,
-                       StringView arg7, StringView arg8);
-std::string Substitute(StringView format, StringView arg0, StringView arg1, StringView arg2,
-                       StringView arg3, StringView arg4, StringView arg5, StringView arg6,
-                       StringView arg7, StringView arg8, StringView arg9);
+std::string Substitute(std::string_view format, std::string_view arg0);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3, std::string_view arg4);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3, std::string_view arg4,
+                       std::string_view arg5);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3, std::string_view arg4,
+                       std::string_view arg5, std::string_view arg6);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3, std::string_view arg4,
+                       std::string_view arg5, std::string_view arg6, std::string_view arg7);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3, std::string_view arg4,
+                       std::string_view arg5, std::string_view arg6, std::string_view arg7,
+                       std::string_view arg8);
+std::string Substitute(std::string_view format, std::string_view arg0, std::string_view arg1,
+                       std::string_view arg2, std::string_view arg3, std::string_view arg4,
+                       std::string_view arg5, std::string_view arg6, std::string_view arg7,
+                       std::string_view arg8, std::string_view arg9);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_SUBSTITUTE_H_
+#endif  // SRC_LIB_FXL_STRINGS_SUBSTITUTE_H_

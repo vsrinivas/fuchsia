@@ -4,6 +4,8 @@
 
 #include "garnet/bin/trace/command.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iostream>
 
 namespace tracing {

@@ -4,6 +4,8 @@
 
 #include "src/ui/lib/escher/util/tracer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iostream>
 #include <sstream>
 

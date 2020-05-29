@@ -16,6 +16,7 @@
 #include <zircon/syscalls.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/unique_fd.h>
@@ -23,13 +24,12 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace modular {
 
 // For polling minfs.
-constexpr fxl::StringView kPersistentFileSystem = "/data";
-constexpr fxl::StringView kMinFsName = "minfs";
+constexpr std::string_view kPersistentFileSystem = "/data";
+constexpr std::string_view kMinFsName = "minfs";
 constexpr zx::duration kMaxPollingDelay = zx::sec(10);
 
 void WaitForMinfs() {
@@ -44,7 +44,7 @@ void WaitForMinfs() {
       io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
       if (io_status == ZX_OK && status == ZX_OK) {
         const char* name = reinterpret_cast<const char*>(info.name);
-        fxl::StringView fs_name(name, strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
+        std::string_view fs_name(name, strnlen(name, fuchsia_io_MAX_FS_NAME_BUFFER));
         if (fs_name == kMinFsName) {
           return;
         }

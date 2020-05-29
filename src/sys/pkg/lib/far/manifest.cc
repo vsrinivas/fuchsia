@@ -13,14 +13,14 @@
 
 namespace archive {
 
-bool ReadManifest(fxl::StringView path, ArchiveWriter* writer) {
+bool ReadManifest(std::string_view path, ArchiveWriter* writer) {
   std::string manifest;
-  if (!files::ReadFileToString(path.ToString(), &manifest)) {
-    fprintf(stderr, "error: Fail to read '%s'\n", path.ToString().c_str());
+  if (!files::ReadFileToString(std::string(path), &manifest)) {
+    fprintf(stderr, "error: Fail to read '%s'\n", std::string(path).c_str());
     return false;
   }
 
-  std::vector<fxl::StringView> lines =
+  std::vector<std::string_view> lines =
       fxl::SplitString(manifest, "\n", fxl::WhiteSpaceHandling::kKeepWhitespace,
                        fxl::SplitResult::kSplitWantNonEmpty);
 
@@ -29,7 +29,7 @@ bool ReadManifest(fxl::StringView path, ArchiveWriter* writer) {
     if (offset == std::string::npos)
       continue;
     writer->Add(
-        ArchiveEntry(line.substr(offset + 1).ToString(), line.substr(0, offset).ToString()));
+        ArchiveEntry(std::string(line.substr(offset + 1)), std::string(line.substr(0, offset))));
   }
 
   return true;

@@ -168,8 +168,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   thrd_join(client_run_thread, &thread_ret_code);
 
   ASSERT_EQ(exec_terminated_status, ZX_OK);
-  ASSERT_EQ(fxl::TrimString(std_out, "\n"), fxl::StringView(kTestStdout));
-  ASSERT_EQ(fxl::TrimString(std_err, "\n"), fxl::StringView(kTestStderr));
+  ASSERT_EQ(fxl::TrimString(std_out, "\n"), std::string_view(kTestStdout));
+  ASSERT_EQ(fxl::TrimString(std_err, "\n"), std::string_view(kTestStderr));
 
   // The bash script will create a file with contents that were written to
   // stdin.  Pull this file back and inspect its contents.

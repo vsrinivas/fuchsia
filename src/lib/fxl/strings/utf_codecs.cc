@@ -8,7 +8,7 @@
 
 namespace fxl {
 
-bool IsStringUTF8(fxl::StringView str) {
+bool IsStringUTF8(std::string_view str) {
   const char* src = str.data();
   size_t src_len = str.size();
   size_t char_index = 0;

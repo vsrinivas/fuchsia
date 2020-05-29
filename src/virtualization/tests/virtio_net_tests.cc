@@ -6,6 +6,7 @@
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
 #include <future>
@@ -161,7 +162,7 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
                           },
                           &network_interface),
             ZX_OK);
-  network_interface = fxl::TrimString(network_interface, "\n").ToString();
+  network_interface = std::string(fxl::TrimString(network_interface, "\n"));
   ASSERT_FALSE(network_interface.empty());
 
   // Configure the guest IPv4 address.
@@ -195,7 +196,7 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
                           },
                           &network_interface),
             ZX_OK);
-  network_interface = fxl::TrimString(network_interface, "\n").ToString();
+  network_interface = std::string(fxl::TrimString(network_interface, "\n"));
   ASSERT_FALSE(network_interface.empty());
 
   // Configure the guest's second interface with the same settings as the first interface.

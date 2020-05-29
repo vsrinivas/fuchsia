@@ -6,18 +6,17 @@
 #define SRC_MODULAR_LIB_BASE64URL_BASE64URL_H_
 
 #include <string>
-
-#include "src/lib/fxl/strings/string_view.h"
+#include <string_view>
 
 namespace base64url {
 
 // Encodes the input string in base64url.
-std::string Base64UrlEncode(fxl::StringView input);
+std::string Base64UrlEncode(std::string_view input);
 
 // Decodes the base64url input string. Returns true if successful and false
 // otherwise. The output string is only modified if successful. The decoding can
 // be done in-place.
-bool Base64UrlDecode(fxl::StringView input, std::string* output);
+bool Base64UrlDecode(std::string_view input, std::string* output);
 
 }  // namespace base64url
 

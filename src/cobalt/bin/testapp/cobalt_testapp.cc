@@ -32,7 +32,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace cobalt {
 namespace testapp {

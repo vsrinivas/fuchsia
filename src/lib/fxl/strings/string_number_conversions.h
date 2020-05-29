@@ -5,13 +5,13 @@
 // Functions for converting between numbers and their representations as strings
 // (in decimal, in a locale-independent way).
 
-#ifndef LIB_FXL_STRINGS_STRING_NUMBER_CONVERSIONS_H_
-#define LIB_FXL_STRINGS_STRING_NUMBER_CONVERSIONS_H_
+#ifndef SRC_LIB_FXL_STRINGS_STRING_NUMBER_CONVERSIONS_H_
+#define SRC_LIB_FXL_STRINGS_STRING_NUMBER_CONVERSIONS_H_
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 
@@ -34,18 +34,18 @@ std::string NumberToString(NumberType number, Base base = Base::k10);
 // unsigned types, unary '-' is not allowed. For signed types, "-0", "-00", etc.
 // are also allowed.
 template <typename NumberType>
-bool StringToNumberWithError(fxl::StringView string, NumberType* number, Base base = Base::k10);
+bool StringToNumberWithError(std::string_view string, NumberType* number, Base base = Base::k10);
 
 // Converts |string| containing a locale-independent representation of a
 // number to a numeric representation of that number. (On error, this returns
 // zero.) This is available for all |NumberType|s (u)intN_t (from <stdint.h>)
 // and also (unsigned) int. (See |StringToNumberWithError()| for more details.)
 template <typename NumberType>
-NumberType StringToNumber(fxl::StringView string, Base base = Base::k10) {
+NumberType StringToNumber(std::string_view string, Base base = Base::k10) {
   NumberType rv = static_cast<NumberType>(0);
   return StringToNumberWithError(string, &rv, base) ? rv : static_cast<NumberType>(0);
 }
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_STRING_NUMBER_CONVERSIONS_H_
+#endif  // SRC_LIB_FXL_STRINGS_STRING_NUMBER_CONVERSIONS_H_

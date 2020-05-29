@@ -31,7 +31,7 @@ AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
   if (!files::ReadFileToString(filepath, &content)) {
     return AnnotationOr(Error::kFileReadFailure);
   }
-  return AnnotationOr(fxl::TrimString(content, "\r\n").ToString());
+  return AnnotationOr(std::string(fxl::TrimString(content, "\r\n")));
 }
 
 AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key, const std::string& filepath) {

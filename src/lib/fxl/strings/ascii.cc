@@ -6,7 +6,7 @@
 
 namespace fxl {
 
-bool EqualsCaseInsensitiveASCII(fxl::StringView v1, fxl::StringView v2) {
+bool EqualsCaseInsensitiveASCII(std::string_view v1, std::string_view v2) {
   if (v1.size() != v2.size())
     return false;
   for (size_t i = 0; i < v1.size(); ++i) {

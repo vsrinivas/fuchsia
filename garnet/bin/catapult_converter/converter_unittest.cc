@@ -73,7 +73,7 @@ void AssertApproxEqual(rapidjson::Document* document, rapidjson::Value* actual, 
 }
 
 std::vector<std::string> SplitLines(const char* str) {
-  return fxl::SplitStringCopy(fxl::StringView(str), "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll);
+  return fxl::SplitStringCopy(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll);
 }
 
 void PrintLines(const std::vector<std::string>& lines, size_t start, size_t end, char prefix) {

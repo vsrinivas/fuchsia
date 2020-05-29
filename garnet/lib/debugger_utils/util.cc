@@ -80,12 +80,12 @@ std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
   return result;
 }
 
-std::string EncodeString(const fxl::StringView& string) {
+std::string EncodeString(std::string_view string) {
   auto bytes = reinterpret_cast<const uint8_t*>(string.data());
   return EncodeByteArrayString(bytes, string.size());
 }
 
-std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
+std::vector<uint8_t> DecodeByteArrayString(std::string_view string) {
   std::vector<uint8_t> result;
   if (string.size() % 2) {
     FX_LOGS(ERROR) << "Byte array string must have an even number of characters";
@@ -105,12 +105,12 @@ std::vector<uint8_t> DecodeByteArrayString(const fxl::StringView& string) {
   return result;
 }
 
-std::string DecodeString(const fxl::StringView& string) {
+std::string DecodeString(std::string_view string) {
   std::vector<uint8_t> charvec = DecodeByteArrayString(string);
   return std::string(charvec.begin(), charvec.end());
 }
 
-std::string EscapeNonPrintableString(const fxl::StringView& data) {
+std::string EscapeNonPrintableString(std::string_view data) {
   std::string result;
   for (char c : data) {
     if (std::isprint(c)) {

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 int main(int argc, const char* argv[]) {
   if (argc < 2) {
@@ -12,7 +11,7 @@ int main(int argc, const char* argv[]) {
 
   const char* arg = argv[1];
   int number;
-  if (!fxl::StringToNumberWithError<int>(fxl::StringView(arg), &number)) {
+  if (!fxl::StringToNumberWithError<int>(arg, &number)) {
     return -1;
   }
   return number;

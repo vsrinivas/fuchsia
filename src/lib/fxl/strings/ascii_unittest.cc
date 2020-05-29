@@ -6,8 +6,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/strings/string_view.h"
-
 namespace fxl {
 namespace {
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_FAR_ARCHIVE_READER_H_
-#define GARNET_LIB_FAR_ARCHIVE_READER_H_
+#ifndef SRC_SYS_PKG_LIB_FAR_ARCHIVE_READER_H_
+#define SRC_SYS_PKG_LIB_FAR_ARCHIVE_READER_H_
 
+#include <string_view>
 #include <vector>
 
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/sys/pkg/lib/far/format.h"
 
 namespace archive {
@@ -35,18 +35,18 @@ class ArchiveReader {
       callback(entry);
   }
 
-  bool Extract(fxl::StringView output_dir) const;
-  bool ExtractFile(fxl::StringView archive_path, const char* output_path) const;
-  bool CopyFile(fxl::StringView archive_path, int dst_fd) const;
+  bool Extract(std::string_view output_dir) const;
+  bool ExtractFile(std::string_view archive_path, const char* output_path) const;
+  bool CopyFile(std::string_view archive_path, int dst_fd) const;
 
   bool GetDirectoryEntryByIndex(uint64_t index, DirectoryTableEntry* entry) const;
-  bool GetDirectoryEntryByPath(fxl::StringView archive_path, DirectoryTableEntry* entry) const;
+  bool GetDirectoryEntryByPath(std::string_view archive_path, DirectoryTableEntry* entry) const;
 
-  bool GetDirectoryIndexByPath(fxl::StringView archive_path, uint64_t* index) const;
+  bool GetDirectoryIndexByPath(std::string_view archive_path, uint64_t* index) const;
 
   fbl::unique_fd TakeFileDescriptor();
 
-  fxl::StringView GetPathView(const DirectoryTableEntry& entry) const;
+  std::string_view GetPathView(const DirectoryTableEntry& entry) const;
 
  private:
   bool ReadIndex();
@@ -62,4 +62,4 @@ class ArchiveReader {
 
 }  // namespace archive
 
-#endif  // GARNET_LIB_FAR_ARCHIVE_READER_H_
+#endif  // SRC_SYS_PKG_LIB_FAR_ARCHIVE_READER_H_

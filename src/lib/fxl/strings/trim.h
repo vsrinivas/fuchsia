@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_STRINGS_TRIM_H_
-#define LIB_FXL_STRINGS_TRIM_H_
+#ifndef SRC_LIB_FXL_STRINGS_TRIM_H_
+#define SRC_LIB_FXL_STRINGS_TRIM_H_
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 
-// Returns a StringView over str, where chars_to_trim are removed from the
-// beginning and end of the StringView.
-fxl::StringView TrimString(fxl::StringView str, fxl::StringView chars_to_trim);
+// Returns a std::string_view over str, where chars_to_trim are removed from the
+// beginning and end of the std::string_view.
+std::string_view TrimString(std::string_view str, std::string_view chars_to_trim);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_TRIM_H_
+#endif  // SRC_LIB_FXL_STRINGS_TRIM_H_

@@ -8,9 +8,9 @@
 #include <lib/zx/socket.h>
 
 #include <string>
+#include <string_view>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fsl {
 
@@ -19,11 +19,11 @@ namespace fsl {
 // be read from source before the error occurred.
 FXL_EXPORT bool BlockingCopyToString(zx::socket source, std::string* contents);
 
-FXL_EXPORT bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination);
+FXL_EXPORT bool BlockingCopyFromString(std::string_view source, const zx::socket& destination);
 
 // Copies the string |source| to a temporary socket and returns the
 // consumer handle.
-FXL_EXPORT zx::socket WriteStringToSocket(fxl::StringView source);
+FXL_EXPORT zx::socket WriteStringToSocket(std::string_view source);
 
 }  // namespace fsl
 

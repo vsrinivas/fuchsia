@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ctype.h>
-
 #include "argv.h"
+
+#include <ctype.h>
 
 namespace debugger_utils {
 
-Argv BuildArgv(const fxl::StringView& args) {
+Argv BuildArgv(std::string_view args) {
   Argv result;
 
   // TODO: quoting, escapes, etc.
@@ -25,7 +25,7 @@ Argv BuildArgv(const fxl::StringView& args) {
     ++i;
     while (i < n && !isspace(args[i]))
       ++i;
-    result.push_back(args.substr(start, i - start).ToString());
+    result.emplace_back(args.substr(start, i - start));
   }
 
   return result;

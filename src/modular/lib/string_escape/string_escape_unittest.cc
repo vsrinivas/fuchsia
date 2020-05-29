@@ -6,13 +6,11 @@
 
 #include <gtest/gtest.h>
 
-using fxl::StringView;
-
 namespace modular {
 namespace {
 
 TEST(EscapeStringTest, EscapeUnescape) {
-  StringView original = "ABCDEFGHIJKLMNOPQRST";
+  std::string_view original = "ABCDEFGHIJKLMNOPQRST";
   std::string expected = "ABCD|EFGHI|JKLMNOPQRST";
 
   EXPECT_EQ(expected, StringEscape(original, "EJ", '|'));

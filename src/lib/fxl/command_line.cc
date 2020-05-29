@@ -32,8 +32,8 @@ CommandLine& CommandLine::operator=(const CommandLine& from) = default;
 
 CommandLine& CommandLine::operator=(CommandLine&& from) = default;
 
-bool CommandLine::HasOption(StringView name, size_t* index) const {
-  auto it = option_index_.find(name.ToString());
+bool CommandLine::HasOption(std::string_view name, size_t* index) const {
+  auto it = option_index_.find(std::string(name));
   if (it == option_index_.end())
     return false;
   if (index)
@@ -41,7 +41,7 @@ bool CommandLine::HasOption(StringView name, size_t* index) const {
   return true;
 }
 
-bool CommandLine::GetOptionValue(StringView name, std::string* value) const {
+bool CommandLine::GetOptionValue(std::string_view name, std::string* value) const {
   size_t index;
   if (!HasOption(name, &index))
     return false;
@@ -49,8 +49,8 @@ bool CommandLine::GetOptionValue(StringView name, std::string* value) const {
   return true;
 }
 
-std::vector<fxl::StringView> CommandLine::GetOptionValues(StringView name) const {
-  std::vector<fxl::StringView> ret;
+std::vector<std::string_view> CommandLine::GetOptionValues(std::string_view name) const {
+  std::vector<std::string_view> ret;
   for (const auto& option : options_) {
     if (option.name == name)
       ret.push_back(option.value);
@@ -58,11 +58,11 @@ std::vector<fxl::StringView> CommandLine::GetOptionValues(StringView name) const
   return ret;
 }
 
-std::string CommandLine::GetOptionValueWithDefault(StringView name,
-                                                   StringView default_value) const {
+std::string CommandLine::GetOptionValueWithDefault(std::string_view name,
+                                                   std::string_view default_value) const {
   size_t index;
   if (!HasOption(name, &index))
-    return default_value.ToString();
+    return std::string(default_value);
   return options_[index].value;
 }
 

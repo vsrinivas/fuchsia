@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FXL_STRINGS_SPLIT_STRING_H_
-#define LIB_FXL_STRINGS_SPLIT_STRING_H_
+#ifndef SRC_LIB_FXL_STRINGS_SPLIT_STRING_H_
+#define SRC_LIB_FXL_STRINGS_SPLIT_STRING_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "src/lib/fxl/fxl_export.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 
@@ -28,14 +28,14 @@ enum SplitResult {
 
 // Split the given string on ANY of the given separators, returning copies of
 // the result
-std::vector<std::string> SplitStringCopy(StringView input, StringView separators,
+std::vector<std::string> SplitStringCopy(std::string_view input, std::string_view separators,
                                          WhiteSpaceHandling whitespace, SplitResult result_type);
 
-// Like SplitStringCopy above except it returns a vector of StringViews which
+// Like SplitStringCopy above except it returns a vector of std::string_views which
 // reference the original buffer without copying.
-std::vector<StringView> SplitString(StringView input, StringView separators,
-                                    WhiteSpaceHandling whitespace, SplitResult result_type);
+std::vector<std::string_view> SplitString(std::string_view input, std::string_view separators,
+                                          WhiteSpaceHandling whitespace, SplitResult result_type);
 
 }  // namespace fxl
 
-#endif  // LIB_FXL_STRINGS_SPLIT_STRING_H_
+#endif  // SRC_LIB_FXL_STRINGS_SPLIT_STRING_H_

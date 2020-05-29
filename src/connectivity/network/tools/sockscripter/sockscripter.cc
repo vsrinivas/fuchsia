@@ -1007,7 +1007,7 @@ std::string SendBufferGenerator::GetSndStr() {
 }
 
 bool SendBufferGenerator::SetSendBufHex(const char* arg) {
-  fxl::StringView str(arg, strlen(arg));
+  std::string_view str(arg, strlen(arg));
   std::stringstream ss;
   while (str.length()) {
     auto f = str.front();

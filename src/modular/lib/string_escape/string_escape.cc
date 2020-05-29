@@ -6,16 +6,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-using fxl::StringView;
-
 namespace modular {
 
-std::string StringEscape(StringView input, StringView chars_to_escape, char escape_char) {
+std::string StringEscape(std::string_view input, std::string_view chars_to_escape,
+                         char escape_char) {
   std::string output;
   output.reserve(input.size());
 
   for (const auto& c : input) {
-    if (chars_to_escape.find(c) != StringView::npos || c == escape_char) {
+    if (chars_to_escape.find(c) != std::string_view::npos || c == escape_char) {
       output.push_back(escape_char);
     }
     output.push_back(c);
@@ -24,7 +23,7 @@ std::string StringEscape(StringView input, StringView chars_to_escape, char esca
   return output;
 }
 
-std::string StringUnescape(StringView input, char escape_char) {
+std::string StringUnescape(std::string_view input, char escape_char) {
   std::string output;
 
   for (size_t i = 0; i < input.size(); i++) {
@@ -40,8 +39,9 @@ std::string StringUnescape(StringView input, char escape_char) {
   return output;
 }
 
-std::vector<StringView> SplitEscapedString(StringView input, char split_char, char escape_char) {
-  std::vector<StringView> output;
+std::vector<std::string_view> SplitEscapedString(std::string_view input, char split_char,
+                                                 char escape_char) {
+  std::vector<std::string_view> output;
   size_t last_pos = 0;
   for (size_t i = 0; i < input.size(); i++) {
     if (input[i] == escape_char) {

@@ -20,9 +20,9 @@
 namespace files {
 
 namespace {
-fxl::StringView GetGlobalTmpDir() {
+std::string_view GetGlobalTmpDir() {
   const char* env_var = getenv("TMPDIR");
-  return fxl::StringView(env_var ? env_var : "/tmp");
+  return std::string_view(env_var ? env_var : "/tmp");
 }
 
 // Fills the first 6 bytes of |tp| with random characters suitable for the file
@@ -79,8 +79,8 @@ char* MkdTempAt(int root_fd, char* tp, size_t tp_length) {
 
 ScopedTempDirAt::ScopedTempDirAt(int root_fd) : ScopedTempDirAt(root_fd, ".") {}
 
-ScopedTempDirAt::ScopedTempDirAt(int root_fd, fxl::StringView parent_path) : root_fd_(root_fd) {
-  const std::string parent_path_str = parent_path.ToString();
+ScopedTempDirAt::ScopedTempDirAt(int root_fd, std::string_view parent_path) : root_fd_(root_fd) {
+  const std::string parent_path_str(parent_path);
   // MkdTempAt replaces "XXXXXX" so that the resulting directory path is unique.
   directory_path_ = parent_path_str + "/temp_dir_XXXXXX";
   if (!CreateDirectoryAt(root_fd_, parent_path_str) ||
@@ -131,7 +131,7 @@ bool ScopedTempDirAt::NewTempDir(std::string* output) {
 
 ScopedTempDir::ScopedTempDir() : ScopedTempDir("") {}
 
-ScopedTempDir::ScopedTempDir(fxl::StringView parent_path)
+ScopedTempDir::ScopedTempDir(std::string_view parent_path)
     : base_(AT_FDCWD, parent_path.empty() ? GetGlobalTmpDir() : parent_path) {}
 
 ScopedTempDir::~ScopedTempDir() {}

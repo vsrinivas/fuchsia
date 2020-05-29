@@ -4,6 +4,8 @@
 
 #include "src/lib/fxl/log_settings_command_line.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"

@@ -133,7 +133,7 @@ std::string NumberToString(NumberType number, Base base) {
 }
 
 template <typename NumberType>
-bool StringToNumberWithError(fxl::StringView string, NumberType* number, Base base) {
+bool StringToNumberWithError(std::string_view string, NumberType* number, Base base) {
   FX_DCHECK(number);
 
   if (string.empty())
@@ -166,16 +166,16 @@ template std::string NumberToString<int32_t>(int32_t number, Base base);
 template std::string NumberToString<uint32_t>(uint32_t number, Base base);
 template std::string NumberToString<int64_t>(int64_t number, Base base);
 template std::string NumberToString<uint64_t>(uint64_t number, Base base);
-template bool StringToNumberWithError<int8_t>(fxl::StringView string, int8_t* number, Base base);
-template bool StringToNumberWithError<uint8_t>(fxl::StringView string, uint8_t* number, Base base);
-template bool StringToNumberWithError<int16_t>(fxl::StringView string, int16_t* number, Base base);
-template bool StringToNumberWithError<uint16_t>(fxl::StringView string, uint16_t* number,
+template bool StringToNumberWithError<int8_t>(std::string_view string, int8_t* number, Base base);
+template bool StringToNumberWithError<uint8_t>(std::string_view string, uint8_t* number, Base base);
+template bool StringToNumberWithError<int16_t>(std::string_view string, int16_t* number, Base base);
+template bool StringToNumberWithError<uint16_t>(std::string_view string, uint16_t* number,
                                                 Base base);
-template bool StringToNumberWithError<int32_t>(fxl::StringView string, int32_t* number, Base base);
-template bool StringToNumberWithError<uint32_t>(fxl::StringView string, uint32_t* number,
+template bool StringToNumberWithError<int32_t>(std::string_view string, int32_t* number, Base base);
+template bool StringToNumberWithError<uint32_t>(std::string_view string, uint32_t* number,
                                                 Base base);
-template bool StringToNumberWithError<int64_t>(fxl::StringView string, int64_t* number, Base base);
-template bool StringToNumberWithError<uint64_t>(fxl::StringView string, uint64_t* number,
+template bool StringToNumberWithError<int64_t>(std::string_view string, int64_t* number, Base base);
+template bool StringToNumberWithError<uint64_t>(std::string_view string, uint64_t* number,
                                                 Base base);
 
 }  // namespace fxl

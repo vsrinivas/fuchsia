@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iostream>
 #include <map>
 #include <set>
@@ -24,9 +26,9 @@ std::set<std::string> kKnownOptions = {
 
 bool ParseBooleanOption(const fxl::CommandLine& command_line, const char* arg_name,
                         bool* out_value) {
-  if (command_line.HasOption(fxl::StringView(arg_name))) {
+  if (command_line.HasOption(std::string_view(arg_name))) {
     std::string arg_value;
-    command_line.GetOptionValue(fxl::StringView(arg_name), &arg_value);
+    command_line.GetOptionValue(std::string_view(arg_name), &arg_value);
     if (arg_value == "" || arg_value == "true") {
       *out_value = true;
     } else if (arg_value == "false") {

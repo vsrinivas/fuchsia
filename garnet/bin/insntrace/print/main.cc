@@ -91,7 +91,7 @@ static constexpr char kUsageString[] =
 
 static void Usage(FILE* f) { fprintf(f, "%s", kUsageString); }
 
-static bool ParseOption(const char* arg, fxl::StringView* out_name, const char** out_value) {
+static bool ParseOption(const char* arg, std::string_view* out_name, const char** out_value) {
   size_t len = strlen(arg);
   if (len < 2u || arg[0] != '-' || arg[1] != '-')
     return false;
@@ -105,12 +105,12 @@ static bool ParseOption(const char* arg, fxl::StringView* out_name, const char**
   // (Passing a starting |pos| that's "too big" is OK.)
   const char* equals = strchr(arg + 3, '=');
   if (!equals) {
-    *out_name = fxl::StringView(arg + 2);
+    *out_name = std::string_view(arg + 2);
     *out_value = "";
     return true;
   }
 
-  *out_name = fxl::StringView(arg + 2, equals - arg - 2);
+  *out_name = std::string_view(arg + 2, equals - arg - 2);
   *out_value = equals + 1;
   return true;
 }
@@ -123,7 +123,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
 
   int n;
   for (n = 1; n < argc; ++n) {
-    fxl::StringView option;
+    std::string_view option;
     const char* value;
 
     if (strcmp(argv[n], "--") == 0)
@@ -216,7 +216,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
     }
 
     if (option == "id") {
-      if (!fxl::StringToNumberWithError<uint32_t>(fxl::StringView(value), &printer_config->id,
+      if (!fxl::StringToNumberWithError<uint32_t>(std::string_view(value), &printer_config->id,
                                                   fxl::Base::k16)) {
         FX_LOGS(ERROR) << "Not a hex number: " << value;
         return -1;
@@ -246,7 +246,7 @@ static int ParseArgv(int argc, char** argv, DecoderConfig* decoder_config,
     }
 
     if (option == "kernel-cr3") {
-      if (!fxl::StringToNumberWithError<uint64_t>(fxl::StringView(value),
+      if (!fxl::StringToNumberWithError<uint64_t>(std::string_view(value),
                                                   &decoder_config->kernel_cr3, fxl::Base::k16)) {
         FX_LOGS(ERROR) << "Not a valid cr3 number: " << value;
         return -1;

@@ -11,12 +11,12 @@
 #include <zircon/device/vfs.h>
 
 #include <iostream>
+#include <string_view>
 
 #include "isolated_devmgr.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 #define DEVICE_IDS_VID_LOC 0
 #define DEVICE_IDS_PID_LOC 1
@@ -71,7 +71,7 @@ static int process_device_ids(const char* str,
                               fbl::Vector<board_test::DeviceEntry>* dev_entry_list_ptr) {
   board_test::DeviceEntry dev_entry = {};
   uint32_t key;
-  fxl::StringView sv_str = fxl::StringView(str);
+  std::string_view sv_str = std::string_view(str);
   auto params = fxl::SplitString(sv_str, ":", fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
   if ((dev_entry_list_ptr == nullptr) || (params.size() < DEVICE_IDS_SIZE)) {
     return ISO_DEV_MGR_RET_ERR;

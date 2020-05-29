@@ -9,9 +9,9 @@
 
 #include <algorithm>
 #include <ostream>
+#include <string_view>
 
 #include "src/lib/fxl/strings/ascii.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/url_canon_stdstring.h"
 #include "src/lib/url/url_util.h"
 #include "src/lib/url/url_util_internal.h"
@@ -59,7 +59,7 @@ GURL::GURL(std::string canonical_spec, const url::Parsed& parsed, bool is_valid)
   InitializeFromCanonicalSpec();
 }
 
-void GURL::InitCanonical(fxl::StringView input_spec, bool trim_path_end) {
+void GURL::InitCanonical(std::string_view input_spec, bool trim_path_end) {
   // Reserve enough room in the output for the input, plus some extra so that
   // we have room if we have to escape a few things without reallocating.
   spec_.reserve(input_spec.size() + 32);
@@ -174,8 +174,8 @@ bool GURL::SchemeIs(const char* lower_ascii_scheme) const {
   if (parsed_.scheme.is_invalid_or_empty())
     return lower_ascii_scheme == NULL;
   return url::LowerCaseEqualsASCII(
-      fxl::StringView(spec_.data() + parsed_.scheme.begin, parsed_.scheme.len()),
-      fxl::StringView(lower_ascii_scheme));
+      std::string_view(spec_.data() + parsed_.scheme.begin, parsed_.scheme.len()),
+      std::string_view(lower_ascii_scheme));
 }
 
 bool GURL::SchemeIsHTTPOrHTTPS() const {
@@ -252,7 +252,7 @@ const GURL& GURL::EmptyGURL() {
   return *empty_gurl;
 }
 
-bool GURL::DomainIs(fxl::StringView lower_ascii_domain) const {
+bool GURL::DomainIs(std::string_view lower_ascii_domain) const {
   if (!is_valid_ || lower_ascii_domain.empty())
     return false;
 
@@ -276,7 +276,7 @@ bool GURL::DomainIs(fxl::StringView lower_ascii_domain) const {
   // start of the whole host name.
   const char* host_first_pos = spec_.data() + parsed_.host.begin + host_len - domain_len;
 
-  if (!url::LowerCaseEqualsASCII(fxl::StringView(host_first_pos, domain_len), lower_ascii_domain))
+  if (!url::LowerCaseEqualsASCII(std::string_view(host_first_pos, domain_len), lower_ascii_domain))
     return false;
 
   // Make sure there aren't extra characters in host before the compared part;

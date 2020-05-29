@@ -10,7 +10,7 @@
 
 namespace base64url {
 
-std::string Base64UrlEncode(fxl::StringView input) {
+std::string Base64UrlEncode(std::string_view input) {
   std::string output;
   size_t output_length = modp_b64_encode_strlen(input.size());
   // In C++11, std::string guarantees that output[output.size()] is
@@ -28,8 +28,8 @@ std::string Base64UrlEncode(fxl::StringView input) {
   return output;
 }
 
-bool Base64UrlDecode(fxl::StringView input, std::string* output) {
-  std::string input_copy = input.ToString();
+bool Base64UrlDecode(std::string_view input, std::string* output) {
+  std::string input_copy = std::string(input);
   for (char& c : input_copy) {
     if (c == '-')
       c = '+';

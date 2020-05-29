@@ -144,7 +144,7 @@ constexpr char kUsageString[] =
 
 static void PrintUsageString() { std::cout << kUsageString << std::endl; }
 
-static bool BeginsWith(fxl::StringView str, fxl::StringView prefix, fxl::StringView* arg) {
+static bool BeginsWith(std::string_view str, std::string_view prefix, std::string_view* arg) {
   size_t prefix_size = prefix.size();
   if (str.size() < prefix_size)
     return false;
@@ -154,7 +154,7 @@ static bool BeginsWith(fxl::StringView str, fxl::StringView prefix, fxl::StringV
   return true;
 }
 
-static bool ParseFlag(const char* name, const fxl::StringView& arg, bool* value) {
+static bool ParseFlag(const char* name, const std::string_view& arg, bool* value) {
   if (arg == "on")
     *value = true;
   else if (arg == "off")
@@ -168,7 +168,7 @@ static bool ParseFlag(const char* name, const fxl::StringView& arg, bool* value)
 
 // If only fxl string/number conversions supported 0x.
 
-static bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* value) {
+static bool ParseNumber(const char* name, const std::string_view& arg, uint64_t* value) {
   if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
     if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value, fxl::Base::k16)) {
       FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
@@ -183,7 +183,7 @@ static bool ParseNumber(const char* name, const fxl::StringView& arg, uint64_t* 
   return true;
 }
 
-static bool ParseCr3Match(const char* name, const fxl::StringView& arg, uint64_t* value) {
+static bool ParseCr3Match(const char* name, const std::string_view& arg, uint64_t* value) {
   if (arg == "off") {
     *value = 0;
     return true;
@@ -198,7 +198,7 @@ static bool ParseCr3Match(const char* name, const fxl::StringView& arg, uint64_t
   return true;
 }
 
-static bool ParseAddrConfig(const char* name, const fxl::StringView& arg,
+static bool ParseAddrConfig(const char* name, const std::string_view& arg,
                             insntrace::IptConfig::AddrFilter* value) {
   if (arg == "off")
     *value = insntrace::IptConfig::AddrFilter::kOff;
@@ -213,17 +213,17 @@ static bool ParseAddrConfig(const char* name, const fxl::StringView& arg,
   return true;
 }
 
-static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
+static bool ParseAddrRange(const char* name, const std::string_view& arg,
                            insntrace::IptConfig::AddrRange* value) {
-  std::vector<fxl::StringView> range_strings =
-      fxl::SplitString(fxl::StringView(arg), ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  std::vector<std::string_view> range_strings =
+      fxl::SplitString(std::string_view(arg), ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (range_strings.size() != 2 && range_strings.size() != 3) {
     FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
   }
   unsigned i = 0;
   if (range_strings.size() == 3) {
-    value->elf = range_strings[0].ToString();
+    value->elf = std::string(range_strings[0]);
     ++i;
   }
   if (!ParseNumber(name, range_strings[i], &value->begin))
@@ -233,7 +233,7 @@ static bool ParseAddrRange(const char* name, const fxl::StringView& arg,
   return true;
 }
 
-static bool ParseFreqValue(const char* name, const fxl::StringView& arg, uint32_t* value) {
+static bool ParseFreqValue(const char* name, const std::string_view& arg, uint32_t* value) {
   if (!fxl::StringToNumberWithError<uint32_t>(arg, value)) {
     FX_LOGS(ERROR) << "Invalid value for " << name << ": " << arg;
     return false;
@@ -242,10 +242,10 @@ static bool ParseFreqValue(const char* name, const fxl::StringView& arg, uint32_
 }
 
 static bool ParseConfigOption(insntrace::IptConfig* config, const std::string& options_string) {
-  std::vector<fxl::StringView> options = fxl::SplitString(
-      fxl::StringView(options_string), ";", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  std::vector<std::string_view> options = fxl::SplitString(
+      std::string_view(options_string), ";", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
-  fxl::StringView arg;
+  std::string_view arg;
 
   for (const auto& o : options) {
     if (BeginsWith(o, "addr0=", &arg)) {
@@ -323,7 +323,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
 
   if (cl.GetOptionValue("chunk-order", &arg)) {
     size_t chunk_order;
-    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg), &chunk_order)) {
+    if (!fxl::StringToNumberWithError<size_t>(std::string_view(arg), &chunk_order)) {
       FX_LOGS(ERROR) << "Not a valid buffer order: " << arg;
       exit(EXIT_FAILURE);
     }
@@ -349,7 +349,7 @@ static insntrace::IptConfig GetIptConfig(const fxl::CommandLine& cl) {
 
   if (cl.GetOptionValue("num-chunks", &arg)) {
     size_t num_chunks;
-    if (!fxl::StringToNumberWithError<size_t>(fxl::StringView(arg), &num_chunks)) {
+    if (!fxl::StringToNumberWithError<size_t>(std::string_view(arg), &num_chunks)) {
       FX_LOGS(ERROR) << "Not a valid buffer size: " << arg;
       exit(EXIT_FAILURE);
     }

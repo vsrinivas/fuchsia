@@ -36,7 +36,7 @@ bool far_reader_get_count(far_reader_t reader, uint64_t* count) {
 
 bool far_reader_get_index(far_reader_t reader, const char* path, size_t path_length,
                           uint64_t* index) {
-  return reader->impl->GetDirectoryIndexByPath(fxl::StringView(path, path_length), index);
+  return reader->impl->GetDirectoryIndexByPath(std::string_view(path, path_length), index);
 }
 
 bool far_reader_get_path(far_reader_t reader, uint64_t index, const char** path,
@@ -44,7 +44,7 @@ bool far_reader_get_path(far_reader_t reader, uint64_t index, const char** path,
   archive::DirectoryTableEntry entry;
   if (!reader->impl->GetDirectoryEntryByIndex(index, &entry))
     return false;
-  fxl::StringView path_view = reader->impl->GetPathView(entry);
+  std::string_view path_view = reader->impl->GetPathView(entry);
   *path = path_view.data();
   *path_length = path_view.size();
   return true;

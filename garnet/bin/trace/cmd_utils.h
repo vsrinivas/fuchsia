@@ -10,10 +10,10 @@
 #include <stdint.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "garnet/bin/trace/spec.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace tracing {
 
@@ -32,13 +32,13 @@ bool ParseBufferingMode(const std::string& value, BufferingMode* out_mode);
 
 bool ParseBufferSize(const std::string& value, uint32_t* out_buffer_size);
 
-bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
+bool ParseProviderBufferSize(const std::vector<std::string_view>& values,
                              std::vector<ProviderSpec>* out_specs);
 
-bool ParseTriggers(const std::vector<fxl::StringView>& values,
+bool ParseTriggers(const std::vector<std::string_view>& values,
                    std::unordered_map<std::string, Action>* out_specs);
 
-bool ParseAction(fxl::StringView value, Action* out_action);
+bool ParseAction(std::string_view value, Action* out_action);
 
 controller::BufferingMode TranslateBufferingMode(BufferingMode mode);
 

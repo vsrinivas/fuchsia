@@ -8,6 +8,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 

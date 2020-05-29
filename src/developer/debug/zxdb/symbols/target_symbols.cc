@@ -93,13 +93,13 @@ std::string TargetSymbols::GetShortestUniqueFileName(std::string_view file_name)
   if (all_matches.size() <= 1)
     return std::string(file_name_last_part);  // Unique or not found.
 
-  auto components = fxl::SplitString(fxl::StringView(file_name.data(), file_name.size()), "/",
+  auto components = fxl::SplitString(std::string_view(file_name.data(), file_name.size()), "/",
                                      fxl::kKeepWhitespace, fxl::kSplitWantAll);
 
   // Append path components from the right until its unique.
   std::string result(file_name_last_part);
   for (int comp_index = static_cast<int>(components.size()) - 2; comp_index >= 0; comp_index--) {
-    result = components[comp_index].ToString() + "/" + result;
+    result = std::string(components[comp_index]) + "/" + result;
     if (FindFileMatches(result).size() <= 1)
       return result;
   }

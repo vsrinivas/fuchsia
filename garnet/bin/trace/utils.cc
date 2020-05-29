@@ -32,7 +32,8 @@ const char kTcpPrefix[] = "tcp:";
 
 }  // namespace
 
-bool BeginsWith(const fxl::StringView& str, const fxl::StringView& prefix, fxl::StringView* rest) {
+bool BeginsWith(const std::string_view& str, const std::string_view& prefix,
+                std::string_view* rest) {
   size_t prefix_size = prefix.size();
   if (str.size() < prefix_size)
     return false;
@@ -45,7 +46,7 @@ bool BeginsWith(const fxl::StringView& str, const fxl::StringView& prefix, fxl::
 OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line, const char* name,
                                 bool* out_value) {
   std::string arg;
-  bool have_option = command_line.GetOptionValue(fxl::StringView(name), &arg);
+  bool have_option = command_line.GetOptionValue(std::string_view(name), &arg);
 
   if (!have_option) {
     return OptionStatus::NOT_PRESENT;
@@ -63,7 +64,7 @@ OptionStatus ParseBooleanOption(const fxl::CommandLine& command_line, const char
   return OptionStatus::PRESENT;
 }
 
-static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port, addrinfo* out_addr) {
+static bool TcpAddrFromString(std::string_view address, std::string_view port, addrinfo* out_addr) {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
@@ -73,7 +74,7 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port, add
 
   addrinfo* addrinfos;
   int errcode =
-      getaddrinfo(address.ToString().c_str(), port.ToString().c_str(), &hints, &addrinfos);
+      getaddrinfo(std::string(address).c_str(), std::string(port).c_str(), &hints, &addrinfos);
   if (errcode != 0) {
     FX_LOGS(ERROR) << "Failed to getaddrinfo for address " << address << ":" << port << ": "
                    << gai_strerror(errcode);
@@ -89,7 +90,7 @@ static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port, add
   return true;
 }
 
-static std::unique_ptr<std::ostream> ConnectToTraceSaver(const fxl::StringView& address) {
+static std::unique_ptr<std::ostream> ConnectToTraceSaver(const std::string_view& address) {
   FX_LOGS(INFO) << "Connecting to " << address;
 
   size_t colon = address.rfind(':');
@@ -98,8 +99,8 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(const fxl::StringView& 
     return nullptr;
   }
 
-  fxl::StringView ip_addr_str(address.substr(0, colon));
-  fxl::StringView port_str(address.substr(colon + 1));
+  std::string_view ip_addr_str(address.substr(0, colon));
+  std::string_view port_str(address.substr(colon + 1));
 
   // [::1] -> ::1
   ip_addr_str = fxl::TrimString(ip_addr_str, "[]");
@@ -128,7 +129,7 @@ static std::unique_ptr<std::ostream> ConnectToTraceSaver(const fxl::StringView& 
 
 std::unique_ptr<std::ostream> OpenOutputStream(const std::string& output_file_name, bool compress) {
   std::unique_ptr<std::ostream> out_stream;
-  fxl::StringView address;
+  std::string_view address;
   if (BeginsWith(output_file_name, kTcpPrefix, &address)) {
     out_stream = ConnectToTraceSaver(address);
   } else if (compress) {

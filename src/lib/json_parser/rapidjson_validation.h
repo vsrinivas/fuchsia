@@ -9,11 +9,10 @@
 
 #include <memory>
 #include <sstream>
+#include <string_view>
 
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
-
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace json_parser {
 
@@ -29,13 +28,13 @@ struct InitSchemaError {
 };
 
 // Build a SchemaDocument from a json encoded string.
-fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(fxl::StringView json);
+fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(std::string_view json);
 
 // Validate that the given json value match the given schema.
 // Returns validation error on error.
 fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
                                          const rapidjson::SchemaDocument& schema,
-                                         fxl::StringView value_name = "");
+                                         std::string_view value_name = "");
 
 }  // namespace json_parser
 

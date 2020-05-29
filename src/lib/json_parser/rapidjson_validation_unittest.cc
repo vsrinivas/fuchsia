@@ -8,13 +8,13 @@
 
 namespace json_parser {
 
-constexpr fxl::StringView kInvalidSchemaJson1 = "Hello";
+constexpr std::string_view kInvalidSchemaJson1 = "Hello";
 
-constexpr fxl::StringView kInvalidSchemaJson2 = R"({
+constexpr std::string_view kInvalidSchemaJson2 = R"({
   "hello": "world",
 })";
 
-constexpr fxl::StringView kValidSchema = R"({
+constexpr std::string_view kValidSchema = R"({
   "type": "object",
   "additionalProperties": true,
   "properties": {
@@ -25,16 +25,16 @@ constexpr fxl::StringView kValidSchema = R"({
   "required": ["foo"]
 })";
 
-constexpr fxl::StringView kInvalidJson = R"({
+constexpr std::string_view kInvalidJson = R"({
   "hello": "world"
 })";
 
-constexpr fxl::StringView kValidJson = R"({
+constexpr std::string_view kValidJson = R"({
   "foo": "bar",
   "hello": "world"
 })";
 
-bool ParseJson(fxl::StringView json, rapidjson::Document* document) {
+bool ParseJson(std::string_view json, rapidjson::Document* document) {
   document->Parse(json.data(), json.size());
   return !document->HasParseError();
 }

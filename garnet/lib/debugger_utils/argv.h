@@ -6,16 +6,15 @@
 #define GARNET_LIB_DEBUGGER_UTILS_ARGV_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
-
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace debugger_utils {
 
 // An argv abstraction, and easier to type.
 using Argv = std::vector<std::string>;
 
-Argv BuildArgv(const fxl::StringView& args);
+Argv BuildArgv(std::string_view args);
 
 Argv BuildArgv(const char* const argv[], size_t count);
 

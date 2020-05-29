@@ -17,7 +17,6 @@
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 #include "src/storage/volume_image/options.h"

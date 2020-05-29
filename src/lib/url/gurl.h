@@ -7,8 +7,8 @@
 
 #include <iosfwd>
 #include <string>
+#include <string_view>
 
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/third_party/mozilla/url_parse.h"
 #include "src/lib/url/url_canon.h"
 #include "src/lib/url/url_canon_stdstring.h"
@@ -266,7 +266,7 @@ class URL_EXPORT GURL {
   // scheme. This call is more efficient than getting the host and check
   // whether host has the specific domain or not because no copies or
   // object constructions are done.
-  bool DomainIs(fxl::StringView lower_ascii_domain) const;
+  bool DomainIs(std::string_view lower_ascii_domain) const;
 
   // Swaps the contents of this GURL object with |other|, without doing
   // any memory allocations.
@@ -286,7 +286,7 @@ class URL_EXPORT GURL {
   enum RetainWhiteSpaceSelector { RETAIN_TRAILING_PATH_WHITEPACE };
   GURL(const std::string& url_string, RetainWhiteSpaceSelector);
 
-  void InitCanonical(fxl::StringView input_spec, bool trim_path_end);
+  void InitCanonical(std::string_view input_spec, bool trim_path_end);
 
   void InitializeFromCanonicalSpec();
 

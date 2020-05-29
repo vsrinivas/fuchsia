@@ -76,7 +76,7 @@ ErrorOr<std::string> ReadStringFromFile(const std::string& filepath) {
     FX_LOGS(ERROR) << "Failed to read content from " << filepath;
     return Error::kFileReadFailure;
   }
-  return fxl::TrimString(content, "\r\n").ToString();
+  return std::string(fxl::TrimString(content, "\r\n"));
 }
 
 }  // namespace

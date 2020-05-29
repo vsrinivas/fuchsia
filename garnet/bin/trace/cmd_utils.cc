@@ -46,7 +46,7 @@ bool ParseBufferSize(const std::string& value, uint32_t* out_buffer_size) {
   return true;
 }
 
-bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
+bool ParseProviderBufferSize(const std::vector<std::string_view>& values,
                              std::vector<ProviderSpec>* out_specs) {
   for (const auto& value : values) {
     size_t colon = value.rfind(':');
@@ -64,13 +64,13 @@ bool ParseProviderBufferSize(const std::vector<fxl::StringView>& values,
       return false;
     }
     // We can't verify the provider name here, all we can do is pass it on.
-    std::string name = value.substr(0, colon).ToString();
+    std::string name = std::string(value.substr(0, colon));
     out_specs->emplace_back(ProviderSpec{name, megabytes});
   }
   return true;
 }
 
-bool ParseTriggers(const std::vector<fxl::StringView>& values,
+bool ParseTriggers(const std::vector<std::string_view>& values,
                    std::unordered_map<std::string, Action>* out_specs) {
   FX_DCHECK(out_specs);
 
@@ -81,7 +81,7 @@ bool ParseTriggers(const std::vector<fxl::StringView>& values,
                      << "should be alert-name:action, got " << value;
       return false;
     }
-    std::string name = value.substr(0, colon).ToString();
+    std::string name = std::string(value.substr(0, colon));
     if (out_specs->find(name) != out_specs->end()) {
       FX_LOGS(ERROR) << "Multiple trigger options for alert: " << name;
       return false;
@@ -96,7 +96,7 @@ bool ParseTriggers(const std::vector<fxl::StringView>& values,
   return true;
 }
 
-bool ParseAction(fxl::StringView value, Action* out_action) {
+bool ParseAction(std::string_view value, Action* out_action) {
   FX_DCHECK(out_action);
 
   if (value == kActionStop) {

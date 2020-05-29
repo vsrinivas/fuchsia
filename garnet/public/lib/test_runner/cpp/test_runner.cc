@@ -47,7 +47,6 @@
 #include "rapidjson/writer.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace test_runner {
 

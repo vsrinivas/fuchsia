@@ -18,29 +18,29 @@
 namespace archive {
 
 // Commands
-constexpr fxl::StringView kCat = "cat";
-constexpr fxl::StringView kCreate = "create";
-constexpr fxl::StringView kList = "list";
-constexpr fxl::StringView kExtract = "extract";
-constexpr fxl::StringView kExtractFile = "extract-file";
+constexpr std::string_view kCat = "cat";
+constexpr std::string_view kCreate = "create";
+constexpr std::string_view kList = "list";
+constexpr std::string_view kExtract = "extract";
+constexpr std::string_view kExtractFile = "extract-file";
 
-constexpr fxl::StringView kKnownCommands = "create, list, cat, extract, or extract-file";
+constexpr std::string_view kKnownCommands = "create, list, cat, extract, or extract-file";
 
 // Options
-constexpr fxl::StringView kArchive = "archive";
-constexpr fxl::StringView kManifest = "manifest";
-constexpr fxl::StringView kFile = "file";
-constexpr fxl::StringView kOutput = "output";
+constexpr std::string_view kArchive = "archive";
+constexpr std::string_view kManifest = "manifest";
+constexpr std::string_view kFile = "file";
+constexpr std::string_view kOutput = "output";
 
-constexpr fxl::StringView kCatUsage = "cat --archive=<archive> --file=<path> ";
-constexpr fxl::StringView kCreateUsage = "create --archive=<archive> --manifest=<manifest>";
-constexpr fxl::StringView kListUsage = "list --archive=<archive>";
-constexpr fxl::StringView kExtractUsage = "extract --archive=<archive> --output=<path>";
-constexpr fxl::StringView kExtractFileUsage =
+constexpr std::string_view kCatUsage = "cat --archive=<archive> --file=<path> ";
+constexpr std::string_view kCreateUsage = "create --archive=<archive> --manifest=<manifest>";
+constexpr std::string_view kListUsage = "list --archive=<archive>";
+constexpr std::string_view kExtractUsage = "extract --archive=<archive> --output=<path>";
+constexpr std::string_view kExtractFileUsage =
     "extract-file --archive=<archive> --file=<path> --output=<path>";
 
-bool GetOptionValue(const fxl::CommandLine& command_line, fxl::StringView option,
-                    fxl::StringView usage, std::string* value) {
+bool GetOptionValue(const fxl::CommandLine& command_line, std::string_view option,
+                    std::string_view usage, std::string* value) {
   if (!command_line.GetOptionValue(option, value)) {
     fprintf(stderr,
             "error: Missing --%s argument.\n"
@@ -56,7 +56,7 @@ int Create(const fxl::CommandLine& command_line) {
   if (!GetOptionValue(command_line, kArchive, kCreateUsage, &archive_path))
     return -1;
 
-  std::vector<fxl::StringView> manifest_paths = command_line.GetOptionValues(kManifest);
+  std::vector<std::string_view> manifest_paths = command_line.GetOptionValues(kManifest);
   if (manifest_paths.empty())
     return -1;
 
@@ -87,7 +87,7 @@ int List(const fxl::CommandLine& command_line) {
   archive::ArchiveReader reader(std::move(fd));
   if (!reader.Read())
     return -1;
-  reader.ListPaths([](fxl::StringView string) {
+  reader.ListPaths([](std::string_view string) {
     printf("%.*s\n", static_cast<int>(string.size()), string.data());
   });
   return 0;
