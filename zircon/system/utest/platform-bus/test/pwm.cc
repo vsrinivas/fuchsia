@@ -34,7 +34,7 @@ struct mode_config {
 }  // namespace
 
 class TestPwmDevice;
-using DeviceType = ddk::Device<TestPwmDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<TestPwmDevice>;
 
 class TestPwmDevice : public DeviceType,
                       public ddk::PwmImplProtocol<TestPwmDevice, ddk::base_protocol> {
@@ -44,7 +44,6 @@ class TestPwmDevice : public DeviceType,
   explicit TestPwmDevice(zx_device_t* parent) : DeviceType(parent) {}
 
   // Methods required by the ddk mixins
-  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config);
@@ -112,8 +111,6 @@ zx_status_t TestPwmDevice::PwmImplDisable(uint32_t idx) {
   }
   return ZX_OK;
 }
-
-void TestPwmDevice::DdkUnbindDeprecated() {}
 
 void TestPwmDevice::DdkRelease() { delete this; }
 

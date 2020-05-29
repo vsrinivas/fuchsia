@@ -16,7 +16,7 @@
 #define DRIVER_NAME "test-clock"
 
 class TestClockDevice;
-using DeviceType = ddk::Device<TestClockDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<TestClockDevice>;
 
 class TestClockDevice : public DeviceType,
                         public ddk::ClockImplProtocol<TestClockDevice, ddk::base_protocol> {
@@ -29,7 +29,6 @@ class TestClockDevice : public DeviceType,
   zx_status_t Init();
 
   // Methods required by the ddk mixins
-  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t ClockImplEnable(uint32_t clock_id);
@@ -91,8 +90,6 @@ zx_status_t TestClockDevice::Create(zx_device_t* parent) {
 
   return ptr->Init();
 }
-
-void TestClockDevice::DdkUnbindDeprecated() {}
 
 void TestClockDevice::DdkRelease() { delete this; }
 

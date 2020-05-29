@@ -17,7 +17,7 @@
 namespace i2c {
 
 class TestI2cDevice;
-using DeviceType = ddk::Device<TestI2cDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<TestI2cDevice>;
 
 class TestI2cDevice : public DeviceType,
                       public ddk::I2cImplProtocol<TestI2cDevice, ddk::base_protocol> {
@@ -34,7 +34,6 @@ class TestI2cDevice : public DeviceType,
   zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
 
   // Methods required by the ddk mixins
-  void DdkUnbindDeprecated();
   void DdkRelease();
 };
 
@@ -61,8 +60,6 @@ zx_status_t TestI2cDevice::Create(zx_device_t* parent) {
 
   return ZX_OK;
 }
-
-void TestI2cDevice::DdkUnbindDeprecated() {}
 
 void TestI2cDevice::DdkRelease() { delete this; }
 

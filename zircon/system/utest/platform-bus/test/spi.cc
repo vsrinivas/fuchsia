@@ -18,7 +18,7 @@
 namespace spi {
 
 class TestSpiDevice;
-using DeviceType = ddk::Device<TestSpiDevice, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<TestSpiDevice>;
 
 class TestSpiDevice : public DeviceType,
                       public ddk::SpiImplProtocol<TestSpiDevice, ddk::base_protocol> {
@@ -89,7 +89,6 @@ class TestSpiDevice : public DeviceType,
   }
 
   // Methods required by the ddk mixins
-  void DdkUnbindDeprecated() {}
   void DdkRelease() { delete this; }
 private:
   uint32_t bus_id_;
