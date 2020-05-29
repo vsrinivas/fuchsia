@@ -23,6 +23,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.wlan.ap:fuchsia.wlan.ap.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
@@ -55,7 +56,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

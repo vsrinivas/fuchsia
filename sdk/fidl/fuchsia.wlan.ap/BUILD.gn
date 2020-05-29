@@ -17,7 +17,7 @@ fidl("fuchsia.wlan.ap.policy") {
   sources = [ "wlan_ap.fidl" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.wlan.common",
-    "//zircon/system/fidl/fuchsia-net",
   ]
 }

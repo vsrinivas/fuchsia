@@ -10,9 +10,9 @@ rustc_library("fidl_fuchsia_netstack_ext") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/lib/network/fidl_fuchsia_net_ext",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

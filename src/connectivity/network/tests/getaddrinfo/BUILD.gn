@@ -18,6 +18,7 @@ rustc_test("getaddrinfo_test") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -27,7 +28,6 @@ rustc_test("getaddrinfo_test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/netfilter",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
@@ -46,7 +47,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 
   name = "netcfg"

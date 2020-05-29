@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-net") {
-  sdk = true
+fidl("fuchsia.net") {
+  sdk_category = "partner"
+  api = "fuchsia.net.api"
   sources = [
     "connectivity.fidl",
     "namelookup.fidl",

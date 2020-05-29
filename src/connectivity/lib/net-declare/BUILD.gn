@@ -27,7 +27,7 @@ rustc_library("net-declare") {
     "//third_party/rust_crates:proc-macro-hack",
   ]
 
-  test_deps = [ "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc" ]
+  test_deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
 }
 
 unittest_package("net-declare-tests") {

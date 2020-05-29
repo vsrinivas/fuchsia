@@ -16,6 +16,7 @@ rustc_binary("bin") {
 
   deps = [
     "core:lib",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/management/network_manager/core:lib",
@@ -31,7 +32,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 
   test_deps = [

@@ -269,12 +269,12 @@ source_set("queue") {
     ":crash_server",
     ":database",
     ":settings",
+    "//sdk/fidl/fuchsia.net",
     "//src/developer/feedback/crash_reports/info",
     "//src/lib/backoff",
     "//src/lib/fxl",
     "//third_party/crashpad/util",
     "//zircon/public/lib/async",
-    "//zircon/system/fidl/fuchsia-net",
   ]
 
   deps = [

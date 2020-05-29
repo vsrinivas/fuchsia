@@ -13,6 +13,7 @@ rustc_test("network_manager_integration_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
@@ -32,7 +33,6 @@ rustc_test("network_manager_integration_test") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

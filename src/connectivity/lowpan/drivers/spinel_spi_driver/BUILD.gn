@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -22,7 +23,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

@@ -157,6 +157,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//sdk/fidl/fuchsia.inspect.deprecated($go_toolchain)",
+    "//sdk/fidl/fuchsia.net($go_toolchain)",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
     "//sdk/fidl/fuchsia.net.name($go_toolchain)",
@@ -175,7 +176,6 @@ go_library("netstack_lib") {
     "//third_party/golibs:golang.org/x/time",
     "//third_party/golibs:gvisor.dev/gvisor",
     "//zircon/system/fidl/fuchsia-device($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-net($go_toolchain)",
   ]
 }
 

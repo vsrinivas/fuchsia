@@ -11,5 +11,5 @@ fidl("fuchsia.wlan.product.deprecatedconfiguration") {
 
   sources = [ "wlan_deprecated_configuration.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
+  public_deps = [ "//sdk/fidl/fuchsia.net" ]
 }

@@ -103,6 +103,7 @@ source_set("integration_test_lib") {
   sources = [ "test/operation_test_lib.h" ]
   deps = [
     ":proto",
+    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
@@ -112,7 +113,6 @@ source_set("integration_test_lib") {
     "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/tests:fake_netstack",
     "//src/virtualization/tests:guest_console",
-    "//zircon/system/fidl/fuchsia-net",
   ]
 }
 
@@ -218,6 +218,7 @@ executable("server_daemon_test") {
     ":integration_test_lib",
     ":platform_interface_posix",
     ":proto",
+    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sysinfo",
@@ -231,7 +232,6 @@ executable("server_daemon_test") {
     "//src/virtualization/tests:guest_console",
     "//third_party/grpc:grpc++",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/ulib/fzl",
   ]
 
@@ -302,6 +302,7 @@ executable("guest_interaction_service_test") {
     ":fuchsia.netemul.guest",
     ":integration_test_lib",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sysinfo",
@@ -314,7 +315,6 @@ executable("guest_interaction_service_test") {
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/ulib/fzl",
   ]
 }

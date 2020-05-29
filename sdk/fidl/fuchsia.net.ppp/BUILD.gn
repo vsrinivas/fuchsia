@@ -9,7 +9,7 @@ fidl("fuchsia.net.ppp") {
   api = "fuchsia.net.ppp.api"
   sources = [ "ppp.fidl" ]
   public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
+    "//sdk/fidl/fuchsia.net",
     "//zircon/vdso/zx",
   ]
 }

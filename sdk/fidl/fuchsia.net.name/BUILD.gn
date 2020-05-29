@@ -13,7 +13,7 @@ fidl("fuchsia.net.name") {
     "server_watcher.fidl",
   ]
   public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
+    "//sdk/fidl/fuchsia.net",
     "//zircon/vdso/zx",
   ]
 }

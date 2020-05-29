@@ -16,7 +16,7 @@ fidl("fuchsia.hardware.network") {
   ]
 
   public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
+    "//sdk/fidl/fuchsia.net",
     "//zircon/vdso/zx",
   ]
 }

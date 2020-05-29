@@ -9,6 +9,7 @@ rustc_binary("netstack_cfg") {
   name = "netstack_cfg"
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -26,6 +27,5 @@ rustc_binary("netstack_cfg") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

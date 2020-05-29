@@ -14,6 +14,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -30,7 +31,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

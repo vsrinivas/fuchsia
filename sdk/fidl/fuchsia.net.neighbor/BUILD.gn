@@ -15,6 +15,6 @@ fidl("fuchsia.net.neighbor") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
-    "//zircon/system/fidl/fuchsia-net",
+    "//sdk/fidl/fuchsia.net",
   ]
 }

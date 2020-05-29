@@ -34,6 +34,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",
@@ -55,7 +56,6 @@ source_set("lib") {
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/rapidjson",
     "//zircon/system/fidl/fuchsia-device",
-    "//zircon/system/fidl/fuchsia-net",
   ]
 }
 

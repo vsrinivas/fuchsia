@@ -12,6 +12,7 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
@@ -38,7 +39,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 
   test_deps = [ "//src/lib/fidl/rust/fidl" ]
