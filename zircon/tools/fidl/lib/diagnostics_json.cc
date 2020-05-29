@@ -29,7 +29,18 @@ void DiagnosticsJson::Generate(const SourceSpan& span) {
   auto end = span.data();
   end.remove_prefix(start.size());
 
-  auto end_span = SourceSpan(end, span.source_file());
+  // Gracefully handle a span indicating the end of the file.
+  //
+  // If the span starts at the end of the file, `end_span` should be the same as
+  // `span`, or calling SourceSpan::position() will attempt to read past the end
+  // of the source file.
+  SourceSpan end_span;
+  auto end_of_file = span.source_file().data().data() + span.source_file().data().size();
+  if (start.data() == end_of_file) {
+    end_span = span;
+  } else {
+    end_span = SourceSpan(end, span.source_file());
+  }
 
   SourceFile::Position start_position = span.position();
   SourceFile::Position end_position = end_span.position();

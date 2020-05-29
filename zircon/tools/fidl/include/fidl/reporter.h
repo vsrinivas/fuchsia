@@ -144,34 +144,21 @@ class Reporter {
       diagnostics.push_back(warn.get());
     }
 
-    // Sort by file > line > column > kind (errors then warnings) > message.
+    // Sort by file > position > kind (errors then warnings) > message.
     sort(diagnostics.begin(), diagnostics.end(), [](Diagnostic* a, Diagnostic* b) -> bool {
       if (a->span && b->span) {
-        // Sort by filename first
-        if (a->span->source_file().filename() < b->span->source_file().filename())
+        // SourceSpan overloads the < operator to compare by filename, then
+        // start position, then end position.
+        if (a->span < b->span)
           return true;
-        if (a->span->source_file().filename() > b->span->source_file().filename())
-          return false;
-
-        // Then sort by line
-        if (a->span->position().line < b->span->position().line)
-          return true;
-        if (a->span->position().line > b->span->position().line)
-          return false;
-
-        // Then by column
-        if (a->span->position().column < b->span->position().column)
-          return true;
-        if (a->span->position().column > b->span->position().column)
+        if (b->span < a->span)
           return false;
       } else {
         // Sort errors without spans first.
-        if (!a->span && b->span) {
+        if (b->span)
           return true;
-        }
-        if (a->span && !b->span) {
+        if (a->span)
           return false;
-        }
       }
 
       // If neither diagnostic had a span, or if their spans were ==, sort

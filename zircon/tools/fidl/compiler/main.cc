@@ -324,7 +324,7 @@ int main(int argc, char* argv[]) {
       }
       const auto format_value = behavior_argument.substr(equals + 1, behavior_argument.length());
       if (format_value != "text" && format_value != "json") {
-        FailWithUsage("Unknown value for flag `format` %s\n", format_value.data());
+        FailWithUsage("Unknown value `%s` for flag `format`\n", format_value.data());
       }
       format = format_value;
     } else if (behavior_argument == "--c-header") {

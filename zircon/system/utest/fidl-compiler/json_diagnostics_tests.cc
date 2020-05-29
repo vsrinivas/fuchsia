@@ -146,11 +146,40 @@ table Table {
   END_TEST;
 }
 
+bool span_is_eof() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+table Table {
+    1: string foo;
+}
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& diagnostics = library.diagnostics();
+
+  ASSERT_JSON(diagnostics, R"JSON([
+  {
+    "category": "fidlc/error",
+    "message": "unexpected token EndOfFile, was expecting Semicolon",
+    "path": "example.fidl",
+    "start_line": 7,
+    "start_char": 0,
+    "end_line": 7,
+    "end_char": 0
+  }
+])JSON");
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(json_diagnostics_tests)
 
 RUN_TEST(error)
 RUN_TEST(warning)
 RUN_TEST(multiple_errors)
+RUN_TEST(span_is_eof)
 
 END_TEST_CASE(json_diagnostics_tests)
 
