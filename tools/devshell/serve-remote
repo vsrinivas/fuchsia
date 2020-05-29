@@ -92,12 +92,12 @@ fi
 
 args=(
   -6 # We want ipv6 binds for the port forwards
-  -L "\*:8083:localhost:8083" # requests to the package server address locally go to the workstation
-  -R "8022:[${target_addr}]:22" # requests from the workstation ssh to localhost:8022 will make it to the target
-  -R "2345:[${target_addr}]:2345" # requests from the workstation to the debug agent on localhost will make it to the target
-  -R "8007:[${target_addr}]:8007" # port 8007 on workstation to target port 8007
-  -R "8443:[${target_addr}]:8443" # port 8443 on workstation to target port 8443
-  -R "9080:[${target_addr}]:80" # port 9080 on workstation to target port 80
+  -L "\*:8083:localhost:8083"     # fx serve
+  -R "8022:[${target_addr}]:22"   # fx shell
+  -R "2345:[${target_addr}]:2345" # fx debug
+  -R "8007:[${target_addr}]:8007" # Google-specific
+  -R "8443:[${target_addr}]:8443" # Google-specific
+  -R "9080:[${target_addr}]:80"   # SL4F_HTTP_PORT
   -o ExitOnForwardFailure=yes
   "${host}"
 )
