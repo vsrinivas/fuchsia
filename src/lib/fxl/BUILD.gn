@@ -169,4 +169,9 @@ if (is_fuchsia) {
       },
     ]
   }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":fxl_tests" ]
+  }
 }

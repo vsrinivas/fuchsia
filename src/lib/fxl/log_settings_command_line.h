@@ -19,6 +19,7 @@ class CommandLine;
 // Parses log settings from standard command-line options.
 //
 // Recognizes the following options:
+//   --severity=<TRACE|DEBUG|INFO|WARNING|ERROR|FATAL> : sets |min_log_level| to indicated severity
 //   --verbose         : sets |min_log_level| to (LOG_INFO - 1)
 //   --verbose=<level> : sets |min_log_level| incrementally lower than INFO
 //   --quiet           : sets |min_log_level| to LOG_WARNING

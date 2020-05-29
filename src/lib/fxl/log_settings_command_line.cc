@@ -21,10 +21,40 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
     settings.min_log_level = syslog::DefaultLogLevel;
   }
 
+  // --severity=<TRACE|DEBUG|INFO|WARNING|ERROR|FATAL>
+  std::string severity;
+  if (command_line.GetOptionValue("severity", &severity)) {
+    syslog::LogSeverity level;
+    if (severity == "TRACE") {
+      level = syslog::LOG_TRACE;
+    } else if (severity == "DEBUG") {
+      level = syslog::LOG_DEBUG;
+    } else if (severity == "INFO") {
+      level = syslog::LOG_INFO;
+    } else if (severity == "WARNING") {
+      level = syslog::LOG_WARNING;
+    } else if (severity == "ERROR") {
+      level = syslog::LOG_ERROR;
+    } else if (severity == "FATAL") {
+      level = syslog::LOG_FATAL;
+    } else {
+      FX_LOGS(ERROR) << "Error parsing --severity option:" << severity;
+      return false;
+    }
+
+    settings.min_log_level = level;
+  }
+
   // --verbose=<level>
   // (always parse this even if --quiet is present)
+  // Errors if --severity is present.
   std::string verbosity;
   if (command_line.GetOptionValue("verbose", &verbosity)) {
+    if (!severity.empty()) {
+      FX_LOGS(ERROR) << "Setting both --severity and --verbose is not allowed.";
+      return false;
+    }
+
     int level = 1;
     if (!verbosity.empty() && (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
       FX_LOGS(ERROR) << "Error parsing --verbose option: " << verbosity;
@@ -37,8 +67,14 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
   }
 
   // --quiet=<level>
+  // Errors out if --severity is present.
   std::string quietness;
   if (command_line.GetOptionValue("quiet", &quietness)) {
+    if (!severity.empty()) {
+      FX_LOGS(ERROR) << "Setting both --severity and --quiet is not allowed.";
+      return false;
+    }
+
     int level = 1;
     if (!quietness.empty() && (!fxl::StringToNumberWithError(quietness, &level) || level < 0)) {
       FX_LOGS(ERROR) << "Error parsing --quiet option: " << quietness;
@@ -83,11 +119,18 @@ std::vector<std::string> LogSettingsToArgv(const syslog::LogSettings& settings) 
 
   if (settings.min_log_level != syslog::LOG_INFO) {
     std::string arg;
-    if (settings.min_log_level < syslog::LOG_INFO) {
+    if (settings.min_log_level < syslog::LOG_INFO && settings.min_log_level > syslog::LOG_DEBUG) {
       arg = StringPrintf("--verbose=%d", (syslog::LOG_INFO - settings.min_log_level));
+    } else if (settings.min_log_level == syslog::LOG_TRACE) {
+      arg = "--severity=TRACE";
+    } else if (settings.min_log_level == syslog::LOG_DEBUG) {
+      arg = "--severity=DEBUG";
+    } else if (settings.min_log_level == syslog::LOG_WARNING) {
+      arg = "--severity=WARNING";
+    } else if (settings.min_log_level == syslog::LOG_ERROR) {
+      arg = "--severity=ERROR";
     } else {
-      arg = StringPrintf(
-          "--quiet=%d", -(syslog::LOG_INFO - settings.min_log_level) / syslog::LogSeverityStepSize);
+      arg = "--severity=FATAL";
     }
     result.push_back(arg);
   }
@@ -97,6 +140,6 @@ std::vector<std::string> LogSettingsToArgv(const syslog::LogSettings& settings) 
   }
 
   return result;
-}
+}  // namespace fxl
 
 }  // namespace fxl

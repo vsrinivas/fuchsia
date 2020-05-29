@@ -60,6 +60,30 @@ TEST(LogSettings, ParseValidOptions) {
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
   EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=TRACE"}), &settings));
+  EXPECT_EQ(syslog::LOG_TRACE, settings.min_log_level);
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=DEBUG"}), &settings));
+  EXPECT_EQ(syslog::LOG_DEBUG, settings.min_log_level);
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=INFO"}), &settings));
+  EXPECT_EQ(syslog::LOG_INFO, settings.min_log_level);
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=WARNING"}), &settings));
+  EXPECT_EQ(syslog::LOG_WARNING, settings.min_log_level);
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=ERROR"}), &settings));
+  EXPECT_EQ(syslog::LOG_ERROR, settings.min_log_level);
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=FATAL"}), &settings));
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
+
   EXPECT_TRUE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}), &settings));
   EXPECT_EQ("/tmp/custom.log", settings.log_file);
@@ -84,6 +108,18 @@ TEST(LogSettings, ParseInvalidOptions) {
   EXPECT_FALSE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=123garbage"}), &settings));
   EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
+
+  EXPECT_FALSE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--severity=TRACEgarbage"}), &settings));
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
+
+  EXPECT_FALSE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--severity=TRACE --verbose=1"}), &settings));
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
+
+  EXPECT_FALSE(ParseLogSettings(
+      CommandLineFromInitializerList({"argv0", "--severity=TRACE --quiet=1"}), &settings));
+  EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
 }
 
 TEST_F(LogSettingsFixture, SetValidOptions) {
@@ -107,10 +143,10 @@ TEST_F(LogSettingsFixture, ToArgv) {
   EXPECT_TRUE(LogSettingsToArgv(settings).empty());
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
-  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--quiet=1"});
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=WARNING"});
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
-  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--quiet=3"});
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=FATAL"});
 
   EXPECT_TRUE(ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
   EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--verbose=1"});
@@ -123,6 +159,26 @@ TEST_F(LogSettingsFixture, ToArgv) {
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--verbose=20"}), &settings));
   EXPECT_TRUE(LogSettingsToArgv(settings) ==
               std::vector<std::string>{"--verbose=15"});  // verbosity capped
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=TRACE"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=TRACE"});
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=DEBUG"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=DEBUG"});
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=WARNING"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=WARNING"});
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=ERROR"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=ERROR"});
+
+  EXPECT_TRUE(
+      ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=FATAL"}), &settings));
+  EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--severity=FATAL"});
 
   // Reset |settings| back to defaults so we don't pick up previous tests.
   settings = syslog::LogSettings{};

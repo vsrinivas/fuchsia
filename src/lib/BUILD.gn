@@ -72,6 +72,7 @@ group("tests") {
     "fuchsia-component:tests",
     "fuchsia-url:tests",
     "fuzzing:tests",
+    "fxl:tests",
     "http-sse:tests",
     "http-uri-ext:tests",
     "icu:tests",
