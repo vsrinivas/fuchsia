@@ -211,16 +211,26 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
 class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
-    auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir->AddEntry(::llcpp::fuchsia::boot::Arguments::Name,
-                       fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
-                         return fake_boot_args_.Connect(dispatcher_, std::move(request));
-                       }));
+    root_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+    root_dir_->AddEntry(::llcpp::fuchsia::boot::Arguments::Name,
+                        fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
+                          return fake_boot_args_.Connect(dispatcher_, std::move(request));
+                        }));
 
     zx::channel svc_remote;
     ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
 
-    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
+    vfs_.ServeDirectory(root_dir_, std::move(svc_remote));
+  }
+
+  void ForwardServiceTo(const char* name, const zx::channel& root) {
+    zx::channel cloned = zx::channel(fdio_service_clone(root.get()));
+    root_dir_->AddEntry(
+        name,
+        fbl::MakeRefCounted<fs::Service>([name, cloned = std::move(cloned)](zx::channel request) {
+          return fdio_service_connect_at(cloned.get(), fbl::StringPrintf("/svc/%s", name).data(),
+                                         request.release());
+        }));
   }
 
   FakeBootArgs& fake_boot_args() { return fake_boot_args_; }
@@ -228,6 +238,7 @@ class FakeSvc {
 
  private:
   async_dispatcher_t* dispatcher_;
+  fbl::RefPtr<fs::PseudoDir> root_dir_;
   fs::SynchronousVfs vfs_;
   FakeBootArgs fake_boot_args_;
   zx::channel svc_local_;
