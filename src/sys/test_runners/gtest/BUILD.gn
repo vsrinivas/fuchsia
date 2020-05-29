@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test:rust_measure_tape_for_case",
@@ -39,7 +40,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
   ]
 
   test_deps = [ "//src/sys/test_runners:test_lib" ]

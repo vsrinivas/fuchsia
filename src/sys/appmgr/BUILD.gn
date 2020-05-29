@@ -65,6 +65,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/loader",
     "//garnet/public/lib/json",
+    "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
@@ -81,7 +82,6 @@ source_set("lib") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/system/fidl/fuchsia-process",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",

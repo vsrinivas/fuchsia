@@ -23,6 +23,7 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -31,7 +32,6 @@ executable("bin") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-debugdata",
-    "//zircon/system/fidl/fuchsia-process",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

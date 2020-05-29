@@ -73,6 +73,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "zxio.cc",
     ]
     deps = [
+      "//sdk/fidl/fuchsia.process:fuchsia.process_c",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/safemath",
@@ -84,7 +85,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/system/fidl/fuchsia-io2:llcpp",
       "//zircon/system/fidl/fuchsia-net:llcpp",
       "//zircon/system/fidl/fuchsia-posix-socket:llcpp",
-      "//zircon/system/fidl/fuchsia-process:c",
     ]
     public_configs = [ "//build/config:Wno-unused-function" ]
   }

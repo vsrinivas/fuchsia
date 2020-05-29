@@ -29,6 +29,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -70,7 +71,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
-    "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
 
     # This is a 'logical' test-only dep, in that it's only used in the
     # model::testing helpers, but that module is currently included in the main

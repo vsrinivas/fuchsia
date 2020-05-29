@@ -20,12 +20,12 @@ zx_library("test-utils") {
   sdk_headers = [ "test-utils/test-utils.h" ]
   sources = [ "test-utils.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/runtime",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-process:llcpp",
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/unittest",
   ]

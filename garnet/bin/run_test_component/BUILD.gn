@@ -68,13 +68,13 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/syslog/cpp",
     "//src/diagnostics/archivist/fidl:controller",
     "//zircon/system/fidl/fuchsia-debugdata",
-    "//zircon/system/fidl/fuchsia-process",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
