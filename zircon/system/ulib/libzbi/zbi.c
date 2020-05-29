@@ -254,6 +254,10 @@ zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_le
 }
 
 zbi_result_t zbi_extend(void* dst_buffer, size_t capacity, const void* src_buffer) {
+  if (!dst_buffer || !src_buffer) {
+    return ZBI_RESULT_ERROR;
+  }
+
   zbi_header_t* dst = (zbi_header_t*)dst_buffer;
   zbi_header_t* src = (zbi_header_t*)src_buffer;
 

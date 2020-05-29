@@ -833,6 +833,102 @@ static bool ZbiTestCreateEntryWithPayloadTestZbiSectionTooLarge() {
   END_TEST;
 }
 
+static bool ZbiTestExtendTestZbi() {
+  BEGIN_TEST;
+
+  single_entry_test_zbi_t dst_zbi;
+  single_entry_test_zbi_t src_zbi;
+
+  uint32_t payload = 0xABCDABCD;
+  ASSERT_EQ(zbi_create_entry_with_payload(&src_zbi, sizeof(src_zbi), ZBI_TYPE_CONTAINER, 0, 0,
+                                          &payload, sizeof(payload)),
+            ZBI_RESULT_OK);
+
+  // Extend dst to include src's entry.
+  ASSERT_EQ(zbi_extend(&dst_zbi, sizeof(dst_zbi), &src_zbi), ZBI_RESULT_OK);
+  ASSERT_BYTES_EQ(reinterpret_cast<uint8_t*>(dst_zbi.entry_payload),
+                  reinterpret_cast<uint8_t*>(&payload), sizeof(payload), "Mismatched payload.");
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiDstNull() {
+  BEGIN_TEST;
+
+  zbi_header_t zbi = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_extend(nullptr, 0, &zbi), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiSrcNull() {
+  BEGIN_TEST;
+
+  zbi_header_t zbi = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_extend(&zbi, 0, nullptr), ZBI_RESULT_ERROR);
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiDstNotContainer() {
+  BEGIN_TEST;
+
+  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
+  zbi_header_t dst = ZBI_CONTAINER_HEADER(0);
+  dst.type = 0;
+
+  ASSERT_EQ(zbi_extend(&dst, 0, &src), ZBI_RESULT_BAD_TYPE);
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiSrcNotContainer() {
+  BEGIN_TEST;
+
+  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
+  src.type = 0;
+  zbi_header_t dst = ZBI_CONTAINER_HEADER(0);
+
+  ASSERT_EQ(zbi_extend(&dst, 0, &src), ZBI_RESULT_BAD_TYPE);
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiCapacitySmallerThanDstLength() {
+  BEGIN_TEST;
+
+  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
+  zbi_header_t dst = ZBI_CONTAINER_HEADER(1);
+
+  ASSERT_EQ(zbi_extend(&dst, 0, &src), ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiCapacitySmallerThanDstAlignedLength() {
+  BEGIN_TEST;
+
+  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
+  zbi_header_t dst = ZBI_CONTAINER_HEADER(6);
+
+  ASSERT_EQ(zbi_extend(&dst, /*capacity=*/7, &src), ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
+static bool ZbiTestExtendTestZbiSrcTooLarge() {
+  BEGIN_TEST;
+
+  zbi_header_t src = ZBI_CONTAINER_HEADER(ZBI_ALIGNMENT + 1);
+  zbi_header_t dst = ZBI_CONTAINER_HEADER(ZBI_ALIGNMENT);
+
+  ASSERT_EQ(zbi_extend(&dst, /*capacity=*/ZBI_ALIGNMENT, &src), ZBI_RESULT_TOO_BIG);
+
+  END_TEST;
+}
+
 static bool ZbiTestBasic(void) {
   BEGIN_TEST;
   uint8_t* test_zbi = get_test_zbi();
@@ -1311,6 +1407,15 @@ RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiCrc32NotSupported)
 RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiNotContainer)
 RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiCapacitySmallerThanCurrentSize)
 RUN_TEST(ZbiTestCreateEntryWithPayloadTestZbiSectionTooLarge)
+
+RUN_TEST(ZbiTestExtendTestZbi)
+RUN_TEST(ZbiTestExtendTestZbiDstNull)
+RUN_TEST(ZbiTestExtendTestZbiSrcNull)
+RUN_TEST(ZbiTestExtendTestZbiDstNotContainer)
+RUN_TEST(ZbiTestExtendTestZbiSrcNotContainer)
+RUN_TEST(ZbiTestExtendTestZbiCapacitySmallerThanDstLength)
+RUN_TEST(ZbiTestExtendTestZbiCapacitySmallerThanDstAlignedLength)
+RUN_TEST(ZbiTestExtendTestZbiSrcTooLarge)
 
 // Basic tests.
 RUN_TEST(ZbiTestBasic)
