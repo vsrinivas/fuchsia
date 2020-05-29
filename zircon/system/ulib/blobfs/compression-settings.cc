@@ -45,6 +45,8 @@ CompressionAlgorithm AlgorithmForInode(const Inode& inode) {
 
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
   switch (algorithm) {
+    case CompressionAlgorithm::UNCOMPRESSED:
+      return 0;
     case CompressionAlgorithm::LZ4:
       return kBlobFlagLZ4Compressed;
     case CompressionAlgorithm::ZSTD:

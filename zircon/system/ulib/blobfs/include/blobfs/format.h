@@ -241,6 +241,8 @@ constexpr uint16_t kBlobFlagZSTDSeekableCompressed = 1 << 4;
 
 // Identifies that the on-disk storage of the blob is chunk-compression compressed.
 constexpr uint16_t kBlobFlagChunkCompressed = 1 << 5;
+// When adding another compression flag, it must be added to
+// kBlobFlagMaskAnyCompression below.
 
 // Bitmask of all compression flags.
 constexpr uint16_t kBlobFlagMaskAnyCompression =
