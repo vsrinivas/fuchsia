@@ -14,7 +14,11 @@
 #include <optional>
 
 #include <block-client/cpp/client.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
+
+#include "paver-context.h"
 
 namespace paver {
 
@@ -136,6 +140,35 @@ class SysconfigPartitionClient final : public PartitionClient {
 
  private:
   ::sysconfig::SyncClient client_;
+  ::sysconfig::SyncClient::PartitionType partition_;
+};
+
+// Specialized astro sysconfig partition client built on SyncClientBuffered.
+class AstroSysconfigPartitionClientBuffered : public PartitionClient {
+ public:
+  AstroSysconfigPartitionClientBuffered(std::shared_ptr<Context> context,
+                                        ::sysconfig::SyncClient::PartitionType partition)
+      : context_(context), partition_(partition) {}
+
+  zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
+  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
+  zx_status_t Flush() final;
+  zx::channel GetChannel() final;
+  fbl::unique_fd block_fd() final;
+
+  // No copy, no move.
+  AstroSysconfigPartitionClientBuffered(const AstroSysconfigPartitionClientBuffered&) = delete;
+  AstroSysconfigPartitionClientBuffered& operator=(const AstroSysconfigPartitionClientBuffered&) =
+      delete;
+  AstroSysconfigPartitionClientBuffered(AstroSysconfigPartitionClientBuffered&&) = delete;
+  AstroSysconfigPartitionClientBuffered& operator=(AstroSysconfigPartitionClientBuffered&&) =
+      delete;
+
+ private:
+  std::shared_ptr<Context> context_;
   ::sysconfig::SyncClient::PartitionType partition_;
 };
 

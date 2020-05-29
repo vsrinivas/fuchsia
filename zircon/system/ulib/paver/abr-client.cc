@@ -136,21 +136,19 @@ zx_status_t PartitionClient::Write(const uint8_t* buffer, size_t size) {
   if (zx_status_t status = partition_->Write(vmo_, block_size_); status != ZX_OK) {
     return status;
   }
-  if (zx_status_t status = partition_->Flush(); status != ZX_OK) {
-    return status;
-  }
   return ZX_OK;
 }
 
 }  // namespace
 
 zx_status_t Client::Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                           std::shared_ptr<paver::Context> context,
                            std::unique_ptr<abr::Client>* out) {
   if (zx_status_t status = SupportsVerifiedBoot(svc_root); status != ZX_OK) {
     return status;
   }
 
-  if (AstroClient::Create(devfs_root.duplicate(), out) == ZX_OK ||
+  if (AstroClient::Create(devfs_root.duplicate(), svc_root, context, out) == ZX_OK ||
       SherlockClient::Create(std::move(devfs_root), out) == ZX_OK) {
     (*out)->abr_ops_ = {out->get(), Client::ReadAbrMetaData, Client::WriteAbrMetaData};
     return ZX_OK;
@@ -190,9 +188,12 @@ zx_status_t Client::AbrResultToZxStatus(AbrResult status) {
   return ZX_ERR_INTERNAL;
 }
 
-zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out) {
+zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
+                                std::shared_ptr<paver::Context> context,
+                                std::unique_ptr<abr::Client>* out) {
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx_status_t status = paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner);
+  zx_status_t status =
+      paver::AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context, &partitioner);
   if (status != ZX_OK) {
     return status;
   }
