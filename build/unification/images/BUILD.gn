@@ -118,6 +118,7 @@ aggregate_manifest("legacy-tests") {
 aggregate_manifest("migrated-image") {
   deps = [
     "//examples/drivers//fifo:demo-fifo-manifest",
+    "//src/bringup/bin/debuglog:debuglog-manifest",
     "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart-manifest",
     "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb-manifest",
     "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-manifest",
