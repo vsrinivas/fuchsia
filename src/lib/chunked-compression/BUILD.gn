@@ -121,10 +121,19 @@ fuzzer("compress-decompress-fuzzer") {
   ]
 }
 
+fuzzer("compress-fuzzer") {
+  sources = [ "compress-fuzztest.cc" ]
+  deps = [
+    ":chunked-compression",
+    ":chunked-compression-testutils",
+  ]
+}
+
 fuzzers_package("chunked-compression-fuzzers-package") {
   package_name = "chunked-compression-fuzzers"
   fuzzers = [
     ":compress-decompress-fuzzer",
+    ":compress-fuzzer",
     ":decompressor-fuzzer",
     ":header-reader-fuzzer",
   ]
