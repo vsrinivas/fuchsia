@@ -114,36 +114,36 @@ class StreamUsage {
     return StreamUsage(CaptureUsageFromFidlCaptureUsage(u));
   }
 
-  StreamUsage() = default;
+  constexpr StreamUsage() = default;
 
-  bool operator==(const StreamUsage& other) const { return usage_ == other.usage_; }
-  bool operator!=(const StreamUsage& other) const { return !(*this == other); }
+  constexpr bool operator==(const StreamUsage& other) const { return usage_ == other.usage_; }
+  constexpr bool operator!=(const StreamUsage& other) const { return !(*this == other); }
 
   // RenderUsage
-  bool is_render_usage() const { return std::holds_alternative<RenderUsage>(usage_); }
-  StreamUsage& set_render_usage(RenderUsage usage) {
+  constexpr bool is_render_usage() const { return std::holds_alternative<RenderUsage>(usage_); }
+  constexpr StreamUsage& set_render_usage(RenderUsage usage) {
     usage_ = usage;
     return *this;
   }
-  RenderUsage render_usage() const {
+  constexpr RenderUsage render_usage() const {
     FX_DCHECK(is_render_usage());
     return std::get<RenderUsage>(usage_);
   }
 
   // CaptureUsage
-  bool is_capture_usage() const { return std::holds_alternative<CaptureUsage>(usage_); }
-  StreamUsage& set_capture_usage(CaptureUsage usage) {
+  constexpr bool is_capture_usage() const { return std::holds_alternative<CaptureUsage>(usage_); }
+  constexpr StreamUsage& set_capture_usage(CaptureUsage usage) {
     usage_ = usage;
     return *this;
   }
-  CaptureUsage capture_usage() const {
+  constexpr CaptureUsage capture_usage() const {
     FX_DCHECK(is_capture_usage());
     return std::get<CaptureUsage>(usage_);
   }
 
   // A |StreamUsage| is empty if it contains neither a render usage or a capture usage. This state
   // exists to be similar to the semantics of a FIDL union in C++.
-  bool is_empty() const { return std::holds_alternative<std::monostate>(usage_); }
+  constexpr bool is_empty() const { return std::holds_alternative<std::monostate>(usage_); }
 
   const char* ToString() const;
 
@@ -165,7 +165,8 @@ constexpr std::array<StreamUsage, kStreamUsageCount> kStreamUsages = {{
 #undef EXPAND_CAPTURE_USAGE
 }};
 
-static uint32_t HashStreamUsage(const StreamUsage& u) {
+// Guaranteed to be dense, with values ranging from 0 to kStreamUsageCount inclusive.
+static constexpr uint32_t HashStreamUsage(const StreamUsage& u) {
   if (u.is_render_usage()) {
     return static_cast<uint32_t>(u.render_usage());
   }
@@ -213,6 +214,57 @@ static StreamUsageSet StreamUsageSetFromCaptureUsages(const Container& container
                  [](const auto& u) { return StreamUsage::WithCaptureUsage(u); });
   return result;
 }
+
+// A set of StreamUsages represented as a bitmask.
+class StreamUsageMask final {
+ public:
+  constexpr StreamUsageMask() = default;
+  constexpr StreamUsageMask(const StreamUsageMask& other) = default;
+  constexpr StreamUsageMask(std::initializer_list<StreamUsage> usages) {
+    for (const auto& usage : usages) {
+      insert(usage);
+    }
+  }
+
+  constexpr StreamUsageMask& operator=(const StreamUsageMask& other) = default;
+
+  // Insert `usage` into the bitmask.
+  constexpr void insert(const StreamUsage& usage) {
+    if (!usage.is_empty()) {
+      mask_ |= (1 << HashStreamUsage(usage));
+    }
+  }
+
+  // Insert all of the StreamUsages from `other`.
+  constexpr void insert_all(const StreamUsageMask& other) { mask_ |= other.mask_; }
+
+  // Unsets `usage` from the bitmask.
+  constexpr void erase(const StreamUsage& usage) {
+    if (!usage.is_empty()) {
+      mask_ &= ~(1 << HashStreamUsage(usage));
+    }
+  }
+
+  // Returns true iff there are no usages in the mask.
+  constexpr bool is_empty() const { return mask_ == 0; }
+
+  // Clears all elements from the bitmask.
+  constexpr void clear() { mask_ = 0; }
+
+  // Returns true iff `usage` is set.
+  constexpr bool contains(const StreamUsage& usage) const {
+    return !usage.is_empty() && mask_ & (1 << HashStreamUsage(usage));
+  }
+
+  // Returns the raw bitmask.
+  constexpr uint32_t mask() const { return mask_; }
+
+  constexpr bool operator==(const StreamUsageMask& other) const { return mask_ == other.mask_; }
+  constexpr bool operator!=(const StreamUsageMask& other) const { return !(*this == other); }
+
+ private:
+  uint32_t mask_ = 0;
+};
 
 }  // namespace media::audio
 
