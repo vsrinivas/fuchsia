@@ -19,6 +19,7 @@
 
 #include <fbl/string_printf.h>
 
+#include "cpu_workloads.h"
 #include "status.h"
 #include "temperature_sensor.h"
 #include "util.h"
@@ -53,6 +54,40 @@ void CpuStressor::Stop() {
   workers_.clear();
 }
 
+namespace {
+
+void RunWorkload(StatusLine* status, TemperatureSensor* sensor, const Workload& workload,
+                 uint32_t num_cpus, zx::duration duration) {
+  // Start a workload.
+  CpuStressor stressor{num_cpus, workload.work};
+  stressor.Start();
+
+  // Update the status line until the test is finished.
+  zx::time start_time = zx::clock::get_monotonic();
+  zx::time end_time = start_time + duration;
+  std::optional<double> temperature;
+  while (zx::clock::get_monotonic() < end_time) {
+    // Sleep for 250ms or the finish time, whichever is sooner.
+    zx::time next_update = zx::deadline_after(zx::msec(250));
+    zx::nanosleep(std::min(end_time, next_update));
+
+    // Update the status line.
+    temperature = sensor->ReadCelcius();
+    zx::duration time_running = zx::clock::get_monotonic() - start_time;
+    status->Set("  %02ld:%02ld:%02ld || Current test: %s || System temperature: %s",
+                time_running.to_hours(), time_running.to_mins() % 60, time_running.to_secs() % 60,
+                workload.name.c_str(), TemperatureToString(temperature).c_str());
+  }
+  stressor.Stop();
+
+  // Log final temperature
+  status->Set("");
+  status->Log("* Workload %s complete : final temp: %s\n", workload.name.c_str(),
+              TemperatureToString(temperature).c_str());
+}
+
+}  // namespace
+
 void StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   StatusLine status;
 
@@ -71,27 +106,29 @@ void StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
     status.Log("Exercising CPU for %0.2f seconds...\n", DurationToSecs(duration));
   }
 
-  // Start a workload.
-  CpuStressor stressor{num_cpus, []() { /* do nothing */ }};
-  stressor.Start();
+  // Get workloads.
+  std::vector<Workload> workloads = GetWorkloads();
 
-  // Run the loop, updating the status line as we go.
-  while (zx::clock::get_monotonic() < finish_time) {
-    // Sleep for 250ms or the finish time, whichever is sooner.
-    zx::time next_update = zx::deadline_after(zx::msec(250));
-    zx::nanosleep(std::min(finish_time, next_update));
-
-    // Update the status line.
-    std::optional<double> temp = temperature_sensor->ReadCelcius();
-    zx::duration time_running = zx::clock::get_monotonic() - start_time;
-    status.Set("  %02ld:%02ld:%02ld || System temperature: %s", time_running.to_hours(),
-               time_running.to_mins() % 60, time_running.to_secs() % 60,
-               TemperatureToString(temp).c_str());
+  // Determine the time per test, and how many times we should loop through the different workloads.
+  zx::duration time_per_test;
+  uint64_t iterations;
+  if (duration == zx::duration::infinite()) {
+    // If we are running forever, just use 5 minutes for each.
+    time_per_test = zx::sec(300);
+    iterations = UINT64_MAX;
+  } else {
+    time_per_test = duration / workloads.size();
+    iterations = 1;
   }
 
-  status.Set("");
+  // Run the workloads.
+  for (uint64_t iteration = 0; iteration < iterations; iteration++) {
+    for (const auto& workload : workloads) {
+      RunWorkload(&status, temperature_sensor, workload, num_cpus, time_per_test);
+    }
+  }
+
   status.Log("Complete.\n");
-  stressor.Stop();
 }
 
 }  // namespace hwstress

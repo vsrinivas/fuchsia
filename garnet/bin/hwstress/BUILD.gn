@@ -9,6 +9,7 @@ source_set("lib") {
   sources = [
     "args.cc",
     "cpu.cc",
+    "cpu_workloads.cc",
     "hwstress.cc",
     "status.cc",
     "temperature_sensor.cc",
@@ -25,6 +26,11 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  # We want to optimize as much as possible for speed, under the assumption
+  # that this will also optimize for generating code that will maximise the
+  # amount of stress placed on the system (e.g., more heat for CPU tests).
+  configs += [ "//build/config:optimize_speed" ]
 }
 
 executable("bin") {
@@ -52,6 +58,7 @@ executable("hwstress_test") {
   sources = [
     "args_test.cc",
     "cpu_test.cc",
+    "cpu_workloads_test.cc",
     "hwstress_test.cc",
     "status_test.cc",
     "temperature_sensor_test.cc",
