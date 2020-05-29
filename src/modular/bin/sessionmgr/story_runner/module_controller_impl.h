@@ -43,11 +43,7 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   void SetState(fuchsia::modular::ModuleState new_state);
 
   // Calls Teardown() on the AppClient of the module component instance,
-  // notifies state change, then ReleaseModule()s the connection and finally
-  // calls |done|.
-  //
-  // Multiple calls to Teardown() are allowed, and all |done| callbacks are run
-  // in order when teardown is complete.
+  // notifies state change, and then calls |done|.
   void Teardown(fit::function<void()> done);
 
   component::Services& services() { return app_client_.services(); }
@@ -82,10 +78,6 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   // The state of this Module instance. Stored here to notify through events
   // when it changes.
   fuchsia::modular::ModuleState state_{fuchsia::modular::ModuleState::RUNNING};
-
-  // Callbacks passed to Teardown() calls. If there is one Stop() request
-  // pending, a second one is only queued, no second call to Stop() is made.
-  std::vector<fit::function<void()>> teardown_done_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
 };

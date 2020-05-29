@@ -60,49 +60,15 @@ void ModuleControllerImpl::SetState(const fuchsia::modular::ModuleState new_stat
 }
 
 void ModuleControllerImpl::Teardown(fit::function<void()> done) {
-  teardown_done_callbacks_.push_back(std::move(done));
-
-  if (teardown_done_callbacks_.size() != 1) {
-    // Not the first request, Stop() in progress.
-    return;
-  }
-
-  fit::function<void()> cont = [this] {
-    SetState(fuchsia::modular::ModuleState::STOPPED);
-
-    // We take ownership of *this from |story_controller_impl_| so that
-    // teardown happens in StoryControllerImpl but *this is still alive when we
-    // call |teardown_done_callbacks_|. One or more of the callbacks may be a
-    // result callback for fuchsia::modular::ModuleController::Stop() and since
-    // *this owns the fidl::Binding for the channel on which the result message
-    // will be sent, it must be alive when the message is posted.
-    // TODO(thatguy,mesch): This point is reachable from two distinct
-    // code-paths: originating from ModuleControllerImpl::Stop() or
-    // StoryControllerImpl::Stop(). It is not clear whether ReleaseModule()
-    // must be called *before* these done callbacks are called, or whether we
-    // can move this call below the loop and have ReleaseModule also delete
-    // *this.
-    story_controller_impl_->ReleaseModule(this);
-
-    for (auto& done : teardown_done_callbacks_) {
-      done();
-    }
-
-    // |this| must be deleted after the callbacks so that the |done()| calls
-    // above can be dispatched while the bindings still exist in case they are
-    // FIDL method callbacks.
-    //
-    // The destructor of |this| deletes |app_client_|, which will kill the
-    // related application if it's still running.
-    delete this;
-  };
-
   // At this point, it's no longer an error if the module closes its
   // connection, or the application exits.
   app_client_.SetAppErrorHandler(nullptr);
 
   // Tear down the module application through the normal procedure with timeout.
-  app_client_.Teardown(kBasicTimeout, std::move(cont));
+  app_client_.Teardown(kBasicTimeout, [this, done = std::move(done)] {
+    SetState(fuchsia::modular::ModuleState::STOPPED);
+    done();
+  });
 }
 
 void ModuleControllerImpl::Focus() {

@@ -77,12 +77,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by ModuleControllerImpl.
   void DeleteModule(const std::vector<std::string>& module_path, fit::function<void()> done);
 
-  // Called by ModuleControllerImpl.
-  //
-  // Releases ownership of |controller| and cleans up any related internal
-  // storage. It is the caller's responsibility to delete |controller|.
-  void ReleaseModule(ModuleControllerImpl* module_controller_impl);
-
   // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;
 
@@ -214,6 +208,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   bool IsExternalModule(const std::vector<std::string>& module_path);
 
+  // Deletes the entry for this module_path from running_mod_infos_.
+  void EraseRunningModInfo(std::vector<std::string> module_path);
+
   // Handles SessionShell OnModuleFocused event that indicates whether or not a
   // surface was focused.
   void OnSurfaceFocused(fidl::StringPtr surface_id);
@@ -270,7 +267,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // connected to story shell.
   std::map<std::string, PendingViewForStoryShell> pending_story_shell_views_;
 
-  std::vector<RunningModInfo> running_mod_infos_;
+  std::vector<std::unique_ptr<RunningModInfo>> running_mod_infos_;
 
   // This is the source of truth on which activities are currently ongoing in
   // the story's modules.

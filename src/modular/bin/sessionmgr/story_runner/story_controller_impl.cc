@@ -201,6 +201,51 @@ void StoryControllerImpl::RunningModInfo::ResetInspect() {
   }
 }
 
+// TeardownModuleCall tears down the module runtime identified by |module_path|, optionally
+// notifying the story shell of the fact that the module should be defocused.
+class StoryControllerImpl::TeardownModuleCall : public Operation<> {
+ public:
+  TeardownModuleCall(StoryControllerImpl* const story_controller_impl,
+                     std::vector<std::string> module_path, bool notify_story_shell, ResultCall done)
+      : Operation("StoryControllerImpl::TeardownModuleCall", std::move(done)),
+        story_controller_impl_(story_controller_impl),
+        module_path_(std::move(module_path)),
+        notify_story_shell_(std::move(notify_story_shell)) {}
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    auto* const running_mod_info = story_controller_impl_->FindRunningModInfo(module_path_);
+    FX_CHECK(running_mod_info != nullptr) << ModulePathToSurfaceID(module_path_);
+    // If the module is external, we also notify story shell about it going
+    // away. An internal module is stopped by its parent module, and it's up to
+    // the parent module to defocus it first. TODO(mesch): Why not always
+    // defocus?
+    auto future = Future<>::Create("StoryControllerImpl.TeardownModuleCall.Run.future");
+    if (notify_story_shell_ && story_controller_impl_->story_shell_ &&
+        running_mod_info->module_data->module_source() ==
+            fuchsia::modular::ModuleSource::EXTERNAL) {
+      story_controller_impl_->story_shell_->DefocusSurface(ModulePathToSurfaceID(module_path_),
+                                                           future->Completer());
+    } else {
+      future->Complete();
+    }
+
+    future->Then([this, flow] {
+      auto* const running_mod_info = story_controller_impl_->FindRunningModInfo(module_path_);
+      FX_CHECK(running_mod_info != nullptr) << ModulePathToSurfaceID(module_path_);
+      running_mod_info->module_controller_impl->Teardown([flow, this] {
+        story_controller_impl_->EraseRunningModInfo(module_path_);
+      });
+    });
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  const std::vector<std::string> module_path_;
+  const bool notify_story_shell_;
+};
+
 // Launches (brings up a running instance) of a module.
 //
 // If the module is to be composed into the story shell, notifies the story
@@ -224,7 +269,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     RunningModInfo* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path());
-
     // We launch the new module if it doesn't run yet.
     if (!running_mod_info) {
       Launch(flow);
@@ -235,10 +279,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     // tear it down then launch a new instance.
     if (ShouldRestartModuleForNewIntent(running_mod_info->module_data->intent(),
                                         module_data_.intent())) {
-      running_mod_info->module_controller_impl->Teardown([this, flow] {
-        // NOTE(mesch): |running_mod_info| is invalid at this point.
-        Launch(flow);
-      });
+      operation_queue_.Add(std::make_unique<TeardownModuleCall>(
+          story_controller_impl_, module_data_.module_path(), /*notify_story_shell=*/false,
+          [this, flow] { Launch(flow); }));
       return;
     }
 
@@ -268,34 +311,34 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     service_list->names.push_back(fuchsia::intl::PropertyProvider::Name_);
     service_list->provider = std::move(module_context_provider);
 
-    RunningModInfo running_mod_info;
-    running_mod_info.module_data = CloneOptional(module_data_);
+    auto running_mod_info = std::make_unique<RunningModInfo>();
+    running_mod_info->module_data = CloneOptional(module_data_);
 
     // Launch the child application with a newly-constructed ViewTokenPair if
     // no token was already provided.
     if (view_token_) {
       // ModuleControllerImpl's constructor launches the child application.
-      running_mod_info.module_controller_impl = std::make_unique<ModuleControllerImpl>(
+      running_mod_info->module_controller_impl = std::make_unique<ModuleControllerImpl>(
           story_controller_impl_,
           story_controller_impl_->story_provider_impl_->session_environment()->GetLauncher(),
-          std::move(module_config), running_mod_info.module_data.get(), std::move(service_list),
+          std::move(module_config), running_mod_info->module_data.get(), std::move(service_list),
           std::move(*view_token_));
     } else {
       auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
       // ModuleControllerImpl's constructor launches the child application.
-      running_mod_info.module_controller_impl = std::make_unique<ModuleControllerImpl>(
+      running_mod_info->module_controller_impl = std::make_unique<ModuleControllerImpl>(
           story_controller_impl_,
           story_controller_impl_->story_provider_impl_->session_environment()->GetLauncher(),
-          std::move(module_config), running_mod_info.module_data.get(), std::move(service_list),
+          std::move(module_config), running_mod_info->module_data.get(), std::move(service_list),
           std::move(view_token));
-      running_mod_info.pending_view_holder_token = std::move(view_holder_token);
+      running_mod_info->pending_view_holder_token = std::move(view_holder_token);
     }
 
     // Modules added/started through PuppetMaster don't have a module
     // controller request.
     if (module_controller_request_.is_valid()) {
-      running_mod_info.module_controller_impl->Connect(std::move(module_controller_request_));
+      running_mod_info->module_controller_impl->Connect(std::move(module_controller_request_));
     }
 
     ModuleContextInfo module_context_info = {
@@ -304,11 +347,11 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_->story_provider_impl_->session_environment(),
     };
 
-    running_mod_info.module_context_impl =
-        std::make_unique<ModuleContextImpl>(module_context_info, running_mod_info.module_data.get(),
-                                            std::move(module_context_provider_request));
+    running_mod_info->module_context_impl = std::make_unique<ModuleContextImpl>(
+        module_context_info, running_mod_info->module_data.get(),
+        std::move(module_context_provider_request));
 
-    running_mod_info.InitializeInspect(story_controller_impl_);
+    running_mod_info->InitializeInspect(story_controller_impl_);
 
     story_controller_impl_->running_mod_infos_.emplace_back(std::move(running_mod_info));
 
@@ -319,68 +362,11 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     }
   }
 
+  OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
   std::optional<fuchsia::ui::views::ViewToken> view_token_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request_;
-};
-
-// TeardownModuleCall tears down the module by the given module_data. It is enqueued
-// by OnModuleDataUpdated().
-class StoryControllerImpl::TeardownModuleCall : public Operation<> {
- public:
-  TeardownModuleCall(StoryControllerImpl* const story_controller_impl,
-                     fuchsia::modular::ModuleData module_data, ResultCall done)
-      : Operation("StoryControllerImpl::TeardownModuleCall", std::move(done)),
-        story_controller_impl_(story_controller_impl),
-        module_data_(std::move(module_data)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-    // If the module is external, we also notify story shell about it going
-    // away. An internal module is stopped by its parent module, and it's up to
-    // the parent module to defocus it first. TODO(mesch): Why not always
-    // defocus?
-    auto future = Future<>::Create("StoryControllerImpl.TeardownModuleCall.Run.future");
-    if (story_controller_impl_->story_shell_ &&
-        module_data_.module_source() == fuchsia::modular::ModuleSource::EXTERNAL) {
-      story_controller_impl_->story_shell_->DefocusSurface(
-          ModulePathToSurfaceID(module_data_.module_path()), future->Completer());
-    } else {
-      future->Complete();
-    }
-
-    future->Then([this, flow] {
-      // Teardown the module, which discards the module controller. Since
-      // multiple TeardownModuleCall operations can be queued by module data
-      // updates, we must check whether the module has already been killed.
-      auto* const running_mod_info =
-          story_controller_impl_->FindRunningModInfo(module_data_.module_path());
-      if (!running_mod_info) {
-        FX_LOGS(INFO) << "No ModuleController for Module '"
-                      << ModulePathToSurfaceID(module_data_.module_path())
-                      << "'. Was ModuleController.Stop() called twice?";
-        return;
-      }
-
-      // The result callback |done_| must be invoked BEFORE the Teardown()
-      // callback returns, just in case it is, or it invokes, a callback of a
-      // FIDL method on ModuleController (happens in the case that this
-      // Operation instance executes a ModuleController.Stop() FIDL method
-      // invocation).
-      //
-      // After the Teardown() callback returns, the ModuleControllerImpl is
-      // deleted, and any FIDL connections that have invoked methods on it are
-      // closed.
-      //
-      // Be aware that done_ is NOT the Done() callback of the Operation.
-      running_mod_info->module_controller_impl->Teardown([flow] {});
-    });
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  fuchsia::modular::ModuleData module_data_;
 };
 
 // Calls LaunchModuleCall to get a running instance, and delegates visual
@@ -554,11 +540,13 @@ class StoryControllerImpl::TeardownStoryCall : public Operation<> {
     std::vector<FuturePtr<>> did_teardowns;
     did_teardowns.reserve(story_controller_impl_->running_mod_infos_.size());
 
-    // Tear down all connections with a fuchsia::modular::ModuleController
+    // Tear down all modules.
     for (auto& running_mod_info : story_controller_impl_->running_mod_infos_) {
       auto did_teardown =
           Future<>::Create("StoryControllerImpl.TeardownStoryCall.Run.did_teardown");
-      running_mod_info.module_controller_impl->Teardown(did_teardown->Completer());
+      operation_collection_.Add(std::make_unique<TeardownModuleCall>(
+          story_controller_impl_, running_mod_info->module_data->module_path(),
+          /*notify_story_shell=*/false, did_teardown->Completer()));
       did_teardowns.emplace_back(did_teardown);
     }
 
@@ -585,6 +573,7 @@ class StoryControllerImpl::TeardownStoryCall : public Operation<> {
         });
   }
 
+  OperationCollection operation_collection_;
   StoryControllerImpl* const story_controller_impl_;  // not owned
 
   // Whether this Stop operation is part of stopping all stories at once. In
@@ -666,8 +655,9 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
       // If the module is running, kill it.
       if (running_mod_info) {
         running_mod_info->is_deleted_property.Set("True");
-        operation_queue_.Add(std::make_unique<TeardownModuleCall>(
-            story_controller_impl_, std::move(module_data_), [flow] {}));
+        operation_queue_.Add(
+            std::make_unique<TeardownModuleCall>(story_controller_impl_, module_data_.module_path(),
+                                                 /*notify_story_shell=*/true, [flow] {}));
       }
       return;
     }
@@ -937,17 +927,6 @@ void StoryControllerImpl::DeleteModule(const std::vector<std::string>& module_pa
       std::make_unique<DeleteModuleCall>(story_storage_, module_path, std::move(done)));
 }
 
-void StoryControllerImpl::ReleaseModule(ModuleControllerImpl* const module_controller_impl) {
-  auto fit = std::find_if(running_mod_infos_.begin(), running_mod_infos_.end(),
-                          [module_controller_impl](const RunningModInfo& c) {
-                            return c.module_controller_impl.get() == module_controller_impl;
-                          });
-  FX_DCHECK(fit != running_mod_infos_.end());
-  fit->module_controller_impl.release();
-  pending_story_shell_views_.erase(ModulePathToSurfaceID(fit->module_data->module_path()));
-  running_mod_infos_.erase(fit);
-}
-
 fidl::StringPtr StoryControllerImpl::GetStoryId() const { return story_observer_->model().name(); }
 
 void StoryControllerImpl::EmbedModule(
@@ -1110,6 +1089,15 @@ void StoryControllerImpl::NotifyOneStoryWatcher(
   watcher->OnStateChange(model.runtime_state());
 }
 
+void StoryControllerImpl::EraseRunningModInfo(std::vector<std::string> module_path) {
+  auto it =
+      std::find_if(running_mod_infos_.begin(), running_mod_infos_.end(),
+                   [module_path](auto& e) { return e->module_data->module_path() == module_path; });
+  FX_CHECK(it != running_mod_infos_.end());
+  pending_story_shell_views_.erase(ModulePathToSurfaceID(module_path));
+  running_mod_infos_.erase(it);
+}
+
 bool StoryControllerImpl::IsExternalModule(const std::vector<std::string>& module_path) {
   auto* const i = FindRunningModInfo(module_path);
   if (!i) {
@@ -1122,8 +1110,8 @@ bool StoryControllerImpl::IsExternalModule(const std::vector<std::string>& modul
 StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindRunningModInfo(
     const std::vector<std::string>& module_path) {
   for (auto& c : running_mod_infos_) {
-    if (c.module_data->module_path() == module_path) {
-      return &c;
+    if (c->module_data->module_path() == module_path) {
+      return c.get();
     }
   }
   return nullptr;
