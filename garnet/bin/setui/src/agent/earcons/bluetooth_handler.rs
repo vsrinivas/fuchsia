@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::earcons::agent::{connect_to_sound_player, CommonEarconsParams};
+use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{
     BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
 };
+use crate::agent::earcons::utils::connect_to_sound_player;
 use crate::agent::earcons::utils::play_sound;
 use anyhow::Context;
 use fidl_fuchsia_bluetooth_sys::{AccessMarker, Peer, TechnologyType};

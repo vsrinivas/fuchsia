@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::service_context::ServiceContextHandle,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_media_sounds::PlayerProxy,
+    fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
     fuchsia_syslog::{fx_log_debug, fx_log_err},
     fuchsia_zircon::{self as zx},
     futures::lock::Mutex,
@@ -28,6 +29,25 @@ fn resource_file(
                 .context("Opening package data file")?,
         )?,
     )))
+}
+
+/// Establish a connection to the sound player and return the proxy representing the service.
+/// Will not do anything if the sound player connection is already established.
+pub async fn connect_to_sound_player(
+    service_context_handle: ServiceContextHandle,
+    sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
+) {
+    let mut sound_player_connection_lock = sound_player_connection.lock().await;
+    if sound_player_connection_lock.is_none() {
+        *sound_player_connection_lock = service_context_handle
+            .lock()
+            .await
+            .connect::<PlayerMarker>()
+            .await
+            .context("Connecting to fuchsia.media.sounds.Player")
+            .map_err(|e| fx_log_err!("Failed to connect to fuchsia.media.sounds.Player: {}", e))
+            .ok()
+    }
 }
 
 /// Plays a sound with the given [id] and [file_name] via the [sound_player_proxy].
