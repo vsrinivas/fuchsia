@@ -13,6 +13,7 @@ group("subbenchmarks") {
     "roundtrip",
     "rust",
     "walker",
+    "//topaz/tests/dart_fidl_benchmarks",
   ]
 }
 

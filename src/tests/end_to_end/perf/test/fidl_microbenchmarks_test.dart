@@ -37,4 +37,16 @@ void main() {
       tmpPerfResultsJson('rust_fidl_microbenchmarks'));
   runFidlBenchmark('walker_fidl_microbenchmarks');
   runFidlBenchmark('cpp_allocation_strategy_fidl_microbenchmarks');
+
+  test('dart_fidl_microbenchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    const resultsFile =
+        '/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart_fidl_benchmarks:0#meta:dart_fidl_benchmarks.cmx/results.json';
+    const command = 'run-test-component --realm-label=fidl_benchmarks '
+        'fuchsia-pkg://fuchsia.com/dart_fidl_benchmarks#meta/dart_fidl_benchmarks.cmx '
+        '--out_file /data/results.json';
+    final result = await helper.sl4fDriver.ssh.run(command);
+    expect(result.exitCode, equals(0));
+    await helper.processResults(resultsFile);
+  }, timeout: Timeout.none);
 }

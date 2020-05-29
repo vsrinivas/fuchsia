@@ -486,12 +486,6 @@ To run all FIDL tests, use:
 fx run-e2e-tests fidl_microbenchmarks_test
 ```
 
-To test a specific binding, add the `-n [binding]` flag. For example:
-
-```
-fx run-e2e-test fidl_microbenchmarks_test -- -n "rust_fidl_microbenchmarks"
-```
-
 ### All Regen Commands
 
 | Name                  | Regen Commands                                                              | Input                                                             |  Output                                                                                    |
