@@ -11,9 +11,7 @@ on_second_thought_keep_on_astro = false
 bootfs_only = false
 
 kernel_cmdline_args -= [
-  # TODO(fxb/52619): Disabled while we track down why logs being sent to
-  # Archivist are disappearing.
-  # "devmgr.log-to-debuglog=true",
+  "devmgr.log-to-debuglog=true",
   "kernel.oom.behavior=jobkill",
 ]
 kernel_cmdline_args += [ "kernel.oom.behavior=reboot" ]
