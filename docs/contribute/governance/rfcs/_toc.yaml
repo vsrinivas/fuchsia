@@ -2,9 +2,11 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "RFC 0001 RFC Process"
+- title: "Overview"
+  path: /docs/contribute/governance/rfcs
+- title: "RFC-0001: RFC Process"
   path: /docs/contribute/governance/rfcs/0001_rfc_process.md
-- title: "RFC 0002 Platform Versioning"
+- title: "RFC-0002: Platform Versioning"
   path: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
