@@ -498,7 +498,7 @@ test_package("carnelian-render-tests") {
   tests = [
     {
       name = "carnelian_lib_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 
@@ -513,7 +513,7 @@ test_package("carnelian-tests") {
   tests = [
     {
       name = "carnelian_lib_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
