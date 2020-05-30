@@ -19,6 +19,14 @@
 namespace fbl {
 namespace internal {
 
+// Some fbl::Function functionality is disabled in the kernel. This provides a
+// static_assert-usable value.
+#ifdef _KERNEL
+constexpr bool kMustInline = true;
+#else
+constexpr bool kMustInline = false;
+#endif
+
 // Checks if |T| is null. Defaults to false. |Comparison| is the type yielded by
 // comparing a T value with nullptr.
 template <typename T, typename Comparison = bool>
@@ -146,8 +154,15 @@ struct FunctionTargetHolder final {
   template <typename Callable>
   struct TargetHelper {
     using InlineFunctionTarget = fbl::internal::InlineFunctionTarget<Callable, Result, Args...>;
-    using HeapFunctionTarget = fbl::internal::HeapFunctionTarget<Callable, Result, Args...>;
     static constexpr bool can_inline = (sizeof(InlineFunctionTarget) <= target_size);
+    // If we must inline, assert that we can in fact inline.
+    static_assert(!kMustInline || can_inline);
+    // Ensure we won't instantiate HeapFunctionTarget when must_inline is
+    // true. The static_assert just above ensures that we are not ever choosing
+    // the dummy void type in the declaration of Type.
+    using HeapFunctionTarget =
+        std::conditional_t<kMustInline, void,
+                           fbl::internal::HeapFunctionTarget<Callable, Result, Args...>>;
     using Type = std::conditional_t<can_inline, InlineFunctionTarget, HeapFunctionTarget>;
     static_assert(sizeof(Type) <= target_size, "Target should fit in FunctionTargetHolder.");
   };
