@@ -22,6 +22,7 @@ rustc_library("io_conformance") {
   name = "io_conformance"
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -30,7 +31,6 @@ rustc_library("io_conformance") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -40,6 +40,7 @@ rustc_test("io1_conformance_test") {
   source_root = "io1_tests.rs"
   deps = [
     ":io_conformance",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -50,7 +51,6 @@ rustc_test("io1_conformance_test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -90,7 +90,7 @@ test_package("io_fidl_conformance_tests") {
 #     "//zircon/system/ulib/async-loop:async-loop-default",
 #     "//zircon/public/lib/fbl",
 #     "//zircon/public/lib/fdio",
-#     "//zircon/system/fidl/fuchsia-io",
+#     "//sdk/fidl/fuchsia.io",
 #   ]
 # }
 

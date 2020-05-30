@@ -13,6 +13,7 @@ rustc_library("blobfs-ramdisk") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -26,7 +27,6 @@ rustc_library("blobfs-ramdisk") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   test_deps = [

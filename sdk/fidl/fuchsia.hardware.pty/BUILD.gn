@@ -8,7 +8,7 @@ fidl("fuchsia.hardware.pty") {
   sdk_category = "partner"
   api = "fuchsia.hardware.pty.api"
   public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
+    "//sdk/fidl/fuchsia.io",
     "//zircon/system/fidl/fuchsia-mem",
   ]
   sources = [ "pty.fidl" ]

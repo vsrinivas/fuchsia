@@ -34,6 +34,7 @@ rustc_library("lib") {
     ":session_framework_metrics_registry_rustlib",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -48,7 +49,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

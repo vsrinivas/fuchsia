@@ -18,11 +18,11 @@ test("component_cpp_unittests") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-io",
   ]
 }
 
@@ -36,10 +36,10 @@ test("component_cpp_testing_unittests") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-io",
   ]
 }
 
@@ -53,10 +53,10 @@ test("component_cpp_testing_tests") {
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.debugdata",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fidl",
-    "//zircon/system/fidl/fuchsia-io",
   ]
 }
 

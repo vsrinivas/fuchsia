@@ -267,6 +267,6 @@ children with `use` declarations; it must use `BindChild()`.
 [channel]: /docs/reference/kernel_objects/channel.md
 [namespaces]: /docs/concepts/framework/namespaces.md
 [component-manifests]: component_manifests.md
-[fuchsia.io]: /zircon/system/fidl/fuchsia-io/io.fidl
+[fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
 [abi-system]: /docs/concepts/system/abi/system.md
 [realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl

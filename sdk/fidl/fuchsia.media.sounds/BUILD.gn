@@ -10,8 +10,8 @@ fidl("fuchsia.media.sounds") {
   sources = [ "sound_player.fidl" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.media",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }

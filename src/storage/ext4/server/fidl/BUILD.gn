@@ -10,7 +10,7 @@ fidl("ext4_readonly") {
   sources = [ "ext4_readonly.fidl" ]
 
   public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
+    "//sdk/fidl/fuchsia.io",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }

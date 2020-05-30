@@ -17,6 +17,7 @@ rustc_test("lifecycle") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
@@ -26,7 +27,6 @@ rustc_test("lifecycle") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:futures-util",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -36,6 +36,7 @@ rustc_test("lifecycle_timeout") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
@@ -45,7 +46,6 @@ rustc_test("lifecycle_timeout") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:futures-util",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -55,6 +55,7 @@ rustc_test("lifecycle_timeout_unresponsive") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
@@ -64,7 +65,6 @@ rustc_test("lifecycle_timeout_unresponsive") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:futures-util",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

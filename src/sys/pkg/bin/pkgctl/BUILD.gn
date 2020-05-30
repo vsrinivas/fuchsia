@@ -14,6 +14,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
@@ -30,7 +31,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

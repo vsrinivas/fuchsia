@@ -11,9 +11,9 @@ source_set("testing") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-io",
   ]
 
   # TODO(47046): UBSan has found an instance of undefined behavior in this target.

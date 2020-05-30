@@ -12,7 +12,7 @@ fidl_c_header("fuchsia-debugdata") {
 }
 
 fidl_c_header("fuchsia-io") {
-  sources = [ "fuchsia-io/io.fidl" ]
+  sources = [ "../../../sdk/fidl/fuchsia.io/io.fidl" ]
 
   deps = [
     ":fuchsia-mem",
@@ -157,7 +157,6 @@ group("fidl") {
 #------------------
 #------------------
 #------------------
-    "fuchsia-io",
 #------------------
 #------------------
 #------------------

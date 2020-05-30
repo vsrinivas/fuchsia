@@ -90,6 +90,7 @@ rustc_binary("resolved_error_reporter_bin") {
   source_root = "resolved_error/reporter.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -99,7 +100,6 @@ rustc_binary("resolved_error_reporter_bin") {
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -109,6 +109,7 @@ rustc_binary("async_reporter_bin") {
   source_root = "async/reporter.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -116,7 +117,6 @@ rustc_binary("async_reporter_bin") {
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//third_party/rust_crates:anyhow",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -151,6 +151,7 @@ rustc_binary("realm_offered_nested") {
   source_root = "realm_offered/nested.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -159,7 +160,6 @@ rustc_binary("realm_offered_nested") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -185,6 +185,7 @@ rustc_binary("capability_ready_root_bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -194,7 +195,6 @@ rustc_binary("capability_ready_root_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

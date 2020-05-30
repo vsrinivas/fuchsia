@@ -83,12 +83,12 @@ source_set("src") {
 
   public_deps = [
     "model",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/ulib/fs",
   ]
 }

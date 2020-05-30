@@ -23,13 +23,13 @@ source_set("io") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_c_client",
     "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io_c_client",
     "//zircon/system/ulib/fzl",
   ]
 

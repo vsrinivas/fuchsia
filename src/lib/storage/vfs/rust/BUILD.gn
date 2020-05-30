@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 common_deps = [
+  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
   "//src/lib/storage/pseudo-fs",
@@ -23,7 +24,6 @@ common_deps = [
   "//third_party/rust_crates:static_assertions",
   "//third_party/rust_crates:thiserror",
   "//third_party/rust_crates:void",
-  "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
 ]
 

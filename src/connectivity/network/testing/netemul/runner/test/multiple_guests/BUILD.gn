@@ -10,6 +10,7 @@ rustc_binary("multiple_guests") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//src/connectivity/network/testing/netemul/runner/test/guest:lib",
     "//src/lib/fdio/rust:fdio",
@@ -22,6 +23,5 @@ rustc_binary("multiple_guests") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

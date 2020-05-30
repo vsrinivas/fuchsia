@@ -178,5 +178,5 @@ The created runner capability may then be [offered][offer] to children, or
 [offer]: component_manifests.md#offer
 [sdk-component-controller]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
-[sdk-directory]: /zircon/system/fidl/fuchsia-io/io.fidl
+[sdk-directory]: /sdk/fidl/fuchsia.io/io.fidl
 [use]: component_manifests.md#use

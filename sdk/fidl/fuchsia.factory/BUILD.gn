@@ -8,5 +8,5 @@ fidl("fuchsia.factory") {
   sdk_category = "partner"
 
   sources = [ "factory.fidl" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

@@ -57,8 +57,8 @@ source_set("common") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
@@ -86,9 +86,9 @@ test("console-test") {
   ]
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
 }
 

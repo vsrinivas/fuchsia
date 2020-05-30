@@ -19,8 +19,8 @@ executable("dd") {
   sources = [ "main.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-io:c",
   ]
 }
 

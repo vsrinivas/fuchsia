@@ -33,6 +33,7 @@ rustc_library("test_utils_lib") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -48,7 +49,6 @@ rustc_library("test_utils_lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:rand",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

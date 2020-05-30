@@ -62,9 +62,9 @@ action("json_for_test") {
     ":fidl($fidl_toolchain)",
     ":fidl-composed($fidl_toolchain)",
     ":fidl-sys($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp/test:frobinator",
-    "//zircon/system/fidl/fuchsia-io",
   ]
   outputs = [ "$target_gen_dir/library_loader_test_data.h" ]
   script = "generate_test_includes.sh"

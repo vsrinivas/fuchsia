@@ -16,8 +16,8 @@ fidl("fuchsia.sys.internal") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.sys",
-    "//zircon/system/fidl/fuchsia-io",
   ]
 }

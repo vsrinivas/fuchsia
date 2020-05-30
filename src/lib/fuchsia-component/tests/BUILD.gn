@@ -14,6 +14,7 @@ rustc_test("fuchsia-component-v1-test") {
     ":fuchsia.component.test-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -23,7 +24,6 @@ rustc_test("fuchsia-component-v1-test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

@@ -13,6 +13,7 @@ rustc_library("process_builder") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -30,7 +31,6 @@ rustc_library("process_builder") {
     "//third_party/rust_crates:owning_ref",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   # TODO(46774): Fix the leaks and remove this.

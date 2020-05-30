@@ -13,6 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/by_addr:by_addr",
@@ -29,7 +30,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   non_rust_deps = [

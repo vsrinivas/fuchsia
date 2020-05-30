@@ -27,13 +27,13 @@ zx_library("service-llcpp") {
     "llcpp/service.cc",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl-llcpp",
-    "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/fs",
   ]
 }

@@ -21,11 +21,11 @@ executable("bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io_llcpp",
   ]
 }
 

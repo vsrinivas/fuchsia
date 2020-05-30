@@ -10,6 +10,7 @@ rustc_library("io_util") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -19,7 +20,6 @@ rustc_library("io_util") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   test_deps = [

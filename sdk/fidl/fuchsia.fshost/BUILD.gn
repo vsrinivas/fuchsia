@@ -6,5 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.fshost") {
   sources = [ "fshost.fidl" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

@@ -241,7 +241,7 @@ executable("server_daemon_test") {
 fidl("fuchsia.netemul.guest") {
   sdk_category = "internal"
   sources = [ "fidl/fuchsia.netemul.guest_interaction.fidl" ]
-  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }
 
 executable("guest_discovery_service_bin") {

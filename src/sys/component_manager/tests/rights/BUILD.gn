@@ -17,6 +17,7 @@ rustc_test("rights_integration_test_bin") {
   edition = "2018"
   source_root = "rights_integration_test.rs"
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
@@ -25,7 +26,6 @@ rustc_test("rights_integration_test_bin") {
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   # TODO(46776): Fix the leaks and remove this.
@@ -36,8 +36,8 @@ executable("expose_dir_rights") {
   sources = [ "expose_dir_rights.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.io",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
@@ -50,6 +50,7 @@ rustc_binary("use_dir_rights") {
   edition = "2018"
   source_root = "use_dir_rights.rs"
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -60,7 +61,6 @@ rustc_binary("use_dir_rights") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -70,6 +70,7 @@ rustc_binary("component_manager_for_rights_test") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -84,7 +85,6 @@ rustc_binary("component_manager_for_rights_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -93,6 +93,7 @@ rustc_binary("use_storage") {
   source_root = "use_storage.rs"
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -103,7 +104,6 @@ rustc_binary("use_storage") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

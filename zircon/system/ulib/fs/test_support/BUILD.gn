@@ -31,9 +31,9 @@ zx_library("test_support") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs/transaction",

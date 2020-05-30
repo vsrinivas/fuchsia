@@ -12,10 +12,10 @@ test("integration_part_2") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-io",
   ]
 }

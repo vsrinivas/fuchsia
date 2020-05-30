@@ -13,11 +13,11 @@ rustc_library("directory_broker") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

@@ -16,7 +16,7 @@ fidl("hub") {
 
   sources = [ "hub.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }
 
 fidl("echofactory") {

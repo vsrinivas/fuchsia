@@ -101,7 +101,7 @@ zx_library("fs") {
       "//zircon/public/lib/zx",
 
       # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
-      "//zircon/system/fidl/fuchsia-io:llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
 
       # <fs/trace.h> has #include <lib/trace/event.h>.
       "//zircon/system/ulib/trace",
@@ -111,6 +111,7 @@ zx_library("fs") {
     ]
     deps += [
       "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fdio",
@@ -118,7 +119,6 @@ zx_library("fs") {
       "//zircon/public/lib/fit",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/fidl/fuchsia-mem:llcpp",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/trace",

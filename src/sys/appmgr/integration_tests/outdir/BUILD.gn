@@ -19,6 +19,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -31,7 +32,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   # TODO(49207): Fix the leaks and remove this.

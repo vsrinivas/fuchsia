@@ -10,12 +10,12 @@ executable("bin") {
   output_name = "io_conformance_harness_ulibfs"
   sources = [ "harness.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io.test",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

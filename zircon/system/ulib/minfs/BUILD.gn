@@ -107,6 +107,7 @@ zx_library("minfs") {
     deps += [
       "//sdk/fidl/fuchsia.device:fuchsia.device_c",
       "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
@@ -114,7 +115,6 @@ zx_library("minfs") {
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-io:llcpp",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
