@@ -183,7 +183,6 @@ source_set("audio_core_lib") {
   deps = [
     ":json_schema_headers",
     ":media_metrics_registry",
-    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/media/cpp:no_converters",

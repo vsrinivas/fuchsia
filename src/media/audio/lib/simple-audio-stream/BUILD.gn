@@ -31,14 +31,7 @@ zx_library("simple-audio-stream") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
   ]
