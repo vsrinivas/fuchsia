@@ -328,14 +328,20 @@ void arch_mp_reschedule(cpu_mask_t mask) {
   } else {
     needs_ipi = mask;
     // We are attempting to wake the set up CPUs in |mask| and cause them to schedule a new thread.
-    // Before a target CPU executes the halt instruction, it clears the |halt_interlock| flag;
-    // set the halt_interlock flag here to avoid the target CPU entering the halt state - this
-    // prevents an unnecessary halt instruction.
+    // A target CPU spins for a short time before execuing halt; before it spins, it sets the
+    // |halt_interlock| flag to '1'. Before a target CPU executes the halt instruction, it sets
+    // the |halt_interlock| flag to '2' and skips the halt if the flag was cleared while spinning.
+    // Try to clear the |halt_interlock| flag from 1 -> 0. If we do so, we can skip sending an
+    // IPI and prevent an unnecessary halt instruction.
     while (mask) {
       cpu_num_t cpu_id = lowest_cpu_set(mask);
       cpu_mask_t cpu_mask = cpu_num_to_mask(cpu_id);
       struct x86_percpu* percpu = cpu_id ? &ap_percpus[cpu_id - 1] : &bp_percpu;
-      atomic_store_relaxed(&percpu->halt_interlock, 1);
+      int expect_spin = 1;
+      bool did_fast_wakeup = atomic_cmpxchg(&percpu->halt_interlock, &expect_spin, 0);
+      if (did_fast_wakeup) {
+        needs_ipi &= ~cpu_mask;
+      }
       mask &= ~cpu_mask;
     }
   }
@@ -380,20 +386,27 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
     }
   } else {
     for (;;) {
+      // Set the halt_interlock flag and spin for a little bit, in case a wakeup happens very
+      // shortly before we decide to go to sleep. If the halt_interlock flag is changed, another CPU
+      // has woken us, avoid the halt instruction.
       LocalTraceDuration trace{"idle"_stringref};
       constexpr int kPauseIterations = 3000;
-      // Clear the halt_interlock flag and spin for a little bit, in case a wakeup happens very
-      // shortly before we decide to go to sleep. If the halt_interlock flag is set, another CPU
-      // has tried to wake us, avoid the halt instruction.
-      atomic_store_relaxed(&percpu->halt_interlock, 0);
+      int halt_interlock_spinning = 1;
+      atomic_store_relaxed(&percpu->halt_interlock, halt_interlock_spinning);
       for (int i = 0; i < kPauseIterations; i++) {
         arch::Yield();
+        if (atomic_load_relaxed(&percpu->halt_interlock) != halt_interlock_spinning) {
+          break;
+        }
       }
-      if (atomic_load_relaxed(&percpu->halt_interlock)) {
-        continue;
+      // If the halt_interlock flag was changed, another CPU must have done it; avoid HLT and
+      // switch to a new runnable thread.
+      bool no_fast_wakeup = atomic_cmpxchg(&percpu->halt_interlock, &halt_interlock_spinning, 2);
+      if (no_fast_wakeup) {
+        x86_idle();
+      } else {
+        Thread::Current::Preempt();
       }
-
-      x86_idle();
     }
   }
 }
