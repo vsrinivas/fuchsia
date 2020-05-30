@@ -137,12 +137,18 @@ source_set("crash_register") {
   public_deps = [
     ":product",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crash_reports/info",
+    "//src/developer/feedback/utils:errors",
+    "//src/developer/feedback/utils/fit",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/feedback/utils/fidl:channel_provider_ptr",
   ]
 }
 
@@ -153,6 +159,7 @@ source_set("crash_reporter") {
   ]
 
   public_deps = [
+    ":crash_register",
     ":crash_server",
     ":privacy_settings_ptr",
     ":product",
@@ -163,7 +170,6 @@ source_set("crash_reporter") {
     "//src/developer/feedback/crash_reports/info",
     "//src/developer/feedback/utils:errors",
     "//src/developer/feedback/utils:utc_time_provider",
-    "//src/developer/feedback/utils/fidl:channel_provider_ptr",
     "//src/developer/feedback/utils/fidl:data_provider_ptr",
     "//src/developer/feedback/utils/fidl:device_id_provider_ptr",
     "//src/developer/feedback/utils/fit",
@@ -176,6 +182,7 @@ source_set("crash_reporter") {
     ":report_util",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils/cobalt",
+    "//zircon/public/lib/fit",
   ]
 }
 
@@ -254,7 +261,10 @@ source_set("privacy_settings_ptr") {
 }
 
 source_set("product") {
-  sources = [ "product.h" ]
+  sources = [
+    "product.cc",
+    "product.h",
+  ]
 
   public_deps = [ "//src/developer/feedback/utils:errors" ]
 }

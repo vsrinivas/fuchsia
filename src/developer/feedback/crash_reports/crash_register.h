@@ -6,28 +6,42 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_CRASH_REGISTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fit/promise.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include "src/developer/feedback/crash_reports/info/crash_register_info.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/product.h"
+#include "src/developer/feedback/utils/errors.h"
+#include "src/developer/feedback/utils/fit/timeout.h"
 
 namespace feedback {
 
 class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
  public:
-  explicit CrashRegister(std::shared_ptr<InfoContext> info_context);
+  explicit CrashRegister(async_dispatcher_t* dispatcher,
+                         std::shared_ptr<sys::ServiceDirectory> services,
+                         std::shared_ptr<InfoContext> info_context,
+                         const ErrorOr<std::string>& build_version);
 
   // |fuchsia::feedback::CrashReportingProductRegister|
   void Upsert(std::string component_url, fuchsia::feedback::CrashReportingProduct product) override;
 
-  // TODO(48451): expose the Product to use for a given program name, including a default product
-  // for when no clients registered a Product for that component URL.
+  // Returns the Product registered by clients for a given component URL, otherwise the default
+  // Product for the platform.
+  ::fit::promise<Product> GetProduct(const std::string& program_name, fit::Timeout timeout);
 
  private:
+  async_dispatcher_t* dispatcher_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   CrashRegisterInfo info_;
+  const ErrorOr<std::string> build_version_;
+
   std::map<std::string, Product> component_to_products_;
 };
 

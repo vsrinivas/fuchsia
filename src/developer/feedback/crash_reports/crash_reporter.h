@@ -11,8 +11,10 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
+#include <string>
 
 #include "src/developer/feedback/crash_reports/config.h"
+#include "src/developer/feedback/crash_reports/crash_register.h"
 #include "src/developer/feedback/crash_reports/crash_server.h"
 #include "src/developer/feedback/crash_reports/info/crash_reporter_info.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
@@ -38,13 +40,15 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                                                   std::shared_ptr<sys::ServiceDirectory> services,
                                                   const timekeeper::Clock& clock,
                                                   std::shared_ptr<InfoContext> info_context,
-                                                  const Config* config);
-  static std::unique_ptr<CrashReporter> TryCreate(async_dispatcher_t* dispatcher,
-                                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                                  const timekeeper::Clock& clock,
-                                                  std::shared_ptr<InfoContext> info_context,
                                                   const Config* config,
-                                                  std::unique_ptr<CrashServer> crash_server);
+                                                  const ErrorOr<std::string>& build_version,
+                                                  CrashRegister* crash_register);
+  // For testing purposes and injecting a stub CrashServer.
+  static std::unique_ptr<CrashReporter> TryCreate(
+      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+      const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
+      const Config* config, const ErrorOr<std::string>& build_version,
+      CrashRegister* crash_register, std::unique_ptr<CrashServer> crash_server);
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
@@ -52,22 +56,25 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
  private:
   CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                 const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
-                const Config* config, std::unique_ptr<CrashServer> crash_server,
+                const Config* config, const ErrorOr<std::string>& build_version,
+                CrashRegister* crash_register, std::unique_ptr<CrashServer> crash_server,
                 std::unique_ptr<Queue> queue);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config* config_;
+  const ErrorOr<std::string> build_version_;
+  CrashRegister* crash_register_;
   const UTCTimeProvider utc_provider_;
   const std::unique_ptr<CrashServer> crash_server_;
   const std::unique_ptr<Queue> queue_;
+
   CrashReporterInfo info_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
   fidl::DataProviderPtr data_provider_ptr_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
-  const ErrorOr<std::string> build_version_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);
 };

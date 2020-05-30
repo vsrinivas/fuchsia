@@ -11,12 +11,14 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
+#include <string>
 
 #include "src/developer/feedback/crash_reports/config.h"
 #include "src/developer/feedback/crash_reports/crash_register.h"
 #include "src/developer/feedback/crash_reports/crash_reporter.h"
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/info/main_service_info.h"
+#include "src/developer/feedback/utils/errors.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
 
@@ -52,13 +54,15 @@ class MainService {
  private:
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               std::shared_ptr<InfoContext> info_context, Config config,
+              const ErrorOr<std::string>& build_version,
+              std::unique_ptr<CrashRegister> crash_register,
               std::unique_ptr<CrashReporter> crash_reporter);
 
   async_dispatcher_t* dispatcher_;
   MainServiceInfo info_;
   const Config config_;
 
-  CrashRegister crash_register_;
+  std::unique_ptr<CrashRegister> crash_register_;
   ::fidl::BindingSet<fuchsia::feedback::CrashReportingProductRegister> crash_register_connections_;
 
   std::unique_ptr<CrashReporter> crash_reporter_;

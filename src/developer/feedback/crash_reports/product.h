@@ -18,6 +18,8 @@ struct Product {
   ErrorOr<std::string> channel;
 };
 
+bool operator==(const Product& a, const Product& b);
+
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASH_REPORTS_PRODUCT_H_

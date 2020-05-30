@@ -5,9 +5,12 @@
 #include "src/developer/feedback/crash_reports/crash_register.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
+#include <lib/fit/promise.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
@@ -17,6 +20,7 @@
 #include "src/developer/feedback/crash_reports/info/info_context.h"
 #include "src/developer/feedback/crash_reports/product.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/channel_provider.h"
 #include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -33,6 +37,7 @@ using inspect::testing::StringIs;
 using testing::Not;
 using testing::UnorderedElementsAreArray;
 
+constexpr char kBuildVersion[] = "some-version";
 constexpr char kComponentUrl[] = "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx";
 
 // Unit-tests the server of fuchsia.feedback.CrashReportingProductRegister.
@@ -41,22 +46,47 @@ constexpr char kComponentUrl[] = "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-compo
 // connecting through FIDL.
 class CrashRegisterTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  CrashRegisterTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
+  CrashRegisterTest()
+      : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
   void SetUp() override {
     inspector_ = std::make_unique<inspect::Inspector>();
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
-    crash_register_ = std::make_unique<CrashRegister>(info_context_);
+    crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
+                                                      ErrorOr<std::string>(kBuildVersion));
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
   }
 
  protected:
+  void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
+    channel_provider_server_ = std::move(server);
+    if (channel_provider_server_) {
+      InjectServiceProvider(channel_provider_server_.get());
+    }
+  }
+
   void Upsert(const std::string& component_url, CrashReportingProduct product) {
     crash_register_->Upsert(component_url, std::move(product));
-    RunLoopUntilIdle();
+  }
+
+  Product GetProduct(const std::string& program_name) {
+    const zx::duration timeout = zx::sec(1);
+    auto promise = crash_register_->GetProduct(program_name, fit::Timeout(timeout));
+
+    bool was_called = false;
+    ::fit::result<Product> product;
+    executor_.schedule_task(
+        std::move(promise).then([&was_called, &product](::fit::result<Product>& result) {
+          was_called = true;
+          product = std::move(result);
+        }));
+    FX_CHECK(RunLoopFor(timeout));
+    FX_CHECK(was_called);
+    FX_CHECK(product.is_ok());
+    return product.take_value();
   }
 
   inspect::Hierarchy InspectTree() {
@@ -66,10 +96,12 @@ class CrashRegisterTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
  private:
+  async::Executor executor_;
   timekeeper::TestClock clock_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::shared_ptr<InfoContext> info_context_;
   std::unique_ptr<CrashRegister> crash_register_;
+  std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
 };
 
 TEST_F(CrashRegisterTest, Upsert_Basic) {
@@ -143,6 +175,60 @@ TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
                                                   })))),
                             })))))))));
 }
+
+TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("some channel"));
+
+  const auto expected = Product{
+      .name = "Fuchsia",
+      .version = std::string(kBuildVersion),
+      .channel = std::string("some channel"),
+  };
+  EXPECT_THAT(GetProduct("some program name"), expected);
+};
+
+TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelProvider) {
+  SetUpChannelProviderServer(nullptr);
+
+  const auto expected = Product{
+      .name = "Fuchsia",
+      .version = ErrorOr<std::string>(kBuildVersion),
+      .channel = ErrorOr<std::string>(Error::kConnectionError),
+  };
+  EXPECT_THAT(GetProduct("some program name"), expected);
+};
+
+TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
+  CrashReportingProduct product;
+  product.set_name("some name");
+  product.set_version("some version");
+  product.set_channel("some channel");
+  Upsert(kComponentUrl, std::move(product));
+
+  const auto expected = Product{
+      .name = "some name",
+      .version = std::string("some version"),
+      .channel = std::string("some channel"),
+  };
+  EXPECT_THAT(GetProduct(kComponentUrl), expected);
+};
+
+TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>("some channel"));
+
+  CrashReportingProduct product;
+  product.set_name("some name");
+  product.set_version("some version");
+  product.set_channel("some channel");
+  Upsert(kComponentUrl, std::move(product));
+
+  const auto expected = Product{
+      .name = "Fuchsia",
+      .version = std::string(kBuildVersion),
+      .channel = std::string("some channel"),
+  };
+  EXPECT_THAT(GetProduct("some program name"), expected);
+};
 
 }  // namespace
 }  // namespace feedback

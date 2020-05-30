@@ -87,8 +87,9 @@ constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 constexpr char kCrashpadAttachmentsDir[] = "attachments";
 constexpr char kProgramName[] = "crashing_program";
 
-constexpr char kDefaultChannel[] = "my-channel";
-constexpr char kDefaultDeviceId[] = "my-device-id";
+constexpr char kBuildVersion[] = "some-version";
+constexpr char kDefaultChannel[] = "some-channel";
+constexpr char kDefaultDeviceId[] = "some-device-id";
 
 constexpr char kSingleAttachmentKey[] = "attachment.key";
 constexpr char kSingleAttachmentValue[] = "attachment.value";
@@ -136,6 +137,8 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
     inspector_ = std::make_unique<inspect::Inspector>();
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
+    crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
+                                                      std::string(kBuildVersion));
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProviderServer();
@@ -156,7 +159,8 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     crash_reporter_ = CrashReporter::TryCreate(dispatcher(), services(), clock_, info_context_,
-                                               &config_, std::move(crash_server));
+                                               &config_, ErrorOr<std::string>(kBuildVersion),
+                                               crash_register_.get(), std::move(crash_server));
     FX_CHECK(crash_reporter_);
   }
 
@@ -252,10 +256,10 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
 
     std::map<std::string, testing::Matcher<std::string>> expected_annotations = {
         {"product", "Fuchsia"},
-        {"version", Not(IsEmpty())},
+        {"version", kBuildVersion},
         {"ptype", testing::StartsWith("crashing_program")},
         {"osName", "Fuchsia"},
-        {"osVersion", Not(IsEmpty())},
+        {"osVersion", kBuildVersion},
         {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},
@@ -270,12 +274,6 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
       EXPECT_THAT(crash_server_->latest_annotations(),
                   testing::Contains(testing::Pair(key, value)));
     }
-    ASSERT_NE(crash_server_->latest_annotations().find("version"),
-              crash_server_->latest_annotations().end());
-    ASSERT_NE(crash_server_->latest_annotations().find("osVersion"),
-              crash_server_->latest_annotations().end());
-    EXPECT_STREQ(crash_server_->latest_annotations().at("version").c_str(),
-                 crash_server_->latest_annotations().at("osVersion").c_str());
   }
 
   // Checks that on the crash server the keys for the attachments received match the
@@ -464,6 +462,7 @@ class CrashReporterTest : public UnitTestFixture, public CobaltTestFixture {
   Config config_;
 
  protected:
+  std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<CrashReporter> crash_reporter_;
 };
 
@@ -547,6 +546,32 @@ TEST_F(CrashReporterTest, Check_UnknownChannel) {
   ASSERT_NE(crash_server_->latest_annotations().find("debug.channel.error"),
             crash_server_->latest_annotations().end());
   EXPECT_EQ(crash_server_->latest_annotations().at("debug.channel.error"), "FIDL connection error");
+}
+
+TEST_F(CrashReporterTest, Check_RegisteredProduct) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  fuchsia::feedback::CrashReportingProduct product;
+  product.set_name("some name");
+  product.set_version("some version");
+  product.set_channel("some channel");
+  crash_register_->Upsert(kProgramName, std::move(product));
+
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
+
+  ASSERT_NE(crash_server_->latest_annotations().find("product"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("product"), "some name");
+  ASSERT_NE(crash_server_->latest_annotations().find("version"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("version"), "some version");
+  ASSERT_NE(crash_server_->latest_annotations().find("channel"),
+            crash_server_->latest_annotations().end());
+  EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "some channel");
 }
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {

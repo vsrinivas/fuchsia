@@ -197,10 +197,14 @@ executable("crash_register_unittest") {
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:channel_provider",
     "//src/developer/feedback/testing/stubs:cobalt",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
   ]
 }
 
