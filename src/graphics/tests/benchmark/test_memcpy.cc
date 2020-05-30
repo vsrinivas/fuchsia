@@ -20,7 +20,7 @@ void loop() {
 }
 
 int main(int argc, char** argv) {
-  buffer_size = 60 * 1024 * 1024;
+  buffer_size = 6 * 1024 * 1024;
   iterations = 1000;
 
   a = malloc(buffer_size);
