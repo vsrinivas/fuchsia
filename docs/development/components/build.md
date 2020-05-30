@@ -293,7 +293,6 @@ them.
    import("//src/sys/build/components.gni")
 
    fuchsia_rust_unittest("my-unittest") {
-     # Alternatively put sources under `src/` and remove the line above
      deps = [ ... ]
    }
    ```
