@@ -31,7 +31,7 @@ class TestThreadingModel : public ThreadingModel {
   ExecutionDomain& FidlDomain() override { return fidl_holder_.domain; }
   ExecutionDomain& IoDomain() override { return io_holder_.domain; }
   OwnedDomainPtr AcquireMixDomain() override {
-    return OwnedDomainPtr(&mix_holder_.domain, [](...) {});
+    return OwnedDomainPtr(&mix_holder_.domain, [](ExecutionDomain*) {});
   }
   void Quit() override { loop_->Quit(); }
   // Note we should never call this on the |TestThreadingModel|. Execution should instead be

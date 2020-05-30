@@ -206,7 +206,8 @@ TEST_F(AudioRendererTest, SendPacket) {
   audio_renderer_->SendPacket(std::move(packet),
                               [&callback_received] { callback_received = true; });
 
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, [](...) {});
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                        [](int64_t, int64_t) {});
   RunLoopUntil([this, &callback_received]() { return error_occurred_ || callback_received; });
   EXPECT_TRUE(callback_received);
 }
@@ -232,7 +233,8 @@ TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
                               [&callback_count] { EXPECT_EQ(3u, callback_count++); });
 
   // Play and expect the callbacks in order.
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, [](...) {});
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                        [](int64_t, int64_t) {});
 
   RunLoopUntil([this, &callback_count]() { return error_occurred_ || (callback_count == 4u); });
   EXPECT_EQ(4u, callback_count);
