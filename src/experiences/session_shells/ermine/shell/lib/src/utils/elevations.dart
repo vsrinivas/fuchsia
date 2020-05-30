@@ -10,5 +10,5 @@ class Elevations {
   Elevations._internal();
 
   /// Elevations for all system overlays like Ask, Status, etc.
-  static double get systemOverlayElevation => 200.0;
+  static double get systemOverlayElevation => 10.0;
 }
