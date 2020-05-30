@@ -70,7 +70,10 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/wav",
   ]
 
-  deps = [ "//sdk/fidl/fuchsia.scheduler" ]
+  deps = [
+    "//sdk/fidl/fuchsia.media.tuning",
+    "//sdk/fidl/fuchsia.scheduler",
+  ]
 }
 
 # Flexible utility class for channel-based communication (such as to drivers or device services).

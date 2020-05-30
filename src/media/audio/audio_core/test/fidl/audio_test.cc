@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/media/tuning/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include <cmath>
@@ -329,6 +330,18 @@ TEST_F(UsageVolumeControlTest, FailToConnectToCaptureUsageVolume) {
   RunLoopUntil([&client_error] { return client_error != std::nullopt; });
 
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, *client_error);
+}
+
+//
+// Test that the user is connected to the audio tuner.
+//
+TEST_F(AudioTest, ConnectToAudioTuner) {
+  fuchsia::media::tuning::AudioTunerPtr audio_tuner;
+  environment()->ConnectToService(audio_tuner.NewRequest());
+  audio_tuner.set_error_handler(ErrorHandler());
+  audio_tuner->GetAvailableAudioEffects(
+      CompletionCallback([](std::vector<fuchsia::media::tuning::AudioEffectType>) {}));
+  ExpectCallback();
 }
 
 //
