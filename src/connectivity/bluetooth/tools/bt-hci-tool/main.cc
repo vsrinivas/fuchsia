@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/driver.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -13,6 +11,9 @@
 
 #include <cstdio>
 #include <iostream>
+
+#include <ddk/driver.h>
+#include <fbl/unique_fd.h>
 
 #include "commands.h"
 #include "lib/fit/defer.h"
@@ -72,13 +73,11 @@ int main(int argc, char* argv[]) {
   }
 
   auto hci_dev = std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
-  auto hci = ::bt::hci::Transport::Create(std::move(hci_dev));
-  if (!hci->Initialize()) {
+  auto hci_result = ::bt::hci::Transport::Create(std::move(hci_dev));
+  if (hci_result.is_error()) {
     return EXIT_FAILURE;
   }
-
-  // Make sure the HCI Transport gets shut down cleanly upon exit.
-  auto ac = fit::defer([&hci] { hci->ShutDown(); });
+  auto hci = hci_result.take_value();
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
