@@ -32,14 +32,8 @@ struct percpu {
   percpu(const percpu&) = delete;
   percpu operator=(const percpu&) = delete;
 
-  // per cpu timer queue
-  struct list_node timer_queue;
-
-  // per cpu preemption timer; ZX_TIME_INFINITE means not set
-  zx_time_t preempt_timer_deadline;
-
-  // deadline of this cpu's platform timer or ZX_TIME_INFINITE if not set
-  zx_time_t next_timer_deadline;
+  // Each CPU maintains a per-cpu queue of timers.
+  TimerQueue timer_queue;
 
   // Performance scale of this CPU relative to the highest performance CPU. This
   // value is determined from the system topology, when available. The precision

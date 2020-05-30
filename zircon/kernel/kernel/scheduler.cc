@@ -712,7 +712,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     if (timeslice_changed && timeslice_remaining) {
       const SchedTime slice_deadline_ns = start_of_current_time_slice_ns_ + remaining_time_slice_ns;
       absolute_deadline_ns_ = ClampToDeadline(slice_deadline_ns);
-      TimerQueue::PreemptReset(absolute_deadline_ns_.raw_value());
+      percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
     }
 
     current_state->fair_.initial_time_slice_ns = time_slice_ns;
@@ -804,11 +804,11 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     // If there are no tasks to run in the future, disable the preemption timer.
     // Otherwise, set the preemption time to the earliest eligible time.
     if (deadline_run_queue_.is_empty()) {
-      TimerQueue::PreemptCancel();
+      percpu::Get(current_cpu).timer_queue.PreemptCancel();
     } else {
       const auto& earliest_thread = deadline_run_queue_.front();
       absolute_deadline_ns_ = earliest_thread.scheduler_state_.start_time_;
-      TimerQueue::PreemptReset(absolute_deadline_ns_.raw_value());
+      percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
     }
   } else if (timeslice_expired || next_thread != current_thread) {
     LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{
@@ -837,7 +837,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     SCHED_LTRACEF("Start preempt timer: current=%s next=%s now=%" PRId64 " deadline=%" PRId64 "\n",
                   current_thread->name_, next_thread->name_, now.raw_value(),
                   absolute_deadline_ns_.raw_value());
-    TimerQueue::PreemptReset(absolute_deadline_ns_.raw_value());
+    percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
 
     trace_start_preemption.End(Round<uint64_t>(now), Round<uint64_t>(absolute_deadline_ns_));
 
@@ -849,7 +849,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   } else if (const SchedTime eligible_time_ns = GetNextEligibleTime();
              eligible_time_ns < absolute_deadline_ns_) {
     absolute_deadline_ns_ = eligible_time_ns;
-    TimerQueue::PreemptReset(absolute_deadline_ns_.raw_value());
+    percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
   }
 
   if (next_thread != current_thread) {

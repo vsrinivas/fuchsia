@@ -29,11 +29,6 @@ percpu** percpu::processor_index_{percpu::boot_index_};
 size_t percpu::processor_count_{1};
 
 percpu::percpu(cpu_num_t cpu_num) {
-  list_initialize(&timer_queue);
-
-  preempt_timer_deadline = ZX_TIME_INFINITE;
-  next_timer_deadline = ZX_TIME_INFINITE;
-
   scheduler.this_cpu_ = cpu_num;
 
 #if WITH_LOCK_DEP

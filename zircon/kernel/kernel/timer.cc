@@ -90,24 +90,18 @@ zx_time_t current_time(void) { return gTicksToTime.Scale(current_ticks()); }
 
 zx_ticks_t ticks_per_second(void) { return gTicksPerSecond; }
 
-// Set the platform's oneshot timer to the minimum of its current deadline and |new_deadline|.
-//
-// Call this when the timer queue's head changes.
-//
-// Can only be called when interrupts are disabled and current CPU is |cpu|.
-static void update_platform_timer(uint cpu, zx_time_t new_deadline) {
+void TimerQueue::UpdatePlatformTimer(zx_time_t new_deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(cpu == arch_curr_cpu_num());
-  if (new_deadline < percpu::Get(cpu).next_timer_deadline) {
+  if (new_deadline < next_timer_deadline_) {
     LTRACEF("rescheduling timer for %" PRIi64 " nsecs\n", new_deadline);
     platform_set_oneshot_timer(new_deadline);
-    percpu::Get(cpu).next_timer_deadline = new_deadline;
+    next_timer_deadline_ = new_deadline;
   }
 }
 
-static void insert_timer_in_queue(uint cpu, Timer* timer, zx_time_t earliest_deadline,
-                                  zx_time_t latest_deadline) {
+void TimerQueue::Insert(Timer* timer, zx_time_t earliest_deadline, zx_time_t latest_deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
+  cpu_num_t cpu = arch_curr_cpu_num();
   LTRACEF("timer %p, cpu %u, scheduled %" PRIi64 "\n", timer, cpu, timer->scheduled_time_);
 
   // For inserting the timer we consider several cases. In general we
@@ -125,7 +119,7 @@ static void insert_timer_in_queue(uint cpu, Timer* timer, zx_time_t earliest_dea
   //
   Timer* entry;
 
-  list_for_every_entry (&percpu::Get(cpu).timer_queue, entry, Timer, node_) {
+  list_for_every_entry (&timer_list_, entry, Timer, node_) {
     if (entry->scheduled_time_ > latest_deadline) {
       // New timer latest is earlier than the current timer.
       // Just add upfront as is, without slack.
@@ -166,7 +160,7 @@ static void insert_timer_in_queue(uint cpu, Timer* timer, zx_time_t earliest_dea
     //  -------------(--e---t-----?-------------------> time
     //
 
-    const Timer* next = list_next_type(&percpu::Get(cpu).timer_queue, &entry->node_, Timer, node_);
+    const Timer* next = list_next_type(&timer_list_, &entry->node_, Timer, node_);
 
     if (next != NULL) {
       if (next->scheduled_time_ <= timer->scheduled_time_) {
@@ -214,7 +208,7 @@ static void insert_timer_in_queue(uint cpu, Timer* timer, zx_time_t earliest_dea
 
   // Walked off the end of the list and there was no overlap.
   timer->slack_ = 0;
-  list_add_tail(&percpu::Get(cpu).timer_queue, &timer->node_);
+  list_add_tail(&timer_list_, &timer->node_);
 }
 
 Timer::~Timer() {
@@ -263,12 +257,14 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
 
   LTRACEF("scheduled time %" PRIi64 "\n", scheduled_time_);
 
-  insert_timer_in_queue(cpu, this, earliest_deadline, latest_deadline);
+  TimerQueue& timer_queue = percpu::Get(cpu).timer_queue;
+
+  timer_queue.Insert(this, earliest_deadline, latest_deadline);
   kcounter_add(timer_created_counter, 1);
 
-  if (list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_) == this) {
-    // we just modified the head of the timer queue
-    update_platform_timer(cpu, deadline.when());
+  if (list_peek_head_type(&timer_queue.timer_list_, Timer, node_) == this) {
+    // We just modified the head of the timer queue.
+    timer_queue.UpdatePlatformTimer(deadline.when());
   }
 }
 
@@ -279,17 +275,15 @@ void TimerQueue::PreemptReset(zx_time_t deadline) {
 
   LTRACEF("preempt timer cpu %u deadline %" PRIi64 "\n", cpu, deadline);
 
-  percpu::Get(cpu).preempt_timer_deadline = deadline;
+  preempt_timer_deadline_ = deadline;
 
-  update_platform_timer(cpu, deadline);
+  UpdatePlatformTimer(deadline);
 }
 
 void TimerQueue::PreemptCancel() {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  uint cpu = arch_curr_cpu_num();
-
-  percpu::Get(cpu).preempt_timer_deadline = ZX_TIME_INFINITE;
+  preempt_timer_deadline_ = ZX_TIME_INFINITE;
 
   // Note, we're not updating the platform timer. It's entirely possible the timer queue is empty
   // and the preemption timer is the only reason the platform timer is set. To know that, we'd
@@ -324,8 +318,9 @@ bool Timer::Cancel() {
   if (list_in_list(&node_)) {
     callback_not_running = true;
 
-    // save a copy of the old head of the queue so later we can see if we modified the head
-    Timer* oldhead = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+    // Save a copy of the old head of the queue so later we can see if we modified the head.
+    TimerQueue& timer_queue = percpu::Get(cpu).timer_queue;
+    Timer* oldhead = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
 
     // remove our timer from the queue
     list_delete(&node_);
@@ -338,11 +333,11 @@ bool Timer::Cancel() {
     // see if we've just modified the head of this cpu's timer queue.
     // if we modified another cpu's queue, we'll just let it fire and sort itself out
     if (unlikely(oldhead == this)) {
-      // timer we're canceling was at head of queue, see if we should update platform timer
-      Timer* newhead = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+      // The Timer we're canceling was at head of queue, so see if we should update platform timer.
+      Timer* newhead = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
       if (newhead) {
-        update_platform_timer(cpu, newhead->scheduled_time_);
-      } else if (percpu::Get(cpu).next_timer_deadline == ZX_TIME_INFINITE) {
+        timer_queue.UpdatePlatformTimer(newhead->scheduled_time_);
+      } else if (timer_queue.next_timer_deadline_ == ZX_TIME_INFINITE) {
         LTRACEF("clearing old hw timer, preempt timer not set, nothing in the queue\n");
         platform_stop_timer();
       }
@@ -377,20 +372,22 @@ void timer_tick(zx_time_t now) {
 
   LTRACEF("cpu %u now %" PRIi64 ", sp %p\n", cpu, now, __GET_FRAME());
 
-  // platform timer has fired, no deadline is set
-  percpu::Get(cpu).next_timer_deadline = ZX_TIME_INFINITE;
+  TimerQueue& timer_queue = percpu::Get(cpu).timer_queue;
 
-  // service preempt timer before acquiring the timer lock
-  if (now >= percpu::Get(cpu).preempt_timer_deadline) {
-    percpu::Get(cpu).preempt_timer_deadline = ZX_TIME_INFINITE;
+  // The platform timer has fired, so no deadline is set.
+  timer_queue.next_timer_deadline_ = ZX_TIME_INFINITE;
+
+  // Service the preemption timer before acquiring the timer lock.
+  if (now >= timer_queue.preempt_timer_deadline_) {
+    timer_queue.preempt_timer_deadline_ = ZX_TIME_INFINITE;
     Scheduler::TimerTick(SchedTime{now});
   }
 
   Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
 
   for (;;) {
-    // see if there's an event to process
-    timer = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+    // See if there's an event to process.
+    timer = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
     if (likely(timer == 0)) {
       break;
     }
@@ -400,14 +397,14 @@ void timer_tick(zx_time_t now) {
       break;
     }
 
-    // process it
+    // Process it.
     LTRACEF("timer %p\n", timer);
     DEBUG_ASSERT_MSG(timer && timer->magic_ == Timer::kMagic,
                      "ASSERT: timer failed magic check: timer %p, magic 0x%x\n", timer,
                      (uint)timer->magic_);
     list_delete(&timer->node_);
 
-    // mark the timer busy
+    // Mark the timer busy.
     timer->active_cpu_ = cpu;
     // Unlocking the spinlock in CallUnlocked acts as a memory barrier.
 
@@ -425,14 +422,14 @@ void timer_tick(zx_time_t now) {
       DEBUG_ASSERT(arch_ints_disabled());
     });
 
-    // mark it not busy
-    timer->active_cpu_ = -1;
+    // Mark it not busy.
+    timer->active_cpu_ = INVALID_CPU;
     arch::DeviceMemoryBarrier();
   }
 
-  // get the deadline of the event at the head of the queue (if any)
+  // Get the deadline of the event at the head of the queue (if any).
   zx_time_t deadline = ZX_TIME_INFINITE;
-  timer = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+  timer = list_peek_head_type(&timer_queue.timer_list_, Timer, node_);
   if (timer) {
     deadline = timer->scheduled_time_;
 
@@ -440,14 +437,14 @@ void timer_tick(zx_time_t now) {
     DEBUG_ASSERT(deadline > now);
   }
 
-  // we're done manipulating the timer queue
+  // We're done manipulating the timer queue.
   guard.Release();
 
-  // set the platform timer to the *soonest* of queue event and preempt timer
-  if (percpu::Get(cpu).preempt_timer_deadline < deadline) {
-    deadline = percpu::Get(cpu).preempt_timer_deadline;
+  // Set the platform timer to the *soonest* of queue event and preemption timer.
+  if (timer_queue.preempt_timer_deadline_ < deadline) {
+    deadline = timer_queue.preempt_timer_deadline_;
   }
-  update_platform_timer(cpu, deadline);
+  timer_queue.UpdatePlatformTimer(deadline);
 }
 
 zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
@@ -468,45 +465,43 @@ zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
 
 void TimerQueue::TransitionOffCpu(uint old_cpu) {
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
-  uint cpu = arch_curr_cpu_num();
 
-  Timer* old_head = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+  Timer* old_head = list_peek_head_type(&timer_list_, Timer, node_);
 
   Timer *entry = NULL, *tmp_entry = NULL;
   // Move all timers from old_cpu to this cpu
-  list_for_every_entry_safe (&percpu::Get(old_cpu).timer_queue, entry, tmp_entry, Timer, node_) {
+  list_for_every_entry_safe (&percpu::Get(old_cpu).timer_queue.timer_list_, entry, tmp_entry, Timer,
+                             node_) {
     list_delete(&entry->node_);
     // We lost the original asymmetric slack information so when we combine them
     // with the other timer queue they are not coalesced again.
     // TODO(cpu): figure how important this case is.
-    insert_timer_in_queue(cpu, entry, entry->scheduled_time_, entry->scheduled_time_);
+    Insert(entry, entry->scheduled_time_, entry->scheduled_time_);
     // Note, we do not increment the "created" counter here because we are simply moving these
     // timers from one queue to another and we already counted them when they were first
     // created.
   }
 
-  Timer* new_head = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+  Timer* new_head = list_peek_head_type(&timer_list_, Timer, node_);
   if (new_head != NULL && new_head != old_head) {
-    // we just modified the head of the timer queue
-    update_platform_timer(cpu, new_head->scheduled_time_);
+    // We just modified the head of the timer queue.
+    UpdatePlatformTimer(new_head->scheduled_time_);
   }
 
   // the old cpu has no tasks left, so reset the deadlines
-  percpu::Get(old_cpu).preempt_timer_deadline = ZX_TIME_INFINITE;
-  percpu::Get(old_cpu).next_timer_deadline = ZX_TIME_INFINITE;
+  percpu::Get(old_cpu).timer_queue.preempt_timer_deadline_ = ZX_TIME_INFINITE;
+  percpu::Get(old_cpu).timer_queue.next_timer_deadline_ = ZX_TIME_INFINITE;
 }
 
 void TimerQueue::ThawPercpu(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
 
-  uint cpu = arch_curr_cpu_num();
+  // Rxeset next_timer_deadline_ so that UpdatePlatformTimer will reconfigure the timer.
+  next_timer_deadline_ = ZX_TIME_INFINITE;
+  zx_time_t deadline = preempt_timer_deadline_;
 
-  // reset next_timer_deadline so that update_platform_timer will reconfigure the timer
-  percpu::Get(cpu).next_timer_deadline = ZX_TIME_INFINITE;
-  zx_time_t deadline = percpu::Get(cpu).preempt_timer_deadline;
-
-  Timer* t = list_peek_head_type(&percpu::Get(cpu).timer_queue, Timer, node_);
+  Timer* t = list_peek_head_type(&timer_list_, Timer, node_);
   if (t) {
     if (t->scheduled_time_ < deadline) {
       deadline = t->scheduled_time_;
@@ -515,7 +510,7 @@ void TimerQueue::ThawPercpu(void) {
 
   guard.Release();
 
-  update_platform_timer(cpu, deadline);
+  UpdatePlatformTimer(deadline);
 }
 
 void PrintTimerQueues(char* buf, size_t len) {
@@ -531,7 +526,7 @@ void PrintTimerQueues(char* buf, size_t len) {
       }
       Timer* t;
       zx_time_t last = now;
-      list_for_every_entry (&percpu::Get(i).timer_queue, t, Timer, node_) {
+      list_for_every_entry (&percpu::Get(i).timer_queue.timer_list_, t, Timer, node_) {
         zx_duration_t delta_now = zx_time_sub_time(t->scheduled_time_, now);
         zx_duration_t delta_last = zx_time_sub_time(t->scheduled_time_, last);
         ptr += snprintf(buf + ptr, len - ptr,

@@ -15,6 +15,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
 #include <fbl/auto_call.h>
+#include <kernel/percpu.h>
 #include <kernel/timer.h>
 #include <vm/vm_aspace.h>
 
@@ -94,7 +95,7 @@ zx_status_t suspend_thread(void* raw_arg) {
 
   arch_resume();
   platform_resume();
-  TimerQueue::ThawPercpu();
+  percpu::Get(arch_curr_cpu_num()).timer_queue.ThawPercpu();
 
   DEBUG_ASSERT(arch_ints_disabled());
   arch_enable_ints();

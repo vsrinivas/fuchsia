@@ -92,38 +92,56 @@ struct Timer {
   zx_status_t TrylockOrCancel(SpinLock* lock) TA_TRY_ACQ(false, lock);
 };
 
+// Preemption Timers
+//
+// Each CPU has a dedicated preemption timer that's managed using specialized
+// functions (prefixed with timer_preempt_).
+//
+// Preemption timers are different from general timers. Preemption timers:
+//
+// - are reset frequently by the scheduler so performance is important
+// - should not be migrated off their CPU when the CPU is shutdown
+//
+// Note: A preemption timer may fire even after it has been canceled.
 struct TimerQueue {
-  // Preemption Timers
-  //
-  // Each CPU has a dedicated preemption timer that's managed using specialized functions (prefixed
-  // with timer_preempt_).
-  //
-  // Preemption timers are different from general timers. Preemption timers:
-  //
-  // - are reset frequently by the scheduler so performance is important
-  // - should not be migrated off their CPU when the CPU is shutdown
-  //
-  // Note: A preemption timer may fire even after it has been canceled.
-  //
-
-  //
-  // Set/reset the current CPU's preemption timer.
+  // Set/reset the preemption timer.
   //
   // When the preemption timer fires, Scheduler::TimerTick is called.
-  static void PreemptReset(zx_time_t deadline);
+  void PreemptReset(zx_time_t deadline);
 
-  //
-  // Cancel the current CPU's preemption timer.
-  static void PreemptCancel();
+  // Cancel the preemption timer.
+  void PreemptCancel();
 
   // Internal routines used when bringing cpus online/offline
 
-  // Moves |old_cpu|'s timers (except its preemption timer) to the current cpu
-  static void TransitionOffCpu(uint old_cpu);
+  // Moves |old_cpu|'s timers (except its preemption timer) to this TimerQueue.
+  void TransitionOffCpu(uint old_cpu);
 
-  // This function is to be invoked after resume on each CPU that may have
-  // had timers still on it, in order to restart hardware timers.
-  static void ThawPercpu();
+  // This function is to be invoked after resume on each CPU's TimerQueue that
+  // may have had timers still on it, in order to restart hardware timers.
+  void ThawPercpu();
+
+  // The below are morally private, and will actually be so when this code
+  // migrates off list_node, which requires types to be standard layout.
+
+  // Add the |Timer| to this TimerQueue, possibly coalescing deadlines as well.
+  void Insert(Timer* timer, zx_time_t earliest_deadline, zx_time_t latest_deadline);
+
+  // Set the platform's oneshot timer to the minimum of its current deadline and |new_deadline|.
+  //
+  // This is called when the IimerQueue's head changes.
+  //
+  // This can only be called when interrupts are disabled.
+  void UpdatePlatformTimer(zx_time_t new_deadline);
+
+  // Timers on this queue.
+  struct list_node timer_list_ = LIST_INITIAL_VALUE(timer_list_);
+
+  // This TimerQueue's preemption deadline. ZX_TIME_INFINITE means not set.
+  zx_time_t preempt_timer_deadline_ = ZX_TIME_INFINITE;
+
+  // This TimerQueue's deadline for its platform timer or ZX_TIME_INFINITE if not set
+  zx_time_t next_timer_deadline_ = ZX_TIME_INFINITE;
 };
 
 // Prints the contents of all timer queues into |buf| of length |len| and null terminates |buf|.
