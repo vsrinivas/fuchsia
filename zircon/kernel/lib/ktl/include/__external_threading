@@ -34,23 +34,6 @@ void __libcpp_thread_yield();
 // there only conditionally on when <__external_threading> is not used.
 #define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
 
-// TODO(52189): This is a hacky way to distinguish the vintage of the libc++
-// implementation.  This code is tied to a particular libc++ implementation
-// version and so this sort of adaptation only exists during a soft transition
-// to roll out a newer toolchain with newer libc++ headers.
-#ifndef __cpp_lib_span
-template <class T> struct hash;
-
-struct __libcpp_timed_backoff_policy {
-  bool operator()(chrono::nanoseconds) const;
-};
-
-template <class _Fn, class _BFn>
-bool __libcpp_thread_poll_with_backoff(_Fn&&, _BFn&&,
-                                       chrono::nanoseconds = chrono::nanoseconds::zero());
-
-#endif  // TODO(52189)
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE___EXTERNAL_THREADING
