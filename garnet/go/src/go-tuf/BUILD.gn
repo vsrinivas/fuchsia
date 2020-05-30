@@ -77,7 +77,7 @@ test_package("go_tuf_tests") {
     tests += [
       {
         name = test
-        environments = [ emu_env ]
+        environments = basic_envs
       },
     ]
   }
