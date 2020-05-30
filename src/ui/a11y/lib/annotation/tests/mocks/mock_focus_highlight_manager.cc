@@ -6,6 +6,12 @@
 
 namespace accessibility_test {
 
+void MockFocusHighlightManager::SetAnnotationsEnabled(bool annotations_enabled) {
+  annotations_enabled_ = annotations_enabled;
+}
+
+bool MockFocusHighlightManager::GetAnnotationsEnabled() { return annotations_enabled_; }
+
 void MockFocusHighlightManager::ClearHighlight() { highlighted_node_ = std::nullopt; }
 
 void MockFocusHighlightManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) {

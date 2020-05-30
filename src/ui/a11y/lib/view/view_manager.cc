@@ -99,6 +99,21 @@ void ViewManager::SetSemanticsEnabled(bool enabled) {
   }
 }
 
+void ViewManager::SetAnnotationsEnabled(bool annotations_enabled) {
+  // This function call should be a noop if annotation state is not changing.
+  if (annotations_enabled_ == annotations_enabled) {
+    return;
+  }
+
+  // If we are disabling annotations, then we should clear the existing
+  // highlight (if any).
+  if (!annotations_enabled) {
+    ClearHighlight();
+  }
+
+  annotations_enabled_ = annotations_enabled;
+}
+
 void ViewManager::ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                     zx_status_t status, const zx_packet_signal* signal) {
   zx_koid_t koid = fsl::GetKoid(wait->object());
@@ -156,6 +171,10 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
 }
 
 void ViewManager::ClearHighlight() {
+  if (!annotations_enabled_) {
+    return;
+  }
+
   if (RemoveHighlight()) {
     highlighted_node_ = std::nullopt;
   }
@@ -180,6 +199,10 @@ bool ViewManager::RemoveHighlight() {
 }
 
 void ViewManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) {
+  if (!annotations_enabled_) {
+    return;
+  }
+
   ClearHighlight();
 
   if (DrawHighlight(newly_highlighted_node)) {

@@ -20,6 +20,12 @@ class MockFocusHighlightManager : public a11y::FocusHighlightManager {
   ~MockFocusHighlightManager() override = default;
 
   // |FocusHighlightManager|
+  void SetAnnotationsEnabled(bool annotations_enabled) override;
+
+  // Returns value of |annotations_enabled_|.
+  bool GetAnnotationsEnabled();
+
+  // |FocusHighlightManager|
   void ClearHighlight() override;
 
   // |FocusHighlightManager|
@@ -29,6 +35,8 @@ class MockFocusHighlightManager : public a11y::FocusHighlightManager {
   std::optional<SemanticNodeIdentifier> GetHighlightedNode() const;
 
  private:
+  bool annotations_enabled_ = false;
+
   std::optional<SemanticNodeIdentifier> highlighted_node_;
 };
 

@@ -47,10 +47,11 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_setui_(&context_provider_),
         mock_focus_chain_(&context_provider_),
         mock_property_provider_(&context_provider_),
+        mock_annotation_view_factory_(new MockAnnotationViewFactory()),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       std::make_unique<MockViewSemanticsFactory>(),
-                      std::make_unique<MockAnnotationViewFactory>(), context_provider_.context(),
-                      context_->outgoing()->debug_dir()),
+                      std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
+                      context_provider_.context(), context_->outgoing()->debug_dir()),
         tts_manager_(context_),
         color_transform_manager_(context_),
         app_(context_, &view_manager_, &tts_manager_, &color_transform_manager_,
@@ -107,6 +108,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   MockSetUIAccessibility mock_setui_;
   MockFocusChain mock_focus_chain_;
   MockPropertyProvider mock_property_provider_;
+  MockAnnotationViewFactory* mock_annotation_view_factory_;
 
   a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
@@ -420,6 +422,12 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
 
   ASSERT_TRUE(mock_focus_chain_.IsRequestFocusCalled());
   EXPECT_EQ(a11y::GetKoid(view_ref_), mock_focus_chain_.GetFocusedViewKoid());
+
+  auto highlighted_view =
+      mock_annotation_view_factory_->GetAnnotationView(a11y::GetKoid(view_ref_));
+  EXPECT_TRUE(highlighted_view);
+  auto highlight = highlighted_view->GetCurrentHighlight();
+  EXPECT_TRUE(highlight.has_value());
 }
 
 TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {

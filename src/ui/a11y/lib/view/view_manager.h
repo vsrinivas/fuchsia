@@ -50,6 +50,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // closed, which deletes all the semantic tree data.
   void SetSemanticsEnabled(bool enabled);
 
+  // |FocusHighlightManager|
+  void SetAnnotationsEnabled(bool annotations_enabled) override;
+
   // |SemanticsSource|
   bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
 
@@ -118,6 +121,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       wait_map_;
 
   bool semantics_enabled_ = false;
+
+  bool annotations_enabled_ = false;
 
   std::optional<SemanticNodeIdentifier> highlighted_node_ = std::nullopt;
 

@@ -72,6 +72,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
     view_manager_ = std::make_unique<a11y::ViewManager>(
         std::move(tree_service_factory_), std::move(view_semantics_factory),
         std::move(annotation_view_factory), context_provider_.context(), debug_dir());
+    view_manager_->SetAnnotationsEnabled(true);
 
     semantic_provider_ = std::make_unique<MockSemanticProvider>(view_manager_.get());
   }
@@ -302,6 +303,68 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
   EXPECT_EQ(highlight->max.z, 3.0);
 
   view_manager_->ClearHighlight();
+
+  auto maybe_highlighted_view =
+      annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  ASSERT_TRUE(maybe_highlighted_view);
+  auto maybe_highlight = maybe_highlighted_view->GetCurrentHighlight();
+  EXPECT_FALSE(maybe_highlight.has_value());
+}
+
+TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
+  view_manager_->SetSemanticsEnabled(true);
+  RunLoopUntilIdle();
+
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+  node_updates.emplace_back(CreateTestNode(0u, "test_label_0", {1u}));
+  auto node_with_bounding_box = CreateTestNode(1u, "test_label_1");
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+  node_with_bounding_box.set_location(bounding_box);
+  node_updates.emplace_back(std::move(node_with_bounding_box));
+  ApplyNodeUpdates(std::move(node_updates));
+
+  a11y::FocusHighlightManager::SemanticNodeIdentifier newly_highlighted_node;
+  newly_highlighted_node.koid = semantic_provider_->koid();
+  newly_highlighted_node.node_id = 1u;
+
+  view_manager_->UpdateHighlight(newly_highlighted_node);
+
+  auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  ASSERT_TRUE(highlighted_view);
+  auto highlight = highlighted_view->GetCurrentHighlight();
+  EXPECT_TRUE(highlight.has_value());
+  EXPECT_EQ(highlight->max.x, 1.0);
+  EXPECT_EQ(highlight->max.y, 2.0);
+  EXPECT_EQ(highlight->max.z, 3.0);
+
+  // Disable annotations.
+  view_manager_->SetAnnotationsEnabled(false);
+
+  // Verify that highlights were cleared.
+  auto maybe_highlighted_view =
+      annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  ASSERT_TRUE(maybe_highlighted_view);
+  auto maybe_highlight = maybe_highlighted_view->GetCurrentHighlight();
+  EXPECT_FALSE(maybe_highlight.has_value());
+}
+
+TEST_F(ViewManagerTest, FocusHighlightManagerDrawHighlightWithAnnotationsDisabled) {
+  view_manager_->SetAnnotationsEnabled(false);
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+  node_updates.emplace_back(CreateTestNode(0u, "test_label_0", {1u}));
+  auto node_with_bounding_box = CreateTestNode(1u, "test_label_1");
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+  node_with_bounding_box.set_location(bounding_box);
+  node_updates.emplace_back(std::move(node_with_bounding_box));
+  ApplyNodeUpdates(std::move(node_updates));
+
+  a11y::FocusHighlightManager::SemanticNodeIdentifier newly_highlighted_node;
+  newly_highlighted_node.koid = semantic_provider_->koid();
+  newly_highlighted_node.node_id = 1u;
+
+  view_manager_->UpdateHighlight(newly_highlighted_node);
 
   auto maybe_highlighted_view =
       annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());

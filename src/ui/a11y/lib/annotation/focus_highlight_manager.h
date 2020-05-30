@@ -20,6 +20,9 @@ class FocusHighlightManager {
   FocusHighlightManager() = default;
   virtual ~FocusHighlightManager() = default;
 
+  // Enables/disables annotations.
+  virtual void SetAnnotationsEnabled(bool annotations_enabled) = 0;
+
   // Clears existing highlight.
   virtual void ClearHighlight() = 0;
 
