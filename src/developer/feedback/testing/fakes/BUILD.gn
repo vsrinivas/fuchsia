@@ -107,13 +107,13 @@ executable("data_provider_main") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-mem",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

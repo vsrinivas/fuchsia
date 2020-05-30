@@ -41,6 +41,7 @@ source_set("gpretty_printers") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:types",
@@ -48,7 +49,6 @@ source_set("gpretty_printers") {
     "//src/developer/feedback/utils/cobalt",
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

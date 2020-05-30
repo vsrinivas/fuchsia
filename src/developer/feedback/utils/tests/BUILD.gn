@@ -106,6 +106,7 @@ executable("archive_unittest") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
@@ -115,7 +116,6 @@ executable("archive_unittest") {
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

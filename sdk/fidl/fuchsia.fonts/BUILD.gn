@@ -16,6 +16,6 @@ fidl("fuchsia.fonts") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.intl",
-    "//zircon/system/fidl/fuchsia-mem",
+    "//sdk/fidl/fuchsia.mem",
   ]
 }

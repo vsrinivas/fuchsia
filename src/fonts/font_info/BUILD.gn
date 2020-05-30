@@ -23,8 +23,8 @@ rustc_library("font_info") {
   if (is_fuchsia) {
     deps += [
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+      "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
       "//src/lib/zircon/rust:fuchsia-zircon",
-      "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     ]
   }
 }

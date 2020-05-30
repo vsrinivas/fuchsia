@@ -20,9 +20,9 @@ source_set("vmo") {
   deps = [ "//zircon/public/lib/fdio" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.mem",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 
   public_configs = [ "//garnet/public:config" ]

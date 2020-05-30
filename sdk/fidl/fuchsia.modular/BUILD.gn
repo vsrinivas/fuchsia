@@ -51,10 +51,10 @@ fidl("fuchsia.modular") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

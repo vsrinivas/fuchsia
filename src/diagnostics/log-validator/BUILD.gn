@@ -20,6 +20,7 @@ group("tests") {
 
 validator_deps = [
   "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
+  "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
   "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
   "//src/diagnostics/log-validator/fidl:validate-rustc",
   "//src/lib/fidl/rust/fidl",
@@ -32,7 +33,6 @@ validator_deps = [
   "//third_party/rust_crates:argh",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:pretty_assertions",
-  "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
 ]
 
 rustc_binary("log-validator-bin") {

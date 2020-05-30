@@ -11,6 +11,6 @@ fidl("validate") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
-    "//zircon/system/fidl/fuchsia-mem",
+    "//sdk/fidl/fuchsia.mem",
   ]
 }

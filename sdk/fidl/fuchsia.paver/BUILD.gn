@@ -10,6 +10,6 @@ fidl("fuchsia.paver") {
     "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.volume",
     "//sdk/fidl/fuchsia.io",
-    "//zircon/system/fidl/fuchsia-mem",
+    "//sdk/fidl/fuchsia.mem",
   ]
 }

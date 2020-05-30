@@ -215,6 +215,7 @@ executable("crash_reporter_unittest") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
@@ -240,7 +241,6 @@ executable("crash_reporter_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 
@@ -251,6 +251,7 @@ executable("crash_reports_integration_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/testing/fakes:cobalt",
     "//src/developer/feedback/utils/cobalt",
@@ -259,7 +260,6 @@ executable("crash_reports_integration_test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

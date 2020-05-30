@@ -15,7 +15,7 @@ source_set("archive") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//zircon/system/fidl/fuchsia-mem",
+    "//sdk/fidl/fuchsia.mem",
   ]
 
   deps = [

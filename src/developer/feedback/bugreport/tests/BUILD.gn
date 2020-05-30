@@ -51,13 +51,13 @@ executable("bugreport_integration_test") {
   sources = [ "bug_reporter_integration_test.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.mem",
     "//src/developer/feedback/bugreport:src",
     "//src/developer/feedback/utils:archive",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

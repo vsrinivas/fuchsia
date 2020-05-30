@@ -13,6 +13,7 @@ rustc_library("fuchsia-cobalt") {
 
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
@@ -22,6 +23,5 @@ rustc_library("fuchsia-cobalt") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

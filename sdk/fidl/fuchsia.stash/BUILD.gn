@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.stash") {
   sources = [ "stash.fidl" ]
 
-  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
+  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
 
   sdk_category = "internal"
 

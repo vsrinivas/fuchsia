@@ -12,6 +12,6 @@ fidl("fuchsia.factory.camera") {
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.images",
-    "//zircon/system/fidl/fuchsia-mem",
+    "//sdk/fidl/fuchsia.mem",
   ]
 }

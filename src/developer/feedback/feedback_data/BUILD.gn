@@ -114,6 +114,7 @@ source_set("data_provider") {
     ":datastore",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/feedback_data/annotations:types",
@@ -126,7 +127,6 @@ source_set("data_provider") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/libpng",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

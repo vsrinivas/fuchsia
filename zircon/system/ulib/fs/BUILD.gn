@@ -112,6 +112,7 @@ zx_library("fs") {
     deps += [
       "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fdio",
@@ -119,7 +120,6 @@ zx_library("fs") {
       "//zircon/public/lib/fit",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-mem:llcpp",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/trace",
     ]

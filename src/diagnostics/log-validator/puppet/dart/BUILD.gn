@@ -16,13 +16,13 @@ dart_app("log-validator-dart-puppet") {
       sources = []
       deps = [
         "//sdk/fidl/fuchsia.diagnostics.stream",
+        "//sdk/fidl/fuchsia.mem",
         "//src/diagnostics/lib/streams/dart:fuchsia_diagnostic_streams",
         "//src/diagnostics/log-validator/fidl:validate",
         "//topaz/public/dart/fidl",
         "//topaz/public/dart/fuchsia_logger",
         "//topaz/public/dart/fuchsia_services",
         "//topaz/public/dart/zircon",
-        "//zircon/system/fidl/fuchsia-mem",
       ]
     },
   ]

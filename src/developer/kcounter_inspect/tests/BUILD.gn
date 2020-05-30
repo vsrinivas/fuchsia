@@ -47,6 +47,7 @@ executable("kcounter_inspect_integration_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -54,7 +55,6 @@ executable("kcounter_inspect_integration_test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -24,10 +24,10 @@ fidl("fuchsia.ui.scenic") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

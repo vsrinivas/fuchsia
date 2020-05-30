@@ -4,19 +4,11 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.kernel") {
+fidl("fuchsia.mem") {
   sdk_category = "partner"
-  api = "fuchsia.kernel.api"
-
+  api = "fuchsia.mem.api"
   sources = [
-    "kernel-counter.fidl",
-    "kernel-debug.fidl",
-    "kernel-mexec.fidl",
-    "kernel-stats.fidl",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.mem",
-    "//zircon/vdso/zx",
+    "buffer.fidl",
+    "range.fidl",
   ]
 }
