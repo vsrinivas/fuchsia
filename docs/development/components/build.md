@@ -250,6 +250,13 @@ are provided.
    fuchsia_rust_component("my-component") {
      deps = [ ... ]
    }
+
+   # Alternatively, wrap an existing rustc_binary
+   rustc_binary("my_rust_binary") { ... }
+
+   fuchsia_rust_component("my-component") {
+     rustc_binary = ":my_rust_binary"
+   }
    ```
 
    See also: [`fuchsia_rust_component.gni`](/src/sys/build/fuchsia_rust_component.gni)
@@ -294,6 +301,18 @@ them.
 
    fuchsia_rust_unittest("my-unittest") {
      deps = [ ... ]
+   }
+
+   # Alternatively, wrap an existing rustc_test
+   rustc_library("my_rust_lib") {
+     ...
+     with_unit_tests = true
+   }
+
+   fuchsia_rust_unittest("my-unittest") {
+     # rustc_binary and rustc_library generate an "_test" test target
+     rustc_test = ":my_rust_lib_test"
+     output_name = "my_rust_lib_lib_test"
    }
    ```
 

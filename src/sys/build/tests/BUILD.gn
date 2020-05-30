@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
 # Run all tests with:
@@ -38,8 +39,14 @@ fuchsia_cpp_unittest("twoplustwo-cpp-unittest") {
   ]
 }
 
-fuchsia_rust_unittest("twoplustwo-rust-unittest") {
+rustc_library("twoplustwo_rust") {
   source_root = "two_plus_two.rs"
+  with_unit_tests = true
+}
+
+fuchsia_rust_unittest("twoplustwo-rust-unittest") {
+  rustc_test = ":twoplustwo_rust_test"
+  output_name = "twoplustwo_rust_lib_test"
 }
 
 fuchsia_rust_unittest("readfile-unittest") {

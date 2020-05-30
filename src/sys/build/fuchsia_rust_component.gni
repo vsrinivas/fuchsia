@@ -50,13 +50,17 @@ import("//src/sys/build/fuchsia_component.gni")
 #     Resources to include. See documentation for `fuchsia_component()`.
 #     Type: list(scopes)
 #
+#   rustc_binary (optional)
+#     Reference an existing rustc_binary target rather than creating one.
+#     Type: label
+#
 #   data_deps
 #   deps
 #   public_deps
 #   testonly
 #   visibility
 #
-#   Additional parameters will be forwarded to `executable()`.
+#   Additional parameters will be forwarded to `rustc_binary()`.
 template("fuchsia_rust_component") {
   assert(
       defined(invoker.manifest),
@@ -75,22 +79,27 @@ template("fuchsia_rust_component") {
   # Rust tools don't like dashes ¯\_(ツ)_/¯
   output_name = string_replace(output_name, "-", "_")
 
-  rustc_binary_target = "${target_name}_rustc_binary"
-  import("//build/rust/rustc_binary.gni")
-  rustc_binary(rustc_binary_target) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "component_name",
-                             "manifest",
-                             "name",
-                             "output_name",
-                             "resources",
-                             "target_name",
-                             "visibility",
-                           ])
-    name = output_name
-    visibility = [ ":*" ]
+  if (defined(invoker.rustc_binary)) {
+    rustc_binary_target = invoker.rustc_binary
+  } else {
+    rustc_binary_target = "${target_name}_rustc_binary"
+    import("//build/rust/rustc_binary.gni")
+    rustc_binary(rustc_binary_target) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "component_name",
+                               "manifest",
+                               "name",
+                               "output_name",
+                               "resources",
+                               "target_name",
+                               "visibility",
+                             ])
+      name = output_name
+      visibility = [ ":*" ]
+    }
+    rustc_binary_target = ":$rustc_binary_target"
   }
 
   fuchsia_component(target_name) {
@@ -108,7 +117,7 @@ template("fuchsia_rust_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$rustc_binary_target" ]
+    deps += [ rustc_binary_target ]
     if (!defined(resources)) {
       resources = []
     }
