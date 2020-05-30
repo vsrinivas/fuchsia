@@ -219,7 +219,10 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(brcmf_scb_val_le))) == ZX_OK) {
         // Initiate Disassoc from AP
         auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
-        DisassocLocalClient(scb_val);
+        auto req_bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
+        common::MacAddr bssid(assoc_state_.opts->bssid);
+        ZX_ASSERT(bssid == *req_bssid);
+        DisassocLocalClient(scb_val->val);
       } else {
         // Driver indicating disassoc (no data)
         if (assoc_state_.state == AssocState::ASSOCIATED) {
@@ -236,10 +239,18 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       // TODO(karthikrish) Use dev_is_up_ to disable Tx, Rx, etc.
       dev_is_up_ = true;
       break;
-    case BRCMF_C_DOWN:
+    case BRCMF_C_DOWN: {
       // The value in the IOVAR does not matter (according to Broadcom)
+      // If any of the IFs are operational (i.e., client is associated or
+      // softap is started) disconnect as appropriate.
+      int16_t softap_idx = GetIfidx(true);
+      if (softap_idx != -1) {
+        StopSoftAP(softap_idx);
+      }
+      DisassocLocalClient(BRCMF_E_REASON_LINK_DISASSOC);
       dev_is_up_ = false;
       break;
+    }
     case BRCMF_C_SET_INFRA:
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(uint32_t))) == ZX_OK) {
         iface_tbl_[ifidx].ap_config.infra_mode = *(reinterpret_cast<uint32_t*>(data));
@@ -289,16 +300,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           } else {
             // AP stop
             ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == true);
-            // Disassoc and remove all the associated clients
-            for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-              simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client,
-                                                                 0);
-              hw_.Tx(&disassoc_req_frame);
-            }
-            iface_tbl_[ifidx].ap_config.clients.clear();
-            SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
-            iface_tbl_[ifidx].ap_config.ap_started = false;
-            iface_tbl_[ifidx].chanspec = 0;
+            StopSoftAP(ifidx);
             BRCMF_DBG(SIM, "AP Stop processed");
           }
         } else {
@@ -389,6 +391,19 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
   hw_.Tx(&dataFrame);
 
   return ZX_OK;
+}
+
+// Stop the SoftAP
+void SimFirmware::StopSoftAP(uint16_t ifidx) {
+  // Disassoc and remove all the associated clients
+  for (auto client : iface_tbl_[ifidx].ap_config.clients) {
+    simulation::SimDisassocReqFrame disassoc_req_frame(iface_tbl_[ifidx].mac_addr, client, 0);
+    hw_.Tx(&disassoc_req_frame);
+  }
+  iface_tbl_[ifidx].ap_config.clients.clear();
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
+  iface_tbl_[ifidx].ap_config.ap_started = false;
+  iface_tbl_[ifidx].chanspec = 0;
 }
 
 uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
@@ -948,17 +963,14 @@ void SimFirmware::RxAssocResp(const simulation::SimAssocRespFrame* frame) {
 }
 
 // Disassociate the Local Client (request coming in from the driver)
-void SimFirmware::DisassocLocalClient(brcmf_scb_val_le* scb_val) {
-  uint32_t reason = scb_val->val;
-  common::MacAddr* bssid;
-
-  bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
+void SimFirmware::DisassocLocalClient(uint32_t reason) {
   if (assoc_state_.state == AssocState::ASSOCIATED) {
+    common::MacAddr bssid(assoc_state_.opts->bssid);
     common::MacAddr srcAddr(mac_addr_);
 
     // Transmit the disassoc req and since there is no response for it, indicate disassoc done to
     // driver now
-    simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, *bssid, reason);
+    simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, bssid, reason);
     hw_.Tx(&disassoc_req_frame);
     SetStateToDisassociated(assoc_state_.ifidx);
   } else {

@@ -292,7 +292,7 @@ class SimFirmware {
   void AssocHandleFailure();
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
-  void DisassocLocalClient(brcmf_scb_val_le* scb_val);
+  void DisassocLocalClient(uint32_t reason);
   void SetStateToDisassociated(const uint16_t ifidx);
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
@@ -314,6 +314,7 @@ class SimFirmware {
   void ConductChannelSwitch(wlan_channel_t& dst_channel, uint8_t mode);
   void RxDeauthReq(const simulation::SimDeauthFrame* frame);
 
+  void StopSoftAP(uint16_t ifidx);
   // Allocate a buffer for an event (brcmf_event)
   std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
                                                           brcmf_event_msg_be** msg_be,

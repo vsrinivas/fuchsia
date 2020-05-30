@@ -296,7 +296,9 @@ void AssocTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
 
 void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.deauth_conf_count++; }
 
-void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { context_.deauth_ind_count++; }
+void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+  context_.deauth_ind_count++;
+}
 
 void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
   context_.signal_ind_count++;

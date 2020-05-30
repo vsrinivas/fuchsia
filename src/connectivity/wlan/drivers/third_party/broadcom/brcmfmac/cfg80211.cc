@@ -2674,11 +2674,17 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
     result = WLAN_STOP_RESULT_INTERNAL_ERROR;
   }
 
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
+  // C_DOWN appears to be the only reliable means to bring down an AP successfully.
+  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
   if (status != ZX_OK) {
-    BRCMF_ERR("setting AP mode failed: %s, fw err %s", zx_status_get_string(status),
+    BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    result = WLAN_STOP_RESULT_INTERNAL_ERROR;
+  }
+
+  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
   }
 
   brcmf_vif_clear_mgmt_ies(ifp->vif);

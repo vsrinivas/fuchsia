@@ -40,19 +40,14 @@ class DynamicIfTest : public SimTest {
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
-  // Schedule a future event that will attempt to associate (with settings and expected result
-  // saved in context_) with a FakeAp
-  void ScheduleAssocReq(zx::duration when);
-
-  // Schedule a future event that will attempt to associate Fake Client with our SoftAP
-  void ScheduleAssocWithSoftAP(zx::duration when);
-
+  // Schedule a future callback
+  void ScheduleCall(void (DynamicIfTest::*fn)(), zx::duration when);
   // Schedule an event to stop the test. This is needed to stop any beaconing APs, since the test
   // won't end until all events are processed.
   void ScheduleTestEnd(zx::duration when);
   void TxAssocReq();
 
-  void VerifyAssoc();
+  void VerifyAssocWithSoftAP();
 
   // Query for wlanphy info
   void Query(wlanphy_impl_info_t* out_info);
@@ -94,6 +89,8 @@ class DynamicIfTest : public SimTest {
   // All of the association responses seen in the environment
   std::list<AssocRespInfo> assoc_responses_;
 
+  bool deauth_ind_recv_ = false;
+
  private:
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
@@ -111,7 +108,7 @@ class DynamicIfTest : public SimTest {
   void OnAuthConf(const wlanif_auth_confirm_t* resp);
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   void OnAuthInd(const wlanif_auth_ind_t* ind);
-  void OnDeauthInd(const wlanif_deauth_indication_t* ind){};
+  void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind){};
 };
@@ -132,7 +129,7 @@ wlanif_impl_ifc_protocol_ops_t DynamicIfTest::sme_ops_ = {
         },
     .deauth_ind =
         [](void* cookie, const wlanif_deauth_indication_t* ind) {
-          // Ignore
+          static_cast<DynamicIfTest*>(cookie)->OnDeauthInd(ind);
         },
     .assoc_conf =
         [](void* cookie, const wlanif_assoc_confirm_t* resp) {
@@ -260,16 +257,10 @@ void DynamicIfTest::StartAssoc() {
   client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
 }
 
-void DynamicIfTest::ScheduleAssocReq(zx::duration when) {
-  auto start_assoc_fn = std::make_unique<std::function<void()>>();
-  *start_assoc_fn = std::bind(&DynamicIfTest::StartAssoc, this);
-  env_->ScheduleNotification(std::move(start_assoc_fn), when);
-}
-
-void DynamicIfTest::ScheduleAssocWithSoftAP(zx::duration when) {
-  auto start_assoc_fn = std::make_unique<std::function<void()>>();
-  *start_assoc_fn = std::bind(&DynamicIfTest::TxAssocReq, this);
-  env_->ScheduleNotification(std::move(start_assoc_fn), when);
+void DynamicIfTest::ScheduleCall(void (DynamicIfTest::*fn)(), zx::duration when) {
+  auto cb_fn = std::make_unique<std::function<void()>>();
+  *cb_fn = std::bind(fn, this);
+  env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
 void DynamicIfTest::TxAssocReq() {
@@ -293,7 +284,9 @@ void DynamicIfTest::OnAuthInd(const wlanif_auth_ind_t* ind) {
   auth_ind_recv_ = true;
 }
 
-void DynamicIfTest::VerifyAssoc() {
+void DynamicIfTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { deauth_ind_recv_ = true; }
+
+void DynamicIfTest::VerifyAssocWithSoftAP() {
   // Verify the event indications were received and
   // the number of clients
   ASSERT_EQ(assoc_ind_recv_, true);
@@ -418,16 +411,49 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
 
   // Associate to FakeAp
-  ScheduleAssocReq(zx::msec(10));
+  ScheduleCall(&DynamicIfTest::StartAssoc, zx::msec(10));
   // Associate to SoftAP
-  ScheduleAssocWithSoftAP(zx::msec(100));
+  ScheduleCall(&DynamicIfTest::TxAssocReq, zx::msec(100));
 
   env_->Run();
 
   // Check if the client's assoc with FakeAP succeeded
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   // Verify Assoc with SoftAP succeeded
-  VerifyAssoc();
+  VerifyAssocWithSoftAP();
+  // TODO(karthikrish) Will add disassoc once support in SIM FW is available
+}
+
+// Start both client and SoftAP interfaces simultaneously and check if
+// stopping the AP, disassoc's the client.
+TEST_F(DynamicIfTest, StopAPDisassocsClientIF) {
+  // Create our device instances
+  Init();
+  CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
+  CreateInterface(WLAN_INFO_MAC_ROLE_AP);
+
+  // Start our SoftAP
+  StartSoftAP();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  // Associate to FakeAp
+  ScheduleCall(&DynamicIfTest::StartAssoc, zx::msec(10));
+  // Associate to SoftAP
+  ScheduleCall(&DynamicIfTest::TxAssocReq, zx::msec(100));
+
+  // Verify Assoc with SoftAP succeeded
+  ScheduleCall(&DynamicIfTest::VerifyAssocWithSoftAP, zx::msec(150));
+  env_->Run();
+
+  // Check if the client's assoc with FakeAP succeeded
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(deauth_ind_recv_, true);
   // TODO(karthikrish) Will add disassoc once support in SIM FW is available
 }
 
