@@ -30,7 +30,7 @@ unittest_package("rust-ui-crates-tests") {
   tests = [
     {
       name = "fuchsia_scenic_lib_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
