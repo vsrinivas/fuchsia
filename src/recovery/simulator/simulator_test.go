@@ -86,7 +86,7 @@ func TestSerialShellEnabled(t *testing.T) {
 		ZBI:           zbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog",
 		// This test uses additional memory on ASAN builds than normal.
-		Memory: 3072,
+		Memory: 4096,
 	})
 
 	i.Start()
