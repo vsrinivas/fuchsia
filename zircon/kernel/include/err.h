@@ -14,7 +14,4 @@
 
 #include <zircon/errors.h>
 
-// MOVE to kernel internal used for thread teardown
-#define ZX_ERR_INTERNAL_INTR_KILLED (-502)
-
 #endif  // ZIRCON_KERNEL_INCLUDE_ERR_H_

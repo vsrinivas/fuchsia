@@ -230,4 +230,9 @@
 // ZX_ERR_CONNECTION_ABORTED: Connection was aborted.
 #define ZX_ERR_CONNECTION_ABORTED (-76)
 
+// ======= VDSO-private errors =======
+
+// ZX_ERR_INTERNAL_INTR_KILLED: A task was killed during an operation.
+#define ZX_ERR_INTERNAL_INTR_KILLED (-502)
+
 #endif  // SYSROOT_ZIRCON_ERRORS_H_
