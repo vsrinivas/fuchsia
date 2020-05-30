@@ -333,7 +333,7 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   // Temporarily hardcode the generation of request/response struct members to use the old
-  // wire format, in order to maintain compatibility during the transition for fxb/7024.
+  // wire format, in order to maintain compatibility during the transition for fxb/7704.
   // This block of code is copied from JsonWriter::GenerateArray (with the difference
   // noted below), and will be removed once backends are updated to use anonymous structs.
   GenerateObjectPunctuation(Position::kSubsequent);
