@@ -43,7 +43,7 @@ test_package("libinet_tests") {
   tests = [
     {
       name = "libinet_tests"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }
