@@ -76,6 +76,8 @@ template("ffx") {
                              "deps",
                              "non_rust_deps",
                            ])
+
+    configs += [ "//build/config:rust_panic_abort" ]
   }
 
   tests_deps = []
