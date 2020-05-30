@@ -255,7 +255,9 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
-      sysmem::FORMAT_MODIFIER_LINEAR);
+          sysmem::FORMAT_MODIFIER_LINEAR ||
+      collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
+          sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE);
 
   uint32_t minimum_row_bytes;
   if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
@@ -479,30 +481,40 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted_count = 2;
   buffer_constraints.heap_permitted[0] = sysmem::HeapType::SYSTEM_RAM;
   buffer_constraints.heap_permitted[1] = sysmem::HeapType::AMLOGIC_SECURE;
-  constraints.image_format_constraints_count = 1;
-  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 2;
+  for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
+    sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[i];
 
-  image_constraints.pixel_format.has_format_modifier = true;
-  image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
-  if (config->type == IMAGE_TYPE_CAPTURE) {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
-    image_constraints.min_coded_width = disp_setting_.h_active;
-    image_constraints.max_coded_width = disp_setting_.h_active;
-    image_constraints.min_coded_height = disp_setting_.v_active;
-    image_constraints.max_coded_height = disp_setting_.v_active;
-    image_constraints.min_bytes_per_row = ZX_ALIGN(
-        disp_setting_.h_active * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), kBufferAlignment);
-    image_constraints.max_coded_width_times_coded_height =
-        disp_setting_.h_active * disp_setting_.v_active;
-    buffer_name = "Display capture";
-  } else {
-    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
-    buffer_name = "Display";
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
+    if (config->type == IMAGE_TYPE_CAPTURE) {
+      ZX_DEBUG_ASSERT(i == 0);
+      image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
+      image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
+      image_constraints.min_coded_width = disp_setting_.h_active;
+      image_constraints.max_coded_width = disp_setting_.h_active;
+      image_constraints.min_coded_height = disp_setting_.v_active;
+      image_constraints.max_coded_height = disp_setting_.v_active;
+      image_constraints.min_bytes_per_row =
+          ZX_ALIGN(disp_setting_.h_active * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888),
+                   kBufferAlignment);
+      image_constraints.max_coded_width_times_coded_height =
+          disp_setting_.h_active * disp_setting_.v_active;
+      buffer_name = "Display capture";
+    } else {
+      // The beginning of ARM linear TE memory is a regular linear image, so we can support it by
+      // ignoring everything after that. We never write to the image, so we don't need to worry
+      // about keeping the TE buffer in sync.
+      ZX_DEBUG_ASSERT(i <= 1);
+      image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+      image_constraints.pixel_format.format_modifier.value =
+          i == 0 ? sysmem::FORMAT_MODIFIER_LINEAR : sysmem::FORMAT_MODIFIER_ARM_LINEAR_TE;
+      buffer_name = "Display";
+    }
+    image_constraints.bytes_per_row_divisor = kBufferAlignment;
+    image_constraints.start_offset_divisor = kBufferAlignment;
   }
-  image_constraints.bytes_per_row_divisor = kBufferAlignment;
-  image_constraints.start_offset_divisor = kBufferAlignment;
 
   // Set priority to 10 to override the Vulkan driver name priority of 5, but be less than most
   // application priorities.
