@@ -49,7 +49,7 @@ unittest_package("rolldice-tests") {
   tests = [
     {
       name = "rolldice_lib_lib_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }

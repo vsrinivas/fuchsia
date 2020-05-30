@@ -38,7 +38,7 @@ test_package("tz_version_parrot_test") {
   tests = [
     {
       name = "tz_version_parrot_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
 }

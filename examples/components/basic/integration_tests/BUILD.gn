@@ -32,7 +32,7 @@ test_package("hello-world-integration-test") {
   v2_tests = [
     {
       name = "hello_world_integration_test"
-      environments = [ emu_env ]
+      environments = basic_envs
     },
   ]
   binaries = [
