@@ -2,83 +2,85 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "ftp-001"
+- title: "Overview"
+  path: /docs/contribute/governance/fidl
+- title: "FTP-001: FTP process"
   path: /docs/contribute/governance/fidl/ftp/ftp-001.md
-- title: "ftp-002"
+- title: "FTP-002: Type aliases with \"using\" keyword"
   path: /docs/contribute/governance/fidl/ftp/ftp-002.md
-- title: "ftp-003"
+- title: "FTP-003: Clarification: Default Values for Struct Members"
   path: /docs/contribute/governance/fidl/ftp/ftp-003.md
-- title: "ftp-004"
+- title: "FTP-004: Safer Structs for C++"
   path: /docs/contribute/governance/fidl/ftp/ftp-004.md
-- title: "ftp-005"
+- title: "FTP-005: Method Impossible"
   path: /docs/contribute/governance/fidl/ftp/ftp-005.md
-- title: "ftp-006"
+- title: "FTP-006: Programmer Advisory Explicit Defaults"
   path: /docs/contribute/governance/fidl/ftp/ftp-006.md
-- title: "ftp-007"
+- title: "FTP-007: Tables"
   path: /docs/contribute/governance/fidl/ftp/ftp-007.md
-- title: "ftp-008"
+- title: "FTP-008: Epitaphs"
   path: /docs/contribute/governance/fidl/ftp/ftp-008.md
-- title: "ftp-009"
+- title: "FTP-009: Documentation comments"
   path: /docs/contribute/governance/fidl/ftp/ftp-009.md
-- title: "ftp-010"
+- title: "FTP-010: `[OrdinalRange]`"
   path: /docs/contribute/governance/fidl/ftp/ftp-010.md
-- title: "ftp-012"
+- title: "FTP-012: Empty structs"
   path: /docs/contribute/governance/fidl/ftp/ftp-012.md
-- title: "ftp-013"
+- title: "FTP-013: Introduce a `[Deprecated]` Attribute"
   path: /docs/contribute/governance/fidl/ftp/ftp-013.md
-- title: "ftp-014"
+- title: "FTP-014: Error Handling"
   path: /docs/contribute/governance/fidl/ftp/ftp-014.md
-- title: "ftp-015"
+- title: "FTP-015: Extensible Unions"
   path: /docs/contribute/governance/fidl/ftp/ftp-015.md
-- title: "ftp-016"
+- title: "FTP-016: No Optional Strings or Vectors"
   path: /docs/contribute/governance/fidl/ftp/ftp-016.md
-- title: "ftp-020"
+- title: "FTP-020: Interface Ordinal Hashing"
   path: /docs/contribute/governance/fidl/ftp/ftp-020.md
-- title: "ftp-021"
+- title: "FTP-021: Soft Transitions for Methods Add / Remove"
   path: /docs/contribute/governance/fidl/ftp/ftp-021.md
-- title: "ftp-023"
+- title: "FTP-023: Compositional Model for Protocols"
   path: /docs/contribute/governance/fidl/ftp/ftp-023.md
-- title: "ftp-024"
+- title: "FTP-024: Mandatory Source Compatibility"
   path: /docs/contribute/governance/fidl/ftp/ftp-024.md
-- title: "ftp-025"
+- title: "FTP-025: Bit Flags"
   path: /docs/contribute/governance/fidl/ftp/ftp-025.md
-- title: "ftp-026"
+- title: "FTP-026: Envelopes Everywhere"
   path: /docs/contribute/governance/fidl/ftp/ftp-026.md
-- title: "ftp-027"
+- title: "FTP-027: You only pay for what you use"
   path: /docs/contribute/governance/fidl/ftp/ftp-027.md
-- title: "ftp-028"
+- title: "FTP-028: Handle Rights"
   path: /docs/contribute/governance/fidl/ftp/ftp-028.md
-- title: "ftp-029"
+- title: "FTP-029: Increasing Method Ordinals"
   path: /docs/contribute/governance/fidl/ftp/ftp-029.md
-- title: "ftp-030"
+- title: "FTP-030: FIDL is little endian"
   path: /docs/contribute/governance/fidl/ftp/ftp-030.md
-- title: "ftp-032"
+- title: "FTP-032: Efficient Envelopes: Turning Envelopes into Postcards"
   path: /docs/contribute/governance/fidl/ftp/ftp-032.md
-- title: "ftp-033"
+- title: "FTP-033: Handling of Unknown Fields &amp; Strictness"
   path: /docs/contribute/governance/fidl/ftp/ftp-033.md
-- title: "ftp-035"
+- title: "FTP-035: Automatic Flow Tracing"
   path: /docs/contribute/governance/fidl/ftp/ftp-035.md
-- title: "ftp-036"
+- title: "FTP-036: Update to Struct Declarations"
   path: /docs/contribute/governance/fidl/ftp/ftp-036.md
-- title: "ftp-037"
+- title: "FTP-037: Transactional Message Header v3"
   path: /docs/contribute/governance/fidl/ftp/ftp-037.md
-- title: "ftp-040"
+- title: "FTP-040: Identifier Uniqueness"
   path: /docs/contribute/governance/fidl/ftp/ftp-040.md
-- title: "ftp-041"
+- title: "FTP-041: Support for Unifying Services and Devices"
   path: /docs/contribute/governance/fidl/ftp/ftp-041.md
-- title: "ftp-042"
+- title: "FTP-042: Non Nullable Types"
   path: /docs/contribute/governance/fidl/ftp/ftp-042.md
-- title: "ftp-043"
+- title: "FTP-043: Documentation Comment Format"
   path: /docs/contribute/governance/fidl/ftp/ftp-043.md
-- title: "ftp-044"
+- title: "FTP-044: Extensible Method Arguments"
   path: /docs/contribute/governance/fidl/ftp/ftp-044.md
-- title: "ftp-045"
+- title: "FTP-045: Zero-Size Empty Structs"
   path: /docs/contribute/governance/fidl/ftp/ftp-045.md
-- title: "ftp-048"
+- title: "FTP-048: Explicit Union Ordinals"
   path: /docs/contribute/governance/fidl/ftp/ftp-048.md
-- title: "ftp-049"
+- title: "FTP-049: FIDL Tuning Process Evolution"
   path: /docs/contribute/governance/fidl/ftp/ftp-049.md
-- title: "ftp-054"
+- title: "FTP-054: Parameter Attributes"
   path: /docs/contribute/governance/fidl/ftp/ftp-054.md
-- title: "ftp-059"
+- title: "FTP-059: Reserved Bits in Vector/String/Array Count Fields"
   path: /docs/contribute/governance/fidl/ftp/ftp-059.md

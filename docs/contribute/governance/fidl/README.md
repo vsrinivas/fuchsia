@@ -1,4 +1,4 @@
-# FIDL language tuning proposals
+# FIDL language Tuning Proposals (FTP)
 
 Note: Documents are sorted by date reviewed.
 
