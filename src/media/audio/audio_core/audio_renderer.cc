@@ -140,8 +140,8 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
         });
         // TODO(51049) Logging should be removed upon creation of inspect tool or other real-time
         // method for gain observation
-        FX_LOGS(INFO) << StreamUsage::WithRenderUsage(usage_).ToString() << " Gain(" << gain_db
-                      << "db) = "
+        FX_LOGS(INFO) << this << " " << StreamUsage::WithRenderUsage(usage_).ToString() << " Gain("
+                      << gain_db << "db) = "
                       << "Vol(" << volume_command.volume << ") + GainAdjustment("
                       << volume_command.gain_db_adjustment << "db) + StreamGain(" << stream_gain_db_
                       << "db)";

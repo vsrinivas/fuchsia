@@ -18,9 +18,13 @@ class MockStreamVolume : public StreamVolume {
   bool GetStreamMute() const override { return mute_; }
   fuchsia::media::Usage GetStreamUsage() const override { return fidl::Clone(usage_); }
   bool RespectsPolicyAdjustments() const override { return respects_policy_adjustments_; }
-  void RealizeVolume(VolumeCommand volume_command) override { volume_command_ = volume_command; }
+  void RealizeVolume(VolumeCommand volume_command) override {
+    volume_command_ = volume_command;
+    ++realize_volume_calls_;
+  }
 
   bool mute_ = false;
+  int realize_volume_calls_ = 0;
   fuchsia::media::Usage usage_;
   VolumeCommand volume_command_ = {};
   bool respects_policy_adjustments_ = true;
@@ -150,6 +154,43 @@ TEST_F(StreamVolumeManagerTest, UsageVolumeChangeUpdatesStream) {
   RunLoopUntilIdle();
   EXPECT_FLOAT_EQ(media_stream.volume_command_.volume, 0.8);
   EXPECT_FLOAT_EQ(system_agent_stream.volume_command_.volume, 0.9);
+}
+
+TEST_F(StreamVolumeManagerTest, DuplicateUsageGainSettingsIgnored) {
+  auto render_usage =
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA);
+  auto capture_usage =
+      fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+
+  MockStreamVolume render_stream;
+  render_stream.usage_ = fidl::Clone(render_usage);
+
+  MockStreamVolume capture_stream;
+  capture_stream.usage_ = fidl::Clone(capture_usage);
+
+  manager_.AddStream(&render_stream);
+  manager_.AddStream(&capture_stream);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, render_stream.realize_volume_calls_);
+  EXPECT_EQ(1, capture_stream.realize_volume_calls_);
+
+  manager_.SetUsageGain(fidl::Clone(render_usage), -10);
+  RunLoopUntilIdle();
+  EXPECT_EQ(2, render_stream.realize_volume_calls_);
+
+  // No realize volume call if gain is unchanged.
+  manager_.SetUsageGain(fidl::Clone(render_usage), -10);
+  RunLoopUntilIdle();
+  EXPECT_EQ(2, render_stream.realize_volume_calls_);
+
+  manager_.SetUsageGainAdjustment(fidl::Clone(capture_usage), -10);
+  RunLoopUntilIdle();
+  EXPECT_EQ(2, capture_stream.realize_volume_calls_);
+
+  // No realize volume call if gain adjustment is unchanged.
+  manager_.SetUsageGainAdjustment(fidl::Clone(capture_usage), -10);
+  RunLoopUntilIdle();
+  EXPECT_EQ(2, capture_stream.realize_volume_calls_);
 }
 
 }  // namespace

@@ -72,13 +72,19 @@ const UsageGainSettings& StreamVolumeManager::GetUsageGainSettings() const {
 }
 
 void StreamVolumeManager::SetUsageGain(fuchsia::media::Usage usage, float gain_db) {
-  usage_gain_settings_.SetUsageGain(fidl::Clone(usage), gain_db);
-  UpdateStreamsWithUsage(std::move(usage));
+  if (gain_db != usage_gain_settings_.GetUnadjustedUsageGain(usage)) {
+    usage_gain_settings_.SetUsageGain(fidl::Clone(usage), gain_db);
+    UpdateStreamsWithUsage(std::move(usage));
+  }
 }
 
 void StreamVolumeManager::SetUsageGainAdjustment(fuchsia::media::Usage usage, float gain_db) {
-  usage_gain_settings_.SetUsageGainAdjustment(fidl::Clone(usage), gain_db);
-  UpdateStreamsWithUsage(std::move(usage));
+  float gain_adjustment = usage_gain_settings_.GetAdjustedUsageGain(usage) -
+                          usage_gain_settings_.GetUnadjustedUsageGain(usage);
+  if (gain_db != gain_adjustment) {
+    usage_gain_settings_.SetUsageGainAdjustment(fidl::Clone(usage), gain_db);
+    UpdateStreamsWithUsage(std::move(usage));
+  }
 }
 
 void StreamVolumeManager::BindUsageVolumeClient(
