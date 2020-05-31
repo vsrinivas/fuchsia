@@ -84,6 +84,93 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
   return std::make_unique<TypeUndefined>();
 }
 
+class LoadGlobalHelper {
+ public:
+  LoadGlobalHelper() = default;
+
+  fidl::VectorView<llcpp::fuchsia::shell::Node> nodes() { return builder_.NodesAsVectorView(); }
+
+  struct TypeAndValue {
+    shell::console::AstBuilder::NodeId value_id;
+    llcpp::fuchsia::shell::ShellType type;
+  };
+
+  TypeAndValue Set(const Value& value) {
+    TypeAndValue id;
+    switch (value.type()) {
+      case ValueType::kUndef: {
+        id.value_id.file_id = -1;
+        id.value_id.node_id = -1;
+        fidl::aligned<bool> undef = true;
+        auto undef_ptr = builder_.ManageCopyOf(&undef);
+        id.type = llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(undef_ptr));
+        break;
+      }
+      case ValueType::kInt8:
+        id.value_id = builder_.AddIntegerLiteral(value.GetInt8());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT8);
+        break;
+      case ValueType::kUint8:
+        id.value_id = builder_.AddIntegerLiteral(value.GetUint8());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT8);
+        break;
+      case ValueType::kInt16:
+        id.value_id = builder_.AddIntegerLiteral(value.GetInt16());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT16);
+        break;
+      case ValueType::kUint16:
+        id.value_id = builder_.AddIntegerLiteral(value.GetUint16());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT16);
+        break;
+      case ValueType::kInt32:
+        id.value_id = builder_.AddIntegerLiteral(value.GetInt32());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT32);
+        break;
+      case ValueType::kUint32:
+        id.value_id = builder_.AddIntegerLiteral(value.GetUint32());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT32);
+        break;
+      case ValueType::kInt64:
+        id.value_id = builder_.AddIntegerLiteral(value.GetInt64());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT64);
+        break;
+      case ValueType::kUint64:
+        id.value_id = builder_.AddIntegerLiteral(value.GetUint64());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT64);
+        break;
+      // Float ?
+      case ValueType::kString:
+        id.value_id = builder_.AddStringLiteral(value.GetString()->value());
+        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::STRING);
+        break;
+      case ValueType::kObject: {
+        builder_.OpenObject();
+        Object* object = value.GetObject();
+        const std::shared_ptr<ObjectSchema> schema = object->schema();
+        for (auto& field : schema->fields()) {
+          auto value = object->GetField(field.get());
+          auto expression_id = Set(*value);
+          builder_.AddField(field->name(), expression_id.value_id, std::move(expression_id.type));
+        }
+        shell::console::AstBuilder::NodePair value_type = builder_.CloseObject();
+        id.value_id = value_type.value_node;
+        auto type_ptr = builder_.ManageCopyOf(&value_type.schema_node);
+        id.type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(type_ptr));
+        break;
+      }
+    }
+    return id;
+  }
+
+  llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
+    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_.ManageCopyOf(&type);
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
+  }
+
+ private:
+  shell::console::AstBuilder builder_;
+};
+
 // - ServerInterpreterContext ----------------------------------------------------------------------
 
 std::unique_ptr<Expression> ServerInterpreterContext::GetExpression(const NodeId& node_id) {
@@ -362,93 +449,6 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
     interpreter_->EraseServerContext(context_id);
   }
 }
-
-class LoadGlobalHelper {
- public:
-  LoadGlobalHelper() = default;
-
-  fidl::VectorView<llcpp::fuchsia::shell::Node> nodes() { return builder_.NodesAsVectorView(); }
-
-  struct TypeAndValue {
-    shell::console::AstBuilder::NodeId value_id;
-    llcpp::fuchsia::shell::ShellType type;
-  };
-
-  TypeAndValue Set(const Value& value) {
-    TypeAndValue id;
-    switch (value.type()) {
-      case ValueType::kUndef: {
-        id.value_id.file_id = -1;
-        id.value_id.node_id = -1;
-        fidl::aligned<bool> undef = true;
-        auto undef_ptr = builder_.ManageCopyOf(&undef);
-        id.type = llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned_ptr(undef_ptr));
-        break;
-      }
-      case ValueType::kInt8:
-        id.value_id = builder_.AddIntegerLiteral(value.GetInt8());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT8);
-        break;
-      case ValueType::kUint8:
-        id.value_id = builder_.AddIntegerLiteral(value.GetUint8());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT8);
-        break;
-      case ValueType::kInt16:
-        id.value_id = builder_.AddIntegerLiteral(value.GetInt16());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT16);
-        break;
-      case ValueType::kUint16:
-        id.value_id = builder_.AddIntegerLiteral(value.GetUint16());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT16);
-        break;
-      case ValueType::kInt32:
-        id.value_id = builder_.AddIntegerLiteral(value.GetInt32());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT32);
-        break;
-      case ValueType::kUint32:
-        id.value_id = builder_.AddIntegerLiteral(value.GetUint32());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT32);
-        break;
-      case ValueType::kInt64:
-        id.value_id = builder_.AddIntegerLiteral(value.GetInt64());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::INT64);
-        break;
-      case ValueType::kUint64:
-        id.value_id = builder_.AddIntegerLiteral(value.GetUint64());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT64);
-        break;
-      // Float ?
-      case ValueType::kString:
-        id.value_id = builder_.AddStringLiteral(value.GetString()->value());
-        id.type = GetBuiltin(llcpp::fuchsia::shell::BuiltinType::STRING);
-        break;
-      case ValueType::kObject: {
-        builder_.OpenObject();
-        Object* object = value.GetObject();
-        const std::shared_ptr<ObjectSchema> schema = object->schema();
-        for (auto& field : schema->fields()) {
-          auto value = object->GetField(field.get());
-          auto expression_id = Set(*value);
-          builder_.AddField(field->name(), expression_id.value_id, std::move(expression_id.type));
-        }
-        shell::console::AstBuilder::NodePair value_type = builder_.CloseObject();
-        id.value_id = value_type.value_node;
-        auto type_ptr = builder_.ManageCopyOf(&value_type.schema_node);
-        id.type = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned_ptr(type_ptr));
-        break;
-      }
-    }
-    return id;
-  }
-
-  llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
-    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_.ManageCopyOf(&type);
-    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned_ptr(type_ptr));
-  }
-
- private:
-  shell::console::AstBuilder builder_;
-};
 
 void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
   LoadGlobalHelper helper;
