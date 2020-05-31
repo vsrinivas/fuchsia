@@ -196,7 +196,7 @@ class function_impl<inline_target_size, require_inline, Result(Args...)> final
   template <typename Callable,
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
-  function_impl(Callable target) : base(std::move(target)) {}
+  function_impl(Callable&& target) : base(std::forward<Callable>(target)) {}
 
   // Deletes the specializations of function_impl(Callable) that would allow
   // a |fit::function| to be constructed from a |fit::callback|. This prevents
@@ -234,8 +234,8 @@ class function_impl<inline_target_size, require_inline, Result(Args...)> final
   template <typename Callable,
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
-  function_impl& operator=(Callable target) {
-    base::assign(std::move(target));
+  function_impl& operator=(Callable&& target) {
+    base::assign(std::forward<Callable>(target));
     return *this;
   }
 
@@ -349,7 +349,7 @@ class callback_impl<inline_target_size, require_inline, Result(Args...)> final
   template <typename Callable,
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
-  callback_impl(Callable target) : base(std::move(target)) {}
+  callback_impl(Callable&& target) : base(std::forward<Callable>(target)) {}
 
   // Creates a callback with a target moved from another callback,
   // leaving the other callback with an empty target.
@@ -374,8 +374,8 @@ class callback_impl<inline_target_size, require_inline, Result(Args...)> final
   template <typename Callable,
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
-  callback_impl& operator=(Callable target) {
-    base::assign(std::move(target));
+  callback_impl& operator=(Callable&& target) {
+    base::assign(std::forward<Callable>(target));
     return *this;
   }
 

@@ -61,7 +61,10 @@ template <typename Callable, typename Result, typename... Args>
 struct target<Callable,
               /*is_inline=*/true, /*is_shared=*/false, Result, Args...>
     final {
-  static void initialize(void* bits, Callable&& target) { new (bits) Callable(std::move(target)); }
+  template <typename Callable_>
+  static void initialize(void* bits, Callable_&& target) {
+    new (bits) Callable(std::forward<Callable_>(target));
+  }
   static Result invoke(void* bits, Args... args) {
     auto& target = *static_cast<Callable*>(bits);
     return target(std::forward<Args>(args)...);
@@ -93,9 +96,10 @@ template <typename Callable, typename Result, typename... Args>
 struct target<Callable,
               /*is_inline=*/false, /*is_shared=*/false, Result, Args...>
     final {
-  static void initialize(void* bits, Callable&& target) {
+  template <typename Callable_>
+  static void initialize(void* bits, Callable_&& target) {
     auto ptr = static_cast<Callable**>(bits);
-    *ptr = new Callable(std::move(target));
+    *ptr = new Callable(std::forward<Callable_>(target));
   }
   static Result invoke(void* bits, Args... args) {
     auto& target = **static_cast<Callable**>(bits);
@@ -203,8 +207,8 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
   template <typename Callable,
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
-  function_base(Callable target) {
-    initialize_target(std::move(target));
+  function_base(Callable&& target) {
+    initialize_target(std::forward<Callable>(target));
   }
 
   function_base(function_base&& other) { move_target_from(std::move(other)); }
@@ -288,9 +292,9 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
   template <typename Callable,
             typename = std::enable_if_t<std::is_convertible<
                 decltype(std::declval<Callable&>()(std::declval<Args>()...)), result_type>::value>>
-  void assign(Callable target) {
+  void assign(Callable&& target) {
     destroy_target();
-    initialize_target(std::move(target));
+    initialize_target(std::forward<Callable>(target));
   }
 
   // Used by derived "impl" classes to implement operator=().
@@ -350,18 +354,21 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
   // assumes target is uninitialized
   void initialize_null_target() { ops_ = &null_target_type::ops; }
 
-  // assumes target is uninitialized
+  // target may or may not be initialized.
   template <typename Callable>
-  void initialize_target(Callable target) {
-    static_assert(std::alignment_of<Callable>::value <= std::alignment_of<storage_type>::value,
-                  "Alignment of Callable must be <= alignment of max_align_t.");
-    static_assert(!require_inline || sizeof(Callable) <= inline_target_size,
+  void initialize_target(Callable&& target) {
+    // Convert function or function references to function pointer.
+    using DecayedCallable = std::decay_t<Callable>;
+    static_assert(
+        std::alignment_of<DecayedCallable>::value <= std::alignment_of<storage_type>::value,
+        "Alignment of Callable must be <= alignment of max_align_t.");
+    static_assert(!require_inline || sizeof(DecayedCallable) <= inline_target_size,
                   "Callable too large to store inline as requested.");
     if (is_null(target)) {
       initialize_null_target();
     } else {
-      ops_ = &target_type<Callable>::ops;
-      target_type<Callable>::initialize(&bits_, std::move(target));
+      ops_ = &target_type<DecayedCallable>::ops;
+      target_type<DecayedCallable>::initialize(&bits_, std::forward<Callable>(target));
     }
   }
 
