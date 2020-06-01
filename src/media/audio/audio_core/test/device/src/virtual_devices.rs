@@ -39,15 +39,8 @@ async fn input_device_initialize_gain() -> Result<()> {
 async fn input_device_remove() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
         assets.device.remove()?;
-        assert_matches!(
-            assets
-                .enumerator
-                .take_event_stream()
-                .try_next()
-                .await?
-                .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
-            Some(_)
-        );
+        let event = assets.enumerator.take_event_stream().try_next().await?.unwrap();
+        assert_matches!(event, AudioDeviceEnumeratorEvent::OnDeviceRemoved { .. });
 
         Ok(())
     })
@@ -65,16 +58,8 @@ async fn input_device_remove_unplugged() -> Result<()> {
             )?;
 
             assets.device.remove()?;
-            assert_matches!(
-                assets
-                    .enumerator
-                    .take_event_stream()
-                    .try_next()
-                    .await?
-                    .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
-                Some(_)
-            );
-
+            let event = assets.enumerator.take_event_stream().try_next().await?.unwrap();
+            assert_matches!(event, AudioDeviceEnumeratorEvent::OnDeviceRemoved { .. });
             Ok(())
         }
     })
@@ -112,15 +97,8 @@ async fn output_device_initialize_gain() -> Result<()> {
 async fn output_device_remove() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<OutputProxy>| async move {
         assets.device.remove()?;
-        assert_matches!(
-            assets
-                .enumerator
-                .take_event_stream()
-                .try_next()
-                .await?
-                .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
-            Some(_)
-        );
+        let event = assets.enumerator.take_event_stream().try_next().await?.unwrap();
+        assert_matches!(event, AudioDeviceEnumeratorEvent::OnDeviceRemoved { .. });
 
         Ok(())
     })
@@ -138,15 +116,8 @@ async fn output_device_remove_unplugged() -> Result<()> {
             )?;
 
             assets.device.remove()?;
-            assert_matches!(
-                assets
-                    .enumerator
-                    .take_event_stream()
-                    .try_next()
-                    .await?
-                    .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
-                Some(_)
-            );
+            let event = assets.enumerator.take_event_stream().try_next().await?.unwrap();
+            assert_matches!(event, AudioDeviceEnumeratorEvent::OnDeviceRemoved { .. });
 
             Ok(())
         }
