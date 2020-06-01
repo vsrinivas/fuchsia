@@ -18,9 +18,10 @@ import (
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/space"
 
+	"metrics"
+
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
-	"metrics"
 )
 
 var (
@@ -139,6 +140,10 @@ func run(ctx *component.Context) (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to parse update mode: %s", err)
 	}
+
+	// Garbage collect again to remove any old update packages which might exist.
+	// This allows us to account in our space budget for only one update package at a time.
+	GcPackages(ctx)
 
 	phase = metrics.PhasePackageDownload
 	if updateMode == UpdateModeNormal {
