@@ -526,7 +526,8 @@ function fx-run-ninja {
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression). GOMA_DISABLED will forcefully disable Goma even if it's set to
   # empty.
-  full_cmdline=(env -i "TERM=${TERM}" "PATH=${PATH}" \
+  local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
+  full_cmdline=(env -i "TERM=${TERM}" "PATH=${newpath}" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
