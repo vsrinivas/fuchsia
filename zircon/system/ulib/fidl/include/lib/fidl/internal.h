@@ -68,13 +68,7 @@ static inline bool FidlAddOutOfLine(uint32_t offset, uint32_t size, uint32_t* ou
 
 struct FidlStructField {
   const fidl_type_t* type;
-
-  // If |type| is not nullptr, |offset| stores the offset of the struct member.
-  // If |type| is nullptr, |padding_offset| stores the offset where padding starts.
-  union {
-    uint32_t offset;
-    uint32_t padding_offset;
-  };
+  uint32_t offset;
   uint8_t padding;
 
 #ifdef __cplusplus
@@ -175,7 +169,9 @@ struct fidl_type {
   constexpr fidl_type() = default;
 };
 
-#define FIDL_INTERNAL_INHERIT_TYPE_T final : fidl_type
+#define FIDL_INTERNAL_INHERIT_TYPE_T \
+  final:                             \
+  fidl_type
 
 // When compiling in C++14 mode, the rules around initialization
 // changes such that the compiler requires an explicit constructor.

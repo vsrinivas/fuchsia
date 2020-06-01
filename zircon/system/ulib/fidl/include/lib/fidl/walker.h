@@ -346,21 +346,12 @@ Result Walker<VisitorImpl>::WalkStruct(const FidlCodedStruct* coded_struct,
     const FidlStructField& field = coded_struct->fields[i];
     Position field_position = position + field.offset;
     if (field.padding > 0) {
-      Position padding_position;
-      if (field.type) {
-        padding_position = field_position + TypeSize(field.type);
-      } else {
-        // Current type does not have coding information. |field.offset| stores the
-        // offset of the padding.
-        padding_position = field_position;
-      }
+      Position padding_position = field_position + TypeSize(field.type);
       auto status = visitor_->VisitInternalPadding(padding_position, field.padding);
       FIDL_STATUS_GUARD(status);
     }
-    if (field.type) {
-      Result result = WalkInternal(field.type, field_position, depth);
-      FIDL_RESULT_GUARD(result);
-    }
+    Result result = WalkInternal(field.type, field_position, depth);
+    FIDL_RESULT_GUARD(result);
   }
   return Result::kContinue;
 }
