@@ -15,8 +15,9 @@ import("//build/testing/host_test_data.gni")
 # test executables.
 
 test_list = [
-  "garnet_input_latency_benchmarks_test",
+  "dart_inspect_benchmarks_test",
   "fidl_microbenchmarks_test",
+  "garnet_input_latency_benchmarks_test",
   "kernel_boot_timeline_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
@@ -80,6 +81,7 @@ group("package_deps") {
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",
     "//third_party/iperf",
+    "//topaz/tests/dart-inspect-benchmarks",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/ui/bin/activity",

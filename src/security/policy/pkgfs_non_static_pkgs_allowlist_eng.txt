@@ -21,12 +21,13 @@ amberctl
 
 # Needed to load trace specs for tests
 benchmark
-rust_inspect_benchmarks
-netstack_benchmarks
-garnet_input_latency_benchmarks
-fuchsia_benchmarks
+dart-inspect-benchmarks
 fidl_benchmarks
+fuchsia_benchmarks
+garnet_input_latency_benchmarks
 go_fidl_benchmarks
+netstack_benchmarks
+rust_inspect_benchmarks
 
 # Needed by the peridot tests
 catapult_converter
