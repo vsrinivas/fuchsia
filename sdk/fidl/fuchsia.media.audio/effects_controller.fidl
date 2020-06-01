@@ -1,0 +1,34 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.audio;
+
+enum UpdateEffectError {
+    INVALID_CONFIG = 1;
+    NOT_FOUND = 2;
+};
+
+const uint32 MAX_EFFECT_NAME_LENGTH = 128;
+
+protocol EffectsController {
+    /// Sends the `config` message to an audio effect named `effect_name`. If the
+    /// server closes the `EffectsController` connection for any reason, that
+    /// indicates that the effects have been reset and any state associated with
+    /// previous `UpdateEffect` messages have been lost. Clients who wish to re-apply
+    /// state should respond by reconnecting and resending any needed `UpdateEffect`
+    /// messages. If a client closes the connection, no state will be lost but the
+    /// client will also be unable to determine if and when any state associated with
+    /// previous messages have been lost.
+    ///
+    /// Returns success (empty response) if the message was accepted by an
+    /// effect named `effect_name`.
+    ///
+    /// Returns `UpdateEffectError.INVALID_CONFIG` if an effect with the name
+    /// `effect_name` was found, but the `config` message was rejected.
+    ///
+    /// Returns `UpdateEffectError.NOT_FOUND` if no effect with name `effect_name`
+    /// could be located.
+    UpdateEffect(string:MAX_EFFECT_NAME_LENGTH effect_name, string:MAX config)
+        -> () error UpdateEffectError;
+};

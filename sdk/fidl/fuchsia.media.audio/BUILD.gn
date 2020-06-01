@@ -11,6 +11,7 @@ fidl("fuchsia.media.audio") {
   sdk_category = "partner"
 
   sources = [
+    "effects_controller.fidl",
     "gain_control.fidl",
     "volume_control.fidl",
   ]
