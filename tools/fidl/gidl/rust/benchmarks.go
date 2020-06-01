@@ -19,7 +19,7 @@ import (
 var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 use {
 	fidl::{
-		encoding::{Context, Decodable, Decoder, Encoder},
+		encoding::{Context, Decodable, Decoder, Encoder, with_tls_coding_bufs},
 		handle::Handle,
 	},
 	fidl_benchmarkfidl as benchmarkfidl,
@@ -38,16 +38,15 @@ const V1_CONTEXT: &Context = &Context {};
 
 {{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
-	let bytes = &mut Vec::<u8>::with_capacity(65536);
-	{{- /* TODO(fxb/36441): Revisit this when adding support for handles. */}}
-	let handles = &mut Vec::<Handle>::with_capacity(64);
 	b.iter_batched_ref(
 		|| {
 			{{ .Value }}
 		},
 		|value| {
-			{{- /* Note: Encoding will truncate bytes and handles first. */}}
-			Encoder::encode_with_context(V1_CONTEXT, bytes, handles, value).unwrap();
+			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
+			with_tls_coding_bufs(|bytes, handles| {
+				Encoder::encode_with_context(V1_CONTEXT, bytes, handles, value).unwrap();
+			});
 		},
 		BatchSize::SmallInput,
 	);
