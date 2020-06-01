@@ -5,7 +5,7 @@
 use {
     crate::{
         archive, archive_accessor, configs,
-        data_repository::InspectDataRepository,
+        data_repository::DiagnosticsDataRepository,
         data_stats, diagnostics,
         events::{stream::EventStream, types::EventSource},
         logs,
@@ -172,7 +172,7 @@ impl Archivist {
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
         // in that it has no statically configured selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
-        let all_inspect_repository = Arc::new(RwLock::new(InspectDataRepository::new(None)));
+        let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
 
         // TODO(4601): Refactor this code.
         // Set up loading feedback pipeline configs.

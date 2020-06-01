@@ -42,7 +42,26 @@ use {
 //    5) Converting an unpopulated data map into a populated data map.
 pub static INSPECT_ASYNC_TIMEOUT_SECONDS: i64 = 5;
 
-pub type InspectDataTrie = trie::Trie<String, UnpopulatedInspectDataContainer>;
+pub struct DiagnosticsArtifactsContainer {
+    /// Relative moniker of the component that this artifacts container
+    /// is representing.
+    pub relative_moniker: Vec<String>,
+    /// Container holding the artifacts needed to serve inspect data.
+    /// If absent, this is interpereted as a component existing, but not
+    /// hosting diagnostics data.
+    pub inspect_artifacts_container: Option<InspectArtifactsContainer>,
+}
+
+pub struct InspectArtifactsContainer {
+    /// DirectoryProxy for the out directory that this
+    /// data packet is configured for.
+    pub component_diagnostics_proxy: Arc<DirectoryProxy>,
+    /// Optional hierarchy matcher. If unset, the reader is running
+    /// in all-access mode, meaning no matching or filtering is required.
+    pub inspect_matcher: Option<InspectHierarchyMatcher>,
+}
+
+pub type DiagnosticsDataTrie = trie::Trie<String, DiagnosticsArtifactsContainer>;
 
 pub enum ReadSnapshot {
     Single(Snapshot),
@@ -361,7 +380,8 @@ impl PopulatedInspectDataContainer {
                             },
                             InspectData::File(contents) => match Snapshot::try_from(contents) {
                                 Ok(snapshot) => {
-                                    acc.push(SnapshotData::successful(ReadSnapshot::Single(snapshot), filename));
+                                    acc.push(SnapshotData::successful(
+                                        ReadSnapshot::Single(snapshot), filename));
                                 }
                                 Err(e) => {
                                     acc.push(SnapshotData::failed(
@@ -405,20 +425,20 @@ pub struct UnpopulatedInspectDataContainer {
     pub inspect_matcher: Option<InspectHierarchyMatcher>,
 }
 
-/// InspectDataRepository manages storage of all state needed in order
+/// DiagnosticsDataRepository manages storage of all state needed in order
 /// for the inspect reader to retrieve inspect data when a read is requested.
-pub struct InspectDataRepository {
-    pub data_directories: InspectDataTrie,
+pub struct DiagnosticsDataRepository {
+    pub data_directories: DiagnosticsDataTrie,
     /// Optional static selectors. For the all_access reader, there
     /// are no provided selectors. For all other pipelines, a non-empty
     /// vector is required.
     pub static_selectors: Option<Vec<Arc<Selector>>>,
 }
 
-impl InspectDataRepository {
+impl DiagnosticsDataRepository {
     pub fn new(static_selectors: Option<Vec<Arc<Selector>>>) -> Self {
-        InspectDataRepository {
-            data_directories: InspectDataTrie::new(),
+        DiagnosticsDataRepository {
+            data_directories: DiagnosticsDataTrie::new(),
             static_selectors: static_selectors,
         }
     }
@@ -427,78 +447,173 @@ impl InspectDataRepository {
         self.data_directories.remove(component_id.unique_key());
     }
 
-    pub fn add(
-        &mut self,
-        identifier: ComponentIdentifier,
-        directory_proxy: DirectoryProxy,
-    ) -> Result<(), Error> {
+    pub fn add_new_component(&mut self, identifier: ComponentIdentifier) -> Result<(), Error> {
         let relative_moniker = identifier.relative_moniker_for_selectors();
-        let matched_selectors = match &self.static_selectors {
-            Some(selectors) => Some(selectors::match_component_moniker_against_selectors(
-                &relative_moniker,
-                &selectors,
-            )?),
-            None => None,
-        };
 
-        // The component events stream might contain duplicated events for out/diagnostics
-        // directories of components that already existed before the archivist started or the
-        // archivist itself, make sure we don't track duplicated component diagnostics directories.
+        // The component events stream might contain duplicated events for a component starting and a
+        // component existing, due to races in the synthesis and live-emission. We need to make sure we don't
+        // track duplicate component entries.
         if self.contains(&identifier, &relative_moniker) {
             return Ok(());
         }
 
         let key = identifier.unique_key();
-        match matched_selectors {
-            Some(selectors) => {
-                if !selectors.is_empty() {
-                    self.data_directories.insert(
-                        key,
-                        UnpopulatedInspectDataContainer {
-                            relative_moniker: relative_moniker,
-                            component_diagnostics_proxy: directory_proxy,
-                            inspect_matcher: Some((&selectors).try_into()?),
-                        },
-                    );
-                }
-                Ok(())
-            }
-            None => {
-                self.data_directories.insert(
-                    key,
-                    UnpopulatedInspectDataContainer {
-                        relative_moniker: relative_moniker,
-                        component_diagnostics_proxy: directory_proxy,
-                        inspect_matcher: None,
-                    },
-                );
 
-                Ok(())
+        // We know from the above `contains` check that the diagnostics data container
+        // for this component hasn't been initialized. We are safe to just instaniate
+        // without any ordering checking here.
+        self.data_directories.insert(
+            key,
+            DiagnosticsArtifactsContainer {
+                relative_moniker: relative_moniker,
+                inspect_artifacts_container: None,
+            },
+        );
+
+        Ok(())
+    }
+
+    pub fn add_inspect_artifacts(
+        &mut self,
+        identifier: ComponentIdentifier,
+        directory_proxy: DirectoryProxy,
+    ) -> Result<(), Error> {
+        let relative_moniker = identifier.relative_moniker_for_selectors();
+
+        let key = identifier.unique_key();
+
+        // Create an optional inspect artifact container. If the option is None, this implies
+        // that there existed static selectors, and none of them matched the relative moniker
+        // of the component being inserted. So we can abort insertion.
+        let inspect_artifact_container = match &self.static_selectors {
+            Some(selectors) => {
+                let matched_selectors = selectors::match_component_moniker_against_selectors(
+                    &relative_moniker,
+                    &selectors,
+                )?;
+                match &matched_selectors[..] {
+                    [] => None,
+                    populated_vec => Some(InspectArtifactsContainer {
+                        component_diagnostics_proxy: Arc::new(directory_proxy),
+                        inspect_matcher: Some((populated_vec).try_into()?),
+                    }),
+                }
+            }
+            None => Some(InspectArtifactsContainer {
+                component_diagnostics_proxy: Arc::new(directory_proxy),
+                inspect_matcher: None,
+            }),
+        };
+
+        match inspect_artifact_container {
+            Some(inspect_container) => {
+                self.insert_inspect_artifact_container(inspect_container, key, relative_moniker)
+            }
+            // The Inspect artifact container being None here implies that
+            // there were valid static selectors and none of them applied to
+            // the component currently being processed.
+            None => {
+                return Ok(());
             }
         }
     }
 
+    // Inserts an InspectArtifactsContainer into the data repository.
+    fn insert_inspect_artifact_container(
+        &mut self,
+        inspect_container: InspectArtifactsContainer,
+        key: Vec<String>,
+        relative_moniker: Vec<String>,
+    ) -> Result<(), Error> {
+        let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
+        match diag_repo_entry_opt {
+            Some(diag_repo_entry) => {
+                let diag_repo_entry_values: &mut [DiagnosticsArtifactsContainer] =
+                    diag_repo_entry.get_values_mut();
+
+                match &mut diag_repo_entry_values[..] {
+                    [] => {
+                        // An entry with no values implies that the somehow we observed the
+                        // creation of a component lower in the topology before observing this
+                        // one. If this is the case, just instantiate as though it's our first
+                        // time encountering this moniker segment.
+                        self.data_directories.insert(
+                            key,
+                            DiagnosticsArtifactsContainer {
+                                relative_moniker: relative_moniker,
+                                inspect_artifacts_container: Some(inspect_container),
+                            },
+                        )
+                    }
+                    [existing_diagnostics_artifact_container] => {
+                        // Races may occur between synthesized and real diagnostics_ready
+                        // events, so we must handle de-duplication here.
+                        // TODO(52047): Remove once caching handles ordering issues.
+                        if existing_diagnostics_artifact_container
+                            .inspect_artifacts_container
+                            .is_none()
+                        {
+                            // This is expected to be the most common case. We've encountered the
+                            // diagnostics_ready event for a component that has already been
+                            // observed to be started/existing. We now must update the diagnostics
+                            // artifact container with the inspect artifacts that accompanied the
+                            // diagnostics_ready event.
+                            existing_diagnostics_artifact_container.inspect_artifacts_container =
+                                Some(inspect_container);
+                        }
+                    }
+                    _ => {
+                        return Err(format_err!(
+                            concat!(
+                                "Encountered a diagnostics data repository node with more",
+                                "than one artifact container, moniker: {:?}."
+                            ),
+                            key
+                        ));
+                    }
+                }
+            }
+            // This case is expected to be uncommon; we've encountered a diagnostics_ready
+            // event before a start or existing event!
+            None => self.data_directories.insert(
+                key,
+                DiagnosticsArtifactsContainer {
+                    relative_moniker: relative_moniker,
+                    inspect_artifacts_container: Some(inspect_container),
+                },
+            ),
+        }
+        Ok(())
+    }
+
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
     /// which contain data that should be selected from.
-    pub fn fetch_data(&self) -> Vec<UnpopulatedInspectDataContainer> {
+    pub fn fetch_inspect_data(&self) -> Vec<UnpopulatedInspectDataContainer> {
         return self
             .data_directories
             .iter()
-            .filter_map(
-                |(_, unpopulated_data_container_opt)| match unpopulated_data_container_opt {
-                    Some(unpopulated_data_container) => io_util::clone_directory(
-                        &unpopulated_data_container.component_diagnostics_proxy,
-                        CLONE_FLAG_SAME_RIGHTS,
-                    )
-                    .ok()
-                    .map(|directory| UnpopulatedInspectDataContainer {
-                        relative_moniker: unpopulated_data_container.relative_moniker.clone(),
-                        component_diagnostics_proxy: directory,
-                        inspect_matcher: unpopulated_data_container.inspect_matcher.clone(),
-                    }),
+            .filter_map(|(_, diagnostics_artifacts_container_opt)| {
+                match diagnostics_artifacts_container_opt {
+                    Some(diagnostics_artifacts_container) => {
+                        match &diagnostics_artifacts_container.inspect_artifacts_container {
+                            Some(inspect_artifacts) => io_util::clone_directory(
+                                &inspect_artifacts.component_diagnostics_proxy,
+                                CLONE_FLAG_SAME_RIGHTS,
+                            )
+                            .ok()
+                            .map(|directory| UnpopulatedInspectDataContainer {
+                                relative_moniker: diagnostics_artifacts_container
+                                    .relative_moniker
+                                    .clone(),
+                                component_diagnostics_proxy: directory,
+                                inspect_matcher: inspect_artifacts.inspect_matcher.clone(),
+                            }),
+                            None => None,
+                        }
+                    }
                     None => None,
-                },
-            )
+                }
+            })
             .collect();
     }
 
@@ -708,7 +823,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = InspectDataRepository::new(None);
+        let mut inspect_repo = DiagnosticsDataRepository::new(None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -719,13 +834,109 @@ mod tests {
         });
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
 
         let key = component_id.unique_key();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
+        let mut data_repo = DiagnosticsDataRepository::new(None);
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path,
+            component_name: "foo.cmx".into(),
+        });
+
+        data_repo.add_new_component(component_id.clone()).expect("instantiated new component.");
+
+        let (proxy, _) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        data_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+
+        let key = component_id.unique_key();
+        assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
+        let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
+        assert!(entry.inspect_artifacts_container.is_some());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn data_repo_tolerates_duplicate_new_component_insertions() {
+        let mut data_repo = DiagnosticsDataRepository::new(None);
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path,
+            component_name: "foo.cmx".into(),
+        });
+
+        data_repo.add_new_component(component_id.clone()).expect("instantiated new component.");
+        let duplicate_new_component_insertion = data_repo.add_new_component(component_id.clone());
+        assert!(duplicate_new_component_insertion.is_ok());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
+        let mut data_repo = DiagnosticsDataRepository::new(None);
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path,
+            component_name: "foo.cmx".into(),
+        });
+
+        let (proxy, _) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        data_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
+
+        let false_new_component_result = data_repo.add_new_component(component_id.clone());
+        assert!(false_new_component_result.is_ok());
+
+        // We shouldn't have overwritten the entry. There should still be an inspect
+        // artifacts container.
+        let key = component_id.unique_key();
+        assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
+        let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
+        assert!(entry.inspect_artifacts_container.is_some());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
+        let mut data_repo = DiagnosticsDataRepository::new(None);
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path,
+            component_name: "foo.cmx".into(),
+        });
+
+        data_repo.add_new_component(component_id.clone()).expect("insertion will succeed.");
+        let key = component_id.unique_key();
+        assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
+
+        let mutable_values =
+            data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
+        mutable_values.push(DiagnosticsArtifactsContainer {
+            relative_moniker: component_id.relative_moniker_for_selectors(),
+            inspect_artifacts_container: None,
+        });
+
+        let (proxy, _) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        assert!(data_repo.add_inspect_artifacts(component_id.clone(), proxy).is_err());
     }
 }

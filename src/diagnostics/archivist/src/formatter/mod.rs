@@ -49,6 +49,7 @@ where
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
 pub enum LifecycleEventType {
+    Started,
     Existing,
     DiagnosticsReady,
 }

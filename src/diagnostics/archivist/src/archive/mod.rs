@@ -5,7 +5,7 @@
 use {
     crate::{
         configs,
-        data_repository::InspectDataRepository,
+        data_repository::DiagnosticsDataRepository,
         diagnostics,
         events::types::{
             ComponentEvent, ComponentEventData, ComponentEventStream, ComponentIdentifier,
@@ -579,13 +579,13 @@ pub struct ArchivistState {
     writer: Option<ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    inspect_repository: Arc<RwLock<InspectDataRepository>>,
+    inspect_repository: Arc<RwLock<DiagnosticsDataRepository>>,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
-        inspect_repository: Arc<RwLock<InspectDataRepository>>,
+        inspect_repository: Arc<RwLock<DiagnosticsDataRepository>>,
         writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(
@@ -611,7 +611,7 @@ fn populate_inspect_repo(
         .lock()
         .inspect_repository
         .write()
-        .add(inspect_reader_data.component_id, inspect_directory_proxy)
+        .add_inspect_artifacts(inspect_reader_data.component_id, inspect_directory_proxy)
 }
 
 fn remove_from_inspect_repo(

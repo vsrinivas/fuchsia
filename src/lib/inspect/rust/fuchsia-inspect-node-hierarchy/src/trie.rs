@@ -102,6 +102,17 @@ where
             .try_fold(&self.root, |curr_node, key_fragment| curr_node.children.get(&key_fragment))
     }
 
+    /// Retrieves a mutable node identified by the key fragment vector `key` if it
+    /// exists in the prefix trie, else None.
+    pub fn get_mut(&mut self, key: Vec<K>) -> Option<&mut TrieNode<K, V>>
+    where
+        K: Hash + Eq + Debug,
+    {
+        key.into_iter().try_fold(&mut self.root, |curr_node, key_fragment| {
+            curr_node.children.get_mut(&key_fragment)
+        })
+    }
+
     /// Takes a key fragment sequence in vector form, and a value defined by the
     /// key sequence, and populates the trie creating new nodes where needed, before
     /// inserting the value into the vector of values defined by the provided sequence.
@@ -138,6 +149,10 @@ where
         K: Hash + Eq,
     {
         TrieNode { values: Vec::new(), children: HashMap::new() }
+    }
+
+    pub fn get_values_mut(&mut self) -> &mut Vec<V> {
+        return &mut self.values;
     }
 }
 

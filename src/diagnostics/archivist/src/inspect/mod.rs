@@ -5,7 +5,7 @@
 use {
     crate::{
         data_repository::{
-            InspectDataRepository, Moniker, PopulatedInspectDataContainer, ReadSnapshot,
+            DiagnosticsDataRepository, Moniker, PopulatedInspectDataContainer, ReadSnapshot,
             SnapshotData, UnpopulatedInspectDataContainer,
         },
         diagnostics,
@@ -84,11 +84,11 @@ impl Into<NodeHierarchyData> for SnapshotData {
 ///                       what inspect data is returned by read requests. A none type
 ///                       implies that all available data should be returned.
 ///
-/// inspect_repo: the InspectDataRepository which holds the access-points for all relevant
+/// inspect_repo: the DiagnosticsDataRepository which holds the access-points for all relevant
 ///               inspect data.
 #[derive(Clone)]
 pub struct ReaderServer {
-    pub inspect_repo: Arc<RwLock<InspectDataRepository>>,
+    pub inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
     pub configured_selectors: Option<Vec<Arc<fidl_fuchsia_diagnostics::Selector>>>,
     pub inspect_reader_server_stats: Arc<diagnostics::InspectReaderServerStats>,
 }
@@ -109,7 +109,7 @@ impl Drop for ReaderServer {
 
 impl ReaderServer {
     pub fn new(
-        inspect_repo: Arc<RwLock<InspectDataRepository>>,
+        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
         configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
         inspect_reader_server_stats: Arc<diagnostics::InspectReaderServerStats>,
     ) -> Self {
@@ -460,7 +460,7 @@ impl ReaderServer {
 
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into futures.
-        let inspect_repo_data = self.inspect_repo.read().fetch_data();
+        let inspect_repo_data = self.inspect_repo.read().fetch_inspect_data();
 
         let inspect_repo_length = inspect_repo_data.len();
         let mut inspect_repo_iter = inspect_repo_data.into_iter();
@@ -831,7 +831,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = InspectDataRepository::new(None);
+        let mut inspect_repo = DiagnosticsDataRepository::new(None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -842,11 +842,11 @@ mod tests {
         });
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
-        inspect_repo.add(component_id.clone(), proxy).expect("add to repo");
+        inspect_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
 
         let key = component_id.unique_key();
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
@@ -872,7 +872,7 @@ mod tests {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
-        let inspect_repo = Arc::new(RwLock::new(InspectDataRepository::new(Some(vec![
+        let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(Some(vec![
             Arc::new(child_1_1_selector),
             Arc::new(child_2_selector),
         ]))));
@@ -914,7 +914,7 @@ mod tests {
         }}});
 
         let inspector_arc = Arc::new(inspector);
-        inspect_repo.write().add(component_id.clone(), out_dir_proxy).unwrap();
+        inspect_repo.write().add_inspect_artifacts(component_id.clone(), out_dir_proxy).unwrap();
 
         {
             let reader_server =

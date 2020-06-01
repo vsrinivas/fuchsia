@@ -507,6 +507,14 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
     type Error = anyhow::Error;
 
     fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Error> {
+        selectors[..].try_into()
+    }
+}
+
+impl TryFrom<&[Arc<Selector>]> for InspectHierarchyMatcher {
+    type Error = anyhow::Error;
+
+    fn try_from(selectors: &[Arc<Selector>]) -> Result<Self, Error> {
         let (node_path_regexes, property_regexes): (Vec<_>, Vec<_>) = selectors
             .iter()
             .map(|selector| {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{data_repository::InspectDataRepository, diagnostics, inspect},
+    crate::{data_repository::DiagnosticsDataRepository, diagnostics, inspect},
     anyhow::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{
@@ -26,7 +26,7 @@ use {
 pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
-    inspect_repo: Arc<RwLock<InspectDataRepository>>,
+    inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
     archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
 }
 
@@ -56,7 +56,7 @@ impl ArchiveAccessor {
     /// parameter determines which static configurations scope/restrict the visibility of inspect
     /// data accessed by readers spawned by this accessor.
     pub fn new(
-        inspect_repo: Arc<RwLock<InspectDataRepository>>,
+        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
         archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
     ) -> Self {
         ArchiveAccessor { inspect_repo, archive_accessor_stats }
