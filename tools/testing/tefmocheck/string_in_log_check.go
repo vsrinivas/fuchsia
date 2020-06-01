@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"syscall"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	"go.fuchsia.dev/fuchsia/tools/net/netutilconstants"
@@ -52,5 +53,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Log: SwarmingOutputType})
 	// For fxbug.dev/52719.
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Log: SwarmingOutputType})
+	// For fxbug.dev/43188.
+	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("/dev/net/tun (qemu): %s", syscall.EBUSY.Error()), Log: SwarmingOutputType})
 	return ret
 }
