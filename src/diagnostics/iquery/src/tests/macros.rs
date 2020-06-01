@@ -11,7 +11,7 @@ macro_rules! assert_command {
     (command: $command:expr, golden_basename: $golden:ident, args: [$($arg:expr),*]) => {
         use crate::tests::macros::CommandAssertion;
         let args : Vec<&str> = vec![$($arg),*];
-        assert_command!(@assertion [json], $command, $golden, args, false);
+        assert_command!(@assertion [json, text], $command, $golden, args, false);
     };
 
     (
@@ -22,7 +22,7 @@ macro_rules! assert_command {
     ) => {
         use crate::tests::macros::CommandAssertion;
         let args : Vec<&str> = vec![$($arg),*];
-        assert_command!(@assertion [json], $command, $golden, args, true);
+        assert_command!(@assertion [json, text], $command, $golden, args, true);
     };
 
     (@assertion

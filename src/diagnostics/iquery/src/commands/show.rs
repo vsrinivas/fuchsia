@@ -5,7 +5,8 @@
 use {
     crate::{
         commands::{types::*, utils},
-        types::Error,
+        formatting::text_formatter,
+        types::{Error, ToText},
     },
     argh::FromArgs,
     async_trait::async_trait,
@@ -41,6 +42,15 @@ pub struct ShowCommandResultItem {
 impl PartialOrd for ShowCommandResultItem {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.moniker.cmp(&other.moniker))
+    }
+}
+
+impl ToText for Vec<ShowCommandResultItem> {
+    fn to_text(self) -> String {
+        self.into_iter()
+            .map(|item| text_formatter::format(&item.moniker, item.payload))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 

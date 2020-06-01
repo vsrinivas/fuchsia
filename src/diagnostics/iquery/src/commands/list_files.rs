@@ -32,7 +32,7 @@ pub struct ListFilesCommand {
 impl Command for ListFilesCommand {
     type Result = Vec<String>;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
+    async fn execute(&self) -> Result<Vec<String>, Error> {
         let paths = if self.paths.is_empty() { &*CURRENT_DIR } else { &self.paths };
 
         let mut result = BTreeSet::new();

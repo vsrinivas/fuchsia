@@ -52,6 +52,9 @@ pub async fn execute_command(command: &[&str]) -> Result<String, Error> {
 pub fn assert_result(result: &str, expected: &str) {
     let clean_result = cleanup_variable_strings(&result);
     let Changeset { diffs, distance, .. } = Changeset::new(&clean_result, expected.trim(), "\n");
+    if distance == 0 {
+        return;
+    }
     for diff in &diffs {
         match diff {
             Difference::Same(ref x) => {
@@ -110,6 +113,8 @@ fn cleanup_variable_strings(string: &str) -> String {
     // Replace start_timestamp_nanos in fuchsia.inspect.Health entries.
     let re = Regex::new("\"start_timestamp_nanos\": \\d+").unwrap();
     let string = re.replace_all(&string, "\"start_timestamp_nanos\": \"TIMESTAMP\"").to_string();
+    let re = Regex::new("start_timestamp_nanos = \\d+").unwrap();
+    let string = re.replace_all(&string, "start_timestamp_nanos = TIMESTAMP").to_string();
 
     // Replace instance IDs in paths.
     let re = Regex::new("/\\d+/").unwrap();

@@ -3,7 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{commands::types::*, location::InspectLocation, result::IqueryResult, types::Error},
+    crate::{
+        commands::types::*,
+        formatting::text_formatter,
+        location::InspectLocation,
+        result::IqueryResult,
+        types::{Error, ToText},
+    },
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
@@ -28,6 +34,15 @@ pub struct ShowFileResultItem {
     path: String,
     #[derivative(Ord = "ignore", PartialOrd = "ignore")]
     pub payload: NodeHierarchy,
+}
+
+impl ToText for Vec<ShowFileResultItem> {
+    fn to_text(self) -> String {
+        self.into_iter()
+            .map(|item| text_formatter::format(&item.path, item.payload))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 }
 
 #[async_trait]

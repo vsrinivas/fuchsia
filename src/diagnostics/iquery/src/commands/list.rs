@@ -5,7 +5,7 @@
 use {
     crate::{
         commands::{types::*, utils},
-        types::Error,
+        types::{Error, ToText},
     },
     argh::FromArgs,
     async_trait::async_trait,
@@ -35,6 +35,17 @@ impl PartialOrd for ListResponseItem {
                 ListResponseItem::Component(other_component),
             ) => component.partial_cmp(other_component),
         }
+    }
+}
+
+impl ToText for Vec<ListResponseItem> {
+    fn to_text(self) -> String {
+        self.into_iter()
+            .map(|item| match item {
+                ListResponseItem::Component(string) => string,
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 

@@ -11,7 +11,7 @@ use {
 pub use crate::formatting::{json_formatter::JsonFormatter, text_formatter::TextFormatter};
 
 mod json_formatter;
-mod text_formatter;
+pub mod text_formatter;
 
 pub trait Formatter {
     fn new(path_format: PathFormat, max_depth: Option<u64>, sort: bool) -> Self

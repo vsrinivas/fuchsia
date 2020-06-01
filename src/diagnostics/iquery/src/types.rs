@@ -65,3 +65,19 @@ impl FromStr for Format {
         }
     }
 }
+
+pub trait ToText {
+    fn to_text(self) -> String;
+}
+
+impl ToText for Vec<String> {
+    fn to_text(self) -> String {
+        self.join("\n")
+    }
+}
+
+impl ToText for String {
+    fn to_text(self) -> String {
+        self
+    }
+}

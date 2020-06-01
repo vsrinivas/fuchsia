@@ -22,7 +22,7 @@ pub enum SubCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
 pub struct CommandLine {
-    #[argh(option, default = "Format::Json")]
+    #[argh(option, default = "Format::Text")]
     /// the format to be used to display the results (json, text).
     pub format: Format,
 
@@ -44,8 +44,7 @@ macro_rules! execute_and_format {
                                 .map_err(|e| Error::InvalidCommandResponse(e))
                         }
                         Format::Text => {
-                            // TODO(fxbug.dev/45458): implement
-                            unimplemented!()
+                            Ok(result.to_text())
                         }
                     }
                 }
