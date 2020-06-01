@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
   config.mount_path = kMountPath;
   config.ramdisk_block_count = 1 << 18;  // 128 MB.
   config.format_type = DISK_FORMAT_BLOBFS;
+  config.write_compression_level = 3;
 
   auto parent = std::make_unique<fs::Environment>(config);
   fs::g_environment = parent.get();

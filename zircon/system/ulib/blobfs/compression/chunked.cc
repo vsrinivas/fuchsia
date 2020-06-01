@@ -6,7 +6,6 @@
 
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
-#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <blobfs/compression-settings.h>
@@ -70,6 +69,11 @@ zx_status_t ChunkedCompressor::SetOutput(void* dst, size_t dst_len) {
     return zstatus;
   }
   return ZX_OK;
+}
+
+size_t ChunkedCompressor::BufferMax(size_t input_length) {
+  chunked_compression::CompressionParams params = DefaultParams(input_length);
+  return params.ComputeOutputSizeLimit(input_length);
 }
 
 size_t ChunkedCompressor::Size() const { return compressed_size_.value_or(0ul); }
@@ -166,8 +170,7 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
         decompressor_.DecompressFrame(seek_table_, i, src, max_compressed_size - src_offset, dst,
                                       *uncompressed_size - dst_offset, &bytes_in_frame);
     if (status != chunked_compression::kStatusOk) {
-      FS_TRACE_ERROR("blobfs DecompressFrame failed: %s\n",
-                     zx_status_get_string(ToZxStatus(status)));
+      FS_TRACE_ERROR("blobfs DecompressFrame failed: %d\n", status);
       return ToZxStatus(status);
     }
     src_offset += entry.compressed_size;

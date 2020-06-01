@@ -39,6 +39,10 @@ class ChunkedCompressor : public Compressor {
   // Must be called before |Update()| or |End()| are called.
   zx_status_t SetOutput(void* dst, size_t dst_len);
 
+  // Returns an upper bound on the size of the buffer required to store the compressed
+  // representation of a blob of size `input_length`.
+  static size_t BufferMax(size_t input_length);
+
   ////////////////////////////////////////
   // Compressor interface
   size_t Size() const final;
