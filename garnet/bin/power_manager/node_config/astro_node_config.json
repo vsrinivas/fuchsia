@@ -68,5 +68,10 @@
       "thermal_shutdown_temperature": 95.0,
       "throttle_end_delay": 60.0
     }
+  },
+  {
+    "type": "DriverManagerHandler",
+    "name": "driver_manager_handler",
+    "config": {}
   }
 ]

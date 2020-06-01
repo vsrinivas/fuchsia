@@ -131,6 +131,9 @@
 
                 // Service from appmgr
                 "/svc/fuchsia.tracing.provider.Registry",
+
+                // Service from power_manager
+                "/svc/fuchsia.power.manager.DriverManagerRegistration",
             ],
         },
     ],

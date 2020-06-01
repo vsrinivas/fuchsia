@@ -47,6 +47,7 @@
                 "/svc/fuchsia.boot.RootJob",
                 "/svc/fuchsia.boot.RootJobForInspect",
                 "/svc/fuchsia.kernel.Stats",
+                "/svc/fuchsia.power.manager.DriverManagerRegistration",
             ],
             from: "realm",
             to: [ "#driver_manager" ],

@@ -214,6 +214,7 @@
                 "/svc/fuchsia.pkg.RepositoryManager",
                 "/svc/fuchsia.pkg.rewrite.Engine",
                 "/svc/fuchsia.posix.socket.Provider",
+                "/svc/fuchsia.power.manager.DriverManagerRegistration",
                 "/svc/fuchsia.process.Resolver",
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher",
