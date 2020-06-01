@@ -32,6 +32,18 @@ struct InspectSettings final {
   size_t maximum_size;
 };
 
+// Stats about an inspector.
+struct InspectStats final {
+  // The current number of bytes to store Inspect data.
+  size_t size;
+
+  // The maximum number of bytes that can be used to store Inspect data.
+  size_t maximum_size;
+
+  // The number of dynamic children linked to an Inspector.
+  size_t dynamic_child_count;
+};
+
 // The entry point into the Inspection API.
 //
 // An Inspector wraps a particular tree of Inspect data.
@@ -66,6 +78,9 @@ class Inspector final {
   // The returned bytes will always be a consistent snapshot of the inspector state, truncated to
   // include only relevant bytes from the underlying VMO.
   std::vector<uint8_t> CopyBytes() const;
+
+  // Returns stats about this Inspector.
+  InspectStats GetStats() const;
 
   // Returns a reference to the root node owned by this inspector.
   Node& GetRoot() const;

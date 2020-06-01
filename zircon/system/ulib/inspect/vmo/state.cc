@@ -983,5 +983,15 @@ std::string State::UniqueName(const std::string& prefix) {
   return out.str();
 }
 
+InspectStats State::GetStats() const {
+  InspectStats ret = {};
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  ret.dynamic_child_count = link_callbacks_.size();
+  ret.maximum_size = heap_->maximum_size();
+  ret.size = heap_->size();
+  return ret;
+}
+
 }  // namespace internal
 }  // namespace inspect

@@ -86,6 +86,13 @@ std::vector<uint8_t> Inspector::CopyBytes() const {
   return ret;
 }
 
+InspectStats Inspector::GetStats() const {
+  if (!state_) {
+    return InspectStats{};
+  }
+  return state_->GetStats();
+}
+
 Node& Inspector::GetRoot() const { return *root_; }
 
 std::vector<std::string> Inspector::GetChildNames() const { return state_->GetLinkNames(); }

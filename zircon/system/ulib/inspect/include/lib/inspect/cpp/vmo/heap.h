@@ -60,9 +60,10 @@ class Heap final {
   // Return the current usable size of the VMO.
   size_t size() const { return cur_size_; }
 
- private:
-  static constexpr const size_t kDefaultMaxSize = 256 * 1024;
+  // Return the maximum size of the VMO.
+  size_t maximum_size() const { return max_size_; }
 
+ private:
   // Returns true if the given block is free and of the expected order.
   inline bool IsFreeBlock(BlockIndex block, size_t expected_order) const;
 

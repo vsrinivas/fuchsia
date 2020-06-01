@@ -62,6 +62,28 @@ TEST(Inspect, CreateCopyVmo) {
   EXPECT_EQ(s, string_value->value());
 }
 
+constexpr size_t kPageSize = 4096;
+
+TEST(Inspect, CreateGetStats) {
+  // Limit to 2 pages.
+  Inspector inspector(inspect::InspectSettings{.maximum_size = 2 * kPageSize});
+
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(1 * kPageSize, stats.size);
+  EXPECT_EQ(2 * kPageSize, stats.maximum_size);
+  EXPECT_EQ(0, stats.dynamic_child_count);
+
+  // Fill up the buffer
+  for (int i = 0; i < 1000; i++) {
+    inspector.GetRoot().CreateString(std::to_string(i), "This is a test", &inspector);
+  }
+
+  stats = inspector.GetStats();
+  EXPECT_EQ(2 * kPageSize, stats.size);
+  EXPECT_EQ(2 * kPageSize, stats.maximum_size);
+  EXPECT_EQ(0, stats.dynamic_child_count);
+}
+
 TEST(Inspect, GetLinks) {
   Inspector inspector;
 
@@ -77,6 +99,9 @@ TEST(Inspect, GetLinks) {
   auto children = inspector.GetChildNames();
   ASSERT_EQ(1u, children.size());
   EXPECT_EQ("lazy-0", children[0]);
+
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(1u, stats.dynamic_child_count);
 
   fit::result<Inspector> result;
   fit::single_threaded_executor exec;
@@ -128,6 +153,10 @@ TEST(Inspect, CreateWithVmoInvalidSize) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0 /* size */, 0, &vmo));
   Inspector inspector(std::move(vmo));
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(0, stats.size);
+  EXPECT_EQ(0, stats.maximum_size);
+  EXPECT_EQ(0, stats.dynamic_child_count);
   EXPECT_FALSE(bool(inspector));
 }
 
@@ -138,6 +167,10 @@ TEST(Inspect, CreateWithVmoReadOnly) {
   zx::vmo duplicate;
   ASSERT_OK(vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicate));
   Inspector inspector(std::move(duplicate));
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(0, stats.size);
+  EXPECT_EQ(0, stats.maximum_size);
+  EXPECT_EQ(0, stats.dynamic_child_count);
   EXPECT_FALSE(bool(inspector));
 }
 
@@ -149,6 +182,9 @@ TEST(Inspect, CreateWithVmoDuplicateVmo) {
   ASSERT_OK(
       vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &duplicate));
   Inspector inspector(std::move(duplicate));
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(4096, stats.size);
+  EXPECT_EQ(4096, stats.maximum_size);
   EXPECT_TRUE(bool(inspector));
 }
 
@@ -172,6 +208,10 @@ TEST(Inspect, CreateWithDirtyVmo) {
   EXPECT_EQ(1, hierarchy.node().properties().size());
   EXPECT_EQ("test", hierarchy.node().properties()[0].name());
   EXPECT_EQ(100, hierarchy.node().properties()[0].Get<inspect::UintPropertyValue>().value());
+
+  auto stats = inspector.GetStats();
+  EXPECT_EQ(4096, stats.size);
+  EXPECT_EQ(4096, stats.maximum_size);
 }
 
 TEST(Inspect, UniqueName) {
