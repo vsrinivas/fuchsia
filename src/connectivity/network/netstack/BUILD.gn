@@ -172,6 +172,7 @@ go_library("netstack_lib") {
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/btree",
     "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:go.uber.org/multierr",
     "//third_party/golibs:golang.org/x/net",
     "//third_party/golibs:golang.org/x/time",
     "//third_party/golibs:gvisor.dev/gvisor",

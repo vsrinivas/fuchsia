@@ -140,6 +140,12 @@ go_library("go.opencensus.io") {
   ]
 }
 
+golib("go.uber.org/atomic") {
+}
+golib("go.uber.org/multierr") {
+  deps = [ ":go.uber.org/atomic" ]
+}
+
 ### golang.org/x/*
 golib("golang.org/x/crypto") {
 }

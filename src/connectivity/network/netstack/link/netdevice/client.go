@@ -21,6 +21,7 @@ import (
 
 	"fidl/fuchsia/hardware/network"
 
+	"go.uber.org/multierr"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -400,7 +401,7 @@ func (c *Client) Close() error {
 	c.admin.mu.closed = true
 	c.handler.DetachTx()
 
-	err := link.CombineErrors(
+	err := multierr.Combine(
 		c.device.Close(),
 		// Session also has a Close method, make sure we're calling the ChannelProxy
 		// one.
@@ -411,11 +412,11 @@ func (c *Client) Close() error {
 		c.handler.TxFifo.Close(),
 	)
 	if c.admin.mu.watcher != nil {
-		err = link.AppendError(err, c.admin.mu.watcher.Close())
+		err = multierr.Append(err, c.admin.mu.watcher.Close())
 		c.admin.watcherWg.Wait()
 		c.admin.mu.watcher = nil
 	}
-	return link.AppendError(err, c.changeState(func() (link.State, error) {
+	return multierr.Append(err, c.changeState(func() (link.State, error) {
 		return link.StateClosed, nil
 	}))
 }
