@@ -117,6 +117,8 @@ void AudioDriverV2::Cleanup() {
   writable_ring_buffer = nullptr;
 
   cmd_timeout_.Cancel();
+  stream_config_fidl_ = nullptr;
+  ring_buffer_fidl_ = nullptr;
 }
 
 std::optional<Format> AudioDriverV2::GetFormat() const {
