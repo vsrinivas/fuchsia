@@ -32,7 +32,6 @@ use {
         OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::prelude::*,
     matches::assert_matches,
@@ -40,9 +39,7 @@ use {
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
         default::Default,
-        ffi::CString,
         path::{Path, PathBuf},
-        ptr,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -281,21 +278,12 @@ impl RoutingTest {
     /// exists.
     pub fn install_hippo_dir(&self, path: &str) {
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
+        let ns = fdio::Namespace::installed().expect("Failed to get installed namespace");
+        match ns.bind(path, client_chan) {
+            Ok(()) | Err(zx::Status::ALREADY_EXISTS) => {}
+            Err(status) => panic!("Failed to bind hippo dir: {}", status),
+        }
 
-        let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
-        let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
-        if status != zx::sys::ZX_OK {
-            panic!(
-                "bad status returned for fdio_ns_get_installed: {}",
-                zx::Status::from_raw(status)
-            );
-        }
-        let cstr = CString::new(path).unwrap();
-        let status =
-            unsafe { fdio::fdio_sys::fdio_ns_bind(ns_ptr, cstr.as_ptr(), client_chan.into_raw()) };
-        if status != zx::sys::ZX_OK && status != zx::sys::ZX_ERR_ALREADY_EXISTS {
-            panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
-        }
         let mut out_dir = OutDir::new();
         Self::install_default_out_files(&mut out_dir);
         out_dir.add_directory_proxy(&self.test_dir_proxy);
