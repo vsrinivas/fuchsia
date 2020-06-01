@@ -63,6 +63,7 @@ KEYWORD(Bits, "bits")
 KEYWORD(Const, "const")
 KEYWORD(Enum, "enum")
 KEYWORD(Protocol, "protocol")
+KEYWORD(Resource, "resource")
 KEYWORD(Service, "service")
 KEYWORD(Strict, "strict")
 KEYWORD(Struct, "struct")
@@ -77,6 +78,7 @@ KEYWORD(True, "true")
 KEYWORD(False, "false")
 
 KEYWORD(Reserved, "reserved")
+KEYWORD(Properties, "properties")
 
 #undef KEYWORD
 #undef TOKEN

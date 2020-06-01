@@ -280,6 +280,10 @@ class Parser {
   std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
+  std::unique_ptr<raw::ResourceProperty> ParseResourcePropertyDeclaration();
+  std::unique_ptr<raw::ResourceDeclaration> ParseResourceDeclaration(
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+
   std::unique_ptr<raw::ServiceMember> ParseServiceMember();
   std::unique_ptr<raw::ServiceDeclaration> ParseServiceDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&);

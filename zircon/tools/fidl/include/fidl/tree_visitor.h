@@ -142,6 +142,12 @@ class TreeVisitor {
   virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) {
     element->Accept(this);
   }
+  virtual void OnResourceProperty(std::unique_ptr<ResourceProperty> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnResourceDeclaration(std::unique_ptr<ResourceDeclaration> const& element) {
+    element->Accept(this);
+  }
   virtual void OnServiceMember(std::unique_ptr<ServiceMember> const& element) {
     element->Accept(this);
   }

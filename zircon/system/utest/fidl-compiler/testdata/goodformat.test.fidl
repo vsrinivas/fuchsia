@@ -225,4 +225,10 @@ protocol Example {
         -> ();
 };
 
+resource SomeRes : uint32 {
+    properties {
+        Enum2 subtype;
+    };
+};
+
 // Comments at EOF

@@ -559,6 +559,14 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
           return Fail(ErrCannotBeNullable, args.span);
         break;
 
+      case Decl::Kind::kResource: {
+        // Currently the only resource types are new-style handles,
+        // and they should be resolved to concrete subtypes and
+        // dispatched to the handle template earlier.
+        assert(false);
+        break;
+      }
+
       default:
         if (args.nullability == types::Nullability::kNullable)
           break;
@@ -1280,6 +1288,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kProtocol:
       StoreDecl(decl_ptr, &protocol_declarations_);
       break;
+    case Decl::Kind::kResource:
+      StoreDecl(decl_ptr, &resource_declarations_);
+      break;
     case Decl::Kind::kService:
       StoreDecl(decl_ptr, &service_declarations_);
       break;
@@ -1311,6 +1322,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   switch (kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
+    case Decl::Kind::kResource:
     case Decl::Kind::kService:
     case Decl::Kind::kStruct:
     case Decl::Kind::kTable:
@@ -1406,9 +1418,20 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
       return false;
   }
 
+  // Only one of these should be set, either handle_subtype for "old",
+  // or handle_subtype_identifier for "new". (Neither set is OK too for
+  // an untyped handle.)
+  std::optional<Name> handle_subtype_identifier;
+  assert(!(raw_type_ctor->handle_subtype && raw_type_ctor->handle_subtype_identifier));
+  if (raw_type_ctor->handle_subtype_identifier) {
+    handle_subtype_identifier =
+        Name::CreateSourced(this, raw_type_ctor->handle_subtype_identifier->span());
+  }
+
   *out_type_ctor = std::make_unique<TypeConstructor>(
       std::move(name.value()), std::move(maybe_arg_type_ctor), raw_type_ctor->handle_subtype,
-      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability);
+      std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
+      raw_type_ctor->nullability);
   return true;
 }
 
@@ -1653,11 +1676,40 @@ void Library::ConsumeProtocolDeclaration(
                                           std::move(composed_protocols), std::move(methods)));
 }
 
+bool Library::ConsumeResourceDeclaration(
+    std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
+  std::vector<Resource::Property> properties;
+  for (auto& property : resource_declaration->properties) {
+    std::unique_ptr<TypeConstructor> type_ctor;
+    auto span = property->identifier->span();
+    if (!ConsumeTypeConstructor(std::move(property->type_ctor), span, &type_ctor))
+      return false;
+    auto attributes = std::move(property->attributes);
+    properties.emplace_back(std::move(type_ctor), property->identifier->span(),
+                            std::move(attributes));
+  }
+
+  std::unique_ptr<TypeConstructor> type_ctor;
+  if (resource_declaration->maybe_type_ctor) {
+    if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor),
+                                resource_declaration->span(), &type_ctor))
+      return false;
+  } else {
+    type_ctor = TypeConstructor::CreateSizeType();
+  }
+
+  return RegisterDecl(std::make_unique<Resource>(
+      std::move(resource_declaration->attributes),
+      Name::CreateSourced(this, resource_declaration->identifier->span()), std::move(type_ctor),
+      std::move(properties)));
+}
+
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
                                                                 types::Nullability nullability) {
   return std::make_unique<TypeConstructor>(
       decl->name, nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
-      nullptr /* handle_rights */, nullptr /* maybe_size */, nullability);
+      std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
+      nullptr /* maybe_size */, nullability);
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
@@ -1849,6 +1901,11 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   auto protocol_declaration_list = std::move(file->protocol_declaration_list);
   for (auto& protocol_declaration : protocol_declaration_list) {
     step.ForProtocolDeclaration(std::move(protocol_declaration));
+  }
+
+  auto resource_declaration_list = std::move(file->resource_declaration_list);
+  for (auto& resource_declaration : resource_declaration_list) {
+    step.ForResourceDeclaration(std::move(resource_declaration));
   }
 
   auto service_declaration_list = std::move(file->service_declaration_list);
@@ -2462,6 +2519,11 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       }
       break;
     }
+    case Decl::Kind::kResource: {
+      auto resource_decl = static_cast<const Resource*>(decl);
+      maybe_add_decl(resource_decl->subtype_ctor.get());
+      break;
+    }
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
       for (const auto& member : service_decl->members) {
@@ -2615,6 +2677,12 @@ bool Library::CompileDecl(Decl* decl) {
         return false;
       break;
     }
+    case Decl::Kind::kResource: {
+      auto resource_decl = static_cast<Resource*>(decl);
+      if (!CompileResource(resource_decl))
+        return false;
+      break;
+    }
     case Decl::Kind::kService: {
       auto service_decl = static_cast<Service*>(decl);
       if (!CompileService(service_decl))
@@ -2714,6 +2782,21 @@ void Library::VerifyDeclAttributes(Decl* decl) {
             ValidateAttributesConstraints(method.maybe_response, method.attributes.get());
           }
         }
+      }
+      break;
+    }
+    case Decl::Kind::kResource: {
+      auto resource_declaration = static_cast<Resource*>(decl);
+      // Attributes: check placement.
+      ValidateAttributesPlacement(AttributeSchema::Placement::kResourceDecl,
+                                  resource_declaration->attributes.get());
+      for (const auto& property : resource_declaration->properties) {
+        ValidateAttributesPlacement(AttributeSchema::Placement::kResourceProperty,
+                                    property.attributes.get());
+      }
+      if (placement_ok.NoNewErrors()) {
+        // Attributes: check constraints.
+        ValidateAttributesConstraints(resource_declaration, resource_declaration->attributes.get());
       }
       break;
     }
@@ -2929,6 +3012,28 @@ bool Library::CompileEnum(Enum* enum_declaration) {
 }
 
 bool HasSimpleLayout(const Decl* decl) { return decl->HasAttribute("ForDeprecatedCBindings"); }
+
+bool Library::CompileResource(Resource* resource_declaration) {
+  Scope<std::string_view> scope;
+  if (!CompileTypeConstructor(resource_declaration->subtype_ctor.get()))
+    return false;
+
+  if (resource_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
+    return Fail(ErrEnumTypeMustBeIntegralPrimitive, *resource_declaration,
+                resource_declaration->subtype_ctor->type);
+  }
+
+  for (auto& property : resource_declaration->properties) {
+    auto name_result = scope.Insert(property.name.data(), property.name);
+    if (!name_result.ok())
+      return Fail(ErrDuplicateResourcePropertyName, property.name,
+                  name_result.previous_occurrence());
+
+    if (!CompileTypeConstructor(property.type_ctor.get()))
+      return false;
+  }
+  return true;
+}
 
 bool Library::CompileProtocol(Protocol* protocol_declaration) {
   MethodScope method_scope;
@@ -3175,16 +3280,74 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
     return false;
   }
 
+  std::optional<types::HandleSubtype> handle_subtype;
+  if (type_ctor->handle_subtype) {
+    assert(!type_ctor->handle_subtype_identifier &&
+           "cannot have both new and old style handle syntax");
+    handle_subtype = type_ctor->handle_subtype;
+  } else if (type_ctor->handle_subtype_identifier) {
+    types::HandleSubtype subtype;
+    if (!ResolveHandleSubtypeIdentifier(type_ctor, &subtype)) {
+      return Fail(ErrCouldNotResolveHandleSubtype);
+    }
+    handle_subtype = subtype;
+  }
+
   if (type_ctor->handle_rights)
     if (!ResolveConstant(type_ctor->handle_rights.get(), &kRightsType))
       return Fail(ErrCouldNotResolveHandleRights);
 
-  if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype,
+  if (!typespace_->Create(type_ctor->name, maybe_arg_type, handle_subtype,
                           type_ctor->handle_rights.get(), size, type_ctor->nullability,
                           &type_ctor->type, &type_ctor->from_type_alias))
     return false;
 
   return true;
+}
+
+bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor,
+                                             types::HandleSubtype* subtype) {
+  assert(type_ctor->handle_subtype_identifier);
+
+  // We only support an extremely limited form of resource suitable for
+  // handles here, where it must be:
+  // - derived from uint32
+  // - have a single properties element
+  // - the single property element must be a reference to an enum
+  // - the single property must be named "subtype".
+
+  Decl* handle_decl = LookupDeclByName(type_ctor->name);
+  if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
+    return Fail(ErrHandleSubtypeNotResource, type_ctor->name);
+  }
+
+  auto* resource = static_cast<Resource*>(handle_decl);
+  if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
+    return Fail(ErrResourceMustBeUint32Derived, resource->name);
+  }
+  if (resource->properties.size() != 1 || resource->properties[0].name.data() != "subtype") {
+    return Fail(ErrResourceCanOnlyHaveSubtypeProperty, resource->name);
+  }
+
+  Decl* subtype_decl = LookupDeclByName(resource->properties[0].type_ctor->name);
+  if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
+    return Fail(ErrResourceSubtypePropertyMustReferToEnum, resource->name);
+  }
+
+  auto* subtype_enum = static_cast<Enum*>(subtype_decl);
+  for (const auto& member : subtype_enum->members) {
+    if (member.name.data() == type_ctor->handle_subtype_identifier->span()->data()) {
+      if (!ResolveConstant(member.value.get(), &kHandleSubtypeType)) {
+        return false;
+      }
+      const flat::ConstantValue& value = member.value->Value();
+      auto numeric_constant = reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value);
+      *subtype = types::HandleSubtype(static_cast<uint32_t>(numeric_constant));
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size) {
@@ -3348,8 +3511,8 @@ const std::set<Library*>& Library::dependencies() const { return dependencies_.d
 std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   return std::make_unique<TypeConstructor>(
       Name::CreateIntrinsic("uint32"), nullptr /* maybe_arg_type */,
-      std::optional<types::HandleSubtype>(), nullptr /* handle_rights */, nullptr /* maybe_size */,
-      types::Nullability::kNonnullable);
+      std::optional<types::HandleSubtype>(), std::optional<Name>() /* handle_subtype_identifier */,
+      nullptr /* handle_rights */, nullptr /* maybe_size */, types::Nullability::kNonnullable);
 }
 
 }  // namespace flat

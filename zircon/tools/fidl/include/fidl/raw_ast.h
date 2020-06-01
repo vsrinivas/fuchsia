@@ -261,12 +261,14 @@ class TypeConstructor final : public SourceElement {
   TypeConstructor(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                   std::optional<types::HandleSubtype> handle_subtype,
+                  std::unique_ptr<Identifier> handle_subtype_identifier,
                   std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
                   types::Nullability nullability)
       : SourceElement(element),
         identifier(std::move(identifier)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
         handle_subtype(handle_subtype),
+        handle_subtype_identifier(std::move(handle_subtype_identifier)),
         handle_rights(std::move(handle_rights)),
         maybe_size(std::move(maybe_size)),
         nullability(nullability) {}
@@ -276,6 +278,7 @@ class TypeConstructor final : public SourceElement {
   std::unique_ptr<CompoundIdentifier> identifier;
   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
   std::optional<types::HandleSubtype> handle_subtype;
+  std::unique_ptr<Identifier> handle_subtype_identifier;
   std::unique_ptr<Constant> handle_rights;
   std::unique_ptr<Constant> maybe_size;
   types::Nullability nullability;
@@ -482,6 +485,43 @@ class ProtocolDeclaration final : public SourceElement {
   std::vector<std::unique_ptr<ProtocolMethod>> methods;
 };
 
+class ResourceProperty final : public SourceElement {
+ public:
+  ResourceProperty(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+                   std::unique_ptr<Identifier> identifier,
+                   std::unique_ptr<AttributeList> attributes)
+      : SourceElement(element),
+        type_ctor(std::move(type_ctor)),
+        identifier(std::move(identifier)),
+        attributes(std::move(attributes)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<Identifier> identifier;
+  std::unique_ptr<AttributeList> attributes;
+};
+
+class ResourceDeclaration final : public SourceElement {
+ public:
+  ResourceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                      std::unique_ptr<Identifier> identifier,
+                      std::unique_ptr<TypeConstructor> maybe_type_ctor,
+                      std::vector<std::unique_ptr<ResourceProperty>> properties)
+      : SourceElement(element),
+        attributes(std::move(attributes)),
+        identifier(std::move(identifier)),
+        maybe_type_ctor(std::move(maybe_type_ctor)),
+        properties(std::move(properties)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Identifier> identifier;
+  std::unique_ptr<TypeConstructor> maybe_type_ctor;
+  std::vector<std::unique_ptr<ResourceProperty>> properties;
+};
+
 class ServiceMember final : public SourceElement {
  public:
   ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
@@ -669,6 +709,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
        std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
        std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list,
+       std::vector<std::unique_ptr<ResourceDeclaration>> resource_declaration_list,
        std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list,
        std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
@@ -681,6 +722,7 @@ class File final : public SourceElement {
         const_declaration_list(std::move(const_declaration_list)),
         enum_declaration_list(std::move(enum_declaration_list)),
         protocol_declaration_list(std::move(protocol_declaration_list)),
+        resource_declaration_list(std::move(resource_declaration_list)),
         service_declaration_list(std::move(service_declaration_list)),
         struct_declaration_list(std::move(struct_declaration_list)),
         table_declaration_list(std::move(table_declaration_list)),
@@ -696,6 +738,7 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
   std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
   std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list;
+  std::vector<std::unique_ptr<ResourceDeclaration>> resource_declaration_list;
   std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list;
   std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;

@@ -448,9 +448,10 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,
             return "fidl_table_t";
           case flat::Decl::Kind::kProtocol:
             return "zx_handle_t";
+          case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:
-            assert(false && "no C name for service or type alias");
+            assert(false && "no C name");
             break;
         }
       }

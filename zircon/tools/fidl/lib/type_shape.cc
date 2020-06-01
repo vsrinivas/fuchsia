@@ -155,6 +155,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
             assert(false && "UnalignedSize(flat::IdentifierType&) called on invalid nullable kind");
@@ -294,6 +295,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
             assert(false && "Alignment(flat::IdentifierType&) called on invalid nullable kind");
@@ -436,17 +438,19 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kTable:
+          case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTypeAlias:
             assert(false && "Depth(flat::IdentifierType&) called on invalid nullable kind");
             return DataSize(0);
         }
       case types::Nullability::kNonnullable:
         switch (object.type_decl->kind) {
-          case flat::Decl::Kind::kProtocol:
-          case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kProtocol:
+          case flat::Decl::Kind::kResource:
+          case flat::Decl::Kind::kService:
             return DataSize(0);
           case flat::Decl::Kind::kUnion:
           case flat::Decl::Kind::kTable:
@@ -698,6 +702,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
             assert(false && "MaxOutOfLine(flat::IdentifierType&) called on invalid nullable kind");
@@ -853,6 +858,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
             assert(false && "HasPadding(flat::IdentifierType&) called on invalid nullable kind");

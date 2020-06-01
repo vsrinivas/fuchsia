@@ -112,7 +112,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   virtual void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) override {
     OnBlankLineRequiringNode();
-    ScopedBool mem(is_enum_or_bits_decl_, true);
+    ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
     TreeVisitor::OnEnumDeclaration(element);
   }
 
@@ -124,7 +124,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   virtual void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) override {
     OnBlankLineRequiringNode();
-    ScopedBool mem(is_enum_or_bits_decl_, true);
+    ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
     TreeVisitor::OnBitsDeclaration(element);
   }
 
@@ -143,6 +143,16 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     ScopedBool before(blank_space_before_colon_, false);
     ScopedBool mem(is_member_decl_);
     TreeVisitor::OnProtocolMethod(element);
+  }
+
+  virtual void OnResourceProperty(std::unique_ptr<ResourceProperty> const& element) override {
+    TreeVisitor::OnResourceProperty(element);
+  }
+
+  virtual void OnResourceDeclaration(std::unique_ptr<ResourceDeclaration> const& element) override {
+    OnBlankLineRequiringNode();
+    ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
+    TreeVisitor::OnResourceDeclaration(element);
   }
 
   virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) override {
@@ -201,8 +211,8 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) override {
     ScopedIncrement si(nested_type_depth_);
-    ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_decl_);
-    ScopedBool after_colon(blank_space_after_colon_, is_enum_or_bits_decl_);
+    ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_or_resource_decl_);
+    ScopedBool after_colon(blank_space_after_colon_, is_enum_or_bits_or_resource_decl_);
     TreeVisitor::OnTypeConstructor(element);
   }
 
@@ -412,7 +422,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   void OnBlankLineRespectingNode() { blank_line_respecting_node_ = true; }
 
-  bool is_enum_or_bits_decl_ = false;
+  bool is_enum_or_bits_or_resource_decl_ = false;
   bool is_member_decl_ = false;
   bool is_param_decl_ = false;
 

@@ -68,6 +68,7 @@ struct Decl {
     kConst,
     kEnum,
     kProtocol,
+    kResource,
     kService,
     kStruct,
     kTable,
@@ -117,11 +118,13 @@ struct TypeConstructor final {
 
   TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                   std::optional<types::HandleSubtype> handle_subtype,
+                  std::optional<Name> handle_subtype_identifier,
                   std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
                   types::Nullability nullability)
       : name(std::move(name)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
         handle_subtype(handle_subtype),
+        handle_subtype_identifier(std::move(handle_subtype_identifier)),
         handle_rights(std::move(handle_rights)),
         maybe_size(std::move(maybe_size)),
         nullability(nullability) {}
@@ -133,6 +136,7 @@ struct TypeConstructor final {
   const Name name;
   const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
   const std::optional<types::HandleSubtype> handle_subtype;
+  const std::optional<Name> handle_subtype_identifier;
   const std::unique_ptr<Constant> handle_rights;
   const std::unique_ptr<Constant> maybe_size;
   const types::Nullability nullability;
@@ -473,6 +477,29 @@ struct Protocol final : public TypeDecl {
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
+struct Resource final : public Decl {
+  struct Property {
+    Property(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+             std::unique_ptr<raw::AttributeList> attributes)
+        : type_ctor(std::move(type_ctor)),
+          name(std::move(name)),
+          attributes(std::move(attributes)) {}
+    std::unique_ptr<TypeConstructor> type_ctor;
+    SourceSpan name;
+    std::unique_ptr<raw::AttributeList> attributes;
+  };
+
+  Resource(std::unique_ptr<raw::AttributeList> attributes, Name name,
+           std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Property> properties)
+      : Decl(Kind::kResource, std::move(attributes), std::move(name)),
+        subtype_ctor(std::move(subtype_ctor)),
+        properties(std::move(properties)) {}
+
+  // Set during construction.
+  std::unique_ptr<TypeConstructor> subtype_ctor;
+  std::vector<Property> properties;
+};
+
 struct TypeAlias final : public Decl {
   TypeAlias(std::unique_ptr<raw::AttributeList> attributes, Name name,
             std::unique_ptr<TypeConstructor> partial_type_ctor)
@@ -577,6 +604,8 @@ class AttributeSchema {
     kProtocolDecl,
     kLibrary,
     kMethod,
+    kResourceDecl,
+    kResourceProperty,
     kServiceDecl,
     kServiceMember,
     kStructDecl,
@@ -756,6 +785,7 @@ class Library {
   void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
   void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
+  bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
   bool ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
                             bool anonymous, Struct** out_struct_decl);
   bool CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
@@ -780,6 +810,7 @@ class Library {
   bool CompileConst(Const* const_declaration);
   bool CompileEnum(Enum* enum_declaration);
   bool CompileProtocol(Protocol* protocol_declaration);
+  bool CompileResource(Resource* resource_declaration);
   bool CompileService(Service* service_decl);
   bool CompileStruct(Struct* struct_declaration);
   bool CompileTable(Table* table_declaration);
@@ -791,6 +822,7 @@ class Library {
   bool CompileTypeConstructor(TypeConstructor* type);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
+  bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, types::HandleSubtype* subtype);
   bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
   bool ResolveOrOperatorConstant(Constant* constant, const Type* type,
                                  const ConstantValue& left_operand,
@@ -833,6 +865,7 @@ class Library {
   std::vector<std::unique_ptr<Const>> const_declarations_;
   std::vector<std::unique_ptr<Enum>> enum_declarations_;
   std::vector<std::unique_ptr<Protocol>> protocol_declarations_;
+  std::vector<std::unique_ptr<Resource>> resource_declarations_;
   std::vector<std::unique_ptr<Service>> service_declarations_;
   std::vector<std::unique_ptr<Struct>> struct_declarations_;
   std::vector<std::unique_ptr<Table>> table_declarations_;
@@ -851,6 +884,10 @@ class Library {
   const Name kRightsTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kRightsType =
       PrimitiveType(kRightsTypeName, types::PrimitiveSubtype::kUint32);
+
+  const Name kHandleSubtypeTypeName = Name::CreateIntrinsic("uint32");
+  const PrimitiveType kHandleSubtypeType =
+      PrimitiveType(kHandleSubtypeTypeName, types::PrimitiveSubtype::kUint32);
 
   std::unique_ptr<raw::AttributeList> attributes_;
 
@@ -907,6 +944,9 @@ class ConsumeStep : public StepBase {
   }
   void ForProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
     library_->ConsumeProtocolDeclaration(std::move(protocol_declaration));
+  }
+  void ForResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
+    library_->ConsumeResourceDeclaration(std::move(resource_declaration));
   }
   void ForServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
     library_->ConsumeServiceDeclaration(std::move(service_decl));

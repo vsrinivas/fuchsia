@@ -472,6 +472,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
       break;
     }
     case flat::Decl::Kind::kConst:
+    case flat::Decl::Kind::kResource:
     case flat::Decl::Kind::kService:
     case flat::Decl::Kind::kTypeAlias:
       // Nothing to do.

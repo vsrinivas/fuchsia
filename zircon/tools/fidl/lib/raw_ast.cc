@@ -76,6 +76,8 @@ void TypeConstructor::Accept(TreeVisitor* visitor) const {
     visitor->OnTypeConstructor(maybe_arg_type_ctor);
   if (handle_subtype)
     visitor->OnHandleSubtype(handle_subtype.value());
+  if (handle_subtype_identifier)
+    visitor->OnIdentifier(handle_subtype_identifier);
   if (maybe_size != nullptr)
     visitor->OnConstant(maybe_size);
   visitor->OnNullability(nullability);
@@ -204,6 +206,29 @@ void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
   }
 }
 
+void ResourceProperty::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnTypeConstructor(type_ctor);
+  visitor->OnIdentifier(identifier);
+}
+
+void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnIdentifier(identifier);
+  if (maybe_type_ctor != nullptr) {
+    visitor->OnTypeConstructor(maybe_type_ctor);
+  }
+  for (auto property = properties.begin(); property != properties.end(); ++property) {
+    visitor->OnResourceProperty(*property);
+  }
+}
+
 void ServiceMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
@@ -323,6 +348,9 @@ void File::Accept(TreeVisitor* visitor) const {
   }
   for (auto& i : protocol_declaration_list) {
     visitor->OnProtocolDeclaration(i);
+  }
+  for (auto& i : resource_declaration_list) {
+    visitor->OnResourceDeclaration(i);
   }
   for (auto& i : service_declaration_list) {
     visitor->OnServiceDeclaration(i);

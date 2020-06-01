@@ -60,6 +60,8 @@ namespace {
   DO(ProtocolMethod)          \
   DO(ComposeProtocol)         \
   DO(ProtocolDeclaration)     \
+  DO(ResourceDeclaration)     \
+  DO(ResourceProperty)        \
   DO(ServiceMember)           \
   DO(ServiceDeclaration)      \
   DO(StructMember)            \
@@ -191,6 +193,15 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::ProtocolDeclaration, *element);
     TreeVisitor::OnProtocolDeclaration(element);
   }
+  void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override {
+    CheckSpanOfType(ElementType::ResourceProperty, *element);
+    TreeVisitor::OnResourceProperty(element);
+  }
+  void OnResourceDeclaration(
+      std::unique_ptr<fidl::raw::ResourceDeclaration> const& element) override {
+    CheckSpanOfType(ElementType::ResourceDeclaration, *element);
+    TreeVisitor::OnResourceDeclaration(element);
+  }
   void OnServiceMember(std::unique_ptr<fidl::raw::ServiceMember> const& element) override {
     CheckSpanOfType(ElementType::ServiceMember, *element);
     TreeVisitor::OnServiceMember(element);
@@ -318,6 +329,7 @@ const std::vector<TestCase> test_cases = {
     {ElementType::Identifier,
      {
          R"FIDL(library «x»; struct «S» { «int64» «i»; };)FIDL",
+         R"FIDL(library «x»; struct «S» { «handle»:«THREAD» «h»; };)FIDL",
      }},
     {ElementType::CompoundIdentifier,
      {
@@ -399,12 +411,16 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
          R"FIDL(library x; «using y as z»;)FIDL",
          R"FIDL(library x; «using y = int32»;)FIDL",
      }},
+    {ElementType::ResourceDeclaration, {R"FIDL(
+     library example; «resource Res : uint32 { properties { Enum subtype; }; }»;)FIDL"}},
+    {ElementType::ResourceProperty, {R"FIDL(
+     library example; resource Res : uint32 { properties { «Enum subtype»; }; };)FIDL"}},
     {ElementType::ProtocolDeclaration,
      {
          R"FIDL(library x; «protocol X {}»;)FIDL",
          R"FIDL(library x; «[attr] protocol X { compose OtherProtocol; }»;)FIDL",
      }},
-    {ElementType::ProtocolMethod, // Method
+    {ElementType::ProtocolMethod,  // Method
      {
          R"FIDL(library x; protocol X { «Method(int32 a) -> (bool res)»; };)FIDL",
          R"FIDL(library x; protocol X { «-> Event(bool res)»; };)FIDL",
@@ -416,7 +432,7 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
          R"FIDL(library x; protocol X { «Method(int32 a) -> ()»; };)FIDL",
          R"FIDL(library x; protocol X { «Method(int32 a) -> (bool res, int32 res2)»; };)FIDL",
      }},
-    {ElementType::ProtocolMethod, // Event
+    {ElementType::ProtocolMethod,  // Event
      {
          R"FIDL(library x; protocol X { «-> Event()»; };)FIDL",
          R"FIDL(library x; protocol X { «[attr] -> Event(bool res, int32 res2)»; };)FIDL",
@@ -492,6 +508,7 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
          R"FIDL(library x; const «int32» x = 1;)FIDL",
          R"FIDL(library x; const «handle<vmo, zx.rights.READ>?» x = 1;)FIDL",
          R"FIDL(library x; const «Foo<«Bar<«handle<vmo>»>:20»>?» x = 1;)FIDL",
+         R"FIDL(library x; const «handle:VMO» x = 1;)FIDL",
      }},
 };
 

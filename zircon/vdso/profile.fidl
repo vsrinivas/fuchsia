@@ -37,6 +37,6 @@ struct ProfileInfo {
 protocol profile {
     /// Create a scheduler profile.
     /// Rights: root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
-    profile_create(handle<job> root_job, uint32 options, ProfileInfo profile)
-        -> (status status, handle<profile> out);
+    profile_create(handle:JOB root_job, uint32 options, ProfileInfo profile)
+        -> (status status, handle:PROFILE out);
 };

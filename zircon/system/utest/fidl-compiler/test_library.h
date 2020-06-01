@@ -173,6 +173,15 @@ class TestLibrary final {
     return nullptr;
   }
 
+  const fidl::flat::Resource* LookupResource(const std::string& name) {
+    for (const auto& resource_decl : library_->resource_declarations_) {
+      if (resource_decl->GetName() == name) {
+        return resource_decl.get();
+      }
+    }
+    return nullptr;
+  }
+
   const fidl::flat::Service* LookupService(const std::string& name) {
     for (const auto& service_decl : library_->service_declarations_) {
       if (service_decl->GetName() == name) {

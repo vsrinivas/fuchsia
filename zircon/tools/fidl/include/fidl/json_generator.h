@@ -115,6 +115,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Protocol& value);
   void Generate(const flat::Protocol::MethodWithInfo& value);
   void Generate(const flat::LiteralConstant& value);
+  void Generate(const flat::Resource& value);
+  void Generate(const flat::Resource::Property& value);
   void Generate(const flat::Service& value);
   void Generate(const flat::Service::Member& value);
   void Generate(const flat::Struct& value);

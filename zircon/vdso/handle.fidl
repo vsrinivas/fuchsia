@@ -4,8 +4,8 @@
 
 library zx;
 
-[Transport = "Syscall"]
-protocol handle {
+[Transport = "Syscall", NoProtocolPrefix]
+protocol handlefuncs {
     /// Close a handle.
     /// Rights: None.
     handle_close([Release] handle handle) -> (status status);

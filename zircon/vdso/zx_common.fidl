@@ -56,3 +56,42 @@ const uint64 CHANNEL_MAX_MSG_BYTES = 65536;
 const uint64 CHANNEL_MAX_MSG_HANDLES = 64;
 const uint64 MAX_NAME_LEN = 32;
 const uint64 MAX_CPUS = 512;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    PROCESS = 1;
+    THREAD = 2;
+    VMO = 3;
+    CHANNEL = 4;
+    EVENT = 5;
+    PORT = 6;
+    INTERRUPT = 9;
+    PCI_DEVICE = 11;
+    LOG = 12;
+    SOCKET = 14;
+    RESOURCE = 15;
+    EVENTPAIR = 16;
+    JOB = 17;
+    VMAR = 18;
+    FIFO = 19;
+    GUEST = 20;
+    VCPU = 21;
+    TIMER = 22;
+    IOMMU = 23;
+    BTI = 24;
+    PROFILE = 25;
+    PMT = 26;
+    SUSPEND_TOKEN = 27;
+    PAGER = 28;
+    EXCEPTION = 29;
+    CLOCK = 30;
+    STREAM = 31;
+    MSI_ALLOCATION = 32;
+    MSI_INTERRUPT = 33;
+};
+
+resource handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};

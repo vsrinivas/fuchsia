@@ -361,6 +361,27 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateTypeShapes(prefix, value, true);
 }
 
+void JSONGenerator::Generate(const flat::Resource::Property& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameSpan(value.name));
+    GenerateTypeAndFromTypeAlias(*value.type_ctor);
+    if (value.attributes)
+      GenerateObjectMember("maybe_attributes", value.attributes);
+  });
+}
+
+void JSONGenerator::Generate(const flat::Resource& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameSpan(value.name));
+    if (value.attributes)
+      GenerateObjectMember("maybe_attributes", value.attributes);
+    GenerateTypeAndFromTypeAlias(*value.subtype_ctor);
+    GenerateObjectMember("properties", value.properties);
+  });
+}
+
 void JSONGenerator::Generate(const flat::Service& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
@@ -613,15 +634,17 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
     for (const auto& decl : library->enum_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "enum");
 
+    for (const auto& decl : library->resource_declarations_)
+      GenerateDeclarationsEntry(count++, decl->name, "experimental_resource");
+
     for (const auto& decl : library->protocol_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "interface");
 
     for (const auto& decl : library->service_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "service");
 
-    for (const auto& decl : library->struct_declarations_) {
+    for (const auto& decl : library->struct_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "struct");
-    }
 
     for (const auto& decl : library->table_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "table");
@@ -732,6 +755,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("bits_declarations", library_->bits_declarations_);
     GenerateObjectMember("const_declarations", library_->const_declarations_);
     GenerateObjectMember("enum_declarations", library_->enum_declarations_);
+    GenerateObjectMember("experimental_resource_declarations", library_->resource_declarations_);
     GenerateObjectMember("interface_declarations", library_->protocol_declarations_);
     GenerateObjectMember("service_declarations", library_->service_declarations_);
     GenerateObjectMember("struct_declarations", AllStructs(library_));

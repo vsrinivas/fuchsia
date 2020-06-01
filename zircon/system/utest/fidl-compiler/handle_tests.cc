@@ -119,6 +119,46 @@ struct MyStruct {
   END_TEST;
 }
 
+bool handle_fidl_defined_test() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    PROCESS = 1;
+    THREAD = 2;
+    VMO = 3;
+};
+
+resource handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+struct MyStruct {
+  handle:THREAD a;
+  // TODO(fxbug.dev/51001): Parse with <>, e.g. handle:<PROCESS> b;
+  // TODO(fxbug.dev/51001): Parse with <> and rights, e.g. handle:<VMO, 1> c;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_TRUE(library.Compile());
+  auto a = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
+  EXPECT_FALSE(a->handle_subtype.has_value());
+  EXPECT_TRUE(a->handle_subtype_identifier.has_value());
+  ASSERT_TRUE(a->handle_subtype_identifier.value().span()->data() == "THREAD");
+  ASSERT_NULL(a->handle_rights);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(handle_tests)
@@ -126,4 +166,5 @@ RUN_TEST(handle_rights_test)
 RUN_TEST(no_handle_rights_test)
 RUN_TEST(invalid_handle_rights_test)
 RUN_TEST(plain_handle_test)
+RUN_TEST(handle_fidl_defined_test)
 END_TEST_CASE(handle_tests)

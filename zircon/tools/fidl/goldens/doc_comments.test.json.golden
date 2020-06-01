@@ -166,6 +166,7 @@
       "strict": true
     }
   ],
+  "experimental_resource_declarations": [],
   "interface_declarations": [
     {
       "name": "test.name/Interface",

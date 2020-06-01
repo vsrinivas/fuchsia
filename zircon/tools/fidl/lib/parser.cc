@@ -495,6 +495,12 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   if (!Ok())
     return Fail();
   std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
+  // Either handle_subtype or handle_subtype_identifier will be set.
+  // handle_subtype is the old version with a hardcoded set of handle subtypes,
+  // handle_subtype_identifier is used otherwise, which allows deferral of the
+  // mapping (which is looked up in the handle resource later). Old handle
+  // subtypes are handle<job>, whereas new fidl-defined handle subtypes are
+  // constraints, e.g. handle:JOB.
   std::optional<types::HandleSubtype> handle_subtype;
   std::unique_ptr<raw::Constant> handle_rights;
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
@@ -503,10 +509,10 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     bool is_handle_identifier =
         identifier->components.size() == 1 && identifier->components[0]->span().data() == "handle";
     if (is_handle_identifier) {
-      auto identifier = ParseIdentifier(true);
+      auto sub_identifier = ParseIdentifier(true);
       if (!Ok())
         return Fail();
-      if (!LookupHandleSubtype(identifier.get(), &handle_subtype))
+      if (!LookupHandleSubtype(sub_identifier.get(), &handle_subtype))
         return Fail();
       if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights)) {
         if (MaybeConsumeToken(OfKind(Token::Kind::kComma))) {
@@ -523,10 +529,15 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
       return Fail();
   }
   std::unique_ptr<raw::Constant> maybe_size;
+  std::unique_ptr<raw::Identifier> handle_subtype_identifier;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
-    maybe_size = ParseConstant();
+    if (identifier->components.back()->span().data() == "handle") {
+      handle_subtype_identifier = ParseIdentifier();
+    } else {
+      maybe_size = ParseConstant();
+    }
     if (!Ok())
       return Fail();
   }
@@ -539,7 +550,8 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
 
   return std::make_unique<raw::TypeConstructor>(
       scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
-      handle_subtype, std::move(handle_rights), std::move(maybe_size), nullability);
+      handle_subtype, std::move(handle_subtype_identifier), std::move(handle_rights),
+      std::move(maybe_size), nullability);
 }
 
 std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
@@ -947,6 +959,102 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
       std::move(composed_protocols), std::move(methods));
 }
 
+std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration() {
+  ASTScope scope(this);
+  auto attributes = MaybeParseAttributeList();
+  if (!Ok())
+    return Fail();
+  auto type_ctor = ParseTypeConstructor();
+  if (!Ok())
+    return Fail();
+  auto identifier = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::ResourceProperty>(scope.GetSourceElement(), std::move(type_ctor),
+                                                 std::move(identifier), std::move(attributes));
+}
+
+std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+  std::vector<std::unique_ptr<raw::ResourceProperty>> properties;
+
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource));
+  if (!Ok())
+    return Fail();
+
+  auto identifier = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
+  if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+    if (!Ok())
+      return Fail();
+    maybe_type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+  }
+
+  ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+  if (!Ok())
+    return Fail();
+
+  // Just the scaffolding of the resource here, only properties is currently accepted.
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProperties));
+  if (!Ok())
+    return Fail();
+
+  ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+  if (!Ok())
+    return Fail();
+
+  auto parse_prop = [&properties, this]() {
+    if (Peek().kind() == Token::Kind::kRightCurly) {
+      ConsumeToken(OfKind(Token::Kind::kRightCurly));
+      return Done;
+    } else {
+      add(&properties, [&] { return ParseResourcePropertyDeclaration(); });
+      return More;
+    }
+  };
+
+  auto checkpoint = reporter_->Checkpoint();
+  while (parse_prop() == More) {
+    if (!Ok()) {
+      const auto result = RecoverToEndOfMember();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      } else if (result == RecoverResult::EndOfScope) {
+        continue;
+      }
+    }
+    ConsumeTokenOrRecover(OfKind(Token::Kind::kSemicolon));
+  }
+  if (!Ok())
+    Fail();
+
+  if (!checkpoint.NoNewErrors())
+    return nullptr;
+
+  if (properties.empty())
+    return Fail(ErrMustHaveOneProperty);
+
+  // End of properties block.
+  ConsumeToken(OfKind(Token::Kind::kSemicolon));
+  if (!Ok())
+    return Fail();
+
+  // End of resource.
+  ConsumeToken(OfKind(Token::Kind::kRightCurly));
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::ResourceDeclaration>(
+      scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+      std::move(maybe_type_ctor), std::move(properties));
+}
+
 std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
   ASTScope scope(this);
   auto attributes = MaybeParseAttributeList();
@@ -1265,6 +1373,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
   std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
   std::vector<std::unique_ptr<raw::ProtocolDeclaration>> protocol_declaration_list;
+  std::vector<std::unique_ptr<raw::ResourceDeclaration>> resource_declaration_list;
   std::vector<std::unique_ptr<raw::ServiceDeclaration>> service_declaration_list;
   std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
@@ -1284,9 +1393,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     return Fail();
 
   auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
-                            &protocol_declaration_list, &service_declaration_list,
-                            &struct_declaration_list, &done_with_library_imports, &using_list,
-                            &table_declaration_list, &union_declaration_list, this]() {
+                            &protocol_declaration_list, &resource_declaration_list,
+                            &service_declaration_list, &struct_declaration_list,
+                            &done_with_library_imports, &using_list, &table_declaration_list,
+                            &union_declaration_list, this]() {
     ASTScope scope(this);
     std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -1354,6 +1464,13 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         done_with_library_imports = true;
         add(&protocol_declaration_list,
             [&] { return ParseProtocolDeclaration(std::move(attributes), scope); });
+        return More;
+      }
+
+      case CASE_IDENTIFIER(Token::Subkind::kResource): {
+        done_with_library_imports = true;
+        add(&resource_declaration_list,
+            [&] { return ParseResourceDeclaration(std::move(attributes), scope); });
         return More;
       }
 
@@ -1439,8 +1556,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       scope.GetSourceElement(), end.value(), std::move(attributes), std::move(library_name),
       std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
-      std::move(service_declaration_list), std::move(struct_declaration_list),
-      std::move(table_declaration_list), std::move(union_declaration_list));
+      std::move(resource_declaration_list), std::move(service_declaration_list),
+      std::move(struct_declaration_list), std::move(table_declaration_list),
+      std::move(union_declaration_list));
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {

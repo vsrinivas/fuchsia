@@ -238,6 +238,11 @@ __BEGIN_CDECLS
   }
 
   for (const auto& e : library.enums()) {
+    if (e->id() == "zx/obj_type") {
+      // TODO(fxbug.dev/51001): This will emit a correct, but not yet
+      // wanted duplicate definition of ZX_OBJ_TYPE_xyz.
+      continue;
+    }
     auto names = formatter.Format(*e);
     std::string title_line = MakeTitleLine(names.base_name);
     writer->Printf("%s\n", title_line.c_str());

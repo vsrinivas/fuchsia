@@ -5,6 +5,7 @@
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
+  "experimental_resource_declarations": [],
   "interface_declarations": [
     {
       "name": "fidl.test.json/Parent",

@@ -58,6 +58,8 @@ constexpr WarningDef WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");
 constexpr WarningDef WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
+constexpr ErrorDef ErrMustHaveOneProperty(
+    "must have at least one property");
 
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration
@@ -157,12 +159,15 @@ constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberName(
 constexpr ErrorDef<uint32_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef ErrCouldNotResolveHandleRights("unable to resolve handle rights");
+constexpr ErrorDef ErrCouldNotResolveHandleSubtype("unable to resolve handle subtype");
 constexpr ErrorDef ErrCouldNotParseSizeBound("unable to parse size bound");
 constexpr ErrorDef<std::string> ErrCouldNotResolveMember("unable to resolve {} member");
 constexpr ErrorDef<std::string, std::string, flat::Name> ErrDuplicateMemberName(
     "name of member {} conflicts with previously declared member in the {} {}");
 constexpr ErrorDef<std::string, std::string, std::string, flat::Name> ErrDuplicateMemberValue(
     "value of member {} conflicts with previously declared member {} in the {} {}");
+constexpr ErrorDef<SourceSpan> ErrDuplicateResourcePropertyName(
+    "Multiple resource properties with the same name; previous was at {}");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
@@ -208,6 +213,13 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeParameterized(
     "{} cannot be parametrized");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
+constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
+    "handle subtype {} is not a defined resource");
+constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
+constexpr ErrorDef<flat::Name> ErrResourceCanOnlyHaveSubtypeProperty(
+    "resource {} expected to have exactly one property named subtype");
+constexpr ErrorDef<flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
+    "resource {} expected to refer to enum for subtype");
 
 constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>,
                    std::vector<std::string_view>>
