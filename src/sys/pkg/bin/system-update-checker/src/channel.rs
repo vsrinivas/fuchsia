@@ -5,7 +5,8 @@
 use crate::connect::*;
 use anyhow::anyhow;
 use fidl_fuchsia_cobalt::{
-    Status as CobaltStatus, SystemDataUpdaterMarker, SystemDataUpdaterProxy,
+    SoftwareDistributionInfo, Status as CobaltStatus, SystemDataUpdaterMarker,
+    SystemDataUpdaterProxy,
 };
 use fidl_fuchsia_pkg::RepositoryManagerMarker;
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
@@ -73,24 +74,38 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
     async fn notify_cobalt(service_connector: &S, current_channel: String) {
         loop {
             let cobalt = Self::connect(service_connector).await;
+            let distribution_info = SoftwareDistributionInfo {
+                current_channel: Some(current_channel.clone()),
+                // The realm field allows the omaha_client to pass the Omaha app_id to Cobalt.
+                // Here we have no need to populate the realm field.
+                current_realm: None,
+            };
 
-            fx_log_info!("calling cobalt.SetChannel(\"{}\")", current_channel);
+            fx_log_info!("calling cobalt.SetSoftwareDistributionInfo(\"{:?}\")", distribution_info);
 
-            match cobalt.set_channel(&current_channel).await {
+            match cobalt.set_software_distribution_info(distribution_info).await {
                 Ok(CobaltStatus::Ok) => {
                     return;
                 }
                 Ok(CobaltStatus::EventTooBig) => {
-                    fx_log_warn!("cobalt.SetChannel returned Status.EVENT_TOO_BIG, retrying");
+                    fx_log_warn!(
+                        "cobalt.SetSoftwareDistributionInfo returned Status.EVENT_TOO_BIG, retrying"
+                    );
                 }
                 Ok(status) => {
                     // Not much we can do about the other status codes but log.
-                    fx_log_err!("cobalt.SetChannel returned non-OK status: {:?}", status);
+                    fx_log_err!(
+                        "cobalt.SetSoftwareDistributionInfo returned non-OK status: {:?}",
+                        status
+                    );
                     return;
                 }
                 Err(err) => {
                     // channel broken, so log the error and reconnect.
-                    fx_log_warn!("cobalt.SetChannel returned error: {:#}, retrying", anyhow!(err));
+                    fx_log_warn!(
+                        "cobalt.SetSoftwareDistributionInfo returned error: {:#}, retrying",
+                        anyhow!(err)
+                    );
                 }
             }
 
@@ -432,8 +447,11 @@ mod tests {
             fasync::spawn_local(async move {
                 while let Some(req) = stream.try_next().await.unwrap_or(None) {
                     match req {
-                        SystemDataUpdaterRequest::SetChannel { current_channel, responder } => {
-                            *chan.lock() = Some(current_channel);
+                        SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
+                            info,
+                            responder,
+                        } => {
+                            *chan.lock() = info.current_channel;
                             responder.send(CobaltStatus::Ok).unwrap();
                         }
                         _ => unreachable!(),
@@ -471,6 +489,7 @@ mod tests {
         struct State {
             mode: Option<FlakeMode>,
             channel: Option<String>,
+            realm: Option<String>,
             connect_count: u64,
             call_count: u64,
         }
@@ -486,6 +505,7 @@ mod tests {
                     state: Arc::new(Mutex::new(State {
                         mode: Some(FlakeMode::ErrorOnConnect),
                         channel: None,
+                        realm: None,
                         connect_count: 0,
                         call_count: 0,
                     })),
@@ -496,6 +516,9 @@ mod tests {
             }
             fn channel(&self) -> Option<String> {
                 self.state.lock().channel.clone()
+            }
+            fn realm(&self) -> Option<String> {
+                self.state.lock().realm.clone()
             }
             fn connect_count(&self) -> u64 {
                 self.state.lock().connect_count
@@ -528,8 +551,8 @@ mod tests {
                         fasync::spawn_local(async move {
                             while let Some(req) = stream.try_next().await.unwrap() {
                                 match req {
-                                    SystemDataUpdaterRequest::SetChannel {
-                                        current_channel: _current_channel,
+                                    SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
+                                        info: _info,
                                         responder,
                                     } => {
                                         state.lock().call_count += 1;
@@ -556,6 +579,15 @@ mod tests {
                                     } => {
                                         state.lock().call_count += 1;
                                         state.lock().channel = Some(current_channel);
+                                        responder.send(CobaltStatus::Ok).unwrap();
+                                    }
+                                    SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
+                                        info,
+                                        responder,
+                                    } => {
+                                        state.lock().call_count += 1;
+                                        state.lock().channel = info.current_channel;
+                                        state.lock().realm = info.current_realm;
                                         responder.send(CobaltStatus::Ok).unwrap();
                                     }
                                     _ => unreachable!(),
@@ -606,6 +638,7 @@ mod tests {
         assert_eq!(connector.connect_count(), 5);
         assert_eq!(connector.call_count(), 2);
         assert_eq!(connector.channel(), Some("stable".to_owned()));
+        assert_eq!(connector.realm(), None);
 
         // Bails out if Cobalt responds with an unexpected status code
         let connector = FlakeyServiceConnector::new();
@@ -648,6 +681,13 @@ mod tests {
                     match req {
                         SystemDataUpdaterRequest::SetChannel { current_channel, responder } => {
                             *chan.lock() = Some(current_channel);
+                            responder.send(CobaltStatus::Ok).unwrap();
+                        }
+                        SystemDataUpdaterRequest::SetSoftwareDistributionInfo {
+                            info,
+                            responder,
+                        } => {
+                            *chan.lock() = info.current_channel;
                             responder.send(CobaltStatus::Ok).unwrap();
                         }
                         _ => unreachable!(),
