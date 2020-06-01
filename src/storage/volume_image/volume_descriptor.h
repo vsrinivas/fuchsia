@@ -44,13 +44,10 @@ struct VolumeDescriptor {
   std::array<uint8_t, kGuidLength> type;
 
   // Name expected for the partition.
-  std::array<uint8_t, kNameLength> name;
+  std::array<char, kNameLength> name;
 
   // Number of bytes used to chunk the image.
   uint64_t block_size;
-
-  // Compression options for this block image.
-  CompressionOptions compression;
 
   // Encryption options for this image.
   EncryptionType encryption;

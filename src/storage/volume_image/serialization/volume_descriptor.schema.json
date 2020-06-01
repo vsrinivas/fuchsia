@@ -37,21 +37,6 @@
                     ],
                     "default": "ENCRYPTION_TYPE_NONE"
                 },
-                "compression_schema": {
-                    "type": "string",
-                    "enum": [
-                        "COMPRESSION_SCHEMA_NONE",
-                        "COMPRESSION_SCHEMA_LZ4"
-                    ],
-                    "default": "COMPRESSION_SCHEMA_NONE"
-                },
-                "compression_options": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer",
-                        "minimum": 0
-                    }
-                },
                 "options": {
                     "type": "array",
                     "contains": {

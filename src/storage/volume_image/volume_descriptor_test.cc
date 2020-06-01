@@ -27,8 +27,6 @@ namespace {
 
 TEST(VolumeDescriptorTest, SerializeReturnsSchemaValidData) {
   VolumeDescriptor descriptor = {};
-  descriptor.compression.schema = CompressionSchema::kLz4;
-  descriptor.compression.options = {{"option_1", 1}};
   descriptor.options = {Option::kNone};
   descriptor.encryption = EncryptionType::kZxcrypt;
   auto schema_json = GetSchema(Schema::kVolumeDescriptor);
@@ -59,11 +57,6 @@ std::string GetSerializedJson(fit::function<void(rapidjson::Document*)> mutator 
       "name": "i-have-a-name",
       "block_size": 512,
       "encryption_type": "ENCRYPTION_TYPE_ZXCRYPT",
-      "compression_schema": "COMPRESSION_SCHEMA_LZ4",
-      "compression_options": {
-        "random_option": 24,
-        "random_option_2": 25
-      },
       "options" : [
         "OPTION_NONE",
         "OPTION_EMPTY"
@@ -100,8 +93,6 @@ TEST(VolumeDescriptorTest, DeserializeSerializedDataIsOk) {
   ASSERT_EQ(deserialized_1.block_size, deserialized_2.block_size);
   ASSERT_EQ(deserialized_1.instance, deserialized_2.instance);
   ASSERT_EQ(deserialized_1.name, deserialized_2.name);
-  ASSERT_EQ(deserialized_1.compression.schema, deserialized_2.compression.schema);
-  ASSERT_EQ(deserialized_1.compression.options, deserialized_2.compression.options);
   ASSERT_EQ(deserialized_1.encryption, deserialized_2.encryption);
   ASSERT_EQ(deserialized_1.options, deserialized_2.options);
 }
@@ -125,11 +116,6 @@ TEST(VolumeDescriptorTest, DeserializeFromValidDataReturnsVolumeDescriptor) {
   EXPECT_EQ(kName, std::string(reinterpret_cast<const char*>(descriptor.name.data())));
   EXPECT_EQ(512u, descriptor.block_size);
   EXPECT_EQ(EncryptionType::kZxcrypt, descriptor.encryption);
-  EXPECT_EQ(CompressionSchema::kLz4, descriptor.compression.schema);
-  std::map<std::string, uint64_t> kExpectedCompressionOptions = {{"random_option", 24},
-                                                                 {"random_option_2", 25}};
-  EXPECT_THAT(descriptor.compression.options,
-              ::testing::UnorderedElementsAreArray(kExpectedCompressionOptions));
   EXPECT_THAT(descriptor.options, ::testing::UnorderedElementsAre(Option::kNone, Option::kEmpty));
 }
 
@@ -157,12 +143,6 @@ TEST(VolumeDescriptorTest, DeserializeWithLongNameIsTruncated) {
 TEST(VolumeDescriptorTest, DeserializeWithBadMagicIsError) {
   ASSERT_TRUE(VolumeDescriptor::Deserialize(GetSerializedJson([](auto* document) {
                 (*document)["magic"] = 0xB201C4;
-              })).is_error());
-}
-
-TEST(VolumeDescriptorTest, DeserializeWithBadCompressionSchemaIsError) {
-  ASSERT_TRUE(VolumeDescriptor::Deserialize(GetSerializedJson([](auto* document) {
-                (*document)["compression_schema"] = "BAD_OR_UNKNOWN_SCHEMA";
               })).is_error());
 }
 

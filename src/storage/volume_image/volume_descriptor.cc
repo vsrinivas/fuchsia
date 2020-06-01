@@ -67,20 +67,7 @@ fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
   memcpy(descriptor.name.data(), name.c_str(), name.length());
 
   descriptor.block_size = document["block_size"].GetUint64();
-  auto& compression = descriptor.compression;
-  auto compression_enum =
-      StringAsEnum<CompressionSchema>(document["compression_schema"].GetString());
-  if (compression_enum.is_error()) {
-    return compression_enum.take_error_result();
-  }
-  compression.schema = compression_enum.take_value();
 
-  if (document.HasMember("compression_options")) {
-    const auto& option_map = document["compression_options"].GetObject();
-    for (auto& option : option_map) {
-      compression.options[option.name.GetString()] = option.value.GetUint64();
-    }
-  }
   auto encryption_enum = StringAsEnum<EncryptionType>(document["encryption_type"].GetString());
   if (encryption_enum.is_error()) {
     return encryption_enum.take_error_result();
@@ -121,19 +108,6 @@ fit::result<std::vector<uint8_t>, std::string> VolumeDescriptor::Serialize() con
                      document.GetAllocator());
   document.AddMember("block_size", block_size, document.GetAllocator());
   document.AddMember("encryption_type", EnumAsString(encryption), document.GetAllocator());
-  document.AddMember("compression_schema", EnumAsString(compression.schema),
-                     document.GetAllocator());
-
-  if (!compression.options.empty()) {
-    rapidjson::Value option_map;
-    option_map.SetObject();
-    for (const auto& option : compression.options) {
-      rapidjson::Value key(option.first.c_str(), document.GetAllocator());
-      rapidjson::Value value(option.second);
-      option_map.AddMember(key, value, document.GetAllocator());
-    }
-    document.AddMember("compression_options", option_map, document.GetAllocator());
-  }
 
   if (!options.empty()) {
     rapidjson::Value option_set;
