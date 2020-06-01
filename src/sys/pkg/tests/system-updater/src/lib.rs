@@ -734,6 +734,7 @@ async fn test_system_update() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -788,6 +789,7 @@ async fn test_system_update_force_recovery() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::SetConfigurationUnbootable {
@@ -937,6 +939,7 @@ async fn test_system_update_no_reboot() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -975,6 +978,7 @@ async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::SetConfigurationUnbootable {
@@ -1021,6 +1025,7 @@ async fn test_broken_logger() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1079,6 +1084,7 @@ async fn test_failing_package_fetch() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(system_image_url.to_string()),
         ]
     );
@@ -1110,6 +1116,7 @@ async fn test_system_update_fails_when_sync_fails() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
         ]
@@ -1143,6 +1150,7 @@ async fn test_normal_requires_zbi() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
         ]
@@ -1175,7 +1183,7 @@ async fn test_force_recovery_rejects_zbi() {
 
     assert_eq!(
         env.take_interactions(),
-        vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), BlobfsSync,]
+        vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,]
     );
 }
 
@@ -1281,6 +1289,7 @@ async fn test_writes_bootloader() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1328,6 +1337,7 @@ async fn test_writes_recovery() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1377,6 +1387,7 @@ async fn test_writes_recovery_named_recovery() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1426,6 +1437,7 @@ async fn test_writes_recovery_vbmeta() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1479,6 +1491,7 @@ async fn test_writes_fuchsia_vbmeta() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1528,6 +1541,7 @@ async fn test_skips_recovery_vbmeta() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1587,6 +1601,7 @@ async fn do_test_working_image_write_with_abr(
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1655,6 +1670,7 @@ async fn test_working_image_with_unsupported_abr() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::WriteAsset {
@@ -1715,6 +1731,7 @@ async fn test_failing_image_write() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1748,6 +1765,7 @@ async fn test_uses_custom_update_package() {
         vec![
             Gc,
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1877,6 +1895,7 @@ async fn test_writes_firmware() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1924,7 +1943,7 @@ async fn test_writes_multiple_firmware_types() {
     // The order of files listed from a directory isn't guaranteed so the
     // firmware could be written in either order. Sort by type string so
     // we can easily validate contents.
-    interactions[5..7].sort_by_key(|event| {
+    interactions[6..8].sort_by_key(|event| {
         if let Paver(PaverEvent::WriteFirmware { firmware_type, payload: _ }) = event {
             return firmware_type.clone();
         } else {
@@ -1937,6 +1956,7 @@ async fn test_writes_multiple_firmware_types() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
@@ -1993,6 +2013,7 @@ async fn test_unsupported_firmware_type() {
         vec![
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
