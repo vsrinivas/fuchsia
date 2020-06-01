@@ -143,6 +143,7 @@ extern port_t port;
 extern bool g_vc_owns_display;
 extern vc_t* g_active_vc;
 extern int g_status_width;
+extern vc_t* g_log_vc;
 
 void handle_key_press(uint8_t keycode, int modifiers);
 void vc_toggle_framebuffer();

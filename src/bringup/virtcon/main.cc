@@ -42,6 +42,8 @@
 
 port_t port;
 static port_handler_t new_vc_ph;
+static bool keep_log;
+
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr, nullptr, nullptr};
 
@@ -236,8 +238,9 @@ static void start_shell(bool make_active, const char* cmd, const color_scheme_t*
 static zx_status_t new_vc_cb(void*, zx_handle_t session, fidl_txn_t* txn) {
   zx::channel session_channel(session);
 
+  bool make_active = !(keep_log && g_active_vc && g_active_vc == g_log_vc && g_active_vc);
   vc_t* vc = nullptr;
-  if (remote_session_create(&vc, std::move(session_channel), true,
+  if (remote_session_create(&vc, std::move(session_channel), make_active,
                             &color_schemes[kDefaultColorScheme]) < 0) {
     return ZX_OK;
   }
@@ -355,7 +358,6 @@ zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
 int main(int argc, char** argv) {
   // NOTE: devmgr has getenv_bool. when more options are added, consider
   // sharing that.
-  bool keep_log = false;
   const char* value = getenv("virtcon.keep-log-visible");
   if (value == NULL ||
       ((strcmp(value, "0") == 0) || (strcmp(value, "false") == 0) || (strcmp(value, "off") == 0))) {

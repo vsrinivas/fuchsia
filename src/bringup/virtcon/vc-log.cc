@@ -8,9 +8,10 @@
 
 #include "vc.h"
 
+vc_t* g_log_vc;
+
 static zx_koid_t proc_koid;
 static port_handler_t log_ph;
-static vc_t* log_vc;
 
 // This is the list for logs on displays other than the main display.
 static struct list_node log_list = LIST_INITIAL_VALUE(log_list);
@@ -31,10 +32,10 @@ zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out) {
   }
 
   // Copy the log buffer into the new vc.
-  size_t textbuf_size = log_vc->rows * log_vc->columns * sizeof(vc_char_t);
-  memcpy(vc->text_buf, log_vc->text_buf, textbuf_size);
-  vc->cursor_x = log_vc->cursor_x;
-  vc->cursor_y = log_vc->cursor_y;
+  size_t textbuf_size = g_log_vc->rows * g_log_vc->columns * sizeof(*vc->text_buf);
+  memcpy(vc->text_buf, g_log_vc->text_buf, textbuf_size);
+  vc->cursor_x = g_log_vc->cursor_x;
+  vc->cursor_y = g_log_vc->cursor_y;
 
   // Set the new vc graphics and flush the text.
   vc->active = true;
@@ -54,10 +55,10 @@ void log_delete_vc(vc_t* vc) {
 
 int log_start(void) {
   // Create initial console for debug log.
-  if (vc_create(&log_vc, &color_schemes[kDefaultColorScheme]) != ZX_OK) {
+  if (vc_create(&g_log_vc, &color_schemes[kDefaultColorScheme]) != ZX_OK) {
     return -1;
   }
-  snprintf(log_vc->title, sizeof(log_vc->title), "debuglog");
+  snprintf(g_log_vc->title, sizeof(g_log_vc->title), "debuglog");
 
   // Get our process koid so the log reader can
   // filter out our own debug messages from the log.
@@ -107,14 +108,14 @@ zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt
     if (rec->pid == proc_koid) {
       continue;
     }
-    write_to_log(log_vc, rec);
+    write_to_log(g_log_vc, rec);
 
     vc_t* vc = NULL;
     list_for_every_entry (&log_list, vc, vc_t, node) { write_to_log(vc, rec); }
   }
 
   const char* oops = "<<LOG ERROR>>\n";
-  vc_write(log_vc, oops, strlen(oops), 0);
+  vc_write(g_log_vc, oops, strlen(oops), 0);
 
   // Error reading the log, no point in continuing to try to read
   // log messages.
