@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerflow/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
@@ -55,7 +55,7 @@ class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::Poin
 
 // Tracks input APIs.
 class InputSystem : public System,
-                    public fuchsia::ui::pointerflow::InjectorRegistry,
+                    public fuchsia::ui::pointerinjector::Registry,
                     public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
@@ -73,9 +73,9 @@ class InputSystem : public System,
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) override;
 
-  // |fuchsia.ui.pointerflow.InjectorRegistry|
-  void Register(fuchsia::ui::pointerflow::InjectorConfig config,
-                fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
+  // |fuchsia.ui.pointerinjector.Registry|
+  void Register(fuchsia::ui::pointerinjector::Config config,
+                fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
                 RegisterCallback callback) override;
 
   fuchsia::ui::input::ImeServicePtr& ime_service() { return ime_service_; }
@@ -167,8 +167,8 @@ class InputSystem : public System,
   // TODO(50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y code.
   glm::vec2 GetScreenSpaceNDCPoint(glm::vec2 world_space_point) const;
 
+  using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
-
   std::map<InjectorId, Injector> injectors_;
 
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
@@ -191,7 +191,7 @@ class InputSystem : public System,
   // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
   std::map<scheduling::SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
 
-  fidl::BindingSet<fuchsia::ui::pointerflow::InjectorRegistry> injector_registry_;
+  fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> injector_registry_;
 
   fidl::BindingSet<fuchsia::ui::input::PointerCaptureListenerRegistry> pointer_capture_registry_;
   // A singleton listener who wants to be notified when pointer events happen.

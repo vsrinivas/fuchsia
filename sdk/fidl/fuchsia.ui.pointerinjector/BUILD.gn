@@ -7,7 +7,14 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ui.pointerinjector") {
   sdk_category = "partner"
 
-  sources = [ "injector.fidl" ]
+  sources = [
+    "config.fidl",
+    "device.fidl",
+    "event.fidl",
+  ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.views" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
+  ]
 }

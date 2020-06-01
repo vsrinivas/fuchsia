@@ -32,5 +32,5 @@ source_set("input") {
     "//zircon/system/ulib/trace",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.pointerflow" ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.pointerinjector" ]
 }

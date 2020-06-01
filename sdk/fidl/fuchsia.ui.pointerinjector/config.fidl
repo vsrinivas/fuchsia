@@ -115,12 +115,12 @@ union Target {
 table Viewport {
     /// The viewport's minimal and maximal extents in the viewport coordinate
     /// system.
-    1: Extents viewport_extents;
+    1: Extents extents;
 
     /// A transformation matrix that describes how to map the viewport
     /// coordinate system to the context coordinate system.
     ///
-    /// This transform, together with |viewport_extents|, defines the viewport's
+    /// This transform, together with |extents|, defines the viewport's
     /// placement in the context coordinate system.
     ///
     /// This transform must be an invertible matrix (i.e., has a non-zero

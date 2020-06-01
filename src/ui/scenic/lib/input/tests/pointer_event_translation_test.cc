@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerflow/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 
 #include <gtest/gtest.h>
 
@@ -12,8 +12,11 @@
 namespace lib_ui_input_tests {
 namespace {
 
-using Phase = fuchsia::ui::pointerflow::EventPhase;
-using DeviceType = fuchsia::ui::pointerflow::DeviceType;
+static const glm::mat3 kIdentity{};
+static constexpr uint32_t kDeviceId = 0;
+
+using Phase = fuchsia::ui::pointerinjector::EventPhase;
+using DeviceType = fuchsia::ui::pointerinjector::DeviceType;
 
 TEST(PointerEventTranslationTest, ReversePointerTraceHACK) {
   const float high = -3.40282e+38;
@@ -27,28 +30,32 @@ TEST(PointerEventTranslationTest, ReversePointerTraceHACK) {
 }
 
 TEST(PointerEventTranslationTest, Add) {
-  constexpr uint32_t device_id = 0;
-
-  fuchsia::ui::pointerflow::Event event;
+  fuchsia::ui::pointerinjector::Event event;
   event.set_timestamp(1);
-  event.set_pointer_id(2);
-  event.set_position_x(3);
-  event.set_position_y(4);
-  event.set_phase(Phase::ADD);
+  {
+    fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+    pointer_sample.set_pointer_id(2);
+    pointer_sample.set_position_in_viewport({3, 4});
+    pointer_sample.set_phase(Phase::ADD);
+    fuchsia::ui::pointerinjector::Data data;
+    data.set_pointer_sample(std::move(pointer_sample));
+    event.set_data(std::move(data));
+  }
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
-      scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
+      scenic_impl::input::PointerInjectorEventToGfxPointerEvent(
+          event, kDeviceId, /*viewport_to_context_transform*/ kIdentity);
 
   ASSERT_EQ(results.size(), 2u);
   EXPECT_EQ(results[0].phase, fuchsia::ui::input::PointerEventPhase::ADD);
-  EXPECT_EQ(results[0].device_id, device_id);
+  EXPECT_EQ(results[0].device_id, kDeviceId);
   EXPECT_EQ(results[0].event_time, 1u);
   EXPECT_EQ(results[0].pointer_id, 2u);
   EXPECT_EQ(results[0].x, 3);
   EXPECT_EQ(results[0].y, 4);
 
   EXPECT_EQ(results[1].phase, fuchsia::ui::input::PointerEventPhase::DOWN);
-  EXPECT_EQ(results[1].device_id, device_id);
+  EXPECT_EQ(results[1].device_id, kDeviceId);
   EXPECT_EQ(results[1].event_time, 1u);
   EXPECT_EQ(results[1].pointer_id, 2u);
   EXPECT_EQ(results[1].x, 3);
@@ -56,21 +63,25 @@ TEST(PointerEventTranslationTest, Add) {
 }
 
 TEST(PointerEventTranslationTest, Change) {
-  constexpr uint32_t device_id = 0;
-
-  fuchsia::ui::pointerflow::Event event;
+  fuchsia::ui::pointerinjector::Event event;
   event.set_timestamp(1);
-  event.set_pointer_id(2);
-  event.set_position_x(3);
-  event.set_position_y(4);
-  event.set_phase(Phase::CHANGE);
+  {
+    fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+    pointer_sample.set_pointer_id(2);
+    pointer_sample.set_position_in_viewport({3, 4});
+    pointer_sample.set_phase(Phase::CHANGE);
+    fuchsia::ui::pointerinjector::Data data;
+    data.set_pointer_sample(std::move(pointer_sample));
+    event.set_data(std::move(data));
+  }
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
-      scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
+      scenic_impl::input::PointerInjectorEventToGfxPointerEvent(
+          event, kDeviceId, /*viewport_to_context_transform*/ kIdentity);
 
   ASSERT_EQ(results.size(), 1u);
   EXPECT_EQ(results[0].phase, fuchsia::ui::input::PointerEventPhase::MOVE);
-  EXPECT_EQ(results[0].device_id, device_id);
+  EXPECT_EQ(results[0].device_id, kDeviceId);
   EXPECT_EQ(results[0].event_time, 1u);
   EXPECT_EQ(results[0].pointer_id, 2u);
   EXPECT_EQ(results[0].x, 3);
@@ -78,28 +89,32 @@ TEST(PointerEventTranslationTest, Change) {
 }
 
 TEST(PointerEventTranslationTest, Remove) {
-  constexpr uint32_t device_id = 0;
-
-  fuchsia::ui::pointerflow::Event event;
+  fuchsia::ui::pointerinjector::Event event;
   event.set_timestamp(1);
-  event.set_pointer_id(2);
-  event.set_position_x(3);
-  event.set_position_y(4);
-  event.set_phase(Phase::REMOVE);
+  {
+    fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+    pointer_sample.set_pointer_id(2);
+    pointer_sample.set_position_in_viewport({3, 4});
+    pointer_sample.set_phase(Phase::REMOVE);
+    fuchsia::ui::pointerinjector::Data data;
+    data.set_pointer_sample(std::move(pointer_sample));
+    event.set_data(std::move(data));
+  }
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
-      scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
+      scenic_impl::input::PointerInjectorEventToGfxPointerEvent(
+          event, kDeviceId, /*viewport_to_context_transform*/ kIdentity);
 
   ASSERT_EQ(results.size(), 2u);
   EXPECT_EQ(results[0].phase, fuchsia::ui::input::PointerEventPhase::UP);
-  EXPECT_EQ(results[0].device_id, device_id);
+  EXPECT_EQ(results[0].device_id, kDeviceId);
   EXPECT_EQ(results[0].event_time, 1u);
   EXPECT_EQ(results[0].pointer_id, 2u);
   EXPECT_EQ(results[0].x, 3);
   EXPECT_EQ(results[0].y, 4);
 
   EXPECT_EQ(results[1].phase, fuchsia::ui::input::PointerEventPhase::REMOVE);
-  EXPECT_EQ(results[1].device_id, device_id);
+  EXPECT_EQ(results[1].device_id, kDeviceId);
   EXPECT_EQ(results[1].event_time, 1u);
   EXPECT_EQ(results[1].pointer_id, 2u);
   EXPECT_EQ(results[1].x, 3);
@@ -107,21 +122,25 @@ TEST(PointerEventTranslationTest, Remove) {
 }
 
 TEST(PointerEventTranslationTest, Cancel) {
-  constexpr uint32_t device_id = 0;
-
-  fuchsia::ui::pointerflow::Event event;
+  fuchsia::ui::pointerinjector::Event event;
   event.set_timestamp(1);
-  event.set_pointer_id(2);
-  event.set_position_x(3);
-  event.set_position_y(4);
-  event.set_phase(Phase::CANCEL);
+  {
+    fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+    pointer_sample.set_pointer_id(2);
+    pointer_sample.set_position_in_viewport({3, 4});
+    pointer_sample.set_phase(Phase::CANCEL);
+    fuchsia::ui::pointerinjector::Data data;
+    data.set_pointer_sample(std::move(pointer_sample));
+    event.set_data(std::move(data));
+  }
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
-      scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
+      scenic_impl::input::PointerInjectorEventToGfxPointerEvent(
+          event, kDeviceId, /*viewport_to_context_transform*/ kIdentity);
 
   ASSERT_EQ(results.size(), 1u);
   EXPECT_EQ(results[0].phase, fuchsia::ui::input::PointerEventPhase::CANCEL);
-  EXPECT_EQ(results[0].device_id, device_id);
+  EXPECT_EQ(results[0].device_id, kDeviceId);
   EXPECT_EQ(results[0].event_time, 1u);
   EXPECT_EQ(results[0].pointer_id, 2u);
   EXPECT_EQ(results[0].x, 3);
@@ -131,12 +150,17 @@ TEST(PointerEventTranslationTest, Cancel) {
 TEST(PointerEventTranslationTest, TraceFlowId) {
   constexpr uint32_t device_id = 0;
 
-  fuchsia::ui::pointerflow::Event event;
+  fuchsia::ui::pointerinjector::Event event;
   event.set_timestamp(1);
-  event.set_pointer_id(2);
-  event.set_position_x(3);
-  event.set_position_y(4);
-  event.set_phase(Phase::ADD);
+  {
+    fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+    pointer_sample.set_pointer_id(2);
+    pointer_sample.set_position_in_viewport({3, 4});
+    pointer_sample.set_phase(Phase::ADD);
+    fuchsia::ui::pointerinjector::Data data;
+    data.set_pointer_sample(std::move(pointer_sample));
+    event.set_data(std::move(data));
+  }
 
   // Create a trace id with some high bits and low bits.
   constexpr float high = 7;
@@ -144,7 +168,8 @@ TEST(PointerEventTranslationTest, TraceFlowId) {
   event.set_trace_flow_id(scenic_impl::input::PointerTraceHACK(high, low));
 
   std::vector<fuchsia::ui::input::PointerEvent> results =
-      scenic_impl::input::PointerFlowEventToGfxPointerEvent(event, device_id);
+      scenic_impl::input::PointerInjectorEventToGfxPointerEvent(
+          event, kDeviceId, /*viewport_to_context_transform*/ kIdentity);
 
   ASSERT_EQ(results.size(), 2u);
   EXPECT_EQ(results[0].radius_minor, low);

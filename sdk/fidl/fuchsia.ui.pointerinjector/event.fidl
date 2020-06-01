@@ -29,13 +29,13 @@ enum EventPhase {
 table PointerSample {
     /// An identifier of the pointer that issued this event.
     /// It is unique only to a specific pointer device.
-    3: uint32 pointer_id;
+    1: uint32 pointer_id;
 
     /// The state of this event in the pointer event stream's state machine.
-    3: EventPhase phase;
+    2: EventPhase phase;
 
     /// The position of this event, in the viewport's coordinate system.
-    4: Point2 position_in_viewport;
+    3: Point2 position_in_viewport;
 };
 
 /// A selection of FIFO data sent over the channel.
@@ -65,5 +65,5 @@ table Event {
 
     /// An identifier to correlate this event's send/receive occurrence across
     /// component boundaries or abstraction layers.
-    6: uint64 trace_flow_id;
+    3: uint64 trace_flow_id;
 };

@@ -164,36 +164,15 @@ void A11yPointerEventRegistry::Register(
   }
 }
 
-void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
-                           fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
+void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
+                           fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
                            RegisterCallback callback) {
-  if (!config.has_device_config() || !config.has_context() || !config.has_target() ||
-      !config.has_dispatch_policy()) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config| is incomplete.";
+  if (!Injector::IsValidConfig(config)) {
+    // Errors printed inside IsValidConfig. Just return here.
     return;
   }
 
-  if (config.dispatch_policy() != fuchsia::ui::pointerflow::DispatchPolicy::EXCLUSIVE) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE DispatchPolicy is supported.";
-    return;
-  }
-
-  if (!config.device_config().has_device_id() || !config.device_config().has_device_type()) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.DeviceConfig| is incomplete.";
-    return;
-  }
-
-  if (config.device_config().device_type() != fuchsia::ui::pointerflow::DeviceType::TOUCH) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only TOUCH device type is supported.";
-    return;
-  }
-
-  if (!config.context().is_view() || !config.target().is_view()) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
-                      "is incomplete.";
-    return;
-  }
-
+  // Check connectivity here, since injector doesn't have access to it.
   const zx_koid_t context_koid = utils::ExtractKoid(config.context().view());
   const zx_koid_t target_koid = utils::ExtractKoid(config.target().view());
   if (context_koid == ZX_KOID_INVALID || target_koid == ZX_KOID_INVALID) {
@@ -211,12 +190,18 @@ void InputSystem::Register(fuchsia::ui::pointerflow::InjectorConfig config,
 
   const InjectorId id = ++last_injector_id_;
   InjectorSettings settings{.dispatch_policy = config.dispatch_policy(),
-                            .device_id = config.device_config().device_id(),
-                            .device_type = config.device_config().device_type(),
+                            .device_id = config.device_id(),
+                            .device_type = config.device_type(),
                             .context_koid = context_koid,
                             .target_koid = target_koid};
+  Viewport viewport{
+      .extents = {config.viewport().extents()},
+      .viewport_to_context_transform =
+          ColumnMajorVectorToMat3(config.viewport().viewport_to_context_transform()),
+  };
+
   const auto [it, success] = injectors_.try_emplace(
-      id, id, std::move(settings), std::move(injector),
+      id, std::move(settings), std::move(viewport), std::move(injector),
       /*is_descendant_and_connected*/
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);

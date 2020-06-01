@@ -6,12 +6,13 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/input/helper.h"
 
 namespace scenic_impl {
 namespace input {
 
-using fuchsia::ui::pointerflow::EventPhase;
+using fuchsia::ui::pointerinjector::EventPhase;
 
 namespace {
 
@@ -23,29 +24,110 @@ fuchsia::ui::input::PointerEvent CreateCancelEvent(uint32_t device_id, uint32_t 
   return cancel_event;
 }
 
-bool HasRequiredFields(const fuchsia::ui::pointerflow::Event& event) {
-  return event.has_timestamp() && event.has_pointer_id() && event.has_phase() &&
-         event.has_position_x() && event.has_position_y();
+bool HasRequiredFields(const fuchsia::ui::pointerinjector::PointerSample& pointer) {
+  return pointer.has_pointer_id() && pointer.has_phase() && pointer.has_position_in_viewport();
+}
+
+bool AreValidExtents(const std::array<std::array<float, 2>, 2>& extents) {
+  for (auto& point : extents) {
+    for (float f : point) {
+      if (!std::isfinite(f)) {
+        return false;
+      }
+    }
+  }
+
+  const float min_x = extents[0][0];
+  const float min_y = extents[0][1];
+  const float max_x = extents[1][0];
+  const float max_y = extents[1][1];
+  return std::isless(min_x, max_x) && std::isless(min_y, max_y);
+}
+
+zx_status_t IsValidViewport(const fuchsia::ui::pointerinjector::Viewport& viewport) {
+  if (!viewport.has_extents() || !viewport.has_viewport_to_context_transform()) {
+    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had missing fields";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!AreValidExtents(viewport.extents())) {
+    FX_LOGS(ERROR)
+        << "Provided fuchsia::ui::pointerinjector::Viewport had invalid extents. Extents min: {"
+        << viewport.extents()[0][0] << ", " << viewport.extents()[0][1] << "} max: {"
+        << viewport.extents()[1][0] << ", " << viewport.extents()[1][1] << "}";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  for (float f : viewport.viewport_to_context_transform()) {
+    if (!std::isfinite(f)) {
+      FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport "
+                        "viewport_to_context_transform contained a NaN or infinity";
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  // Must be invertible, i.e. determinant must be non-zero.
+  const glm::mat3 viewport_to_context_transform =
+      ColumnMajorVectorToMat3(viewport.viewport_to_context_transform());
+  if (fabs(glm::determinant(viewport_to_context_transform)) <=
+      std::numeric_limits<float>::epsilon()) {
+    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had a non-invertible matrix";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace
 
+bool Injector::IsValidConfig(const fuchsia::ui::pointerinjector::Config& config) {
+  if (!config.has_device_id() || !config.has_device_type() || !config.has_context() ||
+      !config.has_target() || !config.has_viewport() || !config.has_dispatch_policy()) {
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config| is incomplete.";
+    return false;
+  }
+
+  if (config.dispatch_policy() != fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET) {
+    FX_LOGS(ERROR)
+        << "InjectorRegistry::Register : Only DispatchPolicy EXCLUSIVE_TARGET is supported.";
+    return false;
+  }
+
+  if (config.device_type() != fuchsia::ui::pointerinjector::DeviceType::TOUCH) {
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only DeviceType TOUCH is supported.";
+    return false;
+  }
+
+  if (!config.context().is_view() || !config.target().is_view()) {
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
+                      "is not a view. Only views are supported.";
+    return false;
+  }
+
+  if (IsValidViewport(config.viewport()) != ZX_OK) {
+    // Errors printed in IsValidViewport. Just return result here.
+    return false;
+  }
+
+  return true;
+}
+
 Injector::Injector(
-    InjectorId id, InjectorSettings settings,
-    fidl::InterfaceRequest<fuchsia::ui::pointerflow::Injector> injector,
+    InjectorSettings settings, Viewport viewport,
+    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
     fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
         is_descendant_and_connected,
     fit::function<void(/*context*/ zx_koid_t, /*target*/ zx_koid_t,
                        /*context_local_event*/ const fuchsia::ui::input::PointerEvent&)>
         inject)
-    : binding_(this, std::move(injector)),
-      id_(id),
+    : binding_(this, std::move(device)),
       settings_(std::move(settings)),
+      viewport_(std::move(viewport)),
       is_descendant_and_connected_(std::move(is_descendant_and_connected)),
       inject_(std::move(inject)) {
   FX_DCHECK(is_descendant_and_connected_);
   FX_DCHECK(inject_);
-  FX_LOGS(INFO) << "Injector : Registered new injector with internal id: " << id_
+  FX_LOGS(INFO) << "Injector : Registered new injector with "
                 << " Device Id: " << settings_.device_id
                 << " Device Type: " << static_cast<uint32_t>(settings_.device_type)
                 << " Dispatch Policy: " << static_cast<uint32_t>(settings_.dispatch_policy)
@@ -63,7 +145,7 @@ void Injector::SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
   });
 }
 
-void Injector::Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
+void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
                       InjectCallback callback) {
   // TODO(50348): Find a way to make to listen for scene graph events instead of checking
   // connectivity per injected event.
@@ -82,26 +164,75 @@ void Injector::Inject(::std::vector<fuchsia::ui::pointerflow::Event> events,
   }
 
   for (const auto& event : events) {
-    if (!HasRequiredFields(event)) {
-      FX_LOGS(ERROR) << "Injected fuchsia::ui::pointerflow::Event was missing required fields";
+    if (!event.has_timestamp() || !event.has_data()) {
+      FX_LOGS(ERROR) << "Inject() called with an incomplete event";
       CloseChannel(ZX_ERR_INVALID_ARGS);
       return;
     }
 
-    // Enforce event stream ordering rules.
-    if (!ValidateEventStream(event.pointer_id(), event.phase())) {
-      FX_LOGS(ERROR) << "Inject() called with invalid event stream";
-      CloseChannel(ZX_ERR_BAD_STATE);
-      return;
-    }
+    if (event.data().is_viewport()) {
+      const auto& new_viewport = event.data().viewport();
 
-    // Translate events to the legacy input1 protocol and inject them.
-    for (const auto& translated_event :
-         PointerFlowEventToGfxPointerEvent(event, settings_.device_id)) {
-      inject_(settings_.context_koid, settings_.target_koid, translated_event);
+      {
+        const zx_status_t result = IsValidViewport(new_viewport);
+        if (result != ZX_OK) {
+          // Errors printed inside IsValidViewport. Just close channel here.
+          CloseChannel(result);
+          return;
+        }
+      }
+      viewport_ = {.extents = {new_viewport.extents()},
+                   .viewport_to_context_transform =
+                       ColumnMajorVectorToMat3(new_viewport.viewport_to_context_transform())};
+    } else if (event.data().is_pointer_sample()) {
+      const auto& pointer_sample = event.data().pointer_sample();
+
+      {
+        const zx_status_t result = ValidatePointerSample(pointer_sample);
+        if (result != ZX_OK) {
+          CloseChannel(result);
+          return;
+        }
+      }
+
+      // Translate events to the legacy input1 protocol and inject them.
+      // TODO(52970): Propagate the viewport concept through the system, and don't allow ADD events
+      // outside the viewport.
+      for (const auto& translated_event : PointerInjectorEventToGfxPointerEvent(
+               event, settings_.device_id, viewport_.viewport_to_context_transform)) {
+        inject_(settings_.context_koid, settings_.target_koid, translated_event);
+      }
+      continue;
+    } else {
+      // Should be unreachable.
+      FX_LOGS(WARNING) << "Unknown fuchsia::ui::pointerinjector::Data received";
     }
   }
+
   callback();
+}
+
+zx_status_t Injector::ValidatePointerSample(
+    const fuchsia::ui::pointerinjector::PointerSample& pointer_sample) {
+  if (!HasRequiredFields(pointer_sample)) {
+    FX_LOGS(ERROR)
+        << "Injected fuchsia::ui::pointerinjector::PointerSample was missing required fields";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const auto [x, y] = pointer_sample.position_in_viewport();
+  if (!std::isfinite(x) || !std::isfinite(y)) {
+    FX_LOGS(ERROR) << "fuchsia::ui::pointerinjector::PointerSample contained a NaN or inf value";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Enforce event stream ordering rules.
+  if (!ValidateEventStream(pointer_sample.pointer_id(), pointer_sample.phase())) {
+    FX_LOGS(ERROR) << "Inject() called with invalid event stream";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
 }
 
 bool Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {

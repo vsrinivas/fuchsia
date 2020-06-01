@@ -13,7 +13,7 @@
 // These tests exercise the context View Space to target View Space coordinate transform logic
 // applied to pointer events sent to sessions using the input injection API.
 // Setup:
-// - Injection done in context View Space, with fuchsia.ui.pointerflow
+// - Injection done in context View Space, with fuchsia.ui.pointerinjector
 // - Target(s) specified by View (using view ref koids)
 // - Dispatch done in fuchsia.ui.scenic.SessionListener (legacy)
 
@@ -24,6 +24,14 @@ using fuchsia::ui::input::PointerEventPhase;
 
 // Sets up a 9x9 "display".
 class CoordinateTransformTest2 : public InputSystemTest {
+  // clang-format off
+  static constexpr std::array<float, 9> kIdentityMatrix = {
+    1, 0, 0, // column one
+    0, 1, 0, // column two
+    0, 0, 1, // column three
+  };
+  // clang-format on
+
  protected:
   void SetUp() override { InputSystemTest::SetUp(); }
 
@@ -32,40 +40,48 @@ class CoordinateTransformTest2 : public InputSystemTest {
     InputSystemTest::TearDown();
   }
 
-  void Inject(float x, float y, fuchsia::ui::pointerflow::EventPhase phase) {
+  void Inject(float x, float y, fuchsia::ui::pointerinjector::EventPhase phase) {
     FX_CHECK(injector_);
-    fuchsia::ui::pointerflow::Event event;
+    fuchsia::ui::pointerinjector::Event event;
     event.set_timestamp(0);
-    event.set_pointer_id(1);
-    event.set_phase(phase);
-    event.set_position_x(x);
-    event.set_position_y(y);
-    std::vector<fuchsia::ui::pointerflow::Event> events;
+    {
+      fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+      pointer_sample.set_pointer_id(1);
+      pointer_sample.set_phase(phase);
+      pointer_sample.set_position_in_viewport({x, y});
+      fuchsia::ui::pointerinjector::Data data;
+      data.set_pointer_sample(std::move(pointer_sample));
+      event.set_data(std::move(data));
+    }
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
     events.emplace_back(std::move(event));
     injector_->Inject(std::move(events), [] {});
   }
 
   void RegisterInjector(fuchsia::ui::views::ViewRef context_view_ref,
-                        fuchsia::ui::views::ViewRef target_view_ref) {
-    fuchsia::ui::pointerflow::InjectorConfig config;
+                        fuchsia::ui::views::ViewRef target_view_ref,
+                        std::array<float, 9> viewport_to_context_transform = kIdentityMatrix) {
+    fuchsia::ui::pointerinjector::Config config;
+    config.set_device_id(1);
+    config.set_device_type(fuchsia::ui::pointerinjector::DeviceType::TOUCH);
+    config.set_dispatch_policy(fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET);
     {
       {
-        fuchsia::ui::pointerflow::DeviceConfig device_config;
-        device_config.set_device_id(1);
-        device_config.set_device_type(fuchsia::ui::pointerflow::DeviceType::TOUCH);
-        config.set_device_config(std::move(device_config));
-      }
-      {
-        fuchsia::ui::pointerflow::InjectorContext context;
+        fuchsia::ui::pointerinjector::Context context;
         context.set_view(std::move(context_view_ref));
         config.set_context(std::move(context));
       }
       {
-        fuchsia::ui::pointerflow::InjectorTarget target;
+        fuchsia::ui::pointerinjector::Target target;
         target.set_view(std::move(target_view_ref));
         config.set_target(std::move(target));
       }
-      config.set_dispatch_policy(fuchsia::ui::pointerflow::DispatchPolicy::EXCLUSIVE);
+      {
+        fuchsia::ui::pointerinjector::Viewport viewport;
+        viewport.set_extents(FullScreenExtents());
+        viewport.set_viewport_to_context_transform(viewport_to_context_transform);
+        config.set_viewport(std::move(viewport));
+      }
     }
 
     bool error_callback_fired = false;
@@ -83,9 +99,14 @@ class CoordinateTransformTest2 : public InputSystemTest {
 
   uint32_t test_display_width_px() const override { return 9; }
   uint32_t test_display_height_px() const override { return 9; }
+  std::array<std::array<float, 2>, 2> FullScreenExtents() const {
+    return {{{0, 0},
+             {static_cast<float>(test_display_width_px()),
+              static_cast<float>(test_display_height_px())}}};
+  }
 
  private:
-  fuchsia::ui::pointerflow::InjectorPtr injector_;
+  fuchsia::ui::pointerinjector::DevicePtr injector_;
 };
 
 // In this test we set up the context and the target. We apply a scale, rotation and translation
@@ -93,12 +114,14 @@ class CoordinateTransformTest2 : public InputSystemTest {
 // the coordinates received by the listener are correctly transformed.
 // Only the transformation of the target, relative to the context, should have any effect on
 // the output.
+// The viewport-to-context transform here is the identity.
 //
 // Below are ASCII diagrams showing the transformation *difference* between target and context.
 // Note that the dashes represent the context view and notated X,Y coordinate system is the
 // context's coordinate system. The target view's coordinate system has its origin at corner '1'.
 //
-// Scene pre-transformation (1,2,3,4 denote the corners of the target view):
+// Scene pre-transformation
+// 1,2,3,4 denote the corners of the target view:
 //   X ->
 // Y 1 O O O O 2
 // | O O O O O O
@@ -142,12 +165,12 @@ class CoordinateTransformTest2 : public InputSystemTest {
 //
 // After translation:
 //   X ->
-// Y 4      O      O      O      O    D 1 - - - M1
+// Y 4      O      O      O      O    D 1 - - - C1
 // |                                  - - - - - -
 // V O      O      O      O      O    - O - - - -
 //                                    - - - - - -
 //   O      O      O      O      O    - O - - - -
-//                                    U - - - - M2
+//                                    U - - - - C2
 //   O      O      O      O      O      O
 //
 //   O      O      O      O      O      O
@@ -202,10 +225,10 @@ TEST_F(CoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyTransformed) {
   // pre-transformation.
   {
     RegisterInjector(client_1.view_ref(), client_2.view_ref());
-    Inject(0, 0, fuchsia::ui::pointerflow::EventPhase::ADD);
-    Inject(5, 0, fuchsia::ui::pointerflow::EventPhase::CHANGE);
-    Inject(5, 5, fuchsia::ui::pointerflow::EventPhase::CHANGE);
-    Inject(0, 5, fuchsia::ui::pointerflow::EventPhase::REMOVE);
+    Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
     RunLoopUntilIdle();
   }
 
@@ -232,6 +255,99 @@ TEST_F(CoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyTransformed) {
         PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 5.0 / 2.0, 1.0 / 3.0));
     EXPECT_TRUE(
         PointerMatches(events[5].pointer(), 1u, PointerEventPhase::REMOVE, 5.0 / 2.0, 1.0 / 3.0));
+  }
+}
+
+// In this test the context and the target have identical coordinate systems, but the viewport
+// no longer matches the context's coordinate system.
+//
+// Below is an ASCII diagram showing the resulting setup.
+// O represents the views, - the viewport.
+//   X ->
+// Y O   O   O   O   O   O
+// |
+// V   D - - - - C1- - - -
+//   O - O - O - O - O - O
+//     - - - - - - - - - -
+//     - - - - - - - - - -
+//   O - O - O - O - O - O
+//     U - - - - C2- - - -
+//     - - - - - - - - - -
+//   O - O - O - O - O - O
+//     - - - - - - - - - -
+//     - - - - - - - - - -
+//   O   O   O   O   O   O
+//
+//
+//   O   O   O   O   O   O
+//
+TEST_F(CoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyViewportTransformed) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders, one a child of the other.
+  auto [root_session, root_resources] = CreateScene();
+  scenic::ViewHolder holder_1(root_session.session(), std::move(vh1), "holder_1");
+  {
+    holder_1.SetViewProperties(k5x5x1);
+    root_resources.scene.AddChild(holder_1);
+    RequestToPresent(root_session.session());
+  }
+
+  SessionWrapper client_1 = CreateClient("view_1", std::move(v1));
+  scenic::ViewHolder holder_2(client_1.session(), std::move(vh2), "holder_2");
+  {
+    holder_2.SetViewProperties(k5x5x1);
+    client_1.view()->AddChild(holder_2);
+    RequestToPresent(client_1.session());
+  }
+
+  SessionWrapper client_2 = CreateClient("view_2", std::move(v2));
+
+  // Scene is now set up, send in the input. One event for where each corner of the view was
+  // pre-transformation.
+  {
+    // Transform to scale the viewport by 1/2 in the x-direction, 1/3 in the y-direction,
+    // and then translate by (1, 2).
+    // clang-format off
+    static constexpr std::array<float, 9> kViewportToContextTransform = {
+      1./2.,  0,  0, // first column
+      0,  1./3.,  0, // second column
+      1,      2,  1, // third column
+    };
+    // clang-format on
+
+    RegisterInjector(client_1.view_ref(), client_2.view_ref(), kViewportToContextTransform);
+    Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+  }
+
+  {
+    // Context should receive no events.
+    const std::vector<fuchsia::ui::input::InputEvent>& events = client_1.events();
+    EXPECT_EQ(events.size(), 0u);
+  }
+
+  {  // Target should receive events correctly transformed to its Local Space.
+    const std::vector<fuchsia::ui::input::InputEvent>& events = client_2.events();
+    ASSERT_EQ(events.size(), 6u);
+
+    // Targets gets properly transformed input coordinates.
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.0 / 2.0 + 1,
+                               0.0 / 3.0 + 2));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 0.0 / 2.0 + 1,
+                               0.0 / 3.0 + 2));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 5.0 / 2.0 + 1,
+                               0.0 / 3.0 + 2));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 5.0 / 2.0 + 1,
+                               5.0 / 3.0 + 2));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 0.0 / 2.0 + 1,
+                               5.0 / 3.0 + 2));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::REMOVE, 0.0 / 2.0 + 1,
+                               5.0 / 3.0 + 2));
   }
 }
 
@@ -271,10 +387,10 @@ TEST_F(CoordinateTransformTest2, ClipSpaceTransformedScene_ShouldHaveNoImpactOnO
   // pre-transformation.
   {
     RegisterInjector(client_1.view_ref(), client_2.view_ref());
-    Inject(0, 0, fuchsia::ui::pointerflow::EventPhase::ADD);
-    Inject(5, 0, fuchsia::ui::pointerflow::EventPhase::CHANGE);
-    Inject(5, 5, fuchsia::ui::pointerflow::EventPhase::CHANGE);
-    Inject(0, 5, fuchsia::ui::pointerflow::EventPhase::REMOVE);
+    Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
     RunLoopUntilIdle();
   }
 

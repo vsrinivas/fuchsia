@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerflow/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 
@@ -35,7 +35,7 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb);
 // Turn a 64-bit uint to two floats (high bits, low bits).
 std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
 
-// Turns a pointerflow::Event into the corresponding PointerFlowEvents.
+// Turns a pointerinjector::Event into the corresponding GFX pointer events.
 // Expects |event| to be a valid TOUCH pointer event.
 // The mapping is directly translated, except for if the phase is ADD or REMOVE, in which case
 // the event is duplicated and an extra phase is inserted.
@@ -43,8 +43,8 @@ std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
 // event_time = timestamp
 // pointer_id = pointer_id
 // device_id = device_id
-// x = position_x
-// y = position_y
+// x = viewport_to_context_transform * viewport_position[0]
+// y = viewport_to_context_transform * viewport_position[1]
 // type = fuchsia::ui::input::PointerEventType::TOUCH
 //
 // radius_minor and radius_major are set to the lower and upper bits of trace_flow_id if available
@@ -54,8 +54,11 @@ std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
 // CHANGE -> MOVE
 // REMOVE -> UP + REMOVE
 // CANCEL -> CANCEL
-std::vector<fuchsia::ui::input::PointerEvent> PointerFlowEventToGfxPointerEvent(
-    const fuchsia::ui::pointerflow::Event& event, uint32_t device_id);
+std::vector<fuchsia::ui::input::PointerEvent> PointerInjectorEventToGfxPointerEvent(
+    const fuchsia::ui::pointerinjector::Event& event, uint32_t device_id,
+    const glm::mat3& viewport_to_context_transform);
+
+glm::mat3 ColumnMajorVectorToMat3(const std::array<float, 9>& matrix_array);
 
 }  // namespace input
 }  // namespace scenic_impl
