@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -28,10 +29,26 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("lib") {
+  name = "emergency_lib"
+
+  # Generates a GN target for unit-tests with the label `lib_test`, and
+  # a binary named `emergency_lib_lib_test`.
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:matches",
   ]
 }
 
@@ -59,13 +76,23 @@ package("pkg") {
 }
 
 # Run with `fx test emergency-tests`.
-test_package("emergency-tests") {
-  deps = [ ":bin_test" ]
+unittest_package("emergency-tests") {
+  deps = [
+    ":bin_test",
+    ":lib_test",
+  ]
+
+  #  deps = [ ":lib_test" ]
 
   tests = [
     {
       name = "emergency_bin_test"
       dest = "emergency_test"
+      environments = basic_envs
+    },
+    {
+      name = "emergency_lib_lib_test"
+      dest = "emergency_lib_test"
       environments = basic_envs
     },
   ]
