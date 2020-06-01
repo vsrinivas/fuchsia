@@ -188,8 +188,7 @@ fn open_isolated_devmgr() -> Result<fs::File, zx::Status> {
     let (client_chan, server_chan) = zx::Channel::create()?;
     fdio::service_connect("/svc/fuchsia.test.IsolatedDevmgr", server_chan)?;
 
-    let devmgr = fdio::create_fd(client_chan.into())?.into();
-    Ok(devmgr)
+    Ok(fdio::create_fd(client_chan.into())?)
 }
 
 #[cfg(test)]

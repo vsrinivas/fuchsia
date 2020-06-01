@@ -13,11 +13,7 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::{stream::FuturesUnordered, TryStreamExt},
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
-    std::{
-        collections::HashSet,
-        io::Read as _,
-        os::unix::io::{FromRawFd, IntoRawFd},
-    },
+    std::{collections::HashSet, io::Read as _},
     system_image::StaticPackages,
 };
 
@@ -134,11 +130,7 @@ impl BlobLocation {
 }
 
 fn client_end_to_openat(client: ClientEnd<DirectoryMarker>) -> Result<openat::Dir, Error> {
-    let fd = fdio::create_fd(client.into())
-        .map_err(|e| anyhow!("error creating File from handle: {}", e))?
-        .into_raw_fd();
-    // Safe because we own the fd.
-    Ok(unsafe { openat::Dir::from_raw_fd(fd) })
+    fdio::create_fd(client.into()).context("failed to create fd")
 }
 
 #[cfg(test)]

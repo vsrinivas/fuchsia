@@ -118,7 +118,7 @@ impl Sound {
         id: u32,
         file_channel: fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>,
     ) -> std::result::Result<Self, zx::Status> {
-        let wav = wav_reader::WavReader::read(BufReader::new(fdio::create_fd(
+        let wav = wav_reader::WavReader::read(BufReader::new(fdio::create_fd::<std::fs::File>(
             file_channel.into_handle(),
         )?))
         .map_err(|_| zx::Status::INVALID_ARGS)?;

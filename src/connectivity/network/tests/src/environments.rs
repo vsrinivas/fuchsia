@@ -13,7 +13,6 @@ use fidl_fuchsia_netemul_sandbox as netemul_sandbox;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, TryFutureExt as _};
 use std::convert::TryInto as _;
-use std::os::unix::io::{FromRawFd as _, IntoRawFd as _};
 
 /// Helper definition to help type system identify `None` as `IntoIterator`
 /// where `Item: Into<netemul_environment::LaunchService`.
@@ -491,8 +490,7 @@ impl<'a> TestEnvironment<'a> {
             .map_err(std::io::Error::from_raw_os_error)
             .context("failed to create socket")?;
 
-        let fd = fdio::create_fd(sock.into()).context("failed to create raw fd")?.into_raw_fd();
-        Ok(unsafe { socket2::Socket::from_raw_fd(fd) })
+        Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)
     }
 }
 

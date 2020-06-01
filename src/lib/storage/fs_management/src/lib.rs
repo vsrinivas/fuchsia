@@ -543,7 +543,7 @@ mod tests {
         // force fsck to fail by stomping all over one of blobfs's metadata blocks after formatting
         // TODO(35860): corrupt something other than the superblock
         let device_channel = ramdisk.open().expect("failed to get channel to device");
-        let mut file = fdio::create_fd(device_channel.into_handle())
+        let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
             .expect("failed to convert to file descriptor");
         let mut bytes: Vec<u8> = std::iter::repeat(0xff).take(block_size as usize).collect();
         file.write(&mut bytes).expect("failed to write to device");
@@ -616,7 +616,7 @@ mod tests {
 
         // force fsck to fail by stomping all over one of minfs's metadata blocks after formatting
         let device_channel = ramdisk.open().expect("failed to get channel to device");
-        let mut file = fdio::create_fd(device_channel.into_handle())
+        let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
             .expect("failed to convert to file descriptor");
 
         // when minfs isn't on an fvm, the location for it's bitmap offset is the 8th block.

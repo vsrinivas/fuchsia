@@ -80,7 +80,7 @@ impl Pty {
         // the normal open interface, since otherwise fdio gets confused about the associated event
         // object.  This confusion is caused by how we currently route the pty service through
         // svchost.  Once that routing is gone, this bounce through should be unnecessary.
-        let server_pty = fdio::create_fd(zx::Channel::from(server_chan).into())
+        let server_pty = fdio::create_fd::<File>(zx::Channel::from(server_chan).into())
             .context("failed to create FD from server PTY")?;
         let fd = server_pty.as_raw_fd();
         let previous = {
