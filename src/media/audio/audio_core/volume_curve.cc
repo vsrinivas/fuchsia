@@ -69,7 +69,7 @@ float VolumeCurve::VolumeToDb(float volume) const {
   const float x = std::clamp<float>(volume, fuchsia::media::audio::MIN_VOLUME,
                                     fuchsia::media::audio::MAX_VOLUME);
 
-  const auto bounds = Bounds(x);
+  const auto bounds = Bounds(x, Attribute::kVolume);
   FX_DCHECK(bounds.has_value())
       << "At construction, we ensure the volume domain includes [0.0, 1.0].";
 
@@ -87,10 +87,39 @@ float VolumeCurve::VolumeToDb(float volume) const {
   return mixer::LinearInterpolateF(a, b, alpha);
 }
 
+float VolumeCurve::DbToVolume(float gain_dbfs) const {
+  const float x =
+      std::clamp<float>(gain_dbfs, fuchsia::media::audio::MUTED_GAIN_DB, Gain::kUnityGainDb);
+
+  const auto bounds = Bounds(x, Attribute::kGain);
+  if (!bounds.has_value()) {
+    // We verify that our volume curve tops off at Unity at construction time, so we won't be above
+    // that. If our gain is below our min gain for the volume curve, we'll clamp our volume to 0.
+    return 0.0;
+  }
+
+  const auto [lower_bound, upper_bound] = bounds.value();
+
+  const auto x0 = lower_bound.gain_dbfs;
+  const auto a = lower_bound.volume;
+  const auto x1 = upper_bound.gain_dbfs;
+  const auto b = upper_bound.volume;
+
+  FX_DCHECK(x1 != x0) << "At construction, we reject vertical segments.";
+
+  const auto alpha = (x - x0) / (x1 - x0);
+
+  return mixer::LinearInterpolateF(a, b, alpha);
+}
+
 std::optional<std::pair<VolumeCurve::VolumeMapping, VolumeCurve::VolumeMapping>>
-VolumeCurve::Bounds(float x) const {
-  const auto mappings_are_enclosing_bounds = [x](VolumeMapping a, VolumeMapping b) {
-    return a.volume <= x && b.volume >= x;
+VolumeCurve::Bounds(float x, VolumeCurve::Attribute attr) const {
+  const auto mappings_are_enclosing_bounds = [x, attr](VolumeMapping a, VolumeMapping b) {
+    if (attr == Attribute::kVolume) {
+      return a.volume <= x && b.volume >= x;
+    } else {
+      return a.gain_dbfs <= x && b.gain_dbfs >= x;
+    }
   };
 
   auto it = std::adjacent_find(mappings_.begin(), mappings_.end(), mappings_are_enclosing_bounds);

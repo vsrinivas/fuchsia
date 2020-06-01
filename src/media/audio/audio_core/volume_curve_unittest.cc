@@ -100,10 +100,19 @@ TEST(VolumeCurveTest, VolumeToDbBasic) {
   auto curve = curve_result.take_value();
 
   EXPECT_FLOAT_EQ(curve.VolumeToDb(fuchsia::media::audio::MIN_VOLUME), -100.0);
+  EXPECT_FLOAT_EQ(curve.DbToVolume(-100.0), fuchsia::media::audio::MIN_VOLUME);
+
   EXPECT_FLOAT_EQ(curve.VolumeToDb(0.25), -75.0);
+  EXPECT_FLOAT_EQ(curve.DbToVolume(-75.0), 0.25);
+
   EXPECT_FLOAT_EQ(curve.VolumeToDb(0.5), -50.0);
+  EXPECT_FLOAT_EQ(curve.DbToVolume(-50.0), 0.5);
+
   EXPECT_FLOAT_EQ(curve.VolumeToDb(0.75), -25.0);
+  EXPECT_FLOAT_EQ(curve.DbToVolume(-25.0), 0.75);
+
   EXPECT_FLOAT_EQ(curve.VolumeToDb(fuchsia::media::audio::MAX_VOLUME), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(curve.DbToVolume(Gain::kUnityGainDb), fuchsia::media::audio::MAX_VOLUME);
 }
 
 TEST(VolumeCurveTest, DefaultCurveWithMinGainDb) {
@@ -112,10 +121,19 @@ TEST(VolumeCurveTest, DefaultCurveWithMinGainDb) {
 
   EXPECT_FLOAT_EQ(curve100.VolumeToDb(fuchsia::media::audio::MIN_VOLUME),
                   fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_FLOAT_EQ(curve100.DbToVolume(fuchsia::media::audio::MUTED_GAIN_DB),
+                  fuchsia::media::audio::MIN_VOLUME);
+
   EXPECT_FLOAT_EQ(curve100.VolumeToDb(fuchsia::media::audio::MIN_VOLUME),
                   fuchsia::media::audio::MUTED_GAIN_DB);
+  EXPECT_FLOAT_EQ(curve100.DbToVolume(fuchsia::media::audio::MUTED_GAIN_DB),
+                  fuchsia::media::audio::MIN_VOLUME);
+
   EXPECT_FLOAT_EQ(curve50.VolumeToDb(fuchsia::media::audio::MAX_VOLUME), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(curve50.DbToVolume(Gain::kUnityGainDb), fuchsia::media::audio::MAX_VOLUME);
+
   EXPECT_FLOAT_EQ(curve50.VolumeToDb(fuchsia::media::audio::MAX_VOLUME), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(curve50.DbToVolume(Gain::kUnityGainDb), fuchsia::media::audio::MAX_VOLUME);
 
   const auto middle100 = curve100.VolumeToDb(0.5);
   const auto middle50 = curve50.VolumeToDb(0.5);

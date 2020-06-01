@@ -48,16 +48,26 @@ class VolumeCurve {
   // clamped before sampling.
   float VolumeToDb(float volume) const;
 
+  // Samples the gain curve for the volume value at `gain_dbfs`. Outside of [-160.0, 0.0], the gain
+  // is clamped before sampling.
+  float DbToVolume(float gain_dbfs) const;
+
   // Returns the set of underlying mappings for this curve.
   const std::vector<VolumeMapping>& mappings() const { return mappings_; }
 
  private:
   explicit VolumeCurve(std::vector<VolumeMapping> mappings);
 
-  // Returns the bounds, the neighboring mappings to volume x. If x is 0.5, and we have mappings at
-  // volumes [0.0, 0.25, 0.75, 1.0] the mappings at 0.25 and 0.75 will be returned as bounds. If two
-  // bounds do not exist, std::nullopt is returned. Mappings may be equal to x on one side.
-  std::optional<std::pair<VolumeMapping, VolumeMapping>> Bounds(float x) const;
+  enum class Attribute {
+    kVolume,
+    kGain,
+  };
+
+  // Returns the bounds, the neighboring mappings to attribute x (either gain or volume). If x is
+  // 0.5, and we have mappings at [0.0, 0.25, 0.75, 1.0] the mappings at 0.25 and 0.75 will be
+  // returned as bounds. If two bounds do not exist, std::nullopt is returned. Mappings may be
+  // equal to x on one side.
+  std::optional<std::pair<VolumeMapping, VolumeMapping>> Bounds(float x, Attribute attribute) const;
 
   // Mappings stored with the assumptions that 1) the map is sorted by volume, 2) there are
   // at least two mappings, 3) the volume domain includes [0.0, 1.0], and 4) the final mapping is
