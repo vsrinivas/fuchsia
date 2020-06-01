@@ -77,4 +77,6 @@ enum Severity : int8 {
     WARN = 0x40;
     /// Components should include error records as well as more severe records.
     ERROR = 0x50;
+    /// Components should include fatal records as well as more severe records.
+    FATAL = 0x60;
 };
