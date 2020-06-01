@@ -168,8 +168,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     std::map<std::string, inspect::StringProperty> annotation_properties;
 
     // Helper for initializing inspect nodes and properties.
-    void InitializeInspect(StoryControllerImpl* const story_controller_impl);
-    void ResetInspect();
+    void InitializeInspectProperties(StoryControllerImpl* const story_controller_impl);
+    void UpdateInspectProperties();
   };
 
   // A module's story shell-related information that we pend until we are able

@@ -95,7 +95,7 @@ zx_time_t GetNowUTC() {
   return now;
 }
 
-void StoryControllerImpl::RunningModInfo::InitializeInspect(
+void StoryControllerImpl::RunningModInfo::InitializeInspectProperties(
     StoryControllerImpl* const story_controller_impl) {
   mod_inspect_node =
       story_controller_impl->story_inspect_node_->CreateChild(module_data->module_url());
@@ -173,10 +173,10 @@ void StoryControllerImpl::RunningModInfo::InitializeInspect(
     module_surface_relation_emphasis = mod_inspect_node.CreateDouble(
         modular_config::kInspectSurfaceRelationEmphasis, module_data->surface_relation().emphasis);
   }
-  ResetInspect();
+  UpdateInspectProperties();
 }
 
-void StoryControllerImpl::RunningModInfo::ResetInspect() {
+void StoryControllerImpl::RunningModInfo::UpdateInspectProperties() {
   module_intent_action_property.Set(module_data->intent().action.value_or(""));
 
   std::string param_names_str = "";
@@ -351,7 +351,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         module_context_info, running_mod_info->module_data.get(),
         std::move(module_context_provider_request));
 
-    running_mod_info->InitializeInspect(story_controller_impl_);
+    running_mod_info->InitializeInspectProperties(story_controller_impl_);
 
     story_controller_impl_->running_mod_infos_.emplace_back(std::move(running_mod_info));
 
@@ -881,7 +881,7 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
         fidl::Clone(module_data.annotations(),
                     running_mod_info->module_data->mutable_annotations());
       }
-      running_mod_info->ResetInspect();
+      running_mod_info->UpdateInspectProperties();
     }
     OnModuleDataUpdated(std::move(module_data));
     return StoryStorage::NotificationInterest::CONTINUE;
