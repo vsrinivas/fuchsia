@@ -42,7 +42,7 @@ Please read the [contributing doc][contributing] for more information.
 
 [tutorials]: /docs/development/languages/fidl/tutorials/overview.md
 [concepts]: /docs/concepts/fidl/overview.md
-[contributing]: /docs/contribute/contributing_to_fidl.md
+[contributing]: /docs/contribute/contributing-to-fidl
 [bindings-ref]: /docs/reference/fidl/bindings/overview.md
 [language-ref]: /docs/reference/fidl/language/language.md
 [wire-format]: /docs/reference/fidl/language/wire-format

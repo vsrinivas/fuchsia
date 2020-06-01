@@ -9,7 +9,8 @@ toc:
 - title: "Contributing to Zircon"
   path: /docs/contribute/contributing_to_zircon.md
 - title: "Contributing to FIDL"
-  path: /docs/contribute/contributing_to_fidl.md
+  section:
+  - include: /docs/contribute/contributing-to-fidl/_toc.yaml
 - title: "Best practices"
   section:
   - include: /docs/contribute/best-practices/_toc.yaml

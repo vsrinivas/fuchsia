@@ -620,6 +620,6 @@ reference][language-reference], or the [contributing doc][fidl-contributing].
 [wire-format]: /docs/reference/fidl/language/wire-format
 [language-spec]: /docs/reference/fidl/language/language.md
 [developer-guides]: /docs/development/languages/fidl/
-[fidl-contributing]: /docs/contribute/contributing_to_fidl.md
+[fidl-contributing]: /docs/contribute/contributing-to-fidl/
 [compiler-spec]: /docs/development/languages/fidl/guides/
 [attributes]: /docs/reference/fidl/language/attributes.md
