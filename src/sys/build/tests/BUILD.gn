@@ -90,4 +90,7 @@ fuchsia_test_package("echo-integration-test") {
     ":return_zero_component",
   ]
   components = [ ":echo-server" ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }

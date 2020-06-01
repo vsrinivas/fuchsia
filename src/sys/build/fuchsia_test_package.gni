@@ -27,8 +27,8 @@ import("//src/sys/build/fuchsia_test.gni")
 #   components = [ ":fonts-ui" ],
 #   test_specs = {
 #     environments = [
-#       "astro_env",
-#       "sherlock_env",
+#       astro_env,
+#       sherlock_env,
 #     ]
 #   }
 # }
@@ -75,6 +75,12 @@ template("fuchsia_test_package") {
     package_name = invoker.package_name
   }
   test_deps = []
+
+  test_specs = {
+  }
+  if (defined(invoker.test_specs)) {
+    test_specs = invoker.test_specs
+  }
   foreach(test, invoker.test_components) {
     test_target = "${target_name}_test_" + get_label_info(test, "name")
     fuchsia_test(test_target) {
@@ -82,6 +88,7 @@ template("fuchsia_test_package") {
       package_name = package_name
       component = test
       visibility = [ ":*" ]
+      forward_variables_from(test_specs, "*")
     }
     test_deps += [ ":$test_target" ]
   }
