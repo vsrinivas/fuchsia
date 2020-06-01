@@ -36,6 +36,11 @@ class LoopbackConnectionFactory {
  public:
   LoopbackConnectionFactory() : loop_(&kAsyncLoopConfigNeverAttachToThread) { loop_.StartThread(); }
 
+  ~LoopbackConnectionFactory() {
+    loop_.Quit();
+    loop_.JoinThreads();
+  }
+
   // Create a channel to |impl| implementing FIDL interface |T|.
   template <typename T>
   zx::channel CreateChannelTo(T* impl) {
