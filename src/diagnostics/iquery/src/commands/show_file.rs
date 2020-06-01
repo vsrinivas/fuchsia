@@ -48,16 +48,16 @@ impl Command for ShowFileCommand {
                 Err(_) => continue,
                 Ok(location) => location,
             };
+            let path = location.path.to_string_lossy().to_string();
             match IqueryResult::try_from(location).await {
-                // TODO(fxbug.dev/45458): surface errors too.
-                Err(_) => {}
+                Err(e) => {
+                    return Err(Error::ReadLocation(path.to_string(), e));
+                }
                 Ok(IqueryResult { location, hierarchy: Some(mut hierarchy) }) => {
                     hierarchy.sort();
                     results.push(ShowFileResultItem {
                         payload: hierarchy,
-                        path: location
-                            .absolute_path()
-                            .unwrap_or(location.path.to_string_lossy().to_string()),
+                        path: location.absolute_path().unwrap_or(path),
                     });
                 }
                 Ok(_) => {}
@@ -68,7 +68,7 @@ impl Command for ShowFileCommand {
     }
 }
 
-fn expand_paths(query_paths: &[String]) -> Result<Vec<String>, Error> {
+pub fn expand_paths(query_paths: &[String]) -> Result<Vec<String>, Error> {
     let mut result = Vec::new();
     for query_path in query_paths {
         if query_path.ends_with(".inspect") {
@@ -97,54 +97,4 @@ fn expand_paths(query_paths: &[String]) -> Result<Vec<String>, Error> {
         }
     }
     Ok(result)
-}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, crate::testing, fuchsia_async as fasync};
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_no_paths() {
-        let command = ShowFileCommand { paths: vec![] };
-        assert!(matches!(command.execute().await, Err(Error::InvalidArguments(_))));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn show_file() {
-        let (_env, _app) =
-            testing::start_basic_component("show-file-test-1").await.expect("create comp 1");
-        let (_env2, _app2) =
-            testing::start_test_component("show-file-test-2").await.expect("create comp 2");
-        let command = ShowFileCommand {
-            paths: vec![
-                "/hub/r/show-file-test-1/*/c/basic_component.cmx/*/out/diagnostics/fuchsia.inspect.Tree".to_string(),
-                "/hub/r/show-file-test-2/*/c/test_component.cmx/*/out/diagnostics/*".to_string(),
-            ],
-        };
-        let result = command.execute().await.expect("successful execution");
-        testing::assert_result(
-            result,
-            include_str!("../../test_data/show_file_json_expected.json"),
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn inspect_vmo_file_directly() {
-        let (_env, _app) =
-            testing::start_test_component("show-file-vmo-2").await.expect("create comp 2");
-        let paths = expand_paths(&[
-            "/hub/r/show-file-vmo-2/*/c/test_component.cmx/*/out/diagnostics/*".to_string(),
-        ])
-        .expect("got paths");
-
-        // Pass only the path to the vmo file. Without the workaround in `get_paths` comments this
-        // wouldn't work and the `result` would be an emtpy list.
-        let path = paths
-            .into_iter()
-            .find(|p| p.ends_with("root.inspect"))
-            .expect("found root.inspect path");
-        let command = ShowFileCommand { paths: vec![path] };
-        let result = command.execute().await.expect("successful execution");
-        testing::assert_result(result, include_str!("../../test_data/show_file_vmo_expected.json"));
-    }
 }

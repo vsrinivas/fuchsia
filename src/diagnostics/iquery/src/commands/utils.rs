@@ -41,8 +41,6 @@ pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarc
         .ok_or(Error::ArchiveInvalidJson)?
         .into_iter()
         .map(|result| {
-            // TODO(fxbug.dev/45458): we should propagate and print errors for stuff we failed to
-            // read.
             let payload =
                 result.get_mut("payload").ok_or(Error::archive_missing_property("payload"))?;
             let mut hierarchy: NodeHierarchy<String> =

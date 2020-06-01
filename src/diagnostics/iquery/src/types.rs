@@ -29,6 +29,9 @@ pub enum Error {
 
     #[error("Failed to list locations on {} {}", _0, _1)]
     ListLocations(String, anyhow::Error),
+
+    #[error("Failed to find inspect data in location {}: {}", _0, _1)]
+    ReadLocation(String, anyhow::Error),
 }
 
 impl Error {

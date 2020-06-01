@@ -25,7 +25,8 @@ mod result;
 mod types;
 
 #[cfg(test)]
-mod testing;
+#[macro_use]
+mod tests;
 
 /// Exceute the command specified in the |options|.
 async fn legacy_execute(options: &DeprecatedOptions) -> Vec<Result<IqueryResult, Error>> {
@@ -96,7 +97,9 @@ async fn main() -> Result<(), Error> {
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     match CommandLine::from_args(&[strs[0]], &strs[1..]) {
         Ok(command_line) => match command_line.execute().await {
-            Ok(()) => {}
+            Ok(result) => {
+                println!("{}", result);
+            }
             Err(err) => eprintln!("{}", err),
         },
         Err(early_exit) => match early_exit.status {

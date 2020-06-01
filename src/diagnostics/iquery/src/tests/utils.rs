@@ -5,7 +5,10 @@
 #![cfg(test)]
 
 use {
-    anyhow::{format_err, Error},
+    crate::{command_line::CommandLine, commands::*, types::Error},
+    anyhow::format_err,
+    argh::FromArgs,
+    difference::{Changeset, Difference},
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -13,9 +16,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     futures::StreamExt,
-    pretty_assertions::assert_eq,
     regex::Regex,
-    serde::Serialize,
 };
 
 const BASIC_COMPONENT_URL: &'static str =
@@ -24,29 +25,59 @@ const TEST_COMPONENT_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/iquery_tests#meta/test_component.cmx";
 
 /// Creates a new environment named `env_label` and a starts the basic component under it.
-pub async fn start_basic_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
+pub async fn start_basic_component(
+    env_label: &str,
+) -> Result<(NestedEnvironment, App), anyhow::Error> {
     let (env, app) = launch(env_label, BASIC_COMPONENT_URL)?;
     wait_for_out_ready(&app).await?;
     Ok((env, app))
 }
 
 /// Creates a new environment named `env_label` and a starts the test component under it.
-pub async fn start_test_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
+pub async fn start_test_component(
+    env_label: &str,
+) -> Result<(NestedEnvironment, App), anyhow::Error> {
     let (env, app) = launch(env_label, TEST_COMPONENT_URL)?;
     wait_for_out_ready(&app).await?;
     Ok((env, app))
 }
 
-/// Validates that a command result matches the expected json string
-pub fn assert_result<T: Serialize>(result: T, expected: &str) {
-    let result = serde_json::to_string_pretty(&result).expect("result is json");
-    let result: serde_json::Value =
-        serde_json::from_str(&cleanup_variable_strings(result)).expect("cleaned result is json");
-    let expected: serde_json::Value = serde_json::from_str(expected).expect("expected is json");
-    assert_eq!(result, expected);
+/// Execute a command: [command, flags, and, args]
+pub async fn execute_command(command: &[&str]) -> Result<String, Error> {
+    let command_line = CommandLine::from_args(&["iquery"], command).expect("create command line");
+    command_line.execute().await
 }
 
-fn launch(env_label: &str, url: impl Into<String>) -> Result<(NestedEnvironment, App), Error> {
+/// Validates that a command result matches the expected json string
+pub fn assert_result(result: &str, expected: &str) {
+    let clean_result = cleanup_variable_strings(&result);
+    let Changeset { diffs, distance, .. } = Changeset::new(&clean_result, expected.trim(), "\n");
+    for diff in &diffs {
+        match diff {
+            Difference::Same(ref x) => {
+                eprintln!(" {}", x);
+            }
+            Difference::Add(ref x) => {
+                eprintln!("+{}", x);
+            }
+            Difference::Rem(ref x) => {
+                eprintln!("-{}", x);
+            }
+        }
+    }
+    assert_eq!(distance, 0);
+}
+
+/// Checks that the result string (cleaned) and the expected string are equal
+pub fn result_equals_expected(result: &str, expected: &str) -> bool {
+    let clean_result = cleanup_variable_strings(&result);
+    clean_result.trim() == expected.trim()
+}
+
+fn launch(
+    env_label: &str,
+    url: impl Into<String>,
+) -> Result<(NestedEnvironment, App), anyhow::Error> {
     let mut service_fs = ServiceFs::new();
     let env = service_fs.create_nested_environment(env_label)?;
     let app = client::launch(&env.launcher(), url.into(), None)?;
@@ -54,7 +85,7 @@ fn launch(env_label: &str, url: impl Into<String>) -> Result<(NestedEnvironment,
     Ok((env, app))
 }
 
-async fn wait_for_out_ready(app: &App) -> Result<(), Error> {
+async fn wait_for_out_ready(app: &App) -> Result<(), anyhow::Error> {
     let mut component_stream = app.controller().take_event_stream();
     match component_stream
         .next()
@@ -75,12 +106,12 @@ async fn wait_for_out_ready(app: &App) -> Result<(), Error> {
 /// Cleans-up instances of:
 /// - `"start_timestamp_nanos": 7762005786231` by `"start_timestamp_nanos": TIMESTAMP`
 /// - instance ids by INSTANCE_ID
-fn cleanup_variable_strings(string: String) -> String {
+fn cleanup_variable_strings(string: &str) -> String {
     // Replace start_timestamp_nanos in fuchsia.inspect.Health entries.
     let re = Regex::new("\"start_timestamp_nanos\": \\d+").unwrap();
     let string = re.replace_all(&string, "\"start_timestamp_nanos\": \"TIMESTAMP\"").to_string();
 
     // Replace instance IDs in paths.
     let re = Regex::new("/\\d+/").unwrap();
-    re.replace_all(&string, "/INSTANCE_ID/").to_string()
+    re.replace_all(&string, "/INSTANCE_ID/").trim().to_string()
 }

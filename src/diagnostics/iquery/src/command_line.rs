@@ -40,9 +40,8 @@ macro_rules! execute_and_format {
                     let result = command.execute().await?;
                     match $self.format {
                         Format::Json => {
-                            let json_string = serde_json::to_string_pretty(&result)
-                                .map_err(|e| Error::InvalidCommandResponse(e))?;
-                            println!("{}", json_string);
+                            serde_json::to_string_pretty(&result)
+                                .map_err(|e| Error::InvalidCommandResponse(e))
                         }
                         Format::Text => {
                             // TODO(fxbug.dev/45458): implement
@@ -57,10 +56,9 @@ macro_rules! execute_and_format {
 
 #[async_trait]
 impl Command for CommandLine {
-    type Result = ();
+    type Result = String;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        execute_and_format!(self, [List, ListFiles, Selectors, Show, ShowFile]);
-        Ok(())
+        execute_and_format!(self, [List, ListFiles, Selectors, Show, ShowFile])
     }
 }
