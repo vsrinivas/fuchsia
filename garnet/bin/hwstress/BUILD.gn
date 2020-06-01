@@ -65,10 +65,11 @@ executable("hwstress_test") {
     "cpu_stressor_test.cc",
     "cpu_workloads_test.cc",
     "hwstress_test.cc",
-    "profile_manager_test.cc",
     "status_test.cc",
-    "temperature_sensor_test.cc",
     "util_test.cc",
+
+    # "profile_manager_test.cc",  # TODO(fxb/52994) Re-enable test when flakes resolved.
+    # "temperature_sensor_test.cc",  # TODO(fxb/52994) Re-enable test when flakes resolved.
   ]
 
   deps = [
