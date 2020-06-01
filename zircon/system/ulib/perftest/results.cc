@@ -8,9 +8,9 @@
 #include <inttypes.h>
 #include <math.h>
 
-#include <fbl/algorithm.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <numeric>
 #include <utility>
 
@@ -23,11 +23,11 @@ double Mean(const fbl::Vector<double>& values) {
 }
 
 double Min(const fbl::Vector<double>& values) {
-  return *fbl::min_element(values.begin(), values.end());
+  return *std::min_element(values.begin(), values.end());
 }
 
 double Max(const fbl::Vector<double>& values) {
-  return *fbl::max_element(values.begin(), values.end());
+  return *std::max_element(values.begin(), values.end());
 }
 
 double StdDev(const fbl::Vector<double>& values, double mean) {

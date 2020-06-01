@@ -121,66 +121,6 @@ IS_POW2_TEST(uint64_t)
 IS_POW2_TEST(size_t)
 #undef IS_POW2_TEST
 
-TEST(AlgorithmTest, MaxElement) {
-  int* null = nullptr;
-  EXPECT_EQ(fbl::max_element(null, null), null);
-
-  int value = 5;
-  EXPECT_EQ(fbl::max_element(&value, &value), &value);
-
-  int values[] = {1, 3, 7, -2, 5, 7};
-  constexpr size_t count = fbl::count_of(values);
-  int* first = values;
-  int* last = values + count;
-  EXPECT_EQ(fbl::max_element(first, last), values + 2);
-}
-
-bool MaxCompare(int a, int b) { return a > b; }
-
-TEST(AlgorithmTest, MaxElementCompare) {
-  int* null = nullptr;
-  EXPECT_EQ(fbl::max_element(null, null, MaxCompare), null);
-
-  int value = 5;
-  EXPECT_EQ(fbl::max_element(&value, &value, MaxCompare), &value);
-
-  int values[] = {1, 3, 7, -2, 5, 7};
-  constexpr size_t count = fbl::count_of(values);
-  int* first = values;
-  int* last = values + count;
-  EXPECT_EQ(fbl::max_element(first, last, MaxCompare), values + 2);
-}
-
-TEST(AlgorithmTest, MinElement) {
-  int* null = nullptr;
-  EXPECT_EQ(fbl::min_element(null, null), null);
-
-  int value = 5;
-  EXPECT_EQ(fbl::min_element(&value, &value), &value);
-
-  int values[] = {1, 3, -7, -2, 5, -7};
-  constexpr size_t count = fbl::count_of(values);
-  int* first = values;
-  int* last = values + count;
-  EXPECT_EQ(fbl::min_element(first, last), values + 2);
-}
-
-bool MinCompare(int a, int b) { return a < b; }
-
-TEST(AlgorithmTest, MinElementCompare) {
-  int* null = nullptr;
-  EXPECT_EQ(fbl::min_element(null, null, MinCompare), null);
-
-  int value = 5;
-  EXPECT_EQ(fbl::min_element(&value, &value, MinCompare), &value);
-
-  int values[] = {1, 3, -7, -2, 5, -7};
-  constexpr size_t count = fbl::count_of(values);
-  int* first = values;
-  int* last = values + count;
-  EXPECT_EQ(fbl::min_element(first, last, MinCompare), values + 2);
-}
-
 TEST(AlgorithmTest, LowerBound) {
   int* null = nullptr;
   EXPECT_EQ(fbl::lower_bound(null, null, 0), null);
