@@ -16,6 +16,7 @@ pub enum SubCommand {
     Selectors(SelectorsCommand),
     Show(ShowCommand),
     ShowFile(ShowFileCommand),
+    ListFiles(ListFilesCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -59,7 +60,7 @@ impl Command for CommandLine {
     type Result = ();
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        execute_and_format!(self, [List, Selectors, Show, ShowFile]);
+        execute_and_format!(self, [List, ListFiles, Selectors, Show, ShowFile]);
         Ok(())
     }
 }

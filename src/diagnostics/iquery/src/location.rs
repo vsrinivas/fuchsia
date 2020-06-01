@@ -28,9 +28,10 @@ lazy_static! {
 }
 
 /// Gets an iterator over all inspect files in a directory.
-pub async fn all_locations(root: &str) -> Result<Vec<InspectLocation>, Error> {
+pub async fn all_locations(root: impl AsRef<str>) -> Result<Vec<InspectLocation>, Error> {
     let mut path = std::env::current_dir()?;
-    path.push(root);
+    let root = root.as_ref();
+    path.push(&root);
     let dir_proxy = io_util::open_directory_in_namespace(
         &path.to_string_lossy().to_string(),
         io_util::OPEN_RIGHT_READABLE,

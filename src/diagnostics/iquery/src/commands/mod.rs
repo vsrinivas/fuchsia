@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::commands::{list::*, selectors::*, show::*, show_file::*, types::*};
+pub use crate::commands::{list::*, list_files::*, selectors::*, show::*, show_file::*, types::*};
 
 mod list;
+mod list_files;
 mod selectors;
 mod show;
 mod show_file;

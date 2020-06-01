@@ -45,10 +45,6 @@ impl PartialOrd for ListResponseItem {
 #[derive(Default, FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "list")]
 pub struct ListCommand {
-    #[argh(switch)]
-    /// print v1 /hub entries that contain inspect.
-    pub hub: bool,
-
     #[argh(option)]
     /// the name of the manifest file that we are interested in. If this is provided, the output
     /// will only contain monikers for components whose url contains the provided name.
@@ -64,11 +60,10 @@ impl Command for ListCommand {
     type Result = Vec<ListResponseItem>;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        // TODO(fxbug.dev/45458): support listing hub entries
         // TODO(fxbug.dev/45458): support filtering by manifest name
         // TODO(fxbug.dev/45458): support including the url in the response
         // TODO(fxbug.dev/51165): once the archive exposes lifecycle we don't need to query all the
-        // inspect data. We can just query a snapshot of all running components.
+        // inspect data. We can just query a snapshot of all running components with inspect data.
         let fetcher = InspectDataFetcher::new();
         let mut results = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
         let mut results = results

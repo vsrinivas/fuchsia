@@ -26,6 +26,9 @@ pub enum Error {
 
     #[error("Failed parsing glob {}: {}", _0, _1)]
     ParsePath(String, anyhow::Error),
+
+    #[error("Failed to list locations on {} {}", _0, _1)]
+    ListLocations(String, anyhow::Error),
 }
 
 impl Error {
