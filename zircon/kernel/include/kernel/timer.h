@@ -40,8 +40,8 @@ struct Timer {
   Callback callback_ = nullptr;
   void* arg_ = nullptr;
 
-  // <0 if inactive
-  volatile int active_cpu_ = -1;
+  // INVALID_CPU, if inactive.
+  volatile cpu_num_t active_cpu_ = INVALID_CPU;
 
   // true if cancel is pending
   volatile bool cancel_ = false;
@@ -115,7 +115,7 @@ struct TimerQueue {
   // Internal routines used when bringing cpus online/offline
 
   // Moves |old_cpu|'s timers (except its preemption timer) to this TimerQueue.
-  void TransitionOffCpu(uint old_cpu);
+  void TransitionOffCpu(cpu_num_t old_cpu);
 
   // This function is to be invoked after resume on each CPU's TimerQueue that
   // may have had timers still on it, in order to restart hardware timers.

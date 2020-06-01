@@ -215,7 +215,7 @@ Timer::~Timer() {
   // Ensure that we are not on any cpu's list.
   ZX_DEBUG_ASSERT(!list_in_list(&node_));
   // Ensure that we are not active on some cpu.
-  ZX_DEBUG_ASSERT(active_cpu_ == -1);
+  ZX_DEBUG_ASSERT(active_cpu_ == INVALID_CPU);
 }
 
 void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
@@ -236,16 +236,16 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
 
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
-  bool currently_active = (active_cpu_ == (int)cpu);
+  bool currently_active = (active_cpu_ == cpu);
   if (unlikely(currently_active)) {
     // the timer is active on our own cpu, we must be inside the callback
     if (cancel_) {
       return;
     }
-  } else if (unlikely(active_cpu_ >= 0)) {
-    panic("timer %p currently active on a different cpu %d\n", this, active_cpu_);
+  } else if (unlikely(active_cpu_ != INVALID_CPU)) {
+    panic("timer %p currently active on a different cpu %u\n", this, active_cpu_);
   }
 
   // Set up the structure.
@@ -271,7 +271,7 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
 void TimerQueue::PreemptReset(zx_time_t deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   LTRACEF("preempt timer cpu %u deadline %" PRIi64 "\n", cpu, deadline);
 
@@ -296,14 +296,14 @@ bool Timer::Cancel() {
 
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   // mark the timer as canceled
   cancel_ = true;
   arch::DeviceMemoryBarrier();
 
   // see if we're trying to cancel the timer we're currently in the middle of handling
-  if (unlikely(active_cpu_ == (int)cpu)) {
+  if (unlikely(active_cpu_ == cpu)) {
     // zero it out
     callback_ = nullptr;
     arg_ = nullptr;
@@ -349,7 +349,7 @@ bool Timer::Cancel() {
   guard.Release();
 
   // wait for the timer to become un-busy in case a callback is currently active on another cpu
-  while (active_cpu_ >= 0) {
+  while (active_cpu_ != INVALID_CPU) {
     arch::Yield();
   }
 
@@ -368,7 +368,7 @@ void timer_tick(zx_time_t now) {
 
   CPU_STATS_INC(timer_ints);
 
-  uint cpu = arch_curr_cpu_num();
+  cpu_num_t cpu = arch_curr_cpu_num();
 
   LTRACEF("cpu %u now %" PRIi64 ", sp %p\n", cpu, now, __GET_FRAME());
 
@@ -463,7 +463,7 @@ zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
   return ZX_OK;
 }
 
-void TimerQueue::TransitionOffCpu(uint old_cpu) {
+void TimerQueue::TransitionOffCpu(cpu_num_t old_cpu) {
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
   Timer* old_head = list_peek_head_type(&timer_list_, Timer, node_);
@@ -518,7 +518,7 @@ void PrintTimerQueues(char* buf, size_t len) {
   zx_time_t now = current_time();
 
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
-  for (uint i = 0; i < percpu::processor_count(); i++) {
+  for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
     if (mp_is_cpu_online(i)) {
       ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);
       if (ptr >= len) {
