@@ -59,7 +59,7 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
     RunLoopUntil([&] { return fake_session_shell_->is_running(); });
   }
 
-  fit::result<inspect::contrib::DiagnosticsData> GetInspect() {
+  fit::result<inspect::contrib::DiagnosticsData> GetInspectDiagnosticsData() {
     auto archive = real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>();
 
     inspect::contrib::ArchiveReader reader(std::move(archive), {kSessionmgrSelector});
@@ -154,7 +154,7 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
   RunLoopUntil([&] { return called_get_stories; });
 
   // Check the Inspect node hierarchy is properly set up with only a root.
-  auto data_result = GetInspect();
+  auto data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   auto data = data_result.take_value();
   EXPECT_NE(rapidjson::Value(), data.GetByPath({"root"}));
@@ -170,7 +170,7 @@ TEST_F(InspectSessionTest, DefaultAgentsHierarchy) {
   // Wait for our session shell to start.
   RunLoopUntil([&] { return fake_session_shell_->is_running(); });
 
-  auto data_result = GetInspect();
+  auto data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   auto data = data_result.take_value();
   EXPECT_NE(rapidjson::Value(),
@@ -240,7 +240,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
       [&execute_called](fuchsia::modular::ExecuteResult result) { execute_called = true; });
   RunLoopUntil([&] { return execute_called; });
 
-  auto data_result = GetInspect();
+  auto data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   auto data = data_result.take_value();
   EXPECT_EQ(rapidjson::Value(last_focus_timestamps.back()),
@@ -256,7 +256,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   // Check that a node is removed from the hierarchy when a story is removed.
   // TODO(fxb/48109): This test must check that root/my_story is missing, but it is actually
   // present. Update this test when the underlying bug is fixed.
-  data_result = GetInspect();
+  data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   data = data_result.take_value();
   EXPECT_NE(rapidjson::Value(), data.GetByPath({"root"}));
@@ -309,9 +309,9 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
         EXPECT_FALSE(result.is_err());
         annotate_done = true;
       });
-  RunLoopUntil([&] { return annotate_done && execute_called; });
+  RunLoopUntil([&] { return annotate_done; });
 
-  auto data_result = GetInspect();
+  auto data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   auto data = data_result.take_value();
   EXPECT_EQ(rapidjson::Value("False"),
@@ -333,6 +333,19 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
                             modular_config::kInspectSurfaceRelationEmphasis}));
   EXPECT_EQ(rapidjson::Value("mod1"),
             data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectModulePath}));
+
+  // Due to flake fxbug.dev/50778, explicitly wait for a value to exist at 'annotation: text_key'
+  // before validating it has the correct value. The race was not reproducible on developer machines
+  // but exhibited as 'annotation: text_key' being null. If there is even a single execution run
+  // loop step between the callback to StoryPuppetMaster.AnnotateModule() and when Inspect data
+  // is available in the snapshot, the race could theorectically happen. This explicit wait
+  // ensures that the Inspect snapshot has caught up.
+  RunLoopUntil([this, &kStoryId]() -> bool {
+    auto data_result = GetInspectDiagnosticsData();
+    assert(data_result.is_ok());
+    auto data = data_result.take_value();
+    return !data.GetByPath({"root", kStoryId, kFakeModuleUrl, "annotation: text_key"}).IsNull();
+  });
   EXPECT_EQ(rapidjson::Value("bytes"),
             data.GetByPath({"root", kStoryId, kFakeModuleUrl, "annotation: text_key"}));
 }

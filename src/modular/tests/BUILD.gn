@@ -349,6 +349,10 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
+      name = "inspect_session_test"
+      environments = basic_envs
+    },
+    {
       name = "intl_property_provider_test"
       environments = basic_envs
     },
