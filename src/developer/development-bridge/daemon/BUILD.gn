@@ -37,7 +37,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:socket2",
       "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates:tokio",
     ]
 
     # TODO: remove this dep once Overnet is on async-std also.
