@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_LLCPP_TEST_UTILS_H_
-#define LIB_FIDL_LLCPP_TEST_UTILS_H_
+#ifndef SRC_LIB_FIDL_LLCPP_TESTS_TEST_UTILS_H_
+#define SRC_LIB_FIDL_LLCPP_TESTS_TEST_UTILS_H_
 
 #include <lib/fidl/llcpp/coding.h>
 #include <zircon/status.h>
@@ -42,6 +42,7 @@ OwnedLinearizeResult<FidlType> Linearize(FidlType* value) {
 
   if constexpr (FidlType::HasPointer) {
     owned_result.linearized_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
+    memset(owned_result.linearized_buffer.data(), 0xcd, owned_result.linearized_buffer.size());
     owned_result.result = fidl::Linearize(
         aligned_value,
         fidl::BytePart(&owned_result.linearized_buffer[0], ZX_CHANNEL_MAX_MSG_BYTES));
@@ -153,4 +154,4 @@ constexpr inline uint64_t FidlAlign(uint32_t offset) {
 
 }  // namespace llcpp_conformance_utils
 
-#endif  // LIB_FIDL_LLCPP_TEST_UTILS_H_
+#endif  // SRC_LIB_FIDL_LLCPP_TESTS_TEST_UTILS_H_
