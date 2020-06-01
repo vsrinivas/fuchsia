@@ -18,6 +18,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
+#include <optional>
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/configuration/color_transform_manager.h"
@@ -104,6 +105,13 @@ class App {
     bool operator==(GestureState o) const;
   };
 
+  // Finishes the SetUp of this object. For now, only the fetch of the current settings is called
+  // here. If any condition needs this object to be fully-initialized (all class members are
+  // initialized), they must be invoked here. For example: the field |profile_| is only available
+  // after this object is initialized, and settings relly on this field to process its logic. Trying
+  // to handle the settings logic without |profile_| would result in an error.
+  void FinishSetUp();
+
   // Callback for Setui's Watch2() method.
   void SetuiWatch2Callback(fuchsia::settings::AccessibilitySettings settings);
 
@@ -124,11 +132,13 @@ class App {
   // Fetches the user's i18n profile and stores in |i18n_profile_|.
   void PropertyProviderOnChangeHandler();
 
+  // Data fields that must be initialized to consider this object as initialized.
   // Current state of the a11y manager
   A11yManagerState state_;
 
   // The user's i18n profile.
-  fuchsia::intl::Profile i18n_profile_;
+  std::optional<fuchsia::intl::Profile> i18n_profile_;
+  // End of list of data fields that must be set to consider this object initialized.
 
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
   a11y::ViewManager* view_manager_;

@@ -18,7 +18,21 @@ void MockPropertyProvider::GetProfile(GetProfileCallback callback) {
   get_profile_count_++;
   fuchsia::intl::Profile profile;
   profile_.Clone(&profile);
-  callback(std::move(profile));
+  if (delay_response_) {
+    callback_ = [profile = std::move(profile), callback = std::move(callback)]() mutable {
+      callback(std::move(profile));
+    };
+  } else {
+    callback(std::move(profile));
+  }
+}
+
+void MockPropertyProvider::ReplyToGetProfile() {
+  if (delay_response_) {
+    if (callback_) {
+      callback_();
+    }
+  }
 }
 
 void MockPropertyProvider::SetLocale(std::string locale_id) {

@@ -16,6 +16,8 @@
 namespace accessibility_test {
 
 // A Mock to provide locale information to accessibility through the PropertyProvider service.
+// By default, calls to GetProfile() are only answered when this mock invokes ReplyToGetProfile().
+// See |delay_response_| documentation.
 class MockPropertyProvider : public fuchsia::intl::PropertyProvider {
  public:
   explicit MockPropertyProvider(sys::testing::ComponentContextProvider* context);
@@ -29,6 +31,13 @@ class MockPropertyProvider : public fuchsia::intl::PropertyProvider {
 
   int get_profile_count() const { return get_profile_count_; }
 
+  // If |delay_response_| is true, Invokes the callback passed in GetProfile(). This is used to
+  // simulate different timings for responses. Honnors only the last call to GetProfile().
+  void ReplyToGetProfile();
+
+  bool delay_response() const { return delay_response_; }
+  void set_delay_response(bool delay_response) { delay_response_ = delay_response; }
+
  private:
   // |fuchsia.intl.PropertyProvider|
   void GetProfile(GetProfileCallback callback) override;
@@ -39,6 +48,10 @@ class MockPropertyProvider : public fuchsia::intl::PropertyProvider {
   fuchsia::intl::Profile profile_;
   // Number of times GetProfile() was called.
   int get_profile_count_ = 0;
+  // If true, calls to GetProfile() will store the callback, and only invoke it on calls to
+  // ReplyToGetProfile().
+  bool delay_response_ = true;
+  fit::function<void()> callback_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MockPropertyProvider);
 };
 

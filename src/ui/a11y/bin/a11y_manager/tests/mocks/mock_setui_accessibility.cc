@@ -16,6 +16,7 @@ MockSetUIAccessibility::MockSetUIAccessibility(sys::testing::ComponentContextPro
 MockSetUIAccessibility::~MockSetUIAccessibility() = default;
 
 void MockSetUIAccessibility::Watch2(Watch2Callback callback) {
+  num_watch2_called_++;
   watch2Callback_ = std::move(callback);
 
   // First call to Watch should return immediately.

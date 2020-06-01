@@ -69,9 +69,6 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
     FX_LOGS(ERROR) << "Error from fuchsia::settings::Accessibility" << zx_status_get_string(status);
   });
 
-  // Start watching setui for current settings
-  WatchSetui();
-
   // Connects to property provider to retrieve the current locale. Also adds a handler for the event
   // to process when the locale changes.
   property_provider_ = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
@@ -81,10 +78,25 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   property_provider_.events().OnChange =
       fit::bind_member(this, &App::PropertyProviderOnChangeHandler);
   // Fetches the initial locale.
-  PropertyProviderOnChangeHandler();
+  // When the locale is returned, marks this object as initialized and ready to process requests.
+  // This is necessary because the Locale is a must-have information that needs to be present to
+  // build some elements.
+  property_provider_->GetProfile([this](fuchsia::intl::Profile profile) mutable {
+    this->i18n_profile_ = std::move(profile);
+    // Note: FinishSetUp() is invoked here because having the locale is the only must-have
+    // information at the moment we need before we can proceed with regular flow. This should be
+    // moved elsewhere if ever comes a new condition that needs to be met to consider this object
+    // fully-initialized.
+    FinishSetUp();
+  });
 }
 
 App::~App() = default;
+
+void App::FinishSetUp() {
+  // Start watching setui for current settings
+  WatchSetui();
+}
 
 void App::SetState(A11yManagerState state) {
   state_ = state;

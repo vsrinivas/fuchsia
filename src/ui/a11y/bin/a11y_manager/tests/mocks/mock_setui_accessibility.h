@@ -24,6 +24,8 @@ class MockSetUIAccessibility : public fuchsia::settings::Accessibility {
   // |fuchsia.settings.Accessibility|
   void Set(fuchsia::settings::AccessibilitySettings settings, SetCallback callback) override;
 
+  int num_watch2_called() const { return num_watch2_called_; }
+
  private:
   fidl::BindingSet<fuchsia::settings::Accessibility> bindings_;
 
@@ -32,6 +34,8 @@ class MockSetUIAccessibility : public fuchsia::settings::Accessibility {
   bool first_watch_;
   fuchsia::settings::AccessibilitySettings settings_;
 
+  // Number of times Watch2() was called.
+  int num_watch2_called_ = 0;
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSetUIAccessibility);
 };
 }  // namespace accessibility_test
