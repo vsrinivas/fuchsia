@@ -59,6 +59,17 @@ struct TypeConverter<fuchsia::media::ColorSpace, media_player::VideoStreamType::
 };
 
 template <>
+struct TypeConverter<fuchsia::sysmem::PixelFormat, media_player::VideoStreamType::PixelFormat> {
+  static fuchsia::sysmem::PixelFormat Convert(
+      media_player::VideoStreamType::PixelFormat pixel_format);
+};
+
+template <>
+struct TypeConverter<fuchsia::sysmem::ColorSpace, media_player::VideoStreamType::ColorSpace> {
+  static fuchsia::sysmem::ColorSpace Convert(media_player::VideoStreamType::ColorSpace color_space);
+};
+
+template <>
 struct TypeConverter<fuchsia::media::StreamType, media_player::StreamType> {
   static fuchsia::media::StreamType Convert(const media_player::StreamType& input);
 };
@@ -66,6 +77,11 @@ struct TypeConverter<fuchsia::media::StreamType, media_player::StreamType> {
 template <>
 struct TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamType> {
   static std::unique_ptr<media_player::StreamType> Convert(const fuchsia::media::StreamType& input);
+};
+
+template <>
+struct TypeConverter<fuchsia::sysmem::ImageFormat_2, media_player::VideoStreamType> {
+  static fuchsia::sysmem::ImageFormat_2 Convert(const media_player::VideoStreamType& input);
 };
 
 template <>

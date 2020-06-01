@@ -161,6 +161,9 @@ TypeConverter<fuchsia::images::PixelFormat, media_player::VideoStreamType::Pixel
       return fuchsia::images::PixelFormat::NV12;
     case media_player::VideoStreamType::PixelFormat::kYv12:
       return fuchsia::images::PixelFormat::YV12;
+    case media_player::VideoStreamType::PixelFormat::kI420:
+      // Not represented in |fuchsia::images::PixelFormat|.
+      break;
   }
 
   FX_LOGS(ERROR) << "unrecognized pixel format";
@@ -181,6 +184,56 @@ TypeConverter<fuchsia::media::ColorSpace, media_player::VideoStreamType::ColorSp
       return fuchsia::media::ColorSpace::HD_REC709;
     case media_player::VideoStreamType::ColorSpace::kSdRec601:
       return fuchsia::media::ColorSpace::SD_REC601;
+  }
+
+  FX_LOGS(ERROR) << "unrecognized color space";
+  abort();
+}
+
+fuchsia::sysmem::PixelFormat
+TypeConverter<fuchsia::sysmem::PixelFormat, media_player::VideoStreamType::PixelFormat>::Convert(
+    media_player::VideoStreamType::PixelFormat pixel_format) {
+  switch (pixel_format) {
+    case media_player::VideoStreamType::PixelFormat::kArgb:
+      return fuchsia::sysmem::PixelFormat{.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8,
+                                          .has_format_modifier = false};
+    case media_player::VideoStreamType::PixelFormat::kYuy2:
+      return fuchsia::sysmem::PixelFormat{.type = fuchsia::sysmem::PixelFormatType::YUY2,
+                                          .has_format_modifier = false};
+    case media_player::VideoStreamType::PixelFormat::kNv12:
+      return fuchsia::sysmem::PixelFormat{.type = fuchsia::sysmem::PixelFormatType::NV12,
+                                          .has_format_modifier = false};
+    case media_player::VideoStreamType::PixelFormat::kYv12:
+      return fuchsia::sysmem::PixelFormat{.type = fuchsia::sysmem::PixelFormatType::YV12,
+                                          .has_format_modifier = false};
+    case media_player::VideoStreamType::PixelFormat::kI420:
+      return fuchsia::sysmem::PixelFormat{.type = fuchsia::sysmem::PixelFormatType::I420,
+                                          .has_format_modifier = false};
+    default:
+      break;
+  }
+
+  FX_LOGS(ERROR) << "unrecognized pixel format";
+  abort();
+}
+
+fuchsia::sysmem::ColorSpace
+TypeConverter<fuchsia::sysmem::ColorSpace, media_player::VideoStreamType::ColorSpace>::Convert(
+    media_player::VideoStreamType::ColorSpace color_space) {
+  // TODO(dalesat): Fix this mapping.
+  switch (color_space) {
+    case media_player::VideoStreamType::ColorSpace::kUnknown:
+      return fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::INVALID};
+    case media_player::VideoStreamType::ColorSpace::kNotApplicable:
+      return fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::REC709};
+    case media_player::VideoStreamType::ColorSpace::kJpeg:
+      return fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::INVALID};
+    case media_player::VideoStreamType::ColorSpace::kHdRec709:
+      return fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::REC709};
+    case media_player::VideoStreamType::ColorSpace::kSdRec601:
+      return fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC};
+    default:
+      break;
   }
 
   FX_LOGS(ERROR) << "unrecognized color space";
@@ -289,6 +342,23 @@ TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamT
   }
 
   return nullptr;
+}
+
+fuchsia::sysmem::ImageFormat_2
+TypeConverter<fuchsia::sysmem::ImageFormat_2, media_player::VideoStreamType>::Convert(
+    const media_player::VideoStreamType& input) {
+  return fuchsia::sysmem::ImageFormat_2{
+      .pixel_format = fidl::To<fuchsia::sysmem::PixelFormat>(input.pixel_format()),
+      .coded_width = input.coded_width(),
+      .coded_height = input.coded_height(),
+      .bytes_per_row = input.line_stride(),
+      .display_width = input.width(),
+      .display_height = input.height(),
+      .color_space = fidl::To<fuchsia::sysmem::ColorSpace>(input.color_space()),
+      .has_pixel_aspect_ratio = true,
+      .pixel_aspect_ratio_width = input.pixel_aspect_ratio_width(),
+      .pixel_aspect_ratio_height = input.pixel_aspect_ratio_height(),
+  };
 }
 
 fuchsia::media::Metadata TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(

@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SESSION_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SESSION_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -29,17 +30,22 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   ~FakeSession() override;
 
+  void SetSysmemAllocator(fuchsia::sysmem::Allocator* sysmem_allocator) {
+    sysmem_allocator_ = sysmem_allocator;
+  }
+
   // Binds the session.
   void Bind(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
             fuchsia::ui::scenic::SessionListenerPtr listener);
 
   // Indicates that the session should print out expected frame info.
-  void DumpExpectations(uint32_t display_height);
+  void DumpExpectations();
 
   // Indicates that the session should verify supplied frames against the
   // specified PacketInfos.
-  void SetExpectations(uint32_t black_image_id, const fuchsia::images::ImageInfo& black_image_info,
-                       const fuchsia::images::ImageInfo& info, uint32_t display_height,
+  void SetExpectations(uint32_t black_image_id,
+                       const fuchsia::sysmem::ImageFormat_2& black_image_format,
+                       const fuchsia::sysmem::ImageFormat_2& format,
                        const std::vector<PacketInfo>&& expected_packets_info);
 
   // Returns true if everything has gone as expected so far.
@@ -68,7 +74,9 @@ class FakeSession : public fuchsia::ui::scenic::Session {
     Resource(fuchsia::ui::gfx::ResourceArgs args) : args_(std::move(args)) {}
 
     bool is_material() const { return args_.is_material(); }
-    bool is_texture() const { return args_.is_image() || args_.is_image_pipe(); };
+    bool is_texture() const {
+      return args_.is_image() || args_.is_image_pipe() || args_.is_image_pipe2();
+    };
     bool is_shape() const {
       return args_.is_rectangle() || args_.is_rounded_rectangle() || args_.is_circle() ||
              args_.is_mesh();
@@ -151,6 +159,7 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   void FindShapeNodes(uint32_t node_id, fuchsia::ui::gfx::vec3 translation,
                       fuchsia::ui::gfx::vec3 scale, std::vector<ShapeNode>* shape_nodes);
 
+  fuchsia::sysmem::Allocator* sysmem_allocator_;
   async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
   fuchsia::ui::scenic::SessionListenerPtr listener_;
@@ -161,10 +170,9 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   bool dump_expectations_ = false;
   uint32_t expected_black_image_id_ = 0;
-  std::unique_ptr<fuchsia::images::ImageInfo> expected_black_image_info_;
-  std::unique_ptr<fuchsia::images::ImageInfo> expected_image_info_;
+  std::unique_ptr<fuchsia::sysmem::ImageFormat_2> expected_black_image_format_;
+  std::unique_ptr<fuchsia::sysmem::ImageFormat_2> expected_image_format_;
   std::vector<PacketInfo> expected_packets_info_;
-  uint32_t expected_display_height_ = 0;
   bool expected_ = true;
 
   fxl::WeakPtrFactory<FakeSession> weak_factory_;

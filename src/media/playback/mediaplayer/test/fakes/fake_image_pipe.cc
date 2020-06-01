@@ -11,11 +11,18 @@
 #include <iomanip>
 #include <iostream>
 
+#include "src/media/playback/mediaplayer/test/fakes/formatting.h"
+
 namespace media_player {
 namespace test {
 
-FakeImagePipe::FakeImagePipe()
-    : dispatcher_(async_get_default_dispatcher()), binding_(this), weak_factory_(this) {}
+FakeImagePipe::FakeImagePipe(fuchsia::sysmem::Allocator* sysmem_allocator)
+    : sysmem_allocator_(sysmem_allocator),
+      dispatcher_(async_get_default_dispatcher()),
+      binding_(this),
+      weak_factory_(this) {
+  FX_CHECK(sysmem_allocator_);
+}
 
 FakeImagePipe::~FakeImagePipe() {
   while (!image_presentation_queue_.empty()) {
@@ -28,7 +35,7 @@ FakeImagePipe::~FakeImagePipe() {
   }
 }
 
-void FakeImagePipe::Bind(fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
+void FakeImagePipe::Bind(fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request) {
   binding_.Bind(std::move(request));
 }
 
@@ -49,30 +56,40 @@ void FakeImagePipe::OnPresentScene(zx::time presentation_time, zx::time next_pre
   }
 }
 
-void FakeImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                             zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
-                             fuchsia::images::MemoryType memory_type) {
-  if (image_id == expected_black_image_id_) {
-    if (expected_black_image_info_) {
-      ExpectImageInfo(*expected_black_image_info_, image_info);
-    }
-  } else {
-    if (dump_expectations_) {
-      FX_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
-      std::cerr << "{.width = " << image_info.width << ",\n"
-                << ".height = " << image_info.height << ",\n"
-                << ".stride = " << image_info.stride << ",\n"
-                << ".pixel_format = fuchsia::images::PixelFormat::YV12,\n"
-                << "};\n";
-    }
+void FakeImagePipe::AddBufferCollection(
+    uint32_t buffer_collection_id,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token) {
+  if (buffer_collections_by_id_.find(buffer_collection_id) != buffer_collections_by_id_.end()) {
+    FX_LOGS(ERROR) << "AddBufferCollection called for existing collection " << buffer_collection_id;
+    expected_ = false;
+    binding_.Unbind();
+    return;
+  }
 
-    if (expected_image_info_) {
-      ExpectImageInfo(*expected_image_info_, image_info);
+  FX_CHECK(sysmem_allocator_);
+  buffer_collections_by_id_.emplace(
+      buffer_collection_id,
+      std::make_unique<BufferCollection>(std::move(buffer_collection_token), sysmem_allocator_));
+}
+
+void FakeImagePipe::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
+                             uint32_t buffer_collection_index,
+                             fuchsia::sysmem::ImageFormat_2 image_format) {
+  if (dump_expectations_) {
+    std::cerr << "// Format for image " << image_id << "\n";
+    std::cerr << image_format << "\n";
+  }
+
+  if (image_id == expected_black_image_id_) {
+    if (expected_black_image_format_) {
+      ExpectImageFormat(*expected_black_image_format_, image_format);
     }
+  } else if (expected_image_format_) {
+    ExpectImageFormat(*expected_image_format_, image_format);
   }
 
   auto [iter, inserted] = images_by_id_.emplace(
-      image_id, Image(std::move(image_info), std::move(memory), offset_bytes, size_bytes));
+      image_id, Image(std::move(image_format), buffer_collection_id, buffer_collection_index));
   if (!inserted) {
     FX_LOGS(ERROR) << "AddImage image_id: (" << image_id
                    << ") refers to existing image, closing connection.";
@@ -80,16 +97,33 @@ void FakeImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image
     binding_.Unbind();
     return;
   }
+}
 
-  auto& image = iter->second;
-  if (image.offset_bytes_ + image.size_bytes_ > image.vmo_mapper_.size()) {
-    FX_LOGS(ERROR) << "AddImage image_id: (" << image_id << ") offset_bytes ("
-                   << image.offset_bytes_ << ") plus size_bytes (" << image.size_bytes_
-                   << ") exceeds vmo size (" << image.vmo_mapper_.size()
-                   << "), closing connection.";
+void FakeImagePipe::RemoveBufferCollection(uint32_t buffer_collection_id) {
+  if (buffer_collections_by_id_.erase(buffer_collection_id) != 1) {
+    FX_LOGS(ERROR) << "RemoveBufferCollection called for unrecognized id " << buffer_collection_id;
     expected_ = false;
     binding_.Unbind();
     return;
+  }
+
+  // Remove images referencing the collection.
+  auto iter = images_by_id_.begin();
+  while (iter != images_by_id_.end()) {
+    if (iter->second.buffer_collection_id_ == buffer_collection_id) {
+      uint32_t image_id = iter->first;
+      iter = images_by_id_.erase(iter);
+      for (auto& image_presentation : image_presentation_queue_) {
+        if (image_presentation.image_id_ == image_id) {
+          FX_DCHECK(image_presentation.release_fences_);
+          for (auto& release_fence : *image_presentation.release_fences_) {
+            release_fence.signal(0, ZX_EVENT_SIGNALED);
+          }
+        }
+      }
+    } else {
+      ++iter;
+    }
   }
 }
 
@@ -147,19 +181,9 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
 
   Image& image = iter->second;
 
-  uint64_t size = image.image_info_.stride * image.image_info_.height;
+  uint64_t size = image.image_format_.bytes_per_row * image.image_format_.coded_height;
 
-  if (image.offset_bytes_ + size > image.vmo_mapper_.size()) {
-    FX_LOGS(ERROR) << "PresentImage: image exceeds vmo limits";
-    FX_LOGS(ERROR) << "    vmo size     " << image.vmo_mapper_.size();
-    FX_LOGS(ERROR) << "    image offset " << image.offset_bytes_;
-    FX_LOGS(ERROR) << "    image stride " << image.image_info_.stride;
-    FX_LOGS(ERROR) << "    image height " << image.image_info_.height;
-    expected_ = false;
-    return;
-  }
-
-  void* image_payload = reinterpret_cast<uint8_t*>(image.vmo_mapper_.start()) + image.offset_bytes_;
+  void* image_payload = GetPayload(image.buffer_collection_id_, image.buffer_index_);
 
   if (dump_expectations_) {
     // Here's we're dumping the packet to the console to generate some C++ code
@@ -168,7 +192,7 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
     // Also, this ends up on the console, not in the logs.
     std::cerr << "{ " << presentation_time - initial_presentation_time_ << ", " << size << ", 0x"
               << std::hex << std::setw(16) << std::setfill('0')
-              << PacketHash(image_payload, image.image_info_) << std::dec << " },\n";
+              << PacketHash(image_payload, image.image_format_) << std::dec << " },\n";
   }
 
   if (!expected_packets_info_.empty()) {
@@ -178,11 +202,11 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
     }
 
     if (expected_packets_info_iter_->size() != size ||
-        expected_packets_info_iter_->hash() != PacketHash(image_payload, image.image_info_)) {
+        expected_packets_info_iter_->hash() != PacketHash(image_payload, image.image_format_)) {
       FX_LOGS(ERROR) << "PresentImage: supplied frame doesn't match expected packet info";
       FX_LOGS(ERROR) << "actual:   " << presentation_time - initial_presentation_time_ << ", "
                      << size << ", 0x" << std::hex << std::setw(16) << std::setfill('0')
-                     << PacketHash(image_payload, image.image_info_) << std::dec;
+                     << PacketHash(image_payload, image.image_format_) << std::dec;
       FX_LOGS(ERROR) << "expected: " << expected_packets_info_iter_->pts() << ", "
                      << expected_packets_info_iter_->size() << ", 0x" << std::hex << std::setw(16)
                      << std::setfill('0') << expected_packets_info_iter_->hash() << std::dec;
@@ -207,99 +231,199 @@ void FakeImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
   });
 }
 
-void FakeImagePipe::ExpectImageInfo(const fuchsia::images::ImageInfo& expected,
-                                    const fuchsia::images::ImageInfo& actual) {
-  if (actual.transform != expected.transform) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.transform value "
-                   << fidl::ToUnderlying(actual.transform);
+void FakeImagePipe::ExpectImageFormat(const fuchsia::sysmem::ImageFormat_2& expected,
+                                      const fuchsia::sysmem::ImageFormat_2& actual) {
+  if (actual.pixel_format.type != expected.pixel_format.type) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.pixel_format.type value "
+                   << fidl::ToUnderlying(actual.pixel_format.type);
     expected_ = false;
   }
 
-  if (actual.width != expected.width) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.width value " << actual.width;
+  if (actual.coded_width != expected.coded_width) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.coded_width value "
+                   << actual.coded_width;
     expected_ = false;
   }
 
-  if (actual.height != expected.height) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.height value " << actual.height;
+  if (actual.coded_height != expected.coded_height) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.coded_height value "
+                   << actual.coded_height;
     expected_ = false;
   }
 
-  if (actual.stride != expected.stride) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.stride value " << actual.stride;
+  if (actual.bytes_per_row != expected.bytes_per_row) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.bytes_per_row value "
+                   << actual.bytes_per_row;
     expected_ = false;
   }
 
-  if (actual.pixel_format != expected.pixel_format) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.pixel_format value "
-                   << fidl::ToUnderlying(actual.pixel_format);
+  if (actual.display_width != expected.display_width) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.display_width value "
+                   << actual.display_width;
     expected_ = false;
   }
 
-  if (actual.color_space != expected.color_space) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.color_space value "
-                   << fidl::ToUnderlying(actual.color_space);
+  if (actual.display_height != expected.display_height) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.display_height value "
+                   << actual.display_height;
     expected_ = false;
   }
 
-  if (actual.tiling != expected.tiling) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.tiling value "
-                   << fidl::ToUnderlying(actual.tiling);
+  if (actual.color_space.type != expected.color_space.type) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.color_space.type value "
+                   << fidl::ToUnderlying(actual.color_space.type);
     expected_ = false;
   }
 
-  if (actual.alpha_format != expected.alpha_format) {
-    FX_LOGS(ERROR) << "ExpectImageInfo: unexpected ImageInfo.alpha_format value "
-                   << fidl::ToUnderlying(actual.alpha_format);
+  if (actual.has_pixel_aspect_ratio != expected.has_pixel_aspect_ratio) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.has_pixel_aspect_ratio value "
+                   << actual.has_pixel_aspect_ratio;
+    expected_ = false;
+  }
+
+  if (actual.pixel_aspect_ratio_width != expected.pixel_aspect_ratio_width) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.pixel_aspect_ratio_width value "
+                   << actual.pixel_aspect_ratio_width;
+    expected_ = false;
+  }
+
+  if (actual.pixel_aspect_ratio_height != expected.pixel_aspect_ratio_height) {
+    FX_LOGS(ERROR) << "ExpectImageFormat: unexpected ImageFormat.pixel_aspect_ratio_height value "
+                   << actual.pixel_aspect_ratio_height;
     expected_ = false;
   }
 }
 
-uint64_t FakeImagePipe::PacketHash(const void* data, const fuchsia::images::ImageInfo& image_info) {
+uint64_t FakeImagePipe::PacketHash(const void* data,
+                                   const fuchsia::sysmem::ImageFormat_2& image_format) {
   FX_DCHECK(data);
-  FX_DCHECK(expected_display_height_ <= image_info.height);
-  FX_DCHECK(image_info.pixel_format == fuchsia::images::PixelFormat::YV12);
+  FX_DCHECK(image_format.pixel_format.type == fuchsia::sysmem::PixelFormatType::I420);
   const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
   uint64_t hash = 0;
 
   // Hash the Y plane.
-  for (uint32_t line = 0; line < expected_display_height_; ++line) {
-    hash = PacketInfo::Hash(bytes, image_info.width, hash);
-    bytes += image_info.stride;
+  for (uint32_t line = 0; line < image_format.display_height; ++line) {
+    hash = PacketInfo::Hash(bytes, image_format.display_width, hash);
+    bytes += image_format.bytes_per_row;
   }
 
-  bytes += image_info.stride * (image_info.height - expected_display_height_);
+  bytes += image_format.bytes_per_row * (image_format.coded_height - image_format.display_height);
 
   // Hash the V plane.
-  for (uint32_t line = 0; line < expected_display_height_ / 2; ++line) {
-    hash = PacketInfo::Hash(bytes, image_info.width / 2, hash);
-    bytes += image_info.stride / 2;
+  for (uint32_t line = 0; line < image_format.display_height / 2; ++line) {
+    hash = PacketInfo::Hash(bytes, image_format.display_width / 2, hash);
+    bytes += image_format.bytes_per_row / 2;
   }
 
-  bytes += (image_info.stride * (image_info.height - expected_display_height_)) / 4;
+  bytes +=
+      (image_format.bytes_per_row * (image_format.coded_height - image_format.display_height)) / 4;
 
   // Hash the U plane.
-  for (uint32_t line = 0; line < expected_display_height_ / 2; ++line) {
-    hash = PacketInfo::Hash(bytes, image_info.width / 2, hash);
-    bytes += image_info.stride / 2;
+  for (uint32_t line = 0; line < image_format.display_height / 2; ++line) {
+    hash = PacketInfo::Hash(bytes, image_format.display_width / 2, hash);
+    bytes += image_format.bytes_per_row / 2;
   }
 
   return hash;
 }
 
+void* FakeImagePipe::GetPayload(uint32_t buffer_collection_id, uint32_t buffer_index) {
+  auto iter = buffer_collections_by_id_.find(buffer_collection_id);
+  if (iter == buffer_collections_by_id_.end()) {
+    FX_LOGS(ERROR) << "GetPayload: unrecognized buffer collection id " << buffer_collection_id;
+    expected_ = false;
+    return nullptr;
+  }
+
+  auto& collection = iter->second;
+  FX_CHECK(collection);
+  if (!collection->ready_) {
+    FX_LOGS(ERROR) << "GetPayload: buffer collection " << buffer_collection_id << " not ready";
+    expected_ = false;
+    return nullptr;
+  }
+
+  if (buffer_index >= collection->buffers_.size()) {
+    FX_LOGS(ERROR) << "GetPayload: buffer index " << buffer_index << " out of range for collection "
+                   << buffer_collection_id << " of size " << collection->buffers_.size();
+    expected_ = false;
+    return nullptr;
+  }
+
+  return collection->buffers_[buffer_index].start();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FakeImagePipe::BufferCollection implementation.
+
+FakeImagePipe::BufferCollection::BufferCollection(
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_handle,
+    fuchsia::sysmem::Allocator* sysmem_allocator) {
+  FX_CHECK(token_handle.is_valid());
+  FX_CHECK(sysmem_allocator);
+  token_ = token_handle.Bind();
+  FX_CHECK(token_);
+  token_->Sync([this, sysmem_allocator]() {
+    auto handle = token_.Unbind();
+    sysmem_allocator->BindSharedCollection(std::move(handle), collection_.NewRequest());
+
+    fuchsia::sysmem::BufferCollectionConstraints constraints{
+        .usage = fuchsia::sysmem::BufferUsage{.cpu = fuchsia::sysmem::cpuUsageRead |
+                                                     fuchsia::sysmem::cpuUsageReadOften},
+        .min_buffer_count_for_camping = 0,
+        .min_buffer_count_for_dedicated_slack = 0,
+        .min_buffer_count_for_shared_slack = 0,
+        .min_buffer_count = 0,
+        .max_buffer_count = 0,
+        .has_buffer_memory_constraints = true,
+        .image_format_constraints_count = 0};
+    constraints.buffer_memory_constraints.heap_permitted_count = 0;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
+
+    collection_->SetConstraints(true, constraints);
+
+    collection_->WaitForBuffersAllocated(
+        [this](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 collection_info) {
+          if (status != ZX_OK) {
+            FX_PLOGS(ERROR, status) << "Sysmem buffer allocation failed";
+            return;
+          }
+
+          buffers_.resize(collection_info.buffer_count);
+
+          for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+            auto& buffer_info = collection_info.buffers[i];
+            FX_DCHECK(buffer_info.vmo_usable_start == 0);
+            FX_DCHECK(buffer_info.vmo);
+
+            uint64_t size;
+            zx_status_t status = buffer_info.vmo.get_size(&size);
+            if (status != ZX_OK) {
+              FX_PLOGS(ERROR, status) << "Couldn't get vmo size";
+              return;
+            }
+
+            auto& buffer = buffers_[i];
+            status = buffer.Map(buffer_info.vmo, 0, size, ZX_VM_PERM_READ);
+            if (status != ZX_OK) {
+              FX_PLOGS(ERROR, status) << "Couldn't map vmo";
+              return;
+            }
+          }
+
+          ready_ = true;
+        });
+  });
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // FakeImagePipe::Image implementation.
 
-FakeImagePipe::Image::Image(fuchsia::images::ImageInfo image_info, zx::vmo memory,
-                            uint64_t offset_bytes, uint64_t size_bytes)
-    : image_info_(std::move(image_info)), offset_bytes_(offset_bytes), size_bytes_(size_bytes) {
-  uint64_t size;
-  zx_status_t status = memory.get_size(&size);
-  FX_CHECK(status == ZX_OK);
-
-  status = vmo_mapper_.Map(memory, 0, size, ZX_VM_PERM_READ, nullptr);
-  FX_CHECK(status == ZX_OK);
-}
+FakeImagePipe::Image::Image(fuchsia::sysmem::ImageFormat_2 image_format,
+                            uint32_t buffer_collection_id, uint32_t buffer_index)
+    : image_format_(std::move(image_format)),
+      buffer_collection_id_(buffer_collection_id),
+      buffer_index_(buffer_index) {}
 
 }  // namespace test
 }  // namespace media_player

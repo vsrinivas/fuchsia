@@ -244,6 +244,28 @@ void Node::NotifyOutputConnectionReady(size_t index) {
   });
 }
 
+void Node::NotifyNewInputSysmemToken(size_t index) {
+  FX_DCHECK(index < inputs_.size());
+
+  PostTask([this, index]() {
+    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    OnNewInputSysmemToken(index);
+    // We may be ready to move packets now.
+    NeedsUpdate();
+  });
+}
+
+void Node::NotifyNewOutputSysmemToken(size_t index) {
+  FX_DCHECK(index < outputs_.size());
+
+  PostTask([this, index]() {
+    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+    OnNewOutputSysmemToken(index);
+    // We may be ready to move packets now.
+    NeedsUpdate();
+  });
+}
+
 void Node::Update() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
@@ -427,8 +449,8 @@ const PayloadVmos& Node::UseInputVmos(size_t input_index) const {
   const Input& input = inputs_[input_index];
 
   FX_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesVmos ||
-             input.payload_config().mode_ == PayloadMode::kProvidesVmos ||
-             input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
+            input.payload_config().mode_ == PayloadMode::kProvidesVmos ||
+            input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
   FX_DCHECK(input.payload_manager().ready());
 
   return input.payload_manager().input_vmos();
@@ -467,9 +489,11 @@ void Node::ConfigureOutputDeferred(size_t output_index) {
   EnsureOutput(output_index);
 }
 
-void Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                           uint32_t max_payload_count, uint64_t max_payload_size,
-                                           zx_vm_option_t map_flags, size_t output_index) {
+void Node::ConfigureOutputToUseLocalMemory(
+    uint64_t max_aggregate_payload_size, uint32_t max_payload_count, uint64_t max_payload_size,
+    zx_vm_option_t map_flags,
+    std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
+    size_t output_index) {
   // This method runs on an arbitrary thread.
   FX_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
 
@@ -483,13 +507,15 @@ void Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
   config.map_flags_ = map_flags;
+  config.output_video_constraints_ = std::move(video_constraints);
 
   ApplyOutputConfiguration(&output);
 }
 
-void Node::ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
-                                               uint32_t max_payload_count,
-                                               uint64_t max_payload_size, size_t output_index) {
+void Node::ConfigureOutputToProvideLocalMemory(
+    uint64_t max_aggregate_payload_size, uint32_t max_payload_count, uint64_t max_payload_size,
+    std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
+    size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -501,13 +527,16 @@ void Node::ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_si
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
   config.map_flags_ = ZX_VM_PERM_WRITE;
+  config.output_video_constraints_ = std::move(video_constraints);
 
   ApplyOutputConfiguration(&output);
 }
 
-void Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-                                    uint64_t max_payload_size, VmoAllocation vmo_allocation,
-                                    zx_vm_option_t map_flags, size_t output_index) {
+void Node::ConfigureOutputToUseVmos(
+    uint64_t max_aggregate_payload_size, uint32_t max_payload_count, uint64_t max_payload_size,
+    VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
+    std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
+    size_t output_index) {
   // This method runs on an arbitrary thread.
   FX_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
 
@@ -521,12 +550,15 @@ void Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
+  config.output_video_constraints_ = std::move(video_constraints);
 
   ApplyOutputConfiguration(&output);
 }
 
-void Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
-                                        size_t output_index) {
+void Node::ConfigureOutputToProvideVmos(
+    VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
+    std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
+    size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -538,15 +570,17 @@ void Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_opti
   config.max_payload_size_ = 0;
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
+  config.output_video_constraints_ = std::move(video_constraints);
 
   ApplyOutputConfiguration(&output);
 }
 
-void Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
-                                          uint64_t max_aggregate_payload_size,
-                                          uint32_t max_payload_count, uint64_t max_payload_size,
-                                          VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
-                                          size_t output_index) {
+void Node::ConfigureOutputToUseSysmemVmos(
+    ServiceProvider* service_provider, uint64_t max_aggregate_payload_size,
+    uint32_t max_payload_count, uint64_t max_payload_size, VmoAllocation vmo_allocation,
+    zx_vm_option_t map_flags,
+    std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
+    size_t output_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   EnsureOutput(output_index);
@@ -559,6 +593,7 @@ void Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
+  config.output_video_constraints_ = std::move(video_constraints);
 
   ApplyOutputConfiguration(&output, service_provider);
 }
@@ -587,8 +622,8 @@ const PayloadVmos& Node::UseOutputVmos(size_t output_index) const {
   const Output& output = outputs_[output_index];
 
   FX_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesVmos ||
-             output.payload_config().mode_ == PayloadMode::kProvidesVmos ||
-             output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
+            output.payload_config().mode_ == PayloadMode::kProvidesVmos ||
+            output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
   FX_DCHECK(output.connected());
   FX_DCHECK(output.mate()->payload_manager().ready());
 

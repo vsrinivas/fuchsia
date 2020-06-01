@@ -33,7 +33,7 @@ PacketPtr CopyPacket(const Packet& original, fbl::RefPtr<PayloadBuffer> copied_p
 
 Input::Input(Node* node, size_t index) : node_(node), index_(index), state_(State::kRefusesPacket) {
   FX_DCHECK(node_);
-  RegisterConnectionReadyCallbacks();
+  RegisterPayloadManagerCallbacks();
 }
 
 Input::Input(Input&& input)
@@ -43,7 +43,7 @@ Input::Input(Input&& input)
   FX_DCHECK(input.mate() == nullptr);
   FX_DCHECK(input.packet() == nullptr);
   FX_DCHECK(input.payload_config().mode_ == PayloadMode::kNotConfigured);
-  RegisterConnectionReadyCallbacks();
+  RegisterPayloadManagerCallbacks();
 }
 
 Input::~Input() {}
@@ -132,7 +132,7 @@ void Input::RequestPacket() {
 
 void Input::Flush() { TakePacket(false); }
 
-void Input::RegisterConnectionReadyCallbacks() {
+void Input::RegisterPayloadManagerCallbacks() {
   payload_manager_.RegisterReadyCallbacks(
       [this]() {
         FX_DCHECK(mate_);
@@ -142,6 +142,17 @@ void Input::RegisterConnectionReadyCallbacks() {
       [this]() {
         FX_DCHECK(node_);
         node_->NotifyInputConnectionReady(index());
+      });
+
+  payload_manager_.RegisterNewSysmemTokenCallbacks(
+      [this]() {
+        FX_DCHECK(mate_);
+        FX_DCHECK(mate_->node());
+        mate_->node()->NotifyNewOutputSysmemToken(mate_->index());
+      },
+      [this]() {
+        FX_DCHECK(node_);
+        node_->NotifyNewInputSysmemToken(index());
       });
 }
 

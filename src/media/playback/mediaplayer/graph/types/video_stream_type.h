@@ -23,6 +23,7 @@ class VideoStreamType : public StreamType {
     kYuy2,
     kNv12,
     kYv12,
+    kI420,
   };
 
   enum class ColorSpace { kUnknown, kNotApplicable, kJpeg, kHdRec709, kSdRec601 };

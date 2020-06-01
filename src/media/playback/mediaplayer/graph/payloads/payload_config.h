@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_CONFIG_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_CONFIG_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
+
 namespace media_player {
 
 // Indicates how an input or output wants to access/allocate payload buffers.
@@ -138,6 +140,11 @@ struct PayloadConfig {
   // mapped at all. This can happen when the node is a pass-through for VMOs. The video renderer
   // is an example of this.
   zx_vm_option_t map_flags_;
+
+  // Indicates the format constraints for video output. This field should be populated for
+  // uncompressed video outputs so the payload manager can provide them to sysmem should the need
+  // arise.
+  std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> output_video_constraints_;
 };
 
 }  // namespace media_player

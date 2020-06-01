@@ -258,8 +258,10 @@ void FfmpegDemuxImpl::Dump(std::ostream& os) const {
 
 void FfmpegDemuxImpl::ConfigureConnectors() {
   for (size_t output_index = 0; output_index < streams_.size(); ++output_index) {
-    ConfigureOutputToProvideLocalMemory(0, kMaxPayloadCount,
+    ConfigureOutputToProvideLocalMemory(0,  // max_aggregate_payload_size
+                                        kMaxPayloadCount,
                                         MaxPayloadSize(streams_[output_index]->stream_type().get()),
+                                        nullptr,  // video_constraints
                                         output_index);
   }
 }

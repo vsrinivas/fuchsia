@@ -64,6 +64,11 @@ class Node : public std::enable_shared_from_this<Node> {
   // This method is called on the graph's thread.
   virtual void OnInputConnectionReady(size_t input_index) {}
 
+  // Notifies that the specified input has a new (replacement) sysmem token.
+  //
+  // This method is called on the graph's thread.
+  virtual void OnNewInputSysmemToken(size_t input_index) {}
+
   // Flushes an input. |hold_frame| indicates whether a video renderer should
   // hold and display the newest frame. The callback is used to indicate that
   // the flush operation is complete. It may be called synchronously or on an
@@ -112,6 +117,18 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // This method may be called on an arbitrary thread.
   void NotifyOutputConnectionReady(size_t index);
+
+  // Notifies the node that the connection for the indicated input has a new (replacement) sysmem
+  // token.
+  //
+  // This method may be called on an arbitrary thread.
+  void NotifyNewInputSysmemToken(size_t index);
+
+  // Notifies the node that the connection for the indicated output has a new (replacement) sysmem
+  // token.
+  //
+  // This method may be called on an arbitrary thread.
+  void NotifyNewOutputSysmemToken(size_t index);
 
   // Flushes an input. |hold_frame| indicates whether a video renderer should
   // hold and display the newest frame. The callback is used to indicate that
@@ -162,6 +179,11 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // This method is called on the graph's thread.
   virtual void OnOutputConnectionReady(size_t output_index) {}
+
+  // Notifies that the specified output has a new (replacement) sysmem token.
+  //
+  // This method is called on the graph's thread.
+  virtual void OnNewOutputSysmemToken(size_t output_index) {}
 
   // Flushes an output. The callback is used to indicate that the flush
   // operation is complete. It may be called synchronously or on an arbitrary
@@ -366,15 +388,20 @@ class Node : public std::enable_shared_from_this<Node> {
   // |ProvideOutputVmos| for the specified output. |AllocatePayloadBuffer|
   // is available for allocating payloads.
   //
+  // |video_constraints| must be provided for uncompressed video outputs in the event that the
+  // connected input is configured using |ConfigureInputToUseSysmemVmos|, in which case the
+  // constraints are needed to constrain the sysmem buffer collection properly.
+  //
   // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  void ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                       uint32_t max_payload_count, uint64_t max_payload_size,
-                                       zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
-                                       size_t output_index = 0);
+  void ConfigureOutputToUseLocalMemory(
+      uint64_t max_aggregate_payload_size, uint32_t max_payload_count, uint64_t max_payload_size,
+      zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+      std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints = nullptr,
+      size_t output_index = 0);
 
   // Configures an output to allocate its own payloads from local memory. It is
   // assumed that the output can allocate as much memory as is required. The size and count values
@@ -385,14 +412,19 @@ class Node : public std::enable_shared_from_this<Node> {
   // Calling this function prohibits the use of |UseOutputVmos|,
   // |ProvideOutputVmos| or |AllocatePayloadBuffer| for the specified output.
   //
+  // |video_constraints| must be provided for uncompressed video outputs in the event that the
+  // connected input is configured using |ConfigureInputToUseSysmemVmos|, in which case the
+  // constraints are needed to constrain the sysmem buffer collection properly.
+  //
   // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  void ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
-                                           uint32_t max_payload_count, uint64_t max_payload_size,
-                                           size_t output_index = 0);
+  void ConfigureOutputToProvideLocalMemory(
+      uint64_t max_aggregate_payload_size, uint32_t max_payload_count, uint64_t max_payload_size,
+      std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints = nullptr,
+      size_t output_index = 0);
 
   // Configures an output to address payloads as contiguous regions in VMOs
   // that are created by some other party. |max_aggregate_payload_size|
@@ -413,15 +445,20 @@ class Node : public std::enable_shared_from_this<Node> {
   // being used, and |AllocatePayloadBuffer| is available for allocating
   // payloads.
   //
+  // |video_constraints| must be provided for uncompressed video outputs in the event that the
+  // connected input is configured using |ConfigureInputToUseSysmemVmos|, in which case the
+  // constraints are needed to constrain the sysmem buffer collection properly.
+  //
   // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  void ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-                                uint64_t max_payload_size, VmoAllocation vmo_allocation,
-                                zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
-                                size_t output_index = 0);
+  void ConfigureOutputToUseVmos(
+      uint64_t max_aggregate_payload_size, uint32_t max_payload_count, uint64_t max_payload_size,
+      VmoAllocation vmo_allocation, zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+      std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints = nullptr,
+      size_t output_index = 0);
 
   // Configures an output to address payloads as contiguous regions in VMOs
   // that the output provides. If the VMOs provided by the output are
@@ -434,14 +471,19 @@ class Node : public std::enable_shared_from_this<Node> {
   // specified output, and |AllocatePayloadBuffer| is available for allocating
   // payloads.
   //
+  // |video_constraints| must be provided for uncompressed video outputs in the event that the
+  // connected input is configured using |ConfigureInputToUseSysmemVmos|, in which case the
+  // constraints are needed to constrain the sysmem buffer collection properly.
+  //
   // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  void ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
-                                    zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
-                                    size_t output_index = 0);
+  void ConfigureOutputToProvideVmos(
+      VmoAllocation vmo_allocation, zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+      std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints = nullptr,
+      size_t output_index = 0);
 
   // Configures an output to address payloads as contiguous regions in VMOs provided by sysmem. If
   // the VMOs provided by sysmem are inadequate to hold all the payloads that are kept in memory
@@ -449,17 +491,22 @@ class Node : public std::enable_shared_from_this<Node> {
   // input and doing copies. |vmo_allocation| indicates how the payload buffers will be distributed
   // across the VMOs.
   //
+  // |video_constraints| must be provided for uncompressed video outputs in the event that the
+  // connected input is configured using |ConfigureInputToUseSysmemVmos| and the input configration
+  // is incompatible, in which case the constraints are needed to constrain the sysmem buffer
+  // collection properly.
+  //
   // Calling this function allows the use of |TakeOutputSysmemToken| for the specified output.
   //
   // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method must be called on the main graph thread.
-  void ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
-                                      uint64_t max_aggregate_payload_size,
-                                      uint32_t max_payload_count, uint64_t max_payload_size,
-                                      VmoAllocation vmo_allocation,
-                                      zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
-                                      size_t output_index = 0);
+  void ConfigureOutputToUseSysmemVmos(
+      ServiceProvider* service_provider, uint64_t max_aggregate_payload_size,
+      uint32_t max_payload_count, uint64_t max_payload_size, VmoAllocation vmo_allocation,
+      zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+      std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints = nullptr,
+      size_t output_index = 0);
 
   // Returns true if the specified input is ready for calls to
   // |AllocatePayloadBuffer|, |UseOutputVmos| or |ProvideOutputVmos|.

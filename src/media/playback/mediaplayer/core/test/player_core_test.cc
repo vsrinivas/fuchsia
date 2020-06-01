@@ -182,7 +182,7 @@ TEST_F(PlayerTest, FakeSegments) {
 
   // Add a video stream indicating we will *not* add more streams.
   VideoStreamType video_type(nullptr, StreamType::kVideoEncodingUncompressed, nullptr,
-                             VideoStreamType::PixelFormat::kYv12,
+                             VideoStreamType::PixelFormat::kI420,
                              VideoStreamType::ColorSpace::kNotApplicable, 0, 0, 0, 0, 1, 1, 0);
 
   // We need a non-null output, but it doesn't have to work.

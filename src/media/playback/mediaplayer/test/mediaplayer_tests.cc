@@ -18,6 +18,7 @@
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_scenic.h"
+#include "src/media/playback/mediaplayer/test/fakes/fake_sysmem.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_wav_reader.h"
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
 
@@ -48,6 +49,9 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
 
     services->AddService(fake_audio_.GetRequestHandler());
     services->AddService(fake_scenic_.GetRequestHandler());
+    services->AddService(fake_sysmem_.GetRequestHandler());
+
+    fake_scenic_.SetSysmemAllocator(&fake_sysmem_);
 
     // Create the synthetic environment.
     environment_ = CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services));
@@ -70,6 +74,13 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
 
   void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
 
+  zx::vmo CreateVmo(size_t size) {
+    zx::vmo result;
+    zx_status_t status = zx::vmo::create(size, 0, &result);
+    FX_CHECK(status == ZX_OK);
+    return result;
+  }
+
   // Queues commands to wait for end of stream and to call |QuitLoop|.
   void QuitOnEndOfStream() {
     commands_.WaitForEndOfStream();
@@ -89,18 +100,240 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
     view_holder_token_ = std::move(view_holder_token);
   }
 
+  std::list<std::unique_ptr<FakeSysmem::Expectations>> BlackImageSysmemExpectations();
+
+  std::list<std::unique_ptr<FakeSysmem::Expectations>> BearVideoImageSysmemExpectations();
+
+  std::list<std::unique_ptr<FakeSysmem::Expectations>> BearSysmemExpectations();
+
   fuchsia::media::playback::PlayerPtr player_;
   bool player_connection_closed_ = false;
 
   FakeWavReader fake_reader_;
   FakeAudio fake_audio_;
   FakeScenic fake_scenic_;
+  FakeSysmem fake_sysmem_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
   CommandQueue commands_;
 };
+
+std::list<std::unique_ptr<FakeSysmem::Expectations>>
+MediaPlayerTests::BlackImageSysmemExpectations() {
+  std::list<std::unique_ptr<FakeSysmem::Expectations>> result;
+  result
+      .push_back(std::
+                     make_unique<FakeSysmem::Expectations>(
+                         FakeSysmem::Expectations{
+
+                             .constraints_ = {fuchsia::sysmem::BufferCollectionConstraints{
+                                                  .usage =
+                                                      {
+                                                          .cpu =
+                                                              fuchsia::sysmem::cpuUsageRead |
+                                                              fuchsia::sysmem::cpuUsageReadOften |
+                                                              fuchsia::sysmem::cpuUsageWrite |
+                                                              fuchsia::sysmem::cpuUsageWriteOften,
+                                                      },
+                                                  .min_buffer_count = 1,
+                                                  .has_buffer_memory_constraints = true,
+                                                  .buffer_memory_constraints =
+                                                      {
+                                                          .min_size_bytes = 16,
+                                                          .ram_domain_supported = true,
+                                                      },
+                                                  .image_format_constraints_count = 1,
+                                                  .image_format_constraints =
+                                                      {
+                                                          fuchsia::sysmem::
+                                                              ImageFormatConstraints{
+                                                                  .pixel_format =
+                                                                      {
+                                                                          .type = fuchsia::
+                                                                              sysmem::PixelFormatType::R8G8B8A8},
+                                                                  .color_spaces_count = 1,
+                                                                  .color_space =
+                                                                      {
+                                                                          fuchsia::sysmem::
+                                                                              ColorSpace{.type =
+                                                                                             fuchsia::
+                                                                                                 sysmem::ColorSpaceType::SRGB},
+                                                                      },
+                                                                  .required_min_coded_width = 2,
+                                                                  .required_max_coded_width = 2,
+                                                                  .required_min_coded_height = 2,
+                                                                  .required_max_coded_height = 2,
+                                                              },
+                                                      },
+                                              },
+                                              fuchsia::sysmem::BufferCollectionConstraints{
+                                                  .usage =
+                                                      {
+                                                          .cpu =
+                                                              fuchsia::sysmem::cpuUsageRead |
+                                                              fuchsia::sysmem::cpuUsageReadOften,
+                                                      },
+                                                  .has_buffer_memory_constraints = true,
+                                                  .buffer_memory_constraints =
+                                                      {
+                                                          .ram_domain_supported = true,
+                                                      },
+                                              }},
+                             .collection_info_ =
+                                 {
+                                     .buffer_count = 2,
+                                     .settings =
+                                         {
+                                             .buffer_settings =
+                                                 {
+                                                     .size_bytes = 128,
+                                                     .coherency_domain =
+                                                         fuchsia::sysmem::CoherencyDomain::RAM,
+                                                     .heap = fuchsia::sysmem::HeapType::SYSTEM_RAM,
+                                                 },
+                                             .has_image_format_constraints = true,
+                                             .image_format_constraints =
+                                                 {
+                                                     .pixel_format =
+                                                         {.type =
+                                                              fuchsia::sysmem::PixelFormatType::
+                                                                  R8G8B8A8},
+                                                     .color_spaces_count = 1,
+                                                     .color_space =
+                                                         {fuchsia::sysmem::ColorSpace{.type =
+                                                                                          fuchsia::sysmem::ColorSpaceType::SRGB}},
+                                                     .min_coded_width = 0,
+                                                     .max_coded_width = 16384,
+                                                     .min_coded_height = 0,
+                                                     .max_coded_height = 16384,
+                                                     .min_bytes_per_row = 4,
+                                                     .max_bytes_per_row = 4294967295,
+                                                     .bytes_per_row_divisor = 64,
+                                                     .start_offset_divisor = 4,
+                                                     .required_min_coded_width = 2,
+                                                     .required_max_coded_width = 2,
+                                                     .required_min_coded_height = 2,
+                                                     .required_max_coded_height = 2,
+                                                     .required_min_bytes_per_row = 4294967295,
+                                                     .required_max_bytes_per_row = 0,
+                                                 }},
+                                     .buffers =
+                                         {
+                                             fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
+                                             fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
+                                         },
+                                 }}));
+
+  return result;
+}
+
+std::list<std::unique_ptr<FakeSysmem::Expectations>>
+MediaPlayerTests::BearVideoImageSysmemExpectations() {
+  std::list<std::unique_ptr<FakeSysmem::Expectations>> result;
+
+  // Video buffers
+  result.push_back(std::make_unique<FakeSysmem::Expectations>(FakeSysmem::Expectations{
+      .constraints_ =
+          {fuchsia::sysmem::BufferCollectionConstraints{
+               .usage =
+                   {
+                       .cpu = fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften,
+                   },
+               .has_buffer_memory_constraints = true,
+               .buffer_memory_constraints =
+                   {
+                       .ram_domain_supported = true,
+                   },
+           },
+           fuchsia::sysmem::BufferCollectionConstraints{
+               .usage =
+                   {
+                       .cpu = fuchsia::sysmem::cpuUsageWrite |
+                              fuchsia::sysmem::cpuUsageWriteOften,
+                   },
+               .min_buffer_count_for_camping = 6,
+               .has_buffer_memory_constraints = true,
+               .buffer_memory_constraints =
+                   {
+                       .min_size_bytes = 1416960,
+                       .ram_domain_supported = true,
+                   },
+               .image_format_constraints_count = 1,
+               .image_format_constraints =
+                   {
+                       fuchsia::sysmem::ImageFormatConstraints{
+                           .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::I420},
+                           .color_spaces_count = 1,
+                           .color_space =
+                               {
+                                   fuchsia::sysmem::ColorSpace{
+                                       .type = fuchsia::sysmem::ColorSpaceType::REC709},
+                               },
+                           .required_min_coded_width = 1280,
+                           .required_max_coded_width = 1280,
+                           .required_min_coded_height = 738,
+                           .required_max_coded_height = 738,
+                       },
+                   },
+           }},
+      .collection_info_ =
+          {
+              .buffer_count = 8,
+              .settings = {.buffer_settings =
+                               {
+                                   .size_bytes = 1416960,
+                                   .coherency_domain = fuchsia::sysmem::CoherencyDomain::RAM,
+                                   .heap = fuchsia::sysmem::HeapType::SYSTEM_RAM,
+                               },
+                           .has_image_format_constraints = true,
+                           .image_format_constraints =
+                               {
+                                   .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::I420},
+                                   .color_spaces_count = 1,
+                                   .color_space =
+                                       {
+                                           fuchsia::sysmem::ColorSpace{
+                                               .type = fuchsia::sysmem::ColorSpaceType::REC709}},
+                                   .min_coded_width = 0,
+                                   .max_coded_width = 16384,
+                                   .min_coded_height = 0,
+                                   .max_coded_height = 16384,
+                                   .min_bytes_per_row = 4,
+                                   .max_bytes_per_row = 4294967295,
+                                   .coded_width_divisor = 2,
+                                   .coded_height_divisor = 2,
+                                   .bytes_per_row_divisor = 16,
+                                   .start_offset_divisor = 2,
+                                   .required_min_coded_width = 1280,
+                                   .required_max_coded_width = 1280,
+                                   .required_min_coded_height = 738,
+                                   .required_max_coded_height = 738,
+                                   .required_min_bytes_per_row = 4294967295,
+                                   .required_max_bytes_per_row = 0,
+                               }},
+              .buffers =
+                  {
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                      fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
+                  },
+          }}));
+
+  return result;
+}
+
+std::list<std::unique_ptr<FakeSysmem::Expectations>> MediaPlayerTests::BearSysmemExpectations() {
+  auto result = BlackImageSysmemExpectations();
+  result.splice(result.end(), BearVideoImageSysmemExpectations());
+  return result;
+}
 
 // Play a synthetic WAV file from beginning to end.
 TEST_F(MediaPlayerTests, PlayWav) {
@@ -412,61 +645,73 @@ TEST_F(MediaPlayerTests, PlayBear) {
   // It would be great to verify the audio packets here, but test bots are slow enough that
   // audio packets sometimes get dropped due to lack of VMO space for the audio renderer.
 
+  fake_sysmem_.SetExpectations(BearSysmemExpectations());
+
   fake_scenic_.session().SetExpectations(
       1,
       {
-          .width = 2,
-          .height = 2,
-          .stride = 2 * sizeof(uint32_t),
-          .pixel_format = fuchsia::images::PixelFormat::BGRA_8,
+          .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8},
+          .coded_width = 2,
+          .coded_height = 2,
+          .bytes_per_row = 8,
+          .display_width = 2,
+          .display_height = 2,
+          .color_space = {.type = fuchsia::sysmem::ColorSpaceType::SRGB},
+          .has_pixel_aspect_ratio = true,
       },
       {
-          .width = 1280,
-          .height = 738,
-          .stride = 1280,
-          .pixel_format = fuchsia::images::PixelFormat::YV12,
+          .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::I420},
+          .coded_width = 1280,
+          .coded_height = 738,
+          .bytes_per_row = 1280,
+          .display_width = 1280,
+          .display_height = 720,
+          .color_space = {.type = fuchsia::sysmem::ColorSpaceType::REC709},
+          .has_pixel_aspect_ratio = true,
       },
-      720, {{0, 944640, 0x0864378c3655ba47},          {133729451, 944640, 0x2481a21b1e543c8e},
-            {167096118, 944640, 0xe4294049f22539bc},  {200462784, 944640, 0xde1058aba916ffad},
-            {233829451, 944640, 0xc3fc580b34dc0383},  {267196118, 944640, 0xff31322e5ccdebe0},
-            {300562784, 944640, 0x64d31206ece7417f},  {333929451, 944640, 0xf1c6bf7fe1be29be},
-            {367296118, 944640, 0x72f44e5249a05c15},  {400662784, 944640, 0x1ad7e92183fb3aa4},
-            {434029451, 944640, 0x24b78b95d8c8b73d},  {467396118, 944640, 0x25a798d9af5a1b7e},
-            {500762784, 944640, 0x3379288b1f4197a5},  {534129451, 944640, 0x15fb9c205590cbc9},
-            {567496118, 944640, 0xc04a1834aec8b399},  {600862784, 944640, 0x97eded0e3b6348d3},
-            {634229451, 944640, 0x09dba227982ba479},  {667596118, 944640, 0x4d2a1042babc479c},
-            {700962784, 944640, 0x379f96a35774dc2b},  {734329451, 944640, 0x2d95a4b5506bd4c3},
-            {767696118, 944640, 0xda99bf00cd971999},  {801062784, 944640, 0x20a21550eb717da2},
-            {834429451, 944640, 0x3733b96d2279460b},  {867796118, 944640, 0x8ea51ee0088cda67},
-            {901162784, 944640, 0x8d6af19e5d9629ae},  {934529451, 944640, 0xd9765bd28098f093},
-            {967896118, 944640, 0x9a747455b496c9d1},  {1001262784, 944640, 0xfc8e90e73cc086f6},
-            {1034629451, 944640, 0xc3dec92946fc0005}, {1067996118, 944640, 0x215b196e790214c4},
-            {1101362784, 944640, 0x30b114015d719041}, {1134729451, 944640, 0x5ed6e582ac4022a1},
-            {1168096118, 944640, 0xbccb6f8ba8601507}, {1201462784, 944640, 0x34eab6666dc6c717},
-            {1234829451, 944640, 0x5e33bfc44650245f}, {1268196118, 944640, 0x736397b78e0850ff},
-            {1301562784, 944640, 0x620d7190a9e49a31}, {1334929451, 944640, 0x436e952327e311ea},
-            {1368296118, 944640, 0xf6fa16fc170a85f3}, {1401662784, 944640, 0x9f457e1a66323ead},
-            {1435029451, 944640, 0xb1747e31ea5358db}, {1468396118, 944640, 0x4da84ec1c5cb45de},
-            {1501762784, 944640, 0x5454f9007dc4de01}, {1535129451, 944640, 0x8e9777accf38e4f0},
-            {1568496118, 944640, 0x16a2ebade809e497}, {1601862784, 944640, 0x36d323606ebca2f4},
-            {1635229451, 944640, 0x17eaf1e84353dec9}, {1668596118, 944640, 0xdb1b344498520386},
-            {1701962784, 944640, 0xec53764065860e7f}, {1735329451, 944640, 0x110a7dddd4c45a54},
-            {1768696118, 944640, 0x6df1c973722f01c7}, {1802062784, 944640, 0x2e18f1e1544e002a},
-            {1835429451, 944640, 0x0de7b784dd8b0494}, {1868796118, 944640, 0x6e254cd1652be6a9},
-            {1902162784, 944640, 0x6353cb7c270b06c2}, {1935529451, 944640, 0x8d62a2ddb0350ab9},
-            {1968896118, 944640, 0xaf0ee1376ded95cd}, {2002262784, 944640, 0xf617917814de4169},
-            {2035629451, 944640, 0xf686efcec861909f}, {2068996118, 944640, 0x539f93afe6863cca},
-            {2102362784, 944640, 0x12c5c5e4eb5b2649}, {2135729451, 944640, 0x984cf8179effd823},
-            {2169096118, 944640, 0xfcb0cc2eb449ed16}, {2202462784, 944640, 0xf070b3572db477cc},
-            {2235829451, 944640, 0x5dd53f712ce8e1a6}, {2269196118, 944640, 0x02e0600528534bef},
-            {2302562784, 944640, 0x53120fbaca19e13b}, {2335929451, 944640, 0xd66e3cb3e70897eb},
-            {2369296118, 944640, 0x9f4138aa8e84cbf4}, {2402662784, 944640, 0xf350694d6a12ec39},
-            {2436029451, 944640, 0x08c986a97ab8fbb3}, {2469396118, 944640, 0x229d2b908659b728},
-            {2502762784, 944640, 0xf54cbe4582a3f8e1}, {2536129451, 944640, 0x8c8985c6649a3e1c},
-            {2569496118, 944640, 0x711e04eccc5e4527}, {2602862784, 944640, 0x78e2979034921e70},
-            {2636229451, 944640, 0x51c3524f5bf83a62}, {2669596118, 944640, 0x12b6f7b7591e7044},
-            {2702962784, 944640, 0xca8d7ac09b973a4b}, {2736329451, 944640, 0x3e666b376fcaa466},
-            {2769696118, 944640, 0x8f3657c9648b6dbb}, {2803062784, 944640, 0x19a30916a3375f4e}});
+      {
+          {0, 944640, 0xe22305b43e20ba47},          {146479375, 944640, 0x66ae7cd1ab593c8e},
+          {179846042, 944640, 0x8893faaea28f39bc},  {213212708, 944640, 0x88508b0a34efffad},
+          {246579375, 944640, 0x3a63c81772b70383},  {279946042, 944640, 0x3780c4550621ebe0},
+          {313312708, 944640, 0x4f921c4320a6417f},  {346679375, 944640, 0x4e9a21647e4929be},
+          {380046042, 944640, 0xe7e665c795955c15},  {413412708, 944640, 0x3c3aedc1d6683aa4},
+          {446779375, 944640, 0xfe9e286a635fb73d},  {480146042, 944640, 0x47e6f4f1abff1b7e},
+          {513512708, 944640, 0x84f562dcd46197a5},  {546879375, 944640, 0xf38b34e69d27cbc9},
+          {580246042, 944640, 0xee2998da3599b399},  {613612708, 944640, 0x524da51958ef48d3},
+          {646979375, 944640, 0x062586602fe0a479},  {680346042, 944640, 0xc32d430e92ae479c},
+          {713712708, 944640, 0x3dff5398e416dc2b},  {747079375, 944640, 0xd3c76266c63bd4c3},
+          {780446042, 944640, 0xc3241587b5491999},  {813812708, 944640, 0xfd3abe1fbe877da2},
+          {847179375, 944640, 0x1a3bd139a0f8460b},  {880546042, 944640, 0x11f585d7e68bda67},
+          {913912708, 944640, 0xecd344c5043e29ae},  {947279375, 944640, 0x7ae6b259c3b7f093},
+          {980646042, 944640, 0x5d49bfa6c196c9d1},  {1014012708, 944640, 0xe83a44b02cac86f6},
+          {1047379375, 944640, 0xffad44c6d3f60005}, {1080746042, 944640, 0x85d1372b40b214c4},
+          {1114112708, 944640, 0x9b6f88950ead9041}, {1147479375, 944640, 0x1396882cb6f522a1},
+          {1180846042, 944640, 0x07815d4ef90b1507}, {1214212708, 944640, 0x424879e928edc717},
+          {1247579375, 944640, 0xd623f27e3773245f}, {1280946042, 944640, 0x47581df2a2e350ff},
+          {1314312708, 944640, 0xb836a1cbbae59a31}, {1347679375, 944640, 0xe6d7ce3f416411ea},
+          {1381046042, 944640, 0x1c5dba765b2b85f3}, {1414412708, 944640, 0x85987a43defb3ead},
+          {1447779375, 944640, 0xe66b3d70ca2358db}, {1481146042, 944640, 0x2b7e765a1f2245de},
+          {1514512708, 944640, 0x9e79fedce712de01}, {1547879375, 944640, 0x7ad7078f8731e4f0},
+          {1581246042, 944640, 0x91ac3c20c4d4e497}, {1614612708, 944640, 0xdb7c8209e5b3a2f4},
+          {1647979375, 944640, 0xd47a9314da3ddec9}, {1681346042, 944640, 0x00c1c1f8e8570386},
+          {1714712708, 944640, 0x1b603a5644b00e7f}, {1748079375, 944640, 0x15c18419b83f5a54},
+          {1781446042, 944640, 0x0038ff1808d201c7}, {1814812708, 944640, 0xe7b2592675d2002a},
+          {1848179375, 944640, 0x55ef9a4ba7570494}, {1881546042, 944640, 0x14b6c92ae0fde6a9},
+          {1914912708, 944640, 0x3f05f2378c5d06c2}, {1948279375, 944640, 0x04f246ec6c3f0ab9},
+          {1981646042, 944640, 0x829529ce2d0a95cd}, {2015012708, 944640, 0xc0eee6a564624169},
+          {2048379375, 944640, 0xdd31903bdc9c909f}, {2081746042, 944640, 0x989727e8fcd13cca},
+          {2115112708, 944640, 0x9e6b6fe9d1b02649}, {2148479375, 944640, 0x01cfc5a96079d823},
+          {2181846042, 944640, 0x90ee949821bfed16}, {2215212708, 944640, 0xf6e66a48b2c977cc},
+          {2248579375, 944640, 0xb5a1d79f1401e1a6}, {2281946042, 944640, 0x89e8ca8aa0b24bef},
+          {2315312708, 944640, 0xd7e384493250e13b}, {2348679375, 944640, 0x7c042bbc365297eb},
+          {2382046042, 944640, 0xfaf92184251ecbf4}, {2415412708, 944640, 0x0edcf5f479f9ec39},
+          {2448779375, 944640, 0x59c165487d90fbb3}, {2482146042, 944640, 0xd4fbf15095e6b728},
+          {2515512708, 944640, 0x6a05e676671df8e1}, {2548879375, 944640, 0x44d653ed72393e1c},
+          {2582246042, 944640, 0x912f720f4c904527}, {2615612708, 944640, 0xe4ca7bc6919d1e70},
+          {2648979375, 944640, 0x6cde61420e173a62}, {2682346042, 944640, 0xfe0d7d86d0b57044},
+          {2715712708, 944640, 0x2d96bc09b6303a4b}, {2749079375, 944640, 0x2cdaab788c93a466},
+          {2782446042, 944640, 0x979b90a096e76dbb}, {2815812708, 944640, 0x851ccb01ea035f4e},
+      });
 
   CreateView();
   commands_.SetFile(kBearFilePath);
@@ -476,6 +721,7 @@ TEST_F(MediaPlayerTests, PlayBear) {
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
+  EXPECT_TRUE(fake_sysmem_.expected());
 }
 
 // Play an opus file from beginning to end.
@@ -522,6 +768,8 @@ TEST_F(MediaPlayerTests, PlayOpus) {
 // tests the ability of the player to handle the case in which the audio
 // renderer is holding on to packets for too long.
 TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
+  fake_sysmem_.SetExpectations(BearSysmemExpectations());
+
   CreateView();
   fake_audio_.renderer().SetRetainPackets(true);
 
@@ -532,10 +780,13 @@ TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
+  EXPECT_TRUE(fake_sysmem_.expected());
 }
 
 // Regression test for US-544.
 TEST_F(MediaPlayerTests, RegressionTestUS544) {
+  fake_sysmem_.SetExpectations(BearSysmemExpectations());
+
   CreateView();
   commands_.SetFile(kBearFilePath);
 
@@ -556,11 +807,17 @@ TEST_F(MediaPlayerTests, RegressionTestUS544) {
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
+  EXPECT_TRUE(fake_sysmem_.expected());
 }
 
 // Regression test for QA-539.
 // Verifies that the player can play two files in a row.
 TEST_F(MediaPlayerTests, RegressionTestQA539) {
+  auto sysmem_expectations = BearSysmemExpectations();
+  // Expect the video image buffers to be allocated again.
+  sysmem_expectations.splice(sysmem_expectations.end(), BearVideoImageSysmemExpectations());
+  fake_sysmem_.SetExpectations(std::move(sysmem_expectations));
+
   CreateView();
   commands_.SetFile(kBearFilePath);
 
@@ -577,6 +834,7 @@ TEST_F(MediaPlayerTests, RegressionTestQA539) {
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
+  EXPECT_TRUE(fake_sysmem_.expected());
 }
 
 // Play an LPCM elementary stream using |ElementarySource|. We delay calling SetSource to ensure
@@ -624,7 +882,7 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
-  // currently can. The compiler has no way of knowing whether this is
+  // currently can. The compiler has no way of knowsing whether this is
   // legit.
   // TODO(dalesat): Do this safely once FIDL-329 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(

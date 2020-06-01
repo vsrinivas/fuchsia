@@ -48,11 +48,14 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
 FfmpegAudioDecoder::~FfmpegAudioDecoder() {}
 
 void FfmpegAudioDecoder::ConfigureConnectors() {
-  ConfigureInputToUseLocalMemory(0, 2);
+  ConfigureInputToUseLocalMemory(0,   // max_aggregate_payload_size
+                                 2);  // max_payload_count
   // TODO(dalesat): Real numbers here. How big are packets?
   // We're OK for now, because the audio renderer asks for a single VMO that's
   // big enough to handle any packet we want to produce.
-  ConfigureOutputToUseLocalMemory(0, 1, 1);
+  ConfigureOutputToUseLocalMemory(0,   // max_aggregate_payload_size
+                                  1,   // max_payload_count
+                                  1);  // max_payload_size
 }
 
 void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {

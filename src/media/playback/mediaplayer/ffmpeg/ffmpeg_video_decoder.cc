@@ -11,6 +11,7 @@
 
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_formatting.h"
+#include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 extern "C" {
 #include "libavutil/imgutils.h"
 }
@@ -52,10 +53,32 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
 
   if (has_size()) {
     configured_output_buffer_size_ = buffer_size_;
-    ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount, configured_output_buffer_size_);
+    ConfigureOutput(configured_output_buffer_size_);
   } else {
     ConfigureOutputDeferred();
   }
+}
+
+void FfmpegVideoDecoder::ConfigureOutput(size_t buffer_size) {
+  auto stream_type = output_stream_type();
+  auto& type = *stream_type->video();
+  auto constraints = std::make_shared<fuchsia::sysmem::ImageFormatConstraints>();
+  constraints->pixel_format = fidl::To<fuchsia::sysmem::PixelFormat>(type.pixel_format());
+  constraints->color_spaces_count = 1;
+  constraints->color_space[0] = fidl::To<fuchsia::sysmem::ColorSpace>(type.color_space());
+  constraints->required_min_coded_width = type.coded_width();
+  constraints->required_max_coded_width = type.coded_width();
+  constraints->required_min_coded_height = type.coded_height();
+  constraints->required_max_coded_height = type.coded_height();
+
+  ConfigureOutputToUseLocalMemory(0,  // max_aggregate_payload_size
+                                  kOutputMaxPayloadCount, buffer_size, ZX_VM_PERM_WRITE,
+                                  std::move(constraints));
+}
+
+void FfmpegVideoDecoder::OnOutputConnectionReady(size_t output_index) {
+  FX_DCHECK(output_index == 0);
+  sync_completion_signal(&completion_);
 }
 
 void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
@@ -102,16 +125,11 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
     configured_output_buffer_size_ = buffer_size;
 
     // We need to configure the output, but that has to happen on the graph
-    // thread. Do that and block until it's done.
-    sync_completion completion;
-    PostTask([this, buffer_size, &completion]() {
-      ConfigureOutputToUseLocalMemory(0,                       // max_aggregate_payload_size
-                                      kOutputMaxPayloadCount,  // max_payload_count
-                                      buffer_size);            // max_payload_size
-      sync_completion_signal(&completion);
-    });
+    // thread. Do that and block until the output connection is ready.
+    PostTask([this, buffer_size]() { ConfigureOutput(buffer_size); });
 
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    sync_completion_wait(&completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&completion_);
   }
 
   fbl::RefPtr<PayloadBuffer> payload_buffer = AllocatePayloadBuffer(buffer_size_);
@@ -132,12 +150,6 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVF
   av_image_fill_arrays(av_frame->data, av_frame->linesize,
                        reinterpret_cast<uint8_t*>(payload_buffer->data()), av_codec_context.pix_fmt,
                        aligned_width_, aligned_height_, kFrameBufferAlign);
-
-  if (av_codec_context.pix_fmt == AV_PIX_FMT_YUV420P ||
-      av_codec_context.pix_fmt == AV_PIX_FMT_YUVJ420P) {
-    // Turn I420 into YV12 by swapping the U and V planes.
-    std::swap(av_frame->data[1], av_frame->data[2]);
-  }
 
   av_frame->width = coded_size.width();
   av_frame->height = coded_size.height();

@@ -153,14 +153,26 @@ void PayloadManager::RegisterReadyCallbacks(fit::closure output, fit::closure in
   ready_callback_for_input_ = std::move(input);
 }
 
+void PayloadManager::RegisterNewSysmemTokenCallbacks(fit::closure output, fit::closure input) {
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  new_sysmem_token_callback_for_output_ = std::move(output);
+  new_sysmem_token_callback_for_input_ = std::move(input);
+}
+
 void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
                                               ServiceProvider* service_provider) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FX_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
 
+  bool notify_input = false;
+
   {
     std::lock_guard<std::mutex> locker(mutex_);
+
+    if (service_provider) {
+      service_provider_ = service_provider;
+    }
 
     ++ready_deferrals_;
 
@@ -174,19 +186,30 @@ void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
     output_.config_ = config;
 
     if (input_.config_.mode_ != PayloadMode::kNotConfigured) {
+      auto input_sysmem_token_generation = input_.sysmem_token_generation_;
+
       // Both connectors are configured, so we can get the allocators set up accordingly. If the
       // output is using |kUsesSysmemVmos|, |UpdateAllocators| will ensure that the output connector
       // has a token to provide to the upstream node.
-      UpdateAllocators(service_provider);
+      UpdateAllocators();
+
+      if (input_sysmem_token_generation != input_.sysmem_token_generation_) {
+        notify_input = true;
+      }
     } else if (config.mode_ == PayloadMode::kUsesSysmemVmos) {
       // The input isn't configured yet, so we can't set up the allocators. The output is configured
       // to |kUsesSysmemVmos|, so the upstream node expects to be able to grab the sysmem token
       // after this call, so we make sure the tokens are created.
-      EnsureBufferCollectionTokens(&output_, service_provider);
+      EnsureBufferCollectionTokens(&output_);
     }
   }
 
   DecrementReadyDeferrals();
+
+  // Notify the input node that it needs to get its new sysmem token.
+  if (notify_input && new_sysmem_token_callback_for_input_) {
+    new_sysmem_token_callback_for_input_();
+  }
 }
 
 void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
@@ -196,12 +219,18 @@ void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
   FX_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK(config.mode_ != PayloadMode::kProvidesLocalMemory);
   FX_DCHECK(allocate_callback == nullptr || config.mode_ == PayloadMode::kUsesVmos ||
-             config.mode_ == PayloadMode::kProvidesVmos ||
-             config.mode_ == PayloadMode::kUsesSysmemVmos);
+            config.mode_ == PayloadMode::kProvidesVmos ||
+            config.mode_ == PayloadMode::kUsesSysmemVmos);
   FX_DCHECK((config.mode_ == PayloadMode::kUsesSysmemVmos) == !!service_provider);
+
+  bool notify_output = false;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
+
+    if (service_provider) {
+      service_provider_ = service_provider;
+    }
 
     ++ready_deferrals_;
 
@@ -216,19 +245,30 @@ void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
     allocate_callback_ = std::move(allocate_callback);
 
     if (output_.config_.mode_ != PayloadMode::kNotConfigured) {
+      auto output_sysmem_token_generation = output_.sysmem_token_generation_;
+
       // Both connectors are configured, so we can get the allocators set up accordingly. If the
       // output is using |kUsesSysmemVmos|, |UpdateAllocators| will ensure that the input connector
       // has a token to provide to the downstream node.
-      UpdateAllocators(service_provider);
+      UpdateAllocators();
+
+      if (output_sysmem_token_generation != output_.sysmem_token_generation_) {
+        notify_output = true;
+      }
     } else if (config.mode_ == PayloadMode::kUsesSysmemVmos) {
       // The output isn't configured yet, so we can't set up the allocators. The input is configured
       // to |kUsesSysmemVmos|, so the downstream node expects to be able to grab the sysmem token
       // after this call, so we make sure the tokens are created.
-      EnsureBufferCollectionTokens(&input_, service_provider);
+      EnsureBufferCollectionTokens(&input_);
     }
   }
 
   DecrementReadyDeferrals();
+
+  // Notify the output node that it needs to get its new sysmem token.
+  if (notify_output && new_sysmem_token_callback_for_output_) {
+    new_sysmem_token_callback_for_output_();
+  }
 }
 
 bool PayloadManager::ready() const {
@@ -266,8 +306,8 @@ PayloadVmos& PayloadManager::input_vmos() const {
   std::lock_guard<std::mutex> locker(mutex_);
   FX_DCHECK(ready_locked());
   FX_DCHECK(input_.config_.mode_ == PayloadMode::kUsesVmos ||
-             input_.config_.mode_ == PayloadMode::kProvidesVmos ||
-             input_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
+            input_.config_.mode_ == PayloadMode::kProvidesVmos ||
+            input_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
 
   VmoPayloadAllocator* result = input_vmo_payload_allocator_locked();
   FX_DCHECK(result);
@@ -297,8 +337,8 @@ PayloadVmos& PayloadManager::output_vmos() const {
   std::lock_guard<std::mutex> locker(mutex_);
   FX_DCHECK(ready_locked());
   FX_DCHECK(output_.config_.mode_ == PayloadMode::kUsesVmos ||
-             output_.config_.mode_ == PayloadMode::kProvidesVmos ||
-             output_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
+            output_.config_.mode_ == PayloadMode::kProvidesVmos ||
+            output_.config_.mode_ == PayloadMode::kUsesSysmemVmos);
 
   VmoPayloadAllocator* result = output_vmo_payload_allocator_locked();
   FX_DCHECK(result);
@@ -367,14 +407,6 @@ void PayloadManager::OnDisconnect() {
   output_.EnsureNoAllocator();
   input_.EnsureNoAllocator();
   copy_ = false;
-
-  // If the input is configured to use sysmem, we'll need a new pair of buffer collection tokens.
-  if (input_.config_.mode_ == PayloadMode::kUsesSysmemVmos) {
-    FX_DCHECK(sysmem_allocator_);
-    sysmem_allocator_->AllocateSharedCollection(input_.sysmem_token_for_node_.NewRequest());
-    input_.sysmem_token_for_node_->Duplicate(
-        ZX_DEFAULT_VMO_RIGHTS, input_.sysmem_token_for_mate_or_provisioning_.NewRequest());
-  }
 }
 
 bool PayloadManager::ready_locked() const {
@@ -382,8 +414,7 @@ bool PayloadManager::ready_locked() const {
          input_.config_.mode_ != PayloadMode::kNotConfigured;
 }
 
-void PayloadManager::EnsureBufferCollectionTokens(Connector* connector,
-                                                  ServiceProvider* service_provider) {
+void PayloadManager::EnsureBufferCollectionTokens(Connector* connector) {
   FX_DCHECK(connector);
 
   if (connector->sysmem_token_for_mate_or_provisioning_) {
@@ -391,11 +422,27 @@ void PayloadManager::EnsureBufferCollectionTokens(Connector* connector,
     return;
   }
 
-  FX_DCHECK(service_provider);
-  EnsureSysmemAllocator(service_provider);
+  EnsureSysmemAllocator();
   sysmem_allocator_->AllocateSharedCollection(connector->sysmem_token_for_node_.NewRequest());
   connector->sysmem_token_for_node_->Duplicate(
       ZX_DEFAULT_VMO_RIGHTS, connector->sysmem_token_for_mate_or_provisioning_.NewRequest());
+
+  connector->sysmem_token_generation_++;
+}
+
+void PayloadManager::ShareBufferCollection(
+    Connector* from, Connector* to,
+    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> dup) {
+  FX_DCHECK(from);
+  FX_DCHECK(to);
+  FX_DCHECK(dup);
+  FX_DCHECK(from->sysmem_token_for_mate_or_provisioning_);
+  FX_DCHECK(!to->sysmem_token_for_mate_or_provisioning_);
+  FX_DCHECK(!to->sysmem_token_for_node_);
+  to->sysmem_token_for_node_ = std::move(from->sysmem_token_for_mate_or_provisioning_);
+  to->sysmem_token_for_node_->Duplicate(ZX_DEFAULT_VMO_RIGHTS, std::move(dup));
+
+  to->sysmem_token_generation_++;
 }
 
 void PayloadManager::DecrementReadyDeferrals() {
@@ -418,19 +465,17 @@ void PayloadManager::DecrementReadyDeferrals() {
   if (ready_callback_for_input_) {
     ready_callback_for_input_();
   }
-
-  sysmem_allocator_ = nullptr;
 }
 
-void PayloadManager::EnsureSysmemAllocator(ServiceProvider* service_provider) {
+void PayloadManager::EnsureSysmemAllocator() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FX_DCHECK(service_provider);
+  FX_CHECK(service_provider_);
   if (!sysmem_allocator_) {
-    sysmem_allocator_ = service_provider->ConnectToService<fuchsia::sysmem::Allocator>();
+    sysmem_allocator_ = service_provider_->ConnectToService<fuchsia::sysmem::Allocator>();
   }
 }
 
-void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
+void PayloadManager::UpdateAllocators() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FX_DCHECK(output_.config_.mode_ != PayloadMode::kNotConfigured);
   FX_DCHECK(input_.config_.mode_ != PayloadMode::kNotConfigured);
@@ -442,21 +487,11 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
 
   // When |ApplyXxxConfiguration| is called, and the connector is being configured to use sysmem,
   // the caller expects the buffer collection token to be available immediately after the call.
-  // for this reason, when the |ApplyXxxConfiguration| methods *do not* call |UpdateAllocators|,
+  // For this reason, when the |ApplyXxxConfiguration| methods *do not* call |UpdateAllocators|,
   // they instead call |EnsureBufferCollectionTokens|. In all other cases, |UpdateAllocators| is
   // responsible for calling |EnsureBufferCollectionTokens| to make sure connectors have their
   // tokens. This allows |UpdateAllocators| to refrain from creating a second pair of tokens when
   // the two connectors need to share a buffer collection.
-
-  // Note that the |service_provider| parameter is optional. |EnsureBufferCollectionTokens| checks
-  // that it has been provided when it's actually needed. It's provided when the configuration
-  // being applied is |kUsesSysmemVmos|, which is adequate, because either:
-  // 1) |service_provider| is not needed at all, or
-  // 2) |service_provider| is needed, because the second configuration applied is |kUsesSysmemVmos|,
-  //    in which case, |service_provider| is provided.
-  // 3) The first configuration applied is |kUsesSysmemVmos|, and the second is not, in which case
-  //    the tokens were already created for the first configuration and |service_provider| is not
-  //    needed.
 
   // We may set this to true again later.
   copy_ = false;
@@ -496,7 +531,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           // We don't need to specify vmo allocation, because the output does all the allocation
           // itself.
           ++ready_deferrals_;
-          EnsureBufferCollectionTokens(&output_, service_provider);
+          EnsureBufferCollectionTokens(&output_);
           output_.EnsureProvisionedSysmemVmoAllocator(input_.config_, sysmem_allocator_.get(),
                                                       CombinedVmoAllocation());
           input_.EnsureNoAllocator();
@@ -557,7 +592,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // We don't need to specify vmo allocation, because the output does all the allocation
             // itself.
             ++ready_deferrals_;
-            EnsureBufferCollectionTokens(&output_, service_provider);
+            EnsureBufferCollectionTokens(&output_);
             output_.EnsureProvisionedSysmemVmoAllocator(input_.config_, sysmem_allocator_.get(),
                                                         CombinedVmoAllocation());
             input_.EnsureNoAllocator();
@@ -566,7 +601,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // The input will allocate from its own VMOs provided here.
             // Payloads will be copied.
             ++ready_deferrals_;
-            EnsureBufferCollectionTokens(&output_, service_provider);
+            EnsureBufferCollectionTokens(&output_);
             output_.EnsureProvisionedSysmemVmoAllocator(input_.config_, sysmem_allocator_.get(),
                                                         output_.config_.vmo_allocation_);
             input_.EnsureProvisionedVmoAllocator(AugmentedInputConfig());
@@ -627,7 +662,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           // Payloads will be copied.
           // For the output allocator, we use the output's specified VMO allocation.
           ++ready_deferrals_;
-          EnsureBufferCollectionTokens(&output_, service_provider);
+          EnsureBufferCollectionTokens(&output_);
           output_.EnsureProvisionedSysmemVmoAllocator(input_.config_, sysmem_allocator_.get(),
                                                       output_.config_.vmo_allocation_);
           input_.EnsureExternalVmoAllocator();
@@ -646,7 +681,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           // The input will use sysmem VMOs.
           output_.EnsureNoAllocator();
           ++ready_deferrals_;
-          EnsureBufferCollectionTokens(&input_, service_provider);
+          EnsureBufferCollectionTokens(&input_);
           input_.EnsureProvisionedSysmemVmoAllocator(output_.config_, sysmem_allocator_.get(),
                                                      input_.config_.vmo_allocation_);
           break;
@@ -658,7 +693,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           // copier doesn't care.
           output_.EnsureNoAllocator();
           ++ready_deferrals_;
-          EnsureBufferCollectionTokens(&input_, service_provider);
+          EnsureBufferCollectionTokens(&input_);
           input_.EnsureProvisionedSysmemVmoAllocator(CopyToOutputConfig(), sysmem_allocator_.get(),
                                                      input_.config_.vmo_allocation_);
           copy_ = true;
@@ -671,7 +706,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // apply the constraints of both.
             output_.EnsureNoAllocator();
             ++ready_deferrals_;
-            EnsureBufferCollectionTokens(&input_, service_provider);
+            EnsureBufferCollectionTokens(&input_);
             input_.EnsureProvisionedSysmemVmoAllocator(output_.config_, sysmem_allocator_.get(),
                                                        CombinedVmoAllocation());
           } else {
@@ -682,7 +717,7 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // copier doesn't care.
             output_.EnsureProvisionedVmoAllocator(output_.config_);
             ++ready_deferrals_;
-            EnsureBufferCollectionTokens(&input_, service_provider);
+            EnsureBufferCollectionTokens(&input_);
             input_.EnsureProvisionedSysmemVmoAllocator(
                 CopyToOutputConfig(), sysmem_allocator_.get(), input_.config_.vmo_allocation_);
             copy_ = true;
@@ -696,14 +731,14 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
           // copier doesn't care.
           output_.EnsureExternalVmoAllocator();
           ++ready_deferrals_;
-          EnsureBufferCollectionTokens(&input_, service_provider);
+          EnsureBufferCollectionTokens(&input_);
           input_.EnsureProvisionedSysmemVmoAllocator(CopyToOutputConfig(), sysmem_allocator_.get(),
                                                      input_.config_.vmo_allocation_);
           copy_ = true;
           break;
         case PayloadMode::kUsesSysmemVmos:
           FX_DCHECK(output_.sysmem_token_for_mate_or_provisioning_ ||
-                     input_.sysmem_token_for_mate_or_provisioning_);
+                    input_.sysmem_token_for_mate_or_provisioning_);
           if (ConfigsAreCompatible()) {
             // The output and input will share sysmem VMOs.
             output_.EnsureNoAllocator();
@@ -711,24 +746,21 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // We need a third token for the 'silent' participant.
             fuchsia::sysmem::BufferCollectionTokenPtr third_token;
 
-            // One of the connectors already has its pair of tokens. We'll use those tokens and
-            // dup one of them for the third 'silent' participant.
+            // If we're configuring this connection for the first time, one of the connectors
+            // will have buffer collection tokens already, and we'll use those. If we're
+            // reconfiguring, we'll need a fresh set of tokens.
             if (input_.sysmem_token_for_mate_or_provisioning_) {
-              // The downstream connector (input) has been given its tokens, so we'll use that
-              // collection.
-              FX_DCHECK(!output_.sysmem_token_for_mate_or_provisioning_);
-              output_.sysmem_token_for_node_ =
-                  std::move(input_.sysmem_token_for_mate_or_provisioning_);
-              output_.sysmem_token_for_node_->Duplicate(ZX_DEFAULT_VMO_RIGHTS,
-                                                        third_token.NewRequest());
+              // The downstream connector (input) has its tokens, so we'll use that collection.
+              ShareBufferCollection(&input_, &output_, third_token.NewRequest());
+            } else if (output_.sysmem_token_for_mate_or_provisioning_) {
+              // The upstream connector (output) has its tokens, so we'll use that collection.
+              ShareBufferCollection(&output_, &input_, third_token.NewRequest());
             } else {
-              // The upstream connector (output) has been given its tokens, so we'll use that
-              // collection.
-              FX_DCHECK(output_.sysmem_token_for_mate_or_provisioning_);
-              input_.sysmem_token_for_node_ =
-                  std::move(output_.sysmem_token_for_mate_or_provisioning_);
-              input_.sysmem_token_for_node_->Duplicate(ZX_DEFAULT_VMO_RIGHTS,
-                                                       third_token.NewRequest());
+              // This connection was configured previously. None of the connector tokens are
+              // populated, because they've already been used. We need to make a new set of
+              // tokens.
+              EnsureBufferCollectionTokens(&input_);
+              ShareBufferCollection(&input_, &output_, third_token.NewRequest());
             }
 
             // We provision a VMO allocator, but only so we know how many buffers are in the
@@ -754,11 +786,11 @@ void PayloadManager::UpdateAllocators(ServiceProvider* service_provider) {
             // We use the VMO allocation of the output for output and input for input, because their
             // respective constraints must be met and the copier doesn't care.
             ++ready_deferrals_;
-            EnsureBufferCollectionTokens(&output_, service_provider);
+            EnsureBufferCollectionTokens(&output_);
             output_.EnsureProvisionedSysmemVmoAllocator(input_.config_, sysmem_allocator_.get(),
                                                         output_.config_.vmo_allocation_);
             ++ready_deferrals_;
-            EnsureBufferCollectionTokens(&input_, service_provider);
+            EnsureBufferCollectionTokens(&input_);
             input_.EnsureProvisionedSysmemVmoAllocator(
                 CopyToOutputConfig(), sysmem_allocator_.get(), input_.config_.vmo_allocation_);
             copy_ = true;
@@ -940,8 +972,13 @@ void PayloadManager::Connector::EnsureEmptyVmoAllocator(VmoAllocation vmo_alloca
   }
 
   FX_DCHECK(vmo_allocator_);
-  // TODO(dalesat): Reuse VMOs?
   vmo_allocator_->RemoveAllVmos();
+
+  if (sysmem_collection_) {
+    sysmem_collection_->Close();
+  }
+
+  sysmem_collection_ = nullptr;
 
   if (vmo_allocator_->vmo_allocation() != vmo_allocation) {
     vmo_allocator_->SetVmoAllocation(vmo_allocation);
@@ -990,10 +1027,6 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
 
   EnsureEmptyVmoAllocator(vmo_allocation);
 
-  if (sysmem_collection_) {
-    sysmem_collection_->Close();
-  }
-
   sysmem_token_for_mate_or_provisioning_->Sync([this, config = local_config, sysmem_allocator]() {
     FX_DCHECK(sysmem_token_for_mate_or_provisioning_);
     sysmem_allocator->BindSharedCollection(std::move(sysmem_token_for_mate_or_provisioning_),
@@ -1023,7 +1056,7 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
     }
 
     fuchsia::sysmem::BufferCollectionConstraints constraints{
-        .usage = fuchsia::sysmem::BufferUsage{.cpu = cpu_usage},
+        .usage = {.cpu = cpu_usage},
         .min_buffer_count_for_camping = config.max_payload_count_,
         .min_buffer_count_for_dedicated_slack = 0,
         .min_buffer_count_for_shared_slack = 0,
@@ -1033,6 +1066,13 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
         .image_format_constraints_count = 0};
     constraints.buffer_memory_constraints.min_size_bytes = config.max_payload_size_;
     constraints.buffer_memory_constraints.heap_permitted_count = 0;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
+
+    if (config.output_video_constraints_) {
+      constraints.image_format_constraints_count = 1;
+      constraints.image_format_constraints[0] = *config.output_video_constraints_;
+    }
+
     sysmem_collection_->SetConstraints(true, constraints);
 
     sysmem_collection_->WaitForBuffersAllocated(

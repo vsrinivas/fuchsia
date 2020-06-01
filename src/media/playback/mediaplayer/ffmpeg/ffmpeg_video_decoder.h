@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_FFMPEG_VIDEO_DECODER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_FFMPEG_VIDEO_DECODER_H_
 
+#include <lib/sync/completion.h>
+
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_base.h"
 
@@ -21,6 +23,8 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
   // Node implementation.
   void ConfigureConnectors() override;
+
+  void OnOutputConnectionReady(size_t output_index) override;
 
  protected:
   // FfmpegDecoderBase overrides.
@@ -46,12 +50,16 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   // Specifying a changed size is fine.  Specifying a changed pix_fmt is not.
   bool UpdateSize(const AVCodecContext& av_codec_context);
 
+  // Calls |ConfigureOutputToUseLocalMemory|.
+  void ConfigureOutput(size_t buffer_size);
+
   size_t buffer_size_ = 0;
   uint32_t aligned_width_ = 0;
   uint32_t aligned_height_ = 0;
 
   size_t configured_output_buffer_size_ = 0;
   std::unique_ptr<StreamType> revised_stream_type_;
+  sync_completion completion_;
 };
 
 }  // namespace media_player

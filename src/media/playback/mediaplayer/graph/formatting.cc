@@ -198,6 +198,8 @@ std::ostream& operator<<(std::ostream& os, VideoStreamType::PixelFormat value) {
       return os << "yv12";
     case VideoStreamType::PixelFormat::kNv12:
       return os << "nv12";
+    case VideoStreamType::PixelFormat::kI420:
+      return os << "i420";
   }
 
   return os;
@@ -306,6 +308,80 @@ std::ostream& operator<<(std::ostream& os, const PayloadConfig& value) {
     default:
       os << "0x" << std::hex << value.map_flags_ << std::dec;
       break;
+  }
+
+  if (value.output_video_constraints_) {
+    auto& constraints = *value.output_video_constraints_;
+    os << fostr::NewLine << "output video constraints:";
+    os << fostr::Indent;
+    os << fostr::NewLine
+       << "pixel format:          " << static_cast<uint32_t>(constraints.pixel_format.type);
+    os << fostr::NewLine << "color space:           ";
+    for (size_t i = 0; i < constraints.color_spaces_count; ++i) {
+      os << static_cast<uint32_t>(constraints.color_space[i].type) << " ";
+    }
+    if (constraints.min_coded_width != 0) {
+      os << fostr::NewLine << "min coded width:       " << constraints.min_coded_width;
+    }
+    if (constraints.max_coded_width != 0) {
+      os << fostr::NewLine << "max coded width:       " << constraints.max_coded_width;
+    }
+    if (constraints.min_coded_height != 0) {
+      os << fostr::NewLine << "min coded height:      " << constraints.min_coded_height;
+    }
+    if (constraints.max_coded_height != 0) {
+      os << fostr::NewLine << "max coded height:      " << constraints.max_coded_height;
+    }
+    if (constraints.min_bytes_per_row != 0) {
+      os << fostr::NewLine << "min bytes per row:     " << constraints.min_bytes_per_row;
+    }
+    if (constraints.max_bytes_per_row != 0) {
+      os << fostr::NewLine << "max bytes per row:     " << constraints.max_bytes_per_row;
+    }
+    if (constraints.max_coded_width_times_coded_height != 0xFFFFFFFF) {
+      os << fostr::NewLine
+         << "max coded area:        " << constraints.max_coded_width_times_coded_height;
+    }
+    if (constraints.layers != 1) {
+      os << fostr::NewLine << "layers:                " << constraints.layers;
+    }
+    if (constraints.coded_width_divisor != 1) {
+      os << fostr::NewLine << "coded width div:       " << constraints.coded_width_divisor;
+    }
+    if (constraints.coded_height_divisor != 1) {
+      os << fostr::NewLine << "coded height div:      " << constraints.coded_height_divisor;
+    }
+    if (constraints.bytes_per_row_divisor != 1) {
+      os << fostr::NewLine << "bytes per row div:     " << constraints.bytes_per_row_divisor;
+    }
+    if (constraints.start_offset_divisor != 1) {
+      os << fostr::NewLine << "start offset div:      " << constraints.start_offset_divisor;
+    }
+    if (constraints.display_width_divisor != 1) {
+      os << fostr::NewLine << "display width div:     " << constraints.display_width_divisor;
+    }
+    if (constraints.display_height_divisor != 1) {
+      os << fostr::NewLine << "display height div:    " << constraints.display_height_divisor;
+    }
+    if (constraints.required_min_coded_width != 0) {
+      os << fostr::NewLine << "req min coded width:   " << constraints.required_min_coded_width;
+    }
+    if (constraints.required_max_coded_width != 0) {
+      os << fostr::NewLine << "req max coded width:   " << constraints.required_max_coded_width;
+    }
+    if (constraints.required_min_coded_height != 0) {
+      os << fostr::NewLine << "req min coded height:  " << constraints.required_min_coded_height;
+    }
+    if (constraints.required_max_coded_height != 0) {
+      os << fostr::NewLine << "rea max coded height:  " << constraints.required_max_coded_height;
+    }
+    if (constraints.required_min_bytes_per_row != 0) {
+      os << fostr::NewLine << "req min bytes per row: " << constraints.required_min_bytes_per_row;
+    }
+    if (constraints.required_max_bytes_per_row != 0) {
+      os << fostr::NewLine << "req max bytes per row: " << constraints.required_max_bytes_per_row;
+    }
+    os << fostr::Outdent;
   }
 
   return os << fostr::Outdent;

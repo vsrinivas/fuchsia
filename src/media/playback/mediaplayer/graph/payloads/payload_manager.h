@@ -90,6 +90,11 @@ class PayloadManager {
   // Register callbacks to call when the connection is ready.
   void RegisterReadyCallbacks(fit::closure output, fit::closure input);
 
+  // Register callbacks to call when the sysmem tokens have been replaced. These are only called
+  // when old tokens are being replaced. The first token for a node is available immediately after
+  // the node configures the connector.
+  void RegisterNewSysmemTokenCallbacks(fit::closure output, fit::closure input);
+
   // Applies the output configuration supplied in |config|.
   //
   // This method must be called on the main graph thread.
@@ -251,6 +256,8 @@ class PayloadManager {
     // other connector or is used to provision |vmo_allocator_| with buffers.
     fuchsia::sysmem::BufferCollectionTokenPtr sysmem_token_for_mate_or_provisioning_;
     fuchsia::sysmem::BufferCollectionPtr sysmem_collection_;
+    // Incremented when sysmem_token_for_node_ is set (not cleared).
+    uint32_t sysmem_token_generation_ = 0;
   };
 
   void DumpInternal(std::ostream& os) const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -272,22 +279,27 @@ class PayloadManager {
   }
 
   // Ensures that the connector has a pair of buffer collection tokens.
-  void EnsureBufferCollectionTokens(Connector* connector, ServiceProvider* service_provider);
+  void EnsureBufferCollectionTokens(Connector* connector) FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
+  // Share |from|'s buffer collection with |to| creating a duplicate token |dup|.
+  void ShareBufferCollection(Connector* from, Connector* to,
+                             fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> dup)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Decrements |ready_deferrals_| and signals readiness if this |PayloadManager| is ready.
   //
   // This method must be called on the main graph thread.
-  void DecrementReadyDeferrals();
+  void DecrementReadyDeferrals() FXL_LOCKS_EXCLUDED(mutex_);
 
   // Ensures that |sysmem_allocator_| is populated.
   //
   // This method must be called on the main graph thread.
-  void EnsureSysmemAllocator(ServiceProvider* service_provider);
+  void EnsureSysmemAllocator() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Updates the allocators based in the current configs.
   //
   // This method must be called on the main graph thread.
-  void UpdateAllocators(ServiceProvider* service_provider) FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void UpdateAllocators() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Determines whether the output and input configuration are compatible.
   // The |mode_| values are not examined and are assumed to be compatible.
@@ -329,18 +341,25 @@ class PayloadManager {
 
   // Optionally provided by the input to perform allocations against the input
   // VMOS.
-  AllocateCallback allocate_callback_;
+  AllocateCallback allocate_callback_ FXL_GUARDED_BY(mutex_);
 
   // Indicates whether copying must occur. If this field is true, the input
   // will have an allocator.
   bool copy_ FXL_GUARDED_BY(mutex_) = false;
 
+  ServiceProvider* service_provider_ FXL_GUARDED_BY(mutex_) = nullptr;
+
   // Accessed only on the main graph thread.
-  fuchsia::sysmem::AllocatorPtr sysmem_allocator_;
+  fuchsia::sysmem::AllocatorPtr sysmem_allocator_ FXL_GUARDED_BY(mutex_);
 
   // Async callbacks for readiness. Accessed only on the main graph thread.
   fit::closure ready_callback_for_output_;
   fit::closure ready_callback_for_input_;
+
+  // Async callbacks for when sysmem tokens have been replaced. Accessed only on the main graph
+  // thread.
+  fit::closure new_sysmem_token_callback_for_output_;
+  fit::closure new_sysmem_token_callback_for_input_;
 
   // Count of reasons to defer readiness. This |PayloadManager| is ready when this value reaches
   // zero and neither config mode is |kNotConfigured|. |ApplyOutputConfiguration| and

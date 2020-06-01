@@ -45,6 +45,7 @@ source_set("ffmpeg") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/demux",
+    "//src/media/playback/mediaplayer/fidl",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/util",

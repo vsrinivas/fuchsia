@@ -520,7 +520,7 @@ VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(AVPixelFormat av_pixel
   switch (av_pixel_format) {
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
-      return VideoStreamType::PixelFormat::kYv12;
+      return VideoStreamType::PixelFormat::kI420;
     default:
       return VideoStreamType::PixelFormat::kUnknown;
   }
@@ -528,12 +528,13 @@ VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(AVPixelFormat av_pixel
 
 AVPixelFormat AVPixelFormatFromPixelFormat(VideoStreamType::PixelFormat pixel_format) {
   switch (pixel_format) {
-    case VideoStreamType::PixelFormat::kYv12:
+    case VideoStreamType::PixelFormat::kI420:
       return AV_PIX_FMT_YUV420P;
     case VideoStreamType::PixelFormat::kUnknown:
     case VideoStreamType::PixelFormat::kArgb:
     case VideoStreamType::PixelFormat::kYuy2:
     case VideoStreamType::PixelFormat::kNv12:
+    case VideoStreamType::PixelFormat::kYv12:
     default:
       return AV_PIX_FMT_NONE;
   }

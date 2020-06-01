@@ -23,6 +23,10 @@ class FakeScenic : public fuchsia::ui::scenic::Scenic {
 
   FakeSession& session() { return fake_session_; }
 
+  void SetSysmemAllocator(fuchsia::sysmem::Allocator* sysmem_allocator) {
+    fake_session_.SetSysmemAllocator(sysmem_allocator);
+  }
+
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetRequestHandler() {
     return bindings_.GetHandler(this);

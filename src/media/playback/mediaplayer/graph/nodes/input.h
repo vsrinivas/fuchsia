@@ -76,7 +76,7 @@ class Input {
  private:
   enum class State { kNeedsPacket, kRefusesPacket, kHasPacket };
 
-  void RegisterConnectionReadyCallbacks();
+  void RegisterPayloadManagerCallbacks();
 
   Node* node_;
   size_t index_;

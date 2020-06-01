@@ -6,6 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_VIDEO_RENDERER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -14,7 +15,6 @@
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <queue>
-#include <unordered_map>
 
 #include <fbl/array.h>
 
@@ -25,7 +25,7 @@
 namespace media_player {
 
 // VideoRenderer that renders video via FIDL services.
-class FidlVideoRenderer : public VideoRenderer {
+class FidlVideoRenderer : public VideoRenderer, public ServiceProvider {
  public:
   static std::shared_ptr<FidlVideoRenderer> Create(sys::ComponentContext* component_context);
 
@@ -42,6 +42,8 @@ class FidlVideoRenderer : public VideoRenderer {
 
   void OnInputConnectionReady(size_t input_index) override;
 
+  void OnNewInputSysmemToken(size_t output_index) override;
+
   void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override;
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
@@ -57,6 +59,9 @@ class FidlVideoRenderer : public VideoRenderer {
   fuchsia::math::Size video_size() const override;
 
   fuchsia::math::Size pixel_aspect_ratio() const override;
+
+  // ServiceProvider implementation.
+  void ConnectToService(std::string service_path, zx::channel channel) override;
 
   // Registers a callback that's called when the values returned by |video_size|
   // or |pixel_aspect_ratio| change.
@@ -92,7 +97,7 @@ class FidlVideoRenderer : public VideoRenderer {
     void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);
 
-    fbl::RefPtr<PayloadVmo> vmo_;
+    uint32_t buffer_index_;
     uint32_t image_id_;
     // If the |ImagePipe| channel closes unexpectedly, all the |Images|
     // associated with the view are deleted, so this |release_tracker_| no
@@ -112,16 +117,20 @@ class FidlVideoRenderer : public VideoRenderer {
 
     ~View() override;
 
-    // Adds the black image to the image pipe.
-    void AddBlackImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                       const zx::vmo& vmo);
+    void AddBufferCollection(uint32_t buffer_collection_id,
+                             fuchsia::sysmem::BufferCollectionTokenPtr token);
 
-    // Removes the old images from the image pipe, if images were added
-    // previously, and adds new images. An image is added for each VMO in
-    // |vmos|, and they are numbered starting with |image_id_base|.
-    void UpdateImages(uint32_t image_id_base, fuchsia::images::ImageInfo image_info,
-                      uint32_t display_width, uint32_t display_height,
-                      const std::vector<fbl::RefPtr<PayloadVmo>>& vmos);
+    void RemoveBufferCollection(uint32_t buffer_collection_id);
+
+    // Adds the black image to the image pipe.
+    void AddBlackImage(uint32_t image_id, uint32_t buffer_collection_id, uint32_t buffer_index,
+                       fuchsia::sysmem::ImageFormat_2 image_format);
+
+    // Removes the old images from the image pipe, if images were added previously, and adds new
+    // images. |image_count| images are added with buffer indexes starting with 0 and image ids
+    // starting with |image_id_base|.
+    void UpdateImages(uint32_t image_id_base, uint32_t image_count, uint32_t buffer_collection_id,
+                      fuchsia::sysmem::ImageFormat_2 image_format);
 
     // Presents the black image using the |ImagePipe|.
     void PresentBlackImage(uint32_t image_id, uint64_t presentation_time);
@@ -143,13 +152,14 @@ class FidlVideoRenderer : public VideoRenderer {
     scenic::ShapeNode image_pipe_node_;
     scenic::Material image_pipe_material_;
 
-    fuchsia::images::ImagePipePtr image_pipe_;
+    fuchsia::images::ImagePipe2Ptr image_pipe_;
 
     uint32_t image_width_;
     uint32_t image_height_;
     uint32_t display_width_;
     uint32_t display_height_;
     fbl::Array<Image> images_;
+    bool black_image_added_ = false;
 
     // Disallow copy, assign and move.
     View(const View&) = delete;
@@ -157,6 +167,9 @@ class FidlVideoRenderer : public VideoRenderer {
     View& operator=(const View&) = delete;
     View& operator=(View&&) = delete;
   };
+
+  // Alocates a buffer for a black image.
+  void AllocateBlackBuffer();
 
   // Updates the images added to the image pipes associated with the views.
   void UpdateImages();
@@ -185,7 +198,9 @@ class FidlVideoRenderer : public VideoRenderer {
                kPacketDemand;
   }
 
-  bool have_valid_image_info() { return image_info_.width != 0 && image_info_.height != 0; }
+  bool have_valid_image_format() {
+    return image_format_.coded_width != 0 && image_format_.coded_height != 0;
+  }
 
   sys::ComponentContext* component_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -193,21 +208,25 @@ class FidlVideoRenderer : public VideoRenderer {
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   bool input_connection_ready_ = false;
   zx::vmo black_image_vmo_;
-  fuchsia::images::ImageInfo image_info_{};
-  uint32_t display_width_{};
-  uint32_t display_height_{};
-  fuchsia::math::Size pixel_aspect_ratio_{.width = 1, .height = 1};
+  fuchsia::sysmem::ImageFormat_2 image_format_{.coded_width = 0,
+                                               .coded_height = 0,
+                                               .pixel_aspect_ratio_width = 1,
+                                               .pixel_aspect_ratio_height = 1};
   uint32_t presented_packets_not_released_ = 0;
   bool flushed_ = true;
   fit::closure flush_callback_;
   bool flush_hold_frame_;
   bool initial_packet_presented_ = false;
   std::queue<PacketPtr> packets_awaiting_presentation_;
-  std::unordered_map<View*, std::unique_ptr<View>> views_;
+  std::unique_ptr<View> view_;
   fit::closure prime_callback_;
   fit::closure geometry_update_callback_;
   uint32_t image_id_base_ = 2;  // 1 is reserved for the black image.
   uint32_t next_image_id_base_ = 2;
+  fuchsia::sysmem::BufferCollectionPtr black_image_buffer_collection_;
+  fuchsia::sysmem::BufferCollectionTokenPtr black_image_buffer_collection_token_;
+  fuchsia::sysmem::BufferCollectionTokenPtr black_image_buffer_collection_token_for_pipe_;
+  int64_t prev_scenic_presentation_time_ = 0;
 
   PacketTimingTracker arrivals_;
 

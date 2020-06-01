@@ -4,6 +4,7 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_video_renderer.h"
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/zx/clock.h>
@@ -12,24 +13,31 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 
 namespace media_player {
 namespace {
 
 constexpr float kVideoElevation = 0.0f;
 
-// TODO(dalesat): |ZX_RIGHT_WRITE| shouldn't be required, but it is.
-static constexpr zx_rights_t kVmoDupRights =
-    ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE;
-
+static constexpr uint32_t kVideoBufferCollectionId = 1;
+static constexpr uint32_t kBlackImageBufferCollectionId = 2;
+static constexpr uint32_t kBlackImageBufferIndex = 0;
 static constexpr uint32_t kBlackImageId = 1;
 static constexpr uint32_t kBlackImageWidth = 2;
 static constexpr uint32_t kBlackImageHeight = 2;
-static const fuchsia::images::ImageInfo kBlackImageInfo{
-    .width = kBlackImageWidth,
-    .height = kBlackImageHeight,
-    .stride = kBlackImageWidth * sizeof(uint32_t),
-    .pixel_format = fuchsia::images::PixelFormat::BGRA_8};
+static const fuchsia::sysmem::ImageFormat_2 kBlackImageFormat{
+    .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8,
+                     .has_format_modifier = false},
+    .coded_width = kBlackImageWidth,
+    .coded_height = kBlackImageHeight,
+    .bytes_per_row = kBlackImageWidth * sizeof(uint32_t),
+    .display_width = kBlackImageWidth,
+    .display_height = kBlackImageHeight,
+    .color_space = {.type = fuchsia::sysmem::ColorSpaceType::SRGB},
+    .has_pixel_aspect_ratio = true,
+    .pixel_aspect_ratio_width = 1,
+    .pixel_aspect_ratio_height = 1};
 
 }  // namespace
 
@@ -48,16 +56,7 @@ FidlVideoRenderer::FidlVideoRenderer(sys::ComponentContext* component_context)
                                  Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
                                  Range<uint32_t>(0, std::numeric_limits<uint32_t>::max())));
 
-  // Create the black image VMO.
-  size_t size = kBlackImageInfo.width * kBlackImageInfo.height * sizeof(uint32_t);
-  fzl::VmoMapper mapper;
-  zx_status_t status = mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-                                           &black_image_vmo_, kVmoDupRights);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to create and map VMO, status " << status;
-  }
-
-  memset(mapper.start(), 0, mapper.size());
+  AllocateBlackBuffer();
 }
 
 FidlVideoRenderer::~FidlVideoRenderer() {}
@@ -89,11 +88,12 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
 void FidlVideoRenderer::ConfigureConnectors() {
   // The decoder knows |max_payload_size|, so this is enough information to
   // configure the allocator(s).
-  ConfigureInputToUseVmos(0,              // max_aggregate_payload_size
-                          kPacketDemand,  // max_payload_count
-                          0,              // max_payload_size
-                          VmoAllocation::kVmoPerBuffer,
-                          0);  // map_flags
+  ConfigureInputToUseSysmemVmos(this,
+                                0,                  // max_aggregate_payload_size
+                                kPacketDemand - 1,  // max_payload_count
+                                0,                  // max_payload_size
+                                VmoAllocation::kVmoPerBuffer,
+                                0);  // map_flags
 }
 
 void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
@@ -101,8 +101,17 @@ void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
 
   input_connection_ready_ = true;
 
-  if (have_valid_image_info()) {
+  if (have_valid_image_format()) {
     UpdateImages();
+  }
+}
+
+void FidlVideoRenderer::OnNewInputSysmemToken(size_t input_index) {
+  FX_DCHECK(input_index == 0);
+
+  if (view_) {
+    view_->RemoveBufferCollection(kVideoBufferCollectionId);
+    view_->AddBufferCollection(kVideoBufferCollectionId, TakeInputSysmemToken());
   }
 }
 
@@ -214,12 +223,22 @@ void FidlVideoRenderer::PresentPacket(PacketPtr packet, int64_t scenic_presentat
   FX_DCHECK(packet->payload_buffer()->vmo());
   uint32_t buffer_index = packet->payload_buffer()->vmo()->index();
 
-  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
+  FX_DCHECK(scenic_presentation_time >= prev_scenic_presentation_time_);
+
+  if (view_) {
+    if (packet->payload()) {
+      zx_status_t status = zx_cache_flush(packet->payload(), packet->size(), ZX_CACHE_FLUSH_DATA);
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to flush payload";
+      }
+    }
+
     // |PresentImage| will keep its reference to |release_tracker| until the
     // release fence is signalled or the |ImagePipe| connection closes.
-    view_raw_ptr->PresentImage(buffer_index, scenic_presentation_time, release_tracker,
-                               dispatcher());
+    view_->PresentImage(buffer_index, scenic_presentation_time, release_tracker, dispatcher());
   }
+
+  prev_scenic_presentation_time_ = scenic_presentation_time;
 
   ++presented_packets_not_released_;
 }
@@ -236,45 +255,15 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
     return;
   }
 
-  bool had_valid_image_info = have_valid_image_info();
+  bool had_valid_image_info = have_valid_image_format();
 
   // This really should be using |video_stream_type.width()| and
   // video_stream_type.height(). See the comment in |View::OnSceneInvalidated|
   // for more information.
   // TODO(dalesat): Change this once SCN-862 and SCN-141 are fixed.
-  image_info_.width = video_stream_type.coded_width();
-  image_info_.height = video_stream_type.coded_height();
+  image_format_ = fidl::To<fuchsia::sysmem::ImageFormat_2>(video_stream_type);
 
-  display_width_ = video_stream_type.width();
-  display_height_ = video_stream_type.height();
-
-  // TODO(dalesat): Stash these in image_info_ if/when those fields are added.
-  pixel_aspect_ratio_.width = video_stream_type.pixel_aspect_ratio_width();
-  pixel_aspect_ratio_.height = video_stream_type.pixel_aspect_ratio_height();
-
-  image_info_.stride = video_stream_type.line_stride();
-
-  switch (video_stream_type.pixel_format()) {
-    case VideoStreamType::PixelFormat::kArgb:
-      image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
-      break;
-    case VideoStreamType::PixelFormat::kYuy2:
-      image_info_.pixel_format = fuchsia::images::PixelFormat::YUY2;
-      break;
-    case VideoStreamType::PixelFormat::kNv12:
-      image_info_.pixel_format = fuchsia::images::PixelFormat::NV12;
-      break;
-    case VideoStreamType::PixelFormat::kYv12:
-      image_info_.pixel_format = fuchsia::images::PixelFormat::YV12;
-      break;
-    default:
-      // Not supported.
-      // TODO(dalesat): Report the problem.
-      FX_LOGS(FATAL) << "Unsupported pixel format.";
-      break;
-  }
-
-  FX_DCHECK(have_valid_image_info());
+  FX_DCHECK(have_valid_image_format());
 
   if (!had_valid_image_info && input_connection_ready_) {
     // Updating images was deferred when |OnInputConnectionReady| was called,
@@ -282,9 +271,9 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
     UpdateImages();
   }
 
-  // We probably have new geometry, so invalidate the views.
-  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
-    view_raw_ptr->InvalidateScene();
+  // We probably have new geometry, so invalidate the view.
+  if (view_) {
+    view_->InvalidateScene();
   }
 }
 
@@ -301,11 +290,21 @@ void FidlVideoRenderer::Prime(fit::closure callback) {
 }
 
 fuchsia::math::Size FidlVideoRenderer::video_size() const {
-  return fuchsia::math::Size{.width = static_cast<int32_t>(display_width_),
-                             .height = static_cast<int32_t>(display_height_)};
+  return fuchsia::math::Size{.width = static_cast<int32_t>(image_format_.display_width),
+                             .height = static_cast<int32_t>(image_format_.display_height)};
 }
 
-fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const { return pixel_aspect_ratio_; }
+fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const {
+  return fuchsia::math::Size{
+      .width = static_cast<int32_t>(image_format_.pixel_aspect_ratio_width),
+      .height = static_cast<int32_t>(image_format_.pixel_aspect_ratio_height),
+  };
+}
+
+void FidlVideoRenderer::ConnectToService(std::string service_path, zx::channel channel) {
+  FX_DCHECK(component_context_);
+  component_context_->svc()->Connect(service_path, std::move(channel));
+}
 
 void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
   geometry_update_callback_ = std::move(callback);
@@ -317,29 +316,122 @@ void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
       .view_token = std::move(view_token),
       .component_context = component_context_};
-  auto view = std::make_unique<View>(
-      std::move(view_context), std::static_pointer_cast<FidlVideoRenderer>(shared_from_this()));
-  View* view_raw_ptr = view.get();
-  views_.emplace(view_raw_ptr, std::move(view));
+  view_ = std::make_unique<View>(std::move(view_context),
+                                 std::static_pointer_cast<FidlVideoRenderer>(shared_from_this()));
 
-  view_raw_ptr->SetReleaseHandler(
-      [this, view_raw_ptr](zx_status_t status) { views_.erase(view_raw_ptr); });
+  view_->SetReleaseHandler([this](zx_status_t status) { view_ = nullptr; });
 
-  view_raw_ptr->AddBlackImage(kBlackImageId, kBlackImageInfo, black_image_vmo_);
+  if (black_image_buffer_collection_token_for_pipe_) {
+    // If we get here, |WaitForBuffersAllocated| is blocked in |AllocateBlackBuffer|. After the
+    // image pipe gets this token, |WaitForBuffersAllocated| will return, and |AllocateBlackBuffer|
+    // will add the black image.
+    view_->AddBufferCollection(kBlackImageBufferCollectionId,
+                               std::move(black_image_buffer_collection_token_for_pipe_));
+  }
 
-  if (have_valid_image_info() && input_connection_ready_) {
+  // It's safe to call |TakeInputSysmemToken| here, because the player adds the renderer to the
+  // graph before calling |CreateView|. |ConfigureConnectors| is called when the renderer is added
+  // to the graph, and the token is available immediately after that.
+  view_->AddBufferCollection(kVideoBufferCollectionId, TakeInputSysmemToken());
+
+  if (have_valid_image_format() && input_connection_ready_) {
     // We're ready to add images to the new view, so do so.
     std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
     FX_DCHECK(!vmos.empty());
-    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_, display_height_, vmos);
+    view_->UpdateImages(image_id_base_, vmos.size(), kVideoBufferCollectionId, image_format_);
   }
+}
+
+void FidlVideoRenderer::AllocateBlackBuffer() {
+  auto sysmem_allocator =
+      static_cast<ServiceProvider*>(this)->ConnectToService<fuchsia::sysmem::Allocator>();
+  sysmem_allocator->AllocateSharedCollection(black_image_buffer_collection_token_.NewRequest());
+  black_image_buffer_collection_token_->Duplicate(
+      ZX_DEFAULT_VMO_RIGHTS, black_image_buffer_collection_token_for_pipe_.NewRequest());
+
+  if (view_) {
+    FX_DCHECK(black_image_buffer_collection_);
+    view_->AddBufferCollection(kBlackImageBufferCollectionId,
+                               std::move(black_image_buffer_collection_token_for_pipe_));
+  }
+
+  black_image_buffer_collection_token_->Sync(
+      [this, sysmem_allocator = std::move(sysmem_allocator)]() {
+        sysmem_allocator->BindSharedCollection(std::move(black_image_buffer_collection_token_),
+                                               black_image_buffer_collection_.NewRequest());
+
+        uint64_t image_size =
+            kBlackImageFormat.coded_width * kBlackImageFormat.coded_height * sizeof(uint32_t);
+
+        // kBlackImageFormat
+        fuchsia::sysmem::BufferCollectionConstraints constraints{
+            .usage = fuchsia::sysmem::BufferUsage{.cpu = fuchsia::sysmem::cpuUsageRead |
+                                                         fuchsia::sysmem::cpuUsageReadOften |
+                                                         fuchsia::sysmem::cpuUsageWrite |
+                                                         fuchsia::sysmem::cpuUsageWriteOften},
+            .min_buffer_count_for_camping = 0,
+            .min_buffer_count_for_dedicated_slack = 0,
+            .min_buffer_count_for_shared_slack = 0,
+            .min_buffer_count = 1,
+            .max_buffer_count = 0,
+            .has_buffer_memory_constraints = true,
+            .image_format_constraints_count = 1};
+
+        constraints.buffer_memory_constraints.min_size_bytes = image_size;
+        constraints.buffer_memory_constraints.heap_permitted_count = 0;
+        constraints.buffer_memory_constraints.ram_domain_supported = true;
+
+        auto& image_constraints = constraints.image_format_constraints[0];
+        image_constraints.pixel_format = kBlackImageFormat.pixel_format;
+        image_constraints.color_spaces_count = 1;
+        image_constraints.color_space[0] = kBlackImageFormat.color_space;
+        image_constraints.required_min_coded_width = kBlackImageFormat.coded_width;
+        image_constraints.required_max_coded_width = kBlackImageFormat.coded_width;
+        image_constraints.required_min_coded_height = kBlackImageFormat.coded_height;
+        image_constraints.required_max_coded_height = kBlackImageFormat.coded_height;
+
+        black_image_buffer_collection_->SetConstraints(true, constraints);
+
+        // If there is no view at the moment, this method will hang until |CreateView| is
+        // called, after to which, we'll add the image to the view.
+        black_image_buffer_collection_->WaitForBuffersAllocated(
+            [this, image_size](zx_status_t status,
+                               fuchsia::sysmem::BufferCollectionInfo_2 collection_info) {
+              if (status != ZX_OK) {
+                FX_PLOGS(ERROR, status) << "Sysmem buffer allocation failed for black image";
+                return;
+              }
+
+              FX_DCHECK(collection_info.buffer_count > 0);
+
+              auto& vmo_buffer = collection_info.buffers[0];
+              FX_DCHECK(vmo_buffer.vmo_usable_start == 0);
+              FX_CHECK(vmo_buffer.vmo.is_valid());
+
+              fzl::VmoMapper mapper;
+              status = mapper.Map(vmo_buffer.vmo, 0, image_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                  nullptr);
+              if (status != ZX_OK) {
+                FX_PLOGS(ERROR, status) << "Failed to map VMO";
+                return;
+              }
+
+              memset(mapper.start(), 0, mapper.size());
+
+              if (view_) {
+                FX_DCHECK(black_image_buffer_collection_);
+                view_->AddBlackImage(kBlackImageId, kBlackImageBufferCollectionId,
+                                     kBlackImageBufferIndex, kBlackImageFormat);
+              }
+            });
+      });
 }
 
 void FidlVideoRenderer::UpdateImages() {
   std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
   FX_DCHECK(!vmos.empty());
 
-  if (vmos[0]->size() < image_info_.stride * image_info_.height) {
+  if (vmos[0]->size() < image_format_.bytes_per_row * image_format_.coded_height) {
     // The payload VMOs are too small for the images. We will be getting a new
     // set of VMOs shortly, at which time |OnInputConnectionReady| will be
     // called, and we'll he here again with good VMOs.
@@ -349,14 +441,14 @@ void FidlVideoRenderer::UpdateImages() {
   image_id_base_ = next_image_id_base_;
   next_image_id_base_ = image_id_base_ + vmos.size();
 
-  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
-    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_, display_height_, vmos);
+  if (view_) {
+    view_->UpdateImages(image_id_base_, vmos.size(), kVideoBufferCollectionId, image_format_);
   }
 }
 
 void FidlVideoRenderer::PresentBlackImage() {
-  for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
-    view_raw_ptr->PresentBlackImage(kBlackImageId, zx::clock::get_monotonic().get());
+  if (view_) {
+    view_->PresentBlackImage(kBlackImageId, prev_scenic_presentation_time_);
   }
 }
 
@@ -472,7 +564,7 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
 
   // Create an |ImagePipe|.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic::NewCreateImagePipeCmd(
+  session()->Enqueue(scenic::NewCreateImagePipe2Cmd(
       image_pipe_id, image_pipe_.NewRequest(renderer_->dispatcher())));
 
   image_pipe_.set_error_handler([this](zx_status_t status) {
@@ -500,74 +592,81 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
 
 FidlVideoRenderer::View::~View() {}
 
-void FidlVideoRenderer::View::AddBlackImage(uint32_t image_id,
-                                            fuchsia::images::ImageInfo image_info,
-                                            const zx::vmo& vmo) {
-  FX_DCHECK(vmo);
-
+void FidlVideoRenderer::View::AddBufferCollection(uint32_t buffer_collection_id,
+                                                  fuchsia::sysmem::BufferCollectionTokenPtr token) {
   if (!image_pipe_) {
-    FX_LOGS(FATAL) << "View::AddBlackImage called with no ImagePipe.";
+    FX_LOGS(ERROR) << "View::AddBufferCollection called with no ImagePipe.";
     return;
   }
 
-  zx::vmo duplicate;
-  zx_status_t status = vmo.duplicate(kVmoDupRights, &duplicate);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to duplicate VMO, status " << status;
-  }
-
-  uint64_t size;
-  status = vmo.get_size(&size);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to get size of VMO, status " << status;
-  }
-
-  // For now, we don't support non-zero memory offsets.
-  image_pipe_->AddImage(image_id, image_info, std::move(duplicate),
-                        /*offset_bytes=*/0, size, fuchsia::images::MemoryType::HOST_MEMORY);
+  image_pipe_->AddBufferCollection(buffer_collection_id, std::move(token));
 }
 
-void FidlVideoRenderer::View::UpdateImages(uint32_t image_id_base,
-                                           fuchsia::images::ImageInfo image_info,
-                                           uint32_t display_width, uint32_t display_height,
-                                           const std::vector<fbl::RefPtr<PayloadVmo>>& vmos) {
-  FX_DCHECK(!vmos.empty());
+void FidlVideoRenderer::View::RemoveBufferCollection(uint32_t buffer_collection_id) {
+  if (!image_pipe_) {
+    FX_LOGS(ERROR) << "View::RemoveBufferCollection called with no ImagePipe.";
+    return;
+  }
+
+  image_pipe_->RemoveBufferCollection(buffer_collection_id);
+}
+
+void FidlVideoRenderer::View::AddBlackImage(uint32_t image_id, uint32_t buffer_collection_id,
+                                            uint32_t buffer_index,
+                                            fuchsia::sysmem::ImageFormat_2 image_format) {
+  if (!image_pipe_) {
+    FX_LOGS(ERROR) << "View::AddBlackImage called with no ImagePipe.";
+    return;
+  }
+
+  if (black_image_added_) {
+    return;
+  }
+
+  image_pipe_->AddImage(image_id, buffer_collection_id, buffer_index, image_format);
+  black_image_added_ = true;
+}
+
+void FidlVideoRenderer::View::UpdateImages(uint32_t image_id_base, uint32_t image_count,
+                                           uint32_t buffer_collection_id,
+                                           fuchsia::sysmem::ImageFormat_2 image_format) {
+  FX_DCHECK(image_count != 0);
 
   if (!image_pipe_) {
     FX_LOGS(FATAL) << "View::UpdateImages called with no ImagePipe.";
     return;
   }
 
-  image_width_ = image_info.width;
-  image_height_ = image_info.height;
-  display_width_ = display_width;
-  display_height_ = display_height;
+  image_width_ = image_format.coded_width;
+  image_height_ = image_format.coded_height;
+  display_width_ = image_format.display_width;
+  display_height_ = image_format.display_height;
 
-  // Remove the current set of images.
-  for (auto& image : images_) {
-    image_pipe_->RemoveImage(image.image_id_);
-  }
+  // We never need to |RemoveImage|, because we |RemoveBufferCollection|,
+  // which causes the images to be removed.
 
-  images_.reset(new Image[vmos.size()], vmos.size());
+  images_.reset(new Image[image_count], image_count);
 
-  uint32_t index = 0;
-  for (auto vmo : vmos) {
+  for (uint32_t index = 0; index < image_count; ++index) {
     auto& image = images_[index];
 
-    image.vmo_ = vmo;
+    image.buffer_index_ = index;
     image.image_id_ = index + image_id_base;
-    ++index;
 
     // For now, we don't support non-zero memory offsets.
-    image_pipe_->AddImage(image.image_id_, image_info, image.vmo_->Duplicate(kVmoDupRights),
-                          /*offset_bytes=*/0, image.vmo_->size(),
-                          fuchsia::images::MemoryType::HOST_MEMORY);
+    image_pipe_->AddImage(image.image_id_, buffer_collection_id, image.buffer_index_, image_format);
   }
 }
 
 void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id, uint64_t presentation_time) {
   if (!image_pipe_) {
     FX_LOGS(FATAL) << "View::PresentBlackImage called with no ImagePipe.";
+    return;
+  }
+
+  if (!black_image_added_) {
+    // We haven't added the black image yet, so we can't present it.
+    FX_LOGS(WARNING) << "View::PresentBlackImage black image not added yet";
     return;
   }
 
@@ -628,20 +727,10 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
     return;
   }
 
-  // Because scenic doesn't handle display height being different than image
-  // height (SCN-862) or non-minimal stride (SCN-141), we have to position
-  // |image_pipe_node_| so it extends beyond the view to the right and at the
-  // bottom by |image_width_ - display_width_| and |image_height_ -
-  // display_height_|, respectively, and clip off the pixels we don't want to
-  // display.
-  // TODO(dalesat): Remove this once SCN-862 and SCN-141 are fixed.
   image_pipe_node_.SetMaterial(image_pipe_material_);
 
-  // Position |image_pipe_node_| so the unwanted parts are clipped off.
-  image_pipe_node_.SetShape(scenic::Rectangle(session(), image_width_, image_height_));
-  image_pipe_node_.SetTranslation(static_cast<float>(image_width_ - display_width_) / 2.0f,
-                                  static_cast<float>(image_height_ - display_height_) / 2.0f,
-                                  kVideoElevation);
+  image_pipe_node_.SetShape(scenic::Rectangle(session(), display_width_, display_height_));
+  image_pipe_node_.SetTranslation(0.0f, 0.0f, kVideoElevation);
 
   // Scale |entity_node_| to fill the view.
   float width_scale = logical_size().x / display_width_;
@@ -664,17 +753,6 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
   // fixed.
   entity_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f, 0.0f);
-
-  // Clip |entity_node_| to get rid of the unwanted parts of the video on the
-  // right and bottom. Each plane is described as a normal vector and a position
-  // relative to the parent's origin represented as a scalar multiple of the
-  // normal. The region in the direction of the normal is visible. To clip on
-  // the right, we use a normal that points in the -x (left) direction. To clip
-  // on the bottom, we use a normal that points in the -y (up) direction. The
-  // scalars are negative to get a positive x and y offset, respectively, when
-  // multiplied by the respective normals.
-  entity_node_.SetClipPlanes({{{-1.0f, 0.0f, 0.0f}, static_cast<float>(display_width_) / -2.0f},
-                              {{0.0f, -1.0f, 0.0f}, static_cast<float>(display_height_) / -2.0f}});
 }
 
 }  // namespace media_player

@@ -42,28 +42,26 @@ void FakeSession::Bind(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> requ
   PresentScene();
 }
 
-void FakeSession::DumpExpectations(uint32_t display_height) {
+void FakeSession::DumpExpectations() {
   if (image_pipe_) {
-    image_pipe_->DumpExpectations(display_height);
+    image_pipe_->DumpExpectations();
   } else {
     dump_expectations_ = true;
-    expected_display_height_ = display_height;
   }
 }
 
 void FakeSession::SetExpectations(uint32_t black_image_id,
-                                  const fuchsia::images::ImageInfo& black_image_info,
-                                  const fuchsia::images::ImageInfo& info, uint32_t display_height,
+                                  const fuchsia::sysmem::ImageFormat_2& black_image_format,
+                                  const fuchsia::sysmem::ImageFormat_2& format,
                                   const std::vector<PacketInfo>&& expected_packets_info) {
   if (image_pipe_) {
-    image_pipe_->SetExpectations(black_image_id, black_image_info, info, display_height,
+    image_pipe_->SetExpectations(black_image_id, black_image_format, format,
                                  std::move(expected_packets_info));
   } else {
     expected_black_image_id_ = black_image_id;
-    expected_black_image_info_ = fidl::MakeOptional(black_image_info);
-    expected_image_info_ = fidl::MakeOptional(info);
+    expected_black_image_format_ = fidl::MakeOptional(black_image_format);
+    expected_image_format_ = fidl::MakeOptional(format);
     expected_packets_info_ = std::move(expected_packets_info);
-    expected_display_height_ = display_height;
   }
 }
 
@@ -191,22 +189,21 @@ void FakeSession::HandleSetEventMask(uint32_t resource_id, uint32_t event_mask) 
 }
 
 void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::ResourceArgs args) {
-  if (args.is_image_pipe()) {
+  if (args.is_image_pipe2()) {
     FX_CHECK(!image_pipe_) << "fake supports only one image pipe.";
-    FX_CHECK(args.image_pipe().image_pipe_request);
-    image_pipe_ = std::make_unique<FakeImagePipe>();
-    image_pipe_->Bind(std::move(args.image_pipe().image_pipe_request));
+    FX_CHECK(args.image_pipe2().image_pipe_request);
+    image_pipe_ = std::make_unique<FakeImagePipe>(sysmem_allocator_);
+    image_pipe_->Bind(std::move(args.image_pipe2().image_pipe_request));
     image_pipe_->OnPresentScene(zx::time(), next_presentation_time_, kPresentationInterval);
 
     if (dump_expectations_) {
-      image_pipe_->DumpExpectations(expected_display_height_);
+      image_pipe_->DumpExpectations();
     }
 
     if (!expected_packets_info_.empty()) {
-      FX_CHECK(expected_image_info_);
-      image_pipe_->SetExpectations(expected_black_image_id_, *expected_black_image_info_,
-                                   *expected_image_info_, expected_display_height_,
-                                   std::move(expected_packets_info_));
+      FX_CHECK(expected_image_format_);
+      image_pipe_->SetExpectations(expected_black_image_id_, *expected_black_image_format_,
+                                   *expected_image_format_, std::move(expected_packets_info_));
     }
   } else if (args.is_view()) {
     fuchsia::ui::gfx::ViewProperties view_properties;

@@ -342,7 +342,8 @@ void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints c
   BufferSet& current_set = input_buffers_.current_set();
 
   ConfigureInputToUseSysmemVmos(
-      service_provider_, 0, current_set.packet_count_for_server(), current_set.buffer_size(),
+      service_provider_, 0,  // max_aggregate_payload_size
+      current_set.packet_count_for_server(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
       0,  // map_flags
       [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
@@ -403,7 +404,8 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
   BufferSet& current_set = output_buffers_.current_set();
 
   ConfigureOutputToUseSysmemVmos(
-      service_provider_, 0, current_set.packet_count_for_server(), current_set.buffer_size(),
+      service_provider_, 0,  // max_aggregate_payload_size
+      current_set.packet_count_for_server(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
       0);  // map_flags
 

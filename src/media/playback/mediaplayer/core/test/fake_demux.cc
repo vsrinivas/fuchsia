@@ -23,7 +23,7 @@ FakeDemux::FakeDemux() {
   streams_.push_back(std::make_unique<DemuxStreamImpl>(
       1,
       VideoStreamType::Create(
-          nullptr, StreamType::kVideoEncodingTheora, nullptr, VideoStreamType::PixelFormat::kYv12,
+          nullptr, StreamType::kVideoEncodingTheora, nullptr, VideoStreamType::PixelFormat::kI420,
           VideoStreamType::ColorSpace::kNotApplicable, 1920, 1080, 1920, 1080, 1, 1, 1920),
       media::TimelineRate(1, 1)));
 }

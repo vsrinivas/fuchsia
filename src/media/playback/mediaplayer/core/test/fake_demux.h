@@ -25,7 +25,11 @@ class FakeDemux : public Demux {
   // Demux implementation.
   void ConfigureConnectors() override {
     for (size_t output_index = 0; output_index < streams_.size(); ++output_index) {
-      ConfigureOutputToProvideLocalMemory(0, 1, 0, output_index);
+      ConfigureOutputToProvideLocalMemory(0,        // max_aggregate_payload_size
+                                          1,        // max_payload_size
+                                          0,        // map_flags
+                                          nullptr,  // video_constraints
+                                          output_index);
     }
   }
 
