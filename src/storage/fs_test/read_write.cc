@@ -15,8 +15,5 @@ TEST_P(FileSystemTest, ReadFileAfterWritingFileSucceeds) {
   EXPECT_TRUE(!memcmp(buf, "hello", 5));
 }
 
-INSTANTIATE_TEST_SUITE_P(ReadWrite, FileSystemTest, testing::ValuesIn(AllTestFileSystems()),
-                         testing::PrintToStringParamName());
-
 }  // namespace
 }  // namespace fs_test

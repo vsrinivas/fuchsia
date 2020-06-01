@@ -28,6 +28,12 @@ class FileSystemTest : public testing::Test,
  public:
   FileSystemTest() : fs_(TestFileSystem::Create(GetParam()).value()) {}
 
+  std::string GetPath(std::string_view relative_path) const {
+    std::string path = fs_.mount_path() + "/";
+    path.append(relative_path);
+    return path;
+  }
+
  protected:
   TestFileSystem fs_;
 };

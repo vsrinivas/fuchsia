@@ -11,7 +11,9 @@ group("tests") {
 executable("fs_tests") {
   testonly = true
   sources = [
+    "access.cc",
     "fs_test.cc",
+    "fs_test_fixture.cc",
     "read_write.cc",
   ]
   deps = [
@@ -23,6 +25,7 @@ executable("fs_tests") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
