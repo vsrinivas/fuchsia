@@ -13,9 +13,6 @@ protocol BasemgrDebug {
     /// sessionmgr has been torn down.
     RestartSession() -> ();
 
-    /// Toggles to the next session defined in the basemgr.config file.
-    SelectNextSessionShell() -> ();
-
     /// Logs in as a guest user.
     LoginAsGuest();
 

@@ -80,11 +80,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   void Shutdown() override;
 
-  // |fuchsia::modular::internal::BasemgrDebug|
-  // Toggles to the next session shell in basemgr.config if one exists.
-  // |callback| resolves once session shell has been swapped.
-  void SelectNextSessionShell(SelectNextSessionShellCallback callback) override;
-
   void ShowSetupOrLogin();
 
   // Invoked when a user has been logged in. Starts a new session.

@@ -55,8 +55,6 @@ class SessionCtlApp {
   void ExecuteDeleteAllStoriesCommand(fit::function<void(std::string)> done);
   void ExecuteListStoriesCommand(fit::function<void(std::string)> done);
   void ExecuteRestartSessionCommand(fit::function<void(std::string)> done);
-  void ExecuteSelectNextSessionShellCommand(const fxl::CommandLine& command_line,
-                                            fit::function<void(std::string)> done);
   void ExecuteShutdownBasemgrCommand(const fxl::CommandLine& command_line,
                                      fit::function<void(std::string)> done);
 

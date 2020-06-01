@@ -196,36 +196,6 @@ void BasemgrImpl::Login(bool is_ephemeral_account) {
                                               /* shell_config= */ GetActiveSessionShellConfig());
 }
 
-void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {
-  if (state_ == State::SHUTTING_DOWN) {
-    FX_DLOGS(INFO) << "SelectNextSessionShell() not supported while shutting down";
-    callback();
-    return;
-  }
-
-  if (config_.basemgr_config().session_shell_map().empty()) {
-    FX_DLOGS(INFO) << "No session shells has been defined";
-    callback();
-    return;
-  }
-  auto shell_count = config_.basemgr_config().session_shell_map().size();
-  if (shell_count <= 1) {
-    FX_DLOGS(INFO) << "Only one session shell has been defined so switch is disabled";
-    callback();
-    return;
-  }
-
-  active_session_shell_configs_index_ = (active_session_shell_configs_index_ + 1) % shell_count;
-
-  UpdateSessionShellConfig();
-
-  session_provider_->SwapSessionShell(CloneStruct(session_shell_config_))
-      ->Then([callback = std::move(callback)] {
-        FX_LOGS(INFO) << "Swapped session shell";
-        callback();
-      });
-}
-
 fuchsia::modular::session::SessionShellConfig BasemgrImpl::GetActiveSessionShellConfig() {
   return CloneStruct(config_.basemgr_config()
                          .session_shell_map()

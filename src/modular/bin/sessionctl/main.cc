@@ -111,9 +111,6 @@ login_guest
 restart_session
   Restarts the current session.
 
-next_session_shell
-  Toggles to the next defined session shell.
-
 help
   Lists the available commands.)";
 }

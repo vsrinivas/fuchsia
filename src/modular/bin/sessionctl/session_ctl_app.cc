@@ -34,8 +34,6 @@ void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& comm
     ExecuteListStoriesCommand(std::move(done));
   } else if (cmd == kRestartSessionCommandString) {
     ExecuteRestartSessionCommand(std::move(done));
-  } else if (cmd == kSelectNextSessionCommandString) {
-    ExecuteSelectNextSessionShellCommand(command_line, std::move(done));
   } else {
     done(kGetUsageErrorString);
   }
@@ -188,14 +186,6 @@ void SessionCtlApp::ExecuteListStoriesCommand(fit::function<void(std::string)> d
 void SessionCtlApp::ExecuteRestartSessionCommand(fit::function<void(std::string)> done) {
   basemgr_debug_->RestartSession([this, done = std::move(done)]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
-    done("");
-  });
-}
-
-void SessionCtlApp::ExecuteSelectNextSessionShellCommand(const fxl::CommandLine& command_line,
-                                                         fit::function<void(std::string)> done) {
-  basemgr_debug_->SelectNextSessionShell([this, done = std::move(done)]() {
-    logger_.Log(kSelectNextSessionCommandString, std::vector<std::string>());
     done("");
   });
 }
