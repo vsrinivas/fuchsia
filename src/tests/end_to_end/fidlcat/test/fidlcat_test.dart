@@ -63,7 +63,7 @@ class RunFidlcat {
     final String echoIr =
         Platform.script.resolve('runtime_deps/echo.fidl.json').toFilePath();
     final String ioIr = Platform.script
-        .resolve('runtime_deps/fuchsia-io.fidl.json')
+        .resolve('runtime_deps/fuchsia.io.fidl.json')
         .toFilePath();
     final String sysIr = Platform.script
         .resolve('runtime_deps/fuchsia.sys.fidl.json')

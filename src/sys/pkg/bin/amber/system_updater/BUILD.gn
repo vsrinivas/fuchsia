@@ -14,6 +14,8 @@ go_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol($go_toolchain)",
+    "//sdk/fidl/fuchsia.io($go_toolchain)",
+    "//sdk/fidl/fuchsia.mem($go_toolchain)",
     "//sdk/fidl/fuchsia.paver($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.space($go_toolchain)",
@@ -21,8 +23,6 @@ go_library("lib") {
     "//src/lib/component",
     "//src/lib/syslog/go",
     "//src/sys/pkg/bin/amber:metrics_lib",
-    "//zircon/system/fidl/fuchsia-io($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
   ]
 }
 

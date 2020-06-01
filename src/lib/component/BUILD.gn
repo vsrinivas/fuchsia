@@ -11,8 +11,8 @@ go_library("component") {
   name = "go.fuchsia.dev/fuchsia/src/lib/component"
 
   deps = [
+    "//sdk/fidl/fuchsia.io($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-io($go_toolchain)",
   ]
 }
 
