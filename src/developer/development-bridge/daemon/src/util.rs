@@ -46,3 +46,28 @@ macro_rules! ok_or_continue {
         }
     };
 }
+
+/// Attempts to run an operation that has a Result<T, Error> inside a function
+/// that isn't intended to return an error, instead returning after failure with
+/// a warning log.
+///
+/// # Example:
+///
+/// ```rust
+/// fn fun_function() [
+///   ok_or_return!(some_operation());
+///   some_other_operation_that_depends_on_above_succeeding();
+/// }
+/// ```
+#[macro_export]
+macro_rules! ok_or_return {
+    ($op:expr $(,)?) => {
+        match $op {
+            Ok(t) => t,
+            Err(e) => {
+                log::warn!("{}", e);
+                return;
+            }
+        }
+    };
+}

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::discovery::{TargetFinder, TargetFinderConfig};
-use crate::target::*;
-use futures::channel::mpsc;
+use crate::events;
 use std::io;
 
 #[cfg(target_os = "linux")]
-use {self::linux::MdnsTargetFinderLinuxExt, std::net::UdpSocket};
+use {
+    self::linux::MdnsTargetFinderLinuxExt, crate::events::TryIntoTargetInfo, crate::target::*,
+    std::net::UdpSocket,
+};
 
 #[cfg(target_os = "linux")]
 #[derive(Debug)]
@@ -30,8 +32,8 @@ impl TargetFinder for MdnsTargetFinder {
     }
 
     #[cfg(target_os = "linux")]
-    fn start(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
-        self.linux_start(s)
+    fn start(&self, e: events::Queue<events::DaemonEvent>) -> io::Result<()> {
+        self.linux_start(e)
     }
 
     //// Non-linux trait impl
@@ -42,7 +44,7 @@ impl TargetFinder for MdnsTargetFinder {
     }
 
     #[cfg(not(target_os = "linux"))]
-    fn start(&self, _s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
+    fn start(&self, _e: events::Queue<events::DaemonEvent>) -> io::Result<()> {
         unimplemented!()
     }
 }
@@ -73,7 +75,7 @@ mod linux {
     pub trait MdnsTargetFinderLinuxExt: TargetFinder {
         fn linux_new(c: &TargetFinderConfig) -> io::Result<Self>;
 
-        fn linux_start(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()>;
+        fn linux_start(&self, e: events::Queue<events::DaemonEvent>) -> io::Result<()>;
     }
 
     impl MdnsTargetFinderLinuxExt for MdnsTargetFinder {
@@ -102,8 +104,8 @@ mod linux {
             Ok(Self { listener_sockets, sender_sockets, config: config.clone() })
         }
 
-        fn linux_start(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
-            self.start_listeners(s)?;
+        fn linux_start(&self, e: events::Queue<events::DaemonEvent>) -> io::Result<()> {
+            self.start_listeners(e)?;
             self.start_query_loop()?;
 
             Ok(())
@@ -114,12 +116,12 @@ mod linux {
         m.answers.len() >= 1 && m.answers[0].domain == "_fuchsia._udp.local"
     }
 
-    impl<B: ByteSlice + Clone> TryIntoTarget for dns::Message<B> {
+    impl<B: ByteSlice + Clone> events::TryIntoTargetInfo for dns::Message<B> {
         type Error = MdnsConvertError;
 
-        fn try_into_target(self, src: SocketAddr) -> Result<Target, Self::Error> {
+        fn try_into_target_info(self, src: SocketAddr) -> Result<events::TargetInfo, Self::Error> {
             let mut nodename = String::new();
-            let addrs: HashSet<TargetAddr> = [src.into()].iter().cloned().collect();
+            let mut addrs: HashSet<TargetAddr> = [src.into()].iter().cloned().collect();
             for record in self.additional.iter() {
                 if record.rtype != dns::Type::A && record.rtype != dns::Type::Aaaa {
                     continue;
@@ -136,16 +138,16 @@ mod linux {
             if nodename.len() == 0 {
                 return Err(MdnsConvertError::NodenameMissing);
             }
-            Ok(Target::new_with_addrs(nodename.as_ref(), addrs))
+            Ok(events::TargetInfo { nodename, addresses: addrs.drain().collect() })
         }
     }
 
     impl MdnsTargetFinder {
-        fn start_listeners(&self, s: &mpsc::UnboundedSender<Target>) -> io::Result<()> {
+        fn start_listeners(&self, e: events::Queue<events::DaemonEvent>) -> io::Result<()> {
             // Listen on all sockets in the event that unicast packets are returned.
             for l in self.sender_sockets.iter().chain(self.listener_sockets.iter()) {
-                let sender = s.clone();
                 let sock = l.try_clone()?;
+                let mut e = e.clone();
                 thread::spawn(move || {
                     let mut buf = [0; 1500];
                     loop {
@@ -154,8 +156,13 @@ mod linux {
                         match buf.parse::<dns::Message<_>>() {
                             Ok(m) => {
                                 if is_fuchsia_response(&m) {
-                                    match m.try_into_target(src) {
-                                        Ok(target) => sender.unbounded_send(target).unwrap(),
+                                    match m.try_into_target_info(src) {
+                                        Ok(info) => futures::executor::block_on(e.push(
+                                            events::DaemonEvent::WireTraffic(
+                                                events::WireTrafficType::Mdns(info),
+                                            ),
+                                        ))
+                                        .unwrap(),
                                         _ => (),
                                     }
                                 }

@@ -122,7 +122,6 @@ impl Target {
         }
     }
 
-    #[cfg(target_os = "linux")] // Only used by mDNS code.
     pub fn new_with_addrs(nodename: &str, addrs: HashSet<TargetAddr>) -> Self {
         Self {
             nodename: nodename.to_string(),
@@ -245,8 +244,8 @@ impl Target {
         Err(anyhow!("Waiting for RCS timed out"))
     }
 
-    pub async fn run_host_pipe(target: Arc<Target>) {
-        Target::run_host_pipe_with_allocator(target, onet::HostPipeConnection::new).await
+    pub async fn run_host_pipe(self: Arc<Target>) {
+        Target::run_host_pipe_with_allocator(self, onet::HostPipeConnection::new).await
     }
 
     async fn run_host_pipe_with_allocator(
@@ -314,6 +313,12 @@ impl ToFidlTarget for Arc<Target> {
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
         }
+    }
+}
+
+impl From<crate::events::TargetInfo> for Target {
+    fn from(mut t: crate::events::TargetInfo) -> Self {
+        Self::new_with_addrs(t.nodename.as_ref(), t.addresses.drain(..).collect())
     }
 }
 
@@ -526,16 +531,6 @@ impl TargetCollection {
 
         None
     }
-}
-
-pub trait TryIntoTarget: Sized {
-    type Error;
-
-    /// Attempts, given a source socket address, to determine whether the
-    /// received message was from a Fuchsia target, and if so, what kind. Attempts
-    /// to fill in as much information as possible given the message, consuming
-    /// the underlying object in the process.
-    fn try_into_target(self, src: SocketAddr) -> Result<Target, Self::Error>;
 }
 
 #[cfg(test)]
