@@ -1,0 +1,117 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.weave;
+
+using fuchsia.net as net;
+
+/// The maximum number of HostPorts that Weave can return in a HostPortList, as
+/// weave indexes HostPortLists by a uint8.
+const uint32 MAX_HOST_PORTS = 256;
+/// The largest supported size of a QR code encoded in string format may be.
+const uint32 MAX_QR_CODE_SIZE = 256;
+
+/// An endpoint ID used for identifying which service endpoints are of interest when
+/// looking up endpoints in the Weave Service Directory.
+using ServiceEndpointId = uint64;
+
+/// Current state of pairing/provisioning. At the point of a completely unprovisioned
+/// or factory reset device, all states will be `false`. Outside of an explicit
+/// ResetConfig call or factory reset, the provisioning states will only transition
+/// from `false` to `true` as Weave profiles are provisioned.
+table PairingState {
+    /// Has Weave been fully provisioned? This implies that all provisioning
+    /// has been completed as expected as specified in the configuration.
+    1: bool is_weave_fully_provisioned;
+    /// Has WiFi been provisioned? Defaults to false.
+    2: bool is_wlan_provisioned;
+    /// Has Thread been provisioned? Defaults to false.
+    3: bool is_thread_provisioned;
+    /// Has the fabric been provisioned? Defaults to false.
+    4: bool is_fabric_provisioned;
+    /// Has the service been provisioned? Defaults to false.
+    5: bool is_service_provisioned;
+};
+
+/// ResetConfig flags.
+bits ResetConfigFlags : uint32 {
+    /// Reset network configuration information.
+    NETWORK_CONFIG = 0x0001;
+    /// Reset fabric configuration information.
+    FABRIC_CONFIG = 0x0002;
+    /// Reset service configuration information.
+    SERVICE_CONFIG = 0x0004;
+    /// Reset device operational credentials.
+    OPERATIONAL_CREDENTIALS = 0x0008;
+};
+
+/// Reset all device configuration information.
+const uint32 RESET_CONFIG_ALL = 0x00FF;
+
+/// QR Code data for pairing.
+struct QrCode {
+    /// QR code data in string format, supplying this string in a QR
+    /// code should be sufficient for pairing.
+    string:MAX_QR_CODE_SIZE data;
+};
+
+/// Representation of a host either in the form of a hostname or IP address.
+union Host {
+    1: string:net.MAX_HOSTNAME_SIZE hostname;
+    2: net.IpAddress ip_address;
+};
+
+/// A tuple of host and port to represent a connectable endpoint.
+struct HostPort {
+    Host host;
+    uint16 port;
+};
+
+/// Watches for changes in Weave Service Directory entries for a particular endpoint
+/// ID. The endpoint ID is specified in, and this protocol retrieved from
+/// [`fuchsia.weave/Stack.GetServiceDirectoryWatcher`].
+protocol SvcDirectoryWatcher {
+    /// Returns a vector of HostPorts for the watched endpoint ID.
+    ///
+    /// First call returns the current list of HostPorts or blocks until the list
+    /// is available from the service. Subsequent calls will block until a new
+    /// ServiceDirectory lookup is made and will return the list associated with
+    /// the watched endpoint ID, which may or may not be the same as prior values.
+    ///
+    /// Calling WatchServiceDirectory when a previous call is still pending will
+    /// cause the channel to be closed with `ZX_ERR_BAD_STATE`.
+    WatchServiceDirectory() -> (vector<HostPort>:MAX_HOST_PORTS host_port_list);
+};
+
+/// Watches for changes in pairing state in Weave. Retrieved from
+/// [`fuchsia.weave/Stack.GetPairingStateWatcher`].
+protocol PairingStateWatcher {
+    /// Returns the state of pairing.
+    ///
+    /// First call returns the current pairing state or blocks until the pairing
+    /// state is available. Subsequent calls will block until the pairing state
+    /// changes.
+    ///
+    /// Calling WatchPairingState when a previous call is still pending will cause
+    /// the channel to be closed with `ZX_ERR_BAD_STATE`.
+    WatchPairingState() -> (PairingState state);
+};
+
+/// Calls and services available from WeaveStack. These calls are designed to
+/// wrap the Weave adaptation and provide information or capabilities to Weave
+/// applications or components that are interested in information that Weave
+/// exposes.
+[Discoverable]
+protocol Stack {
+    /// Returns a PairingStateWatcher to watch for changes in pairing state.
+    GetPairingStateWatcher(request<PairingStateWatcher> watcher);
+    /// Returns a SvcDirectoryWatcher to watch changes in the Weave service
+    /// directory for a particular endpoint.
+    GetSvcDirectoryWatcher(ServiceEndpointId endpoint_id,
+                           request<SvcDirectoryWatcher> watcher);
+    /// Returns a QR code that can be used in the pairing process.
+    GetQrCode() -> (QrCode qr_code) error ErrorCode;
+    /// Reset the Weave configuration.
+    ResetConfig(ResetConfigFlags flags) -> () error ErrorCode;
+};

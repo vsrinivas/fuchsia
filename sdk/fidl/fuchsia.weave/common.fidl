@@ -1,0 +1,18 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.weave;
+
+enum ErrorCode : uint32 {
+    /// Key/pairing code not found in storage.
+    FILE_NOT_FOUND = 1;
+    /// Error occurred during cryptographic operations.
+    CRYPTO_ERROR = 2;
+    /// An invalid argument was supplied.
+    INVALID_ARGUMENT = 3;
+    /// Weave is in an invalid state to support the operation.
+    INVALID_STATE = 4;
+    /// An unknown or non-specific error occurred.
+    UNSPECIFIED_ERROR = 0x7FFFFFFF;
+};

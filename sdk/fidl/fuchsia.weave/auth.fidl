@@ -4,14 +4,6 @@
 
 library fuchsia.weave;
 
-/// Error codes for WeaveKeyStore operations.
-enum ErrorCode {
-    /// Key/pairing code not found in storage.
-    FILE_NOT_FOUND = 1;
-    /// Error occurred during cryptographic operations.
-    CRYPTO_ERROR = 2;
-};
-
 /// This protocol is used for signing operations with the factory-provisioned
 /// Weave key.
 [Discoverable]

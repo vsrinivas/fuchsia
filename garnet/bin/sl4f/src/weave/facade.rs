@@ -31,6 +31,9 @@ impl WeaveFacade {
         anyhow!(match code {
             ErrorCode::FileNotFound => "FileNotFound",
             ErrorCode::CryptoError => "CryptoError",
+            ErrorCode::InvalidArgument => "InvalidArgument",
+            ErrorCode::InvalidState => "InvalidState",
+            ErrorCode::UnspecifiedError => "UnspecifiedError",
         })
     }
 
