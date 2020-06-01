@@ -316,6 +316,11 @@ group("pest_generator") {
   deps = [ ":pest_generator-v2_1_3" ]
 }
 
+if (!is_fuchsia) {
+  group("petgraph") {
+    deps = [ ":petgraph-v0_5_1" ]
+  }
+}
 if (is_fuchsia) {
   group("pin-project") {
     deps = [ ":pin-project-v0_4_17" ]
@@ -2501,6 +2506,27 @@ rust_library("filetime-v0_2_4") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+}
+
+rust_library("fixedbitset-v0_2_0") {
+  crate_name = "fixedbitset"
+  crate_root = "//third_party/rust_crates/vendor/fixedbitset/src/lib.rs"
+  output_name = "fixedbitset-da79ca35469fac93"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=da79ca35469fac93",
+    "-Cextra-filename=-da79ca35469fac93",
+  ]
 }
 
 rust_library("flate2-v1_0_14") {
@@ -5157,6 +5183,33 @@ rust_library("pest_meta-v2_1_0") {
     "--edition=2015",
     "-Cmetadata=97d599c12fc59f03",
     "-Cextra-filename=-97d599c12fc59f03",
+  ]
+}
+
+rust_library("petgraph-v0_5_1") {
+  crate_name = "petgraph"
+  crate_root = "//third_party/rust_crates/vendor/petgraph/src/lib.rs"
+  output_name = "petgraph-f655956878203040"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":fixedbitset-v0_2_0" ]
+  deps += [ ":indexmap-v1_0_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f655956878203040",
+    "-Cextra-filename=-f655956878203040",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"graphmap\"",
+    "--cfg=feature=\"matrix_graph\"",
+    "--cfg=feature=\"stable_graph\"",
   ]
 }
 
