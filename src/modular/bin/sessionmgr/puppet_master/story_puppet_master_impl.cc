@@ -188,9 +188,9 @@ class AnnotateModuleOperation
   }
 
   void AnnotateModuleIfFirstAttempt(fuchsia::modular::ModuleDataPtr module_data) {
-    if (attempted)
+    if (attempted_)
       return;
-    attempted = true;
+    attempted_ = true;
     // Merge the annotations provided to the operation into any existing ones in `module_data`.
     auto new_annotations = module_data->has_annotations()
                                ? annotations::Merge(std::move(*module_data->mutable_annotations()),
@@ -217,7 +217,7 @@ class AnnotateModuleOperation
   std::string story_name_;
   std::string module_id_;
   std::vector<fuchsia::modular::Annotation> annotations_;
-  bool attempted = false;
+  bool attempted_ = false;
 };
 
 }  // namespace
