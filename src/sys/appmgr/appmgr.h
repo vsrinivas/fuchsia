@@ -5,6 +5,8 @@
 #ifndef SRC_SYS_APPMGR_APPMGR_H_
 #define SRC_SYS_APPMGR_APPMGR_H_
 
+#include <lib/inspect/cpp/inspector.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <fs/pseudo_dir.h>
@@ -14,6 +16,7 @@
 
 #include "garnet/lib/loader/package_loader.h"
 #include "src/lib/fxl/macros.h"
+#include "src/sys/appmgr/cpu_watcher.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/storage_watchdog.h"
 #include "src/sys/appmgr/util.h"
@@ -37,6 +40,10 @@ class Appmgr {
   ~Appmgr();
 
  private:
+  void MeasureCpu(async_dispatcher_t* dispatcher);
+
+  inspect::Inspector inspector_;
+  std::unique_ptr<CpuWatcher> cpu_watcher_;
   std::unique_ptr<Realm> root_realm_;
   fs::SynchronousVfs publish_vfs_;
   fbl::RefPtr<fs::PseudoDir> publish_dir_;

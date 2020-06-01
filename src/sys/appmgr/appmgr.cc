@@ -4,10 +4,18 @@
 
 #include "src/sys/appmgr/appmgr.h"
 
-#include "fcntl.h"
-#include "lib/fdio/directory.h"
-#include "lib/sys/cpp/termination_reason.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include <fcntl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/inspect/service/cpp/service.h>
+#include <lib/sys/cpp/termination_reason.h>
+#include <lib/zx/time.h>
+
+#include <fbl/ref_ptr.h>
+#include <fs/pseudo_dir.h>
+#include <fs/service.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 using fuchsia::sys::TerminationReason;
 
@@ -16,10 +24,14 @@ namespace {
 constexpr zx::duration kMinSmsmgrBackoff = zx::msec(200);
 constexpr zx::duration kMaxSysmgrBackoff = zx::sec(15);
 constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
+constexpr zx::duration kCpuSamplePeriod = zx::min(1);
 }  // namespace
 
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
-    : publish_vfs_(dispatcher),
+    : inspector_(),
+      cpu_watcher_(
+          std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild("cpu_stats"), zx::job())),
+      publish_vfs_(dispatcher),
       publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
@@ -37,6 +49,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       std::move(args.environment_services), args.run_virtual_console,
       std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
       std::move(appmgr_config_dir));
+  realm_args.cpu_watcher = cpu_watcher_.get();
   root_realm_ = Realm::Create(std::move(realm_args));
   FX_CHECK(root_realm_) << "Cannot create root realm ";
 
@@ -64,8 +77,17 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   }
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
     auto svc = fbl::AdoptRef(new fs::RemoteDir(std::move(svc_client_chan)));
+    auto diagnostics = fbl::AdoptRef(new fs::PseudoDir());
+    diagnostics->AddEntry(
+        fuchsia::inspect::Tree::Name_,
+        fbl::AdoptRef(new fs::Service(
+            [connector = inspect::MakeTreeHandler(&inspector_)](zx::channel chan) mutable {
+              connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+              return ZX_OK;
+            })));
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);
+    publish_dir_->AddEntry("diagnostics", diagnostics);
     publish_vfs_.ServeDirectory(publish_dir_, zx::channel(args.pa_directory_request));
   }
 
@@ -79,7 +101,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
                                            TerminationReason termination_reason) {
       if (termination_reason != TerminationReason::EXITED) {
         FX_LOGS(WARNING) << "sysmgr launch failed: "
-                       << sys::TerminationReasonToString(termination_reason);
+                         << sys::TerminationReasonToString(termination_reason);
         sysmgr_permanently_failed_ = true;
       } else if (status == ZX_ERR_INVALID_ARGS) {
         FX_LOGS(WARNING) << "sysmgr reported invalid arguments";
@@ -113,14 +135,23 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
       auto delay_duration = sysmgr_backoff_.GetNext();
       FX_LOGS(WARNING) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
-                                          .001f * delay_duration.to_msecs());
+                                            .001f * delay_duration.to_msecs());
       async::PostDelayedTask(dispatcher, run_sysmgr, delay_duration);
     };
 
     sysmgr_.set_error_handler(retry_handler);
   });
+
+  async::PostTask(dispatcher, [this, dispatcher] { MeasureCpu(dispatcher); });
 }
 
 Appmgr::~Appmgr() = default;
+
+void Appmgr::MeasureCpu(async_dispatcher_t* dispatcher) {
+  cpu_watcher_->Measure();
+
+  async::PostDelayedTask(
+      dispatcher, [this, dispatcher] { MeasureCpu(dispatcher); }, kCpuSamplePeriod);
+}
 
 }  // namespace component

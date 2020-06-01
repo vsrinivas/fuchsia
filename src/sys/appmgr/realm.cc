@@ -291,6 +291,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       appmgr_config_dir_(std::move(args.appmgr_config_dir)),
       use_parent_runners_(args.options.use_parent_runners),
       delete_storage_on_death_(args.options.delete_storage_on_death),
+      cpu_watcher_(args.cpu_watcher),
       weak_ptr_factory_(this) {
   // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
@@ -460,6 +461,7 @@ void Realm::CreateNestedEnvironment(
         this, label, nested_data_path, nested_cache_path, nested_temp_path, environment_services_,
         /*run_virtual_console=*/false, std::move(options), appmgr_config_dir_.duplicate());
   }
+  args.cpu_watcher = cpu_watcher_;
 
   auto realm = Realm::Create(std::move(args));
   if (!realm) {

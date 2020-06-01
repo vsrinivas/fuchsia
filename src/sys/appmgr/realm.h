@@ -32,6 +32,7 @@
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/component_event_provider_impl.h"
+#include "src/sys/appmgr/cpu_watcher.h"
 #include "src/sys/appmgr/environment_controller_impl.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
@@ -81,6 +82,7 @@ struct RealmArgs {
   fuchsia::sys::ServiceListPtr additional_services;
   fuchsia::sys::EnvironmentOptions options;
   fxl::UniqueFD appmgr_config_dir;
+  CpuWatcher* cpu_watcher;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -93,6 +95,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   ~Realm();
 
   Realm* parent() const { return parent_; }
+  CpuWatcher* cpu_watcher() const { return cpu_watcher_; }
   const std::string& label() const { return label_; }
   const std::string& data_path() const { return data_path_; }
   const std::string& cache_path() const { return cache_path_; }
@@ -285,6 +288,10 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   bool use_parent_runners_ = false;
   bool delete_storage_on_death_ = false;
+
+  // Pointer to a cpu watcher to register and unregister components for sampling.
+  // Not owned.
+  CpuWatcher* const cpu_watcher_;
 
   fxl::WeakPtrFactory<Realm> weak_ptr_factory_;
 

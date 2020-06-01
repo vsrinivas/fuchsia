@@ -20,6 +20,8 @@ source_set("lib") {
     "component_event_provider_impl.h",
     "component_id_index.cc",
     "component_id_index.h",
+    "cpu_watcher.cc",
+    "cpu_watcher.h",
     "debug_info_retriever.cc",
     "debug_info_retriever.h",
     "dynamic_library_loader.cc",
@@ -89,6 +91,7 @@ source_set("lib") {
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/loader-service",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
@@ -149,6 +152,7 @@ executable("unittest_bin") {
     "component_controller_unittest.cc",
     "component_event_provider_unittest.cc",
     "component_id_index_unittest.cc",
+    "cpu_watcher_unittest.cc",
     "hub/hub_holder_unittest.cc",
     "log_connector_impl_unittest.cc",
     "namespace_builder_unittest.cc",

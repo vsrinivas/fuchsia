@@ -183,6 +183,14 @@
             rights: [ "rw*" ],
         },
 
+        // Diagnostics directory used to expose data to Archivist.
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+
         // These services exposed by appmgr are services from the v1 component
         // runtime being made available to the v2 component runtime. These all cause
         // dependency cycles between the two runtimes. Cycles require trickier

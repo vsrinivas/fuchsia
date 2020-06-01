@@ -110,7 +110,7 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
  protected:
   ComponentHub* hub() { return &hub_; }
-  fxl::RefPtr<Namespace> ns() { return ns_; }
+  fxl::RefPtr<Namespace> ns() const { return ns_; }
 
   // Returns the incoming services from the namespace.
   const fbl::RefPtr<ServiceProviderDirImpl>& incoming_services() const {
@@ -158,6 +158,10 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   uint32_t diagnostics_max_retries_ = 0;
 };
 
+// The path to an instance of a component. Includes the realm path, component name, and the koid of
+// the component's main job.
+using InstancePath = std::vector<std::string>;
+
 class ComponentControllerImpl : public ComponentControllerBase {
  public:
   ComponentControllerImpl(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
@@ -167,7 +171,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
                           zx::channel client_request, zx::channel package_handle);
   ~ComponentControllerImpl() override;
 
-  const std::string& koid() const { return koid_; }
+  const std::string& koid() const { return process_koid_; }
 
   zx_status_t AddSubComponentHub(const component::HubInfo& hub_info);
   zx_status_t RemoveSubComponentHub(const component::HubInfo& hub_info);
@@ -182,12 +186,19 @@ class ComponentControllerImpl : public ComponentControllerBase {
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);
 
+  // Returns the path down the component tree to this component instance.
+  //
+  // The path includes the names of all realms, the component name, and the koid of the component's
+  // job.
+  InstancePath GetComponentInstancePath() const;
+
   bool SendReturnCodeIfTerminated();
 
   ComponentContainer<ComponentControllerImpl>* container_;
   zx::job job_;
   zx::process process_;
-  const std::string koid_;
+  const std::string process_koid_;
+  const std::string job_koid_;
 
   async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler> wait_;
 

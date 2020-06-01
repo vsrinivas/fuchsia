@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include <cinttypes>
+#include <string>
 #include <utility>
 
 #include <fbl/string_printf.h>
@@ -34,6 +35,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/namespace.h"
+#include "src/sys/appmgr/realm.h"
 
 namespace component {
 
@@ -304,14 +306,15 @@ ComponentControllerImpl::ComponentControllerImpl(
       container_(container),
       job_(std::move(job)),
       process_(std::move(process)),
-      koid_(std::to_string(fsl::GetKoid(process_.get()))),
+      process_koid_(std::to_string(fsl::GetKoid(process_.get()))),
+      job_koid_(std::to_string(fsl::GetKoid(job_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED),
       system_diagnostics_(DuplicateProcess(process_)) {
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
   FX_DCHECK(status == ZX_OK);
 
-  hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
-  hub()->SetProcessId(koid_);
+  hub()->SetJobId(job_koid_);
+  hub()->SetProcessId(process_koid_);
 
   // Serve connections to the system_diagnostics interface.
   auto system_diagnostics = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -330,19 +333,41 @@ ComponentControllerImpl::ComponentControllerImpl(
   if (package_handle.is_valid()) {
     hub()->AddPackageHandle(fbl::MakeRefCounted<fs::RemoteDir>(std::move(package_handle)));
   }
+
+  zx::job watch_job;
+  if (job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watch_job) != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to duplicate job handle";
+  }
+  auto realm = this->ns()->realm();
+  if (realm && realm->cpu_watcher()) {
+    InstancePath path = GetComponentInstancePath();
+    if (!path.empty()) {
+      realm->cpu_watcher()->AddTask(path, std::move(watch_job));
+    }
+  }
 }
 
 ComponentControllerImpl::~ComponentControllerImpl() {
+  zx_info_handle_basic_t info = {};
   // Two ways we end up here:
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be
   //    alive.
   if (job_) {
+    job_.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     job_.kill();
     // Our owner destroyed this object before we could obtain a termination
     // reason.
 
     SendOnTerminationEvent(-1, TerminationReason::UNKNOWN);
+  }
+
+  auto realm = this->ns()->realm();
+  if (realm && realm->cpu_watcher()) {
+    InstancePath path = GetComponentInstancePath();
+    if (!path.empty()) {
+      realm->cpu_watcher()->RemoveTask(path);
+    }
   }
 
   // Clean up system diagnostics before deleting the backing objects.
@@ -395,6 +420,23 @@ void ComponentControllerImpl::Handler(async_dispatcher_t* dispatcher, async::Wai
   container_->ExtractComponent(this);
   // The destructor of the temporary returned by ExtractComponent destroys
   // |this| at the end of the previous statement.
+}
+
+InstancePath ComponentControllerImpl::GetComponentInstancePath() const {
+  std::vector<std::string> path;
+  auto realm = this->ns()->realm();
+  if (realm) {
+    path.push_back(this->label());
+    auto* cur = realm.get();
+    while (cur) {
+      path.push_back(cur->label());
+      cur = cur->parent();
+    }
+    std::reverse(path.begin(), path.end());
+    path.push_back(job_koid_);
+  }
+
+  return path;
 }
 
 zx::status<bool> ComponentControllerImpl::ContainsProcess(zx_koid_t process_koid) {
