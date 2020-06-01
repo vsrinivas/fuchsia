@@ -88,10 +88,10 @@ the [`bluetooth-tests`](tests/BUILD.gn) package.
 
 ##### Running on a Fuchsia device
 
-* Run all the bt-host unit tests from the target shell:
+* Run all the bt-host unit tests:
 
   ```
-  $ run-test-component bt-host-unittests
+  $ fx test bt-host-unittests
   ```
 
 * Or use the `--gtest_filter`
@@ -99,18 +99,16 @@ the [`bluetooth-tests`](tests/BUILD.gn) package.
 
   ```
   # This only runs the L2CAP unit tests.
-  $ run-test-component bt-host-unittests --gtest_filter=L2CAP_\*
+  $ fx test bt-host-unittests -- --gtest_filter="L2CAP_*"
   ```
 
-* And use the `--verbose` flag to set log verbosity:
+* And use the `--severity=<TRACE|DEBUG|INFO|WARNING|ERROR>` flag to set the minimum log severity to print:
 
   ```
-  # This logs all messages logged using FXL_VLOG up to level 2 (equivalent to ::bt::common::LogSeverity:SPEW)
-  $ run-test-component bt-host-unittests --verbose=2
+  $ fx test bt-host-unittests -- --severity=TRACE
   ```
 
-* After making library or test changes, you can push the test package and run it
-from your development shell:
+* After making library or test changes, you can push the test package and run it from your development shell:
 
   ```
   $ fx test bt-host-unittests -- --gtest_filter="L2CAP_*"
@@ -126,7 +124,7 @@ If you don't have physical hardware available, you can run the tests in QEMU usi
 * Disable unnecessary logging for the tests:
 
   ```
-  $ run-test-component bt-host-unittests --quiet=10
+  $ fx test bt-host-unittests -- --severity=ERROR
   ```
 
 With these two tips, the full bt-host-unittests suite runs in ~2 seconds.
