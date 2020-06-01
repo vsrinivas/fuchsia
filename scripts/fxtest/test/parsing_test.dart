@@ -34,7 +34,7 @@ void main() {
           'environments': [],
           'test': {
             'cpu': 'x64',
-            'deps_file':
+            'runtime_deps':
                 'host_x64/gen/topaz/tools/doc_checker/doc_checker_tests.deps.json',
             'path': 'host_x64/doc_checker_tests',
             'name': '//topaz/tools/doc_checker:doc_checker_tests',
@@ -49,7 +49,7 @@ void main() {
       );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl, null);
-      expect(tds[0].depsFile, testJson[0]['test']['deps_file']);
+      expect(tds[0].runtimeDeps, testJson[0]['test']['runtime_deps']);
       expect(tds[0].path, testJson[0]['test']['path']);
       expect(tds[0].name, testJson[0]['test']['name']);
       expect(tds[0].cpu, testJson[0]['test']['cpu']);
@@ -80,7 +80,7 @@ void main() {
       );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
-      expect(tds[0].depsFile, '');
+      expect(tds[0].runtimeDeps, '');
       expect(tds[0].path, testJson[0]['test']['path']);
       expect(tds[0].name, testJson[0]['test']['name']);
       expect(tds[0].cpu, testJson[0]['test']['cpu']);
@@ -369,6 +369,82 @@ void main() {
       );
 
       expect(parsedManifest.testBundles, hasLength(0));
+    });
+  });
+
+  group('test hints are generated correctly', () {
+    var fxtestDef = TestDefinition.fromJson(
+      {
+        'environments': [],
+        'test': {
+          'cpu': 'x64',
+          'label': '//scripts/fxtest:fxtest_tests(//build/toolchain:host_x64)',
+          'name': 'fxtest_tests',
+          'os': 'linux',
+          'path': 'host_x64/fxtest_tests',
+          'runtime_deps': 'host_x64/gen/scripts/fxtest/fxtest_tests.deps.json'
+        }
+      },
+      buildDir: '/whatever',
+      fx: 'fx',
+    );
+    var randomDef = TestDefinition.fromJson(
+      {
+        'environments': [],
+        'test': {
+          'cpu': 'x64',
+          'label': '//path/whatever:whatever_tests(//build/toolchain:host_x64)',
+          'name': 'whatever_tests',
+          'os': 'linux',
+          'path': 'host_x64/whatever_tests',
+          'runtime_deps':
+              'host_x64/gen/scripts/whatever/whatever_tests.deps.json'
+        }
+      },
+      buildDir: '/whatever',
+      fx: 'fx',
+    );
+    test('with a typo inside a path', () {
+      var reader = TestsManifestReader();
+      var config = TestsConfig.fromRawArgs(rawArgs: ['scripts/fxtets']);
+      var parsedManifest = reader.aggregateTests(
+        comparer: FuzzyComparer(threshold: 3),
+        eventEmitter: (TestEvent event) => null,
+        matchLength: MatchLength.partial,
+        testBundleBuilder: (TestDefinition _testDef, [double confidence]) =>
+            TestBundle.build(
+          testDefinition: _testDef,
+          testRunnerBuilder: (testsConfig) => TestRunner(),
+          timeElapsedSink: (duration, cmd, output) => null,
+          workingDirectory: '/whatever',
+          testsConfig: config,
+        ),
+        testDefinitions: [fxtestDef, randomDef],
+        testsConfig: config,
+      );
+      expect(parsedManifest.testBundles.length, 1);
+      expect(parsedManifest.testBundles[0].testDefinition.name, 'fxtest_tests');
+    });
+
+    test('with an fxtest typo', () {
+      var reader = TestsManifestReader();
+      var config = TestsConfig.fromRawArgs(rawArgs: ['fxtest_tetss']);
+      var parsedManifest = reader.aggregateTests(
+        comparer: FuzzyComparer(threshold: 3),
+        eventEmitter: (TestEvent event) => null,
+        matchLength: MatchLength.partial,
+        testBundleBuilder: (TestDefinition _testDef, [double confidence]) =>
+            TestBundle.build(
+          testDefinition: _testDef,
+          testRunnerBuilder: (testsConfig) => TestRunner(),
+          timeElapsedSink: (duration, cmd, output) => null,
+          workingDirectory: '/whatever',
+          testsConfig: config,
+        ),
+        testDefinitions: [fxtestDef, randomDef],
+        testsConfig: config,
+      );
+      expect(parsedManifest.testBundles.length, 1);
     });
   });
 

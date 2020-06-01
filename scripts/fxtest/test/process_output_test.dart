@@ -59,11 +59,11 @@ void main() {
 Process createOutputTester() {
   var stringEncoder = Utf8Encoder();
   var stdoutController = StreamController<List<int>>()
-    ..add(stringEncoder.convert("line 1\n"))
-    ..add(stringEncoder.convert("line 2\n"))
+    ..add(stringEncoder.convert('line 1\n'))
+    ..add(stringEncoder.convert('line 2\n'))
     ..close();
   var stderrController = StreamController<List<int>>()
-    ..add(stringEncoder.convert("stderr\n"))
+    ..add(stringEncoder.convert('stderr\n'))
     ..close();
   return MockProcess(
     stdout: stdoutController.stream,

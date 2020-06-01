@@ -15,7 +15,7 @@ class TestDefinition {
   final String buildDir;
   final List<String> command;
   final String cpu;
-  final String depsFile;
+  final String runtimeDeps;
   final String path;
   final String label;
   final String name;
@@ -32,7 +32,7 @@ class TestDefinition {
     this.packageUrl,
     this.cpu,
     this.command,
-    this.depsFile,
+    this.runtimeDeps,
     this.label,
     this.path,
   }) {
@@ -51,7 +51,7 @@ class TestDefinition {
       buildDir: buildDir,
       command: List<String>.from(testDetails['command'] ?? []),
       cpu: testDetails['cpu'] ?? '',
-      depsFile: testDetails['deps_file'] ?? '',
+      runtimeDeps: testDetails['runtime_deps'] ?? '',
       fx: fx,
       label: testDetails['label'] ?? '',
       name: testDetails['name'] ?? '',
@@ -66,7 +66,7 @@ class TestDefinition {
   String toString() => '''<TestDefinition
   cpu: $cpu
   command: ${(command ?? []).join(" ")}
-  deps_file: $depsFile
+  deps_file: $runtimeDeps
   label: $label
   package_url: ${packageUrl ?? ''}
   path: $path

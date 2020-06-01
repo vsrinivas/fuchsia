@@ -16,6 +16,7 @@ class SingleTestMatcher {
           PackageUrlMatcher(),
           NameMatcher(),
           LabelMatcher(),
+          RuntimeDepsMatcher(),
         ];
 
   ComparisonResult evaluateTestAgainstArguments(
@@ -24,6 +25,7 @@ class SingleTestMatcher {
     @required MatchLength matchLength,
     @required Comparer comparer,
   }) {
+    var results = <ComparisonResult>[];
     var testNameGroup = testsConfig.testNameGroup;
     // Start by looping over all arguments in this group of arguments (a group
     // of arguments are test names joined by `--and` or `-p|-c`)
@@ -44,6 +46,7 @@ class SingleTestMatcher {
         );
         if (comparisonResult.isMatch) {
           hasMatchedTestName = true;
+          results.add(comparisonResult);
           break;
         }
       }
@@ -53,6 +56,6 @@ class SingleTestMatcher {
         return ComparisonResult.failure;
       }
     }
-    return ComparisonResult.strict(isMatch: true);
+    return ComparisonResult.fromAverage(results);
   }
 }

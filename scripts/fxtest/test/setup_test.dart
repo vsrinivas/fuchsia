@@ -35,7 +35,7 @@ class FuchsiaTestCommandFake extends FuchsiaTestCommand {
           testRunnerBuilder: (testsConfig) => TestRunner(),
         );
   @override
-  Future<void> runTestSuite(TestsManifestReader manifestReader) async {
+  Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
     emitEvent(BeginningTests());
   }
 }

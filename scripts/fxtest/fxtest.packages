@@ -5,6 +5,7 @@
 args:../../third_party/dart-pkg/pub/args/lib/
 async:../../third_party/dart-pkg/pub/async/lib/
 io:../../third_party/dart-pkg/pub/io/lib/
+edit_distance:../../third_party/dart-pkg/pub/edit_distance/lib/
 meta:../../third_party/dart-pkg/pub/meta/lib/
 mockito:../../third_party/dart-pkg/pub/mockito/lib/
 path:../../third_party/dart-pkg/pub/path/lib/

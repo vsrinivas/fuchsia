@@ -100,8 +100,10 @@ class TestStarted extends TestEvent {
   String toString() => '<TestStarted $testName>';
 }
 
+/// Signifies to output formatters that we have entered this phase.
 class BeginningTests extends TestEvent {}
 
+/// Signifies to output formatters that we have entered this phase.
 class AllTestsCompleted extends TestEvent {}
 
 class TimeElapsedEvent extends TestEvent {
@@ -114,3 +116,6 @@ class TimeElapsedEvent extends TestEvent {
   @override
   String toString() => '<TimeElapsedEvent $timeElapsed :: $command />';
 }
+
+/// Signifies to output formatters that we have entered this phase.
+class GeneratingHintsEvent extends TestEvent {}

@@ -13,6 +13,9 @@ import 'package:path/path.dart' as p;
 
 /// Harness for the completely processed tests manifest from a Fuchsia build.
 class ParsedManifest {
+  /// Tests not matched by supplied arguments.
+  final List<TestDefinition> skippedTests;
+
   /// The raw JSON of a test plopped into a class for structured analysis.
   final List<TestDefinition> testDefinitions;
 
@@ -29,9 +32,14 @@ class ParsedManifest {
   ParsedManifest({
     @required this.testDefinitions,
     @required this.testBundles,
+    this.skippedTests = const [],
     this.numDuplicateTests,
     this.numUnparsedTests,
   });
+
+  @override
+  String toString() => '<ParsedManifest ${testBundles.length} matches, '
+      '${skippedTests.length} skipped tests / ${testDefinitions.length} total />';
 }
 
 class TestsManifestReader {
@@ -122,6 +130,7 @@ class TestsManifestReader {
   }) {
     comparer ??= StrictComparer();
     List<TestBundle> testBundles = [];
+    List<TestDefinition> skippedTests = [];
     Set<String> seenPackages = {};
     int numDuplicateTests = 0;
     int numUnparsedTests = 0;
@@ -147,11 +156,9 @@ class TestsManifestReader {
           _handleUnsupportedTest(testDefinition, testsConfig, eventEmitter);
           continue;
         } else if (testType == TestType.unsupportedDeviceTest) {
-          // Currently an intentional no-op, since adding lines here would introduce
-          // ~20 lines of spammy output for every test invocation just from parsing
-          // the file. To avoid this, we handle DeviceTests at runtime, meaning if
-          // a user targets other tests exclusively, they don't have to see or worry
-          // about this.
+          // Intentional no-op to avoid spammy output.
+          // DeviceTests warnings are handled at runtime, meaning if none are
+          // matched, a user doesn't have to think or worry about them.
         }
       }
 
@@ -198,10 +205,7 @@ class TestsManifestReader {
           break;
         }
       }
-
-      if (!testIsClaimed && testsConfig.flags.shouldPrintSkipped) {
-        eventEmitter(TestInfo('Skipped test:\n$testDefinition'));
-      }
+      skippedTests.add(testDefinition);
     }
 
     if (testsConfig.flags.shouldRandomizeTestOrder) {
@@ -211,6 +215,7 @@ class TestsManifestReader {
     return ParsedManifest(
       numDuplicateTests: numDuplicateTests,
       numUnparsedTests: numUnparsedTests,
+      skippedTests: skippedTests,
       testDefinitions: testDefinitions,
       testBundles: testBundles,
     );
@@ -222,16 +227,22 @@ class TestsManifestReader {
     @required void Function(TestEvent) eventEmitter,
     @required String userFriendlyBuildDir,
   }) {
+    if (testsConfig.flags.shouldPrintSkipped) {
+      for (var testDef in parsedManifest.skippedTests) {
+        eventEmitter(TestInfo('Skipped test:\n$testDef'));
+      }
+    }
     String duplicates = '';
     if (parsedManifest.numDuplicateTests > 0) {
       String duplicateWord =
           parsedManifest.numDuplicateTests == 1 ? 'duplicate' : 'duplicates';
-      duplicates = wrapWith(
+      duplicates = testsConfig.wrapWith(
           ' (with ${parsedManifest.numDuplicateTests} $duplicateWord)',
           [darkGray]);
     }
 
-    String manifestName = wrapWith('$userFriendlyBuildDir/tests.json', [green]);
+    String manifestName =
+        testsConfig.wrapWith('$userFriendlyBuildDir/tests.json', [green]);
     eventEmitter(TestInfo(
       'Found ${parsedManifest.testDefinitions.length} total '
       '${parsedManifest.testDefinitions.length != 1 ? "tests" : "test"} in '
@@ -241,9 +252,11 @@ class TestsManifestReader {
     int numTests = testsConfig.flags.limit == 0
         ? parsedManifest.testBundles.length
         : min(testsConfig.flags.limit, parsedManifest.testBundles.length);
-    eventEmitter(TestInfo(
-      'Will run $numTests '
-      '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',
-    ));
+    if (numTests > 0) {
+      eventEmitter(TestInfo(
+        'Will run $numTests '
+        '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',
+      ));
+    }
   }
 }

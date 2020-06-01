@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
+import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
 
 import 'exit_code.dart';
@@ -120,7 +121,8 @@ class FuchsiaTestCommand {
     _eventStreamController.close();
   }
 
-  Future<void> runTestSuite(TestsManifestReader manifestReader) async {
+  Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
+    manifestReader ??= TestsManifestReader();
     var parsedManifest = await readManifest(manifestReader);
 
     manifestReader.reportOnTestBundles(
@@ -129,6 +131,19 @@ class FuchsiaTestCommand {
       parsedManifest: parsedManifest,
       testsConfig: testsConfig,
     );
+
+    if (parsedManifest.testBundles.isEmpty) {
+      return noMatchesHelp(
+        manifestReader: manifestReader,
+        testDefinitions: parsedManifest.testDefinitions,
+        testsConfig: testsConfig,
+      );
+    }
+
+    if (testsConfig.flags.shouldRandomizeTestOrder) {
+      parsedManifest.testBundles.shuffle();
+    }
+
     try {
       // Let the output formatter know that we're done parsing and
       // emitting preliminary events
@@ -157,6 +172,46 @@ class FuchsiaTestCommand {
       testDefinitions: testDefinitions,
       testsConfig: testsConfig,
     );
+  }
+
+  void noMatchesHelp({
+    @required TestsManifestReader manifestReader,
+    @required List<TestDefinition> testDefinitions,
+    @required TestsConfig testsConfig,
+  }) {
+    emitEvent(GeneratingHintsEvent());
+    emitEvent(TestInfo(
+      testsConfig.wrapWith(
+          'Could not find any tests to run with the '
+          'arguments you provided.',
+          [lightYellow]),
+    ));
+    var manifestOfHints = manifestReader.aggregateTests(
+      comparer: FuzzyComparer(threshold: testsConfig.flags.fuzzyThreshold),
+      eventEmitter: (TestEvent event) => null,
+      matchLength: testsConfig.flags.matchLength,
+      testBundleBuilder: testBundleBuilder,
+      testDefinitions: testDefinitions,
+      testsConfig: testsConfig,
+    );
+    if (manifestOfHints.testBundles.isNotEmpty) {
+      manifestOfHints.testBundles.sort(
+        (TestBundle bundle1, TestBundle bundle2) {
+          return bundle1.confidence.compareTo(bundle2.confidence);
+        },
+      );
+      var hints = manifestOfHints.testBundles.length > 1 ? 'hints' : 'hint';
+      emitEvent(TestInfo(
+        'Did you mean... (${manifestOfHints.testBundles.length} $hints)?',
+        requiresPadding: false,
+      ));
+      for (TestBundle bundle in manifestOfHints.testBundles) {
+        emitEvent(TestInfo(
+          ' -- ${bundle.testDefinition.name}',
+          requiresPadding: false,
+        ));
+      }
+    }
   }
 
   TestBundle testBundleBuilder(

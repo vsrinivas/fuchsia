@@ -24,6 +24,14 @@ class ComparisonResult {
   const ComparisonResult.strict({bool isMatch}) : confidence = isMatch ? 1 : 0;
   const ComparisonResult.withConfidence(this.confidence);
 
+  factory ComparisonResult.fromAverage(List<ComparisonResult> results) {
+    double totalConfidence = 0;
+    // Sum the total confidence
+    for (var result in results) totalConfidence += result.confidence;
+    // Complete average calculation
+    return ComparisonResult.withConfidence(totalConfidence / results.length);
+  }
+
   /// All gte-zero confidences indicate a positive comparison.
   bool get isMatch => confidence > 0;
 

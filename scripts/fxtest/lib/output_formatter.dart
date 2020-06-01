@@ -124,6 +124,8 @@ abstract class OutputFormatter {
     if (event is BeginningTests) {
       _hasStartedTests = true;
       _testSuiteStartTime = _now;
+    } else if (event is GeneratingHintsEvent) {
+      _hasStartedTests = true;
     } else if (event is TestStarted) {
       _currentTestIsSlow = false;
       _lastTestStartTime = _now;
@@ -381,8 +383,8 @@ List<String> infoPrint(TestDefinition testDefinition) {
   return <String>[
     _isTruthy(command) ? 'command: $command' : null,
     _isTruthy(testDefinition.cpu) ? 'cpu: ${testDefinition.cpu}' : null,
-    _isTruthy(testDefinition.depsFile)
-        ? 'depsFile: ${testDefinition.depsFile}'
+    _isTruthy(testDefinition.runtimeDeps)
+        ? 'runtime_deps: ${testDefinition.runtimeDeps}'
         : null,
     _isTruthy(testDefinition.name) ? 'name: ${testDefinition.name}' : null,
     _isTruthy(testDefinition.os) ? 'os: ${testDefinition.os}' : null,

@@ -74,6 +74,10 @@ and component.''',
       defaultsTo: false,
       negatable: false,
       help: 'If true, randomizes test execution order')
+  ..addOption('fuzzy',
+      defaultsTo: '3',
+      help: 'The Levenshtein distance threshold to use '
+          'when generating suggestions')
   ..addFlag('dry',
       defaultsTo: false,
       negatable: false,

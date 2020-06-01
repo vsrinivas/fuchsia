@@ -121,6 +121,20 @@ class LabelMatcher extends TestAttributeMatcher {
   }
 }
 
+class RuntimeDepsMatcher extends TestAttributeMatcher {
+  /// Indicates a positive match if the [TestDefinition]'s `"runtime_deps"` field
+  /// matches the given [testName].
+  @override
+  ComparisonResult _testPassesNameCheck(
+      String testName, TestDefinition testDefinition,
+      {MatchLength matchLength, Comparer comparer}) {
+    if (testDefinition.runtimeDeps == null) return ComparisonResult.failure;
+    return matchLength == MatchLength.full
+        ? comparer.equals(testName, testDefinition.runtimeDeps)
+        : comparer.contains(testDefinition.runtimeDeps, testName);
+  }
+}
+
 class NameMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
@@ -221,6 +235,6 @@ class PathMatcher extends TestAttributeMatcher {
       return ComparisonResult.withConfidence(1);
     }
     // Otherwise, do the standard
-    return comparer.startsWith(testDefinition.path, testName);
+    return comparer.contains(testDefinition.path, testName);
   }
 }

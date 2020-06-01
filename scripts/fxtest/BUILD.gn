@@ -75,6 +75,7 @@ dart_library("fxtest_lib") {
   deps = [
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/edit_distance",
     "//third_party/dart-pkg/pub/io",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/path",

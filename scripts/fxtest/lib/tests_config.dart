@@ -25,7 +25,7 @@ class Flags {
   final bool allOutput;
   final bool shouldRebuild;
 
-  /// Extra tokens to be passed through to individual tests.
+  final int fuzzyThreshold;
   final bool infoOnly;
   final MatchLength matchLength;
   final bool shouldFailFast;
@@ -46,6 +46,7 @@ class Flags {
     this.realm,
     this.minSeverityLogs,
     this.allOutput = false,
+    this.fuzzyThreshold,
     this.infoOnly = false,
     this.matchLength = MatchLength.partial,
     this.simpleOutput = false,
@@ -66,6 +67,7 @@ class Flags {
     return Flags(
       allOutput: argResults['output'],
       dryRun: argResults['info'] || argResults['dry'],
+      fuzzyThreshold: int.parse(argResults['fuzzy']),
       infoOnly: argResults['info'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
@@ -92,13 +94,14 @@ class Flags {
 
   @override
   String toString() => '''<Flags
-  dryRun: $dryRun
   allOutput: $allOutput,
-  limit: $limit
-  realm: $realm
+  dryRun: $dryRun
+  fuzzyThreshold: $fuzzyThreshold
   isVerbose: $isVerbose
   info: $infoOnly,
+  limit: $limit
   matchLength: ${matchLength.toString()},
+  realm: $realm
   shouldFailFast: $shouldFailFast
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
