@@ -17,13 +17,15 @@
 #include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>
 
+#include "src/lib/fxl/synchronization/thread_checker.h"
+
 namespace camera {
 
 class ProcessNode;
 // Server-side implementation of a stream.
 class StreamImpl : public fuchsia::camera2::Stream {
  public:
-  explicit StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node);
+  explicit StreamImpl(ProcessNode* output_node);
 
   // Binds a channel to the stream.
   // Args:
@@ -48,11 +50,11 @@ class StreamImpl : public fuchsia::camera2::Stream {
   // outstanding state with the ISP.
   void Shutdown(zx_status_t status);
 
-  async_dispatcher_t* dispatcher_;
   bool started_ = false;
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   fit::function<void(void)> disconnect_handler_;
   ProcessNode& output_node_;
+  fxl::ThreadChecker thread_checker_;
 };
 
 }  // namespace camera

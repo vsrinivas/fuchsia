@@ -7,6 +7,7 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <zircon/assert.h>
 
 #include <queue>
@@ -19,6 +20,7 @@
 #include "fbl/macros.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 
 namespace camera {
 
@@ -56,9 +58,6 @@ class ProcessNode {
   // Notifies that a frame is ready for processing at this node.
   virtual void OnReadyToProcess(const frame_available_info_t* info) = 0;
 
-  // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info);
-
   // Notifies that a frame is released.
   virtual void OnReleaseFrame(uint32_t buffer_index) = 0;
 
@@ -82,6 +81,8 @@ class ProcessNode {
 
   // Notifies that the resolution has been changed.
   void OnResolutionChanged(const frame_available_info* info);
+
+  void RunOnMainThread(fit::closure handler) { async::PostTask(dispatcher_, std::move(handler)); }
 
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
@@ -171,6 +172,8 @@ class ProcessNode {
   void AddToCurrentFrameCount(uint32_t frame_count) { current_frame_count_ += frame_count; }
   void SubtractFromCurrentFrameCount(uint32_t frame_count) { current_frame_count_ -= frame_count; }
 
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+
  protected:
   bool AllChildNodesDisabled();
 
@@ -179,6 +182,9 @@ class ProcessNode {
       shutdown_callback_();
     }
   }
+
+  // Notifies that a frame is done processing by this node.
+  virtual void OnFrameAvailable(const frame_available_info_t* info);
 
   // Dispatcher for the frame processng loop.
   async_dispatcher_t* dispatcher_;
@@ -215,6 +221,7 @@ class ProcessNode {
   fit::function<void(void)> shutdown_callback_;
   bool shutdown_requested_ = false;
   uint32_t current_image_format_index_;
+  fxl::ThreadChecker thread_checker_;
 };
 
 }  // namespace camera

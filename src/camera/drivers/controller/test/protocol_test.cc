@@ -589,12 +589,14 @@ TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) {
 
   // Making a frame available to ISP node.
   // Expecting the frame to be released since node is disabled.
-  EXPECT_NO_FATAL_FAILURE(fr_head_node->OnFrameAvailable(&frame_info));
+  EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
+  RunLoopUntilIdle();
   EXPECT_TRUE(fake_isp_.frame_released());
 
   // Making a frame available to GDC node.
   // Expecting the frame to be released since node is disabled.
   EXPECT_NO_FATAL_FAILURE(gdc_node->OnFrameAvailable(&frame_info));
+  RunLoopUntilIdle();
   EXPECT_TRUE(fake_gdc_.frame_released());
 }
 

@@ -34,7 +34,7 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
-  auto client_stream = std::make_unique<camera::StreamImpl>(dispatcher, output_node.get());
+  auto client_stream = std::make_unique<camera::StreamImpl>(output_node.get());
   if (!client_stream) {
     FX_LOGST(ERROR, kTag) << "Failed to create StreamImpl";
     return fit::error(ZX_ERR_INTERNAL);

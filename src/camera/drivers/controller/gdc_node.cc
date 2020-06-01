@@ -59,7 +59,11 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
 }
 
 void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
-  static_cast<camera::GdcNode*>(ctx)->OnFrameAvailable(info);
+  // This method is invoked by the GDC in its own thread,
+  // so the event must be marshalled to the
+  // controller's thread.
+  auto* gdc_node = static_cast<GdcNode*>(ctx);
+  gdc_node->RunOnMainThread([gdc_node, info = *info]() { gdc_node->OnFrameAvailable(&info); });
 }
 
 void OnGdcResChange(void* ctx, const frame_available_info_t* info) {
@@ -144,6 +148,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 }
 
 void GdcNode::OnFrameAvailable(const frame_available_info_t* info) {
+  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   TRACE_DURATION("camera", "GdcNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   // Once shutdown is requested no calls should be made to the driver.
   if (!shutdown_requested_) {

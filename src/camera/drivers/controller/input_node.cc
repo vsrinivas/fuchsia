@@ -78,6 +78,7 @@ void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
 }
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
+  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   if (!shutdown_requested_) {
     UpdateFrameCounterForAllChildren();

@@ -19,8 +19,7 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller";
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node)
-    : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
+StreamImpl::StreamImpl(ProcessNode* output_node) : binding_(this), output_node_(*output_node) {}
 
 zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> disconnect_handler) {
   FX_DCHECK(!binding_.is_bound());
@@ -39,16 +38,14 @@ zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> di
 }
 
 void StreamImpl::FrameReady(const frame_available_info_t* info) {
-  // This method is invoked by the ISP in its own thread, so the event must be marshalled to the
-  // binding's thread.
-  async::PostTask(dispatcher_, [this, info = *info]() {
-    fuchsia::camera2::FrameAvailableInfo frame_info;
-    frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
-    frame_info.buffer_id = info.buffer_id;
-    frame_info.metadata.set_image_format_index(info.metadata.image_format_index);
-    frame_info.metadata.set_timestamp(info.metadata.timestamp);
-    binding_.events().OnFrameAvailable(std::move(frame_info));
-  });
+  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
+  fuchsia::camera2::FrameAvailableInfo frame_info;
+  frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame_info.buffer_id = info->buffer_id;
+  frame_info.metadata.set_image_format_index(info->metadata.image_format_index);
+  frame_info.metadata.set_timestamp(info->metadata.timestamp);
+  ZX_ASSERT(binding_.is_bound());
+  binding_.events().OnFrameAvailable(std::move(frame_info));
 }
 
 void StreamImpl::Shutdown(zx_status_t status) {

@@ -78,8 +78,12 @@ class InputNode : public ProcessNode {
  private:
   // Notifies when a new frame is available from the ISP.
   static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {
-    frame_available_info_t local_info = *info;
-    static_cast<InputNode*>(ctx)->OnReadyToProcess(&local_info);
+    // This method is invoked by the ISP in its own thread,
+    // so the event must be marshalled to the
+    // controller's thread.
+    auto* input_node = static_cast<InputNode*>(ctx);
+    input_node->RunOnMainThread(
+        [input_node, info = *info]() { input_node->OnReadyToProcess(&info); });
   }
 
   // ISP stream type.

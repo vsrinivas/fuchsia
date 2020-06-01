@@ -21,7 +21,11 @@ namespace camera {
 constexpr auto kTag = "camera_controller_ge2d_node";
 
 void OnGe2dFrameAvailable(void* ctx, const frame_available_info_t* info) {
-  static_cast<camera::Ge2dNode*>(ctx)->OnFrameAvailable(info);
+  // This method is invoked by the GE2D in its own thread,
+  // so the event must be marshalled to the
+  // controller's thread.
+  auto* ge2d_node = static_cast<Ge2dNode*>(ctx);
+  ge2d_node->RunOnMainThread([ge2d_node, info = *info]() { ge2d_node->OnFrameAvailable(&info); });
 }
 
 void OnGe2dResChange(void* ctx, const frame_available_info_t* info) {
@@ -141,6 +145,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 }
 
 void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
+  ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   TRACE_DURATION("camera", "Ge2dNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   // Once shutdown is requested no calls should be made to the driver.
   if (!shutdown_requested_) {
