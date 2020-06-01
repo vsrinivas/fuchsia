@@ -128,6 +128,25 @@ void main() {
         }
       });
     });
+
+    test('hostIpAddress', () async {
+      final ssh = MockSsh();
+      final sl4f = Sl4f('', ssh);
+      // Normally, both addresses (before and after the ~) will be the same.
+      // They differ in this test for the sake of testing (knowing which is
+      // used).
+      when(ssh.runWithOutput(any)).thenAnswer((invocation) => Process.run(
+          '/bin/echo',
+          ['fe80::fefe:fefe:fefe:fefe%4 234~fe80::fefe:fefe:fefe:abab%4 987']));
+      expect(await sl4f.hostIpAddress(), equals('fe80::fefe:fefe:fefe:fefe%4'));
+      when(ssh.runWithOutput(any)).thenAnswer((invocation) =>
+          Process.run('/bin/echo', ['-n', '~fe80::fefe:fefe:fefe:abab%4 987']));
+      expect(await sl4f.hostIpAddress(), equals('fe80::fefe:fefe:fefe:abab%4'));
+      when(ssh.runWithOutput(any))
+          .thenAnswer((invocation) => Process.run('/bin/echo', ['-n', '~']));
+      expect(() async => await sl4f.hostIpAddress(),
+          throwsA(TypeMatcher<Sl4fException>()));
+    });
   });
 
   group('Sl4f fromEnvironment', () {

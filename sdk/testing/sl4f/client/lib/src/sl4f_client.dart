@@ -120,6 +120,34 @@ class Sl4f {
     return Sl4f(host, ssh, port);
   }
 
+  /// Get the IP address that the device under test will use to reach the test
+  /// runner (the 'Host').
+  ///
+  /// This similar to running `fx netaddr --local` because fx is not available
+  /// in all test environments.
+  ///
+  /// Throws a [Sl4fException] if the host IP address cannot be determined.
+  Future<String> hostIpAddress() async {
+    // TODO(fxb/52924): Replace the body of this function with just the host ip
+    // env variable (which could be set in Sl4f.fromEnvironment(), above). Or,
+    // try that env var and use the following as a fallback.
+
+    final result =
+        await ssh.runWithOutput('echo \$SSH_CLIENT~\$SSH_CONNECTION');
+    final strings = await result.stdout?.split('~');
+    if (strings == null || strings.length < 2) {
+      throw Sl4fException('Unable to retrieve host IP address strings.');
+    }
+    var ipAddr = strings[0].split(' ')[0];
+    if (ipAddr.isEmpty) {
+      ipAddr = strings[1].split(' ')[0];
+    }
+    if (ipAddr.isEmpty) {
+      throw Sl4fException('Unable to retrieve host IP address.');
+    }
+    return ipAddr;
+  }
+
   /// Closes the underlying HTTP client.
   ///
   /// If clients remain unclosed, the dart process might not terminate.
