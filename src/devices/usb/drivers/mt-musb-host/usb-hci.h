@@ -32,7 +32,7 @@ constexpr uint32_t kRootHubId = 128;
 constexpr int kMaxDevices = 129;
 
 class UsbHci;
-using DeviceType = ddk::Device<UsbHci, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<UsbHci, ddk::UnbindableNew>;
 
 // UsbHci provides the USB-HCI implementation.
 class UsbHci : public DeviceType, public ddk::UsbHciProtocol<UsbHci, ddk::base_protocol> {
@@ -53,7 +53,7 @@ class UsbHci : public DeviceType, public ddk::UsbHciProtocol<UsbHci, ddk::base_p
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB HCI protocol implementation.

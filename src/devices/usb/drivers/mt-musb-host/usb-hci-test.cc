@@ -54,7 +54,21 @@ TEST_F(HciTest, TestReadEndpointNumber) {
 
   EXPECT_OK(hci.Init());
   EXPECT_EQ(3, regs::INDEX::Get().ReadFrom(&v).selected_endpoint());
-  hci.DdkUnbindDeprecated();
+  hci.DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(HciTest, DdkLifecycle) {
+  ddk::MmioView v = usb_mmio_->View(0);
+  regs::EPINFO::Get().FromValue(0x33).WriteTo(&v);
+
+  fake_ddk::Bind ddk;
+  TUsbHci hci(fake_ddk::kFakeParent, *std::move(usb_mmio_), *std::move(phy_mmio_), intr_.release());
+
+  EXPECT_OK(hci.Init());
+  hci.DdkAdd("mt-usb-host");
+  hci.DdkAsyncRemove();
+  EXPECT_OK(ddk.WaitUntilRemove());
+  EXPECT_TRUE(ddk.Ok());
 }
 
 }  // namespace mt_usb_hci
