@@ -30,8 +30,7 @@ class Home extends StatelessWidget {
         Expanded(
           child: Stack(
             fit: StackFit.expand,
-            //TODO(53107) uncomment after new API rolls
-            // clipBehavior: Clip.none,
+            overflow: Overflow.visible,
             children: <Widget>[
               // Story Clusters.
               Clusters(model: model),
