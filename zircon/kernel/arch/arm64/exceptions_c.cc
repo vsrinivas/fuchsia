@@ -122,8 +122,8 @@ static zx_status_t try_dispatch_user_exception(zx_excp_type_t type, arm64_iframe
 }
 
 // Prints exception details and then panics.
-__NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, const char* format,
-                                      ...) {
+__NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, uint64_t far,
+                                      const char* format, ...) {
   platform_panic_start();
 
   va_list args;
@@ -139,6 +139,8 @@ __NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, cons
   printf("ESR %#x: ec %#x, il %#x, iss %#x\n", esr, ec, il, iss);
   dump_iframe(iframe);
   crashlog.iframe = iframe;
+  crashlog.esr = esr;
+  crashlog.far = far;
 
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
@@ -147,7 +149,8 @@ static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, 
   /* this is for a lot of reasons, but most of them are undefined instructions */
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    exception_die(iframe, esr, "unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+    exception_die(iframe, esr, __arm_rsr64("far_el1"),
+                  "unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   try_dispatch_user_exception(ZX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 }
@@ -155,7 +158,8 @@ static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, 
 static void arm64_brk_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    exception_die(iframe, esr, "BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+    exception_die(iframe, esr, __arm_rsr64("far_el1"), "BRK in kernel: PC at %#" PRIx64 "\n",
+                  iframe->elr);
   }
   try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
 }
@@ -164,7 +168,8 @@ static void arm64_hw_breakpoint_exception_handler(arm64_iframe_t* iframe, uint e
                                                   uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    exception_die(iframe, esr, "HW breakpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+    exception_die(iframe, esr, __arm_rsr64("far_el1"),
+                  "HW breakpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
 
   // We don't need to save the debug state because it doesn't change by an exception. The only
@@ -178,23 +183,25 @@ static void arm64_hw_breakpoint_exception_handler(arm64_iframe_t* iframe, uint e
 
 static void arm64_watchpoint_exception_handler(arm64_iframe_t* iframe, uint exception_flags,
                                                uint32_t esr) {
+  // Arm64 uses the Fault Address Register to determine which watchpoint triggered the exception.
+  uint64_t far = __arm_rsr64("far_el1");
+
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    exception_die(iframe, esr, "Watchpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+    exception_die(iframe, esr, far, "Watchpoint in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
 
   // We don't need to save the debug state because it doesn't change by an exception. The only
   // way to change the debug state is through the thread write syscall.
 
-  // Arm64 uses the Fault Address Register to determine which watchpoint triggered the exception.
-  uint64_t far = __arm_rsr64("far_el1");
   try_dispatch_user_data_fault_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr, far);
 }
 
 static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* trapped inside the kernel, this is bad */
-    exception_die(iframe, esr, "software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+    exception_die(iframe, esr, __arm_rsr64("far_el1"),
+                  "software step in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
   try_dispatch_user_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr);
@@ -203,7 +210,8 @@ static void arm64_step_handler(arm64_iframe_t* iframe, uint exception_flags, uin
 static void arm64_fpu_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
   if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
     /* we trapped a floating point instruction inside our own EL, this is bad */
-    exception_die(iframe, esr, "invalid fpu use in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+    exception_die(iframe, esr, __arm_rsr64("far_el1"),
+                  "invalid fpu use in kernel: PC at %#" PRIx64 "\n", iframe->elr);
   }
   arm64_fpu_exception(iframe, exception_flags);
 }
@@ -245,8 +253,9 @@ static void arm64_instruction_abort_handler(arm64_iframe_t* iframe, uint excepti
     }
   }
 
-  exception_die(iframe, esr, "instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n",
-                iframe->elr, is_user, far);
+  exception_die(iframe, esr, far,
+                "instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n", iframe->elr,
+                is_user, far);
 }
 
 static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
@@ -322,7 +331,7 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   }
 
   // Print the data fault and stop the kernel.
-  exception_die(iframe, esr,
+  exception_die(iframe, esr, far,
                 "data fault: PC at %#" PRIx64 ", FAR %#" PRIx64
                 "\n"
                 "ISS %#x (WnR %d CM %d)\n"
@@ -354,7 +363,8 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
       break;
     case 0b010001: /* syscall from arm32 */
     case 0b010101: /* syscall from arm64 */
-      exception_die(iframe, esr, "syscalls should be handled in assembly\n");
+      exception_die(iframe, esr, __arm_rsr64("far_el1"),
+                    "syscalls should be handled in assembly\n");
       break;
     case 0b100000: /* instruction abort from lower level */
     case 0b100001: /* instruction abort from same level */
@@ -387,15 +397,15 @@ extern "C" void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flag
       /* TODO: properly decode more of these */
       if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
         /* trapped inside the kernel, this is bad */
-        exception_die(iframe, esr, "unhandled exception in kernel: PC at %#" PRIx64 "\n",
-                      iframe->elr);
+        exception_die(iframe, esr, __arm_rsr64("far_el1"),
+                      "unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
       }
       /* let the user exception handler get a shot at it */
       kcounter_add(exceptions_unhandled, 1);
       if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK) {
         break;
       }
-      exception_die(iframe, esr, "unhandled synchronous exception\n");
+      exception_die(iframe, esr, __arm_rsr64("far_el1"), "unhandled synchronous exception\n");
     }
   }
 

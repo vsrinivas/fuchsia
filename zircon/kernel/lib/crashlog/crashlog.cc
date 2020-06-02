@@ -120,6 +120,8 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
             " usp: %#18" PRIx64 "\n"
             " elr: %#18" PRIx64 "\n"
             "spsr: %#18" PRIx64 "\n"
+            " esr: %#18" PRIx32 "\n"
+            " far: %#18" PRIx64 "\n"
             "\n",
             // clang-format on
             crashlog.iframe->r[0], crashlog.iframe->r[1], crashlog.iframe->r[2],
@@ -132,7 +134,8 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
             crashlog.iframe->r[21], crashlog.iframe->r[22], crashlog.iframe->r[23],
             crashlog.iframe->r[24], crashlog.iframe->r[25], crashlog.iframe->r[26],
             crashlog.iframe->r[27], crashlog.iframe->r[28], crashlog.iframe->r[29],
-            crashlog.iframe->lr, crashlog.iframe->usp, crashlog.iframe->elr, crashlog.iframe->spsr);
+            crashlog.iframe->lr, crashlog.iframe->usp, crashlog.iframe->elr, crashlog.iframe->spsr,
+            crashlog.esr, crashlog.far);
 #elif defined(__x86_64__)
     fprintf(&outfile.stream_,
             // clang-format off

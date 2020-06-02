@@ -24,6 +24,12 @@
 typedef struct {
   uintptr_t base_address;
   iframe_t* iframe;
+#if defined(__aarch64__)
+  // On arm64, the ESR and FAR are important for diagnosing kernel crashes, but
+  // are not included in the iframe_t.
+  uint32_t esr;
+  uint64_t far;
+#endif
 } crashlog_t;
 
 extern crashlog_t crashlog;

@@ -78,6 +78,14 @@ func TestKernelCrashlog(t *testing.T) {
 
 	// See that the crashlog looks reasonable.
 	i.WaitForLogMessage("ZIRCON REBOOT REASON (KERNEL PANIC)")
+
+	// See that it contains ESR and FAR.
+	//
+	// This is a regression test for fxb/52182.
+	i.WaitForLogMessage("esr:         0x96000045")
+	i.WaitForLogMessage("far:                0x1")
+
+	// And a backtrace.
 	i.WaitForLogMessage("BACKTRACE")
 	i.WaitForLogMessage("{{{bt:0")
 }
