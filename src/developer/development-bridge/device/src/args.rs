@@ -12,11 +12,11 @@ pub struct PowerCtlCommand {
     pub ctl_type: PowerCtlSubcommand,
 }
 
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Debug, PartialEq, Clone)]
 #[argh(subcommand, name = "reboot", description = "reboots a device. ")]
 pub struct RebootCommand {}
 
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Debug, PartialEq, Clone)]
 #[argh(
     subcommand,
     name = "bootloader",
@@ -24,15 +24,15 @@ pub struct RebootCommand {}
 )]
 pub struct BootloaderCommand {}
 
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Debug, PartialEq, Clone)]
 #[argh(subcommand, name = "recovery", description = "reboots a device into recovery. ")]
 pub struct RecoveryCommand {}
 
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Debug, PartialEq, Clone)]
 #[argh(subcommand, name = "poweroff", description = "powers off a device. ")]
 pub struct PoweroffCommand {}
 
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(FromArgs, PartialEq, Debug, Clone)]
 #[argh(subcommand)]
 pub enum PowerCtlSubcommand {
     Reboot(RebootCommand),

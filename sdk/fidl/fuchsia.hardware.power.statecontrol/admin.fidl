@@ -30,60 +30,75 @@ enum SystemPowerState : uint8 {
 };
 const uint32 MAX_SYSTEM_POWER_STATES = 7;
 
-/// The maxium number of seconds the server will wait for responses from all SuspendWatchers before
-/// changing the system power state.
+/// The maxium number of seconds the server will wait for responses from all RebootMethodsWatchers
+/// before changing the system power state.
 // TODO(52274): Track how long it takes to persist the reboot reason and adjust this value.
-const uint32 MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS = 5;
+[Deprecated = "won't be used once power_manager serves Admin"]
+const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 
 /// Provides administration services for the device manager service and the device tree it controls.
 [Discoverable]
 protocol Admin {
     /// Ask all devices to enter into the system power state indicated by 'state'. The devices will
     /// get into a low power state, that corresponds to the system power state 'state'.
-    [Transitional = "please use Suspend2() "]
+    [Transitional = "deprecated in favor of calling individual methods "]
     Suspend(SystemPowerState state) -> () error zx.status;
 
-    /// Ask all devices to enter into the system power state indicated by 'request.state' and, in
-    /// the case of a reboot or a poweroff, specify the reason for the request. The devices will
-    /// get into a low power state, that corresponds to the system power state 'request.state'.
+    /// Asks the device to enter a fully on state.
     [Transitional]
-    Suspend2(SuspendRequest request) -> () error zx.status;
+    PowerFullyOn() -> () error zx.status;
+
+    /// Asks the device to reboot.
+    [Transitional]
+    Reboot(RebootReason reason) -> () error zx.status;
+
+    /// Asks the device to reboot into the bootloader.
+    [Transitional]
+    RebootToBootloader() -> () error zx.status;
+
+    /// Asks the device to reboot into the recovery partition.
+    [Transitional]
+    RebootToRecovery() -> () error zx.status;
+
+    /// Asks all devices to enter a powered off state.
+    [Transitional]
+    Poweroff() -> () error zx.status;
+
+    /// Perfroms a kernel mexec.
+    [Transitional]
+    Mexec() -> () error zx.status;
+
+    [Transitional]
+    SuspendToRam() -> () error zx.status;
 };
 
-/// Allows components to register a callback that will be executed when Suspend or
-/// Suspend2 is called. The main purpose of this protocol is to be able to track reboot reasons.
-/// Consider relying Component Framework's orderly shutdown if you're looking at using this
-/// protocol.
-// TODO(52277): Revisit this protocol once Component Manager performs an orderly
-// shutdown.
+/// Allows components to register a callback that will be executed when a Reboot method is called.
+/// The main purpose of this protocol is to be able to track reboot reasons. Consider relying on
+/// Component Framework's orderly shutdown if you're looking at using this protocol.
+// Component Framework's orderly shutdown is tracked with bug 51034.
 [Discoverable]
-protocol SuspendWatcherRegister {
-    /// Register a callback to be executed when Suspend or Suspend2 is called.
-    Register(SuspendWatcher watcher);
+protocol RebootMethodsWatcherRegister {
+    /// Register a watcher to be notified when a Reboot method is called. The Register channel
+    /// will be used at most once to notify the watcher of an impending reboot and allow it
+    /// the chance to respond.
+    ///
+    /// Watchers can unregister by closing the underlying channel.
+    Register(RebootMethodsWatcher watcher);
 };
 
-/// Allows components to be notified when Suspend or Suspend2 is called. Watchers will be given
-/// 'MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS' to return before the system power state is changed.
-protocol SuspendWatcher {
-    /// Callback executed to notify watchers that a change in the system power state is at most
-    /// 'MAX_SUSPEND_WATCHER_RESPONSE_TIME_SECONDS' away. Watchers should acknowldege after they
-    /// have performed any necessary actions in response to 'request' in order to prevent delaying
-    /// the system power state change.
-    OnSuspendRequest(SuspendRequest request) -> ();
+/// Allows components to be notified when Reboot related methods are called. Watchers will be given
+/// 'MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS' to return before the system power state is changed.
+protocol RebootMethodsWatcher {
+    OnReboot(RebootReason reason) -> ();
 };
 
-/// The system should enter the power state 'state' and if a reboot or power off is being requested
-/// a reason should be provided.
-table SuspendRequest {
-    1: SystemPowerState state;
-    2: RebootReason reason;
-};
-
-/// Reasons why components instruct a device to reboot.
-//  If you make a CL adding a new value to RebootReason, please add a member of
-//  //src/developer/feedback/OWNERs as a reviewer.
-enum RebootReason : uint16 {
+/// Why the system reboots.
+// If a new value is needed, please add a member of //src/developer/feedback/OWNERs as a reviewer.
+enum RebootReason {
     USER_REQUEST = 1;
     SYSTEM_UPDATE = 2;
     HIGH_TEMPERATURE = 3;
+
+    /// Sessionmgr has failed.
+    SESSION_FAILURE = 4;
 };

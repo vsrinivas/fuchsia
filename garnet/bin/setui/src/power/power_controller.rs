@@ -9,7 +9,7 @@ use {
     crate::switchboard::base::{
         SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
     },
-    fidl_fuchsia_hardware_power_statecontrol::{RebootReason, SuspendRequest, SystemPowerState},
+    fidl_fuchsia_hardware_power_statecontrol::RebootReason,
     fuchsia_syslog::fx_log_err,
 };
 
@@ -34,10 +34,7 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Swi
     };
 
     hardware_power_statecontrol_admin
-        .suspend2(SuspendRequest {
-            state: Some(SystemPowerState::Reboot),
-            reason: Some(RebootReason::UserRequest),
-        })
+        .reboot(RebootReason::UserRequest)
         .await
         .map_err(|_| build_err())
         .and_then(|r| {

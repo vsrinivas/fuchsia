@@ -4,9 +4,7 @@
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
-use fidl_fuchsia_hardware_power_statecontrol::{
-    AdminRequest, RebootReason, SuspendRequest, SystemPowerState,
-};
+use fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, RebootReason};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
@@ -81,14 +79,7 @@ impl Service for HardwarePowerStatecontrolService {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
-                    AdminRequest::Suspend2 {
-                        request:
-                            SuspendRequest {
-                                state: Some(SystemPowerState::Reboot),
-                                reason: Some(RebootReason::UserRequest),
-                            },
-                        responder,
-                    } => {
+                    AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
                         let mut response = {
                             let mut planned_actions = planned_actions.write();
                             if let Some((Action::Reboot, _)) = planned_actions.back() {

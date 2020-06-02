@@ -1704,19 +1704,11 @@ void Coordinator::Suspend(
       std::move(callback));
 }
 
-void Coordinator::Suspend2(
-    power_fidl::statecontrol::SuspendRequest request,
-    power_fidl::statecontrol::Admin::Interface::Suspend2Completer::Sync completer) {
-  if (!request.has_state()) {
-    power_fidl::statecontrol::Admin_Suspend2_Result result;
-    result.set_err(std::make_unique<zx_status_t>(ZX_ERR_INVALID_ARGS));
-    completer.Reply(std::move(result));
-    return;
-  }
-
+void Coordinator::PowerFullyOn(
+    power_fidl::statecontrol::Admin::Interface::PowerFullyOnCompleter::Sync completer) {
   auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
-    power_fidl::statecontrol::Admin_Suspend2_Result result;
-    fidl::aligned<power_fidl::statecontrol::Admin_Suspend2_Response> response;
+    power_fidl::statecontrol::Admin_PowerFullyOn_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_PowerFullyOn_Response> response;
     if (status != ZX_OK) {
       result.set_err(fidl::unowned_ptr(&status));
     } else {
@@ -1726,7 +1718,123 @@ void Coordinator::Suspend2(
   };
 
   Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
-                         GetSuspendFlagsFromSystemPowerState(request.state())),
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::FULLY_ON)),
+          std::move(callback));
+}
+
+void Coordinator::Reboot(
+    power_fidl::statecontrol::RebootReason reason,
+    power_fidl::statecontrol::Admin::Interface::RebootCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_Reboot_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_Reboot_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::REBOOT)),
+          std::move(callback));
+}
+
+void Coordinator::RebootToBootloader(
+    power_fidl::statecontrol::Admin::Interface::RebootToBootloaderCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_RebootToBootloader_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_RebootToBootloader_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::REBOOT_BOOTLOADER)),
+          std::move(callback));
+}
+
+void Coordinator::RebootToRecovery(
+    power_fidl::statecontrol::Admin::Interface::RebootToRecoveryCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_RebootToRecovery_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_RebootToRecovery_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::REBOOT_RECOVERY)),
+          std::move(callback));
+}
+
+void Coordinator::Poweroff(
+    power_fidl::statecontrol::Admin::Interface::PoweroffCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_Poweroff_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_Poweroff_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::POWEROFF)),
+          std::move(callback));
+}
+
+void Coordinator::Mexec(
+    power_fidl::statecontrol::Admin::Interface::MexecCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_Mexec_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_Mexec_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::MEXEC)),
+          std::move(callback));
+}
+
+void Coordinator::SuspendToRam(
+    power_fidl::statecontrol::Admin::Interface::SuspendToRamCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_SuspendToRam_Result result;
+    fidl::aligned<power_fidl::statecontrol::Admin_SuspendToRam_Response> response;
+    if (status != ZX_OK) {
+      result.set_err(fidl::unowned_ptr(&status));
+    } else {
+      result.set_response(fidl::unowned_ptr(&response));
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
+                         GetSuspendFlagsFromSystemPowerState(
+                             power_fidl::statecontrol::SystemPowerState::SUSPEND_RAM)),
           std::move(callback));
 }
 

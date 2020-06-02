@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/modular/testing/cpp/fake_agent.h>
 #include <lib/modular/testing/cpp/fake_component.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 
@@ -38,7 +40,7 @@ class IntlPropertyProviderImpl : public fuchsia::intl::PropertyProvider {
   int call_count_ = 0;
 };
 
-class MockAdmin : public fuchsia::hardware::power::statecontrol::Admin {
+class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_TestBase {
  public:
   bool suspend_called() { return suspend_called_; }
 
@@ -52,15 +54,18 @@ class MockAdmin : public fuchsia::hardware::power::statecontrol::Admin {
         fuchsia::hardware::power::statecontrol::Admin_Suspend_Response(ZX_OK)));
   }
 
-  void Suspend2(fuchsia::hardware::power::statecontrol::SuspendRequest req,
-                Suspend2Callback callback) override {
+  void Reboot(fuchsia::hardware::power::statecontrol::RebootReason reason,
+              RebootCallback callback) override {
     ASSERT_FALSE(suspend_called_);
     suspend_called_ = true;
-    ASSERT_TRUE(req.has_state());
-    ASSERT_EQ(fuchsia::hardware::power::statecontrol::SystemPowerState::REBOOT, req.state());
-    ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST, req.reason());
-    callback(fuchsia::hardware::power::statecontrol::Admin_Suspend2_Result::WithResponse(
-        fuchsia::hardware::power::statecontrol::Admin_Suspend2_Response(ZX_OK)));
+    ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::SESSION_FAILURE, reason);
+    callback(fuchsia::hardware::power::statecontrol::Admin_Reboot_Result::WithResponse(
+        fuchsia::hardware::power::statecontrol::Admin_Reboot_Response(ZX_OK)));
+  }
+
+  // |TestBase|
+  void NotImplemented_(const std::string& name) override {
+    FX_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
   bool suspend_called_ = false;

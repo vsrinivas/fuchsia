@@ -143,11 +143,9 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
     if (session_crash_recovery_counter_ == kMaxCrashRecoveryLimit) {
       FX_LOGS(ERROR) << "Sessionmgr restart limit reached. Considering "
                         "this an unrecoverable failure.";
-      fuchsia::hardware::power::statecontrol::SuspendRequest req;
-      req.set_state(fuchsia::hardware::power::statecontrol::SystemPowerState::REBOOT);
-      req.set_reason(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
-      administrator_->Suspend2(
-          std::move(req), [](fuchsia::hardware::power::statecontrol::Admin_Suspend2_Result status) {
+      administrator_->Reboot(
+          fuchsia::hardware::power::statecontrol::RebootReason::SESSION_FAILURE,
+          [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
             if (status.is_err()) {
               FX_LOGS(ERROR) << "Failed to reboot: " << zx_status_get_string(status.err());
             }

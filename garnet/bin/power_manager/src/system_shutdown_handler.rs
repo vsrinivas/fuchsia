@@ -236,14 +236,53 @@ impl SystemShutdownHandler {
                             let result = self.handle_suspend(state, None).await;
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
-                        fpowercontrol::AdminRequest::Suspend2 { request, responder } => {
-                            if let Some(state) = request.state {
-                                let result = self.handle_suspend(state, None).await;
-                                let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
-                            } else {
-                                let _ =
-                                    responder.send(&mut Err(zx_status::INVALID_ARGS.into_raw()));
-                            }
+                        fpowercontrol::AdminRequest::PowerFullyOn { responder } => {
+                            let result = self
+                                .handle_suspend(fpowercontrol::SystemPowerState::FullyOn, None)
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                        }
+                        fpowercontrol::AdminRequest::Reboot { reason: _, responder } => {
+                            let result = self
+                                .handle_suspend(fpowercontrol::SystemPowerState::Reboot, None)
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                        }
+                        fpowercontrol::AdminRequest::RebootToBootloader { responder } => {
+                            let result = self
+                                .handle_suspend(
+                                    fpowercontrol::SystemPowerState::RebootBootloader,
+                                    None,
+                                )
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                        }
+                        fpowercontrol::AdminRequest::RebootToRecovery { responder } => {
+                            let result = self
+                                .handle_suspend(
+                                    fpowercontrol::SystemPowerState::RebootRecovery,
+                                    None,
+                                )
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                        }
+                        fpowercontrol::AdminRequest::Poweroff { responder } => {
+                            let result = self
+                                .handle_suspend(fpowercontrol::SystemPowerState::Poweroff, None)
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                        }
+                        fpowercontrol::AdminRequest::Mexec { responder } => {
+                            let result = self
+                                .handle_suspend(fpowercontrol::SystemPowerState::Mexec, None)
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                        }
+                        fpowercontrol::AdminRequest::SuspendToRam { responder } => {
+                            let result = self
+                                .handle_suspend(fpowercontrol::SystemPowerState::SuspendRam, None)
+                                .await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                     }
                 }

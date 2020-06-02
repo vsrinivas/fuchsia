@@ -224,13 +224,9 @@ func SendReboot() {
 	var admin = pwrctl.AdminWithCtxInterface(
 		fidl.ChannelProxy{Channel: zx.Channel(channel_local)})
 
-	var request pwrctl.SuspendRequest
-	request.SetState(pwrctl.SystemPowerStateReboot)
-	request.SetReason(pwrctl.RebootReasonSystemUpdate)
-
-	var result pwrctl.AdminSuspend2Result
-	result, err = admin.Suspend2(context.Background(), request)
-	if err != nil || result.Which() == pwrctl.AdminSuspend2ResultErr {
+	var result pwrctl.AdminRebootResult
+	result, err = admin.Reboot(context.Background(), pwrctl.RebootReasonSystemUpdate)
+	if err != nil || result.Which() == pwrctl.AdminRebootResultErr {
 		syslog.Errorf("error sending restart to Admin: %s error: %d", err, result.Err)
 	}
 }

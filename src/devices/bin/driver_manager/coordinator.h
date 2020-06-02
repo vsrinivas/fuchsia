@@ -366,9 +366,20 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
       power_fidl::statecontrol::SystemPowerState state,
       power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) override;
   uint32_t GetSuspendFlagsFromSystemPowerState(power_fidl::statecontrol::SystemPowerState state);
-  void Suspend2(
-      power_fidl::statecontrol::SuspendRequest request,
-      power_fidl::statecontrol::Admin::Interface::Suspend2Completer::Sync completer) override;
+  void PowerFullyOn(
+      power_fidl::statecontrol::Admin::Interface::PowerFullyOnCompleter::Sync completer) override;
+  void Reboot(power_fidl::statecontrol::RebootReason reason,
+              power_fidl::statecontrol::Admin::Interface::RebootCompleter::Sync completer) override;
+  void RebootToBootloader(
+      power_fidl::statecontrol::Admin::Interface::RebootToBootloaderCompleter::Sync completer)
+      override;
+  void RebootToRecovery(power_fidl::statecontrol::Admin::Interface::RebootToRecoveryCompleter::Sync
+                            completer) override;
+  void Poweroff(
+      power_fidl::statecontrol::Admin::Interface::PoweroffCompleter::Sync completer) override;
+  void Mexec(power_fidl::statecontrol::Admin::Interface::MexecCompleter::Sync completer) override;
+  void SuspendToRam(
+      power_fidl::statecontrol::Admin::Interface::SuspendToRamCompleter::Sync completer) override;
 
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }

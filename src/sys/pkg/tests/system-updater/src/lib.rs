@@ -456,22 +456,15 @@ impl MockRebootService {
     ) -> Result<(), Error> {
         while let Some(event) = stream.try_next().await? {
             match event {
-                fidl_fuchsia_hardware_power_statecontrol::AdminRequest::Suspend2 {
-                    request,
+                fidl_fuchsia_hardware_power_statecontrol::AdminRequest::Reboot {
+                    reason,
                     responder,
                 } => {
                     assert_eq!(
-                        request.state,
-                        Some(fidl_fuchsia_hardware_power_statecontrol::SystemPowerState::Reboot)
+                        reason,
+                        fidl_fuchsia_hardware_power_statecontrol::RebootReason::SystemUpdate
                     );
-                    assert_eq!(
-                        request.reason,
-                        Some(fidl_fuchsia_hardware_power_statecontrol::RebootReason::SystemUpdate)
-                    );
-                    eprintln!(
-                        "TEST: Got reboot request with state {:?} and reason {:?}",
-                        request.state, request.reason
-                    );
+                    eprintln!("TEST: Got reboot request with reason {:?}", reason);
                     self.interactions.lock().push(Reboot);
                     responder.send(&mut Ok(()))?;
                 }

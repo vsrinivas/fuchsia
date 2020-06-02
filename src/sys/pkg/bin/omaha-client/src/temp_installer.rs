@@ -7,7 +7,7 @@
 
 use crate::install_plan::FuchsiaInstallPlan;
 use anyhow::anyhow;
-use fidl_fuchsia_hardware_power_statecontrol::{RebootReason, SuspendRequest, SystemPowerState};
+use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
 use fidl_fuchsia_sys::LauncherProxy;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{connect_to_service, launcher, AppBuilder, ExitStatus};
@@ -107,12 +107,9 @@ impl Installer for FuchsiaInstaller {
     fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         async move {
             connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
-                .suspend2(SuspendRequest {
-                    state: Some(SystemPowerState::Reboot),
-                    reason: Some(RebootReason::SystemUpdate),
-                })
+                .reboot(RebootReason::SystemUpdate)
                 .await?
-                .map_err(|e| anyhow!("Suspend error: {}", zx::Status::from_raw(e)))
+                .map_err(|e| anyhow!("Reboot error: {}", zx::Status::from_raw(e)))
         }
         .boxed()
     }
