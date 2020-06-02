@@ -16,6 +16,9 @@ group("tests") {
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
+
+    # TODO(24643): remove
+    "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/scenic",
     "//src/ui/tests/e2e_input_tests/touch/one-flutter",

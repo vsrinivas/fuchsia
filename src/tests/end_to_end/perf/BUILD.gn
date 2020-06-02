@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_library.gni")
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
@@ -110,4 +111,46 @@ group("test") {
   foreach(target_name, test_list) {
     deps += [ ":$target_name($host_toolchain)" ]
   }
+}
+
+group("touch_input_test") {
+  testonly = true
+
+  deps = [
+    ":touch_input_latency_benchmarks_test($host_toolchain)",
+    "//garnet/bin/sl4f",
+    "//src/ui/tests/e2e_input_tests/touch:tests",
+  ]
+}
+
+# Runs the benchmark for touch latency
+dart_test("touch_input_latency_benchmarks_test") {
+  sources = [ "touch_input_latency_benchmarks_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+  environments = [
+    # Runs on "main" builders (try and ci) in NUC environments.
+    nuc_env,
+  ]
+}
+
+# Unit test of processing logic for touch latency
+group("tests") {
+  testonly = true
+  deps = [ ":touch_input_latency_metric_test($host_toolchain)" ]
+}
+
+dart_test("touch_input_latency_metric_test") {
+  sources = [ "touch_input_latency_metric_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
 }
