@@ -110,6 +110,10 @@ bool passthrough_flush(fuchsia_audio_effects_handle_t effects_handle) {
 
   return true;
 }
+
+void passthrough_set_stream_info(fuchsia_audio_effects_handle_t effects_handle,
+                                 const fuchsia_audio_effects_stream_info* stream_info) {}
+
 }  // namespace
 
 DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
@@ -122,5 +126,5 @@ DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
     &passthrough_process_inplace,
     &passthrough_process,
     &passthrough_flush,
-
+    &passthrough_set_stream_info,
 };

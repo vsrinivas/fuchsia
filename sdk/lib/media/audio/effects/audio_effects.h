@@ -28,6 +28,17 @@ const uint32_t FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY = 0;
 
 const size_t FUCHSIA_AUDIO_EFFECTS_MAX_NAME_LENGTH = 255;
 
+// Flags that may be passed to fuchsia_audio_effects_module_v1::set_usages
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_NONE           = 0;
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_BACKGROUND     = (1 << 0);
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA          = (1 << 1);
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_INTERRUPTION   = (1 << 2);
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_SYSTEM_AGENT   = (1 << 3);
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION  = (1 << 4);
+// Mask of all valid usage flags. Any bits not covered by this mask may be ignored by
+// fuchsia_audio_effects_module_v1::set_usages
+const uint32_t FUCHSIA_AUDIO_EFFECTS_USAGE_VALID_MASK     = (1 << 5) - 1;
+
 typedef struct {
   char name[FUCHSIA_AUDIO_EFFECTS_MAX_NAME_LENGTH];
   uint16_t incoming_channels;
@@ -51,6 +62,20 @@ typedef struct {
   // Use |FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY| to indicate any frame count is acceptable.
   uint32_t max_frames_per_buffer;
 } fuchsia_audio_effects_parameters;
+
+typedef struct {
+  // A bitmask of the `FUCHSIA_AUDIO_EFFECTS_USAGE_` flags, indicating what usages are represented
+  // in the audio frames.
+  uint32_t usage_mask;
+
+  // The amount of gain scaling already applied to audio frames before being passed to an effect.
+  // Specifically, this represents the _largest_ single gain_dbfs value among this effect's source
+  // streams.  It does not account for the accumulated effects of multiple source streams, nor of
+  // the actual content of these streams.
+  float gain_dbfs;
+  // Gain normalized from 0.0 to 1.0 according to the volume curve in use.
+  float volume;
+} fuchsia_audio_effects_stream_info;
 
 typedef struct {
   // The number of effect types found in the audio_effects lib.  Subsequent APIs that require
@@ -104,6 +129,11 @@ typedef struct {
 
   // Flushes any cached state this effect identified by `effects_handle`.
   bool (*flush)(fuchsia_audio_effects_handle_t effects_handle);
+
+  // Notifies the effect that properties of the audio frames provided to subsequent calls to
+  // `process` or `process_inplace` have changed.
+  void (*set_stream_info)(fuchsia_audio_effects_handle_t effects_handle,
+                          const fuchsia_audio_effects_stream_info* stream_info);
 } fuchsia_audio_effects_module_v1;
 
 // Declare an exported module instance from a loadable plugin module:

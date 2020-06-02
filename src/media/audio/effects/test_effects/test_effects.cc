@@ -217,6 +217,9 @@ bool flush(fuchsia_audio_effects_handle_t effects_handle) {
   return reinterpret_cast<TestEffect*>(effects_handle)->Flush();
 }
 
+void set_stream_info(fuchsia_audio_effects_handle_t effects_handle,
+                     const fuchsia_audio_effects_stream_info* stream_info) {}
+
 zx_status_t ext_add_effect(test_effect_spec effect) {
   if (g_instance_count > 0) {
     return ZX_ERR_BAD_STATE;
@@ -260,6 +263,7 @@ DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
     &process_inplace,
     &process,
     &flush,
+    &set_stream_info,
 };
 
 DECLARE_TEST_EFFECTS_EXT{

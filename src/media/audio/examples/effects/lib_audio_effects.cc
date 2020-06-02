@@ -116,6 +116,8 @@ bool example_audio_effects_flush(fuchsia_audio_effects_handle_t effects_handle) 
   return effect->Flush();
 }
 
+void example_audio_effects_set_stream_info(fuchsia_audio_effects_handle_t effects_handle,
+                                           const fuchsia_audio_effects_stream_info* stream_info) {}
 }  // namespace
 
 DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
@@ -128,4 +130,5 @@ DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
     &example_audio_effects_process_inplace,
     &example_audio_effects_process,
     &example_audio_effects_flush,
+    &example_audio_effects_set_stream_info,
 };

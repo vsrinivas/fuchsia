@@ -95,6 +95,9 @@ bool inverter_flush(fuchsia_audio_effects_handle_t handle) {
   return handle != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
 }
 
+void inverter_set_stream_info(fuchsia_audio_effects_handle_t handle,
+                              const fuchsia_audio_effects_stream_info* stream_info) {}
+
 }  // namespace
 
 DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
@@ -107,4 +110,5 @@ DECLARE_FUCHSIA_AUDIO_EFFECTS_MODULE_V1{
     &inverter_process_inplace,
     &inverter_process,
     &inverter_flush,
+    &inverter_set_stream_info,
 };
