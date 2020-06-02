@@ -89,8 +89,7 @@ struct PowerYak {
 impl PowerYak {
     pub fn bday(&self) {
         let mut age = self.age.lock().expect("Could not lock mutex");
-        **age += 1;
-        age.iupdate();
+        *age.as_mut() += 1;
     }
 }
 
@@ -187,8 +186,7 @@ mod inner {
 
     impl AutoYakling {
         pub fn bday(&mut self) {
-            *self.age += 1;
-            self.age.iupdate();
+            self.age.iset(*self.age + 1);
         }
     }
 }
@@ -354,12 +352,14 @@ fn ivalue_primitive() {
     assert_inspect_tree!(inspector, root: { num: 126i64 });
 
     // Modifying num should change its value but not update inspect
-    *num += 1;
-    assert_eq!(*num, 127);
-    assert_inspect_tree!(inspector, root: { num: 126i64 });
+    {
+        let mut num = num.as_mut();
+        *num += 1;
+        assert_eq!(*num, 127);
+        assert_inspect_tree!(inspector, root: { num: 126i64 });
+    }
 
-    // Now update inspect
-    num.iupdate();
+    // Now inspect is updated
     assert_inspect_tree!(inspector, root: { num: 127i64 });
     num.iset(-128);
     assert_eq!(*num, -128);
@@ -370,45 +370,6 @@ fn ivalue_primitive() {
 
 #[test]
 fn ivalue_nested() {
-    let inspector = Inspector::new();
-    let root = inspector.root();
-    let yak_base = Yak {
-        name: "Big Sebastian".to_string(),
-        age: 25,
-        credit_card_no: "12345678".to_string(),
-        yakling: Yakling { name: "Lil Sebastian".to_string(), age: 2 },
-    };
-    let mut yak = IValue::attached(yak_base, &root, "my_yak");
-    assert_inspect_tree!(inspector, root: {
-        my_yak: {
-            name: "Big Sebastian",
-            age: 25i64,
-            yakling: {
-                name: "Lil Sebastian",
-                years_old: 2u64,
-            },
-        }
-    });
-    yak.yakling.age += 1; // Happy bday, Lil Sebastian
-    yak.name = "Big Sebastian Sr.".to_string();
-    yak.credit_card_no = "1234".to_string();
-    yak.iupdate();
-    assert_inspect_tree!(inspector, root: {
-        my_yak: {
-            name: "Big Sebastian Sr.",
-            age: 25i64,
-            yakling: {
-                name: "Lil Sebastian",
-                years_old: 3u64,
-            },
-        }
-    });
-    std::mem::drop(yak);
-    assert_inspect_tree!(inspector, root: {});
-}
-
-#[test]
-fn ivalue_as_mut() {
     let inspector = Inspector::new();
     let root = inspector.root();
     let yak_base = Yak {
@@ -454,8 +415,7 @@ fn idebug_enum() {
     let root = inspector.root();
     let mut horse = IDebug::attached(Horse::Arabian, &root, "horse");
     assert_inspect_tree!(inspector, root: { horse: "Arabian" });
-    *horse = Horse::Icelandic;
-    horse.iupdate();
+    horse.iset(Horse::Icelandic);
     assert_inspect_tree!(inspector, root: { horse: "Icelandic" });
     std::mem::drop(horse);
     assert_inspect_tree!(inspector, root: {});

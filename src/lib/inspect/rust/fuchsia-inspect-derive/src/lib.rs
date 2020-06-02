@@ -150,12 +150,6 @@ impl<R: Render> IOwned<R> {
         Self { _base: value, _inspect_data }
     }
 
-    /// Explicitly update the inspect subtree.
-    // TODO(fxbug.dev/52796): Remove this method
-    pub fn iupdate(&mut self) {
-        R::update(&self._base, &mut self._inspect_data);
-    }
-
     /// Returns a RAII guard which can be used for mutations. When the guard
     /// goes out of scope, the new inspect state is published.
     pub fn as_mut(&mut self) -> IOwnedMutGuard<'_, R> {
@@ -216,13 +210,6 @@ impl<R: Render> Deref for IOwned<R> {
     type Target = R::Base;
     fn deref(&self) -> &Self::Target {
         &self._base
-    }
-}
-
-// TODO(fxbug.dev/52796): Remove the DerefMut impl in favor of the IOwnedMutGuard
-impl<R: Render> DerefMut for IOwned<R> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self._base
     }
 }
 
