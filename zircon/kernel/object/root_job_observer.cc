@@ -54,7 +54,7 @@ RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job)
     : RootJobObserver(ktl::move(root_job), Halt) {}
 
 RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, fbl::Closure callback)
-    : root_job_(ktl::move(root_job)), callback_(std::move(callback)) {
+    : root_job_(ktl::move(root_job)), callback_(ktl::move(callback)) {
   root_job_->AddObserver(this);
 }
 
