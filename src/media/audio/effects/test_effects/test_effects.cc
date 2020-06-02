@@ -124,11 +124,16 @@ class TestEffect {
     return true;
   }
 
+  void SetStreamInfo(const fuchsia_audio_effects_stream_info* stream_info) {
+    stream_info_ = *stream_info;
+  }
+
   zx_status_t Inspect(test_effects_inspect_state* state) {
     state->config = config_.data();
     state->config_length = config_.size();
     state->effect_id = effect_id();
     state->flush_count = flush_count();
+    state->stream_info = stream_info_;
     return ZX_OK;
   }
 
@@ -138,6 +143,8 @@ class TestEffect {
   uint16_t channels_in_;
   uint16_t channels_out_;
   std::string config_;
+
+  fuchsia_audio_effects_stream_info stream_info_ = {};
 
   size_t flush_count_ = 0;
 
@@ -218,7 +225,12 @@ bool flush(fuchsia_audio_effects_handle_t effects_handle) {
 }
 
 void set_stream_info(fuchsia_audio_effects_handle_t effects_handle,
-                     const fuchsia_audio_effects_stream_info* stream_info) {}
+                     const fuchsia_audio_effects_stream_info* stream_info) {
+  if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+    return;
+  }
+  return reinterpret_cast<TestEffect*>(effects_handle)->SetStreamInfo(stream_info);
+}
 
 zx_status_t ext_add_effect(test_effect_spec effect) {
   if (g_instance_count > 0) {

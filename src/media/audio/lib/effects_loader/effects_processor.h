@@ -80,6 +80,7 @@ class EffectsProcessor {
   zx_status_t ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const;
   zx_status_t Process(uint32_t num_frames, float* audio_buff_in, float** audio_buff_out) const;
   zx_status_t Flush() const;
+  void SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const;
 
  private:
   std::vector<Effect> effects_chain_;

@@ -385,5 +385,38 @@ TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
   EXPECT_EQ(processor.channels_out(), 1u);
 }
 
+TEST_F(EffectsProcessorTest, SetStreamInfo) {
+  test_effects().AddEffect("effect.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
+  EffectsProcessor processor;
+
+  constexpr int kNumEffects = 5;
+  for (int i = 0; i < kNumEffects; ++i) {
+    Effect effect = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    EXPECT_EQ(processor.AddEffect(std::move(effect)), ZX_OK);
+  }
+
+  // SetStreamInfo
+  constexpr uint32_t kExpectedUsageMask =
+      FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA | FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION;
+  constexpr float kExpectedGainDbfs = -20.0;
+  constexpr float kExpectedVolume = 0.8;
+  fuchsia_audio_effects_stream_info stream_info;
+  stream_info.usage_mask = kExpectedUsageMask;
+  stream_info.gain_dbfs = kExpectedGainDbfs;
+  stream_info.volume = kExpectedVolume;
+  processor.SetStreamInfo(stream_info);
+
+  // Now verify the effects received the stream info.
+  for (int i = 0; i < kNumEffects; ++i) {
+    test_effects_inspect_state inspect = {};
+    EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(i).get(), &inspect));
+
+    EXPECT_EQ(kExpectedUsageMask, inspect.stream_info.usage_mask);
+    EXPECT_EQ(kExpectedGainDbfs, inspect.stream_info.gain_dbfs);
+    EXPECT_EQ(kExpectedVolume, inspect.stream_info.volume);
+  }
+}
+
 }  // namespace
 }  // namespace media::audio

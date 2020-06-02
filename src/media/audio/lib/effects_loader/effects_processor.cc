@@ -155,4 +155,15 @@ zx_status_t EffectsProcessor::Flush() const {
   return result;
 }
 
+void EffectsProcessor::SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const {
+  TRACE_DURATION("audio", "EffectsProcessor::SetStreamInfo");
+  for (const auto& effect : effects_chain_) {
+    if (!effect) {
+      continue;
+    }
+
+    effect.SetStreamInfo(stream_info);
+  }
+}
+
 }  // namespace media::audio

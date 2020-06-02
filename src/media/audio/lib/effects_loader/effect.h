@@ -71,6 +71,7 @@ class Effect {
                       float** audio_buff_out) const;
   zx_status_t Flush() const;
   zx_status_t GetParameters(fuchsia_audio_effects_parameters* params) const;
+  void SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const;
 
  private:
   fuchsia_audio_effects_handle_t effects_handle_;

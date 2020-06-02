@@ -82,4 +82,15 @@ zx_status_t Effect::GetParameters(fuchsia_audio_effects_parameters* params) cons
   return module_->get_parameters(effects_handle_, params) ? ZX_OK : ZX_ERR_NOT_SUPPORTED;
 }
 
+void Effect::SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const {
+  TRACE_DURATION("audio", "Effect::SetStreamInfo");
+  FX_DCHECK(module_);
+  FX_DCHECK(effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
+
+  // If a module does not implement this we just don't notify them.
+  if (module_->set_stream_info) {
+    module_->set_stream_info(effects_handle_, &stream_info);
+  }
+}
+
 }  // namespace media::audio

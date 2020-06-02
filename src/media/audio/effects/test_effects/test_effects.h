@@ -45,6 +45,9 @@ typedef struct {
 
   // The number of times this effect has been flushed.
   size_t flush_count;
+
+  // The last stream info provided to the effects `set_stream_info` hook.
+  fuchsia_audio_effects_stream_info stream_info;
 } test_effects_inspect_state;
 
 // |test_effects_module_ext| is an extension interface that can be used to configure the behavior
