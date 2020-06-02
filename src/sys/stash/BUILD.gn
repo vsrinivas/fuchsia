@@ -31,6 +31,8 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.stash:rust_measure_tape_for_key_value",
+    "//sdk/fidl/fuchsia.stash:rust_measure_tape_for_list_item",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

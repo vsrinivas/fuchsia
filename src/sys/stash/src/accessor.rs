@@ -7,28 +7,19 @@ use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
     FlushError, GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, KeyValue,
     ListItem, ListIteratorMarker, ListIteratorRequest, ListIteratorRequestStream, Value,
-    MAX_KEY_SIZE, MAX_STRING_SIZE,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon_sys;
+use fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
+use rust_measure_tape_for_key_value::measure as key_value_measure;
+use rust_measure_tape_for_list_item::measure as list_item_measure;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::store;
-
-// 16 byte overhead for vectors
-// 16 byte overhead per string
-// 1 byte used for the uint8 type enum
-const LIST_PREFIX_CHUNK_SIZE: usize = (((fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES as u64) - 16)
-    / (MAX_KEY_SIZE + 16 + 1)) as usize;
-
-// 16 byte overhead for vectors
-// 16 byte overhead per string
-const GET_PREFIX_CHUNK_SIZE: usize = (((fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES as u64) - 16)
-    / (MAX_KEY_SIZE + 16 + MAX_STRING_SIZE + 16)) as usize;
 
 /// Accessors are used by clients to view and interact with the store. In this situation, that
 /// means handling transactional logic and using the store_manager to perform store
@@ -155,12 +146,23 @@ impl Accessor {
             async move {
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = ListIteratorRequestStream::from_channel(server_chan);
+                let mut iter = list_results.into_iter();
                 while let Some(ListIteratorRequest::GetNext { responder }) =
                     stream.try_next().await?
                 {
-                    let split_at =
-                        list_results.len() - LIST_PREFIX_CHUNK_SIZE.min(list_results.len());
-                    let mut chunk = list_results.split_off(split_at);
+                    // 16 byte overhead for vectors
+                    // 16 byte overhead per string
+                    let mut bytes_used: usize = 32;
+
+                    let mut item_count = 0;
+                    for result in iter.clone() {
+                        bytes_used += list_item_measure(&result).num_bytes;
+                        if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
+                            break;
+                        }
+                        item_count += 1;
+                    }
+                    let mut chunk: Vec<_> = iter.by_ref().take(item_count).collect();
                     responder.send(&mut chunk.iter_mut())?;
                 }
                 Ok(())
@@ -213,20 +215,40 @@ impl Accessor {
             async move {
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = GetIteratorRequestStream::from_channel(server_chan);
+
+                if !enable_bytes {
+                    for item in get_results.iter() {
+                        if let Value::Bytesval(_) = item.val {
+                            Err(format_err!(
+                                "client attempted to access bytes when the type is disabled",
+                            ))?;
+                        }
+                    }
+                }
+
+                let mut iter = get_results.into_iter().peekable();
                 while let Some(GetIteratorRequest::GetNext { responder }) =
                     stream.try_next().await?
                 {
-                    let split_at = get_results.len() - GET_PREFIX_CHUNK_SIZE.min(get_results.len());
-                    let mut chunk = get_results.split_off(split_at);
-                    if !enable_bytes {
-                        for item in chunk.iter() {
-                            if let Value::Bytesval(_) = item.val {
-                                Err(format_err!(
-                                    "client attempted to access bytes when the type is disabled",
-                                ))?;
+                    let mut chunk = vec![];
+
+                    // 16 byte overhead for vectors
+                    // 16 byte overhead per string
+                    let mut bytes_used: usize = 32;
+
+                    loop {
+                        match iter.peek() {
+                            None => break,
+                            Some(next_item) => {
+                                bytes_used += key_value_measure(next_item).num_bytes;
+                                if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
+                                    break;
+                                }
                             }
                         }
+                        chunk.push(iter.next().unwrap());
                     }
+
                     responder.send(&mut chunk.iter_mut())?;
                 }
                 Ok(())
