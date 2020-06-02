@@ -10,6 +10,7 @@
 #include <zircon/syscalls/iommu.h>
 
 #include <memory>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
@@ -55,6 +56,30 @@ VMO_VMAR_TEST(SinglePageTest) {
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  ASSERT_TRUE(t.Wait());
+}
+
+// Test that a fault can be fulfilled with an uncommitted page.
+VMO_VMAR_TEST(UncommittedSinglePageTest) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+  std::vector<uint8_t> data(PAGE_SIZE, 0);
+
+  TestThread t([vmo, check_vmar, &data]() -> bool { return check_buffer_data(vmo, 0, 1, data.data(), check_vmar); });
+
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  zx::vmo empty;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &empty));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1, std::move(empty)));
 
   ASSERT_TRUE(t.Wait());
 }
@@ -1495,7 +1520,6 @@ TEST(Pager, InvalidPagerSupplyPages) {
     kFromPager,
     kHasMapping,
     kHasClone,
-    kNotCommitted,
     kHasPinned,
     kViolationCount,
   };
@@ -1527,16 +1551,14 @@ TEST(Pager, InvalidPagerSupplyPages) {
       ASSERT_EQ(aux_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &alt_vmo), ZX_OK);
     }
 
-    if (i != kNotCommitted) {
-      if (i == kFromPager) {
-        ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_vmo), ZX_OK);
-        ASSERT_EQ(alt_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-        ASSERT_EQ(
-            zx_pager_supply_pages(pager.get(), aux_vmo.get(), 0, ZX_PAGE_SIZE, alt_vmo.get(), 0),
-            ZX_OK);
-      } else {
-        ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-      }
+    if (i == kFromPager) {
+      ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_vmo), ZX_OK);
+      ASSERT_EQ(alt_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
+      ASSERT_EQ(
+          zx_pager_supply_pages(pager.get(), aux_vmo.get(), 0, ZX_PAGE_SIZE, alt_vmo.get(), 0),
+          ZX_OK);
+    } else {
+      ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
     }
 
     zx::iommu iommu;
@@ -1610,6 +1632,29 @@ TEST(Pager, DecommitTest) {
   ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, ZX_PAGE_SIZE, &child), ZX_OK);
 
   ASSERT_EQ(child.op_range(ZX_VMO_OP_DECOMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+}
+
+// Test that supplying uncommitted pages prevents faults.
+TEST(Pager, UncommittedSupply) {
+  zx::pager pager;
+  ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+
+  zx::port port;
+  ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+  zx::vmo vmo;
+
+  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+
+  zx::vmo empty;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &empty));
+
+  ASSERT_OK(pager.supply_pages(vmo, 0, ZX_PAGE_SIZE, empty, 0));
+
+  // A read should not fault and give zeros.
+  uint32_t val = 42;
+  ASSERT_OK(vmo.read(&val, 0, sizeof(val)));
+  ASSERT_EQ(val, 0);
 }
 
 }  // namespace pager_tests

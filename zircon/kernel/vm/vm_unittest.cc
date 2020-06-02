@@ -2433,6 +2433,21 @@ static bool vmpl_take_gap_test() {
   END_TEST;
 }
 
+// Tests that an empty page splice list can be created.
+static bool vmpl_take_empty_test() {
+  BEGIN_TEST;
+
+  VmPageList pl;
+
+  VmPageSpliceList splice = pl.TakePages(PAGE_SIZE, PAGE_SIZE);
+
+  EXPECT_FALSE(splice.IsDone());
+  EXPECT_TRUE(splice.Pop().IsEmpty());
+  EXPECT_TRUE(splice.IsDone());
+
+  END_TEST;
+}
+
 // Tests that cleaning up a splice list doesn't blow up
 static bool vmpl_take_cleanup_test() {
   BEGIN_TEST;

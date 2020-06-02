@@ -3219,8 +3219,7 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
   // what sorts of vmos are acceptable. If splice starts being used in more places,
   // then this restriction might need to be lifted.
   // TODO: Check that the region is locked once locking is implemented
-  if (mapping_list_len_ || children_list_len_ ||
-      AttributedPagesInRangeLocked(offset, len) != (len / PAGE_SIZE)) {
+  if (mapping_list_len_ || children_list_len_) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -3258,13 +3257,22 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
   while (!pages->IsDone()) {
     VmPageOrMarker src_page = pages->Pop();
 
+    // The pager API does not allow the source VMO of supply pages to have a page source, so we can
+    // assume that any empty pages are zeroes and insert explicit markers here. We need to insert
+    // explicit markers to actually resolve the pager fault.
+    if (src_page.IsEmpty()) {
+      src_page = VmPageOrMarker::Marker();
+    }
+
     status = AddPageLocked(&src_page, offset);
     if (status == ZX_OK) {
       new_pages_len += PAGE_SIZE;
-    } else if (src_page.IsPage()) {
-      vm_page_t* page = src_page.ReleasePage();
-      DEBUG_ASSERT(!list_in_list(&page->queue_node));
-      list_add_tail(&free_list, &page->queue_node);
+    } else {
+      if (src_page.IsPage()) {
+        vm_page_t* page = src_page.ReleasePage();
+        DEBUG_ASSERT(!list_in_list(&page->queue_node));
+        list_add_tail(&free_list, &page->queue_node);
+      }
 
       if (likely(status == ZX_ERR_ALREADY_EXISTS)) {
         status = ZX_OK;
