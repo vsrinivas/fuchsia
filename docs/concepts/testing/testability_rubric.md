@@ -179,17 +179,16 @@ time out.
 
 The test name can be any of the following:
 
-* The basename of the test's GN target, as seen in the "name" field of each
-  entry in `out/default/tests.json`. This file is created after you run `fx
-  set` inside of your Fuchsia directory.
 * The test package URL (for fuchsia tests) or path (for host tests). This is
-  the name that Flake Fetcher uses to refer to tests.
+  the name that Flake Fetcher uses to refer to tests, and is seen in the
+  "name" field of each entry in `out/default/tests.json`. That file is
+  created after you run `fx set` inside of your Fuchsia directory.
 * A regular expression (using Go's [regular expression
-  syntax](https://github.com/google/re2/wiki/Syntax)) that matches either of
-  the above fields. However, note that if a single multiplier matches more
-  than 5 different tests, it will be rejected (to prevent accidental DoSing).
-  If this happens to you, simply edit your commit message locally or in the
-  Gerrit UI to make your regular expression more specific.
+  syntax](https://github.com/google/re2/wiki/Syntax)) that matches the test
+  name as described above. However, note that if a single multiplier matches
+  more than 5 different tests, it will be rejected (to prevent accidental
+  DoSing). If this happens to you, simply edit your commit message locally or
+  in the Gerrit UI to make your regular expression more specific.
 
 The "os" field, if specified, should be either "fuchsia", "linux", or "mac".
 If left unset, the multiplier will match any test, regardless of the test's
