@@ -76,7 +76,7 @@ confusion, and should the be considered on a case-by-case basis.
 See the `Names` section of the
 [Style Rubric][naming-style]
 
-### Qualified Identifiers
+### Qualified Identifiers {#qualified-identifiers}
 
 FIDL always looks for unqualified symbols within the scope of the current
 library. To reference symbols in other libraries, they must be qualified by
